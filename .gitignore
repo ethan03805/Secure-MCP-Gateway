@@ -1,0 +1,16 @@
+# Documentation scratch and generated working evidence
+work/
+
+# Future runtime state and sensitive material are never documentation history
+.env
+.env.*
+*.key
+*.pem
+*.dump
+*.backup
+secrets/
+audit/
+data/
+state/
+source-cache/
+model-weights/
