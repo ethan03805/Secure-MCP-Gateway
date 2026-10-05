@@ -1,0 +1,54 @@
+{
+  "baseline": "MCP Gateway SRS V1",
+  "architecture_revision": "2.0",
+  "date": "2026-10-04",
+  "timezone": "America/New_York",
+  "scope": "Document structure, example syntax, source-key traceability, historical preservation and immutable snapshot identity only; no runtime tests or implementation compliance claimed.",
+  "status": "passed",
+  "counts": {
+    "requirements": 150,
+    "security_MUST_statements": 122,
+    "functional_SHALL_statements": 28,
+    "root_requirements": 10,
+    "acceptance_scenarios": 21,
+    "architecture_sections": 16,
+    "curated_catalog_entries": 11
+  },
+  "checks": [
+    "Unique hierarchical IDs and immediate parent relationships",
+    "Required fields populated and exactly one permitted verification method per record",
+    "Exactly one bold MUST or SHALL imperative per requirement statement",
+    "Each requirement ID occurs once as a rendered requirement record",
+    "All requirement source keys resolve to the research/derivation table",
+    "Architecture sections 1 through 16 are present in sequence",
+    "All 21 acceptance scenarios and 11 curated catalog entries are present",
+    "Balanced fenced code blocks and contiguous Markdown table rows",
+    "JSON, YAML and TOML examples parse successfully",
+    "Architecture relative document links resolve locally",
+    "Current SRS and immutable V1 snapshot are byte-identical",
+    "Pre-split architecture archived byte-for-byte",
+    "Original September architecture and research brief hashes unchanged"
+  ],
+  "parsed_example_languages": [
+    "yaml",
+    "json",
+    "toml"
+  ],
+  "independent_document_review_scopes": [
+    "Neo4j CE limits and graph/audit consistency",
+    "MCP security controls and verification quality",
+    "Curated engineering server source/license/capability claims"
+  ],
+  "git_baseline": {
+    "tag": "mcp-gateway-srs-v1",
+    "tag_resolution_check": "Performed after commit/tag creation; this pre-commit evidence file does not claim to verify a future tag."
+  },
+  "sha256": {
+    "architecture.md": "0200ade7beaaf037a42b426b9bed7552e21bd5b1e031f03f333a168a9a1b002a",
+    "MCP_Gateway_SRS.md": "abb60d9cff944a3cee6bbfe0c3535e54cbe2d46b6735b19f70c118602a51e584",
+    "versions/MCP_Gateway_SRS_V1.md": "abb60d9cff944a3cee6bbfe0c3535e54cbe2d46b6735b19f70c118602a51e584",
+    "archive/architecture-pre-srs-v1-2026-10-04.md": "c3150030e3a4e53455ab0af464a567b2b0866faafa880c674f3351866de7cb5e",
+    "archive/Secure-MCP-Gateway-Architecture.md": "3f7853d49554cf58ae01f2bd87eccbdcdefe7714f736da6a2d4b1c1673674cd9",
+    "Secure-MCP-Gateway-Research-Brief.md": "3a504c0aced2c739cd43729c56be850e9a9502eeb5a66818e9ef72e5247e538f"
+  }
+}
