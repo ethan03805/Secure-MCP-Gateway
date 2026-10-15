@@ -1,0 +1,606 @@
+### FR-3 Policy administration, decision and approval
+
+@FR-3 | Policy capability
+P: —
+S: The Gateway SHALL author, validate, simulate, publish and evaluate immutable policy revisions and SHALL manage human approvals required by them.
+A: E-05; E-06; E-07; F-10; F-11; F-12; F-13; F-14; F-15; F-16; F-17; F-18
+V: Analysis | Review the verification results of every FR-3 child requirement; confirm each has passed.
+SRC: ARCH §4 SS-3; ARCH §7
+R: Developing and testing policy is the owner's primary research purpose.
+
+@FR-3.1 | Policy object types
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL support the policy object types Framework Profile, Session Allow Policy Template, Secret Use Policy, Response Policy, Audit Profile, Observation Policy, Anomaly Response Policy, Research Campaign and Runtime Profile.
+A: E-05; F-10; I-06; I-07; D-01
+V: Test | Create, validate and publish one object of each type; confirm each is stored and evaluable.
+SRC: ARCH §7.2
+R: These objects compose the Allow-policy model.
+
+@FR-3.2 | Policy schema
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL validate every policy object against a versioned JSON Schema for its type before storing it.
+A: E-05; F-10; I-07
+V: Test | Submit objects with a missing field, a wrong type and an unknown enumeration value; confirm each is rejected with a field-level message.
+SRC: ARCH §4 E-05; SEC 7.3
+R: Typed records make evaluation deterministic.
+
+@FR-3.3 | Draft workspace
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL hold edits in a named draft derived from a stated parent revision until the draft is published or discarded.
+A: E-05; F-10; I-06
+V: Demonstration | Create a draft, edit it in two sessions of G-02, discard one and publish the other; confirm the active revision changes only on publish.
+SRC: ARCH §4 E-05
+R: Authors iterate on policy without affecting enforcement.
+
+@FR-3.4 | Revision record
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL record for each published revision its ID, parent revision ID, content digest, policy-schema version, evaluator version, publishing actor, publication time and simulation result reference.
+A: E-05; F-12; D-01
+V: Inspection | Publish a revision; inspect the stored record for each field.
+SRC: A2 §4.1 PolicyRevision; SEC 1.14
+R: Supports reproducible research and audit linkage.
+
+@FR-3.5 | Policy simulation
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL evaluate a draft against a stored fixture set and report, per fixture, the decision under the draft, the decision under the active revision and the difference.
+A: E-05; F-11; I-06
+V: Test | Run a 50-fixture set against a draft that removes one grant; confirm exactly the affected fixtures report a changed decision.
+SRC: ARCH §4 E-05; ARCH §11 item 8
+R: Authors must see the effect of a change before publishing it.
+
+@FR-3.6 | Effective permission report
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL produce, for a selected principal and template, the list of tools and argument constraints the draft or active revision permits.
+A: E-05; F-11; I-06
+V: Test | Generate the report for a fixture principal; compare against hand-computed expected permissions.
+SRC: A2 §7.2 (Effective tools by principal)
+R: Makes the tailored Allow policy reviewable.
+
+@FR-3.7 | Observation cost estimate
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL estimate records per day, storage per day and added p95 latency for a draft Observation Policy or Research Campaign from the trailing 7 days of call rates.
+A: E-05; F-66; I-06
+V: Test | Estimate a policy over a replayed 7-day fixture traffic set; confirm estimates are within ±25% of the measured values after one replayed day.
+SRC: ARCH §11 item 6; ARCH §5 F-66
+R: Researchers must know the cost of a capture choice before publishing it.
+
+@FR-3.8 | Policy export and import
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL export any revision as a canonical JSON document and SHALL import such a document as a new draft.
+A: E-05; F-10; I-06
+V: Test | Export a revision, import it into a clean instance and publish; confirm identical decisions over the fixture set.
+SRC: OWNER (policy development and research reproducibility)
+R: Policies are the research artifact and must be portable.
+
+@FR-3.9 | Policy rollback
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL roll back by publishing the content of a selected earlier revision as a new revision.
+A: E-05; F-12; I-06
+V: Test | Roll back to revision N-2; confirm a new revision ID with N-2 content becomes active.
+SRC: ARCH §4 E-05; SEC 7.9
+R: Rollback keeps history linear and immutable.
+
+@FR-3.10 | Compiled decision snapshot
+P: FR-3
+S: The Policy Decision Service (E-06) SHALL compile the active revision into an in-memory decision snapshot when the revision is activated, and SHALL evaluate requests against that snapshot.
+A: E-06; F-13; I-07
+V: Test | Activate a revision; confirm decisions continue during a 10-second Data Server read pause, with no store access per decision.
+SRC: ARCH §15 E-05/E-06; ARCH §14
+R: Decision latency must not depend on a database round-trip.
+
+@FR-3.11 | Decision record
+P: FR-3
+S: The Policy Decision Service (E-06) SHALL return for each evaluation a decision ID, outcome, reason code, considered, applicable and decisive rule IDs, effective obligations, selected route, policy revision ID, baseline snapshot ID and evaluation duration.
+A: E-06; F-13; F-14; I-08
+V: Test | Evaluate permit, deny and default-deny fixtures; confirm all fields are present and correct.
+SRC: A2 §4.1 Decision; SEC 1.19
+R: Decisions are the primary audit and research record.
+
+@FR-3.12 | Obligation types
+P: FR-3
+S: The Policy Decision Service (E-06) SHALL express obligations using the types request filters, response filters, approval, audit profile, observation policy, rate limit, size limit, timeout, egress grants, secret grants, runtime profile and anomaly response.
+A: E-06; F-14; I-08
+V: Test | Evaluate a fixture rule carrying every obligation type; confirm each appears in the decision.
+SRC: ARCH §4 E-06; ARCH §7.2
+R: Enforcement elements consume a closed set of obligation types.
+
+@FR-3.13 | Rate limit counters
+P: FR-3
+S: The Policy Decision Service (E-06) SHALL maintain sliding-window call counters per principal, per session and per tool, and SHALL apply the smallest applicable rate bound, with CP-11 as the default principal bound.
+A: E-06; F-14; I-08
+V: Test | Exceed a session limit lower than the principal limit; confirm -31005 at the session bound.
+SRC: SEC Appendix A (principal tool rate); SEC Appendix F (resource limits)
+R: Rate limits are a policy obligation.
+
+@FR-3.14 | Approval request creation
+P: FR-3
+S: When a decision carries an approval obligation and no matching unconsumed approval exists, the Approval Service (E-07) SHALL create a pending approval record and the Protocol Mediator (E-02) SHALL return Gateway error `-31002` with `data.approvalId` and `data.expiresAt`.
+A: E-07; E-02; F-17; I-10; X-01
+V: Test | Call a tool that requires approval; confirm -31002 with both data members and a pending record visible in G-13.
+SRC: ARCH §4 E-07; SEC 1.18
+R: Approval is out-of-band; the harness learns the approval ID and retries.
+
+@FR-3.15 | Approval consumption on retry
+P: FR-3
+S: When a session retries a call whose canonical arguments digest matches an approved, unexpired, unconsumed approval for that session, the Approval Service (E-07) SHALL mark the approval consumed and permit dispatch to proceed.
+A: E-07; F-18; I-10
+V: Test | Approve a pending request and retry the identical call; confirm dispatch, and confirm a second retry is denied.
+SRC: ARCH §4 E-07; SEC 1.18
+R: One-use approval bound to the exact request.
+
+@FR-3.16 | Approval status query
+P: FR-3
+S: The Approval Service (E-07) SHALL report the state `pending`, `approved`, `denied`, `expired` or `consumed` of an approval through `GET /smcp/v1/approvals/{id}` to the session that created it.
+A: E-07; F-18; X-01
+V: Test | Query an approval from the creating session and from another session; confirm the state and a 404 for the other session.
+SRC: ARCH §4 E-07
+R: Harness adapters need to know when to retry.
+
+@FR-3.17 | Approver decision
+P: FR-3
+S: The Approval Service (E-07) SHALL record each approve or deny decision with approver identity, decision time and an optional comment.
+A: E-07; F-18; X-05; I-18
+V: Test | Approve and deny requests through G-13; confirm the stored fields and audit events.
+SRC: ARCH §4 E-07; ARCH §6.1 X-05
+R: Approvals are attributable.
+
+@FR-3.18 | Approval evidence display
+P: FR-3
+S: The Approval Service (E-07) SHALL supply to the approval view the public tool name, server revision, canonical arguments, decisive rules and any anomaly band with contributing feature and z-score.
+A: E-07; F-17; X-05
+V: Inspection | Open a pending approval triggered by an anomaly obligation in G-13; confirm each item is displayed.
+SRC: ARCH §4 E-07; ARCH §9.6
+R: Approvers need the evidence to decide.
+
+### FR-4 Enforcement pipeline
+
+@FR-4 | Enforcement pipeline
+P: —
+S: The Gateway SHALL process each tool call through ordered access-time, run-time and response-time enforcement stages.
+A: E-08; E-09; E-10; E-11; E-12
+V: Analysis | Review the verification results of every FR-4 child requirement; confirm each has passed.
+SRC: ARCH §2.1 item 4; ARCH §4 SS-4; ARCH §18.3
+R: The owner's three control points.
+
+@FR-4.1 | Canonical request object
+P: FR-4
+S: The Protocol Mediator (E-02) SHALL convert each `tools/call` into a canonical request containing correlation ID, session ID, principal ID, public tool name, resolved server and tool revision IDs, canonicalized arguments, argument digest and receipt time.
+A: E-02; E-08; F-02; I-03
+V: Test | Submit equivalent calls differing only in JSON key order and whitespace; confirm identical argument digests.
+SRC: ARCH §4 E-02; A2 §4.2 step 1
+R: Policy, approval and audit bind to one canonical form.
+
+@FR-4.2 | Correlation ID
+P: FR-4
+S: The Protocol Mediator (E-02) SHALL assign each northbound request a UUIDv7 correlation ID that every element attaches to the records and events it produces for that request.
+A: E-02; F-02; I-29; I-18
+V: Test | Trace one call through audit, observation and span records; confirm all share the correlation ID.
+SRC: ARCH §10.4; A2 §5
+R: Joins records across elements.
+
+@FR-4.3 | Stage order
+P: FR-4
+S: The Access Enforcement Point (E-08) SHALL execute the stages authenticate, session check, decision, request inspection, request scoring, approval, launch authorization, dispatch, response validation, response inspection, response scoring and release authorization in that order.
+A: E-08; E-09; E-10; E-11; E-12; F-20; F-21; F-29; F-30
+V: Test | Instrument a call and record stage-entry times; confirm the order.
+SRC: ARCH §18.3
+R: Each stage depends on the results of the previous ones.
+
+@FR-4.4 | Filter interface
+P: FR-4
+S: The Request Inspection Pipeline (E-09) and the Response Inspection Pipeline (E-11) SHALL execute filters through one versioned filter interface returning `pass`, `transform` or `block` with findings, timing and filter version.
+A: E-09; E-11; F-21; F-27
+V: Inspection | Inspect the filter interface definition and the registered filters; confirm every filter implements it.
+SRC: ARCH §4 E-09; ARCH §4 E-11
+R: Researchers add and compare filters without changing the pipeline.
+
+@FR-4.5 | Built-in request filters
+P: FR-4
+S: The Request Inspection Pipeline (E-09) SHALL provide the request filters `schema-validate`, `path-canonicalize`, `url-canonicalize`, `size-limit`, `secret-fingerprint`, `injection-detect` and `unicode-control`.
+A: E-09; F-21
+V: Test | Run each filter against its positive and negative fixture corpus; confirm the expected disposition for each fixture.
+SRC: ARCH §4 E-09
+R: The baseline request controls.
+
+@FR-4.6 | Built-in response filters
+P: FR-4
+S: The Response Inspection Pipeline (E-11) SHALL provide the response filters `output-schema`, `secret-fingerprint`, `pii-detect`, `injection-marker`, `unicode-control`, `content-type-gate` and `size-limit`.
+A: E-11; F-27
+V: Test | Run each filter against its positive and negative fixture corpus; confirm the expected disposition for each fixture.
+SRC: ARCH §4 E-11
+R: The baseline response controls.
+
+@FR-4.7 | Filter findings
+P: FR-4
+S: The Request Inspection Pipeline (E-09) and the Response Inspection Pipeline (E-11) SHALL emit each filter's findings and duration to the Observation Collector (E-29).
+A: E-09; E-11; F-21; F-27; I-29
+V: Test | Trigger an `injection-detect` finding; confirm an observation record with the filter ID, finding and duration.
+SRC: ARCH §10.3 P-140; ARCH §10.4
+R: Filter behavior and cost are research data.
+
+@FR-4.8 | Dispatch queue
+P: FR-4
+S: The Tool Dispatcher (E-10) SHALL enforce the CP-10 per-principal and total concurrency limits using a bounded FIFO waiting queue and SHALL reject calls arriving at a full queue with Gateway error `-31005`.
+A: E-10; F-23
+V: Test | Submit 60 concurrent calls from one principal; confirm the concurrency, queue length and rejections.
+SRC: SEC Appendix A (tool concurrency)
+R: Bounded concurrency on a single PC.
+
+@FR-4.9 | Upstream execution timeout
+P: FR-4
+S: The Tool Dispatcher (E-10) SHALL cancel a backend call that has not responded within the CP-13 upstream execution limit.
+A: E-10; F-25; I-13
+V: Test | Call a fixture that never responds; confirm cancellation at the limit.
+SRC: SEC Appendix A
+R: Leaves time for filtering and release within the client deadline.
+
+@FR-4.10 | Response buffering
+P: FR-4
+S: The Tool Dispatcher (E-10) SHALL buffer each backend response completely, up to the CP-08 expanded-size and depth limits, before passing it to the Response Inspection Pipeline (E-11).
+A: E-10; F-24; I-13
+V: Test | Return responses at, and 1 byte above, the limit; confirm the first is processed and the second is rejected with -31003.
+SRC: SEC 5.11; SEC Appendix A
+R: Response filters need the complete representation.
+
+@FR-4.11 | Release disposition
+P: FR-4
+S: The Response Inspection Pipeline (E-11) SHALL assign each response exactly one disposition: `release`, `redact` or `withhold`.
+A: E-11; F-27; I-15
+V: Test | Run fixtures for each disposition; confirm that a withheld response produces -31003 and a redacted one carries redaction markers.
+SRC: ARCH §4 E-11
+R: A closed set of outcomes feeds audit and research.
+
+@FR-4.12 | Provenance metadata
+P: FR-4
+S: The Response Inspection Pipeline (E-11) SHALL add `_meta["local.smcpgw/provenance"]` to each released result, containing server ID, server revision, tool revision, decision ID, applied filter IDs and `untrusted: true`.
+A: E-11; F-28; X-01
+V: Test | Call a tool and inspect the released result's `_meta`.
+SRC: ARCH §4 E-11 F-28; SEC 5.13
+R: Downstream consumers can identify unverified content.
+
+@FR-4.13 | Launch capability
+P: FR-4
+S: The Enforcement Coordinator (E-12) SHALL issue for each authorized call a single-use launch capability bound to the correlation ID, decision ID and policy revision, and the Tool Dispatcher (E-10) SHALL refuse to dispatch without a valid unused capability.
+A: E-12; E-10; F-29; F-23; I-11
+V: Test | Attempt dispatch with no capability, a used capability and a capability from another call; confirm each is refused.
+SRC: ARCH §4 E-12; A2 §4.3
+R: Makes dispatch impossible without a recorded permit.
+
+@FR-4.14 | Emergency stop control
+P: FR-4
+S: The Enforcement Coordinator (E-12) SHALL enter the `stopped` state on an emergency-stop command and SHALL leave it only on an authenticated administrator resume command.
+A: E-12; F-31; I-06
+V: Test | Stop, attempt calls, then resume as a non-administrator and as an administrator; confirm the state transitions.
+SRC: ARCH §4 E-12; SEC 7.6
+R: The operator must be able to halt the Gateway.
+
+@FR-4.15 | Synchronous scoring integration
+P: FR-4
+S: When the Observation Policy selects synchronous scoring, the Request Inspection Pipeline (E-09) and the Response Inspection Pipeline (E-11) SHALL obtain the anomaly band from the Anomaly Scorer (E-31) before launch authorization and before release authorization respectively.
+A: E-09; E-11; E-31; F-21; F-27; F-88; F-89; I-31
+V: Test | Enable synchronous scoring; confirm that an abnormal fixture's obligations apply before dispatch and before release.
+SRC: ARCH §9.5 (Scoring mode); ARCH §18.3
+R: Anomaly obligations must act at the control points.
+
+### FR-5 Server trust, runtime and southbound MCP client
+
+@FR-5 | Server trust and execution
+P: —
+S: The Gateway SHALL import verified server packages from the Trusted MCP Server Library and SHALL run them as contained local MCP servers reached through a Gateway MCP client.
+A: E-10; E-13; E-14; E-15; E-16; E-17; E-18
+V: Analysis | Review the verification results of every FR-5 child requirement; confirm each has passed.
+SRC: ARCH §2.1 item 1; ARCH §4 SS-5
+R: Hosting curated, signed servers locally is the core vision.
+
+@FR-5.1 | Library sources
+P: FR-5
+S: The Library Trust Verifier (E-13) SHALL retrieve packages from a configured local directory library or a configured local OCI registry library.
+A: E-13; F-33; X-03
+V: Test | Import one package from each library type; confirm both succeed.
+SRC: ARCH §6.1 X-03; ARCH §19 OD-7
+R: The library location is a deployment choice.
+
+@FR-5.2 | Package contents
+P: FR-5
+S: The Library Trust Verifier (E-13) SHALL require each package to contain an artifact, a detached signature or signature bundle, a manifest conforming to the X-03 manifest schema, and the signer certificate chain or key identifier.
+A: E-13; F-33; F-34; X-03
+V: Test | Import packages each missing one component; confirm each is rejected with a reason naming the missing component.
+SRC: ARCH §6.3
+R: Verification needs all four components.
+
+@FR-5.3 | Library polling
+P: FR-5
+S: The Library Trust Verifier (E-13) SHALL scan the library for new packages and revocation entries at a configurable interval with a default of 300 seconds, and on operator command.
+A: E-13; F-33; F-35; X-03
+V: Test | Add a package and a revocation entry; confirm both are processed within the interval and immediately on command.
+SRC: ARCH §4 E-13
+R: Timely import and revocation.
+
+@FR-5.4 | Import receipt
+P: FR-5
+S: The Library Trust Verifier (E-13) SHALL write an import receipt containing package identity, artifact digests, signer identity, verification results and import time for every import attempt.
+A: E-13; F-33; I-21; D-02
+V: Inspection | Import a valid and an invalid package; inspect both receipts.
+SRC: ARCH §4 E-13
+R: Imports are auditable.
+
+@FR-5.5 | Manifest registration
+P: FR-5
+S: The Local Server Registry (E-14) SHALL register each verified manifest's tools, schemas, capability ceiling, secret slots, behavior hints, instance scopes and curation attestations as an immutable server revision.
+A: E-14; F-36; I-21; D-02
+V: Inspection | Register a fixture manifest; inspect the stored revision for every manifest field group.
+SRC: ARCH §6.3; ARCH §4 E-14
+R: The registry is the source of the capability ceiling and the catalog.
+
+@FR-5.6 | Server alias
+P: FR-5
+S: The Local Server Registry (E-14) SHALL assign each server a unique alias of 1 to 32 characters drawn from `a-z 0-9 _ -`, defaulting to the manifest server ID and editable by an administrator.
+A: E-14; F-36; I-06
+V: Test | Register two servers whose default aliases collide; confirm enablement of the second is blocked until a unique alias is set.
+SRC: FR-1.26; MCP:server/tools §Tool Names
+R: Aliases form public tool names.
+
+@FR-5.7 | Enablement state
+P: FR-5
+S: The Local Server Registry (E-14) SHALL keep each server revision in one of the states `verified-disabled`, `enabled`, `suspended`, `revoked` or `retired`.
+A: E-14; F-36; D-02
+V: Test | Drive a revision through each transition from G-10; confirm the state and that only `enabled` revisions appear in catalogs.
+SRC: ARCH §4 E-14; SEC 8.1
+R: Verified does not mean enabled.
+
+@FR-5.8 | Expiry suspension
+P: FR-5
+S: The Local Server Registry (E-14) SHALL suspend a server revision when its manifest re-curation date or signature expiry passes.
+A: E-14; F-37; D-02
+V: Test | Import a package expiring in 2 minutes; confirm suspension after expiry.
+SRC: ARCH §4 E-14; SEC Appendix A (re-review)
+R: Curation evidence has a bounded validity.
+
+@FR-5.9 | Launch specification
+P: FR-5
+S: The Server Runtime Manager (E-15) SHALL launch each server instance from a launch specification containing the artifact digest, argument vector, environment allowlist, mounts, network attachment, resource limits and sandbox profile derived from the manifest and the Runtime Profile.
+A: E-15; F-38; I-22; I-23
+V: Inspection | Inspect a generated launch specification against its manifest and Runtime Profile.
+SRC: ARCH §4 E-15
+R: Instances are reproducible from declared inputs.
+
+@FR-5.10 | Instance scope
+P: FR-5
+S: The Server Runtime Manager (E-15) SHALL create instances per call, per session or shared, as selected by the Runtime Profile from the scopes the manifest allows, defaulting to per session.
+A: E-15; F-38; I-12
+V: Test | Configure each scope; confirm instance counts after calls from two sessions.
+SRC: ARCH §4 E-15; ARCH §19 OD-3
+R: Isolation versus cold-start cost is a policy choice.
+
+@FR-5.11 | Instance reuse and idle teardown
+P: FR-5
+S: The Server Runtime Manager (E-15) SHALL reuse a live instance of the matching scope and SHALL tear down an instance idle for the CP-38 interval.
+A: E-15; F-39; F-40
+V: Test | Make two calls in one session and then wait past CP-38; confirm one instance is reused and then torn down.
+SRC: ARCH §4 E-15
+R: Bounds resource use on a single PC.
+
+@FR-5.12 | Crash handling
+P: FR-5
+S: When an instance exits unexpectedly, the Server Runtime Manager (E-15) SHALL mark its in-flight calls indeterminate or failed, restart it on next use, and suspend the server revision after 3 unexpected exits within 5 minutes.
+A: E-15; F-39; I-19
+V: Test | Make a fixture crash four times in 5 minutes; confirm the call outcomes, the restarts and the suspension.
+SRC: MCP:basic/transports/stdio §Unexpected Termination; SEC 7.2
+R: Restart is expected, but a crash loop is a fault.
+
+@FR-5.13 | stdio framing
+P: FR-5
+S: The Tool Dispatcher (E-10) SHALL exchange stdio-transport messages with instances as single-line UTF-8 JSON-RPC messages delimited by newline.
+A: E-10; F-23; F-24; I-13
+V: Test | Run the southbound stdio conformance fixtures; confirm framing in both directions.
+SRC: MCP:basic/transports/stdio
+R: stdio binding framing.
+
+@FR-5.14 | Invalid stdout
+P: FR-5
+S: When an instance writes a stdout line that is not a valid JSON-RPC message, the Tool Dispatcher (E-10) SHALL fail the affected in-flight calls and request instance termination.
+A: E-10; E-15; F-24; F-40; I-13
+V: Test | Make a fixture print a non-JSON line; confirm the call fails with -31007 and the instance is terminated.
+SRC: MCP:basic/transports/stdio
+R: Servers must write only valid MCP messages to stdout.
+
+@FR-5.15 | stderr capture
+P: FR-5
+S: The Server Runtime Manager (E-15) SHALL capture instance stderr into a diagnostic buffer bounded by CP-37 and SHALL exclude stderr content from harness-bound traffic.
+A: E-15; F-39; I-29
+V: Test | Make a fixture write 10 MiB to stderr; confirm the bound and that nothing reaches the harness.
+SRC: MCP:basic/transports/stdio
+R: stderr is diagnostic, untrusted and potentially large.
+
+@FR-5.16 | Era probe
+P: FR-5
+S: When an instance starts, the Tool Dispatcher (E-10) SHALL send `server/discover` with protocol version 2026-07-28 and classify the server as modern on a `DiscoverResult` or recognized modern error, and as legacy on any other error or no response within 5 seconds.
+A: E-10; F-23; I-13
+V: Test | Start modern and legacy fixture servers; confirm each classification.
+SRC: MCP:basic/transports/stdio §Backward Compatibility
+R: Curated servers may implement either era.
+
+@FR-5.17 | Era consistency with manifest
+P: FR-5
+S: When the probed era differs from the protocol era declared in the manifest, the Tool Dispatcher (E-10) SHALL refuse to use the instance and the Local Server Registry (E-14) SHALL suspend the server revision.
+A: E-10; E-14; F-23; F-37
+V: Test | Launch a legacy fixture whose manifest declares modern; confirm refusal and suspension.
+SRC: SEC 3.8; ARCH §6.3
+R: The runtime must match the curated declaration.
+
+@FR-5.18 | Modern southbound requests
+P: FR-5
+S: The Tool Dispatcher (E-10) SHALL send each modern southbound request with `_meta.io.modelcontextprotocol/protocolVersion`, an empty `clientCapabilities` object in the baseline profile, Gateway `clientInfo`, and a request ID unique among its in-flight requests to that instance.
+A: E-10; F-23; I-13
+V: Test | Capture southbound requests; confirm the metadata and ID uniqueness.
+SRC: MCP:basic/index §Per-request protocol fields
+R: Modern server requirement.
+
+@FR-5.19 | Legacy southbound handshake
+P: FR-5
+S: For a legacy instance, the Tool Dispatcher (E-10) SHALL send `initialize` with protocol version 2025-11-25, empty capabilities and Gateway `clientInfo`, followed by `notifications/initialized`, before any other request.
+A: E-10; F-23; I-13
+V: Test | Connect to a legacy fixture; confirm the handshake sequence and the negotiated version.
+SRC: CP-05; MCP:basic/versioning §Backward Compatibility
+R: Dual-era client behavior.
+
+@FR-5.20 | Legacy server-initiated requests
+P: FR-5
+S: When a legacy instance sends `ping`, the Tool Dispatcher (E-10) SHALL reply with an empty result, and when it sends any other request, the Tool Dispatcher SHALL reply with JSON-RPC error `-32601`.
+A: E-10; F-24; I-13
+V: Test | Make a legacy fixture send ping, sampling, elicitation and roots requests; confirm the replies.
+SRC: SEC 5.6; MCP:basic/patterns/mrtr
+R: The Gateway declares no client capabilities southbound.
+
+@FR-5.21 | Startup tool list
+P: FR-5
+S: After the era probe, the Tool Dispatcher (E-10) SHALL retrieve the instance's complete `tools/list` across all pages and pass it to the Local Server Registry (E-14) for comparison with the manifest.
+A: E-10; E-14; F-24; F-37; I-13
+V: Test | Start a fixture with 3 pages of tools; confirm all pages are retrieved and compared.
+SRC: SEC 3.8; MCP:server/utilities/pagination
+R: Detects tool drift before first use.
+
+@FR-5.22 | Backend tool definition validity
+P: FR-5
+S: The Local Server Registry (E-14) SHALL treat as drift a backend tool whose `inputSchema` is null or invalid, or whose `x-mcp-header` annotations violate MCP constraints.
+A: E-14; F-37
+V: Test | Serve fixtures with each defect; confirm drift handling.
+SRC: MCP:server/tools §Tool; MCP:basic/transports/streamable-http §Schema Extension
+R: The Gateway must not present invalid tool definitions.
+
+@FR-5.23 | Result type handling
+P: FR-5
+S: The Tool Dispatcher (E-10) SHALL treat a backend result without `resultType` as `"complete"` and a result with an unrecognized `resultType` as invalid.
+A: E-10; F-24; I-13
+V: Test | Return results with no, known and unknown `resultType`; confirm handling.
+SRC: MCP:basic/index §ResultType
+R: Backward compatibility and strictness.
+
+@FR-5.24 | InputRequiredResult without MRTR profile
+P: FR-5
+S: When the MRTR Relay Profile is disabled and a backend returns an `InputRequiredResult`, the Tool Dispatcher (E-10) SHALL return Gateway error `-31010` to the harness.
+A: E-10; E-02; F-24; F-22; I-13
+V: Test | Make a fixture return `input_required`; confirm -31010 and an audit event.
+SRC: SEC 5.6; MCP:basic/patterns/mrtr
+R: Sampling, elicitation and roots are not qualified.
+
+@FR-5.25 | MRTR Relay Profile
+P: FR-5
+S: When the MRTR Relay Profile is enabled, the Tool Dispatcher (E-10) SHALL relay a backend `InputRequiredResult` northbound with the backend `requestState` wrapped in a Gateway `requestState` that is integrity-protected and bound to session, correlation ID, backend tool revision and the CP-39 expiry.
+A: E-10; E-02; F-24; F-22; I-13; X-01
+V: Test | Enable the profile; complete an elicitation round trip; confirm that tampered, expired and cross-session states are rejected.
+SRC: MCP:basic/patterns/mrtr §Server Requirements; SEC 5.6
+R: Lets elicitation be qualified later without trusting harness-carried state.
+
+@FR-5.26 | Southbound cancellation
+P: FR-5
+S: The Tool Dispatcher (E-10) SHALL cancel a southbound call by sending `notifications/cancelled` with the request ID on stdio instances and by closing the response stream on Streamable HTTP instances.
+A: E-10; F-25; I-13
+V: Test | Cancel calls on both transports; confirm the transport-specific signal.
+SRC: MCP:basic/patterns/cancellation
+R: Transport-specific cancellation rules.
+
+@FR-5.27 | Instance shutdown
+P: FR-5
+S: The Server Runtime Manager (E-15) SHALL stop an stdio instance by closing its stdin, waiting 5 seconds, sending SIGTERM, waiting 5 seconds and sending SIGKILL.
+A: E-15; F-40; I-23
+V: Test | Stop a fixture that ignores EOF and SIGTERM; confirm the escalation timing.
+SRC: MCP:basic/transports/stdio §Shutdown
+R: Graceful but bounded shutdown.
+
+@FR-5.28 | Southbound Streamable HTTP client
+P: FR-5
+S: For an instance using Streamable HTTP, the Tool Dispatcher (E-10) SHALL send each request as a POST carrying `Accept: application/json, text/event-stream`, `MCP-Protocol-Version`, `Mcp-Method` and, where applicable, `Mcp-Name`, and SHALL accept both JSON and SSE responses.
+A: E-10; F-23; F-24; I-13
+V: Test | Run the southbound HTTP conformance fixtures; confirm the headers and both response types.
+SRC: MCP:basic/transports/streamable-http §Sending Messages; §Standard Request Headers
+R: Some curated servers use the HTTP binding inside their sandbox.
+
+@FR-5.29 | Southbound header encoding
+P: FR-5
+S: The Tool Dispatcher (E-10) SHALL mirror `x-mcp-header` parameters into `Mcp-Param-{name}` headers and SHALL apply the `=?base64?…?=` encoding rules to `Mcp-Name` and `Mcp-Param-*` values.
+A: E-10; F-23; I-13
+V: Test | Call fixture tools with non-ASCII, padded and sentinel-like values; confirm the encodings.
+SRC: MCP:basic/transports/streamable-http §Value Encoding
+R: Clients must support `x-mcp-header`.
+
+@FR-5.30 | Southbound SSE comments
+P: FR-5
+S: The Tool Dispatcher (E-10) SHALL ignore SSE comment lines received from Streamable HTTP instances.
+A: E-10; F-24; I-13
+V: Test | Inject comment lines into a fixture stream; confirm no error.
+SRC: MCP:basic/transports/streamable-http §Receiving Messages
+R: Keep-alive comments are valid.
+
+@FR-5.31 | Southbound list-change watch
+P: FR-5
+S: For a shared or session-scoped modern instance whose server declares `tools.listChanged`, the Tool Dispatcher (E-10) SHALL hold a `subscriptions/listen` stream with `toolsListChanged: true` and SHALL trigger a tool-list comparison on each change notification.
+A: E-10; E-14; F-24; F-37; I-13
+V: Test | Make a fixture add a tool at runtime; confirm the comparison and the resulting suspension.
+SRC: MCP:basic/patterns/subscriptions; SEC 3.8
+R: Detects runtime tool drift.
+
+@FR-5.32 | Southbound progress token
+P: FR-5
+S: When a northbound call requests progress, the Tool Dispatcher (E-10) SHALL send a Gateway-generated progress token southbound that is unique among active southbound requests.
+A: E-10; F-23; I-13
+V: Test | Make concurrent progress-enabled calls; confirm unique southbound tokens.
+SRC: MCP:basic/patterns/progress
+R: Tokens must be unique, and northbound tokens are not forwarded.
+
+@FR-5.33 | Runtime observables
+P: FR-5
+S: The Runtime Monitor (E-17) SHALL collect, per instance, process creations, file opens outside declared mounts, network connection attempts, memory peak, CPU time and OOM or limit events.
+A: E-17; F-42; I-24
+V: Test | Run a fixture performing each behavior; confirm each event is collected.
+SRC: ARCH §4 E-17; ARCH §10.3 P-100–P-108
+R: Run-time controls and characterization need these observables.
+
+@FR-5.34 | Declared-behavior rules
+P: FR-5
+S: The Runtime Monitor (E-17) SHALL evaluate each runtime event against the manifest's declared behavior rules and SHALL emit a deviation event for each violation.
+A: E-17; F-43; I-18
+V: Test | Make a fixture spawn an undeclared process; confirm a deviation event.
+SRC: ARCH §4 E-17
+R: Rule-based run-time detection.
+
+@FR-5.35 | Containment actions
+P: FR-5
+S: When a deviation event matches a containment rule, the Runtime Monitor (E-17) SHALL perform the rule's action (`alert`, `kill-instance`, `suspend-revision` or `suspend-session`) within 1 second.
+A: E-17; F-44; I-19
+V: Test | Trigger each action; confirm effect and latency.
+SRC: ARCH §4 E-17
+R: Bounded response to run-time misbehavior.
+
+@FR-5.36 | Egress endpoints
+P: FR-5
+S: The Egress Broker (E-18) SHALL expose, per instance, one local plain-HTTP endpoint for each egress destination granted to that instance and SHALL originate the TLS connection to the bound HTTPS destination.
+A: E-18; F-45; I-25; X-06
+V: Test | Grant two destinations; confirm two endpoints exist and that requests reach the destinations over validated TLS.
+SRC: ARCH §4 E-18; ARCH §8.2 S1
+R: TLS origination at the broker enables credential injection and inspection.
+
+@FR-5.37 | Egress configuration injection
+P: FR-5
+S: The Server Runtime Manager (E-15) SHALL provide each instance with the base URLs of its egress endpoints through the environment variables named in the manifest.
+A: E-15; E-18; F-38; I-22
+V: Inspection | Inspect a launched instance's environment; confirm the endpoint variables and the absence of any secret value.
+SRC: ARCH §4 E-18
+R: Servers find their egress paths without holding credentials.
+
+@FR-5.38 | Egress limits
+P: FR-5
+S: The Egress Broker (E-18) SHALL bound each outbound operation's request size, response size and duration by the smallest of the manifest, Runtime Profile and decision obligations.
+A: E-18; F-45; X-06
+V: Test | Exceed each bound with a fixture; confirm termination and an event.
+SRC: SEC Appendix F (resource limits)
+R: Bounded egress resource use.
+
+@FR-5.39 | Artifact cache
+P: FR-5
+S: The Local Server Registry (E-14) SHALL store each verified artifact in a content-addressed cache keyed by its SHA-256 digest and SHALL retain it while any non-retired revision references it.
+A: E-14; F-36; I-21; D-03
+V: Test | Import two revisions sharing an artifact, retire one, then the other; confirm single storage and removal only after both retire.
+SRC: ARCH §13 D-03
+R: Launches use local verified artifacts without re-fetching.
+

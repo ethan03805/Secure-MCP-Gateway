@@ -1,0 +1,535 @@
+## 4. Functional requirements (FR)
+
+TEXT: Functional requirements make the Gateway work. Each is allocated to the element that implements it, the function it realizes and the interface it uses. Security controls that realize a **MUST** in `MCP_Gateway_Security_SRS.md` are in Section 5, not here, even when they act on the same element.
+
+### FR-1 Harness Edge and northbound MCP server
+
+@FR-1 | Northbound MCP server
+P: —
+S: The Gateway SHALL provide an MCP 2026-07-28 server interface to authenticated harness adapters through the Harness Edge subsystem (SS-1).
+A: E-01; E-02; F-01; F-02; F-03; F-22; X-01
+V: Analysis | Review the verification results of every FR-1 child requirement; confirm each has passed.
+SRC: ARCH §2.1 item 2; ARCH §4 SS-1; MCP:basic/index
+R: Harness adapters reach the Gateway only through this interface, so it must be a conforming MCP server.
+
+@FR-1.1 | Harness listeners
+P: FR-1
+S: The Harness Interface Endpoint (E-01) SHALL accept harness connections only on the TLS TCP listener and the optional Unix-domain-socket listener configured by CP-02.
+A: E-01; F-01; X-01; I-01
+V: Test | Enumerate listening sockets owned by the Gateway service identity; confirm only the CP-02 harness listeners and the CP-03 admin listener exist.
+SRC: ARCH §4 E-01; MCP:basic/transports/streamable-http §Security
+R: A fixed listener set is a precondition for transport and Origin controls.
+
+@FR-1.2 | Single MCP endpoint
+P: FR-1
+S: The Harness Interface Endpoint (E-01) SHALL serve MCP traffic at the single endpoint path defined by CP-01 using HTTP POST.
+A: E-01; F-01; X-01
+V: Test | POST a valid `server/discover` request to the CP-01 path and to another path; confirm a result from CP-01 and `404 Not Found` elsewhere.
+SRC: MCP:basic/transports/streamable-http (single MCP endpoint)
+R: The specification requires one MCP endpoint that supports POST.
+
+@FR-1.3 | GET and DELETE rejection
+P: FR-1
+S: When the Harness Interface Endpoint (E-01) receives an HTTP GET or DELETE on the MCP endpoint, the Harness Interface Endpoint SHALL respond with `405 Method Not Allowed`.
+A: E-01; F-01; X-01
+V: Test | Send GET and DELETE requests to the CP-01 path; confirm each returns 405 with no SSE stream opened.
+SRC: MCP:basic/transports/streamable-http §Earlier Streamable HTTP Revisions
+R: Revision 2026-07-28 removed the GET stream and session DELETE.
+
+@FR-1.4 | Single message per POST
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL reject a POST body that is not exactly one JSON-RPC 2.0 request or notification object with HTTP 400 and JSON-RPC error `-32600`.
+A: E-02; F-02; X-01; I-01
+V: Test | Send a JSON array batch, a JSON-RPC response object and a scalar; confirm each is rejected with 400 and code -32600.
+SRC: MCP:basic/transports/streamable-http §Sending Messages; MCP:basic/index §Messages
+R: MCP Streamable HTTP carries one request or notification per POST and clients do not send responses.
+
+@FR-1.5 | Notification acceptance
+P: FR-1
+S: When a POST body is a well-formed JSON-RPC notification, the Protocol Mediator (E-02) SHALL return HTTP `202 Accepted` with an empty body and discard the notification.
+A: E-02; F-02; X-01
+V: Test | POST `notifications/cancelled` and an unknown notification; confirm 202 with empty body and no state change.
+SRC: MCP:basic/transports/streamable-http §Sending Messages item 5
+R: The 2026-07-28 core protocol defines no client-to-server notification over Streamable HTTP.
+
+@FR-1.6 | Response content type selection
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL respond to a request with `Content-Type: text/event-stream` when the method is `subscriptions/listen` or the request carries a `progressToken`, and with `Content-Type: application/json` otherwise.
+A: E-02; F-22; X-01
+V: Test | Send `tools/call` with and without `progressToken` and a `subscriptions/listen`; confirm the content type for each.
+SRC: MCP:basic/transports/streamable-http §Sending Messages item 6
+R: Gives harness adapters a predictable response shape.
+
+@FR-1.7 | SSE stream conduct
+P: FR-1
+S: When the Protocol Mediator (E-02) returns an SSE response stream, the Protocol Mediator SHALL set `X-Accel-Buffering: no`, emit only notifications related to the originating request, and close the stream after the final JSON-RPC response.
+A: E-02; F-22; X-01
+V: Test | Capture an SSE `tools/call` exchange with progress; confirm the header, that every event relates to the request, and that the stream closes after the response.
+SRC: MCP:basic/transports/streamable-http §Receiving Messages
+R: Required SSE behavior for request-scoped streams.
+
+@FR-1.8 | Required request metadata
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL reject a request lacking `_meta.io.modelcontextprotocol/protocolVersion` or `_meta.io.modelcontextprotocol/clientCapabilities` with HTTP 400 and JSON-RPC error `-32602`.
+A: E-02; F-02; X-01
+V: Test | Send requests omitting each required `_meta` field; confirm 400 with code -32602.
+SRC: MCP:basic/index §Per-request protocol fields
+R: Every 2026-07-28 request is self-describing; missing fields make it malformed.
+
+@FR-1.9 | Unsupported protocol version
+P: FR-1
+S: When a request names a protocol version absent from CP-04, the Protocol Mediator (E-02) SHALL respond with HTTP 400 and an `UnsupportedProtocolVersionError` (`-32022`) whose `data.supported` lists the CP-04 versions and whose `data.requested` echoes the requested version.
+A: E-02; F-03; X-01
+V: Test | Send a request with version `1900-01-01`; confirm status, code and data fields.
+SRC: MCP:basic/versioning §Protocol Version Negotiation; SCHEMA:UnsupportedProtocolVersionError
+R: Clients rely on the supported list to retry with a mutual version.
+
+@FR-1.10 | Unknown method
+P: FR-1
+S: When a request names a method that the Gateway does not implement or has not enabled, the Protocol Mediator (E-02) SHALL respond with HTTP `404 Not Found` and JSON-RPC error `-32601`.
+A: E-02; F-02; X-01
+V: Test | Send `prompts/list`, `resources/read` and `foo/bar` with the baseline profile; confirm 404 with code -32601 for each.
+SRC: MCP:basic/transports/streamable-http §Protocol Version Header
+R: Distinguishes modern unknown-method responses from legacy 404s.
+
+@FR-1.11 | Baseline northbound method set
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL implement the northbound methods `server/discover`, `tools/list`, `tools/call` and `subscriptions/listen` in the baseline profile.
+A: E-02; F-02; X-01; I-03
+V: Test | Exercise each method against a session with one granted tool; confirm a conforming result for each.
+SRC: MCP:server/discover; MCP:server/tools; MCP:basic/patterns/subscriptions; ARCH §6.1 X-01
+R: These methods are the minimum for tool discovery, invocation and change notification.
+
+@FR-1.12 | server/discover result
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL answer `server/discover` with a `DiscoverResult` containing `supportedVersions` equal to CP-04, `capabilities` limited to `tools` with `listChanged: true`, and `_meta.io.modelcontextprotocol/serverInfo` naming the Gateway and its release version.
+A: E-02; F-03; X-01
+V: Test | Call `server/discover`; validate the result against `DiscoverResult` in schema.json and confirm the listed values.
+SRC: MCP:server/discover; SCHEMA:DiscoverResult
+R: Servers must implement discovery and advertise only implemented features.
+
+@FR-1.13 | Cacheable result hints
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL include `ttlMs` from CP-19 and `cacheScope: "private"` in every `server/discover` and `tools/list` result with `resultType: "complete"`.
+A: E-02; F-22; X-01
+V: Test | Call both methods; confirm `ttlMs` equals CP-19 and `cacheScope` is `private`.
+SRC: MCP:server/utilities/caching §Cacheable Results; SCHEMA:CacheableResult
+R: Results are per session, so they must not be shared by intermediaries.
+
+@FR-1.14 | resultType on results
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL set `resultType` to `"complete"` in every result the Gateway originates.
+A: E-02; F-22; X-01
+V: Test | Collect results from all baseline methods; confirm each carries `resultType: "complete"`.
+SRC: MCP:basic/index §ResultType
+R: `resultType` is mandatory on 2026-07-28 results.
+
+@FR-1.15 | Result serverInfo
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL include `_meta.io.modelcontextprotocol/serverInfo` identifying the Gateway in every result the Gateway returns.
+A: E-02; F-22; X-01
+V: Inspection | Inspect results from each baseline method; confirm the field is present and names the Gateway.
+SRC: MCP:basic/index §Per-response protocol fields
+R: Lets harness adapters identify the Gateway without connection state.
+
+@FR-1.16 | Legacy session headers ignored
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL ignore `Mcp-Session-Id` and `Last-Event-ID` request headers and SHALL omit both headers from responses.
+A: E-02; F-02; X-01
+V: Test | Send requests carrying both headers; confirm processing is unchanged and responses contain neither header.
+SRC: MCP:basic/transports/streamable-http §Earlier Streamable HTTP Revisions
+R: Sessions and resumable streams were removed in 2026-07-28.
+
+@FR-1.17 | initialize without legacy profile
+P: FR-1
+S: When the Legacy Northbound Profile is disabled and a request names method `initialize`, the Protocol Mediator (E-02) SHALL return a JSON-RPC error whose message lists the CP-04 protocol versions.
+A: E-02; F-03; X-01
+V: Test | Send a 2025-11-25 `initialize`; confirm the error message names `2026-07-28`.
+SRC: MCP:basic/versioning §Backward Compatibility
+R: Legacy clients have no fall-forward path; the error is their only diagnostic.
+
+@FR-1.18 | JSON-RPC response conformance
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL echo the request `id` in every response and SHALL use integer error codes.
+A: E-02; F-22; X-01
+V: Test | Fuzz requests with string and integer IDs; confirm every response echoes the ID and every error code is an integer.
+SRC: MCP:basic/index §Responses
+R: JSON-RPC correlation correctness.
+
+@FR-1.19 | Reserved error codes
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL emit codes in the range `-32020` to `-32099` only with the meanings defined in the MCP 2026-07-28 schema, and SHALL use codes from Appendix B for Gateway-specific errors.
+A: E-02; F-22; X-01
+V: Inspection | Inspect the error-code table in source and the conformance-test log; confirm no undefined reserved codes, `-32002` or `-32042` are emitted.
+SRC: MCP:basic/index §Error Codes; Appendix B
+R: The specification reserves this sub-range and forbids undefined use.
+
+@FR-1.20 | Gateway error data
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL include `data.reasonCode`, `data.correlationId` and, when a decision exists, `data.decisionId` in every Gateway-specific error from Appendix B.
+A: E-02; F-22; X-01
+V: Test | Trigger each Appendix B error; confirm the data members are present.
+SRC: ARCH §4 E-02; ARCH §11 F-16
+R: Operators and researchers trace a harness-visible error to its audit record.
+
+@FR-1.21 | Duplicate in-flight request ID
+P: FR-1
+S: When a session sends a request whose `id` equals the `id` of another in-flight request of that session, the Protocol Mediator (E-02) SHALL reject the new request with JSON-RPC error `-32600`.
+A: E-02; F-02; X-01
+V: Test | Issue two concurrent `tools/call` requests with the same ID in one session; confirm the second is rejected and the first completes.
+SRC: MCP:basic/index §Requests
+R: Request IDs must not collide while in flight.
+
+@FR-1.22 | UTF-8 and JSON parsing
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL reject a body that is not valid UTF-8 JSON with HTTP 400 and JSON-RPC error `-32700`.
+A: E-02; F-02; X-01
+V: Test | Send invalid UTF-8 and truncated JSON; confirm 400 with code -32700.
+SRC: MCP:basic/transports/index §Messages
+R: JSON-RPC messages must be UTF-8.
+
+@FR-1.23 | tools/list pagination
+P: FR-1
+S: The Access Enforcement Point (E-08) SHALL return `tools/list` results in pages of at most CP-19 tools with an opaque `nextCursor` when further tools remain.
+A: E-08; F-19; X-01; I-03
+V: Test | Grant 250 tools to a session; page through `tools/list`; confirm page sizes, `nextCursor` behavior and a complete, duplicate-free union.
+SRC: MCP:server/utilities/pagination
+R: Large catalogs need bounded responses.
+
+@FR-1.24 | Invalid cursor
+P: FR-1
+S: When `tools/list` receives a cursor that the Gateway did not issue for the current session and policy revision, the Access Enforcement Point (E-08) SHALL return JSON-RPC error `-32602`.
+A: E-08; F-19; X-01
+V: Test | Send a random cursor, a cursor from another session and a cursor from a superseded revision; confirm -32602 for each.
+SRC: MCP:server/utilities/pagination §Error Handling
+R: Invalid cursors yield Invalid Params.
+
+@FR-1.25 | Deterministic tool order
+P: FR-1
+S: The Access Enforcement Point (E-08) SHALL order `tools/list` entries by ascending public tool name so that repeated listings of an unchanged catalog are identical.
+A: E-08; F-19; X-01
+V: Test | List the same catalog ten times; confirm identical ordered output.
+SRC: MCP:server/tools §Capabilities
+R: Deterministic ordering supports client caching and prompt-cache stability.
+
+@FR-1.26 | Public tool names
+P: FR-1
+S: The Access Enforcement Point (E-08) SHALL present each tool under the public name `<serverAlias>.<toolName>` using only the characters `A-Z a-z 0-9 _ - .` and at most 128 characters.
+A: E-08; E-14; F-19; X-01
+V: Test | Register two servers exposing a `search` tool; confirm distinct conforming public names and successful calls to each.
+SRC: MCP:server/tools §Tool Names; ARCH §4 E-14
+R: The Gateway aggregates many servers and must disambiguate collisions.
+
+@FR-1.27 | Tool definition source
+P: FR-1
+S: The Access Enforcement Point (E-08) SHALL build each presented tool definition (`title`, `description`, `inputSchema`, `outputSchema`, `annotations`) from the verified manifest of the enabled server revision.
+A: E-08; E-14; F-19; X-01; I-07
+V: Test | Change a backend's live tool description without changing the manifest; confirm the presented description still matches the manifest.
+SRC: ARCH §6.3; SEC 3.7
+R: Presented definitions must be the curated, signed definitions.
+
+@FR-1.28 | x-mcp-header removal
+P: FR-1
+S: The Access Enforcement Point (E-08) SHALL remove `x-mcp-header` annotations from presented `inputSchema` documents, and the Protocol Mediator (E-02) SHALL ignore `Mcp-Param-*` request headers.
+A: E-08; E-02; F-19; F-02; X-01
+V: Test | Present a manifest tool with an `x-mcp-header` property; confirm it is absent from `tools/list` and that a supplied `Mcp-Param-X` header has no effect.
+SRC: MCP:basic/transports/streamable-http §Custom Headers from Tool Parameters
+R: Header mirroring is unnecessary on the local northbound hop and exposes argument values to intermediaries.
+
+@FR-1.29 | tools/call routing
+P: FR-1
+S: The Access Enforcement Point (E-08) SHALL resolve the public tool name in `tools/call` to exactly one backend server revision and backend tool name before policy evaluation.
+A: E-08; F-20; I-08; X-01
+V: Test | Call a public tool; confirm the dispatched southbound request uses the backend tool name of the resolved revision.
+SRC: ARCH §11.3; ARCH §4 E-08
+R: Policy is evaluated against exact server and tool revisions.
+
+@FR-1.30 | Unknown public tool
+P: FR-1
+S: When `tools/call` names a public tool absent from the session catalog, the Access Enforcement Point (E-08) SHALL return JSON-RPC error `-32602` with message `Unknown tool`.
+A: E-08; F-20; X-01
+V: Test | Call a tool that exists in the registry but is not granted to the session; confirm -32602 and the same message as for a nonexistent tool.
+SRC: MCP:server/tools §Error Handling
+R: An ungranted tool must look the same as a nonexistent one.
+
+@FR-1.31 | Tool result relay
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL return each release-authorized `CallToolResult` with its `content`, `structuredContent` and `isError` members as transformed by the Response Inspection Pipeline (E-11).
+A: E-02; F-22; I-16; X-01
+V: Test | Call tools returning text, structured and error results; confirm the harness receives the post-filter members unchanged otherwise.
+SRC: MCP:server/tools §Tool Result
+R: Harness adapters require the standard result shape.
+
+@FR-1.32 | Backend protocol error mapping
+P: FR-1
+S: When a backend returns a JSON-RPC error for `tools/call`, the Protocol Mediator (E-02) SHALL return Gateway error `-31007` with the backend code in `data.backendCode` and without the backend error message text.
+A: E-02; E-10; F-22; F-24; X-01
+V: Test | Make a fixture backend return -32603 with a long message; confirm the harness receives -31007, the backend code and no backend text.
+SRC: ARCH §4 E-11; Appendix B
+R: Backend error text is untrusted content that has not been filtered.
+
+@FR-1.33 | subscriptions/listen support
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL accept `subscriptions/listen` and SHALL acknowledge only the `toolsListChanged` notification type.
+A: E-02; F-02; X-01
+V: Test | Request toolsListChanged, promptsListChanged and resourceSubscriptions; confirm the acknowledgment lists only `toolsListChanged`.
+SRC: MCP:basic/patterns/subscriptions §Acknowledgment
+R: Only tool-list changes are meaningful in the baseline profile.
+
+@FR-1.34 | Subscription acknowledgment ordering
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL send `notifications/subscriptions/acknowledged` as the first message of each listen stream, carrying `io.modelcontextprotocol/subscriptionId` equal to the listen request ID.
+A: E-02; F-22; X-01
+V: Test | Open a listen stream; confirm the first event is the acknowledgment with the correct subscription ID.
+SRC: MCP:basic/patterns/subscriptions §Acknowledgment
+R: Specification ordering rule.
+
+@FR-1.35 | Tool list change notification
+P: FR-1
+S: When a session's effective catalog changes, the Protocol Mediator (E-02) SHALL send `notifications/tools/list_changed` tagged with the subscription ID on each open listen stream of that session within 2 seconds.
+A: E-02; E-08; F-19; F-22; X-01
+V: Test | Publish a revision that removes a granted tool; confirm the notification arrives on the session's listen stream within 2 s.
+SRC: MCP:server/tools §List Changed Notification; ARCH §18.8
+R: Clients must refresh catalogs after policy or server changes.
+
+@FR-1.36 | Listen keep-alive
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL emit an SSE comment line on each idle listen stream at the CP-20 keep-alive interval.
+A: E-02; F-22; X-01
+V: Test | Hold an idle listen stream for 60 s; confirm comment lines at the CP-20 interval.
+SRC: MCP:basic/transports/streamable-http §Receiving Messages (keep-alive note)
+R: Prevents idle-timeout disconnection.
+
+@FR-1.37 | Graceful listen closure
+P: FR-1
+S: When the Gateway ends a listen stream because of session end or shutdown, the Protocol Mediator (E-02) SHALL send an empty `resultType: "complete"` response carrying the subscription ID before closing the stream.
+A: E-02; F-22; X-01
+V: Test | Terminate the session with an open listen stream; confirm the empty result precedes stream closure.
+SRC: MCP:basic/patterns/subscriptions §Graceful Closure
+R: Lets the client distinguish a graceful end from a dropped connection.
+
+@FR-1.38 | Listen stream limit
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL limit each session to the CP-20 maximum number of concurrent listen streams and reject excess requests with Gateway error `-31005`.
+A: E-02; F-02; X-01
+V: Test | Open CP-20 plus one streams; confirm the last is rejected with -31005.
+SRC: ARCH §4 E-01 (bounds)
+R: Bounds long-lived resource use.
+
+@FR-1.39 | Progress relay
+P: FR-1
+S: When a northbound `tools/call` carries a `progressToken`, the Tool Dispatcher (E-10) SHALL relay backend progress as `notifications/progress` using the northbound token with strictly increasing `progress` values.
+A: E-10; E-02; F-24; F-22; X-01; I-13
+V: Test | Call a fixture tool emitting progress; confirm the harness receives the northbound token and increasing values.
+SRC: MCP:basic/patterns/progress
+R: Long tool calls need progress, and tokens must not leak between hops.
+
+@FR-1.40 | Progress rate bound
+P: FR-1
+S: The Tool Dispatcher (E-10) SHALL forward no more than the CP-21 number of progress notifications per second per request and SHALL stop progress relay once the final response is released.
+A: E-10; F-24; X-01
+V: Test | Make a fixture emit 1,000 progress notifications per second; confirm the forwarded rate and that none follow the response.
+SRC: MCP:basic/patterns/progress §Implementation Notes
+R: Prevents notification flooding.
+
+@FR-1.41 | Northbound cancellation detection
+P: FR-1
+S: When the harness closes the SSE response stream of an in-flight request, the Harness Interface Endpoint (E-01) SHALL signal cancellation of that request to the Tool Dispatcher (E-10) within 1 second.
+A: E-01; E-10; F-01; F-25; X-01
+V: Test | Close the stream during a slow fixture call; confirm a southbound cancellation is issued within 1 s.
+SRC: MCP:basic/patterns/cancellation §Transport-Specific Cancellation
+R: Stream closure is the cancellation signal on Streamable HTTP.
+
+@FR-1.42 | No log notifications northbound
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL omit the `logging` capability and SHALL withhold `notifications/message` from harness-bound streams.
+A: E-02; F-22; X-01
+V: Test | Send requests with `io.modelcontextprotocol/logLevel` set to `debug` against a backend that logs; confirm no `notifications/message` reaches the harness.
+SRC: MCP:server/utilities/logging (Deprecated); MCP:deprecated
+R: Logging is deprecated, and backend log text is untrusted.
+
+@FR-1.43 | Client deadline
+P: FR-1
+S: When a northbound request has not completed within the CP-13 client deadline, the Tool Dispatcher (E-10) SHALL cancel the backend call and the Protocol Mediator (E-02) SHALL return Gateway error `-31008`.
+A: E-10; E-02; F-25; F-22; X-01
+V: Test | Call a fixture that sleeps beyond the deadline; confirm -31008 at the deadline and a southbound cancellation.
+SRC: MCP:basic/patterns/cancellation §Timeouts; SEC Appendix A
+R: Bounded request lifetime.
+
+@FR-1.44 | Trace context handling
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL record a valid W3C `traceparent` from request `_meta` as an observation attribute and SHALL exclude harness `traceparent`, `tracestate` and `baggage` values from southbound requests.
+A: E-02; E-29; F-02; F-80; X-01; I-29
+V: Test | Send a request with trace keys; confirm they appear in the observation record and are absent southbound.
+SRC: MCP:basic/index §OpenTelemetry trace context
+R: Supports research correlation without letting the agent inject context into backends.
+
+@FR-1.45 | Self-asserted clientInfo
+P: FR-1
+S: The Protocol Mediator (E-02) SHALL record `io.modelcontextprotocol/clientInfo` as a self-asserted observation attribute only.
+A: E-02; E-29; F-02; F-80; I-29
+V: Inspection | Inspect the decision inputs and the observation record for a request with forged clientInfo; confirm clientInfo appears only in the observation record.
+SRC: MCP:basic/index §Per-response protocol fields (note)
+R: clientInfo is unverified and must not affect behavior.
+
+@FR-1.46 | Legacy Northbound Profile
+P: FR-1
+S: When the Legacy Northbound Profile is enabled, the Protocol Mediator (E-02) SHALL serve 2025-11-25 clients through a separate legacy adapter that implements the `initialize` handshake and `Mcp-Session-Id` sessions of that revision.
+A: E-02; F-03; X-01
+V: Test | Enable the profile; run the 2025-11-25 conformance fixtures; confirm they pass and that modern requests are unaffected.
+SRC: SEC 5.1; MCP:basic/versioning §Backward Compatibility
+R: Existing harnesses may still speak 2025-11-25.
+
+@FR-1.47 | Unix-domain-socket harness transport
+P: FR-1
+S: When the UDS Harness Profile is enabled, the Harness Interface Endpoint (E-01) SHALL carry MCP over the CP-02 Unix-domain socket using newline-delimited JSON-RPC framing, `notifications/cancelled` cancellation and `subscriptionId` correlation as defined for the stdio binding.
+A: E-01; E-02; F-01; F-02; X-01
+V: Test | Run the northbound conformance suite over the socket; confirm framing, cancellation and subscription correlation.
+SRC: MCP:basic/transports/index §Custom Transports; MCP:basic/transports/stdio
+R: Same-host harnesses can avoid TCP while keeping standard framing.
+
+@FR-1.48 | Harness interface specification
+P: FR-1
+S: The Gateway release SHALL include an X-01 interface control document specifying the session API, required headers, error codes and conformance fixtures.
+A: E-01; E-02; E-04; X-01
+V: Inspection | Inspect the release; confirm the ICD exists and covers each listed topic.
+SRC: ARCH §6.1 X-01; ARCH §17 item 4
+R: Harness adapters are built outside the SoI and need a controlled contract.
+
+### FR-2 Identity and sessions
+
+@FR-2 | Identity and sessions
+P: —
+S: The Gateway SHALL authenticate each framework instance and bind its MCP traffic to a Gateway session governed by a selected Allow policy.
+A: E-03; E-04; F-04; F-05; F-06; F-07; F-08; F-09
+V: Analysis | Review the verification results of every FR-2 child requirement; confirm each has passed.
+SRC: ARCH §2.1 items 2–3; ARCH §4 SS-2
+R: Sessions carry the tailored Allow policy.
+
+@FR-2.1 | Principal registry
+P: FR-2
+S: The Identity & Authentication Service (E-03) SHALL maintain a principal record for each framework instance containing principal ID, framework type, display name, enabled state, Framework Profile ID and credential references.
+A: E-03; F-04; I-07; D-01
+V: Inspection | Create a principal through G-11; inspect the stored record for every listed field.
+SRC: ARCH §4 E-03; A2 §4.1
+R: Policy layers key on principal and framework type.
+
+@FR-2.2 | Session API
+P: FR-2
+S: The Session Manager (E-04) SHALL expose the session API operations `POST /smcp/v1/sessions` (create), `GET /smcp/v1/sessions/{id}` (status) and `DELETE /smcp/v1/sessions/{id}` (terminate) on the harness listener.
+A: E-04; F-06; F-08; F-09; X-01
+V: Test | Exercise create, status and terminate with a valid credential; confirm each returns its documented response.
+SRC: ARCH §18.2; ARCH §6.1 X-01
+R: MCP 2026-07-28 has no protocol sessions, so session establishment needs its own API.
+
+@FR-2.3 | Session create request
+P: FR-2
+S: The Session Manager (E-04) SHALL accept session create requests containing harness type, harness version, purpose tag and, optionally, project root, end-user claim and requested template ID.
+A: E-04; F-06; X-01
+V: Test | Submit create requests with and without each optional field; confirm acceptance and stored values.
+SRC: ARCH §7.1 layer 4; ARCH §18.2
+R: These claims select and narrow the Allow policy.
+
+@FR-2.4 | Session create response
+P: FR-2
+S: The Session Manager (E-04) SHALL return the session ID, session token, expiry time, Allow-policy template ID, policy revision ID and Observation Policy ID in each successful session create response.
+A: E-04; F-06; F-07; X-01
+V: Test | Create a session; confirm each field in the response.
+SRC: ARCH §4 E-04
+R: The harness needs the token and the policy context for diagnostics.
+
+@FR-2.5 | Session token presentation
+P: FR-2
+S: The Identity & Authentication Service (E-03) SHALL read the session token from the `Smcp-Session` HTTP header on the TLS listener and from `_meta["local.smcpgw/session"]` on the UDS listener.
+A: E-03; F-05; X-01; I-02
+V: Test | Send MCP requests with the token in each documented location; confirm acceptance, and rejection with -31006 when it is absent.
+SRC: Appendix A CP-23; ARCH §6.1 X-01
+R: Binds every MCP request to its session.
+
+@FR-2.6 | Template selection
+P: FR-2
+S: The Session Manager (E-04) SHALL select the requested Session Allow Policy template when the principal's Framework Profile permits it, select the profile's default template when none is requested, and reject the create request with Gateway error `-31001` otherwise.
+A: E-04; E-03; F-07; I-04; I-05
+V: Test | Request a permitted template, no template and a non-permitted template; confirm selection, default and rejection.
+SRC: ARCH §7.1; ARCH §18.2 step 2
+R: Implements Allow-policy layers 2 and 3.
+
+@FR-2.7 | Claim narrowing
+P: FR-2
+S: The Session Manager (E-04) SHALL apply the project-root, purpose and end-user claims as narrowing parameters of the selected template.
+A: E-04; F-07; I-05
+V: Test | Create a session with project root `/p/a` under a template allowing `/p`; confirm paths outside `/p/a` are denied.
+SRC: ARCH §7.1 layer 4
+R: Session context tailors the Allow policy.
+
+@FR-2.8 | Session state model
+P: FR-2
+S: The Session Manager (E-04) SHALL maintain each session in exactly one of the states `active`, `suspended`, `terminated` or `expired`, and SHALL accept MCP requests only for `active` sessions.
+A: E-04; F-08; D-07
+V: Test | Drive a session through each state; confirm only active sessions are served and others receive -31006 with the state as reason.
+SRC: ARCH §4 E-04
+R: A defined lifecycle is required for suspension and revocation.
+
+@FR-2.9 | Session lifetime
+P: FR-2
+S: The Session Manager (E-04) SHALL expire a session at the CP-18 maximum lifetime and after the CP-18 idle timeout.
+A: E-04; F-08
+V: Test | Configure short test values; confirm expiry at each limit.
+SRC: ARCH §4 E-04; Appendix A CP-18
+R: Bounds the exposure of a stolen session token.
+
+@FR-2.10 | Concurrent session limit
+P: FR-2
+S: The Session Manager (E-04) SHALL reject a session create request that would exceed the CP-18 concurrent-session limit for the principal with Gateway error `-31005`.
+A: E-04; F-06
+V: Test | Create sessions up to the limit plus one; confirm the last is rejected.
+SRC: ARCH §4 E-04
+R: Bounds per-principal resource use.
+
+@FR-2.11 | Session termination effects
+P: FR-2
+S: When a session terminates, expires or is revoked, the Session Manager (E-04) SHALL close its listen streams, cancel its in-flight calls, release its session-scoped server instances and request withdrawal of its secret grants.
+A: E-04; F-09; I-20
+V: Test | Terminate a session with an open stream, an in-flight call, a session-scoped instance and a grant; confirm each is released.
+SRC: ARCH §4 E-04; ARCH §18.7
+R: Prevents orphaned authority after session end.
+
+@FR-2.12 | Revision change handling
+P: FR-2
+S: When a new policy revision is activated, the Session Manager (E-04) SHALL rebind each active session to the new revision before that session's next request is evaluated.
+A: E-04; F-07; I-05
+V: Test | Activate a revision during an active session; confirm the next decision records the new revision ID.
+SRC: ARCH §4 E-04; SEC 1.17
+R: Sessions must not keep obsolete authority.
+
+@FR-2.13 | Baseline context key
+P: FR-2
+S: The Session Manager (E-04) SHALL compute and store the session's baseline context key from the context dimensions of its Observation Policy at session creation.
+A: E-04; F-07; I-05; D-07
+V: Test | Create sessions under policies with different context dimensions; confirm the stored keys.
+SRC: ARCH §9.3
+R: Scoring needs a stable context key per session.
+
+@FR-2.14 | Credential issuance
+P: FR-2
+S: The Key & Trust Anchor Manager (E-22) SHALL issue framework-instance client certificates by signing a submitted certificate signing request with the Gateway's local client CA.
+A: E-22; F-59; I-06
+V: Test | Submit a CSR through G-11; confirm the issued certificate chains to the client CA and names the principal ID.
+SRC: ARCH §4 E-22; ARCH §19 OD-2
+R: mTLS is the recommended framework credential.
+
+@FR-2.15 | UDS peer mapping
+P: FR-2
+S: When the UDS Harness Profile is enabled, the Identity & Authentication Service (E-03) SHALL require both a registered peer UID and the principal's bearer key on the socket before establishing a session.
+A: E-03; F-04; X-01
+V: Test | Connect with a registered UID and wrong key, and with an unregistered UID and right key; confirm both are rejected.
+SRC: ARCH §19 OD-2
+R: Same-host harnesses use kernel peer credentials plus a key.
+
+@FR-2.16 | Restart invalidation
+P: FR-2
+S: When the Gateway restarts, the Session Manager (E-04) SHALL mark every session existing before the restart as `terminated`.
+A: E-04; F-09; D-07
+V: Test | Restart the Gateway with active sessions; confirm the old tokens receive -31006.
+SRC: ARCH §13 D-07
+R: Session recovery has not been qualified.

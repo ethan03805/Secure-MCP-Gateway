@@ -1,0 +1,494 @@
+### FR-10 Observation, behavior characterization and research
+
+@FR-10 | Observation and analytics
+P: —
+S: The Gateway SHALL capture policy-selected observation parameters and meta-metrics, learn statistical baselines of normal behavior, classify activity by standard-deviation distance from those baselines, and export research datasets.
+A: E-29; E-30; E-31; E-32
+V: Analysis | Review the verification results of every FR-10 child requirement; confirm each has passed.
+SRC: ARCH §2.1 items 6–9; ARCH §9; ARCH §10
+R: The Gateway is a vehicle for developing run-time policy and trend-analysis techniques.
+
+@FR-10.1 | Observable emission
+P: FR-10
+S: Each instrumented element (E-01, E-02, E-04, E-06, E-08, E-09, E-10, E-11, E-12, E-15, E-17, E-18) SHALL emit its catalog-defined raw observables keyed by correlation ID to the Observation Collector (E-29) without blocking its processing path.
+A: E-29; F-80; I-29
+V: Test | Stall E-29 consumption; confirm that instrumented elements continue processing and that drops are counted.
+SRC: ARCH §4 E-29; ARCH §6.2 I-29
+R: Observation must not change enforcement timing.
+
+@FR-10.2 | Timing spans
+P: FR-10
+S: Each instrumented element SHALL emit a timing span per stage containing stage ID, monotonic start and end, CPU time, correlation ID and the ID of the policy object that caused the work.
+A: E-29; F-83; I-29; X-10
+V: Test | Trace a call; confirm a span for every FR-4.3 stage with each field.
+SRC: ARCH §10.4
+R: Enables per-policy time-cost attribution.
+
+@FR-10.3 | Record assembly
+P: FR-10
+S: The Observation Collector (E-29) SHALL assemble one observation record per call from the observables sharing its correlation ID, after the call's release or failure.
+A: E-29; F-80; F-81
+V: Test | Make 1,000 calls; confirm 1,000 records, each joined correctly.
+SRC: ARCH §4 E-29
+R: Per-call records are the analysis unit.
+
+@FR-10.4 | Parameter selection
+P: FR-10
+S: The Observation Collector (E-29) SHALL include in each record only the parameters named by the effective Observation Policy or Research Campaign plus the identifiers P-001, P-004, P-022, P-023, P-080 and P-087.
+A: E-29; F-82
+V: Test | Publish a policy selecting 5 parameters; confirm records contain exactly those plus the identifiers.
+SRC: ARCH §4 E-29; ARCH §10.3
+R: Capture follows policy.
+
+@FR-10.5 | Feature extraction
+P: FR-10
+S: The Observation Collector (E-29) SHALL compute each derived parameter according to its Parameter Catalog definition.
+A: E-29; F-81; D-11
+V: Test | Compare computed features for a fixture call set with reference values; confirm exact match for integer features and agreement within 1e-9 relative error for real-valued features.
+SRC: ARCH §10.3
+R: Feature correctness underlies the research.
+
+@FR-10.6 | Deterministic sampling
+P: FR-10
+S: The Observation Collector (E-29) SHALL select normal-band calls for capture by comparing a hash of the correlation ID with the policy sampling rate.
+A: E-29; F-82
+V: Test | Replay a fixed call set twice at 10%; confirm the same calls are selected and the fraction is 10% ± 1% over 10,000 calls.
+SRC: ARCH §9.5 (Sampling)
+R: Reproducible sampling.
+
+@FR-10.7 | Capture escalation
+P: FR-10
+S: When a call's anomaly band is `elevated` or worse, the Observation Collector (E-29) SHALL capture that call in full with the escalation parameters of its band.
+A: E-29; F-82; I-31
+V: Test | Trigger an abnormal fixture during 10% sampling; confirm full capture with escalation parameters.
+SRC: ARCH §9.5 (Capture escalation)
+R: Abnormal behavior is always recorded.
+
+@FR-10.8 | Drop accounting
+P: FR-10
+S: The Observation Collector (E-29) SHALL count every observable or record dropped or sampled down, by reason, and SHALL report the counts as parameter P-246.
+A: E-29; F-82; F-83
+V: Test | Induce backpressure; confirm the counts match the injected drop volume.
+SRC: ARCH §4 E-29
+R: Silent loss would bias research.
+
+@FR-10.9 | System meta-metrics
+P: FR-10
+S: The Observation Collector (E-29) SHALL sample the system meta-metrics P-240 to P-250 every 10 seconds.
+A: E-29; F-83; D-13
+V: Test | Run for 5 minutes; confirm 30 samples per metric.
+SRC: ARCH §10.3 (system meta-metrics)
+R: Throughput and resource trends.
+
+@FR-10.10 | Gateway-added overhead
+P: FR-10
+S: The Observation Collector (E-29) SHALL compute parameter P-213 for each call as end-to-end latency minus server execution time minus approval wait time.
+A: E-29; F-83
+V: Test | Compare P-213 with an independent harness-side measurement for fixture calls; confirm agreement within 1 ms.
+SRC: ARCH §10.3 P-213
+R: The owner's cost-in-time metric.
+
+@FR-10.11 | Policy cost attribution
+P: FR-10
+S: The Observation Collector (E-29) SHALL aggregate span time by policy revision, rule ID, filter ID and Observation Policy ID.
+A: E-29; F-83; D-13
+V: Test | Run fixture traffic with a deliberately slow filter; confirm that filter ranks first in aggregated cost.
+SRC: ARCH §10.4
+R: Identifies which policy elements cost the most time.
+
+@FR-10.12 | Context key computation
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL group observation records by the baseline context dimensions selected in the Observation Policy.
+A: E-30; F-84; I-34
+V: Test | Configure (principal, tool) contexts; confirm one context per observed pair.
+SRC: ARCH §9.3
+R: Baselines are per context.
+
+@FR-10.13 | Streaming statistics
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL maintain per context and feature the count, mean and M2 accumulator using Welford's online algorithm, with optional exponential decay at the policy half-life.
+A: E-30; F-84; D-10
+V: Test | Feed a 1,000,000-value fixture series; confirm mean and variance agree with two-pass computation within 1e-9 relative error.
+SRC: ARCH §9.2
+R: Numerically stable streaming mean and standard deviation.
+
+@FR-10.14 | Feature transforms
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL apply the per-feature transform selected in the Observation Policy, from `none`, `log1p` and `box-cox(λ)`, before updating statistics.
+A: E-30; F-84
+V: Test | Configure each transform; confirm the stored statistics are of transformed values.
+SRC: ARCH §9.2 (Skewed features)
+R: Sizes and latencies are right-skewed.
+
+@FR-10.15 | Robust statistics option
+P: FR-10
+S: When robust scoring is selected for a feature, the Behavior Baseline Engine (E-30) SHALL maintain a t-digest sketch from which median and MAD are derived.
+A: E-30; F-84; D-10
+V: Test | Compare sketch median and MAD with exact values over a fixture; confirm agreement within 1%.
+SRC: ARCH §9.2 (Robust option)
+R: Heavy-tailed features.
+
+@FR-10.16 | Categorical and sequence features
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL maintain category and tool-transition frequencies per context and SHALL baseline the surprise value −log p of each observed category or transition.
+A: E-30; F-84; D-10
+V: Test | Feed a fixed transition sequence; confirm the stored frequencies and surprise statistics.
+SRC: ARCH §9.2; ARCH §13.1 NEXT_TOOL
+R: Detects unusual tool sequences.
+
+@FR-10.17 | Learning exclusions
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL exclude from learning the records of denied calls, records classified `abnormal` or `critical`, records from flagged sessions and records outside the learning window.
+A: E-30; F-84
+V: Test | Feed a mix of excluded and included records; confirm only the included records change the statistics.
+SRC: ARCH §9.4 step 1; ARCH §2.2 A-6
+R: Defends against baseline poisoning.
+
+@FR-10.18 | Snapshot build
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL build an immutable baseline snapshot, containing snapshot ID, digest, contexts, per-feature statistics, sample counts and learning window, at the policy interval or record count and on operator command.
+A: E-30; F-85; D-10
+V: Test | Trigger a snapshot by each method; inspect the contents and confirm immutability.
+SRC: ARCH §9.4 step 2
+R: Scoring uses fixed, versioned baselines.
+
+@FR-10.19 | Drift report
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL report, for a candidate snapshot against the promoted snapshot, the per-context mean shift in promoted-σ units, the σ ratio and the list of newly characterized contexts.
+A: E-30; F-87; I-06
+V: Test | Build a candidate from shifted fixture data; confirm the reported shift values.
+SRC: ARCH §9.4 step 3
+R: Reviewers see what promotion changes.
+
+@FR-10.20 | Promotion
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL promote a candidate snapshot on authorized operator approval, or automatically when every drift value is within the policy's automatic-promotion limits.
+A: E-30; F-86; I-39
+V: Test | Promote manually; then configure limits and confirm automatic promotion within limits and none beyond them.
+SRC: ARCH §9.4 step 4; ARCH §19 OD-11
+R: Controlled change of the enforcement baseline.
+
+@FR-10.21 | Rollback
+P: FR-10
+S: The Behavior Baseline Engine (E-30) SHALL re-promote any earlier snapshot on authorized operator command.
+A: E-30; F-86; I-39
+V: Test | Roll back to a prior snapshot; confirm subsequent scores record its ID.
+SRC: ARCH §9.4 step 5
+R: Recover from a bad baseline.
+
+@FR-10.22 | Snapshot loading
+P: FR-10
+S: The Anomaly Scorer (E-31) SHALL load a promoted snapshot into memory, verify its digest and atomically replace the previous snapshot.
+A: E-31; F-88; I-39
+V: Test | Promote during load; confirm no score uses a partially loaded snapshot and that a corrupted snapshot is rejected.
+SRC: ARCH §4 E-31
+R: Consistent scoring.
+
+@FR-10.23 | z-score computation
+P: FR-10
+S: The Anomaly Scorer (E-31) SHALL compute each selected feature's score as z = (x − μ) / max(σ, σ_floor) using the snapshot statistics of the session's context and the same transform used in learning.
+A: E-31; F-88; F-89
+V: Test | Score fixture values against a known snapshot; confirm z-scores agree with reference computation within 1e-9.
+SRC: ARCH §9.2 (Distance)
+R: The owner's standard-deviation distance measure.
+
+@FR-10.24 | Robust score
+P: FR-10
+S: When robust scoring is selected for a feature, the Anomaly Scorer (E-31) SHALL compute z_robust = 0.6745 (x − median) / max(MAD, σ_floor).
+A: E-31; F-88; F-89
+V: Test | Score fixture values; confirm agreement with reference values.
+SRC: ARCH §9.2 (Robust option)
+R: Alternative distance for heavy tails.
+
+@FR-10.25 | Score combination
+P: FR-10
+S: The Anomaly Scorer (E-31) SHALL combine feature scores by maximum absolute z and SHALL record the contributing feature.
+A: E-31; F-90
+V: Test | Score a fixture with several elevated features; confirm the maximum and the named feature.
+SRC: ARCH §9.2 (Multi-feature); ARCH §19 OD-12
+R: Explainable combination.
+
+@FR-10.26 | Band classification
+P: FR-10
+S: The Anomaly Scorer (E-31) SHALL classify the combined score into `normal`, `elevated`, `abnormal` or `critical` using the Observation Policy thresholds, with CP-30 as defaults.
+A: E-31; F-90
+V: Test | Score values at each boundary; confirm the band.
+SRC: ARCH §9.2 (Default sigma bands)
+R: Bands drive actions and capture.
+
+@FR-10.27 | Uncharacterized context
+P: FR-10
+S: When a session's context has fewer than n_min samples in the promoted snapshot, the Anomaly Scorer (E-31) SHALL return the band `uncharacterized`.
+A: E-31; F-90
+V: Test | Score a new context; confirm `uncharacterized` until n_min is reached in a promoted snapshot.
+SRC: ARCH §9.2 (Cold start)
+R: No scoring without sufficient data.
+
+@FR-10.28 | Asynchronous scoring
+P: FR-10
+S: When the Observation Policy selects asynchronous scoring, the Anomaly Scorer (E-31) SHALL score the assembled observation record after release and SHALL apply only alert and capture-escalation actions.
+A: E-31; F-90; I-31
+V: Test | Configure asynchronous scoring; trigger an abnormal call; confirm an alert, unchanged release timing and no blocking action.
+SRC: ARCH §9.5 (Scoring mode); ARCH §19 OD-10
+R: Zero hot-path cost option.
+
+@FR-10.29 | Scoring record
+P: FR-10
+S: The Anomaly Scorer (E-31) SHALL record for each score the snapshot ID, context key, per-feature values and z-scores, combined score, band and resulting actions.
+A: E-31; F-90; I-29; I-18
+V: Inspection | Inspect the scoring record of an abnormal call.
+SRC: ARCH §9.4 step 6
+R: Reproducible classification.
+
+@FR-10.30 | Campaign record
+P: FR-10
+S: The Research Dataset Service (E-32) SHALL manage each research campaign with scope, parameter set, sampling, start, end, storage quota, export grant and state (`draft`, `submitted`, `approved`, `active`, `completed`, `exported`, `expired`).
+A: E-32; F-91; D-01
+V: Test | Move a campaign through every state; confirm transitions and recorded fields.
+SRC: ARCH §7.2 Research Campaign; ARCH §18.5
+R: Bounded, governed research capture.
+
+@FR-10.31 | Campaign activation
+P: FR-10
+S: The Research Dataset Service (E-32) SHALL activate an approved campaign at its start time and deactivate it at its end time or when its storage quota is reached.
+A: E-32; F-91
+V: Test | Run a campaign with a small quota; confirm deactivation at the quota.
+SRC: ARCH §18.5 step 3
+R: Time-boxed and bounded capture.
+
+@FR-10.32 | Dataset extraction
+P: FR-10
+S: The Research Dataset Service (E-32) SHALL extract a dataset containing only records within the campaign's scope and time window.
+A: E-32; F-92; I-35
+V: Test | Extract a dataset with out-of-scope traffic present; confirm exclusion.
+SRC: ARCH §4 E-32
+R: Datasets reflect the approved campaign.
+
+@FR-10.33 | Pseudonymization
+P: FR-10
+S: The Research Dataset Service (E-32) SHALL replace principal, session, end-user and S2 identifiers with HMAC-SHA-256 pseudonyms under a per-dataset key from the Key & Trust Anchor Manager (E-22).
+A: E-32; F-92; I-35
+V: Test | Extract two datasets; confirm consistent pseudonyms within each dataset and different pseudonyms across them.
+SRC: ARCH §4 E-32; CP-40
+R: Research data protection.
+
+@FR-10.34 | Export formats
+P: FR-10
+S: The Research Dataset Service (E-32) SHALL export datasets in Parquet, CSV and JSON Lines, and the behavior-model and audit subgraphs in GraphML.
+A: E-32; F-93; X-11
+V: Test | Export in each format; confirm each loads in pyarrow, pandas and NetworkX with identical row counts.
+SRC: ARCH §4 E-32; ARCH §6.1 X-11
+R: Offline analysis with common tools.
+
+@FR-10.35 | Dataset manifest
+P: FR-10
+S: The Research Dataset Service (E-32) SHALL include with every export a data dictionary generated from the Parameter Catalog, a provenance manifest (campaign, policy revisions, baseline snapshots, catalog version, time range, filters) and a SHA-256 checksum file.
+A: E-32; F-93; X-11; D-12
+V: Inspection | Inspect an export package for the three files and verify the checksums.
+SRC: ARCH §4 E-32
+R: Reproducible research.
+
+@FR-10.36 | Export destination
+P: FR-10
+S: The Research Dataset Service (E-32) SHALL write exports to the configured local export directory and SHALL offer them for download through G-09.
+A: E-32; F-93; X-11; D-12
+V: Test | Export a dataset; confirm the files exist and download through G-09.
+SRC: ARCH §6.1 X-11
+R: Local delivery to analysis tools.
+
+@FR-10.37 | Parameter Catalog content
+P: FR-10
+S: The Gateway release SHALL include a versioned Parameter Catalog containing at least the parameters P-001 to P-250 of ArchitectureV2 §10.3, each with ID, name, description, unit, data type, source element, capture point, derivation, sensitivity class, baselinable flag and cost class.
+A: E-29; E-05; D-11
+V: Inspection | Inspect the shipped catalog; confirm every listed parameter and attribute.
+SRC: ARCH §10.1; ARCH §10.3; OWNER (as many parameters as possible)
+R: The catalog is the research data dictionary.
+
+### FR-11 Performance and resources
+
+@FR-11 | Performance
+P: —
+S: The Gateway SHALL meet the CP-32 performance targets on recorded reference hardware with the reference dataset.
+A: E-01; E-06; E-29; E-31; E-27; E-24; E-28
+V: Analysis | Review the performance test report; confirm each FR-11 child passed on the recorded hardware.
+SRC: SEC 10.5; SEC Appendix A; ARCH §14
+R: Speed is important to the owner.
+
+@FR-11.1 | Reference workload
+P: FR-11
+S: The Gateway release SHALL include a reference workload generator producing the reference dataset (10,000 rule and registry nodes, 100,000 event nodes, 256 candidate rules per decision) and eight concurrent callers.
+A: E-25; E-26; E-27
+V: Inspection | Run the generator; confirm the dataset counts.
+SRC: SEC Appendix A (test reference dataset)
+R: Repeatable performance measurement.
+
+@FR-11.2 | Decision latency
+P: FR-11
+S: The Policy Decision Service (E-06) SHALL return decisions with p95 latency of at most 10 ms under the reference workload.
+A: E-06; F-13
+V: Test | Measure 100,000 decisions under the reference workload; confirm p95 ≤ 10 ms.
+SRC: ARCH §14; SEC Appendix A (≤100 ms ceiling)
+R: In-memory snapshots make 10 ms achievable; the security SRS ceiling is 100 ms.
+
+@FR-11.3 | Scoring latency
+P: FR-11
+S: The Anomaly Scorer (E-31) SHALL score a 64-feature vector with p95 latency of at most 2 ms.
+A: E-31; F-88; F-89
+V: Test | Measure 100,000 scores; confirm p95 ≤ 2 ms.
+SRC: ARCH §14
+R: Synchronous scoring must be cheap.
+
+@FR-11.4 | Capture overhead
+P: FR-11
+S: The Observation Collector (E-29) SHALL add at most 1 ms p95 to the processing path of a call.
+A: E-29; F-80
+V: Test | Compare P-213 with capture enabled and disabled under the reference workload; confirm the p95 difference ≤ 1 ms.
+SRC: ARCH §14
+R: Observation must not distort what it measures.
+
+@FR-11.5 | Total overhead
+P: FR-11
+S: The Gateway SHALL add at most 50 ms p95 gateway-added overhead (P-213) for a 64 KiB result at eight concurrent calls with synchronous scoring enabled.
+A: E-01; E-02; E-08; E-09; E-10; E-11; E-12
+V: Test | Measure P-213 under the reference workload; confirm p95 ≤ 50 ms.
+SRC: ARCH §14; SEC Appendix A (≤250 ms ceiling)
+R: Interactive agent use.
+
+@FR-11.6 | Observation ingest
+P: FR-11
+S: The Observation Store (E-27) SHALL sustain ingest of at least 2,000 observation records per second for 10 minutes without backpressure.
+A: E-27; E-26; F-75; F-73
+V: Test | Replay records at 2,000/s for 10 minutes; confirm no backpressure signal.
+SRC: ARCH §14
+R: Research capture volumes.
+
+@FR-11.7 | Snapshot build time
+P: FR-11
+S: The Behavior Baseline Engine (E-30) SHALL build a baseline snapshot of 10,000 contexts in at most 60 seconds.
+A: E-30; F-85
+V: Test | Build a snapshot from a 10,000-context fixture; confirm duration.
+SRC: ARCH §14
+R: Timely baseline refresh.
+
+@FR-11.8 | GUI query latency
+P: FR-11
+S: The Management Console & Control API (E-24) SHALL return bounded audit and analytics queries over 30 days of reference data with p95 latency of at most 2 seconds.
+A: E-24; E-26; F-57; F-76
+V: Test | Run the standard query set 100 times; confirm p95 ≤ 2 s.
+SRC: SEC Appendix A; ARCH §14
+R: Usable investigation and analytics.
+
+@FR-11.9 | Idle footprint
+P: FR-11
+S: The Gateway core processes, excluding server instances, browsers and models, SHALL use at most 4 GiB combined resident memory when idle.
+A: E-28; F-77
+V: Test | Measure combined RSS 10 minutes after start with no traffic.
+SRC: SEC Appendix A (core idle footprint)
+R: Single-PC deployment.
+
+@FR-11.10 | Stop latency
+P: FR-11
+S: The Enforcement Coordinator (E-12) SHALL deny all launch authorizations within 1 second of an emergency-stop command.
+A: E-12; F-31
+V: Test | Issue a stop under load; confirm no launch authorization is issued later than 1 s after the command.
+SRC: SEC 7.6; ARCH §4 E-12
+R: Prompt halt.
+
+### FR-12 Software, build and deployment constraints
+
+@FR-12 | Implementation constraints
+P: —
+S: The Gateway implementation SHALL conform to the open-source, local, single-PC deployment constraints of this section.
+A: E-01; E-24; E-25; E-27; E-28
+V: Analysis | Review the verification results of every FR-12 child requirement; confirm each has passed.
+SRC: SEC 9; OWNER (single PC; open source only)
+R: Owner deployment constraints.
+
+@FR-12.1 | Open-source components
+P: FR-12
+S: Each software component and bundled dependency of the Gateway release SHALL carry an OSI-approved license or public-domain status.
+A: E-01; E-24; E-25; E-27
+V: Inspection | Inspect the release SBOM license fields; confirm every entry is OSI-approved or public domain.
+SRC: SEC 9.1; Section 1
+R: Open source only.
+
+@FR-12.2 | No external service dependency
+P: FR-12
+S: The Gateway SHALL perform every baseline function with outbound Internet access blocked, except brokered egress explicitly granted by policy.
+A: E-01; E-18; E-24; E-25
+V: Test | Run the acceptance suite with an outbound-deny firewall; confirm all baseline functions pass.
+SRC: SEC 9; SEC 9.3
+R: Local, non-SaaS operation.
+
+@FR-12.3 | Host platform
+P: FR-12
+S: The Gateway SHALL run on a single x86_64 Linux host with kernel 6.8 or later, cgroup v2, unprivileged user namespaces, nftables and AppArmor or SELinux.
+A: E-15; E-16; X-07
+V: Demonstration | Install and run the acceptance suite on the reference host.
+SRC: OWNER (single PC); ARCH §15
+R: Defines the isolation features the design relies on.
+
+@FR-12.4 | Filesystem layout
+P: FR-12
+S: The Gateway SHALL keep configuration in `/etc/smcp`, persistent state in `/var/lib/smcp`, runtime sockets in `/run/smcp` and exports in `/var/lib/smcp/exports`.
+A: E-28; E-32; X-07
+V: Inspection | Inspect an installed host for the layout and ownership.
+SRC: A2 §3
+R: Separates protected state from agent-writable locations.
+
+@FR-12.5 | Service management
+P: FR-12
+S: The Gateway SHALL install as systemd services with declared start ordering Data Server, Key & Trust Anchor Manager, Gateway core, then console.
+A: E-25; E-22; E-24; X-07
+V: Test | Reboot the host; confirm the start order from the journal.
+SRC: ARCH §15
+R: Startup gating depends on ordering.
+
+@FR-12.6 | Configuration file
+P: FR-12
+S: The Gateway SHALL read its configuration from TOML files validated against a published schema at startup, and SHALL refuse to start on a validation error.
+A: E-01; E-28
+V: Test | Start with an invalid key and an out-of-range value; confirm refusal with a precise message.
+SRC: ARCH §15
+R: Predictable configuration.
+
+@FR-12.7 | Administrative CLI
+P: FR-12
+S: The Gateway release SHALL include the `smcpctl` command providing bootstrap, health, emergency stop, backup, restore, journal verification and configuration validation subcommands.
+A: E-24; E-28; E-21
+V: Demonstration | Exercise each subcommand on the reference host.
+SRC: SEC 10.9
+R: Procedures that do not depend on the GUI.
+
+@FR-12.8 | Release provenance
+P: FR-12
+S: The Gateway release SHALL include source commit IDs, artifact digests, build recipes, dependency lockfiles, an SPDX or CycloneDX SBOM and license notices.
+A: E-01; E-24; E-25
+V: Inspection | Inspect the release bundle for each item.
+SRC: SEC 10.7
+R: Traceable, reproducible releases.
+
+@FR-12.9 | MCP conformance suite
+P: FR-12
+S: The Gateway source SHALL include an automated conformance suite that exercises northbound and southbound behavior against the message examples in `mcp-spec/2026-07-28/schema/examples` and validates messages against `schema.json`.
+A: E-02; E-10; X-01; I-13
+V: Inspection | Run the suite in CI; confirm it executes and reports results for every example directory.
+SRC: MCP:schema; SEC 10.6
+R: Continuous verification of protocol conformance.
+
+@FR-12.10 | Requirement-tagged tests
+P: FR-12
+S: Each automated test SHALL declare the IDs of the requirements it verifies, and the build SHALL produce a report mapping requirement IDs to test results.
+A: E-01; E-24
+V: Inspection | Inspect the generated report; confirm every Test-method requirement maps to at least one test.
+SRC: SEC 10.3; SEC 10.6
+R: Verification traceability for coding.
+
+@FR-12.11 | No paid database features
+P: FR-12
+S: The Data Server SHALL operate using only self-hosted, OSI-licensed editions of its database components, without Neo4j Enterprise, Aura or other paid features.
+A: E-25; E-27; X-07
+V: Inspection | Inspect installed database packages, configuration and licenses.
+SRC: SEC 9.2; ARCH §15
+R: Open-source local baseline.
+

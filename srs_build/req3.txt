@@ -1,0 +1,607 @@
+### FR-6 Secrets
+
+@FR-6 | Secret management
+P: —
+S: The Gateway SHALL store server secrets and deliver each secret only through a policy-selected delivery mode for an authorized use.
+A: E-19; E-20; F-47; F-48; F-49; F-50; F-51; F-52
+V: Analysis | Review the verification results of every FR-6 child requirement; confirm each has passed.
+SRC: ARCH §2.1 item 5; ARCH §8
+R: Managed secrets are an owner capability.
+
+@FR-6.1 | Secret record
+P: FR-6
+S: The Secret Vault (E-19) SHALL store for each secret a reference ID, name, type, version, owner, creation time, rotation time, expiry and the encrypted value.
+A: E-19; F-47; D-04
+V: Inspection | Create a secret through G-12; inspect the stored record and confirm the value field is ciphertext.
+SRC: ARCH §4 E-19
+R: Secrets need versioned, attributable records.
+
+@FR-6.2 | Write-only values
+P: FR-6
+S: The Secret Vault (E-19) SHALL accept secret values on create and rotate operations and SHALL return only metadata on every read operation.
+A: E-19; F-47; X-08; I-06
+V: Test | Call every secret read operation of the control API; confirm no value or ciphertext is returned.
+SRC: ARCH §4 E-19; SEC 8.5
+R: Values can be written but never read back.
+
+@FR-6.3 | Rotation
+P: FR-6
+S: The Secret Vault (E-19) SHALL rotate a secret by creating a new version, keeping the previous version deliverable for at most the CP-15 overlap, and then retiring it.
+A: E-19; F-48
+V: Test | Rotate a secret; confirm delivery of the new version and that the old version stops at the overlap limit.
+SRC: ARCH §4 E-19; SEC Appendix A
+R: Rotation without downtime.
+
+@FR-6.4 | Retirement zeroization
+P: FR-6
+S: When a secret version is retired, the Secret Vault (E-19) SHALL delete its ciphertext and record a retirement event.
+A: E-19; F-48; I-18
+V: Test | Retire a version; confirm the ciphertext is absent from the store and a retirement event exists.
+SRC: ARCH §4 E-19
+R: Retired material must not remain recoverable from the vault.
+
+@FR-6.5 | Secret slot binding
+P: FR-6
+S: The Policy Administration Service (E-05) SHALL bind a secret to a server only through a Secret Use Policy naming the manifest secret slot, permitted tools, destination, delivery mode, purpose, rate, time window and approval requirement.
+A: E-05; F-10; D-01
+V: Test | Publish a Secret Use Policy for a declared slot; confirm the binding appears in the effective permission report.
+SRC: ARCH §7.2 Secret Use Policy
+R: Secret use is governed by policy.
+
+@FR-6.6 | Delivery mode S1
+P: FR-6
+S: For delivery mode S1, the Secret Broker (E-20) SHALL pass the secret to the Egress Broker (E-18), which SHALL insert it into the header template declared by the slot on each authorized request to the bound destination.
+A: E-20; E-18; F-50; F-46; I-26
+V: Test | Call a fixture API through S1; confirm the destination receives the header and the instance environment, memory dump and mounts lack the value.
+SRC: ARCH §8.2 S1
+R: The preferred mode keeps the secret outside the sandbox.
+
+@FR-6.7 | Delivery mode S2
+P: FR-6
+S: For delivery mode S2, the Secret Broker (E-20) SHALL write the secret to a per-call file in an instance-private tmpfs mount before dispatch and SHALL delete the file when the call completes.
+A: E-20; F-50; F-52; I-28
+V: Test | Call an S2 fixture; confirm the file exists during the call and not after.
+SRC: ARCH §8.2 S2
+R: Short exposure for protocols the broker cannot proxy.
+
+@FR-6.8 | Delivery mode S3
+P: FR-6
+S: For delivery mode S3, the Secret Broker (E-20) SHALL write the secret to an instance-private tmpfs file at instance launch and SHALL delete it at instance teardown.
+A: E-20; F-50; F-52; I-28
+V: Test | Launch and tear down an S3 instance; confirm the file lifetime.
+SRC: ARCH §8.2 S3
+R: Long-lived connections need instance-lifetime secrets.
+
+@FR-6.9 | Delivery mode S4
+P: FR-6
+S: The Secret Broker (E-20) SHALL deliver a secret through a launch environment variable only when the manifest declares no other mode and the Secret Use Policy carries an approved S4 waiver.
+A: E-20; E-05; F-50; F-10
+V: Test | Attempt S4 with and without a waiver and with another supported mode; confirm only the waiver-without-alternative case is accepted.
+SRC: ARCH §8.2 S4
+R: Environment delivery is the most exposing mode.
+
+@FR-6.10 | Leak fingerprints
+P: FR-6
+S: The Secret Broker (E-20) SHALL derive keyed HMAC-SHA-256 fingerprints over each delivered secret's full value and every 12-character substring of its raw, Base64, hex and URL-encoded forms, and SHALL register them with the Response Inspection Pipeline (E-11) and the Observation Collector (E-29).
+A: E-20; F-51; I-14
+V: Test | Deliver a secret and return it raw, Base64-encoded and as a 12-character fragment in a response; confirm each is detected.
+SRC: ARCH §8.5
+R: Leak detection without holding plaintext in the filters.
+
+@FR-6.11 | Secret use event
+P: FR-6
+S: The Secret Broker (E-20) SHALL record each delivery and each denial with secret reference, version, slot, mode, server revision, tool, correlation ID and decision ID, and without the secret value.
+A: E-20; F-49; F-50; I-18
+V: Test | Deliver and deny secrets; inspect the events and search them for the value.
+SRC: ARCH §4 E-20
+R: Every secret use is attributable.
+
+@FR-6.12 | Reference impact preview
+P: FR-6
+S: The Secret Vault (E-19) SHALL report every Secret Use Policy, server revision and slot that references a selected secret.
+A: E-19; F-47; I-06
+V: Test | Bind a secret in two policies; confirm both appear in the impact report.
+SRC: SEC 8.5
+R: Operators see the effect of rotation or revocation.
+
+### FR-7 Audit, keys and health
+
+@FR-7 | Assurance services
+P: —
+S: The Gateway SHALL record security evidence, manage its cryptographic keys and monitor the health of enforcement dependencies.
+A: E-21; E-22; E-23
+V: Analysis | Review the verification results of every FR-7 child requirement; confirm each has passed.
+SRC: ARCH §4 SS-7
+R: Assurance services support every control.
+
+@FR-7.1 | Event schema
+P: FR-7
+S: The Audit & Evidence Service (E-21) SHALL record each security event with event ID, timestamp, event class, phase, origin, correlation ID, session ID, principal ID, decision ID, policy revision, server revision, tool revision, outcome, reason code and policy status.
+A: E-21; F-53; I-18
+V: Inspection | Inspect events of each class; confirm each field is present or explicitly null.
+SRC: A2 §4.1; SEC 6.4; SEC 6.19
+R: A uniform schema enables linkage and query.
+
+@FR-7.2 | Event phases
+P: FR-7
+S: The Audit & Evidence Service (E-21) SHALL support the call phases `requested`, `denied`, `authorized`, `dispatched`, `completed`, `failed`, `indeterminate`, `filtered`, `delivered` and `withheld`.
+A: E-21; F-53
+V: Test | Drive calls to each terminal outcome; confirm the recorded phase sequence.
+SRC: A2 §5
+R: Observed phases, not inferred success.
+
+@FR-7.3 | Audit query API
+P: FR-7
+S: The Audit & Evidence Service (E-21) SHALL answer audit queries filtered by time range, principal, session, server, tool, rule, outcome, event class and policy revision, with cursor pagination of at most 500 events per page.
+A: E-21; F-57; I-06; I-30
+V: Test | Run each filter over the reference dataset; confirm correct results and page bounds.
+SRC: SEC 8.4
+R: Investigation needs bounded, structured queries.
+
+@FR-7.4 | Journal segment format
+P: FR-7
+S: The Audit & Evidence Service (E-21) SHALL write the evidence journal as JSON Lines segments closed at 1,000 events or 60 seconds, each holding the SHA-256 of the previous segment and an Ed25519 signature.
+A: E-21; F-55; D-06
+V: Inspection | Inspect three consecutive segments; confirm the chaining and signatures.
+SRC: ARCH §4 E-21; SEC 6.12
+R: Tamper evidence that is independent of the Data Server.
+
+@FR-7.5 | Journal verification
+P: FR-7
+S: The `smcpctl journal verify` command SHALL validate the hash chain and the signature of every segment in a journal directory and report the first failure.
+A: E-21; F-55; D-06
+V: Test | Verify an intact journal and one with a modified byte; confirm a pass and a precise failure.
+SRC: ARCH §4 E-21
+R: Evidence must be checkable offline.
+
+@FR-7.6 | Alerts
+P: FR-7
+S: The Audit & Evidence Service (E-21) SHALL raise an alert in the management console for each event matching an alert rule of the effective Audit Profile.
+A: E-21; F-53; I-06
+V: Test | Configure an alert on `withheld`; trigger it; confirm the console alert.
+SRC: ARCH §7.2 Audit Profile
+R: Operators need notification of significant events.
+
+@FR-7.7 | Local certificate authorities
+P: FR-7
+S: The Key & Trust Anchor Manager (E-22) SHALL operate separate local certificate authorities for harness client certificates and for Gateway TLS server certificates.
+A: E-22; F-59; F-60; D-08
+V: Inspection | Inspect the CA certificates and an issued certificate of each kind; confirm separate roots.
+SRC: ARCH §4 E-22
+R: Separates client identity from server identity.
+
+@FR-7.8 | Key purposes
+P: FR-7
+S: The Key & Trust Anchor Manager (E-22) SHALL hold separate keys for the purposes client CA, server TLS, vault master, payload encryption, evidence signing, MRTR state protection, cursor protection, research pseudonymization and Data Server credentials.
+A: E-22; F-60; D-08
+V: Inspection | Inspect the key inventory; confirm one key per purpose and no reuse.
+SRC: ARCH §4 E-22
+R: Compromise of one purpose must not affect others.
+
+@FR-7.9 | Key protection at rest
+P: FR-7
+S: The Key & Trust Anchor Manager (E-22) SHALL seal private keys to the host TPM 2.0 when present and otherwise SHALL store them encrypted under an operator passphrase entered at service start.
+A: E-22; F-60; X-07; D-08
+V: Test | Start on a TPM host and on a non-TPM host; confirm the sealing method and that copied key files are unusable.
+SRC: ARCH §15 E-19/E-22
+R: Keys must not sit in plaintext on disk.
+
+@FR-7.10 | Trust anchor enrollment
+P: FR-7
+S: The Key & Trust Anchor Manager (E-22) SHALL enroll a curation trust anchor only after an administrator confirms its displayed fingerprint and assigns its permitted risk classes and expiry.
+A: E-22; F-58; I-06
+V: Demonstration | Enroll an anchor through G-10; confirm the fingerprint confirmation step and the stored scope.
+SRC: ARCH §4 E-22
+R: The trust root is set by a deliberate operator ceremony.
+
+@FR-7.11 | Health checks
+P: FR-7
+S: The Health & Safety Monitor (E-23) SHALL evaluate Data Server reachability, decision-snapshot currency, audit export lag, mandatory-audit capacity, vault availability, clock sanity, trust-anchor validity and memory degradation stage once per second.
+A: E-23; F-61; I-32
+V: Test | Fault each dependency in turn; confirm detection within 2 seconds.
+SRC: ARCH §4 E-23
+R: Enforcement depends on these conditions.
+
+@FR-7.12 | Health states
+P: FR-7
+S: The Health & Safety Monitor (E-23) SHALL report the Gateway health as `healthy`, `degraded` or `fail-closed` together with the list of active causes.
+A: E-23; F-61; F-62; I-06
+V: Test | Induce a non-critical and a critical fault; confirm `degraded` and `fail-closed` with causes.
+SRC: ARCH §4 E-23
+R: Distinguishes degraded observation from unsafe enforcement.
+
+@FR-7.13 | Fail-closed recovery
+P: FR-7
+S: The Health & Safety Monitor (E-23) SHALL return from `fail-closed` to `healthy` only after every critical cause has cleared for 10 consecutive seconds and, for integrity causes, after an administrator acknowledgment.
+A: E-23; F-62; I-19
+V: Test | Clear an availability cause and an integrity cause; confirm the automatic and the acknowledged recovery.
+SRC: ARCH §4 E-23; SEC 7.3
+R: Prevents flapping and requires review after integrity failures.
+
+@FR-7.14 | Evidence export
+P: FR-7
+S: When evidence export is configured, the Audit & Evidence Service (E-21) SHALL copy each closed journal segment and checkpoint to the configured local export directory within 60 seconds of segment closure.
+A: E-21; F-55; X-09; D-06
+V: Test | Configure an export directory; close segments; confirm copies within 60 s and that the copies verify with `smcpctl journal verify`.
+SRC: ARCH §6.1 X-09
+R: Offline archival of evidence without a network service.
+
+### FR-8 Management console and control API
+
+@FR-8 | Management product
+P: —
+S: The Gateway SHALL provide a local graphical console and control API for controlling the Gateway, managing policy and tuning audit, observation and research capture.
+A: E-24; F-63; F-64; F-65; F-67; F-68; F-69; X-04
+V: Analysis | Review the verification results of every FR-8 child requirement; confirm each has passed.
+SRC: ARCH §2.1 item 10; SEC 8
+R: The owner requires one GUI for control, policy and audit tuning.
+
+@FR-8.1 | Control API
+P: FR-8
+S: The Management Console & Control API (E-24) SHALL expose a versioned REST/JSON control API at `/api/v1` on the CP-03 admin listener, described by an OpenAPI 3.1 document served at `/api/v1/openapi.json`.
+A: E-24; F-65; X-04; I-06
+V: Inspection | Retrieve the OpenAPI document; confirm that every console operation maps to a documented endpoint.
+SRC: A2 §7.2; ARCH §6.1 X-04
+R: The GUI and scripts share one contract.
+
+@FR-8.2 | Application roles
+P: FR-8
+S: The Management Console & Control API (E-24) SHALL implement the roles Administrator, Operator, Policy Author, Approver, Auditor and Researcher with the permissions of Appendix C.
+A: E-24; F-64; X-04
+V: Test | Exercise every API operation as each role; confirm results match the Appendix C matrix.
+SRC: SEC 8.10; ARCH §4 E-24
+R: Separation of duties, including research use.
+
+@FR-8.3 | G-01 Gateway Control
+P: FR-8
+S: The Gateway Control view (G-01) SHALL display enforcement state, health causes, active policy revision and active session count, and SHALL provide emergency stop and resume actions.
+A: E-24; F-65; F-31; X-04
+V: Demonstration | Use G-01 to stop and resume the Gateway; confirm the state display updates within 2 seconds.
+SRC: ARCH §4 G-01; SEC 8.7
+R: The operator's primary control surface.
+
+@FR-8.4 | G-02 Policy Studio
+P: FR-8
+S: The Policy Studio view (G-02) SHALL provide structured editors for every policy object type, draft diff against the active revision, simulation results and publish and rollback actions.
+A: E-24; F-65; F-10; F-11; F-12; X-04
+V: Demonstration | Author, simulate and publish a Session Allow Policy template entirely in G-02.
+SRC: ARCH §4 G-02; SEC 8.2
+R: Policy development is the owner's primary purpose.
+
+@FR-8.5 | G-03 Audit Profile Tuning
+P: FR-8
+S: The Audit Profile Tuning view (G-03) SHALL display the mandatory audit floor as read-only and SHALL edit optional capture, retention and alert settings of Audit Profiles.
+A: E-24; F-65; X-04
+V: Demonstration | Edit an Audit Profile in G-03; confirm the floor is not editable and the profile publishes.
+SRC: ARCH §4 G-03; ARCH §11 item 9
+R: Audit tuning without weakening the floor.
+
+@FR-8.6 | G-04 Observation & Parameter Workbench
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL present the Parameter Catalog grouped by category with search, description, unit, sensitivity class and cost indicator for each parameter.
+A: E-24; F-67; X-04; D-11
+V: Demonstration | Search the catalog for "latency"; confirm grouped results with each attribute shown.
+SRC: ARCH §11 item 1; ARCH §10.1
+R: The owner requires a user-friendly parameter selection GUI.
+
+@FR-8.7 | Catalog-driven GUI
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL generate its parameter controls from the Parameter Catalog data so that a catalog parameter added by release appears without GUI code change.
+A: E-24; F-67; D-11
+V: Test | Add a parameter to a test catalog version; confirm it appears in G-04 with no GUI rebuild.
+SRC: ARCH §10.1
+R: The catalog must grow to capture as many parameters as possible.
+
+@FR-8.8 | Observation presets
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL provide the editable presets Minimal security floor, Security standard, Behavior characterization, Performance profiling and Research — full capture, and SHALL save user-defined presets.
+A: E-24; F-67; D-11
+V: Demonstration | Apply each preset, modify one and save it as a new preset.
+SRC: ARCH §11 item 2
+R: Presets make capture tuning approachable.
+
+@FR-8.9 | Scope builder
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL select Observation Policy scope from lists of registered principals, framework types, session templates, servers and tools.
+A: E-24; F-67; X-04
+V: Demonstration | Build a scope of one principal and two tools without free-text entry.
+SRC: ARCH §11 item 3
+R: Prevents scope typos.
+
+@FR-8.10 | Sampling and baseline controls
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL edit the normal-band sampling rate, per-band escalation parameters, baseline context dimensions, per-feature statistics options and sigma-band thresholds.
+A: E-24; F-67; X-04
+V: Demonstration | Set each control and publish; confirm the stored Observation Policy values.
+SRC: ARCH §9.5; ARCH §11 items 4–5
+R: These are the research tuning parameters.
+
+@FR-8.11 | Cost preview display
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL display the F-66 cost estimate for the draft before the publish action is enabled.
+A: E-24; F-67; F-66; X-04
+V: Demonstration | Edit a draft; confirm the estimate refreshes and publish remains disabled until the estimate is shown.
+SRC: ARCH §11 item 6
+R: Cost awareness before capture.
+
+@FR-8.12 | Live record preview
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL display up to 20 sensitivity-masked sample records that the draft would have produced from the most recent traffic.
+A: E-24; F-67; X-04
+V: Demonstration | Preview a draft; confirm masked sample records appear.
+SRC: ARCH §11 item 7
+R: Researchers verify the capture before publishing.
+
+@FR-8.13 | G-05 Behavior Analytics
+P: FR-8
+S: The Behavior Analytics view (G-05) SHALL display per-context feature distributions, z-score timelines, abnormal-event lists with drill-down, and baseline snapshot diffs with promote and rollback actions.
+A: E-24; F-68; F-86; X-04
+V: Demonstration | Inspect a context, open an abnormal event and promote a snapshot from G-05.
+SRC: ARCH §4 G-05
+R: Characterization results must be inspectable.
+
+@FR-8.14 | G-06 Anomaly Response Policy
+P: FR-8
+S: The Anomaly Response Policy view (G-06) SHALL map each sigma band and the uncharacterized state to actions selected from the restrict-only action set.
+A: E-24; F-65; X-04
+V: Demonstration | Configure each band and publish; confirm only restrict-only actions are selectable.
+SRC: ARCH §9.6
+R: Run-time policy development.
+
+@FR-8.15 | G-07 Performance & Meta-metrics
+P: FR-8
+S: The Performance & Meta-metrics view (G-07) SHALL display throughput, p50/p95/p99 gateway-added overhead, per-stage latency and per-rule and per-filter time cost, filterable by policy revision.
+A: E-24; F-69; X-04
+V: Demonstration | Compare two policy revisions' cost in G-07.
+SRC: ARCH §10.4
+R: The owner requires policy time-cost measurement.
+
+@FR-8.16 | G-08 Data Server & Memory
+P: FR-8
+S: The Data Server & Memory view (G-08) SHALL display per-component memory use against budget, cache hit ratios, store sizes, quota percentage, degradation stage and last backup result, and SHALL edit memory budgets.
+A: E-24; F-69; X-04
+V: Demonstration | Change a budget in G-08; confirm it is applied and displayed.
+SRC: ARCH §4 G-08
+R: The owner requires memory management.
+
+@FR-8.17 | G-09 Research Campaigns & Export
+P: FR-8
+S: The Research Campaigns & Export view (G-09) SHALL create, submit, approve, monitor and export research campaigns and SHALL display the data dictionary of each dataset.
+A: E-24; F-65; F-91; F-93; X-04
+V: Demonstration | Run a campaign through its full lifecycle in G-09.
+SRC: ARCH §18.5
+R: Research-instrument use.
+
+@FR-8.18 | G-10 Servers & Library
+P: FR-8
+S: The Servers & Library view (G-10) SHALL list server revisions with state, alias, manifest, attestations, drift and revocation status, and SHALL provide enable, suspend, retire, alias and trust-anchor actions.
+A: E-24; F-65; X-04
+V: Demonstration | Enable, suspend and retire a server from G-10.
+SRC: ARCH §4 G-10; SEC 8.1
+R: Server lifecycle control.
+
+@FR-8.19 | G-11 Sessions & Principals
+P: FR-8
+S: The Sessions & Principals view (G-11) SHALL manage principals and their credentials and SHALL list, inspect, suspend and terminate sessions.
+A: E-24; F-65; X-04
+V: Demonstration | Create a principal, issue a credential and terminate one of its sessions from G-11.
+SRC: ARCH §4 G-11
+R: Identity and session control.
+
+@FR-8.20 | G-12 Secrets
+P: FR-8
+S: The Secrets view (G-12) SHALL provide write-only secret creation and rotation, reference-impact preview, and revocation.
+A: E-24; F-65; X-04
+V: Demonstration | Create, rotate and revoke a secret from G-12; confirm no value is ever displayed.
+SRC: ARCH §4 G-12; SEC 8.5
+R: Secret administration.
+
+@FR-8.21 | G-13 Approvals
+P: FR-8
+S: The Approvals view (G-13) SHALL list pending approvals with remaining validity and SHALL provide approve and deny actions.
+A: E-24; F-65; F-18; X-05
+V: Demonstration | Approve and deny requests from G-13.
+SRC: ARCH §4 G-13
+R: Out-of-band approval channel.
+
+@FR-8.22 | G-14 Audit Investigation
+P: FR-8
+S: The Audit Investigation view (G-14) SHALL navigate from an event to its decision, rule revisions, route, server revision, baseline snapshot and related phases, and SHALL render the path as a bounded graph.
+A: E-24; F-65; F-57; X-04
+V: Demonstration | Start from a withheld event and navigate to its decisive rule and server revision.
+SRC: SEC 8.3; A2 §7.2
+R: Graph-led investigation.
+
+@FR-8.23 | Live updates
+P: FR-8
+S: The Management Console & Control API (E-24) SHALL push state changes to open console views through a server-sent-events channel within 2 seconds of the change.
+A: E-24; F-65; X-04
+V: Test | Change health state and add a pending approval; confirm both views update within 2 seconds.
+SRC: ARCH §4 E-24
+R: The operator must see current state.
+
+@FR-8.24 | Usability
+P: FR-8
+S: The Observation & Parameter Workbench view (G-04) SHALL allow a first-time user who has the in-console help to create and publish a scoped Observation Policy of at least 10 parameters within 10 minutes.
+A: E-24; F-67; X-04
+V: Demonstration | Run a timed task with three first-time users; confirm at least two complete within 10 minutes.
+SRC: OWNER ("user-friendly GUI"); ARCH §11
+R: Makes "user friendly" measurable.
+
+@FR-8.25 | Inline help
+P: FR-8
+S: The Management Console & Control API (E-24) SHALL provide a help entry for every view, policy field and catalog parameter, loaded from local storage.
+A: E-24; F-65; F-67
+V: Inspection | Inspect each view and a sample of 30 parameters; confirm help is present.
+SRC: SEC 8.8; ARCH §11
+R: Supports unaided use.
+
+@FR-8.26 | Local assets
+P: FR-8
+S: The Management Console & Control API (E-24) SHALL load all production scripts, styles, fonts and help from the local installation.
+A: E-24; F-65; X-04
+V: Test | Load every view with outbound network blocked; confirm full function and no external requests.
+SRC: SEC 8.8
+R: Offline local product.
+
+@FR-8.27 | Filter test workbench
+P: FR-8
+S: The Policy Studio view (G-02) SHALL run a selected request or response filter profile against operator-supplied synthetic input and display each filter's matches, transformations, timing and final disposition.
+A: E-24; E-09; E-11; F-65; F-21; F-27; X-04
+V: Demonstration | Test a redaction profile on synthetic text in G-02; confirm matches, transformed output and disposition are shown.
+SRC: SEC 8.6
+R: Filter development is part of policy research.
+
+### FR-9 Data Server
+
+@FR-9 | Data Server
+P: —
+S: The Gateway SHALL persist policy, registry, session, audit, behavior-model and observation data in a Data Server consisting of a graph database, a columnar Observation Store, a Data Access Service and a Data Lifecycle & Memory Manager.
+A: E-25; E-26; E-27; E-28
+V: Analysis | Review the verification results of every FR-9 child requirement; confirm each has passed.
+SRC: ARCH §4 SS-9; OWNER (graph database hosting policy)
+R: The owner requires a fast graph database hosting policy and characterization.
+
+@FR-9.1 | Graph data model
+P: FR-9
+S: The Graph Database Engine (E-25) SHALL store the node labels and relationship types defined in Appendix D with a uniqueness constraint on the `id` property of every label.
+A: E-25; F-70; D-01; D-02; D-05; D-07; D-10; D-11
+V: Inspection | Inspect the deployed schema; confirm every Appendix D label, relationship and constraint.
+SRC: A2 §4.1; ARCH §13.1
+R: A defined graph model is required for code and queries.
+
+@FR-9.2 | Schema migrations
+P: FR-9
+S: The Data Access Service (E-26) SHALL apply versioned, ordered schema migrations at startup and SHALL refuse to start when the database schema version is newer than the release supports.
+A: E-26; F-72; I-36
+V: Test | Start against an older schema and a newer schema; confirm migration and refusal respectively.
+SRC: ARCH §4 E-26
+R: Controlled data-model evolution.
+
+@FR-9.3 | Typed operation catalog
+P: FR-9
+S: The Data Access Service (E-26) SHALL expose to other elements only the typed operations listed in its versioned operation catalog, each mapped to one fixed parameterized query template.
+A: E-26; F-72; I-07; I-30; I-33; I-34; I-35; I-06
+V: Inspection | Inspect the operation catalog and its templates; confirm a one-to-one mapping and no dynamic query construction.
+SRC: ARCH §4 E-26; SEC 1.13
+R: Fixed operations keep query cost and authority reviewable.
+
+@FR-9.4 | Write priority classes
+P: FR-9
+S: The Data Access Service (E-26) SHALL order queued writes by the priority classes P0 policy and control, P1 mandatory audit, P2 observation and P3 research.
+A: E-26; F-73; I-33
+V: Test | Saturate the queue with P2 writes and submit a P1 write; confirm the P1 write commits first.
+SRC: ARCH §4 E-26
+R: Mandatory writes must not wait behind optional data.
+
+@FR-9.5 | Observation batching
+P: FR-9
+S: The Data Access Service (E-26) SHALL write observation records to the Observation Store in batches of at most 1,000 records or 200 milliseconds, whichever occurs first.
+A: E-26; F-73; I-37
+V: Test | Generate 5,000 records per second; confirm batch sizes and maximum batch latency.
+SRC: ARCH §4 E-26
+R: Batching sustains ingest rate.
+
+@FR-9.6 | Backpressure
+P: FR-9
+S: When the P2 write queue exceeds 80% of its capacity, the Data Access Service (E-26) SHALL signal backpressure to the Observation Collector (E-29).
+A: E-26; F-74; I-33; I-38
+V: Test | Stall the Observation Store; confirm the backpressure signal at 80% queue occupancy.
+SRC: ARCH §4 E-26; ARCH §18.6
+R: Optional capture yields before resources are exhausted.
+
+@FR-9.7 | Observation tables
+P: FR-9
+S: The Observation Store (E-27) SHALL store observation records, timing spans and system metrics in separate tables partitioned by UTC day, with one column per Parameter Catalog parameter.
+A: E-27; F-75; D-09; D-13
+V: Inspection | Inspect the store layout after one day of fixture traffic.
+SRC: ARCH §13 D-09, D-13
+R: Columnar layout gives fast aggregation.
+
+@FR-9.8 | Schema evolution
+P: FR-9
+S: When a new Parameter Catalog version adds a parameter, the Observation Store (E-27) SHALL add a nullable column for it without rewriting existing partitions.
+A: E-27; F-75; D-09
+V: Test | Upgrade the catalog; confirm the new column and that old partitions are unchanged.
+SRC: ARCH §4 E-27
+R: The parameter set grows over time.
+
+@FR-9.9 | Aggregate queries
+P: FR-9
+S: The Observation Store (E-27) SHALL answer aggregate queries (count, mean, variance, quantiles, histograms) grouped by baseline context and time bucket for the Baseline Engine, the console and the Research Dataset Service.
+A: E-27; F-76; I-37
+V: Test | Compare query results with an independent computation over a fixture dataset.
+SRC: ARCH §4 E-27
+R: Baselines, analytics and research all need aggregates.
+
+@FR-9.10 | Memory budget application
+P: FR-9
+S: The Data Lifecycle & Memory Manager (E-28) SHALL apply the CP-33 memory budget to the graph engine heap and page cache, the Observation Store memory limit, the baseline cache and the capture queues at startup and on change.
+A: E-28; F-77; I-38
+V: Test | Change budgets through G-08; confirm each component's configured limit.
+SRC: ARCH §4 E-28; OWNER (manage memory)
+R: The owner requires memory management.
+
+@FR-9.11 | Memory accounting
+P: FR-9
+S: The Data Lifecycle & Memory Manager (E-28) SHALL measure each budgeted component's memory use every 5 seconds.
+A: E-28; F-77; I-32; I-38
+V: Test | Compare reported use with operating-system accounting under load; confirm agreement within 10%.
+SRC: ARCH §4 E-28
+R: Budgets need measurement.
+
+@FR-9.12 | Degradation order
+P: FR-9
+S: When a component exceeds 90% of its budget or the host has less than 10% available memory, the Data Lifecycle & Memory Manager (E-28) SHALL apply, in order, reduced normal-band sampling, suspension of S3 payload capture, pausing of research campaigns and cache shrinking to configured floors.
+A: E-28; F-77; I-38; I-32
+V: Test | Induce memory pressure; confirm the stages in order and the reported stage.
+SRC: ARCH §4 E-28; ARCH §18.6
+R: Optional work yields first.
+
+@FR-9.13 | Storage tiering
+P: FR-9
+S: The Data Lifecycle & Memory Manager (E-28) SHALL keep observation partitions younger than 30 days in the hot tier and SHALL move older partitions to compressed warm storage until their retention ends.
+A: E-28; F-78; D-09; D-13
+V: Test | Age fixture partitions; confirm tier moves and query continuity.
+SRC: ARCH §4 E-28
+R: Bounded fast storage with retained history.
+
+@FR-9.14 | Retention execution
+P: FR-9
+S: The Data Lifecycle & Memory Manager (E-28) SHALL delete observation and research data whose policy retention has expired, at least once per day.
+A: E-28; F-78; D-09; D-12
+V: Test | Set a 1-day retention; confirm deletion after expiry.
+SRC: ARCH §4 E-28
+R: Retention is a policy obligation.
+
+@FR-9.15 | Quota thresholds
+P: FR-9
+S: The Data Lifecycle & Memory Manager (E-28) SHALL warn at 80% of each storage quota and SHALL report quota levels to the Health & Safety Monitor (E-23).
+A: E-28; F-78; I-32
+V: Test | Fill a test quota to 80% and 95%; confirm the warning and the reported levels.
+SRC: SEC Appendix A (audit storage)
+R: Capacity awareness.
+
+@FR-9.16 | Backup scheduling
+P: FR-9
+S: The Data Lifecycle & Memory Manager (E-28) SHALL perform scheduled and on-demand backups of the graph database, the Observation Store, configuration, encrypted vault and evidence checkpoints, and SHALL record each backup's result and checksum.
+A: E-28; F-79; D-01; D-04; D-06; D-09
+V: Test | Run an on-demand backup; confirm every component and the recorded checksum.
+SRC: ARCH §4 E-28; SEC 7.7
+R: Recoverability of all stores.
+
+@FR-9.17 | Startup gating
+P: FR-9
+S: The Harness Interface Endpoint (E-01) SHALL refuse harness MCP requests with Gateway error `-31004` until the Data Server is reachable and a validated decision snapshot is loaded.
+A: E-01; E-26; F-01; F-62
+V: Test | Start the Gateway with the graph database stopped; confirm -31004 until the database starts and the snapshot loads.
+SRC: ARCH §4 E-23; SEC 1.2
+R: No service without policy.
+
+@FR-9.18 | Decision and event indexes
+P: FR-9
+S: The Graph Database Engine (E-25) SHALL maintain indexes on decision timestamp, event timestamp, event correlation ID, session ID and server revision ID.
+A: E-25; F-70; F-71
+V: Inspection | Inspect the index list; confirm each index is online.
+SRC: ARCH §14 (GUI query target)
+R: Investigation query performance.
