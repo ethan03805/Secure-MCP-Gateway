@@ -1,0 +1,94 @@
+# GoReleaser configuration for Secure MCP Gateway release archives.
+#
+# Local snapshot (no publishing):  make release-snapshot
+# Release: push a tag v* and .github/workflows/release.yml runs GoReleaser.
+#
+# smcp-refserver is built only when cmd/smcp-refserver exists; the Makefile
+# and the release workflow set SMCP_BUILD_REFSERVER=1 in that case.
+version: 2
+
+project_name: smcp
+
+# Inside build/, which .gitignore already excludes.
+dist: build/dist
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: smcpd
+    main: ./cmd/smcpd
+    binary: smcpd
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  - id: smcpctl
+    main: ./cmd/smcpctl
+    binary: smcpctl
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  - id: smcp-refserver
+    main: ./cmd/smcp-refserver
+    binary: smcp-refserver
+    skip: '{{ ne (envOrDefault "SMCP_BUILD_REFSERVER" "0") "1" }}'
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: smcp
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - src: README.md
+      - src: CHANGELOG.md
+      - src: LICENSE*
+        info:
+          mode: 0644
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+# SBOMs for each archive, generated with syft when it is installed (the
+# release workflow installs it). Snapshot builds without syft skip them.
+sboms:
+  - id: archive-sbom
+    artifacts: archive
+    disable: '{{ not (isEnvSet "SMCP_SBOM") }}'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge pull request"
+      - "^Regenerate generated files"
+
+release:
+  github:
+    owner: ethan03805
+    name: Secure-MCP-Gateway
+  draft: false
+  prerelease: auto
+  mode: replace
+  footer: |
+    Verify a download: `sha256sum --check --ignore-missing {{ .ProjectName }}_{{ .Version }}_checksums.txt`.
+    Install: `curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version {{ .Tag }}`
