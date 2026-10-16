@@ -27,7 +27,6 @@ env:
   NODE_VERSION: "24"
   GOLANGCI_LINT_VERSION: v2.14.0
   GOVULNCHECK_VERSION: v1.9.0
-  FS_SERVER_PKG: "@modelcontextprotocol/server-filesystem@2026.8.31"
 
 jobs:
   srs:
@@ -203,16 +202,10 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
           cache-dependency-path: go.sum
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Prefetch the example filesystem MCP server
-        run: npm cache add "$FS_SERVER_PKG"
       - name: Bootstrap, run smcpd, drive an MCP client, verify the journal
         env:
           SMCP_ITEST_DIR: ${{ runner.temp }}/itest
           SMCP_REQUIRE_PREREQS: "1"
-          SMCP_FS_SERVER_PKG: ${{ env.FS_SERVER_PKG }}
         run: scripts/ci-integration.sh
       - name: Upload the smcpd log
         if: failure()
