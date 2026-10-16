@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-16T22:14:08Z",
-  "commit": "a3193a522a26ad45ee2285cae389851cb97df90e",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a3193a522a26ad45ee2285cae389851cb97df90e",
-  "runUrl": "",
+  "generatedAt": "2026-10-16T23:23:19Z",
+  "commit": "3e978775e11a1ad48aee215215be25c1b9ab665d",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/3e978775e11a1ad48aee215215be25c1b9ab665d",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38981047090",
   "tests": {
-    "total": 20,
-    "passed": 20,
+    "total": 28,
+    "passed": 28,
     "failed": 0,
     "skipped": 0,
-    "durationSec": 28.5,
+    "durationSec": 17.7,
     "packages": [
       {
         "name": "internal/audit",
@@ -52,11 +52,17 @@
         "passed": 3,
         "failed": 0,
         "skipped": 0
+      },
+      {
+        "name": "tools/reqreport",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0
       }
     ]
   },
   "coverage": {
-    "totalPct": 50.1,
+    "totalPct": 67.5,
     "packages": [
       {
         "name": "cmd/smcpctl",
@@ -103,23 +109,27 @@
         "pct": 73.7
       },
       {
-        "name": "tools/reqreport",
+        "name": "scripts/itest-client",
         "pct": 0
+      },
+      {
+        "name": "tools/reqreport",
+        "pct": 81
       }
     ]
   },
   "requirements": {
     "total": 445,
-    "verified": 70,
+    "verified": 71,
     "partial": 0,
     "failing": 0,
-    "unverified": 375,
+    "unverified": 374,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 24,
-        "verified": 7,
+        "verified": 8,
         "partial": 0,
         "failing": 0
       },
@@ -2199,8 +2209,17 @@
       {
         "id": "FR-12.10",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "tools/reqreport.TestComputeStatus",
+          "tools/reqreport.TestCoverage",
+          "tools/reqreport.TestHistory",
+          "tools/reqreport.TestLessID",
+          "tools/reqreport.TestLoadAndMergeElements",
+          "tools/reqreport.TestLoadRequirements",
+          "tools/reqreport.TestParseTestLog",
+          "tools/reqreport.TestRunWritesContractDocuments"
+        ]
       },
       {
         "id": "FR-12.11",
@@ -3439,7 +3458,7 @@
   "agents": [],
   "hostile": [],
   "ci": {
-    "workflow": "local seed",
+    "workflow": "CI",
     "conclusion": "success"
   }
 }
