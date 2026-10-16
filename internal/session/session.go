@@ -2,16 +2,23 @@
 // (E-03) and Session Manager (E-04): principals and OAuth client
 // registrations from configuration (FR-2.1, FR-2.18), the session table
 // (FR-2.8, FR-2.9, FR-2.10, FR-2.16), template selection and claim narrowing
-// from scopes (FR-2.6, FR-2.7, FR-2.21), and bearer-token authentication on
-// every request (FR-2.5, SR-2.1-1, SR-2.1-3). Tokens are 256-bit CSPRNG values
-// stored only as SHA-256 verifiers (SR-2.3-1).
+// from scopes (FR-2.6, FR-2.7, FR-2.21), bearer-token authentication on
+// every request (FR-2.5, SR-2.1-1, SR-2.1-3) and refresh-token rotation with
+// reuse detection (FR-2.22). Tokens are 256-bit CSPRNG values stored only as
+// SHA-256 verifiers (SR-2.3-1).
+//
+// Concurrency: the Store owns every *Session it holds. Methods return
+// copies, so callers can read fields without the Store's lock and cannot
+// change the table by writing to them.
 package session
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -30,6 +37,14 @@ const (
 	StateExpired    = "expired"
 )
 
+// Reasons a session ends.
+const (
+	EndIdle         = "IDLE_TIMEOUT"
+	EndMaxLifetime  = "MAX_LIFETIME"
+	EndTerminated   = "TERMINATED"
+	EndRefreshReuse = "REFRESH_TOKEN_REUSE"
+)
+
 // Session binds a principal to a policy template for a bounded time.
 type Session struct {
 	ID             string
@@ -42,16 +57,19 @@ type Session struct {
 	Purpose        string
 	Project        string
 	EndUser        string
-	ApprovedBy     string // administrator who signed in at the authorization endpoint (FR-2.19)
+	ApprovedBy     string // Session Approver who signed in at the authorization endpoint (FR-2.19)
 	HarnessVersion string
 	State          string
+	EndReason      string
 	CreatedAt      time.Time
 	IdleDeadline   time.Time
 	MaxDeadline    time.Time
+	EndedAt        time.Time
 	Listener       string
 
 	accessHash  string
 	refreshHash string
+	usedRefresh []string // rotated-out refresh verifiers of this session's family
 }
 
 // Claims are the narrowing parameters of ARCH §7.1 layer 4, carried as
@@ -117,34 +135,42 @@ var (
 	ErrTooManySessions  = errors.New("concurrent session limit reached")          // -31005
 	ErrSessionInvalid   = errors.New("session invalid")                           // -31006
 	ErrNoSnapshot       = errors.New("no policy snapshot loaded")                 // -31004
+	ErrRefreshReuse     = errors.New("refresh token reused; session revoked")
 )
 
-// Store is the session table (D-07, memory only in this slice, so every
-// session is gone after a restart as FR-2.16 requires).
+// EndedRetention is how long an ended session stays readable (status API,
+// reuse detection) before the janitor removes it.
+const EndedRetention = 10 * time.Minute
+
+// Store is the session table (D-07, memory only, so every session is gone
+// after a restart as FR-2.16 requires).
 type Store struct {
 	cfg      *config.Config
 	snapshot func() *policy.Snapshot
-	now      func() time.Time
-	onEnd    func(*Session)
 
-	mu        sync.Mutex
-	sessions  map[string]*Session
-	byAccess  map[string]*Session
-	byRefresh map[string]*Session
+	mu          sync.Mutex
+	now         func() time.Time
+	onEnd       func(Session)
+	sessions    map[string]*Session
+	byAccess    map[string]*Session
+	byRefresh   map[string]*Session
+	usedRefresh map[string]string              // rotated-out refresh verifier -> session ID
+	active      map[string]map[string]*Session // principal -> active sessions
 }
 
 // NewStore returns an empty session table.
 func NewStore(cfg *config.Config, snapshot func() *policy.Snapshot) *Store {
 	return &Store{cfg: cfg, snapshot: snapshot, now: time.Now,
-		sessions: map[string]*Session{}, byAccess: map[string]*Session{}, byRefresh: map[string]*Session{}}
+		sessions: map[string]*Session{}, byAccess: map[string]*Session{}, byRefresh: map[string]*Session{},
+		usedRefresh: map[string]string{}, active: map[string]map[string]*Session{}}
 }
 
 // SetNow replaces the clock (tests).
 func (s *Store) SetNow(f func() time.Time) { s.mu.Lock(); s.now = f; s.mu.Unlock() }
 
-// OnEnd registers a callback invoked when a session leaves the active state
-// (FR-2.11 effects are applied by the caller).
-func (s *Store) OnEnd(f func(*Session)) { s.mu.Lock(); s.onEnd = f; s.mu.Unlock() }
+// OnEnd registers a callback invoked, on its own goroutine, when a session
+// leaves the active state (FR-2.11 effects are applied by the caller).
+func (s *Store) OnEnd(f func(Session)) { s.mu.Lock(); s.onEnd = f; s.mu.Unlock() }
 
 // CreateParams are the FR-2.3 inputs.
 type CreateParams struct {
@@ -167,6 +193,12 @@ func hash(tok string) string {
 	return hex.EncodeToString(h[:])
 }
 
+func copyOf(e *Session) *Session {
+	c := *e
+	c.usedRefresh = slices.Clone(e.usedRefresh)
+	return &c
+}
+
 // Create establishes a session (FR-2.3, FR-2.4, FR-2.6, FR-2.7, FR-2.10).
 func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 	s.mu.Lock()
@@ -186,25 +218,15 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 	tmpl := p.Claims.Template
 	if tmpl == "" {
 		tmpl = prof.DefaultTemplate
-	} else {
-		permitted := false
-		for _, t := range prof.Templates {
-			if t == tmpl {
-				permitted = true
-			}
-		}
-		if !permitted {
-			return nil, Tokens{}, ErrNoTemplate
-		}
+	} else if !slices.Contains(prof.Templates, tmpl) {
+		return nil, Tokens{}, ErrNoTemplate
 	}
-	s.expireLocked()
-	active := 0
-	for _, e := range s.sessions {
-		if e.PrincipalID == p.PrincipalID && e.State == StateActive {
-			active++
-		}
+	// Only this principal's sessions are checked, so creation does not scan
+	// the whole table.
+	for _, e := range s.active[p.PrincipalID] {
+		s.checkLocked(e)
 	}
-	if active >= s.cfg.Limits.SessionsPerPrincipal {
+	if len(s.active[p.PrincipalID]) >= s.cfg.Limits.SessionsPerPrincipal {
 		return nil, Tokens{}, ErrTooManySessions
 	}
 	now := s.now()
@@ -216,84 +238,130 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 		CreatedAt: now, IdleDeadline: now.Add(s.cfg.Limits.SessionIdleTimeout.Duration),
 		MaxDeadline: now.Add(s.cfg.Limits.SessionMaxLifetime.Duration), Listener: p.Listener,
 	}
+	if sess.IdleDeadline.After(sess.MaxDeadline) {
+		sess.IdleDeadline = sess.MaxDeadline
+	}
 	tok := Tokens{Access: ids.Secret(), Refresh: ids.Secret()}
 	sess.accessHash, sess.refreshHash = hash(tok.Access), hash(tok.Refresh)
 	s.sessions[sess.ID] = sess
 	s.byAccess[sess.accessHash] = sess
 	s.byRefresh[sess.refreshHash] = sess
-	return sess, tok, nil
+	if s.active[sess.PrincipalID] == nil {
+		s.active[sess.PrincipalID] = map[string]*Session{}
+	}
+	s.active[sess.PrincipalID][sess.ID] = sess
+	return copyOf(sess), tok, nil
 }
 
-// expireLocked moves sessions past their deadlines to expired (FR-2.9).
-func (s *Store) expireLocked() {
+// checkLocked expires one session past its deadlines (FR-2.9) and reports
+// whether it is active.
+func (s *Store) checkLocked(e *Session) bool {
+	if e.State != StateActive {
+		return false
+	}
 	now := s.now()
-	for _, e := range s.sessions {
-		if e.State == StateActive && (now.After(e.IdleDeadline) || now.After(e.MaxDeadline)) {
-			s.endLocked(e, StateExpired)
+	switch {
+	case now.After(e.MaxDeadline):
+		s.endLocked(e, StateExpired, EndMaxLifetime)
+	case now.After(e.IdleDeadline):
+		s.endLocked(e, StateExpired, EndIdle)
+	default:
+		return true
+	}
+	return false
+}
+
+func (s *Store) endLocked(e *Session, state, reason string) {
+	e.State, e.EndReason, e.EndedAt = state, reason, s.now()
+	delete(s.byAccess, e.accessHash)
+	delete(s.byRefresh, e.refreshHash)
+	if m := s.active[e.PrincipalID]; m != nil {
+		delete(m, e.ID)
+		if len(m) == 0 {
+			delete(s.active, e.PrincipalID)
 		}
+	}
+	if s.onEnd != nil {
+		go s.onEnd(*copyOf(e))
 	}
 }
 
-func (s *Store) endLocked(e *Session, state string) {
-	e.State = state
-	delete(s.byAccess, e.accessHash)
-	delete(s.byRefresh, e.refreshHash)
-	if s.onEnd != nil {
-		go s.onEnd(e)
+func (s *Store) touchLocked(e *Session) {
+	e.IdleDeadline = s.now().Add(s.cfg.Limits.SessionIdleTimeout.Duration)
+	if e.IdleDeadline.After(e.MaxDeadline) {
+		e.IdleDeadline = e.MaxDeadline
 	}
 }
 
 // Authenticate verifies a bearer token presented on the named listener and
-// returns the active session, extending its idle deadline (FR-2.5, FR-2.9,
-// SR-2.1-2, SR-2.11-1).
+// returns a copy of the active session, extending its idle deadline
+// (FR-2.5, FR-2.9, SR-2.1-2, SR-2.11-1).
 func (s *Store) Authenticate(bearer, listener string) (*Session, error) {
 	if bearer == "" {
 		return nil, ErrSessionInvalid
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.expireLocked()
 	e := s.byAccess[hash(bearer)]
-	if e == nil || e.State != StateActive {
+	if e == nil || !s.checkLocked(e) || e.Listener != listener {
 		return nil, ErrSessionInvalid
 	}
-	if e.Listener != listener {
-		return nil, ErrSessionInvalid
-	}
-	e.IdleDeadline = s.now().Add(s.cfg.Limits.SessionIdleTimeout.Duration)
-	if e.IdleDeadline.After(e.MaxDeadline) {
-		e.IdleDeadline = e.MaxDeadline
-	}
-	return e, nil
+	s.touchLocked(e)
+	return copyOf(e), nil
 }
 
-// Refresh issues a new access token for the session of a refresh token
-// (FR-2.22). The maximum lifetime is unchanged.
-func (s *Store) Refresh(refresh string) (*Session, Tokens, error) {
+// Refresh rotates the session's tokens (FR-2.22): it issues a new access
+// token and a new refresh token, extends the idle deadline and leaves the
+// maximum lifetime unchanged. The presented refresh token becomes invalid.
+// Presenting a rotated-out refresh token again is treated as theft: the
+// session (the token family) is revoked and ErrRefreshReuse returned. A
+// refresh token presented by a client other than the one it was issued to
+// is refused without rotation.
+func (s *Store) Refresh(refresh, clientID string) (*Session, Tokens, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.expireLocked()
-	e := s.byRefresh[hash(refresh)]
-	if e == nil || e.State != StateActive {
+	h := hash(refresh)
+	if sid, reused := s.usedRefresh[h]; reused {
+		if e := s.sessions[sid]; e != nil && e.State == StateActive {
+			s.endLocked(e, StateTerminated, EndRefreshReuse)
+			return copyOf(e), Tokens{}, ErrRefreshReuse
+		}
+		return nil, Tokens{}, ErrSessionInvalid
+	}
+	e := s.byRefresh[h]
+	if e == nil || !s.checkLocked(e) || e.ClientID != clientID {
 		return nil, Tokens{}, ErrSessionInvalid
 	}
 	delete(s.byAccess, e.accessHash)
-	tok := Tokens{Access: ids.Secret(), Refresh: refresh}
-	e.accessHash = hash(tok.Access)
+	delete(s.byRefresh, e.refreshHash)
+	s.usedRefresh[e.refreshHash] = e.ID
+	e.usedRefresh = append(e.usedRefresh, e.refreshHash)
+	tok := Tokens{Access: ids.Secret(), Refresh: ids.Secret()}
+	e.accessHash, e.refreshHash = hash(tok.Access), hash(tok.Refresh)
 	s.byAccess[e.accessHash] = e
-	e.IdleDeadline = s.now().Add(s.cfg.Limits.SessionIdleTimeout.Duration)
-	if e.IdleDeadline.After(e.MaxDeadline) {
-		e.IdleDeadline = e.MaxDeadline
-	}
-	return e, tok, nil
+	s.byRefresh[e.refreshHash] = e
+	s.touchLocked(e)
+	return copyOf(e), tok, nil
 }
 
-// Get returns a session by ID.
+// Get returns a copy of a session by ID, or nil.
 func (s *Store) Get(id string) *Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.expireLocked()
-	return s.sessions[id]
+	e := s.sessions[id]
+	if e == nil {
+		return nil
+	}
+	s.checkLocked(e)
+	return copyOf(e)
+}
+
+// IsActive reports whether the session exists and is active.
+func (s *Store) IsActive(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	e := s.sessions[id]
+	return e != nil && s.checkLocked(e)
 }
 
 // Terminate ends a session (FR-2.11 effects via OnEnd).
@@ -304,23 +372,63 @@ func (s *Store) Terminate(id string) bool {
 	if e == nil || e.State != StateActive {
 		return false
 	}
-	s.endLocked(e, StateTerminated)
+	s.endLocked(e, StateTerminated, EndTerminated)
 	return true
 }
 
-// Active lists active sessions, newest first.
+// Active lists copies of the active sessions, newest first.
 func (s *Store) Active() []*Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.expireLocked()
 	var out []*Session
-	for _, e := range s.sessions {
-		if e.State == StateActive {
-			out = append(out, e)
+	for _, m := range s.active {
+		for _, e := range m {
+			if s.checkLocked(e) {
+				out = append(out, copyOf(e))
+			}
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
 	return out
+}
+
+// Len returns the number of sessions held, active or ended (tests).
+func (s *Store) Len() int { s.mu.Lock(); defer s.mu.Unlock(); return len(s.sessions) }
+
+// Sweep expires active sessions past their deadlines and removes sessions
+// that ended more than EndedRetention ago, with their rotated-out refresh
+// verifiers.
+func (s *Store) Sweep() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := s.now()
+	for _, m := range s.active {
+		for _, e := range m {
+			s.checkLocked(e)
+		}
+	}
+	for id, e := range s.sessions {
+		if e.State != StateActive && now.Sub(e.EndedAt) > EndedRetention {
+			for _, h := range e.usedRefresh {
+				delete(s.usedRefresh, h)
+			}
+			delete(s.sessions, id)
+		}
+	}
+}
+
+// Run sweeps every interval until ctx ends.
+func (s *Store) Run(ctx context.Context, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			s.Sweep()
+		}
+	}
 }
 
 // ExpiresIn is the access-token lifetime in seconds (CP-18 idle timeout).
