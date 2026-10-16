@@ -23,9 +23,17 @@ for sid in sec:
 
 # ---------- architecture IDs ----------
 a = ARCH_FILE.read_text()
-arch = {k: set(re.findall(rf'\b{k}-\d\d\b', a)) for k in ["E", "F", "I", "X", "G", "D", "P"]}
+arch = {k: set(re.findall(rf'\b{k}-\d{{2,3}}\b', a)) for k in ["E", "F", "I", "X", "G", "D", "P"]}
 enames = dict(re.findall(r'^#### (E-\d\d) (.*?) — T', a, re.M))
-fnames = dict(re.findall(r'^\| (F-\d\d) \| ([^|]+?) \|', a, re.M))
+fnames = dict(re.findall(r'^\| (F-\d{2,3}) \| ([^|]+?) \|', a, re.M))
+
+def natkey(x):
+    """Sort architecture and requirement IDs by their numeric parts (F-9 < F-10 < F-100)."""
+    return [int(p) if p.isdigit() else p for p in re.split(r'(\d+)', x)]
+
+# ---------- controlled parameters ----------
+APPX = (HERE / "appendix.md").read_text()
+cp_defined = {int(n) for n in re.findall(r'^\| CP-(\d\d) \|', APPX, re.M)}
 
 # ---------- requirement sources ----------
 items = []  # sequence of ("md", text) / ("req", dict) / ("disp", dict)
@@ -107,7 +115,7 @@ for r in reqs.values():
         if ref not in reqs and ref != r["id"]:
             errors.append(f"{r['id']}: references unknown {ref}")
     for cp in re.findall(r'\bCP-(\d\d)\b', body):
-        if not 1 <= int(cp) <= 43:
+        if int(cp) not in cp_defined:
             errors.append(f"{r['id']}: unknown CP-{cp}")
     for g in re.findall(r'\bG-\d\d\b', body):
         if g not in arch["G"]:
@@ -117,6 +125,60 @@ for r in reqs.values():
 for sid in disps:
     if sid not in sec:
         errors.append(f"disposition for unknown SEC-{sid}")
+
+# ---------- cross-references in the front matter and appendices ----------
+for name, text in [("front.md", (HERE / "front.md").read_text()), ("appendix.md", APPX), ("appendix2.md", (HERE / "appendix2.md").read_text())]:
+    for ref in set(re.findall(r'\b(?:FR|SR)-\d+(?:\.\d+)*(?:-\d+)?\b', text)):
+        if ref not in reqs:
+            errors.append(f"{name}: references unknown {ref}")
+    for cp in set(re.findall(r'\bCP-(\d\d)\b', text)):
+        if int(cp) not in cp_defined:
+            errors.append(f"{name}: references unknown CP-{cp}")
+
+# ---------- data files under docs/ ----------
+import json
+DOCS = PROJ / "docs"
+catalog_ids = []
+sec103 = re.search(r'^### 10\.3 .*?(?=^### |^## )', a, re.S | re.M)
+arch_params = sorted(set(re.findall(r'\bP-(\d{3})\b', sec103.group(0) if sec103 else "")))
+PARAM_FIELDS = ["id", "name", "description", "unit", "dataType", "sourceElement", "capturePoint", "derivation", "sensitivity", "baselinable", "costClass"]
+try:
+    cat = json.loads((DOCS / "parameters.json").read_text())
+    entries = cat.get("parameters", [])
+    catalog_ids = [e.get("id") for e in entries]
+    for e in entries:
+        for f in PARAM_FIELDS:
+            if f not in e or e[f] in ("", None):
+                errors.append(f"docs/parameters.json: {e.get('id')} missing {f}")
+        if e.get("sensitivity") not in ("S0", "S1", "S2", "S3"):
+            errors.append(f"docs/parameters.json: {e.get('id')} bad sensitivity {e.get('sensitivity')}")
+        if e.get("sourceElement") and not set(re.findall(r'E-\d\d', e["sourceElement"])) <= arch["E"]:
+            errors.append(f"docs/parameters.json: {e.get('id')} unknown source element {e['sourceElement']}")
+    if len(set(catalog_ids)) != len(catalog_ids):
+        errors.append("docs/parameters.json: duplicate parameter IDs")
+    for p in arch_params:
+        if f"P-{p}" not in catalog_ids:
+            errors.append(f"docs/parameters.json: missing P-{p} (ARCH §10.3)")
+except (OSError, ValueError) as ex:
+    errors.append(f"docs/parameters.json: {ex}")
+try:
+    json.loads((DOCS / "schemas" / "manifest.schema.json").read_text())
+except (OSError, ValueError) as ex:
+    errors.append(f"docs/schemas/manifest.schema.json: {ex}")
+status_elems = {}
+try:
+    for e in json.loads((DOCS / "status" / "elements.json").read_text()):
+        status_elems[e.get("id")] = e
+        if e.get("implementation") not in ("implemented", "partial", "not-started"):
+            errors.append(f"docs/status/elements.json: {e.get('id')} bad implementation value")
+        for f in ("packages", "note"):
+            if f not in e:
+                errors.append(f"docs/status/elements.json: {e.get('id')} missing {f}")
+    for e in sorted(arch["E"]):
+        if e not in status_elems:
+            errors.append(f"docs/status/elements.json: missing {e}")
+except (OSError, ValueError) as ex:
+    errors.append(f"docs/status/elements.json: {ex}")
 
 # ---------- coverage ----------
 sr_by_parent = collections.defaultdict(list)
@@ -155,9 +217,9 @@ gmention = collections.Counter()
 for r in reqs.values():
     for g in set(re.findall(r'\bG-\d\d\b', r["stmt"] + r["title"])):
         gmention[g] += 1
-CONTEXT_ONLY = {"X-02"}  # outside the SoI by definition (ARCH §6.1)
-arch_gaps = {k: sorted(x for x in arch[k] if alloc_count[x] == 0 and x not in CONTEXT_ONLY) for k in ["E", "F", "I", "X", "D"]}
-arch_gaps["G"] = sorted(x for x in arch["G"] if gmention[x] == 0)
+CONTEXT_ONLY = set()  # X-02 entered the SoI in V1.2 (packaging command F-96)
+arch_gaps = {k: sorted((x for x in arch[k] if alloc_count[x] == 0 and x not in CONTEXT_ONLY), key=natkey) for k in ["E", "F", "I", "X", "D"]}
+arch_gaps["G"] = sorted((x for x in arch["G"] if gmention[x] == 0), key=natkey)
 for k, v in arch_gaps.items():
     for x in v:
         warnings.append(f"architecture {x} has no allocated requirement")
@@ -207,7 +269,7 @@ for kind, obj in items:
     out.append(f"| Verification Method | {r['method']} |\n| Verification Statement | {esc(r['vstmt'])} |\n")
     out.append(f"| Source | {esc(r['src'])} |\n| Rationale | {esc(r['rat'])} |\n\n")
 
-out.append((HERE / "appendix.md").read_text().rstrip() + "\n\n")
+out.append(APPX.rstrip() + "\n\n")
 
 # Appendix E
 out.append("## Appendix E — Security-control coverage (SEC → SR)\n\n")
@@ -245,7 +307,7 @@ out.append("\n")
 out.append("## Appendix G — Architecture coverage\n\n")
 def cov_table(prefix, label, names=None):
     out.append(f"### {label}\n\n| ID | {'Name | ' if names else ''}Requirements |\n|---|{'---|' if names else ''}---|\n")
-    for x in sorted(arch[prefix]):
+    for x in sorted(arch[prefix], key=natkey):
         rs = [r["id"] for r in reqs.values() if x in r["alloc_ids"]]
         nm = f" {esc(names.get(x,''))} |" if names else ""
         out.append(f"| {x} |{nm} {', '.join(rs) or ('context only — outside SoI' if x in CONTEXT_ONLY else '**none**')} |\n")
@@ -286,15 +348,20 @@ out.append(f"| Security MUSTs ({len(must_ids)}) covered (SR, SEC decomposition o
 out.append(f"| SEC requirements with dispositions (realized outside the Gateway or by process) | {', '.join('SEC ' + d for d in sorted(disps, key=seckey))} |\n")
 out.append(f"| Security SHALL items without citing FR | {', '.join(g for g in gaps if sec[g]['imp']=='SHALL') or 'None'} |\n")
 out.append(f"| Barren functional roots (no children) | {', '.join(barren_roots) or 'None'} |\n")
+out.append(f"| Parameter Catalog (`docs/parameters.json`) | {len(catalog_ids)} parameters; all {len(arch_params)} ARCH §10.3 IDs present |\n")
+out.append(f"| Implementation status (`docs/status/elements.json`) | " + ", ".join(f"{k} {v}" for k, v in sorted(collections.Counter(e['implementation'] for e in status_elems.values()).items())) + " |\n")
 for k, lab in [("E", "Elements"), ("F", "Functions"), ("X", "External interfaces"), ("I", "Internal interfaces"), ("D", "Data stores"), ("G", "GUI modules")]:
     out.append(f"| {lab} without an allocated requirement | {', '.join(arch_gaps[k]) or 'None'} |\n")
 out.append(f"| Allocation IDs resolve in `ArchitectureV2.md` | Pass |\n")
 out.append(f"| Cross-references to FR/SR/CP IDs resolve | Pass |\n")
 out.append("\n### I.1 Items for owner review\n\n")
-out.append("1. **SEC wording versus V2.** Several parent MUSTs name V1 components (Neo4j \"graph service\", \"admission worker\", Hermes). The SR children realize them on V2 elements; the parent text is unchanged in the security SRS.\n")
-out.append("2. **Dispositions.** The SEC requirements listed above are realized outside the Gateway (curation system or harness deployment). Confirm that these allocations are acceptable.\n")
-out.append("3. **Owner-set values.** CP values marked *New* in Appendix A are engineering proposals and need owner confirmation.\n")
-out.append("4. **Usability measure.** FR-8.24 turns \"user friendly\" into a timed task; confirm the threshold.\n")
+out.append("The owner delegated specification decisions to the project team on 2026-10-16. The items below record the decisions taken under that delegation; each is explained in `CHANGELOG.md`.\n\n")
+out.append("1. **SEC wording versus V2.** Several parent MUSTs name V1 components (Neo4j \"graph service\", \"admission worker\", Hermes). The SR children realize them on V2 elements; the parent text is unchanged in the security SRS. In particular, SEC 1.1, 6.2 and 6.3 name the graph as the authority; their SR children realize them on the Policy Store and the Evidence Journal (A-9).\n")
+out.append("2. **Dispositions.** The SEC requirements listed above are realized outside the Gateway (harness deployment or process). V1.2 replaced the curation-system dispositions with packaging requirements (FR-14) and the harness dispositions for SEC 4.9, 4.11 and 4.13 with lockdown requirements.\n")
+out.append("3. **Owner-set values.** CP values marked *New* in Appendix A are engineering values set under the delegation; they are revised by controlled change.\n")
+out.append("4. **Usability measure.** FR-8.24 turns \"user friendly\" into a timed task.\n")
+out.append("\n")
+out.append((HERE / "appendix2.md").read_text().rstrip() + "\n")
 
 OUT.write_text("".join(out))
 print(f"OK: {len(reqs)} requirements ({len(fr)} FR, {len(sr)} SR) -> {OUT}")
