@@ -284,7 +284,7 @@ func compileSchema(raw []byte) (*jsonschema.Schema, error) {
 	}
 	c, err = comp.Compile("tool.json")
 	if err != nil {
-		return nil, fmt.Errorf("%w does not compile: %v", errSchema, err)
+		return nil, fmt.Errorf("%w does not compile: %w", errSchema, err)
 	}
 	schemaCache.Lock()
 	if len(schemaCache.m) >= schemaCacheMax {

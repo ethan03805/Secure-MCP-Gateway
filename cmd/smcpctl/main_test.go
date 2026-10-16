@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -24,7 +23,12 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	binDir = dir
-	goTool := filepath.Join(runtime.GOROOT(), "bin", "go")
+	// go test puts its own toolchain first on PATH for the test process.
+	goTool, err := exec.LookPath("go")
+	if err != nil {
+		os.RemoveAll(dir)
+		panic("go tool: " + err.Error())
+	}
 	for _, pkg := range []string{"smcpctl", "smcpd", "smcp-refserver"} {
 		cmd := exec.Command(goTool, "build", "-o", filepath.Join(dir, pkg), "../"+pkg)
 		cmd.Stderr = os.Stderr

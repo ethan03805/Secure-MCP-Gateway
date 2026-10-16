@@ -63,18 +63,6 @@ func (r *recorder) set(fail func(audit.Event) error, hook func(audit.Event)) {
 	r.mu.Unlock()
 }
 
-func (r *recorder) phases(corr string) []string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	var out []string
-	for _, e := range r.events {
-		if e.CorrelationID == corr && e.Phase != "" {
-			out = append(out, string(e.Phase)+":"+e.ReasonCode)
-		}
-	}
-	return out
-}
-
 func (r *recorder) find(pred func(audit.Event) bool) *audit.Event {
 	r.mu.Lock()
 	defer r.mu.Unlock()

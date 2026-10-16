@@ -108,7 +108,8 @@ func newServer(rootDir string) (*mcp.Server, func(), error) {
 			}
 			entries, err := fs.ReadDir(root.FS(), p)
 			if err != nil {
-				return toolError("cannot list " + a.Path), nil, nil
+				// A listing failure is the tool's result, not a protocol error.
+				return toolError("cannot list " + a.Path), nil, nil //nolint:nilerr // reported to the client as a tool error result
 			}
 			var lines []string
 			for _, e := range entries {

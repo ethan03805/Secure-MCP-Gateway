@@ -315,7 +315,7 @@ func (g *Gateway) Stop(actor, reason string) error {
 	g.gate.Unlock()
 	g.log.Warn("emergency stop", "actor", actor, "reason", reason)
 	if err := g.evidence.Commit(adminEvent("admin", "stopped", ReasonEmergencyStop, actor, map[string]any{"reason": reason})); err != nil {
-		return fmt.Errorf("%w: %v", ErrAuditUnavailable, err)
+		return fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
 	}
 	return nil
 }
@@ -326,7 +326,7 @@ func (g *Gateway) Resume(actor string) error {
 	g.gate.Lock()
 	defer g.gate.Unlock()
 	if err := g.evidence.Commit(adminEvent("admin", "resumed", "EMERGENCY_RESUME", actor, nil)); err != nil {
-		return fmt.Errorf("%w: %v", ErrAuditUnavailable, err)
+		return fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
 	}
 	g.stopped.Store(false)
 	g.log.Warn("emergency stop lifted", "actor", actor)
@@ -354,7 +354,7 @@ func (g *Gateway) ActivatePolicy(actor string, snap *policy.Snapshot) (bool, err
 	}
 	if err := g.evidence.Commit(audit.Event{Class: "admin", Origin: "E-05", Outcome: "activated", ReasonCode: "POLICY_ACTIVATED", PolicyRevision: snap.Revision,
 		PolicyStatus: "not_evaluated", Detail: map[string]any{"actor": actor, "previous_revision": prev, "digest": snap.Digest}}); err != nil {
-		return false, fmt.Errorf("%w: %v", ErrAuditUnavailable, err)
+		return false, fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
 	}
 	return g.decider.Replace(snap)
 }
