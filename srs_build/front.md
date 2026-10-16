@@ -10,7 +10,7 @@
 | Architecture | `ArchitectureV2.md` V2.2 draft — elements E-01…E-33, functions F-01…F-95, interfaces X-01…X-12 and I-01…I-39, GUI modules G-01…G-14, data stores D-01…D-13 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
-| Skill | `/home/netrisk/Projects/mcp-servers/Skills.md` (INCOSE GtWR + project rules) |
+| Skill | `Skills.md` (INCOSE GtWR + project rules) |
 | Status | Draft for owner review. Requirements are not yet implemented or verified. |
 
 ## Contents
@@ -69,7 +69,7 @@ Some requirements apply only when a profile is enabled. Profiles are disabled in
 
 ### 2.1 Imperatives
 
-Imperatives follow `Skills.md` §2.2 and `/home/netrisk/Projects/Resource.md`. **SHALL** is binding and verified. **MUST** appears in this document only when quoting parent controls of `MCP_Gateway_Security_SRS.md`; it is never used as a requirement imperative here. Every requirement in this SRS is a **SHALL**.
+Imperatives follow `Skills.md` §2.2 and the owner's `Resource.md` (not in this repository). **SHALL** is binding and verified. **MUST** appears in this document only when quoting parent controls of `MCP_Gateway_Security_SRS.md`; it is never used as a requirement imperative here. Every requirement in this SRS is a **SHALL**.
 
 > **Note on the parent document:** `MCP_Gateway_Security_SRS.md` writes some measurable leaf controls as MUST at the owner's earlier request. This SRS treats every MUST in that document as a parent control and realizes it with one or more SHALL children allocated to V2 elements.
 
@@ -149,6 +149,6 @@ All selections carry OSI-approved licenses. Exact versions, digests and transiti
 
 ### 3.3 Stack risks to retire in the first prototype phase
 
-1. **MCP SDK revision support.** The 2026-07-28 revision removed `initialize`, sessions and the GET stream. The Go SDK serves 2026-07-28 only with its stateless Streamable HTTP option, and its documentation does not describe one handler serving legacy `initialize` clients at the same time. Confirm in the first prototype that both eras can be served on the CP-01 endpoint (FR-1.46). If they cannot, implement the northbound JSON-RPC layer in the project from `schema.json` and keep the Go SDK for the southbound client only.
+1. **MCP SDK revision support.** *Retired 2026-10-16.* The 2026-07-28 revision removed `initialize`, sessions and the GET stream. The spike in `spikes/go-sdk-dual-era/` shows that `modelcontextprotocol/go-sdk` v1.8.0 serves both eras on one `StreamableHTTPHandler` when `Stateless` is set: 2026-07-28 `server/discover`, `tools/list`, `tools/call` and `subscriptions/listen` (with `notifications/tools/list_changed` delivered on the listen stream) and 2025-11-25 `initialize`, `notifications/initialized`, `tools/list` and `tools/call`, with an `initialize` naming an older version answered with `2025-11-25` as FR-1.17 requires. In the default stateful mode the handler rejects every 2026-07-28 request, so the Gateway uses stateless mode. Legacy clients receive no `Mcp-Session-Id`, which revision 2025-11-25 permits; FR-1.46 is worded accordingly. The SDK's default `cacheScope`, `ttlMs` and `logging` capability must be overridden to meet FR-1.12, FR-1.13 and FR-1.42.
 2. **Neo4j CE write throughput.** Measure the decision-intent and outcome transactions (SR-6.2-1, SR-6.3-1) at the FR-11 reference load. If they miss, keep CE as the system of record and batch non-mandatory graph writes.
 3. **Rootless Podman start latency.** Measure per-session instance cold start. If it is excessive, prefer the `shared` scope for stateless, read-only servers (ARCH OD-3).
