@@ -1,55 +1,109 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-16T23:23:19Z",
-  "commit": "3e978775e11a1ad48aee215215be25c1b9ab665d",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/3e978775e11a1ad48aee215215be25c1b9ab665d",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38981047090",
+  "generatedAt": "2026-10-16T23:26:43Z",
+  "commit": "04b132f769fcb4f4d93d6bf175a34d5cc91a4082",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/04b132f769fcb4f4d93d6bf175a34d5cc91a4082",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38981319133",
   "tests": {
-    "total": 28,
-    "passed": 28,
+    "total": 89,
+    "passed": 89,
     "failed": 0,
     "skipped": 0,
-    "durationSec": 17.7,
+    "durationSec": 34.5,
     "packages": [
       {
+        "name": "cmd/smcp-refserver",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "cmd/smcpctl",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/adminapi",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/audit",
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/authguard",
         "passed": 3,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/backend",
-        "passed": 2,
+        "passed": 8,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/config",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/diag",
         "passed": 1,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/e2e",
-        "passed": 5,
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/edge",
+        "passed": 10,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/keys",
-        "passed": 2,
-        "failed": 0,
-        "skipped": 0
-      },
-      {
-        "name": "internal/policy",
         "passed": 4,
         "failed": 0,
         "skipped": 0
       },
       {
+        "name": "internal/pipeline",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/policy",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/profile",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/reqtest",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/session",
-        "passed": 3,
+        "passed": 10,
         "failed": 0,
         "skipped": 0
       },
@@ -62,8 +116,12 @@
     ]
   },
   "coverage": {
-    "totalPct": 67.5,
+    "totalPct": 73.4,
     "packages": [
+      {
+        "name": "cmd/smcp-refserver",
+        "pct": 73.1
+      },
       {
         "name": "cmd/smcpctl",
         "pct": 0
@@ -73,20 +131,36 @@
         "pct": 0
       },
       {
+        "name": "internal/adminapi",
+        "pct": 77.3
+      },
+      {
+        "name": "internal/app",
+        "pct": 75.3
+      },
+      {
         "name": "internal/audit",
-        "pct": 80.7
+        "pct": 81.4
+      },
+      {
+        "name": "internal/authguard",
+        "pct": 94.2
       },
       {
         "name": "internal/backend",
-        "pct": 78.4
+        "pct": 85.4
       },
       {
         "name": "internal/config",
-        "pct": 86.2
+        "pct": 87.7
+      },
+      {
+        "name": "internal/diag",
+        "pct": 93.8
       },
       {
         "name": "internal/edge",
-        "pct": 81
+        "pct": 87.7
       },
       {
         "name": "internal/ids",
@@ -94,19 +168,27 @@
       },
       {
         "name": "internal/keys",
-        "pct": 73.7
+        "pct": 74.2
+      },
+      {
+        "name": "internal/pipeline",
+        "pct": 86.7
       },
       {
         "name": "internal/policy",
-        "pct": 89.1
+        "pct": 94
+      },
+      {
+        "name": "internal/profile",
+        "pct": 94.7
       },
       {
         "name": "internal/reqtest",
-        "pct": 71.4
+        "pct": 91.7
       },
       {
         "name": "internal/session",
-        "pct": 73.7
+        "pct": 83.4
       },
       {
         "name": "scripts/itest-client",
@@ -120,57 +202,57 @@
   },
   "requirements": {
     "total": 445,
-    "verified": 71,
-    "partial": 0,
+    "verified": 45,
+    "partial": 33,
     "failing": 0,
-    "unverified": 374,
+    "unverified": 367,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 24,
-        "verified": 8,
-        "partial": 0,
+        "verified": 6,
+        "partial": 2,
         "failing": 0
       },
       {
         "element": "E-02",
         "name": "Protocol Mediator",
         "total": 41,
-        "verified": 13,
-        "partial": 0,
+        "verified": 8,
+        "partial": 5,
         "failing": 0
       },
       {
         "element": "E-03",
         "name": "Identity & Authentication Service",
         "total": 10,
-        "verified": 6,
-        "partial": 0,
+        "verified": 2,
+        "partial": 4,
         "failing": 0
       },
       {
         "element": "E-04",
         "name": "Session Manager",
         "total": 16,
-        "verified": 13,
-        "partial": 0,
+        "verified": 7,
+        "partial": 6,
         "failing": 0
       },
       {
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 19,
-        "verified": 1,
-        "partial": 0,
+        "verified": 0,
+        "partial": 1,
         "failing": 0
       },
       {
         "element": "E-06",
         "name": "Policy Decision Service",
         "total": 23,
-        "verified": 5,
-        "partial": 0,
+        "verified": 4,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -185,24 +267,24 @@
         "element": "E-08",
         "name": "Access Enforcement Point",
         "total": 18,
-        "verified": 9,
-        "partial": 0,
+        "verified": 8,
+        "partial": 1,
         "failing": 0
       },
       {
         "element": "E-09",
         "name": "Request Inspection Pipeline",
         "total": 13,
-        "verified": 1,
-        "partial": 0,
+        "verified": 0,
+        "partial": 1,
         "failing": 0
       },
       {
         "element": "E-10",
         "name": "Tool Dispatcher",
         "total": 31,
-        "verified": 3,
-        "partial": 0,
+        "verified": 2,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -218,7 +300,7 @@
         "name": "Enforcement Coordinator",
         "total": 15,
         "verified": 3,
-        "partial": 0,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -233,8 +315,8 @@
         "element": "E-14",
         "name": "Local Server Registry",
         "total": 12,
-        "verified": 1,
-        "partial": 0,
+        "verified": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -242,7 +324,7 @@
         "name": "Server Runtime Manager",
         "total": 11,
         "verified": 0,
-        "partial": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -290,15 +372,15 @@
         "name": "Audit & Evidence Service",
         "total": 22,
         "verified": 3,
-        "partial": 0,
+        "partial": 2,
         "failing": 0
       },
       {
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
         "total": 7,
-        "verified": 3,
-        "partial": 0,
+        "verified": 0,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -314,7 +396,7 @@
         "name": "Management Console & Control API",
         "total": 39,
         "verified": 0,
-        "partial": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -460,7 +542,7 @@
       {
         "id": "FR-1.10",
         "element": "E-02",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
@@ -490,7 +572,7 @@
       {
         "id": "FR-1.14",
         "element": "E-02",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
@@ -498,7 +580,7 @@
       {
         "id": "FR-1.15",
         "element": "E-02",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
@@ -581,10 +663,8 @@
       {
         "id": "FR-1.27",
         "element": "E-08",
-        "status": "verified",
-        "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-1.28",
@@ -679,7 +759,7 @@
       {
         "id": "FR-1.42",
         "element": "E-02",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
@@ -733,7 +813,8 @@
         "element": "E-08",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
+          "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/edge.TestApproverSeam"
         ]
       },
       {
@@ -759,7 +840,7 @@
       {
         "id": "FR-2.3",
         "element": "E-04",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/session.TestCreateSelectsTemplateAndLimits"
         ]
@@ -767,7 +848,7 @@
       {
         "id": "FR-2.4",
         "element": "E-04",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestOAuthSessionAndToolCall",
           "internal/session.TestCreateSelectsTemplateAndLimits"
@@ -776,7 +857,7 @@
       {
         "id": "FR-2.5",
         "element": "E-03",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestOAuthSessionAndToolCall",
           "internal/session.TestAuthenticateAndLifetimes"
@@ -785,7 +866,7 @@
       {
         "id": "FR-2.6",
         "element": "E-04",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestScopesSelectTemplate",
           "internal/session.TestCreateSelectsTemplateAndLimits"
@@ -794,7 +875,7 @@
       {
         "id": "FR-2.7",
         "element": "E-04",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/session.TestCreateSelectsTemplateAndLimits"
         ]
@@ -818,7 +899,7 @@
       {
         "id": "FR-2.10",
         "element": "E-04",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/session.TestCreateSelectsTemplateAndLimits"
         ]
@@ -826,9 +907,10 @@
       {
         "id": "FR-2.11",
         "element": "E-04",
-        "status": "verified",
+        "status": "partial",
         "tests": [
-          "internal/e2e.TestTransportAndAuthenticationRules"
+          "internal/e2e.TestSubscriptionsListenEndsWithSession",
+          "internal/edge.TestSessionEndCancelsInFlightCall"
         ]
       },
       {
@@ -864,7 +946,7 @@
       {
         "id": "FR-2.17",
         "element": "E-03",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestOAuthSessionAndToolCall"
         ]
@@ -872,7 +954,7 @@
       {
         "id": "FR-2.18",
         "element": "E-03",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestOAuthSessionAndToolCall"
         ]
@@ -882,7 +964,9 @@
         "element": "E-04",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
+          "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/session.TestAuthorizationCodeNegativeCases",
+          "internal/session.TestSignInLockoutAndHeaders"
         ]
       },
       {
@@ -890,7 +974,8 @@
         "element": "E-04",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
+          "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/session.TestAuthorizationCodeNegativeCases"
         ]
       },
       {
@@ -908,7 +993,9 @@
         "status": "verified",
         "tests": [
           "internal/e2e.TestTransportAndAuthenticationRules",
-          "internal/session.TestAuthenticateAndLifetimes"
+          "internal/session.TestAuthenticateAndLifetimes",
+          "internal/session.TestRefreshReuseRevokesFamily",
+          "internal/session.TestTokenEndpointRateLimitAndRefreshReuse"
         ]
       },
       {
@@ -926,7 +1013,7 @@
       {
         "id": "FR-3.2",
         "element": "E-05",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/policy.TestCompileAndDecide",
           "internal/policy.TestPublicationInvariants"
@@ -979,13 +1066,16 @@
         "element": "E-06",
         "status": "verified",
         "tests": [
-          "internal/policy.TestCompileAndDecide"
+          "internal/adminapi.TestPolicyReload",
+          "internal/e2e.TestPolicyReloadThroughControlAPI",
+          "internal/edge.TestPolicyHotSwapRebuildsCatalog",
+          "internal/policy.TestReplaceHotSwap"
         ]
       },
       {
         "id": "FR-3.11",
         "element": "E-06",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/policy.TestCompileAndDecide"
         ]
@@ -1001,6 +1091,8 @@
         "element": "E-06",
         "status": "verified",
         "tests": [
+          "internal/e2e.TestRateLimitThroughEdge",
+          "internal/policy.TestProfileRateAndRefusalConsumesNothing",
           "internal/policy.TestRateLimit"
         ]
       },
@@ -1055,7 +1147,7 @@
       {
         "id": "FR-4.3",
         "element": "E-08",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestPolicyDecisionsAndErrorMapping"
         ]
@@ -1069,9 +1161,10 @@
       {
         "id": "FR-4.5",
         "element": "E-09",
-        "status": "verified",
+        "status": "partial",
         "tests": [
-          "internal/e2e.TestPolicyDecisionsAndErrorMapping"
+          "internal/e2e.TestPolicyDecisionsAndErrorMapping",
+          "internal/pipeline.TestFilterChainOrderSelectionAndFailClosed"
         ]
       },
       {
@@ -1091,6 +1184,7 @@
         "element": "E-10",
         "status": "verified",
         "tests": [
+          "internal/backend.TestQueueBoundIsAtomicAndFIFO",
           "internal/e2e.TestQueueBound"
         ]
       },
@@ -1099,14 +1193,17 @@
         "element": "E-10",
         "status": "verified",
         "tests": [
+          "internal/backend.TestUpstreamTimeout",
           "internal/e2e.TestPolicyDecisionsAndErrorMapping"
         ]
       },
       {
         "id": "FR-4.10",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/backend.TestResultBoundWhileReading"
+        ]
       },
       {
         "id": "FR-4.11",
@@ -1119,7 +1216,8 @@
         "element": "E-11",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
+          "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/edge.TestFilterSeamAndProvenance"
         ]
       },
       {
@@ -1127,7 +1225,9 @@
         "element": "E-12",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestPolicyDecisionsAndErrorMapping"
+          "internal/backend.TestDispatcherRequiresCapability",
+          "internal/edge.TestIntentCommittedBeforeCapability",
+          "internal/pipeline.TestCapabilities"
         ]
       },
       {
@@ -1135,7 +1235,10 @@
         "element": "E-12",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestPolicyDecisionsAndErrorMapping"
+          "cmd/smcpctl.TestBootstrapAndControlCommands",
+          "internal/adminapi.TestStopResumeAndLogin",
+          "internal/e2e.TestPolicyDecisionsAndErrorMapping",
+          "internal/edge.TestStopResumeAudited"
         ]
       },
       {
@@ -1279,7 +1382,7 @@
       {
         "id": "FR-5.22",
         "element": "E-14",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/backend.TestCheckToolDefinition"
         ]
@@ -1481,8 +1584,10 @@
       {
         "id": "FR-7.2",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestJournalAfterShutdown"
+        ]
       },
       {
         "id": "FR-7.3",
@@ -1495,6 +1600,8 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/audit.TestCrashRecoveryTruncatedTail",
+          "internal/audit.TestGroupCommitConcurrent",
           "internal/audit.TestJournalChainAndVerify",
           "internal/audit.TestJournalContinuesChainAcrossOpen",
           "internal/audit.TestJournalRotatesByAge"
@@ -1505,7 +1612,12 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
-          "internal/audit.TestJournalChainAndVerify"
+          "cmd/smcpctl.TestBootstrapAndControlCommands",
+          "internal/audit.TestAnchorDetectsTrailingDeletion",
+          "internal/audit.TestCrashRecoveryTruncatedTail",
+          "internal/audit.TestJournalChainAndVerify",
+          "internal/audit.TestUnclosedMiddleSegmentRefused",
+          "internal/e2e.TestJournalAfterShutdown"
         ]
       },
       {
@@ -1517,7 +1629,7 @@
       {
         "id": "FR-7.7",
         "element": "E-22",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/keys.TestEnsureKeys"
         ]
@@ -1525,7 +1637,7 @@
       {
         "id": "FR-7.8",
         "element": "E-22",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/keys.TestEnsureKeys"
         ]
@@ -1839,9 +1951,10 @@
       {
         "id": "FR-9.17",
         "element": "E-01",
-        "status": "verified",
+        "status": "partial",
         "tests": [
-          "internal/e2e.TestTransportAndAuthenticationRules"
+          "internal/e2e.TestTransportAndAuthenticationRules",
+          "internal/edge.TestNoSnapshotFailsClosed"
         ]
       },
       {
@@ -2185,7 +2298,11 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
-          "internal/config.TestDefaultsAndSchema"
+          "cmd/smcpctl.TestBootstrapAndControlCommands",
+          "internal/config.TestBootstrapTokenAdminApproversAndRiskClasses",
+          "internal/config.TestDefaultsAndSchema",
+          "internal/config.TestExplicitZeroLimitsHonored",
+          "internal/config.TestSchemaAndDefaultsAgree"
         ]
       },
       {
@@ -2262,6 +2379,7 @@
         "element": "E-06",
         "status": "verified",
         "tests": [
+          "internal/edge.TestNoSnapshotFailsClosed",
           "internal/policy.TestNoSnapshotDenies"
         ]
       },
@@ -2414,7 +2532,7 @@
       {
         "id": "SR-1.17-1",
         "element": "E-12",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestPolicyDecisionsAndErrorMapping"
         ]
@@ -2422,8 +2540,10 @@
       {
         "id": "SR-1.17-2",
         "element": "E-12",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestSessionEndCancelsInFlightCall"
+        ]
       },
       {
         "id": "SR-1.18-1",
@@ -2498,9 +2618,8 @@
       {
         "id": "SR-2.3-1",
         "element": "E-22",
-        "status": "verified",
+        "status": "partial",
         "tests": [
-          "internal/keys.TestPasswordHash",
           "internal/session.TestAuthenticateAndLifetimes"
         ]
       },
@@ -2519,8 +2638,10 @@
       {
         "id": "SR-2.5-1",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/adminapi.TestControlAPIAuthenticationAndCSRF"
+        ]
       },
       {
         "id": "SR-2.6-1",
@@ -2537,9 +2658,10 @@
       {
         "id": "SR-2.8-1",
         "element": "E-01",
-        "status": "verified",
+        "status": "partial",
         "tests": [
-          "internal/e2e.TestTransportAndAuthenticationRules"
+          "internal/e2e.TestTransportAndAuthenticationRules",
+          "internal/keys.TestCANameConstraintsAndLifetimes"
         ]
       },
       {
@@ -2579,7 +2701,7 @@
       {
         "id": "SR-2.10-1",
         "element": "E-10",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestPolicyDecisionsAndErrorMapping"
         ]
@@ -2587,7 +2709,7 @@
       {
         "id": "SR-2.11-1",
         "element": "E-03",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestOAuthSessionAndToolCall"
         ]
@@ -2679,8 +2801,11 @@
       {
         "id": "SR-3.6-1",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestBootstrapAndControlCommands",
+          "internal/pipeline.TestCheckLaunchSpec"
+        ]
       },
       {
         "id": "SR-3.7-1",
@@ -2831,7 +2956,7 @@
       {
         "id": "SR-5.3-1",
         "element": "E-02",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
@@ -2847,7 +2972,8 @@
         "element": "E-08",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
+          "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/edge.TestPolicyHotSwapRebuildsCatalog"
         ]
       },
       {
@@ -2855,7 +2981,7 @@
         "element": "E-08",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestPolicyDecisionsAndErrorMapping"
+          "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
       {
@@ -2873,8 +2999,10 @@
       {
         "id": "SR-5.7-1",
         "element": "E-08",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestPolicyReloadThroughControlAPI"
+        ]
       },
       {
         "id": "SR-5.7-2",
@@ -2929,7 +3057,8 @@
         "element": "E-11",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
+          "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/edge.TestFilterSeamAndProvenance"
         ]
       },
       {
@@ -3001,8 +3130,13 @@
       {
         "id": "SR-6.1-1",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/audit.TestWriteFailureIsSticky",
+          "internal/e2e.TestJournalAfterShutdown",
+          "internal/edge.TestAuditFailureFailsClosed",
+          "internal/session.TestSessionCreationFailsClosedWithoutEvidence"
+        ]
       },
       {
         "id": "SR-6-2",
@@ -3013,8 +3147,10 @@
       {
         "id": "SR-6.2-1",
         "element": "E-12",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/edge.TestIntentCommittedBeforeCapability"
+        ]
       },
       {
         "id": "SR-6-3",
