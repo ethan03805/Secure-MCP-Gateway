@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-16T23:30:46Z",
-  "commit": "26ea5ced32494c9793728410df43353c3321c695",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/26ea5ced32494c9793728410df43353c3321c695",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38981793183",
+  "generatedAt": "2026-10-16T23:34:40Z",
+  "commit": "d170f05b5005f78540301aa1337727a004c49620",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d170f05b5005f78540301aa1337727a004c49620",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38982141929",
   "tests": {
     "total": 89,
     "passed": 89,
     "failed": 0,
     "skipped": 0,
-    "durationSec": 1.3,
+    "durationSec": 1.5,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
