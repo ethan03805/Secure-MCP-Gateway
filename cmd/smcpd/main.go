@@ -5,9 +5,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -76,5 +78,8 @@ func run(cfgPath string, log *slog.Logger) error {
 	log.Info("smcpd listening", "address", cfg.Listener.Address, "mcp", cfg.ResourceURI(), "policy_revision", snap.Revision)
 	err = gw.Serve(ctx)
 	_ = journal.Record(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "stopped", PolicyStatus: "not_evaluated"})
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
 	return err
 }
