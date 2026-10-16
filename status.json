@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-16T23:26:43Z",
-  "commit": "04b132f769fcb4f4d93d6bf175a34d5cc91a4082",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/04b132f769fcb4f4d93d6bf175a34d5cc91a4082",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38981319133",
+  "generatedAt": "2026-10-16T23:27:33Z",
+  "commit": "541fc05f3a43c1ae96db69758dde465df2d1ce71",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/541fc05f3a43c1ae96db69758dde465df2d1ce71",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38981466398",
   "tests": {
     "total": 89,
     "passed": 89,
     "failed": 0,
     "skipped": 0,
-    "durationSec": 34.5,
+    "durationSec": 1.3,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -201,16 +201,16 @@
     ]
   },
   "requirements": {
-    "total": 445,
+    "total": 558,
     "verified": 45,
     "partial": 33,
     "failing": 0,
-    "unverified": 367,
+    "unverified": 480,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
-        "total": 24,
+        "total": 32,
         "verified": 6,
         "partial": 2,
         "failing": 0
@@ -218,7 +218,7 @@
       {
         "element": "E-02",
         "name": "Protocol Mediator",
-        "total": 41,
+        "total": 43,
         "verified": 8,
         "partial": 5,
         "failing": 0
@@ -226,7 +226,7 @@
       {
         "element": "E-03",
         "name": "Identity & Authentication Service",
-        "total": 10,
+        "total": 14,
         "verified": 2,
         "partial": 4,
         "failing": 0
@@ -234,7 +234,7 @@
       {
         "element": "E-04",
         "name": "Session Manager",
-        "total": 16,
+        "total": 19,
         "verified": 7,
         "partial": 6,
         "failing": 0
@@ -242,7 +242,7 @@
       {
         "element": "E-05",
         "name": "Policy Administration Service",
-        "total": 19,
+        "total": 22,
         "verified": 0,
         "partial": 1,
         "failing": 0
@@ -258,7 +258,7 @@
       {
         "element": "E-07",
         "name": "Approval Service",
-        "total": 7,
+        "total": 13,
         "verified": 0,
         "partial": 0,
         "failing": 0
@@ -266,7 +266,7 @@
       {
         "element": "E-08",
         "name": "Access Enforcement Point",
-        "total": 18,
+        "total": 19,
         "verified": 8,
         "partial": 1,
         "failing": 0
@@ -274,7 +274,7 @@
       {
         "element": "E-09",
         "name": "Request Inspection Pipeline",
-        "total": 13,
+        "total": 16,
         "verified": 0,
         "partial": 1,
         "failing": 0
@@ -290,7 +290,7 @@
       {
         "element": "E-11",
         "name": "Response Inspection Pipeline",
-        "total": 8,
+        "total": 10,
         "verified": 2,
         "partial": 0,
         "failing": 0
@@ -306,7 +306,7 @@
       {
         "element": "E-13",
         "name": "Library Trust Verifier",
-        "total": 11,
+        "total": 25,
         "verified": 0,
         "partial": 0,
         "failing": 0
@@ -314,7 +314,7 @@
       {
         "element": "E-14",
         "name": "Local Server Registry",
-        "total": 12,
+        "total": 13,
         "verified": 0,
         "partial": 1,
         "failing": 0
@@ -370,7 +370,7 @@
       {
         "element": "E-21",
         "name": "Audit & Evidence Service",
-        "total": 22,
+        "total": 24,
         "verified": 3,
         "partial": 2,
         "failing": 0
@@ -378,7 +378,7 @@
       {
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
-        "total": 7,
+        "total": 10,
         "verified": 0,
         "partial": 3,
         "failing": 0
@@ -386,7 +386,7 @@
       {
         "element": "E-23",
         "name": "Health & Safety Monitor",
-        "total": 3,
+        "total": 13,
         "verified": 0,
         "partial": 0,
         "failing": 0
@@ -394,7 +394,7 @@
       {
         "element": "E-24",
         "name": "Management Console & Control API",
-        "total": 39,
+        "total": 73,
         "verified": 0,
         "partial": 1,
         "failing": 0
@@ -410,7 +410,7 @@
       {
         "element": "E-26",
         "name": "Data Access Service",
-        "total": 11,
+        "total": 10,
         "verified": 0,
         "partial": 0,
         "failing": 0
@@ -426,7 +426,7 @@
       {
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
-        "total": 12,
+        "total": 13,
         "verified": 0,
         "partial": 0,
         "failing": 0
@@ -466,7 +466,7 @@
       {
         "element": "E-33",
         "name": "Harness Adapter Kit",
-        "total": 3,
+        "total": 20,
         "verified": 0,
         "partial": 0,
         "failing": 0
@@ -818,6 +818,18 @@
         ]
       },
       {
+        "id": "FR-1.51",
+        "element": "E-02",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-1.52",
+        "element": "E-08",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "FR-2",
         "element": "E-03",
         "status": "unverified",
@@ -999,6 +1011,12 @@
         ]
       },
       {
+        "id": "FR-2.23",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "FR-3",
         "element": "E-05",
         "status": "unverified",
@@ -1127,6 +1145,48 @@
         "tests": []
       },
       {
+        "id": "FR-3.19",
+        "element": "E-07",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-3.20",
+        "element": "E-07",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-3.21",
+        "element": "E-07",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-3.22",
+        "element": "E-07",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-3.23",
+        "element": "E-07",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-3.24",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-3.25",
+        "element": "E-07",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "FR-4",
         "element": "E-08",
         "status": "unverified",
@@ -1244,6 +1304,24 @@
       {
         "id": "FR-4.15",
         "element": "E-09",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-4.16",
+        "element": "E-09",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-4.17",
+        "element": "E-09",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-4.18",
+        "element": "E-11",
         "status": "unverified",
         "tests": []
       },
@@ -1847,6 +1925,54 @@
         "tests": []
       },
       {
+        "id": "FR-8.28",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-8.29",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-8.30",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-8.31",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-8.32",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-8.33",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-8.34",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-8.35",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "FR-9",
         "element": "E-25",
         "status": "unverified",
@@ -2357,6 +2483,468 @@
         "tests": []
       },
       {
+        "id": "FR-13",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.1",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.2",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.3",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.4",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.5",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.6",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.7",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.8",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.9",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.10",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.11",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.12",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-13.13",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.1",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.2",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.3",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.4",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.5",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.6",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.7",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.8",
+        "element": "E-22",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.9",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.10",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.11",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-14.12",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.1",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.2",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.3",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.4",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.5",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.6",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.7",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.8",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.9",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-15.10",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.1",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.2",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.3",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.4",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.5",
+        "element": "E-03",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.6",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.7",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.8",
+        "element": "E-21",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.9",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.10",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.11",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-16.12",
+        "element": "E-04",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.1",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.2",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.3",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.4",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.5",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.6",
+        "element": "E-28",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.7",
+        "element": "E-22",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.8",
+        "element": "E-21",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-17.9",
+        "element": "E-23",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.1",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.2",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.3",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.4",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.5",
+        "element": "E-05",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.6",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.7",
+        "element": "E-02",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.8",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-18.9",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-19",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-19.1",
+        "element": "E-11",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-19.2",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-19.3",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-19.4",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "FR-19.5",
+        "element": "E-09",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "SR-1-1",
         "element": "E-05",
         "status": "unverified",
@@ -2365,6 +2953,12 @@
       {
         "id": "SR-1.1-1",
         "element": "E-06",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-1.1-2",
+        "element": "E-05",
         "status": "unverified",
         "tests": []
       },
@@ -2677,6 +3271,12 @@
         "tests": []
       },
       {
+        "id": "SR-2.8-4",
+        "element": "E-22",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "SR-2.9-1",
         "element": "E-01",
         "status": "verified",
@@ -2713,6 +3313,30 @@
         "tests": [
           "internal/e2e.TestOAuthSessionAndToolCall"
         ]
+      },
+      {
+        "id": "SR-2.11-2",
+        "element": "E-03",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-2.11-3",
+        "element": "E-03",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-2.11-4",
+        "element": "E-04",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-2.11-5",
+        "element": "E-03",
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "SR-2.12-1",
@@ -2799,6 +3423,12 @@
         "tests": []
       },
       {
+        "id": "SR-3.5-1",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "SR-3.6-1",
         "element": "E-15",
         "status": "partial",
@@ -2851,6 +3481,12 @@
       },
       {
         "id": "SR-3.14-1",
+        "element": "E-14",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-4-1",
         "element": "E-14",
         "status": "unverified",
         "tests": []
@@ -2922,7 +3558,31 @@
         "tests": []
       },
       {
+        "id": "SR-4.9-1",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-4.11-1",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-4.13-1",
+        "element": "E-33",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "SR-4.14-1",
+        "element": "E-01",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-4.14-2",
         "element": "E-01",
         "status": "unverified",
         "tests": []
@@ -3035,6 +3695,12 @@
         "tests": []
       },
       {
+        "id": "SR-5.9-2",
+        "element": "E-13",
+        "status": "unverified",
+        "tests": []
+      },
+      {
         "id": "SR-5.10-1",
         "element": "E-09",
         "status": "unverified",
@@ -3060,6 +3726,12 @@
           "internal/e2e.TestOAuthSessionAndToolCall",
           "internal/edge.TestFilterSeamAndProvenance"
         ]
+      },
+      {
+        "id": "SR-5.13-2",
+        "element": "E-04",
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "SR-5.14-1",
@@ -3286,7 +3958,7 @@
       },
       {
         "id": "SR-7.3-1",
-        "element": "E-26",
+        "element": "E-05",
         "status": "unverified",
         "tests": []
       },
@@ -3298,6 +3970,12 @@
       },
       {
         "id": "SR-7.5-1",
+        "element": "E-24",
+        "status": "unverified",
+        "tests": []
+      },
+      {
+        "id": "SR-7.5-2",
         "element": "E-24",
         "status": "unverified",
         "tests": []
@@ -3363,113 +4041,157 @@
       "id": "E-01",
       "name": "Harness Interface Endpoint",
       "subsystem": "SS-1",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/edge"
+      ],
+      "note": "TLS 1.3 loopback listener, POST-only MCP endpoint, header and body bounds, Host and Origin checks. No UDS listener, no Remote Access listener, no per-source connection limits."
     },
     {
       "id": "E-02",
       "name": "Protocol Mediator",
       "subsystem": "SS-1",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/edge"
+      ],
+      "note": "Both protocol eras through the MCP Go SDK in stateless mode, method allowlist, cache hints, Appendix B codes with reasonCode, correlationId and decisionId. No progress relay, no data.message text (FR-1.51), no hold-mode keep-alives."
     },
     {
       "id": "E-03",
       "name": "Identity & Authentication Service",
       "subsystem": "SS-2",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/session",
+        "internal/keys"
+      ],
+      "note": "OAuth 2.1 authorization server (metadata, PKCE S256, resource, iss), pre-registered clients, Argon2id. Sign-in uses the Administrator password, not a Session Approver; metadata advertises client_id_metadata_document_supported without fetching documents; no DCR, mTLS or lockout."
     },
     {
       "id": "E-04",
       "name": "Session Manager",
       "subsystem": "SS-2",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/session"
+      ],
+      "note": "Session store with lifetimes, per-principal limits, scope-to-template mapping, session API and refresh. Refresh tokens are not rotated; sessions do not survive restart; no taint tracking."
     },
     {
       "id": "E-05",
       "name": "Policy Administration Service",
       "subsystem": "SS-3",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/policy"
+      ],
+      "note": "Schema-validated policy file compiled at startup. No signed Policy Store, publication, simulation, rollback or revision history."
     },
     {
       "id": "E-06",
       "name": "Policy Decision Service",
       "subsystem": "SS-3",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/policy"
+      ],
+      "note": "Default-deny decisions over the compiled snapshot, approval obligation flag, sliding-window rate limits, decision IDs. No argument predicates, deny rules, explanations, secret-use or anomaly obligations."
     },
     {
       "id": "E-07",
       "name": "Approval Service",
       "subsystem": "SS-3",
       "implementation": "not-started",
-      "packages": []
+      "packages": [],
+      "note": "An approval-obligated call is refused with -31002; no approval records, hold mode, CLI, console or notification."
     },
     {
       "id": "E-08",
       "name": "Access Enforcement Point",
       "subsystem": "SS-4",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/edge"
+      ],
+      "note": "Session-scoped catalog per policy revision, unknown-tool rejection, approval hint (FR-1.50). No metadata scan at presentation."
     },
     {
       "id": "E-09",
       "name": "Request Inspection Pipeline",
       "subsystem": "SS-4",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/edge"
+      ],
+      "note": "schema-validate request filter only. No path, URL, secret, injection or Unicode filters; no versioned rule sets."
     },
     {
       "id": "E-10",
       "name": "Tool Dispatcher",
       "subsystem": "SS-4",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/backend"
+      ],
+      "note": "stdio dispatch with concurrency and queue bounds, upstream timeout, result size bound and backend error mapping. Instances are shared across sessions; no cancellation propagation or progress relay."
     },
     {
       "id": "E-11",
       "name": "Response Inspection Pipeline",
       "subsystem": "SS-4",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/edge",
+        "internal/backend"
+      ],
+      "note": "Result size bound and provenance metadata marking results untrusted. No content filters, output-schema validation or delimiting."
     },
     {
       "id": "E-12",
       "name": "Enforcement Coordinator",
       "subsystem": "SS-4",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/edge"
+      ],
+      "note": "One-use launch capability, pre-launch and pre-release rechecks, in-memory emergency stop. The authorized event is appended after the capability is issued and is not flushed per call, so SR-6.2-1 and SR-6.3-1 are not yet met."
     },
     {
       "id": "E-13",
       "name": "Library Trust Verifier",
       "subsystem": "SS-5",
       "implementation": "not-started",
-      "packages": []
+      "packages": [],
+      "note": "No package verification or smcpctl package commands; tools are read from live backends at startup."
     },
     {
       "id": "E-14",
       "name": "Local Server Registry",
       "subsystem": "SS-5",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/backend"
+      ],
+      "note": "In-memory registry from the live tool list: public-name derivation, collision refusal, tool definition validity checks. No manifests, enablement states, drift suspension or artifact cache."
     },
     {
       "id": "E-15",
       "name": "Server Runtime Manager",
       "subsystem": "SS-5",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/backend"
+      ],
+      "note": "Launches configured commands as child processes with an environment allowlist and bounded stderr capture. Launch commands are not restricted to packaged artifacts (the bootstrap example uses npx)."
     },
     {
       "id": "E-16",
       "name": "Execution Sandbox",
       "subsystem": "SS-5",
       "implementation": "not-started",
-      "packages": []
+      "packages": [],
+      "note": "No sandbox; backends run unconfined."
     },
     {
       "id": "E-17",
@@ -3503,29 +4225,43 @@
       "id": "E-21",
       "name": "Audit & Evidence Service",
       "subsystem": "SS-7",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/audit"
+      ],
+      "note": "Mandatory event floor to signed, hash-chained JSON Lines segments and the smcpctl journal verify checker. Events are flushed only when a segment closes; no graph mirror feed, export or key transitions."
     },
     {
       "id": "E-22",
       "name": "Key & Trust Anchor Manager",
       "subsystem": "SS-7",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/keys"
+      ],
+      "note": "Local CA and listener certificate, Ed25519 evidence key, Argon2id hashing. CA has five-year validity and no name constraints; keys are 0600 files without TPM, Keychain or passphrase; no trust anchors or rotation."
     },
     {
       "id": "E-23",
       "name": "Health & Safety Monitor",
       "subsystem": "SS-7",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "internal/edge",
+        "cmd/smcpd"
+      ],
+      "note": "GET /healthz reports fail-closed for emergency stop or a missing snapshot. No periodic checks, profiles, diagnostic log or metrics."
     },
     {
       "id": "E-24",
       "name": "Management Console & Control API",
       "subsystem": "SS-8",
-      "implementation": "not-started",
-      "packages": []
+      "implementation": "partial",
+      "packages": [
+        "cmd/smcpctl",
+        "internal/config"
+      ],
+      "note": "smcpctl bootstrap, config validate, journal verify, health and hash-password; TOML configuration validated against a JSON Schema. No control API, console, install, upgrade, approvals or backup commands."
     },
     {
       "id": "E-25",
@@ -3588,7 +4324,8 @@
       "name": "Harness Adapter Kit",
       "subsystem": "SS-1",
       "implementation": "not-started",
-      "packages": []
+      "packages": [],
+      "note": "No smcp-session, smcp-stdio, smcp-connect, doctor or lockdown profiles."
     }
   ],
   "agents": [],
