@@ -1,33 +1,20 @@
+import DocPage from "@/components/DocPage";
 import { readDoc } from "@/lib/content";
-import { renderMarkdown, toc } from "@/lib/markdown";
+import { chapter } from "@/lib/site";
 
-export const metadata = { title: "Client compatibility, Secure MCP Gateway" };
+export const metadata = { title: "Client compatibility" };
 
-export default async function ClientsPage() {
+const CH = chapter("/clients/");
+
+export default function ClientsPage() {
   const md = readDoc("Client-Compatibility-Brief.md");
-  const html = await renderMarkdown(md, { dropTitle: true });
-  const entries = toc(md, 3);
   return (
-    <div className="doc-layout">
-      <aside className="toc" aria-label="Sections">
-        <ol>
-          {entries.map((e) => (
-            <li key={e.id} className={`d${e.depth}`}>
-              <a href={`#${e.id}`}>{e.text}</a>
-            </li>
-          ))}
-        </ol>
-      </aside>
-      <article className="prose">
-        <div className="page-head">
-          <h1>Client compatibility</h1>
-          <p className="lede">
-            What the frameworks in front of the Gateway expect today, checked against primary documentation, and the
-            places where the specification must bend to meet them.
-          </p>
-        </div>
-        <div dangerouslySetInnerHTML={{ __html: html }} />
-      </article>
-    </div>
+    <DocPage file="Client-Compatibility-Brief.md" md={md} title="Client compatibility" chapter={CH.n}>
+      <p>
+        What the agent harnesses in front of the Gateway expect, checked against their primary documentation, and where
+        the specification changes to meet them. Measured results against running clients are in{" "}
+        <a href="/status/#agents">Status, real-agent compatibility</a>.
+      </p>
+    </DocPage>
   );
 }

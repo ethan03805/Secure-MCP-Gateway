@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 /** Repository root: the site lives in <repo>/site and reads the documents beside it. */
 export const REPO_ROOT = path.resolve(process.cwd(), "..");
@@ -12,9 +13,30 @@ export function docExists(relPath: string): boolean {
   return fs.existsSync(path.join(REPO_ROOT, relPath));
 }
 
+const mtimes = new Map<string, string>();
+
+/**
+ * Date of the last commit that touched a file. A fresh checkout gives every
+ * file the same modification time, so git history is the reliable source;
+ * the file system date is the fallback when history is unavailable.
+ */
 export function docMtime(relPath: string): string {
-  const st = fs.statSync(path.join(REPO_ROOT, relPath));
-  return st.mtime.toISOString().slice(0, 10);
+  const hit = mtimes.get(relPath);
+  if (hit) return hit;
+  let date = "";
+  try {
+    date = execFileSync("git", ["log", "-1", "--format=%cs", "--", relPath], {
+      cwd: REPO_ROOT,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch {
+    date = "";
+  }
+  if (!date) date = fs.statSync(path.join(REPO_ROOT, relPath)).mtime.toISOString().slice(0, 10);
+  mtimes.set(relPath, date);
+  return date;
 }
 
 /** Documents the site renders as long-form pages. */
@@ -35,7 +57,7 @@ export const DOCS: { slug: string; file: string; title: string; blurb: string }[
     slug: "security-controls",
     file: "MCP_Gateway_Security_SRS.md",
     title: "Security-control SRS V1",
-    blurb: "The 150 hierarchical controls that root every security requirement.",
+    blurb: "The hierarchical security controls that parent every security requirement.",
   },
   {
     slug: "implementation-srs",
@@ -52,7 +74,7 @@ export const DOCS: { slug: string; file: string; title: string; blurb: string }[
   {
     slug: "research-brief",
     file: "Secure-MCP-Gateway-Research-Brief.md",
-    title: "Research brief, September 2026",
+    title: "Research brief",
     blurb: "The original survey of gateways, policy engines, audit stacks, secrets tools and filters.",
   },
   {
