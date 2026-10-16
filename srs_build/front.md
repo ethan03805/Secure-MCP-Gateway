@@ -3,11 +3,11 @@
 | Field | Value |
 |---|---|
 | File | `Secure_MCP_Gateway_SRS.md` |
-| Baseline | V1.0 draft (implementation SRS) |
-| Date | 2026-10-15 (America/New_York) |
+| Baseline | V1.1 draft (implementation SRS; harness authentication, protocol eras, adapters and tool naming revised) |
+| Date | 2026-10-16 (America/New_York) |
 | Owner | netrisk |
 | System of Interest | Secure MCP Gateway (local, single PC) |
-| Architecture | `ArchitectureV2.md` V2.1 draft — elements E-01…E-32, functions F-01…F-93, interfaces X-01…X-11 and I-01…I-39, GUI modules G-01…G-14, data stores D-01…D-13 |
+| Architecture | `ArchitectureV2.md` V2.2 draft — elements E-01…E-33, functions F-01…F-95, interfaces X-01…X-12 and I-01…I-39, GUI modules G-01…G-14, data stores D-01…D-13 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
 | Skill | `/home/netrisk/Projects/mcp-servers/Skills.md` (INCOSE GtWR + project rules) |
@@ -42,8 +42,8 @@ Per the owner, the Gateway is a local secure MCP gateway on a single PC whose **
 
 ### 1.3 Scope
 
-**In scope:** all elements E-01…E-32 of `ArchitectureV2.md` and their interfaces.
-**Outside the SoI (interfaces only):** the MCP Curation System and Trusted MCP Server Library (X-02/X-03), Harness Adapters and agentic frameworks (X-01), offline analytics tools (X-11), and the host platform (X-07).
+**In scope:** all elements E-01…E-33 of `ArchitectureV2.md` and their interfaces.
+**Outside the SoI (interfaces only):** the MCP Curation System and Trusted MCP Server Library (X-02/X-03), agentic frameworks (X-12), offline analytics tools (X-11), and the host platform (X-07). The reference harness adapters (E-33) are inside the SoI and are delivered with the release.
 
 ### 1.4 Relationship to other documents
 
@@ -60,10 +60,9 @@ Some requirements apply only when a profile is enabled. Profiles are disabled in
 
 | Profile | Enables | Requirements |
 |---|---|---|
-| Legacy Northbound Profile | 2025-11-25 harness clients | FR-1.46, SR-5.1-1, SR-5.3-1 |
 | UDS Harness Profile | Unix-domain-socket harness transport | FR-1.47, FR-2.15, SR-2.8-3 |
 | MRTR Relay Profile | Relaying backend `InputRequiredResult` (elicitation, sampling, roots) | FR-5.25, SR-5.6-2 |
-| OAuth Profile | MCP OAuth authorization on X-01 | SR-2.11-1 |
+| mTLS Harness Profile | Client-certificate authentication on the TLS harness listener, in addition to the bearer token | FR-2.14, SR-2.8-2 |
 | Overlay Profile | Non-loopback listeners for owned remote devices | SR-2.9-3, SR-4.14-1 |
 
 ## 2. Conventions and traceability rules
@@ -150,6 +149,6 @@ All selections carry OSI-approved licenses. Exact versions, digests and transiti
 
 ### 3.3 Stack risks to retire in the first prototype phase
 
-1. **MCP SDK revision support.** The 2026-07-28 revision removed `initialize`, sessions and the GET stream. Confirm that the pinned Go SDK release implements it, with dual-era client support for the southbound path. If it does not, generate types from `schema.json` and implement the thin JSON-RPC layer in the project.
+1. **MCP SDK revision support.** The 2026-07-28 revision removed `initialize`, sessions and the GET stream. The Go SDK serves 2026-07-28 only with its stateless Streamable HTTP option, and its documentation does not describe one handler serving legacy `initialize` clients at the same time. Confirm in the first prototype that both eras can be served on the CP-01 endpoint (FR-1.46). If they cannot, implement the northbound JSON-RPC layer in the project from `schema.json` and keep the Go SDK for the southbound client only.
 2. **Neo4j CE write throughput.** Measure the decision-intent and outcome transactions (SR-6.2-1, SR-6.3-1) at the FR-11 reference load. If they miss, keep CE as the system of record and batch non-mandatory graph writes.
 3. **Rootless Podman start latency.** Measure per-session instance cold start. If it is excessive, prefer the `shared` scope for stateless, read-only servers (ARCH OD-3).

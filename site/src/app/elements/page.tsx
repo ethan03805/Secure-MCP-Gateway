@@ -45,7 +45,7 @@ export default function ElementsPage() {
                     {e.trustNote && (
                       <>
                         {" "}
-                        <span className="badge badge-U">U inside</span>
+                        <span className="badge badge-U">U</span> <span className="meta">{e.trustNote}</span>
                       </>
                     )}
                     <p>{e.purpose}</p>
