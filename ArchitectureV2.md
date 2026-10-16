@@ -1126,7 +1126,7 @@ These extend rev 2.0 §10 targets. All are unmeasured design targets.
    - The Gateway **MUST** protect the integrity of policy and behavior baselines held in the Data Server.
    - The Gateway **MUST** protect sensitive observation data captured for audit and research.
 2. **Section 2 — Functional SHALL requirements by function** (F-01…F-93), each tracing to a MUST root or a functional need (e.g., the observation and research functions F-75…F-93 trace to owner needs for characterization and research).
-3. **Section 3 — Element allocation** (E-01…E-32 and G-01…G-14): performance, memory, isolation, failure behavior and usability, using the allocation targets in Section 4.
+3. **Section 3 — Element allocation** (E-01…E-33 and G-01…G-14): performance, memory, isolation, failure behavior and usability, using the allocation targets in Section 4.
 4. **Section 4 — Interface requirements** (X-01…X-11, I-01…I-39), with ICDs for X-01, X-03, X-05 and X-11 first.
 5. **Section 5 — Data requirements** (D-01…D-13), including the Parameter Catalog as a controlled appendix.
 6. **Appendices:** controlled limits (carry forward V1 Appendix A plus Section 14), the statistical method (Section 9.2), acceptance scenarios (re-map V1 Appendix B to the Section 18 scenarios), and a V1→V2 requirement disposition table (retained / reallocated / moved to curation / retired).

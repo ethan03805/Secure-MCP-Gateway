@@ -42,7 +42,7 @@ Per the owner, the Gateway is a local secure MCP gateway on a single PC whose **
 
 ### 1.3 Scope
 
-**In scope:** all elements E-01…E-32 of `ArchitectureV2.md` and their interfaces.
+**In scope:** all elements E-01…E-33 of `ArchitectureV2.md` and their interfaces.
 **Outside the SoI (interfaces only):** the MCP Curation System and Trusted MCP Server Library (X-02/X-03), agentic frameworks (X-12), offline analytics tools (X-11), and the host platform (X-07). The reference harness adapters (E-33) are inside the SoI and are delivered with the release.
 
 ### 1.4 Relationship to other documents
