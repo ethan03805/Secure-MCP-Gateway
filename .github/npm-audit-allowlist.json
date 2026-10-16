@@ -1,17 +1,4 @@
 {
   "_comment": "Advisories that `npm audit --audit-level=high` may report without failing CI. Each entry needs a reason and an expiry date (YYYY-MM-DD); after expiry the advisory fails the security job again. Remove entries as soon as the dependency is fixed. Checked by scripts/npm-audit-gate.sh.",
-  "advisories": [
-    {
-      "id": "GHSA-6g55-p6wh-862q",
-      "package": "postcss",
-      "reason": "postcss 8.4.31 is pinned inside next 15 and runs only at build time on first-party CSS in site/; the file read needs an attacker-controlled sourceMappingURL in processed CSS. Fix: an npm override to postcss >= 8.5.30 in site/package.json.",
-      "expires": "2026-10-31"
-    },
-    {
-      "id": "GHSA-r28c-9q8g-f849",
-      "package": "postcss",
-      "reason": "Same build-time-only postcss copy as GHSA-6g55-p6wh-862q; path traversal needs attacker-controlled CSS input.",
-      "expires": "2026-10-31"
-    }
-  ]
+  "advisories": []
 }

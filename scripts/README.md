@@ -79,13 +79,15 @@ Requirements: `git`, `gh` (authenticated with push access), `jq`,
 ## Integration run
 
 `ci-integration.sh` uses the built binaries the way an operator would:
-`smcpctl bootstrap` in a temporary directory, `smcpd --config`, a full OAuth
-sign-in and MCP session from `itest-client`, `smcpctl journal verify` after a
-clean stop. On Linux it also checks `podman --version` and
+`smcpctl bootstrap` in a temporary directory with password files, `smcpd
+--config`, a full OAuth sign-in as the Session Approver and MCP session from
+`itest-client` against the bundled `smcp-refserver`, `smcpctl stop` (the next
+call must be refused) and `smcpctl resume`, and `smcpctl journal verify` after
+a clean stop. On Linux it also checks `podman --version` and
 `sudo nft list ruleset`; set `SMCP_REQUIRE_PREREQS=1` to make missing
-prerequisites fail the run. Features not in the current build (for example
-the admin commands and the enforced profile) are listed under "Skipped" at the
-end instead of failing.
+prerequisites fail the run. Features not in the current build (backup,
+restore and the enforced profile) are listed under "Skipped" at the end
+instead of failing.
 
 ```
 make integration
