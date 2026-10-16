@@ -1,0 +1,12 @@
+[
+  {
+    "commit": "a3193a522a26ad45ee2285cae389851cb97df90e",
+    "generatedAt": "2026-10-16T22:14:08Z",
+    "testsPassed": 20,
+    "testsFailed": 0,
+    "coveragePct": 50.1,
+    "verified": 70,
+    "partial": 0,
+    "unverified": 375
+  }
+]
