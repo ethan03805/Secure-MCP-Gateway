@@ -101,6 +101,20 @@ Claude Code honours `_meta` keys on `tools/list` entries. The Gateway should set
 3. Approve shipping `smcp-session` and `smcp-stdio` as Gateway release components, which brings the Harness Adapter inside the system of interest.
 4. Confirm in the first prototype whether the Go SDK can serve both protocol eras on one Streamable HTTP endpoint.
 
+## 6. Disposition (2026-10-16)
+
+The owner approved the recommendations in Section 4. They are applied in SRS V1.1 draft and Architecture V2.2 draft:
+
+| Recommendation | Where it landed |
+|---|---|
+| OAuth 2.1 as the primary session mechanism | FR-2.2, FR-2.5, FR-2.17 to FR-2.22, SR-2.1-1, SR-2.1-2, SR-2.3-1, SR-2.11-1, CP-23, CP-41; ARCH OD-2 decided, X-01 revised |
+| mTLS demoted to an optional profile | mTLS Harness Profile in SRS §1.5; FR-2.14 and SR-2.8-2 made conditional |
+| 2025-11-25 era in the baseline | CP-04, FR-1.16, FR-1.17, FR-1.46, SR-5.1-1, SR-5.3-1; SRS §3.3 risk 1 |
+| Adapters inside the system of interest | ARCH E-33 Harness Adapter Kit, F-94, F-95, X-12, A-2; FR-1.48, FR-12.12, FR-12.13, SR-2.3-2, CP-43 |
+| Tool-name limits | FR-1.26, FR-1.49, CP-42 |
+
+Still open: the client-facing `_meta` hints of Section 4.5, and the first-prototype check of whether the Go SDK serves both eras on one endpoint.
+
 ## Sources
 
 - [MCP blog: The 2026-07-28 Specification](https://blog.modelcontextprotocol.io/posts/2026-07-28/)
