@@ -123,6 +123,10 @@ export default function Home() {
               Harness authentication, protocol eras, adapters and tool naming revised to match shipping clients.
             </span>
           </li>
+          <li>
+            <time dateTime="2026-10-16">16 Oct 2026</time>
+            <span>First Go implementation slice: OAuth sessions, policy decisions, stdio dispatch, signed journal.</span>
+          </li>
         </ol>
       </section>
 
