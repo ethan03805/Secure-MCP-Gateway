@@ -48,4 +48,19 @@ jobs:
       - if: steps.check.outputs.present == 'true'
         run: go vet ./...
       - if: steps.check.outputs.present == 'true'
-        run: go test ./...
+        name: Test and map results to requirement IDs (FR-12.10)
+        run: |
+          mkdir -p build
+          set -o pipefail
+          go test -json ./... | tee build/go-test.json | go run ./tools/reqreport -out build/reqreport
+      - if: steps.check.outputs.present == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirement-report
+          path: |
+            build/reqreport.json
+            build/reqreport.md
+            build/go-test.json
+      - if: steps.check.outputs.present == 'true'
+        name: Spike modules still build
+        run: for d in spikes/*/; do (cd "$d" && go vet ./... && go test ./...); done

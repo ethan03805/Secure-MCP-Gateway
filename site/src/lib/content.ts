@@ -40,8 +40,8 @@ export const DOCS: { slug: string; file: string; title: string; blurb: string }[
   {
     slug: "implementation-srs",
     file: "Secure_MCP_Gateway_SRS.md",
-    title: "Implementation SRS V1.0 draft",
-    blurb: "Generated coding baseline: 434 requirements allocated to the architecture.",
+    title: "Implementation SRS",
+    blurb: "Generated coding baseline: every requirement allocated to the architecture.",
   },
   {
     slug: "client-compatibility",

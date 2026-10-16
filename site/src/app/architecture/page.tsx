@@ -2,7 +2,7 @@ import Mermaid from "@/components/Mermaid";
 import { readDoc } from "@/lib/content";
 import { renderMarkdown, toc } from "@/lib/markdown";
 
-export const metadata = { title: "Architecture V2.1, Secure MCP Gateway" };
+export const metadata = { title: "Architecture V2, Secure MCP Gateway" };
 
 export default async function ArchitecturePage() {
   const md = readDoc("ArchitectureV2.md");
@@ -21,7 +21,7 @@ export default async function ArchitecturePage() {
       </aside>
       <article className="prose">
         <div className="page-head">
-          <h1>Architecture V2.1</h1>
+          <h1>Architecture V2</h1>
           <p className="lede">
             The logical decomposition of the Gateway: ten subsystems, their elements, functions, interfaces and data,
             rendered directly from the architecture document.

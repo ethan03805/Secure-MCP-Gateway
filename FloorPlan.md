@@ -24,6 +24,10 @@ Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level p
 | `work/` | Ignored drafts, candidate/numbered requirement records, generation and validation scripts, prior validation evidence | Intermediate documentation work; not production configuration or runtime test evidence |
 | `.git/` | Git history and annotated version tags (`mcp-gateway-srs-v1` marks the SRS V1 baseline) | Remote `origin` = https://github.com/ethan03805/Secure-MCP-Gateway (public) |
 | `.gitignore` | Exclusions for work material, secrets, graph data, audit payloads, model weights and source caches | Keep sensitive/runtime artifacts out of documentation history |
+| `go.mod`, `go.sum` | Go module `github.com/ethan03805/secure-mcp-gateway` for the Gateway implementation | Build with `go build ./...`; test with `go test ./...` |
+| `cmd/` | `smcpd` (the Gateway daemon) and `smcpctl` (bootstrap, config validate, journal verify, health, hash-password) | First vertical slice; see README |
+| `internal/` | Gateway packages by element: `edge` (E-01, E-02, E-08, E-12), `session` (E-03, E-04, OAuth 2.1), `policy` (E-05, E-06), `backend` (E-10, E-14, E-15), `audit` (E-21), `keys` (E-22), `config` (FR-12.6 with `config.schema.json`), `reqtest` (requirement tagging), `e2e` (end-to-end tests with an in-binary backend server) | Implementation of the first slice; each test declares the requirement IDs it verifies (FR-12.10) |
+| `tools/reqreport/` | Reads `go test -json` output and writes the requirement-to-test report that CI publishes | FR-12.10 |
 | `spikes/` | Throwaway experiments that retire SRS §3.3 stack risks; each has its own `go.mod` and a `README.md` recording the result (`go-sdk-dual-era`: MCP Go SDK serves both protocol eras on one handler in stateless mode) | Evidence for design decisions; not part of the Gateway build |
 | `.github/workflows/` | Continuous integration: SRS regeneration check, site build, Go build and tests | Runs on every push and pull request |
 
