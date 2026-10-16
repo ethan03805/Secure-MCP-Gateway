@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
@@ -10,22 +11,30 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
+	"github.com/ethan03805/secure-mcp-gateway/internal/authguard"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
-	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 )
 
 // OAuth is the local OAuth 2.1 authorization server of FR-2.17 to FR-2.22
 // and the session API of FR-2.2, mounted on the harness listener.
+//
+// Sign-in at the authorization endpoint uses a Session Approver account
+// (config [[approver]]), never the administrator account. Every password and
+// client-secret check goes through an authguard.Guard: per-source rate
+// limit, lockout with backoff, bounded concurrent Argon2id and a dummy
+// verification for unknown accounts.
 type OAuth struct {
 	cfg   *config.Config
 	store *Store
-	audit func(audit.Event)
+	audit audit.Recorder
+	guard *authguard.Guard
 	now   func() time.Time
 
 	mu    sync.Mutex
@@ -40,7 +49,7 @@ type authCode struct {
 	claims      Claims
 	scope       string
 	resource    string
-	adminUser   string
+	approver    string
 	expires     time.Time
 }
 
@@ -51,16 +60,24 @@ const (
 	pathToken     = "/oauth/token"
 	pathSessions  = "/smcp/v1/sessions"
 	codeLifetime  = 10 * time.Minute
+	maxCodes      = 1024
 	listenerTLS   = "tls"
 )
 
-// NewOAuth builds the authorization server over the session store.
-func NewOAuth(cfg *config.Config, store *Store, auditFn func(audit.Event)) *OAuth {
-	if auditFn == nil {
-		auditFn = func(audit.Event) {}
+// NewOAuth builds the authorization server over the session store. rec is
+// the evidence recorder; guard may be nil for the defaults.
+func NewOAuth(cfg *config.Config, store *Store, rec audit.Recorder, guard *authguard.Guard) *OAuth {
+	if rec == nil {
+		rec = &audit.Memory{}
 	}
-	return &OAuth{cfg: cfg, store: store, audit: auditFn, now: time.Now, codes: map[string]*authCode{}}
+	if guard == nil {
+		guard = authguard.New(authguard.Config{})
+	}
+	return &OAuth{cfg: cfg, store: store, audit: rec, guard: guard, now: time.Now, codes: map[string]*authCode{}}
 }
+
+// SetNow replaces the clock (tests).
+func (o *OAuth) SetNow(f func() time.Time) { o.mu.Lock(); o.now = f; o.mu.Unlock() }
 
 // Register mounts the endpoints on mux.
 func (o *OAuth) Register(mux *http.ServeMux) {
@@ -80,6 +97,36 @@ func (o *OAuth) ResourceMetadataURL() string {
 	return o.cfg.Listener.PublicURL + pathPRM + o.cfg.Listener.MCPPath
 }
 
+// Prune removes expired authorization codes and stale guard entries.
+func (o *OAuth) Prune() {
+	o.mu.Lock()
+	now := o.now()
+	for k, c := range o.codes {
+		if now.After(c.expires) {
+			delete(o.codes, k)
+		}
+	}
+	o.mu.Unlock()
+	o.guard.Prune()
+}
+
+// Codes returns the number of outstanding authorization codes (tests).
+func (o *OAuth) Codes() int { o.mu.Lock(); defer o.mu.Unlock(); return len(o.codes) }
+
+// Run prunes every interval until ctx ends.
+func (o *OAuth) Run(ctx context.Context, interval time.Duration) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			o.Prune()
+		}
+	}
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
@@ -89,6 +136,17 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func oauthError(w http.ResponseWriter, status int, code, desc string) {
 	writeJSON(w, status, map[string]string{"error": code, "error_description": desc})
+}
+
+// guardError answers a request the guard refused.
+func guardError(w http.ResponseWriter, d time.Duration, err error) {
+	authguard.RetryAfter(w, d)
+	switch {
+	case errors.Is(err, authguard.ErrBusy):
+		oauthError(w, http.StatusServiceUnavailable, "temporarily_unavailable", "sign-in capacity exhausted; retry shortly")
+	default:
+		oauthError(w, http.StatusTooManyRequests, "temporarily_unavailable", err.Error())
+	}
 }
 
 // FR-2.17: protected-resource metadata (RFC 9728).
@@ -101,20 +159,23 @@ func (o *OAuth) protectedResourceMetadata(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// FR-2.17: authorization-server metadata (RFC 8414).
+// FR-2.17: authorization-server metadata (RFC 8414). Client ID Metadata
+// Documents are not fetched or validated: a client ID that is a metadata URL
+// is accepted only when an operator registered it, so the metadata does not
+// advertise client_id_metadata_document_supported.
 func (o *OAuth) authorizationServerMetadata(w http.ResponseWriter, r *http.Request) {
 	base := o.cfg.Listener.PublicURL
 	var scopes []string
 	if snap := o.store.snapshot(); snap != nil {
 		for name := range snap.Profiles {
 			for _, t := range snap.Profiles[name].Templates {
-				s := "smcp:template:" + t
-				if !contains(scopes, s) {
+				if s := "smcp:template:" + t; !slices.Contains(scopes, s) {
 					scopes = append(scopes, s)
 				}
 			}
 		}
 	}
+	slices.Sort(scopes)
 	writeJSON(w, 200, map[string]any{
 		"issuer":                                         base,
 		"authorization_endpoint":                         base + pathAuthorize,
@@ -126,26 +187,16 @@ func (o *OAuth) authorizationServerMetadata(w http.ResponseWriter, r *http.Reque
 		"token_endpoint_auth_methods_supported":          []string{"none", "client_secret_basic", "client_secret_post"},
 		"scopes_supported":                               scopes,
 		"smcp_scope_patterns":                            []string{"smcp:template:<id>", "smcp:purpose:<tag>", "smcp:project:<path>", "smcp:user:<claim>"},
-		"client_id_metadata_document_supported":          true,
 		"authorization_response_iss_parameter_supported": true,
 	})
 }
 
-func contains(ss []string, s string) bool {
-	for _, x := range ss {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
-
 // redirectAllowed matches a redirect URI against the client's registered
-// URIs. A registered loopback URI with port "*" matches any port, as the
-// Client ID Metadata Document profile permits for native clients.
+// URIs. A registered loopback URI with port "*" matches any port, as native
+// clients use an ephemeral loopback port.
 func redirectAllowed(c *config.Client, uri string) bool {
 	u, err := url.Parse(uri)
-	if err != nil || u.Fragment != "" {
+	if err != nil || u.Fragment != "" || u.User != nil {
 		return false
 	}
 	for _, reg := range c.RedirectURIs {
@@ -160,7 +211,7 @@ func redirectAllowed(c *config.Client, uri string) bool {
 			continue
 		}
 		if wildcard && (ru.Hostname() == "localhost" || ru.Hostname() == "127.0.0.1" || ru.Hostname() == "::1") &&
-			u.Scheme == ru.Scheme && u.Hostname() == ru.Hostname() && u.Path == ru.Path {
+			u.Scheme == ru.Scheme && u.Hostname() == ru.Hostname() && u.Path == ru.Path && u.RawQuery == ru.RawQuery {
 			return true
 		}
 	}
@@ -207,26 +258,34 @@ var loginPage = template.Must(template.New("login").Parse(`<!doctype html>
 h1{font-size:1.25rem}label{display:block;margin:12px 0 4px}input{width:100%;box-sizing:border-box;padding:8px;font-size:16px}
 button{margin-top:16px;padding:10px 16px;font-size:16px}dl{font-size:14px;background:#fff;padding:12px;border:1px solid #ddd}dt{font-weight:600}dd{margin:0 0 8px;word-break:break-all}.err{color:#a00}</style></head>
 <body><h1>Secure MCP Gateway</h1>
-<p>A framework instance is asking for a Gateway session. Sign in as an administrator to approve it.</p>
+<p>A framework instance is asking for a Gateway session. Sign in as a Session Approver to approve it.</p>
 <dl><dt>Client</dt><dd>{{.ClientID}}</dd><dt>Principal</dt><dd>{{.Principal}}</dd><dt>Requested scope</dt><dd>{{if .Scope}}{{.Scope}}{{else}}(default template){{end}}</dd></dl>
-{{if .Error}}<p class="err">{{.Error}}</p>{{end}}
+{{if .Error}}<p class="err" role="alert">{{.Error}}</p>{{end}}
 <form method="post" action="{{.Action}}">
 {{range $k, $v := .Hidden}}<input type="hidden" name="{{$k}}" value="{{$v}}">{{end}}
 <label for="u">Username</label><input id="u" name="username" autocomplete="username" required>
 <label for="p">Password</label><input id="p" name="password" type="password" autocomplete="current-password" required>
 <button type="submit">Approve and continue</button></form></body></html>`))
 
-func (o *OAuth) renderLogin(w http.ResponseWriter, p authorizeParams, c *config.Client, errMsg string) {
+// SecurityHeaders are set on every HTML response of the authorization
+// endpoint: no framing (clickjacking), no inline script, form posts only to
+// this origin, no referrer.
+func SecurityHeaders(h http.Header) {
+	h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+	h.Set("X-Frame-Options", "DENY")
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Referrer-Policy", "no-referrer")
+	h.Set("Cache-Control", "no-store")
+}
+
+func (o *OAuth) renderLogin(w http.ResponseWriter, status int, p authorizeParams, c *config.Client, errMsg string) {
 	hidden := map[string]string{
 		"client_id": p.ClientID, "redirect_uri": p.RedirectURI, "state": p.State, "scope": p.Scope,
 		"code_challenge": p.Challenge, "code_challenge_method": p.Method, "resource": p.Resource, "response_type": p.ResponseType,
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'")
-	if errMsg != "" {
-		w.WriteHeader(http.StatusUnauthorized)
-	}
+	SecurityHeaders(w.Header())
+	w.WriteHeader(status)
 	_ = loginPage.Execute(w, map[string]any{
 		"ClientID": p.ClientID, "Principal": c.Principal, "Scope": p.Scope, "Error": errMsg, "Action": pathAuthorize, "Hidden": hidden,
 	})
@@ -234,6 +293,7 @@ func (o *OAuth) renderLogin(w http.ResponseWriter, p authorizeParams, c *config.
 
 // FR-2.19: authorization endpoint, step 1 (validate and show sign-in).
 func (o *OAuth) authorizeGET(w http.ResponseWriter, r *http.Request) {
+	SecurityHeaders(w.Header())
 	p, c, bad := o.parseAuthorize(r.URL.Query())
 	if bad != "" {
 		http.Error(w, bad, http.StatusBadRequest)
@@ -243,14 +303,14 @@ func (o *OAuth) authorizeGET(w http.ResponseWriter, r *http.Request) {
 		o.redirectError(w, r, p, "invalid_request", msg)
 		return
 	}
-	o.renderLogin(w, p, c, "")
+	o.renderLogin(w, http.StatusOK, p, c, "")
 }
 
 func (o *OAuth) checkAuthorize(p authorizeParams) string {
 	if p.ResponseType != "code" {
 		return "response_type must be code"
 	}
-	if p.Method != "S256" || len(p.Challenge) < 43 {
+	if p.Method != "S256" || len(p.Challenge) != 43 {
 		return "PKCE S256 code_challenge is required"
 	}
 	if p.Resource != o.cfg.ResourceURI() {
@@ -262,8 +322,23 @@ func (o *OAuth) checkAuthorize(p authorizeParams) string {
 	return ""
 }
 
-// FR-2.19: authorization endpoint, step 2 (administrator sign-in, code issue).
+// verifyApprover checks a Session Approver sign-in in constant time with
+// respect to whether the username exists.
+func (o *OAuth) verifyApprover(ctx context.Context, user, pw string) (bool, error) {
+	hash := ""
+	for _, a := range o.cfg.Approvers {
+		if authguard.EqualName(a.Username, user) {
+			hash = a.PasswordHash
+		}
+	}
+	return o.guard.Verify(ctx, hash, pw)
+}
+
+// FR-2.19: authorization endpoint, step 2 (Session Approver sign-in, code
+// issue).
 func (o *OAuth) authorizePOST(w http.ResponseWriter, r *http.Request) {
+	SecurityHeaders(w.Header())
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
@@ -278,16 +353,39 @@ func (o *OAuth) authorizePOST(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, pw := r.PostForm.Get("username"), r.PostForm.Get("password")
-	if user != o.cfg.Admin.Username || !keys.VerifyPassword(o.cfg.Admin.PasswordHash, pw) {
-		o.audit(audit.Event{Class: "auth_failure", Origin: "E-24", Outcome: "deny", ReasonCode: "ADMIN_SIGNIN_FAILED", PolicyStatus: "not_evaluated", Detail: map[string]string{"client_id": p.ClientID}})
-		o.renderLogin(w, p, c, "Sign-in failed.")
+	src := authguard.Source(r)
+	if d, err := o.guard.Check(src, user); err != nil {
+		authguard.RetryAfter(w, d)
+		o.renderLogin(w, http.StatusTooManyRequests, p, c, "Too many sign-in attempts. Wait and try again.")
 		return
 	}
+	ok, err := o.verifyApprover(r.Context(), user, pw)
+	if err != nil {
+		o.renderLogin(w, http.StatusServiceUnavailable, p, c, "Sign-in is busy. Try again in a moment.")
+		return
+	}
+	if !ok {
+		o.guard.Failure(src, user)
+		_ = o.audit.Commit(audit.Event{Class: "auth_failure", Origin: "E-03", Outcome: "deny", ReasonCode: "APPROVER_SIGNIN_FAILED", PolicyStatus: "not_evaluated", Detail: map[string]string{"client_id": p.ClientID}})
+		o.renderLogin(w, http.StatusUnauthorized, p, c, "Sign-in failed.")
+		return
+	}
+	o.guard.Success(user)
 	claims, _ := ParseScopes(strings.Fields(p.Scope))
 	code := ids.Secret()
 	o.mu.Lock()
+	if len(o.codes) >= maxCodes {
+		o.mu.Unlock()
+		o.Prune()
+		o.mu.Lock()
+	}
+	if len(o.codes) >= maxCodes {
+		o.mu.Unlock()
+		o.redirectError(w, r, p, "temporarily_unavailable", "too many outstanding authorization codes")
+		return
+	}
 	o.codes[hash(code)] = &authCode{clientID: c.ClientID, principalID: c.Principal, redirectURI: p.RedirectURI, challenge: p.Challenge,
-		claims: claims, scope: p.Scope, resource: p.Resource, adminUser: user, expires: o.now().Add(codeLifetime)}
+		claims: claims, scope: p.Scope, resource: p.Resource, approver: user, expires: o.now().Add(codeLifetime)}
 	o.mu.Unlock()
 	u, _ := url.Parse(p.RedirectURI)
 	q := u.Query()
@@ -302,19 +400,35 @@ func (o *OAuth) authorizePOST(w http.ResponseWriter, r *http.Request) {
 
 // clientAuth resolves and authenticates the client of a token request
 // (client_secret_basic, client_secret_post, or none for public clients).
-func (o *OAuth) clientAuth(r *http.Request) (*config.Client, string) {
+// Unknown clients cost the same as a wrong secret.
+func (o *OAuth) clientAuth(r *http.Request) (*config.Client, int, string) {
 	id, secret := r.PostForm.Get("client_id"), r.PostForm.Get("client_secret")
 	if u, p, ok := r.BasicAuth(); ok {
 		id, secret = u, p
 	}
+	src := authguard.Source(r)
+	if _, err := o.guard.Check(src, "client:"+id); err != nil {
+		return nil, http.StatusTooManyRequests, err.Error()
+	}
 	c := o.cfg.FindClient(id)
 	if c == nil {
-		return nil, "unknown client"
+		if secret != "" {
+			_, _ = o.guard.Verify(r.Context(), "", secret)
+		}
+		o.guard.Failure(src, "client:"+id)
+		return nil, http.StatusUnauthorized, "client authentication failed"
 	}
-	if c.ClientSecretHash != "" && !keys.VerifyPassword(c.ClientSecretHash, secret) {
-		return nil, "client authentication failed"
+	if c.ClientSecretHash != "" {
+		ok, err := o.guard.Verify(r.Context(), c.ClientSecretHash, secret)
+		if err != nil {
+			return nil, http.StatusServiceUnavailable, "authentication capacity exhausted"
+		}
+		if !ok {
+			o.guard.Failure(src, "client:"+id)
+			return nil, http.StatusUnauthorized, "client authentication failed"
+		}
 	}
-	return c, ""
+	return c, 0, ""
 }
 
 func pkceOK(verifier, challenge string) bool {
@@ -327,14 +441,21 @@ func pkceOK(verifier, challenge string) bool {
 
 // FR-2.20, FR-2.22: the token endpoint creates or refreshes the session.
 func (o *OAuth) token(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 	if err := r.ParseForm(); err != nil {
 		oauthError(w, 400, "invalid_request", "bad form")
 		return
 	}
-	c, bad := o.clientAuth(r)
+	c, status, bad := o.clientAuth(r)
 	if bad != "" {
-		w.Header().Set("WWW-Authenticate", `Basic realm="smcp"`)
-		oauthError(w, 401, "invalid_client", bad)
+		if status == http.StatusUnauthorized {
+			w.Header().Set("WWW-Authenticate", `Basic realm="smcp"`)
+			_ = o.audit.Commit(audit.Event{Class: "auth_failure", Origin: "E-03", Outcome: "deny", ReasonCode: "CLIENT_AUTH_FAILED", PolicyStatus: "not_evaluated"})
+			oauthError(w, status, "invalid_client", bad)
+		} else {
+			authguard.RetryAfter(w, time.Minute)
+			oauthError(w, status, "temporarily_unavailable", bad)
+		}
 		return
 	}
 	switch r.PostForm.Get("grant_type") {
@@ -342,17 +463,17 @@ func (o *OAuth) token(w http.ResponseWriter, r *http.Request) {
 		o.mu.Lock()
 		key := hash(r.PostForm.Get("code"))
 		ac := o.codes[key]
-		delete(o.codes, key) // one use
+		delete(o.codes, key) // one use, even when the redemption below fails
+		now := o.now()
 		o.mu.Unlock()
-		if ac == nil || o.now().After(ac.expires) || ac.clientID != c.ClientID {
+		switch {
+		case ac == nil || now.After(ac.expires) || ac.clientID != c.ClientID:
 			oauthError(w, 400, "invalid_grant", "code unknown, expired or issued to another client")
 			return
-		}
-		if ac.redirectURI != r.PostForm.Get("redirect_uri") {
+		case ac.redirectURI != r.PostForm.Get("redirect_uri"):
 			oauthError(w, 400, "invalid_grant", "redirect_uri mismatch")
 			return
-		}
-		if !pkceOK(r.PostForm.Get("code_verifier"), ac.challenge) {
+		case !pkceOK(r.PostForm.Get("code_verifier"), ac.challenge):
 			oauthError(w, 400, "invalid_grant", "PKCE verification failed")
 			return
 		}
@@ -360,27 +481,49 @@ func (o *OAuth) token(w http.ResponseWriter, r *http.Request) {
 			oauthError(w, 400, "invalid_target", "resource mismatch")
 			return
 		}
-		sess, tok, err := o.store.Create(CreateParams{PrincipalID: ac.principalID, ClientID: c.ClientID, Claims: ac.claims, ApprovedBy: ac.adminUser, Listener: listenerTLS})
+		sess, tok, err := o.store.Create(CreateParams{PrincipalID: ac.principalID, ClientID: c.ClientID, Claims: ac.claims, ApprovedBy: ac.approver, Listener: listenerTLS})
 		if err != nil {
 			o.sessionError(w, err)
 			return
 		}
-		o.audit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision, Outcome: "created", ReasonCode: "OAUTH_CODE", PolicyStatus: "evaluated", Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy, "client_id": c.ClientID}})
-		writeJSON(w, 200, o.tokenResponse(sess, tok))
-	case "refresh_token":
-		sess, tok, err := o.store.Refresh(r.PostForm.Get("refresh_token"))
-		if err != nil {
-			oauthError(w, 400, "invalid_grant", "refresh token invalid or session ended")
+		if !o.recordCreated(w, sess, "OAUTH_CODE", c.ClientID) {
 			return
 		}
-		if sess.ClientID != c.ClientID {
-			oauthError(w, 400, "invalid_grant", "refresh token issued to another client")
+		writeJSON(w, 200, o.tokenResponse(sess, tok))
+	case "refresh_token":
+		sess, tok, err := o.store.Refresh(r.PostForm.Get("refresh_token"), c.ClientID)
+		if errors.Is(err, ErrRefreshReuse) {
+			_ = o.audit.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, Outcome: StateTerminated, ReasonCode: EndRefreshReuse, PolicyStatus: "not_evaluated", Detail: map[string]string{"client_id": c.ClientID}})
+			oauthError(w, 400, "invalid_grant", "refresh token reuse detected; the session has been revoked")
+			return
+		}
+		if err != nil {
+			oauthError(w, 400, "invalid_grant", "refresh token invalid, issued to another client or session ended")
+			return
+		}
+		if err := o.audit.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, Outcome: "refreshed", ReasonCode: "REFRESH", PolicyStatus: "not_evaluated"}); err != nil {
+			o.store.Terminate(sess.ID)
+			oauthError(w, 503, "temporarily_unavailable", "evidence journal unavailable")
 			return
 		}
 		writeJSON(w, 200, o.tokenResponse(sess, tok))
 	default:
 		oauthError(w, 400, "unsupported_grant_type", "use authorization_code or refresh_token")
 	}
+}
+
+// recordCreated commits the session-creation event before any token leaves
+// the Gateway; when evidence cannot be written the session is ended and the
+// request fails closed.
+func (o *OAuth) recordCreated(w http.ResponseWriter, sess *Session, reason, clientID string) bool {
+	err := o.audit.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision,
+		Outcome: "created", ReasonCode: reason, PolicyStatus: "evaluated", Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy, "client_id": clientID}})
+	if err != nil {
+		o.store.Terminate(sess.ID)
+		oauthError(w, 503, "temporarily_unavailable", "evidence journal unavailable")
+		return false
+	}
+	return true
 }
 
 func (o *OAuth) sessionError(w http.ResponseWriter, err error) {
@@ -435,19 +578,37 @@ func (o *OAuth) sessionCreate(w http.ResponseWriter, r *http.Request) {
 	if u, p, ok := r.BasicAuth(); ok {
 		body.ClientID, body.ClientSecret = u, p
 	}
+	src := authguard.Source(r)
+	if d, err := o.guard.Check(src, "client:"+body.ClientID); err != nil {
+		guardError(w, d, err)
+		return
+	}
 	c := o.cfg.FindClient(body.ClientID)
-	if c == nil || c.ClientSecretHash == "" || !keys.VerifyPassword(c.ClientSecretHash, body.ClientSecret) {
-		o.audit(audit.Event{Class: "auth_failure", Origin: "E-03", Outcome: "deny", ReasonCode: "CLIENT_AUTH_FAILED", PolicyStatus: "not_evaluated", Detail: map[string]string{"client_id": body.ClientID}})
+	hash := ""
+	if c != nil {
+		hash = c.ClientSecretHash
+	}
+	ok, err := o.guard.Verify(r.Context(), hash, body.ClientSecret)
+	if err != nil {
+		guardError(w, time.Second, err)
+		return
+	}
+	if !ok {
+		o.guard.Failure(src, "client:"+body.ClientID)
+		_ = o.audit.Commit(audit.Event{Class: "auth_failure", Origin: "E-03", Outcome: "deny", ReasonCode: "CLIENT_AUTH_FAILED", PolicyStatus: "not_evaluated", Detail: map[string]string{"client_id": body.ClientID}})
 		oauthError(w, 401, "invalid_client", "client authentication failed")
 		return
 	}
+	o.guard.Success("client:" + body.ClientID)
 	sess, tok, err := o.store.Create(CreateParams{PrincipalID: c.Principal, ClientID: c.ClientID, HarnessVersion: body.HarnessVersion,
 		Claims: Claims{Template: body.TemplateID, Purpose: body.Purpose, Project: body.ProjectRoot, EndUser: body.EndUser}, Listener: listenerTLS})
 	if err != nil {
 		o.sessionError(w, err)
 		return
 	}
-	o.audit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision, Outcome: "created", ReasonCode: "SESSION_API", PolicyStatus: "evaluated", Detail: map[string]string{"template": sess.Template, "client_id": c.ClientID}})
+	if !o.recordCreated(w, sess, "SESSION_API", c.ClientID) {
+		return
+	}
 	writeJSON(w, 201, o.tokenResponse(sess, tok))
 }
 
@@ -485,6 +646,6 @@ func (o *OAuth) sessionDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	o.store.Terminate(sess.ID)
-	o.audit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, Outcome: "terminated", ReasonCode: "SESSION_API", PolicyStatus: "not_evaluated"})
+	_ = o.audit.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, Outcome: StateTerminated, ReasonCode: "SESSION_API", PolicyStatus: "not_evaluated"})
 	w.WriteHeader(http.StatusNoContent)
 }

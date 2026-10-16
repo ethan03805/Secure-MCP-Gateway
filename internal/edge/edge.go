@@ -1,14 +1,18 @@
 // Package edge is the Harness Edge (E-01 Harness Interface Endpoint, E-02
-// Protocol Mediator) together with the slice of the Access Enforcement Point
-// (E-08) and Enforcement Coordinator (E-12) that a tool call passes through.
+// Protocol Mediator) together with the Access Enforcement Point (E-08) and
+// Enforcement Coordinator (E-12) that a tool call passes through.
 //
 // The MCP wire protocol for both eras comes from the MCP Go SDK's
 // StreamableHTTPHandler in stateless mode (see spikes/go-sdk-dual-era). One
 // mcp.Server exists per Gateway session; it holds exactly the tools the
 // session's policy permits (SR-5.4-1, SR-5.7-1) and every call runs the
-// pipeline of FR-4.3 in order: authenticate, session check, decision,
-// request inspection, (approval), launch authorization, dispatch, response
-// validation, provenance, release authorization.
+// pipeline of FR-4.3 in order (pipeline.go). The stages that later elements
+// provide are reached through the seams of internal/pipeline.
+//
+// Barrier: launch authorization and release authorization run under the
+// read side of Gateway.gate; emergency stop, resume and policy activation
+// take the write side. A state change therefore waits for authorizations in
+// progress and every authorization sees one consistent state.
 package edge
 
 import (
@@ -33,7 +37,9 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
+	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
 
@@ -50,41 +56,83 @@ const (
 	CodeIndeterminate     = -31009
 )
 
+// Reason codes the edge produces itself.
+const (
+	ReasonAuditUnavailable = "AUDIT_UNAVAILABLE"
+	ReasonFailClosed       = "FAIL_CLOSED"
+	ReasonEmergencyStop    = "EMERGENCY_STOP"
+	ReasonCapability       = "CAPABILITY_INVALID"
+	ReasonSessionState     = "SESSION_STATE"
+	ReasonSessionEnded     = "SESSION_ENDED"
+	ReasonApprovalDenied   = "APPROVAL_DENIED"
+	ReasonApprovalNoSvc    = "APPROVAL_UNAVAILABLE"
+	ReasonRevisionChanged  = "POLICY_REVISION_CHANGED"
+)
+
 // Supported northbound protocol versions (CP-04).
 var ProtocolVersions = []string{"2026-07-28", "2025-11-25"}
 
 const metaPrefix = "local.smcpgw/"
 
+// Meta keys set on presented tools that carry an approval obligation:
+// Claude Code's key (FR-1.50) and a vendor-neutral key for other clients.
+const (
+	MetaRequiresUserInteraction = "anthropic/requiresUserInteraction"
+	MetaApprovalRequired        = metaPrefix + "approvalRequired"
+)
+
+// Deps are the components a Gateway is built over. Evidence, Store, OAuth,
+// Decider and Registry are required; the seams default to the current
+// behavior.
+type Deps struct {
+	Config   *config.Config
+	Store    *session.Store
+	OAuth    *session.OAuth
+	Decider  *policy.Decider
+	Registry *backend.Registry
+	Evidence audit.Recorder
+	// EvidenceErr reports a sticky evidence failure (the journal's Err);
+	// when it returns non-nil the Gateway is fail-closed.
+	EvidenceErr func() error
+	Log         *slog.Logger
+
+	Profile      profile.Report
+	Approver     pipeline.Approver
+	Filters      *pipeline.Filters
+	Capabilities *pipeline.Capabilities
+	// ConsoleURL is the base URL approval deep links point at.
+	ConsoleURL string
+}
+
 // Gateway wires the slice together.
 type Gateway struct {
-	cfg     *config.Config
-	store   *session.Store
-	oauth   *session.OAuth
-	decider *policy.Decider
-	reg     *backend.Registry
-	journal *audit.Journal
-	log     *slog.Logger
+	cfg         *config.Config
+	store       *session.Store
+	oauth       *session.OAuth
+	decider     *policy.Decider
+	reg         *backend.Registry
+	evidence    audit.Recorder
+	evidenceErr func() error
+	log         *slog.Logger
+	prof        profile.Report
+	approver    pipeline.Approver
+	filters     *pipeline.Filters
+	caps        *pipeline.Capabilities
+	consoleURL  string
 
-	stopped atomic.Bool // FR-4.14 emergency stop
+	gate    sync.RWMutex // launch/release barrier (see package comment)
+	stopped atomic.Bool  // FR-4.14 emergency stop
 	mux     *http.ServeMux
 	handler *mcp.StreamableHTTPHandler
 
 	mu      sync.Mutex
 	servers map[string]*sessionServer
-
-	capMu sync.Mutex
-	caps  map[string]launchCap // one-use launch capabilities (FR-4.13)
+	track   *tracker // in-flight requests, calls and listen streams per session
 }
 
 type sessionServer struct {
-	sess     *session.Session
 	revision string
 	srv      *mcp.Server
-}
-
-type launchCap struct {
-	correlation, decision, revision string
-	used                            bool
 }
 
 type ctxKey int
@@ -95,24 +143,43 @@ const (
 )
 
 // New builds the Gateway over already-started components.
-func New(cfg *config.Config, store *session.Store, oauth *session.OAuth, decider *policy.Decider, reg *backend.Registry, journal *audit.Journal, log *slog.Logger) *Gateway {
-	if log == nil {
-		log = slog.Default()
+func New(d Deps) (*Gateway, error) {
+	if d.Config == nil || d.Store == nil || d.OAuth == nil || d.Decider == nil || d.Registry == nil || d.Evidence == nil {
+		return nil, errors.New("edge: config, store, oauth, decider, registry and evidence are required")
 	}
-	g := &Gateway{cfg: cfg, store: store, oauth: oauth, decider: decider, reg: reg, journal: journal, log: log,
-		servers: map[string]*sessionServer{}, caps: map[string]launchCap{}}
+	if d.Log == nil {
+		d.Log = slog.Default()
+	}
+	if d.EvidenceErr == nil {
+		d.EvidenceErr = func() error { return nil }
+	}
+	if d.Approver == nil {
+		d.Approver = pipeline.RefuseApprover{}
+	}
+	if d.Filters == nil {
+		d.Filters = pipeline.NewFilters()
+	}
+	if d.Capabilities == nil {
+		return nil, errors.New("edge: the capability ledger shared with the dispatcher is required")
+	}
+	if d.Profile.Profile == "" {
+		d.Profile = profile.Report{Profile: profile.Standalone, Label: "not enforced", Reasons: []string{"profile not resolved"}}
+	}
+	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
+		evidenceErr: d.EvidenceErr, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, caps: d.Capabilities,
+		consoleURL: d.ConsoleURL, servers: map[string]*sessionServer{}, track: newTracker()}
 	g.handler = mcp.NewStreamableHTTPHandler(g.serverFor, &mcp.StreamableHTTPOptions{
 		Stateless:           true,
-		JSONResponse:        true,                        // FR-1.6: JSON unless the request needs a stream
-		MaxRequestBodyBytes: cfg.Limits.RequestBodyBytes, // CP-07, before parsing (SR-7.11-1)
-		Logger:              log,
+		JSONResponse:        true,                             // FR-1.6: JSON unless the request needs a stream
+		MaxRequestBodyBytes: d.Config.Limits.RequestBodyBytes, // CP-07, before parsing (SR-7.11-1)
+		Logger:              d.Log,
 	})
 	g.mux = http.NewServeMux()
-	oauth.Register(g.mux)
-	g.mux.Handle(cfg.Listener.MCPPath, g.mcpChain(g.handler))
+	d.OAuth.Register(g.mux)
+	g.mux.Handle(d.Config.Listener.MCPPath, g.mcpChain(g.handler))
 	g.mux.HandleFunc("GET /healthz", g.healthz)
-	store.OnEnd(g.sessionEnded)
-	return g
+	d.Store.OnEnd(g.sessionEnded)
+	return g, nil
 }
 
 // Handler returns the harness listener's HTTP handler (host and origin
@@ -157,30 +224,32 @@ func TLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	return &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}, nil
 }
 
-// Serve runs the TLS listener until ctx ends.
-func (g *Gateway) Serve(ctx context.Context) error {
-	tc, err := TLSConfig(g.cfg.Listener.TLSCert, g.cfg.Listener.TLSKey)
-	if err != nil {
-		return err
-	}
-	host, _, err := net.SplitHostPort(g.cfg.Listener.Address)
+// CheckLoopback refuses a listener address that is not loopback (SR-2.9-3).
+func CheckLoopback(addr string) error {
+	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return err
 	}
 	if ip := net.ParseIP(host); (ip == nil && host != "localhost") || (ip != nil && !ip.IsLoopback()) {
-		return fmt.Errorf("listener %q is not loopback (SR-2.9-3)", g.cfg.Listener.Address)
+		return fmt.Errorf("listener %q is not loopback (SR-2.9-3)", addr)
 	}
+	return nil
+}
+
+// ServeTLS runs an HTTP server with the listener limits of CP-06 and CP-07
+// on ln until ctx ends.
+func ServeTLS(ctx context.Context, ln net.Listener, h http.Handler, tc *tls.Config, log *slog.Logger) error {
 	srv := &http.Server{
-		Addr:              g.cfg.Listener.Address,
-		Handler:           g.Handler(),
+		Handler:           h,
 		TLSConfig:         tc,
 		ReadHeaderTimeout: 5 * time.Second,  // CP-06
 		ReadTimeout:       15 * time.Second, // CP-07
-		MaxHeaderBytes:    16 << 10,         // CP-06
-		ErrorLog:          slog.NewLogLogger(g.log.Handler(), slog.LevelWarn),
+		IdleTimeout:       90 * time.Second,
+		MaxHeaderBytes:    16 << 10, // CP-06
+		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
 	errc := make(chan error, 1)
-	go func() { errc <- srv.ListenAndServeTLS("", "") }()
+	go func() { errc <- srv.ServeTLS(ln, "", "") }()
 	select {
 	case err := <-errc:
 		return err
@@ -191,24 +260,176 @@ func (g *Gateway) Serve(ctx context.Context) error {
 	}
 }
 
-// Stop enters the emergency-stop state (FR-4.14); Resume leaves it.
-func (g *Gateway) Stop()   { g.stopped.Store(true) }
-func (g *Gateway) Resume() { g.stopped.Store(false) }
+// Listen opens the harness listener after the loopback check.
+func (g *Gateway) Listen() (net.Listener, error) {
+	if err := CheckLoopback(g.cfg.Listener.Address); err != nil {
+		return nil, err
+	}
+	return net.Listen("tcp", g.cfg.Listener.Address)
+}
 
-// failClosed reports whether MCP requests must be refused (FR-9.17, SR-1.2-1, FR-4.14).
-func (g *Gateway) failClosed() bool { return g.stopped.Load() || g.decider.Snapshot() == nil }
+// Serve runs the harness TLS listener on ln until ctx ends.
+func (g *Gateway) Serve(ctx context.Context, ln net.Listener) error {
+	tc, err := TLSConfig(g.cfg.Listener.TLSCert, g.cfg.Listener.TLSKey)
+	if err != nil {
+		return err
+	}
+	return ServeTLS(ctx, ln, g.Handler(), tc, g.log)
+}
 
-func (g *Gateway) healthz(w http.ResponseWriter, r *http.Request) {
-	state := "healthy"
-	var causes []string
+// RunJanitors prunes expired sessions, authorization codes and launch
+// capabilities until ctx ends.
+func (g *Gateway) RunJanitors(ctx context.Context, interval time.Duration) {
+	go g.store.Run(ctx, interval)
+	go g.oauth.Run(ctx, interval)
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			g.caps.Prune()
+		}
+	}
+}
+
+// ErrAuditUnavailable is returned by administrative actions whose evidence
+// could not be written.
+var ErrAuditUnavailable = errors.New("evidence journal unavailable")
+
+func adminEvent(class, outcome, reason, actor string, detail map[string]any) audit.Event {
+	if detail == nil {
+		detail = map[string]any{}
+	}
+	detail["actor"] = actor
+	return audit.Event{Class: class, Origin: "E-24", Outcome: outcome, ReasonCode: reason, PolicyStatus: "not_evaluated", Detail: detail}
+}
+
+// Stop enters the emergency-stop state (FR-4.14). The state changes even
+// when the evidence write fails, because stopping is the safe direction;
+// the error is still returned so the caller can report it.
+func (g *Gateway) Stop(actor, reason string) error {
+	g.gate.Lock()
+	g.stopped.Store(true)
+	g.gate.Unlock()
+	g.log.Warn("emergency stop", "actor", actor, "reason", reason)
+	if err := g.evidence.Commit(adminEvent("admin", "stopped", ReasonEmergencyStop, actor, map[string]any{"reason": reason})); err != nil {
+		return fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
+	}
+	return nil
+}
+
+// Resume leaves the emergency-stop state. Resume is refused when its
+// evidence cannot be written (fail closed).
+func (g *Gateway) Resume(actor string) error {
+	g.gate.Lock()
+	defer g.gate.Unlock()
+	if err := g.evidence.Commit(adminEvent("admin", "resumed", "EMERGENCY_RESUME", actor, nil)); err != nil {
+		return fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
+	}
+	g.stopped.Store(false)
+	g.log.Warn("emergency stop lifted", "actor", actor)
+	return nil
+}
+
+// Stopped reports the emergency-stop state.
+func (g *Gateway) Stopped() bool { return g.stopped.Load() }
+
+// ActivatePolicy validates and activates a compiled snapshot under the
+// barrier (FR-3.10) and records the change. Session catalogs are rebuilt on
+// their next request.
+func (g *Gateway) ActivatePolicy(actor string, snap *policy.Snapshot) (bool, error) {
+	g.gate.Lock()
+	defer g.gate.Unlock()
+	prev := ""
+	if cur := g.decider.Snapshot(); cur != nil {
+		prev = cur.Revision
+	}
+	if cur := g.decider.Snapshot(); cur != nil && cur.Revision == snap.Revision {
+		if cur.Digest != snap.Digest {
+			return false, fmt.Errorf("%w (%s)", policy.ErrRevisionReused, snap.Revision)
+		}
+		return false, nil
+	}
+	if err := g.evidence.Commit(audit.Event{Class: "admin", Origin: "E-05", Outcome: "activated", ReasonCode: "POLICY_ACTIVATED", PolicyRevision: snap.Revision,
+		PolicyStatus: "not_evaluated", Detail: map[string]any{"actor": actor, "previous_revision": prev, "digest": snap.Digest}}); err != nil {
+		return false, fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
+	}
+	return g.decider.Replace(snap)
+}
+
+// failClosed reports why MCP requests must be refused, or "" (FR-9.17,
+// SR-1.2-1, FR-4.14).
+func (g *Gateway) failClosed() string {
+	switch {
+	case g.stopped.Load():
+		return ReasonEmergencyStop
+	case g.decider.Snapshot() == nil:
+		return policy.ReasonNoSnapshot
+	case g.evidenceErr() != nil:
+		return ReasonAuditUnavailable
+	}
+	return ""
+}
+
+// Health is the Gateway's health report.
+type Health struct {
+	State          string   `json:"state"` // healthy, degraded, fail-closed
+	Causes         []string `json:"causes"`
+	Profile        string   `json:"profile"`
+	ReleaseLabel   string   `json:"release_label"`
+	ProfileReasons []string `json:"profile_reasons,omitempty"`
+	Version        string   `json:"version"`
+	PolicyRevision string   `json:"policy_revision,omitempty"`
+	Sessions       int      `json:"sessions"`
+	Launcher       string   `json:"launcher"`
+	Servers        []string `json:"servers"`
+	Unverified     []string `json:"unverified_servers,omitempty"`
+}
+
+// Health computes the health report.
+func (g *Gateway) Health() Health {
+	h := Health{State: "healthy", Causes: []string{}, Profile: g.prof.Profile, ReleaseLabel: g.prof.Label, ProfileReasons: g.prof.Reasons,
+		Version: backend.Version, Sessions: len(g.store.Active()), Launcher: g.reg.Launcher().Name(), Servers: []string{}}
+	if c := g.prof.Degraded(); c != "" {
+		h.State, h.Causes = "degraded", append(h.Causes, c)
+	}
+	for alias, s := range g.reg.Servers() {
+		h.Servers = append(h.Servers, alias)
+		if !s.Verified {
+			h.Unverified = append(h.Unverified, alias)
+		}
+	}
+	if len(h.Unverified) > 0 {
+		h.State, h.Causes = "degraded", append(h.Causes, "unverified_manifests")
+	}
 	if g.stopped.Load() {
-		state, causes = "fail-closed", append(causes, "emergency_stop")
+		h.State, h.Causes = "fail-closed", append(h.Causes, "emergency_stop")
 	}
-	if g.decider.Snapshot() == nil {
-		state, causes = "fail-closed", append(causes, "no_decision_snapshot")
+	if snap := g.decider.Snapshot(); snap == nil {
+		h.State, h.Causes = "fail-closed", append(h.Causes, "no_decision_snapshot")
+	} else {
+		h.PolicyRevision = snap.Revision
 	}
+	if g.evidenceErr() != nil {
+		h.State, h.Causes = "fail-closed", append(h.Causes, "evidence_unavailable")
+	}
+	return h
+}
+
+// healthz is the unauthenticated harness-listener health endpoint. It
+// reports state, causes and profile only; the control API has the detail.
+func (g *Gateway) healthz(w http.ResponseWriter, r *http.Request) {
+	h := g.Health()
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"state": state, "causes": causes, "sessions": len(g.store.Active()), "version": backend.Version})
+	w.Header().Set("Cache-Control", "no-store")
+	status := http.StatusOK
+	if h.State == "fail-closed" {
+		status = http.StatusServiceUnavailable
+	}
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]any{"state": h.State, "causes": h.Causes, "profile": h.Profile, "release_label": h.ReleaseLabel, "version": h.Version})
 }
 
 // gatewayError builds an Appendix B error with FR-1.20 data.
@@ -239,327 +460,66 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			return
 		}
 		corr := ids.New() // FR-4.2
-		if g.failClosed() {
-			writeRPCError(w, http.StatusServiceUnavailable, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", "FAIL_CLOSED", corr, "", nil))
+		if reason := g.failClosed(); reason != "" {
+			writeRPCError(w, http.StatusServiceUnavailable, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", reason, corr, "", nil))
 			return
 		}
 		sess, err := g.store.Authenticate(session.Bearer(r), "tls") // FR-2.5, SR-2.1-3
 		if err != nil {
-			g.record(audit.Event{Class: "auth_failure", Origin: "E-03", CorrelationID: corr, Outcome: "deny", ReasonCode: "SESSION_INVALID", PolicyStatus: "not_evaluated"})
+			if aerr := g.evidence.Commit(audit.Event{Class: "auth_failure", Origin: "E-03", CorrelationID: corr, Outcome: "deny", ReasonCode: "SESSION_INVALID", PolicyStatus: "not_evaluated"}); aerr != nil {
+				g.log.Error("evidence write failed", "err", aerr)
+			}
 			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, g.oauth.ResourceMetadataURL()))
 			writeRPCError(w, http.StatusUnauthorized, gatewayError(CodeSessionInvalid, "session invalid", "SESSION_INVALID", corr, "", nil))
 			return
 		}
-		ctx := context.WithValue(r.Context(), ctxSession, sess)
+		ctx, cancel := context.WithCancel(r.Context())
+		defer cancel()
+		kind := kindRequest
+		if r.Header.Get("Mcp-Method") == "subscriptions/listen" {
+			kind = kindListen
+		}
+		defer g.track.add(sess.ID, kind, cancel)()
+		ctx = context.WithValue(ctx, ctxSession, sess)
 		ctx = context.WithValue(ctx, ctxCorrelation, corr)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func (g *Gateway) record(ev audit.Event) {
-	if g.journal == nil {
-		return
-	}
-	if err := g.journal.Record(ev); err != nil {
-		g.log.Error("audit record failed", "err", err)
-	}
+// trackCall registers a call's cancel function under its session so that
+// ending the session cancels it (FR-2.11). It returns the unregister func.
+func (g *Gateway) trackCall(sessionID string, cancel context.CancelFunc) func() {
+	return g.track.add(sessionID, kindCall, cancel)
 }
 
-// serverFor returns the session's mcp.Server, building it on first use or
-// after a policy revision change (SR-5.7-1).
-func (g *Gateway) serverFor(r *http.Request) *mcp.Server {
-	sess, _ := r.Context().Value(ctxSession).(*session.Session)
-	if sess == nil {
-		return g.emptyServer(nil)
-	}
-	snap := g.decider.Snapshot()
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	if ss := g.servers[sess.ID]; ss != nil && snap != nil && ss.revision == snap.Revision {
-		return ss.srv
-	}
-	srv := g.buildServer(sess, snap)
-	g.servers[sess.ID] = &sessionServer{sess: sess, revision: snap.Revision, srv: srv}
-	return srv
-}
+// InFlight returns the number of tool calls in progress (tests and health).
+func (g *Gateway) InFlight() int { return g.track.count(kindCall) }
 
-func (g *Gateway) serverOptions() *mcp.ServerOptions {
-	return &mcp.ServerOptions{
-		SupportedProtocolVersions: ProtocolVersions,
-		PageSize:                  g.cfg.Limits.CatalogPageSize, // CP-19
-		Capabilities:              &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{ListChanged: true}},
-		SetCacheable: func(ctx context.Context, req mcp.Request, c *mcp.Cacheable) { // FR-1.13
-			c.TTLMs = g.cfg.Limits.CatalogTTLMs
-			c.CacheScope = "private"
-		},
-		Logger: g.log,
-	}
-}
+// ListenStreams returns the number of open listen streams.
+func (g *Gateway) ListenStreams() int { return g.track.count(kindListen) }
 
-func (g *Gateway) emptyServer(catalog map[string]bool) *mcp.Server {
-	srv := mcp.NewServer(&mcp.Implementation{Name: "secure-mcp-gateway", Version: backend.Version}, g.serverOptions())
-	srv.AddReceivingMiddleware(g.methodGate(catalog))
-	return srv
-}
+// sessionEndGrace bounds how long ending a session waits for its requests
+// to write their responses before closing its MCP sessions.
+const sessionEndGrace = 3 * time.Second
 
-// buildServer creates the per-session catalog (FR-1.26, FR-1.27, FR-1.28,
-// FR-1.50, SR-5.4-1).
-func (g *Gateway) buildServer(sess *session.Session, snap *policy.Snapshot) *mcp.Server {
-	catalog := map[string]bool{}
-	srv := g.emptyServer(catalog)
-	if snap == nil {
-		return srv
-	}
-	for _, gr := range snap.Grants(sess.Template) {
-		ref := g.reg.Resolve(backend.PublicName(gr.Server, gr.Tool))
-		if ref == nil {
-			continue // policy names a tool no enabled server provides
-		}
-		catalog[ref.Public] = true
-		t := &mcp.Tool{
-			Name:        ref.Public,
-			Title:       ref.Tool.Title,
-			Description: ref.Tool.Description,
-			InputSchema: stripHeaderAnnotations(ref.Tool.InputSchema),
-			Annotations: ref.Tool.Annotations,
-		}
-		if ref.Tool.OutputSchema != nil {
-			t.OutputSchema = ref.Tool.OutputSchema
-		}
-		if gr.Rule.Approval { // FR-1.50
-			t.Meta = mcp.Meta{"anthropic/requiresUserInteraction": true}
-		}
-		srv.AddTool(t, g.toolHandler(sess, ref))
-	}
-	return srv
-}
-
-// stripHeaderAnnotations removes x-mcp-header from a presented schema (FR-1.28).
-func stripHeaderAnnotations(schema any) any {
-	raw, err := json.Marshal(schema)
-	if err != nil {
-		return schema
-	}
-	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil {
-		return schema
-	}
-	if props, ok := m["properties"].(map[string]any); ok {
-		for _, p := range props {
-			if pm, ok := p.(map[string]any); ok {
-				delete(pm, "x-mcp-header")
-			}
-		}
-	}
-	return m
-}
-
-// Northbound methods of the baseline profile (FR-1.11) plus the legacy
-// handshake (FR-1.46) and ping.
-var allowedMethods = map[string]bool{
-	"server/discover": true, "tools/list": true, "tools/call": true, "subscriptions/listen": true,
-	"initialize": true, "notifications/initialized": true, "ping": true, "notifications/cancelled": true,
-}
-
-// methodGate rejects unqualified methods (FR-1.10, FR-1.42) and answers a
-// call to a tool outside the session catalog with the FR-1.30 message.
-func (g *Gateway) methodGate(catalog map[string]bool) mcp.Middleware {
-	return func(next mcp.MethodHandler) mcp.MethodHandler {
-		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
-			if !allowedMethods[method] {
-				return nil, &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound, Message: "method not available: " + method}
-			}
-			if method == "tools/call" {
-				if p, ok := req.GetParams().(*mcp.CallToolParamsRaw); ok && !catalog[p.Name] {
-					return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Unknown tool"}
-				}
-			}
-			return next(ctx, method, req)
-		}
-	}
-}
-
-// toolHandler is the per-call enforcement pipeline (FR-4.3).
-func (g *Gateway) toolHandler(sess *session.Session, ref *backend.ToolRef) mcp.ToolHandler {
-	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		corr, _ := ctx.Value(ctxCorrelation).(string)
-		if corr == "" {
-			corr = ids.New()
-		}
-		base := audit.Event{CorrelationID: corr, SessionID: sess.ID, PrincipalID: sess.PrincipalID, ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision}
-		ev := func(class string, phase audit.Phase, origin, outcome, reason, decision, revision, status string) {
-			e := base
-			e.Class, e.Phase, e.Origin, e.Outcome, e.ReasonCode, e.DecisionID, e.PolicyRevision, e.PolicyStatus = class, phase, origin, outcome, reason, decision, revision, status
-			g.record(e)
-		}
-		ev("call", audit.PhaseRequested, "E-02", "", "", "", "", "not_evaluated")
-
-		// Session check (the request was authenticated; the session may have
-		// ended since the server object was built).
-		if cur := g.store.Get(sess.ID); cur == nil || cur.State != session.StateActive {
-			ev("call", audit.PhaseDenied, "E-04", "deny", "SESSION_STATE", "", "", "not_evaluated")
-			return nil, gatewayError(CodeSessionInvalid, "session invalid", "SESSION_STATE", corr, "", nil)
-		}
-		if g.failClosed() {
-			ev("call", audit.PhaseDenied, "E-12", "deny", "FAIL_CLOSED", "", "", "unavailable")
-			return nil, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", "FAIL_CLOSED", corr, "", nil)
-		}
-
-		// Decision (SR-5.5-1: every call is evaluated).
-		dec := g.decider.Decide(policy.Request{PrincipalID: sess.PrincipalID, SessionID: sess.ID, Template: sess.Template, Server: ref.Server.Alias, Tool: ref.Tool.Name})
-		base.DecisionID, base.PolicyRevision = dec.ID, dec.PolicyRevision
-		if dec.Outcome != policy.Permit {
-			ev("decision", audit.PhaseDenied, "E-06", "deny", dec.ReasonCode, dec.ID, dec.PolicyRevision, "evaluated")
-			if dec.ReasonCode == policy.ReasonRateLimited {
-				return nil, gatewayError(CodeRateLimited, "rate limited", dec.ReasonCode, corr, dec.ID, map[string]any{"callsPerMinute": dec.Obligations.CallsPerMinute})
-			}
-			if dec.ReasonCode == policy.ReasonNoSnapshot {
-				return nil, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", dec.ReasonCode, corr, dec.ID, nil)
-			}
-			return nil, gatewayError(CodePolicyDenied, "policy denied", dec.ReasonCode, corr, dec.ID, map[string]any{"decisiveRules": dec.DecisiveRules})
-		}
-
-		// Request inspection: schema-validate (FR-4.5 subset).
-		args := req.Params.Arguments
-		if findings := validateArguments(ref.Tool.InputSchema, args); findings != "" {
-			ev("filter", audit.PhaseFiltered, "E-09", "block", "SCHEMA_INVALID", dec.ID, dec.PolicyRevision, "evaluated")
-			raw, _ := json.Marshal(map[string]any{"reasonCode": "SCHEMA_INVALID", "correlationId": corr, "decisionId": dec.ID, "findings": findings})
-			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "arguments do not match the tool schema", Data: raw}
-		}
-
-		// Approval obligation: the Approval Service (E-07) is not in this slice,
-		// so an approval-obligated call cannot proceed (FR-3.14 without an
-		// approval record).
-		if dec.Obligations.Approval {
-			ev("decision", audit.PhaseDenied, "E-07", "deny", "APPROVAL_REQUIRED", dec.ID, dec.PolicyRevision, "evaluated")
-			return nil, gatewayError(CodeApprovalRequired, "approval required", "APPROVAL_REQUIRED", corr, dec.ID, nil)
-		}
-
-		// Launch authorization under the barrier (FR-4.13, SR-1.17-1): intent
-		// is recorded before the capability is issued (SR-6.2-1 analogue).
-		capID, err := g.authorizeLaunch(sess, dec)
-		if err != nil {
-			ev("call", audit.PhaseDenied, "E-12", "deny", err.Error(), dec.ID, dec.PolicyRevision, "evaluated")
-			return nil, gatewayError(CodeGatewayFailClosed, "launch refused", err.Error(), corr, dec.ID, nil)
-		}
-		ev("decision", audit.PhaseAuthorized, "E-12", "permit", dec.ReasonCode, dec.ID, dec.PolicyRevision, "evaluated")
-
-		// Dispatch (FR-4.8, FR-4.9, FR-4.10) with the one-use capability.
-		if !g.consumeCapability(capID, corr) {
-			return nil, gatewayError(CodeGatewayFailClosed, "launch capability invalid", "CAPABILITY", corr, dec.ID, nil)
-		}
-		ev("call", audit.PhaseDispatched, "E-10", "", "", dec.ID, dec.PolicyRevision, "evaluated")
-		cctx, cancel := context.WithTimeout(ctx, g.cfg.Limits.ClientDeadline.Duration) // CP-13 client deadline (FR-1.43)
-		defer cancel()
-		res, err := g.reg.Call(cctx, sess.PrincipalID, ref, req.Params.Arguments, nil)
-		if err != nil {
-			return nil, g.mapDispatchError(err, corr, dec, ev)
-		}
-
-		// Response inspection slice (FR-4.11 disposition, FR-4.12 provenance,
-		// SR-5.13-1) and release authorization (SR-1.17-2).
-		if res.Meta == nil {
-			res.Meta = mcp.Meta{}
-		}
-		res.Meta[metaPrefix+"provenance"] = map[string]any{
-			"serverId": ref.Server.Alias, "serverRevision": ref.Server.Revision, "toolRevision": ref.Revision,
-			"decisionId": dec.ID, "filters": []string{"schema-validate", "size-limit"}, "untrusted": true,
-		}
-		if err := g.authorizeRelease(sess); err != nil {
-			ev("call", audit.PhaseWithheld, "E-12", "withhold", err.Error(), dec.ID, dec.PolicyRevision, "evaluated")
-			return nil, gatewayError(CodeResponseWithheld, "response withheld", err.Error(), corr, dec.ID, nil)
-		}
-		outcome := "ok"
-		if res.IsError {
-			outcome = "tool_error"
-		}
-		ev("call", audit.PhaseCompleted, "E-10", outcome, "", dec.ID, dec.PolicyRevision, "evaluated")
-		ev("call", audit.PhaseDelivered, "E-12", "release", "", dec.ID, dec.PolicyRevision, "evaluated")
-		return res, nil
-	}
-}
-
-func (g *Gateway) mapDispatchError(err error, corr string, dec policy.Decision, ev func(string, audit.Phase, string, string, string, string, string, string)) error {
-	var be *backend.BackendError
-	switch {
-	case errors.As(err, &be): // FR-1.32
-		ev("call", audit.PhaseFailed, "E-10", "backend_error", "BACKEND_ERROR", dec.ID, dec.PolicyRevision, "evaluated")
-		return gatewayError(CodeBackendError, "backend error", "BACKEND_ERROR", corr, dec.ID, map[string]any{"backendCode": be.Code})
-	case errors.Is(err, backend.ErrQueueFull):
-		ev("call", audit.PhaseDenied, "E-10", "deny", "QUEUE_FULL", dec.ID, dec.PolicyRevision, "evaluated")
-		return gatewayError(CodeRateLimited, "dispatch queue full", "QUEUE_FULL", corr, dec.ID, nil)
-	case errors.Is(err, backend.ErrTimeout):
-		ev("call", audit.PhaseIndeterminate, "E-10", "timeout", "UPSTREAM_TIMEOUT", dec.ID, dec.PolicyRevision, "evaluated")
-		return gatewayError(CodeTimeout, "upstream timeout", "UPSTREAM_TIMEOUT", corr, dec.ID, nil)
-	case errors.Is(err, backend.ErrTooLarge):
-		ev("call", audit.PhaseWithheld, "E-11", "withhold", "RESULT_TOO_LARGE", dec.ID, dec.PolicyRevision, "evaluated")
-		return gatewayError(CodeResponseWithheld, "response withheld", "RESULT_TOO_LARGE", corr, dec.ID, nil)
-	case errors.Is(err, context.DeadlineExceeded):
-		ev("call", audit.PhaseIndeterminate, "E-10", "timeout", "CLIENT_DEADLINE", dec.ID, dec.PolicyRevision, "evaluated")
-		return gatewayError(CodeTimeout, "client deadline expired", "CLIENT_DEADLINE", corr, dec.ID, nil)
-	}
-	var we *jsonrpc.Error
-	if errors.As(err, &we) {
-		return we
-	}
-	ev("call", audit.PhaseFailed, "E-10", "failed", "DISPATCH_FAILED", dec.ID, dec.PolicyRevision, "evaluated")
-	return gatewayError(CodeBackendError, "dispatch failed", "DISPATCH_FAILED", corr, dec.ID, nil)
-}
-
-// authorizeLaunch rechecks state under the gate and issues a capability.
-func (g *Gateway) authorizeLaunch(sess *session.Session, dec policy.Decision) (string, error) {
-	g.capMu.Lock()
-	defer g.capMu.Unlock()
-	if g.stopped.Load() {
-		return "", errors.New("EMERGENCY_STOP")
-	}
-	snap := g.decider.Snapshot()
-	if snap == nil || snap.Revision != dec.PolicyRevision {
-		return "", errors.New("POLICY_REVISION_CHANGED")
-	}
-	if cur := g.store.Get(sess.ID); cur == nil || cur.State != session.StateActive {
-		return "", errors.New("SESSION_STATE")
-	}
-	id := ids.Secret()
-	g.caps[id] = launchCap{correlation: "", decision: dec.ID, revision: dec.PolicyRevision}
-	return id, nil
-}
-
-func (g *Gateway) consumeCapability(id, corr string) bool {
-	g.capMu.Lock()
-	defer g.capMu.Unlock()
-	c, ok := g.caps[id]
-	if !ok || c.used {
-		return false
-	}
-	delete(g.caps, id)
-	return true
-}
-
-func (g *Gateway) authorizeRelease(sess *session.Session) error {
-	if g.stopped.Load() {
-		return errors.New("EMERGENCY_STOP")
-	}
-	if cur := g.store.Get(sess.ID); cur == nil || cur.State != session.StateActive {
-		return errors.New("SESSION_STATE")
-	}
-	return nil
-}
-
-// sessionEnded drops the session's server and closes its MCP sessions, which
-// ends any open listen streams (FR-2.11).
-func (g *Gateway) sessionEnded(s *session.Session) {
+// sessionEnded cancels the session's in-flight calls and listen streams,
+// lets its requests finish writing, then drops its server and closes its
+// MCP sessions (FR-2.11).
+func (g *Gateway) sessionEnded(s session.Session) {
 	g.mu.Lock()
 	ss := g.servers[s.ID]
 	delete(g.servers, s.ID)
 	g.mu.Unlock()
-	if ss == nil {
-		return
+	cancelled := g.track.endSession(s.ID, sessionEndGrace)
+	if ss != nil {
+		for ms := range ss.srv.Sessions() {
+			_ = ms.Close()
+		}
 	}
-	for ms := range ss.srv.Sessions() {
-		_ = ms.Close()
+	if err := g.evidence.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: s.ID, PrincipalID: s.PrincipalID, Outcome: s.State, ReasonCode: s.EndReason, PolicyStatus: "not_evaluated",
+		Detail: map[string]any{"cancelled_calls": cancelled}}); err != nil {
+		g.log.Error("evidence write failed", "err", err)
 	}
-	g.record(audit.Event{Class: "session", Origin: "E-04", SessionID: s.ID, PrincipalID: s.PrincipalID, Outcome: s.State, ReasonCode: "SESSION_END", PolicyStatus: "not_evaluated"})
 }
 
 // Close releases resources.
