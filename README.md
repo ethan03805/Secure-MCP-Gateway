@@ -1,26 +1,41 @@
 # Secure MCP Gateway
 
-A local reference monitor and research instrument for agentic frameworks that use the Model Context Protocol. The Gateway decides what a tool call may do before any server code runs, contains and watches the server while it runs, and inspects what comes back before the agent sees it. It records enough about every call to learn what normal looks like, so the same system doubles as an instrument for studying how agents use tools.
+A local reference monitor between AI agent harnesses and Model Context Protocol (MCP) servers. The Gateway decides what a tool call may do before any server code runs, contains and watches the server while it runs (on Linux), and inspects what comes back before the agent sees it. It records signed evidence of every decision, and it records enough about every call to learn what normal looks like, so the same system is also an instrument for studying how agents use tools.
 
-**Status:** specified; first vertical slice implemented. The repository holds the architecture, the security-control baseline, a generated implementation SRS, and a Go implementation of the first slice: OAuth 2.1 sessions, policy decisions, dispatch to stdio MCP servers and a signed evidence journal. See [Running the first slice](#running-the-first-slice) for what it does and does not yet do.
+Licensed under the [Apache License 2.0](LICENSE). Security reports: [SECURITY.md](SECURITY.md).
 
-**Website:** the specification is rendered at the project site (see `site/`). Every count, element page and requirement on the site is read from the documents in this repository at build time.
+## Status
+
+**Specified in full; partly implemented.** The specification baseline is SRS V1.2 with architecture V2.3: built as specified, it is the finished v1 product. The code implements a first vertical slice (OAuth 2.1 sessions, policy decisions, dispatch to stdio MCP servers and a signed evidence journal). Of the 33 architecture elements, 17 are partly implemented and 16 are not started; `docs/status/elements.json` records the state and a note for each, and the requirement report produced by CI lists which requirements tests verify, partly verify, fail or leave unverified (FR-12.10).
+
+No release has been published, and no build is labelled "enforced". A release is labelled "enforced" only when every acceptance scenario AT-01 to AT-21 passes on the Linux Enforced profile (FR-19.3).
+
+## Scope of v1
+
+- **Tools only.** The Gateway relays MCP tools. Resources and prompts are not supported; sampling, elicitation and roots are refused unless the MRTR Relay Profile is enabled.
+- **Local backends only.** Every backend is a local MCP server packaged and signed by the operator (`smcpctl package`). Remote (hosted) MCP servers cannot be used as backends in v1.
+- **Platforms.** Linux (x86_64, arm64) with rootless Podman, nftables, cgroup v2 and systemd runs the **Enforced profile**, which contains each server. macOS arm64, and Linux without those features, runs the **Standalone (unconfined) profile**: the same policy, inspection, approval and evidence controls, but no containment, health always `degraded: unconfined`, high-risk servers refused, and the label "not enforced".
+- **Clients.** Claude Code, Codex CLI, Hermes, OpenCode, Gemini CLI, Goose and Grok Build connect locally. Grok Bot, ChatGPT agent "dots" and Meta Muse run on vendor computers and connect through the Remote Access profile, which exposes the Gateway on your computer through an authenticated tunnel.
+- **Not mediated.** An agent's built-in shell, file, browser and connector tools do not use MCP and bypass the Gateway. See [docs/security-limitations.md](docs/security-limitations.md).
 
 ## Start here
 
 | Read | For |
 |---|---|
-| `ArchitectureV2.md` | The logical decomposition: 10 subsystems, 32 elements, 93 functions, 50 interfaces, 13 data stores, the session Allow-policy model, secrets design and the anomaly method |
-| `Secure_MCP_Gateway_SRS.md` | The implementation baseline: 434 SHALL requirements allocated to the architecture. Generated from `srs_build/`; edit the sources, not the output |
+| `ArchitectureV2.md` | The logical decomposition: 10 subsystems, 33 elements, 99 functions, 56 interfaces (17 external, 39 internal), 15 data stores and 14 GUI view modules; the session Allow-policy model, secrets design, anomaly method and the authority, platform and remote-access assumptions |
+| `Secure_MCP_Gateway_SRS.md` | The implementation baseline: 558 SHALL requirements (385 functional in 19 roots, 173 security), each allocated to the architecture, with the manifest schema, client matrix, hostile fixture suite and acceptance mapping as appendices. Generated from `srs_build/`; edit the sources, not the output |
 | `MCP_Gateway_Security_SRS.md` | The 150 security controls that parent every security requirement |
-| `Client-Compatibility-Brief.md` | What Claude Code, Codex CLI and Hermes expect today, and where the specification must change to meet them |
+| `docs/` | Security Limitations, troubleshooting and reason codes, client quick starts, flow diagrams, and the data files the SRS references (manifest schema, Parameter Catalog, element status, client matrix) |
+| `Client-Compatibility-Brief.md` | What each supported client expects from an MCP server, and the evidence behind the client matrix |
 | `architecture.md` | The problem-space analysis behind the design: threats, Neo4j Community Edition limits, protocol pitfalls, race control |
 | `FloorPlan.md` | What every file in the repository is for |
-| `CHANGELOG.md` | Baseline history and the revision procedure |
+| `CHANGELOG.md` | Baseline history, the reasons for each change, and the revision procedure |
+
+The counts above are those printed by the SRS build (`srs_build/gen.py`) and found in `ArchitectureV2.md` at this commit.
 
 ## Running the first slice
 
-The slice is the path a tool call takes from a harness to a backend server and back, with the controls the SRS puts on that path. It runs on macOS and Linux; the sandbox, egress broker and systemd packaging (FR-12.3 to FR-12.5) are not yet implemented, so backend servers run as plain subprocesses.
+The slice is the path a tool call takes from a harness to a backend server and back, with the controls the SRS puts on that path. It runs on macOS and Linux. Backend servers run as plain subprocesses: the sandbox, egress broker and installer are not implemented yet.
 
 ```
 go build -o build/ ./cmd/...
@@ -28,7 +43,7 @@ go build -o build/ ./cmd/...
 ./build/smcpd --config ~/smcp/smcp.toml
 ```
 
-`bootstrap` writes `smcp.toml` (listener, administrator, principals, OAuth clients, backend servers), `policy.json` (framework profiles and session allow templates) and `state/` (a local CA and listener certificate, the Ed25519 evidence key, the journal). The example configuration launches the reference filesystem MCP server over `npx` on a sandbox directory and grants a read-only template by default.
+`bootstrap` writes `smcp.toml` (listener, administrator, principals, OAuth clients, backend servers), `policy.json` (framework profiles and session allow templates) and `state/` (a local CA and listener certificate, the Ed25519 evidence key, the journal). In this slice the example configuration launches the reference filesystem MCP server through `npx` on a sandbox directory. SRS V1.2 replaces both of these behaviors: the password will be read from a prompt or a protected file (SR-7.5-2), and the example will use a signed reference package (FR-14.10).
 
 To connect Claude Code:
 
@@ -39,31 +54,13 @@ claude mcp add --transport http smcp https://127.0.0.1:8443/mcp
 
 Claude Code discovers the Gateway's OAuth metadata, opens a browser, and the Gateway's sign-in page asks for the administrator password. The token it receives is the Gateway session (FR-2.20); the tools it lists are exactly those the session's template permits (SR-5.4-1), named `<alias>_<tool>` (FR-1.26).
 
-Other commands: `smcpctl config validate`, `smcpctl health`, `smcpctl journal verify` (checks the hash chain and signatures of the evidence journal, FR-7.5) and `smcpctl hash-password` (for confidential client secrets used by the session API, FR-2.2).
+Other commands: `smcpctl config validate`, `smcpctl health`, `smcpctl journal verify` (checks the hash chain and signatures of the evidence journal, FR-7.5) and `smcpctl hash-password`.
 
-### What the slice implements
+What the slice does and does not implement is listed per element in `docs/status/elements.json`, and per flow in `docs/flows/`. The requirement report is built with:
 
-| Area | Elements | Implemented |
-|---|---|---|
-| Harness listener | E-01 | TLS 1.3 loopback listener, POST-only MCP endpoint, body and header bounds, Host and Origin checks |
-| Protocol | E-02 | Both protocol eras on one endpoint through the MCP Go SDK (stateless mode), method allowlist, cache hints, Gateway error codes with `reasonCode`, `correlationId`, `decisionId` |
-| Identity and sessions | E-03, E-04 | OAuth 2.1 authorization server (metadata, PKCE, `resource`, `iss`, administrator sign-in, refresh), session API, bearer authentication on every request, lifetimes and per-principal limits, scope-to-template mapping |
-| Policy | E-05, E-06 | Schema-validated policy file with framework profiles and allow templates, compiled snapshot, default deny, decision records, sliding-window rate limits |
-| Enforcement | E-08, E-09, E-12 | Session-scoped catalog, approval hint on tools, schema-validate request filter, one-use launch capability, pre-launch and pre-release rechecks, emergency stop, provenance metadata |
-| Dispatch | E-10, E-14, E-15 | stdio backend launch with an environment allowlist, live tool list as the server revision, public-name derivation and collision refusal, concurrency and queue bounds, upstream timeout, result size bound, backend error mapping, bounded stderr capture |
-| Assurance | E-21, E-22 | Mandatory event floor to a signed, hash-chained JSON Lines journal; local CA, listener certificate and evidence key; Argon2id password hashing |
-| Build | FR-12.6, FR-12.10 | TOML configuration validated against a published JSON Schema; every test declares the requirement IDs it verifies and CI publishes the requirement report |
-
-### What it deliberately does not do yet
-
-- No signed packages or manifests (E-13): tools come from the live backend. No sandbox (E-16), runtime monitor (E-17) or egress broker (E-18): backends are ordinary subprocesses with an allowlisted environment.
-- No Approval Service (E-07): a call whose template requires approval is refused with `-31002`.
-- No Data Server (SS-9), observation, baselines or research export (SS-10), management console (E-24), secrets (SS-6) or health monitor beyond `/healthz`.
-- Backend instances are shared across sessions (FR-5.10 defaults to per session). Progress relay (FR-1.39) and the UDS listener (FR-1.47) are not implemented.
-- Keys are files with mode 0600; TPM sealing and passphrase encryption (FR-7.9) are not implemented.
-- `smcpctl` lacks emergency stop, backup and restore, which need the admin listener.
-
-The requirement report (`build/reqreport.md` after `go test -json ./... | go run ./tools/reqreport -out build/reqreport`) lists every requirement a test claims to verify and its result.
+```
+go test -json ./... | go run ./tools/reqreport -out build/reqreport
+```
 
 ## Rebuilding the SRS
 
@@ -71,7 +68,7 @@ The requirement report (`build/reqreport.md` after `go test -json ./... | go run
 python3 -I srs_build/gen.py . Secure_MCP_Gateway_SRS.md
 ```
 
-The build fails on any traceability error and warns on coverage gaps against the architecture and the security SRS.
+The build fails on any traceability error, on unknown requirement or parameter references in the front matter and appendices, and on inconsistent `docs/` data files; it warns on coverage gaps against the architecture and the security SRS. Commit the regenerated SRS with its sources.
 
 ## Building the website
 
