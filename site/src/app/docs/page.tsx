@@ -1,28 +1,57 @@
 import Link from "next/link";
-import { DOCS, docExists, docMtime } from "@/lib/content";
+import { DocHead } from "@/components/Sheet";
+import { DOCS, docExists, docMtime, readDoc } from "@/lib/content";
+import { buildCommit, chapter, plural } from "@/lib/site";
 
-export const metadata = { title: "Documents, Secure MCP Gateway" };
+export const metadata = { title: "Documents" };
+
+const CH = chapter("/docs/");
 
 export default function DocsIndex() {
+  const docs = DOCS.filter((d) => docExists(d.file)).map((d) => {
+    const md = readDoc(d.file);
+    return { ...d, words: md.split(/\s+/).filter(Boolean).length, mtime: docMtime(d.file) };
+  });
   return (
-    <>
-      <div className="page-head">
-        <h1>Documents</h1>
-        <p className="lede">
-          The full documents, rendered as written. The structured pages elsewhere on this site are derived from these.
-        </p>
+    <article className="sheet">
+      <DocHead
+        chapter={CH.n}
+        title="Documents"
+        left={["Secure MCP Gateway", "Source documents"]}
+        right={[plural(docs.length, "document"), `site build ${buildCommit()}`]}
+      >
+        <p>The documents in the repository, rendered as written. The structured chapters are derived from these.</p>
+      </DocHead>
+      <div className="table-wrap wide">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Document</th>
+              <th scope="col">About</th>
+              <th scope="col">File</th>
+              <th scope="col" className="num">
+                Words
+              </th>
+              <th scope="col" className="num">
+                Changed
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {docs.map((d) => (
+              <tr key={d.slug}>
+                <td>
+                  <Link href={`/docs/${d.slug}/`}>{d.title}</Link>
+                </td>
+                <td>{d.blurb}</td>
+                <td className="id">{d.file}</td>
+                <td className="num">{d.words.toLocaleString("en-US")}</td>
+                <td className="num">{d.mtime}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <ul className="read-list" style={{ maxWidth: "var(--wide)" }}>
-        {DOCS.filter((d) => docExists(d.file)).map((d) => (
-          <li key={d.slug}>
-            <Link href={`/docs/${d.slug}/`}>{d.title}</Link>
-            <p>{d.blurb}</p>
-            <p className="meta">
-              {d.file}, last changed {docMtime(d.file)}
-            </p>
-          </li>
-        ))}
-      </ul>
-    </>
+    </article>
   );
 }
