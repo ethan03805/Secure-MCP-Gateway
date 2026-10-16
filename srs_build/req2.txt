@@ -34,9 +34,9 @@ R: Authors iterate on policy without affecting enforcement.
 
 @FR-3.4 | Revision record
 P: FR-3
-S: The Policy Administration Service (E-05) SHALL record for each published revision its ID, parent revision ID, content digest, policy-schema version, evaluator version, publishing actor, publication time and simulation result reference.
+S: The Policy Administration Service (E-05) SHALL record for each published revision its ID, parent revision ID, content digest, policy-schema version, evaluator version, publishing actor, publication time, simulation result reference and policy-signing key ID.
 A: E-05; F-12; D-01
-V: Inspection | Publish a revision; inspect the stored record for each field.
+V: Inspection | Publish a revision; inspect the record in the Policy Store for each field.
 SRC: A2 §4.1 PolicyRevision; SEC 1.14
 R: Supports reproducible research and audit linkage.
 
@@ -84,7 +84,7 @@ R: Rollback keeps history linear and immutable.
 P: FR-3
 S: The Policy Decision Service (E-06) SHALL compile the active revision into an in-memory decision snapshot when the revision is activated, and SHALL evaluate requests against that snapshot.
 A: E-06; F-13; I-07
-V: Test | Activate a revision; confirm decisions continue during a 10-second Data Server read pause, with no store access per decision.
+V: Test | Activate a revision; stop the graph database and the Observation Store; confirm decisions continue unchanged for 60 seconds with no Data Server access per decision.
 SRC: ARCH §15 E-05/E-06; ARCH §14
 R: Decision latency must not depend on a database round-trip.
 
@@ -114,11 +114,11 @@ R: Rate limits are a policy obligation.
 
 @FR-3.14 | Approval request creation
 P: FR-3
-S: When a decision carries an approval obligation and no matching unconsumed approval exists, the Approval Service (E-07) SHALL create a pending approval record and the Protocol Mediator (E-02) SHALL return Gateway error `-31002` with `data.approvalId` and `data.expiresAt`.
+S: When a decision carries an approval obligation and no matching unconsumed approval exists, the Approval Service (E-07) SHALL create a pending approval record bound per SR-1.18-2, notify approvers (FR-3.23) and hold the call (FR-3.19).
 A: E-07; E-02; F-17; I-10; X-01
-V: Test | Call a tool that requires approval; confirm -31002 with both data members and a pending record visible in G-13.
-SRC: ARCH §4 E-07; SEC 1.18
-R: Approval is out-of-band; the harness learns the approval ID and retries.
+V: Test | Call a tool that requires approval; confirm a pending record visible in G-13 and in `smcpctl approvals list`, a desktop notification through the test notifier, and that the call is held rather than answered.
+SRC: ARCH §4 E-07; SEC 1.18; OWNER (approvals: hold mode)
+R: Approval is out-of-band. Holding the call lets an approved call finish in the same turn of the agent; the retry path remains for calls that outlast the hold.
 
 @FR-3.15 | Approval consumption on retry
 P: FR-3
@@ -151,6 +151,62 @@ A: E-07; F-17; X-05
 V: Inspection | Open a pending approval triggered by an anomaly obligation in G-13; confirm each item is displayed.
 SRC: ARCH §4 E-07; ARCH §9.6
 R: Approvers need the evidence to decide.
+
+@FR-3.19 | Approval hold mode
+P: FR-3
+S: While an approval-obligated call is pending, the Approval Service (E-07) SHALL keep the call parked for at most the CP-45 hold bound, and the Protocol Mediator (E-02) SHALL send a keep-alive every CP-45 keep-alive interval: a `notifications/progress` message when the request carries a progress token, and an SSE comment line otherwise.
+A: E-07; E-02; F-17; X-01
+V: Test | Call an approval-obligated tool with and without a progress token and leave it pending; confirm keep-alives at the interval in both forms and no response before the hold bound.
+SRC: OWNER (approvals: hold mode with progress keep-alives); MCP:basic/utilities/progress
+R: Harnesses close idle requests. Keep-alives hold the call open while a person decides.
+
+@FR-3.20 | Approval during hold
+P: FR-3
+S: When a held call's approval is granted before the CP-45 hold bound, the Approval Service (E-07) SHALL consume the approval and continue the same call to launch authorization (F-29), so that the harness receives the tool result as the response to its original request.
+A: E-07; E-12; F-18; F-17; I-10; I-11
+V: Test | Hold a call; approve it from G-13; confirm the original request returns the tool result, the approval is `consumed`, and a second identical call creates a new approval.
+SRC: OWNER (approvals: hold mode)
+R: The agent's turn completes without a retry when the person answers in time.
+
+@FR-3.21 | Denial during hold
+P: FR-3
+S: When a held call's approval is denied, the Approval Service (E-07) SHALL end the call with Gateway error `-31001` and reason code `APPROVAL_DENIED`.
+A: E-07; E-02; F-18; X-01
+V: Test | Hold a call; deny it; confirm `-31001` with `APPROVAL_DENIED` and no dispatch event.
+SRC: OWNER (approvals: approve or deny)
+R: A denial is a policy outcome and is reported as one.
+
+@FR-3.22 | Hold bound fallback
+P: FR-3
+S: When a held call reaches the CP-45 hold bound without a decision, the Protocol Mediator (E-02) SHALL end the call with Gateway error `-31002` carrying `data.approvalId`, `data.expiresAt`, the plain-language `data.message` and `data.approvalUrl` (FR-1.51), and the Approval Service (E-07) SHALL keep the approval pending until its CP-17 expiry so that a retry after approval consumes it (FR-3.15).
+A: E-07; E-02; F-17; X-01
+V: Test | Hold a call past the bound; confirm the `-31002` data members; approve; retry the identical call; confirm dispatch.
+SRC: OWNER (approvals: fallback to -31002 with plain-language retry text and a console deep link)
+R: The hold is bounded so a harness never waits indefinitely; the approval survives the fallback.
+
+@FR-3.23 | Approver notification
+P: FR-3
+S: Within 2 seconds of creating a pending approval, the Approval Service (E-07) SHALL notify approvers in the Approvals view (G-13), in the `smcpctl approvals watch` stream and through an OS desktop notification (X-14) whose text contains only the public tool name, the server alias, the approval ID and the console URL.
+A: E-07; E-24; F-17; X-05; X-14
+V: Test | Create an approval with the test notifier attached; confirm the three notices within 2 seconds and that the desktop notification text contains no argument value; remove the notifier binary and confirm the approval flow is unaffected and a diagnostic log warning is written.
+SRC: OWNER (approvals: console, CLI and OS desktop notification)
+R: A held call is only useful if a person learns about it while the hold lasts. Arguments stay out of OS notifications because notification centers persist and display them outside the Gateway's control.
+
+@FR-3.24 | Approval CLI
+P: FR-3
+S: The `smcpctl approvals` command SHALL provide `list`, `show`, `approve`, `deny` and `watch` subcommands that authenticate to the control API as a person holding the Approver or Administrator role and display the FR-3.18 evidence before an approve or deny takes effect.
+A: E-24; E-07; F-18; X-05
+V: Test | Approve and deny held calls with the CLI as an Approver; confirm the evidence is printed, the decisions are recorded with the approver identity, and an Auditor account is refused.
+SRC: OWNER (approve and deny via smcpctl approvals)
+R: Operators who work in a terminal need an approval path that does not require the browser.
+
+@FR-3.25 | Real-harness approval acceptance
+P: FR-3
+S: The Gateway project SHALL verify the approval flow end to end with Claude Code at its Appendix K pinned version, covering a held call approved from G-13, a held call approved with `smcpctl approvals`, a denied call and a call that reaches the hold bound, and SHALL record the harness-visible text of each outcome.
+A: E-07; E-02; E-24; F-17; F-18; X-01; X-05
+V: Demonstration | Run the four cases with the pinned Claude Code build against a Gateway at the release commit; confirm each outcome and file the recorded transcript in `docs/verification/`.
+SRC: REVIEW (C5)
+R: Hold mode depends on harness timeout and progress behavior that unit tests cannot show.
 
 ### FR-4 Enforcement pipeline
 
@@ -282,6 +338,30 @@ V: Test | Enable synchronous scoring; confirm that an abnormal fixture's obligat
 SRC: ARCH §9.5 (Scoring mode); ARCH §18.3
 R: Anomaly obligations must act at the control points.
 
+@FR-4.16 | Versioned detection rule sets
+P: FR-4
+S: The Request Inspection Pipeline (E-09) and the Response Inspection Pipeline (E-11) SHALL load the rules of the `secret-fingerprint`, `injection-detect`, `injection-marker`, `pii-detect` and `unicode-control` filters and of the metadata scan from versioned rule-set files, each with an ID, version and SHA-256 digest, and SHALL record the rule-set ID and version in every finding.
+A: E-09; E-11; E-14; F-21; F-27; F-34
+V: Test | Load two versions of a rule set; run the same input under each; confirm the findings name the version in effect and that a rule-set file whose digest does not match its index is refused at load.
+SRC: REVIEW (I1); SEC 5.14
+R: Detection quality can only be measured and compared per version (FR-19.5).
+
+@FR-4.17 | Injection findings as tags
+P: FR-4
+S: The `injection-detect` and `injection-marker` filters SHALL record each finding as a provenance tag on the released result and as observation parameters P-043 and P-143, and SHALL leave the release disposition unchanged.
+A: E-09; E-11; F-21; F-27; F-28
+V: Test | Run the injection corpus through both filters; confirm every positive sample yields a tag and parameter value and that each result is released with the same disposition as without the filter.
+SRC: OWNER (injection-marker tags only in v1); REVIEW (I1)
+R: Prompt-injection detection has false positives and false negatives that are not yet measured well enough to block on. Tags give the agent and the researcher the signal without claiming a control.
+
+@FR-4.18 | Untrusted-content delimiting
+P: FR-4
+S: When the Response Policy carries the `delimit-untrusted` obligation, the Response Inspection Pipeline (E-11) SHALL enclose each text content item from a tool whose manifest `source_trust` is `untrusted` between delimiter lines that carry a per-response random nonce of at least 96 bits, and SHALL remove from the enclosed text any line matching the delimiter pattern.
+A: E-11; F-27; F-28
+V: Test | Enable the obligation; return text containing a forged delimiter line from an untrusted-source fixture; confirm the released text is enclosed with a fresh nonce and the forged line is removed.
+SRC: REVIEW (I2)
+R: An optional, deterministic way to mark where untrusted text begins and ends for agents that honor it. It is not a control on its own.
+
 ### FR-5 Server trust, runtime and southbound MCP client
 
 @FR-5 | Server trust and execution
@@ -302,7 +382,7 @@ R: The library location is a deployment choice.
 
 @FR-5.2 | Package contents
 P: FR-5
-S: The Library Trust Verifier (E-13) SHALL require each package to contain an artifact, a detached signature or signature bundle, a manifest conforming to the X-03 manifest schema, and the signer certificate chain or key identifier.
+S: The Library Trust Verifier (E-13) SHALL require each package to contain an artifact, a package index listing the artifact, manifest and provenance digests, a minisign signature over that index, a manifest conforming to the Appendix J schema, a provenance statement and the signer key identifier.
 A: E-13; F-33; F-34; X-03
 V: Test | Import packages each missing one component; confirm each is rejected with a reason naming the missing component.
 SRC: ARCH §6.3

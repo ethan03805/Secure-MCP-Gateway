@@ -1,0 +1,74 @@
+# Security Limitations
+
+This document states what the Secure MCP Gateway does not protect against, so that you can decide how far to rely on it. It is required by SRS FR-18.2 and is updated with each release. Where a limitation has a partial mitigation, the mitigation is named; none of them removes the limitation.
+
+## What the Gateway controls
+
+The Gateway mediates MCP tool calls from an agent harness to MCP servers that it launches itself. For those calls it authenticates the harness, decides each call against signed policy, inspects arguments and results, asks a person for approval where policy says so, contains the server (Enforced profile only) and records signed evidence. Everything else an agent can do is outside its control.
+
+## Limitations
+
+### 1. The Standalone profile contains nothing
+
+On macOS, and on Linux without rootless Podman, nftables, cgroup v2 and systemd, the Gateway runs in the Standalone (unconfined) profile. Backend servers run as ordinary child processes with your user's permissions. A malicious or compromised server can read and write any file you can, open network connections, start processes and use as much memory and CPU as the operating system allows.
+
+- **Consequence:** sandbox, egress and resource controls (SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2, the Egress Broker) do not apply. Appendix L rows HF-20 to HF-24 are not defended.
+- **Mitigation:** servers classified `high` risk are refused in this profile (SR-4-1); health always reports `degraded` with cause `unconfined`; every release built for this profile is labelled "not enforced" (FR-13.10).
+
+### 2. The agent runs as the Gateway's own user in the Standalone profile
+
+In the Standalone profile the agent harness and the Gateway run under the same operating-system account. The agent's own file and shell tools can read the Gateway's keys, policy, journal and the harness credential file, and can stop or reconfigure the Gateway.
+
+- **Mitigation:** the per-client lockdown profiles deny the client's own file tools access to the Gateway paths where the client supports such rules (FR-15.1, FR-15.2), and `smcpctl doctor` reports the paths that remain readable (FR-15.4). These rules are enforced by the client, not by the operating system.
+
+### 3. Non-MCP tools bypass the Gateway
+
+An agent's built-in tools (shell or terminal, file editing, web browsing, web fetch, code execution, and vendor connectors) do not go through MCP and never reach the Gateway. This is true of every client in the matrix, and it is the main way an agent can act outside the Gateway's policy.
+
+- **Mitigation:** the lockdown profiles restrict which MCP servers a client loads; they do not disable built-in tools. Use each client's own permission settings to restrict or disable built-in tools.
+
+### 4. Lockdown is only as strong as each client's settings enforcement
+
+Lockdown profiles use each client's own configuration controls (Appendix K of the SRS). Some clients have no administrator-level MCP allowlist, and some vendors state that their allowlists match server names and are not a security boundary. A user, or an agent with shell access, may be able to edit the client's configuration.
+
+- **Mitigation:** clients are labelled `exclusive-gateway` only after passing the bypass tests at their pinned version (SR-4.13-1); all others are labelled `gateway-available`.
+
+### 5. Cloud agents: the tunnel provider sees your traffic
+
+In the Remote Access profile the tunnel provider (Cloudflare, Tailscale, or the agent vendor's tunnel) terminates the public TLS connection. It can read and modify requests and results between the cloud agent and your computer. The client address it forwards is recorded as a claim of the provider, not a verified fact (FR-16.8).
+
+- **Mitigation:** OAuth tokens bound to approved clients, strict rate limits, lockout and request bounds apply to every remote request (FR-16.5 to FR-16.7, SR-4.14-2). Choose a provider you are willing to trust with the content of your tool calls.
+
+### 6. Cloud agents: the vendor's machine is not under your control
+
+A cloud agent runs on the vendor's computer. Installing the Gateway inside that computer is not a control, because the agent controls it. The vendor's administrative MCP allowlist, where one exists, is the only thing that keeps the agent from using other MCP servers; the cloud agent's own browser, terminal and connectors do not pass through the Gateway.
+
+### 7. Detection filters are heuristics
+
+The secret-fingerprint, injection, PII, Unicode-control and metadata filters match versioned rule sets. Each rule set has measured false-positive and false-negative rates on its labelled corpus (FR-19.5); rates on real traffic will differ. A determined attacker can phrase content to avoid any fixed rule set.
+
+### 8. Prompt-injection findings are tags only
+
+In v1, `injection-detect` and `injection-marker` findings are recorded as tags and observation values and do not block or withhold anything (FR-4.17). The deterministic controls that act on untrusted content are session taint (SR-5.13-2), which requires approval for or denies writing and external tools after a session has read untrusted content, and the optional delimiting obligation (FR-4.18).
+
+### 9. Approval depends on the person approving
+
+An approval is only as good as the decision behind it. The approval view shows the exact tool, server revision, arguments and decisive rules (FR-3.18), but it cannot tell whether an action is wise. Desktop notifications deliberately omit arguments (FR-3.23); open the console or `smcpctl approvals show` to see them.
+
+### 10. Signed does not mean safe
+
+A package signature shows who packaged a server and that it has not changed since. It does not show that the server's code is benign. The operator's packaging run reads the server's tool list; it does not review its source.
+
+### 11. Scope limits
+
+- Remote (hosted) MCP servers cannot be used as backends in v1 (FR-14.4).
+- Only MCP tools are relayed. Resources and prompts are refused (SR-5.6-1); sampling, elicitation and roots are refused unless the MRTR Relay Profile is enabled.
+- Windows is not supported.
+
+### 12. Trusted computing base
+
+The host operating system, its administrator, the Gateway binaries and the trust-anchor store are trusted (ARCH A-4). A person with administrator access to the host can change or disable every control and can delete evidence that has not been exported.
+
+## Reporting a limitation that is not listed
+
+See `SECURITY.md` at the repository root.
