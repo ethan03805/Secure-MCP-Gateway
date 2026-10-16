@@ -4,17 +4,29 @@
   "title": "Secure MCP Gateway configuration",
   "type": "object",
   "additionalProperties": false,
+  "$defs": {
+    "duration": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$" },
+    "loopback": { "type": "string", "pattern": "^(127\\.0\\.0\\.1|\\[::1\\]|localhost):[0-9]{1,5}$" },
+    "argon2id": { "type": "string", "pattern": "^\\$argon2id\\$" }
+  },
   "properties": {
     "listener": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "address": { "type": "string", "pattern": "^(127\\.0\\.0\\.1|\\[::1\\]|localhost):[0-9]{1,5}$" },
+        "address": { "$ref": "#/$defs/loopback" },
         "public_url": { "type": "string", "pattern": "^https://" },
         "mcp_path": { "type": "string", "pattern": "^/" },
         "tls_cert": { "type": "string", "minLength": 1 },
         "tls_key": { "type": "string", "minLength": 1 },
         "allowed_origins": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "admin_listener": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "address": { "$ref": "#/$defs/loopback" }
       }
     },
     "state": {
@@ -25,10 +37,28 @@
     "admin": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["username", "password_hash"],
+      "required": ["username"],
+      "anyOf": [
+        { "required": ["password_hash"] },
+        { "required": ["bootstrap_token_sha256", "bootstrap_token_expires"] }
+      ],
       "properties": {
-        "username": { "type": "string", "minLength": 1, "maxLength": 64 },
-        "password_hash": { "type": "string", "pattern": "^\\$argon2id\\$" }
+        "username": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+        "password_hash": { "$ref": "#/$defs/argon2id" },
+        "bootstrap_token_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "bootstrap_token_expires": { "type": "string", "minLength": 1 }
+      }
+    },
+    "approver": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["username", "password_hash"],
+        "properties": {
+          "username": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+          "password_hash": { "$ref": "#/$defs/argon2id" }
+        }
       }
     },
     "policy": {
@@ -46,14 +76,30 @@
         "tool_concurrency_total": { "type": "integer", "minimum": 1 },
         "tool_queue": { "type": "integer", "minimum": 0 },
         "principal_calls_per_minute": { "type": "integer", "minimum": 1 },
-        "upstream_timeout": { "type": "string" },
-        "client_deadline": { "type": "string" },
-        "session_max_lifetime": { "type": "string" },
-        "session_idle_timeout": { "type": "string" },
+        "upstream_timeout": { "$ref": "#/$defs/duration" },
+        "client_deadline": { "$ref": "#/$defs/duration" },
+        "session_max_lifetime": { "$ref": "#/$defs/duration" },
+        "session_idle_timeout": { "$ref": "#/$defs/duration" },
         "sessions_per_principal": { "type": "integer", "minimum": 1 },
         "catalog_ttl_ms": { "type": "integer", "minimum": 0 },
         "catalog_page_size": { "type": "integer", "minimum": 1, "maximum": 1000 },
-        "listen_streams_per_session": { "type": "integer", "minimum": 1 }
+        "listen_streams_per_session": { "type": "integer", "minimum": 1 },
+        "approval_hold": { "$ref": "#/$defs/duration" }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string", "enum": ["auto", "standalone", "enforced"] }
+      }
+    },
+    "log": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
+        "format": { "type": "string", "enum": ["text", "json"] }
       }
     },
     "principal": {
@@ -64,7 +110,10 @@
         "required": ["id", "framework", "profile"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
-          "framework": { "type": "string", "enum": ["claude-code", "codex", "hermes", "cursor", "other"] },
+          "framework": {
+            "type": "string",
+            "enum": ["claude-code", "codex", "hermes", "opencode", "gemini-cli", "goose", "grok-build", "grok-bot", "chatgpt", "meta-muse", "cursor", "other"]
+          },
           "display_name": { "type": "string", "maxLength": 128 },
           "profile": { "type": "string", "minLength": 1 },
           "enabled": { "type": "boolean" }
@@ -96,7 +145,17 @@
           "command": { "type": "string", "minLength": 1 },
           "args": { "type": "array", "items": { "type": "string" } },
           "env": { "type": "object", "additionalProperties": { "type": "string" } },
-          "dir": { "type": "string" }
+          "secret_env": {
+            "type": "object",
+            "propertyNames": { "pattern": "^[A-Z_][A-Z0-9_]{0,63}$" },
+            "additionalProperties": { "type": "string", "minLength": 1 }
+          },
+          "dir": { "type": "string" },
+          "risk_classes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "enum": ["standard", "general-sql", "code-execution", "cad-scripting", "browser-automation"] }
+          }
         }
       }
     }

@@ -8,8 +8,10 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
@@ -19,17 +21,24 @@ import (
 //go:embed config.schema.json
 var schemaJSON []byte
 
+// SchemaJSON returns the published configuration schema.
+func SchemaJSON() []byte { return append([]byte(nil), schemaJSON...) }
+
 // Config is the validated Gateway configuration. Relative paths are resolved
 // against the directory holding the configuration file.
 type Config struct {
-	Listener   Listener    `toml:"listener" json:"listener"`
-	State      State       `toml:"state" json:"state"`
-	Admin      Admin       `toml:"admin" json:"admin"`
-	Policy     Policy      `toml:"policy" json:"policy"`
-	Limits     Limits      `toml:"limits" json:"limits"`
-	Principals []Principal `toml:"principal" json:"principal"`
-	Clients    []Client    `toml:"client" json:"client"`
-	Servers    []Server    `toml:"server" json:"server"`
+	Listener      Listener      `toml:"listener" json:"listener"`
+	AdminListener AdminListener `toml:"admin_listener" json:"admin_listener"`
+	State         State         `toml:"state" json:"state"`
+	Admin         Admin         `toml:"admin" json:"admin"`
+	Approvers     []Approver    `toml:"approver" json:"approver"`
+	Policy        Policy        `toml:"policy" json:"policy"`
+	Limits        Limits        `toml:"limits" json:"limits"`
+	Profile       Profile       `toml:"profile" json:"profile"`
+	Log           Log           `toml:"log" json:"log"`
+	Principals    []Principal   `toml:"principal" json:"principal"`
+	Clients       []Client      `toml:"client" json:"client"`
+	Servers       []Server      `toml:"server" json:"server"`
 
 	// Dir is the directory of the configuration file; set by Load.
 	Dir string `toml:"-" json:"-"`
@@ -45,14 +54,48 @@ type Listener struct {
 	AllowedOrigins []string `toml:"allowed_origins" json:"allowed_origins"`
 }
 
-// State names the directories that hold keys and the evidence journal.
+// AdminListener configures the loopback control API listener (E-24, CP-03).
+// It is separate from the harness listener so that session tokens are never
+// accepted for administrative actions (SR-2.5-1).
+type AdminListener struct {
+	Address string `toml:"address" json:"address"`
+}
+
+// Profile selects the deployment profile. "auto" runs the enforced profile
+// when the host and launcher support it and the standalone (unconfined)
+// profile otherwise; "enforced" refuses to start without confinement;
+// "standalone" never attempts confinement.
+type Profile struct {
+	Mode string `toml:"mode" json:"mode"`
+}
+
+// Log configures the diagnostic logger. Diagnostic logs are separate from
+// the evidence journal and are never evidence.
+type Log struct {
+	Level  string `toml:"level" json:"level"`
+	Format string `toml:"format" json:"format"`
+}
+
+// State names the directory that holds keys and the evidence journal.
 type State struct {
 	Dir string `toml:"dir" json:"dir"`
 }
 
-// Admin is the administrative sign-in used by the OAuth authorization
-// endpoint (FR-2.19) in this slice.
+// Admin is the administrator account of the control API (E-24). Either a
+// password hash or a pending one-use bootstrap token is configured. The
+// bootstrap token is redeemed once on the admin listener to set the
+// password, which is then kept in the state directory.
 type Admin struct {
+	Username              string `toml:"username" json:"username"`
+	PasswordHash          string `toml:"password_hash" json:"password_hash"`
+	BootstrapTokenSHA256  string `toml:"bootstrap_token_sha256" json:"bootstrap_token_sha256"`
+	BootstrapTokenExpires string `toml:"bootstrap_token_expires" json:"bootstrap_token_expires"`
+}
+
+// Approver is a Session Approver account. It may approve harness sign-ins at
+// the OAuth authorization endpoint (FR-2.19) and nothing else; the
+// administrator account is not accepted there.
+type Approver struct {
 	Username     string `toml:"username" json:"username"`
 	PasswordHash string `toml:"password_hash" json:"password_hash"`
 }
@@ -62,8 +105,10 @@ type Policy struct {
 	File string `toml:"file" json:"file"`
 }
 
-// Limits holds controlled parameters from SRS Appendix A that this slice
-// enforces. Zero values are replaced by the appendix defaults.
+// Limits holds controlled parameters from SRS Appendix A that the Gateway
+// enforces. A key absent from the file takes the Appendix A default; a key
+// present with an explicit value, including 0 where the schema allows it,
+// keeps that value.
 type Limits struct {
 	RequestBodyBytes       int64    `toml:"request_body_bytes" json:"request_body_bytes"`                         // CP-07
 	ResultBytes            int64    `toml:"result_bytes" json:"result_bytes"`                                     // CP-08
@@ -79,6 +124,34 @@ type Limits struct {
 	CatalogTTLMs           int      `toml:"catalog_ttl_ms" json:"catalog_ttl_ms"`                                 // CP-19
 	CatalogPageSize        int      `toml:"catalog_page_size" json:"catalog_page_size"`                           // CP-19
 	ListenStreamsPerSess   int      `toml:"listen_streams_per_session" json:"listen_streams_per_session"`         // CP-20
+	ApprovalHold           Duration `toml:"approval_hold" json:"approval_hold"`                                   // approval hold-mode bound
+}
+
+// LimitDefault is one Appendix A default applied to a [limits] key.
+type LimitDefault struct {
+	Key   string
+	Value any // int, int64 or time.Duration
+	field func(*Limits) any
+}
+
+// LimitDefaults lists the defaults by configuration key. A test checks that
+// this list and the schema's limits properties name the same keys.
+var LimitDefaults = []LimitDefault{
+	{"request_body_bytes", int64(1 << 20), func(m *Limits) any { return &m.RequestBodyBytes }},
+	{"result_bytes", int64(8 << 20), func(m *Limits) any { return &m.ResultBytes }},
+	{"tool_concurrency_per_principal", 4, func(m *Limits) any { return &m.ToolConcurrencyPerUser }},
+	{"tool_concurrency_total", 16, func(m *Limits) any { return &m.ToolConcurrencyTotal }},
+	{"tool_queue", 32, func(m *Limits) any { return &m.ToolQueue }},
+	{"principal_calls_per_minute", 60, func(m *Limits) any { return &m.PrincipalCallsPerMin }},
+	{"upstream_timeout", 45 * time.Second, func(m *Limits) any { return &m.UpstreamTimeout }},
+	{"client_deadline", 60 * time.Second, func(m *Limits) any { return &m.ClientDeadline }},
+	{"session_max_lifetime", 8 * time.Hour, func(m *Limits) any { return &m.SessionMaxLifetime }},
+	{"session_idle_timeout", 30 * time.Minute, func(m *Limits) any { return &m.SessionIdleTimeout }},
+	{"sessions_per_principal", 8, func(m *Limits) any { return &m.SessionsPerPrincipal }},
+	{"catalog_ttl_ms", 60000, func(m *Limits) any { return &m.CatalogTTLMs }},
+	{"catalog_page_size", 100, func(m *Limits) any { return &m.CatalogPageSize }},
+	{"listen_streams_per_session", 2, func(m *Limits) any { return &m.ListenStreamsPerSess }},
+	{"approval_hold", 60 * time.Second, func(m *Limits) any { return &m.ApprovalHold }},
 }
 
 // Principal is a framework instance record (FR-2.1).
@@ -100,15 +173,36 @@ type Client struct {
 	RedirectURIs     []string `toml:"redirect_uris" json:"redirect_uris"`
 }
 
-// Server is a backend MCP server this slice launches over stdio. The signed
-// package path (E-13) is not part of the slice; the tool list is taken from
-// the live server at startup and recorded by the registry.
+// Server is a backend MCP server launched over stdio. Signed packages
+// (E-13) are not built yet; until they are, the tool list is taken from the
+// live server at startup and flagged as unverified.
+//
+// RiskClasses names the high-risk classes of the server's tools; a server in
+// any high-risk class is refused under the standalone (unconfined) profile.
+// SecretEnv maps environment variable names to secret references that the
+// Secret Broker (E-20) resolves at launch.
 type Server struct {
-	Alias   string            `toml:"alias" json:"alias"`
-	Command string            `toml:"command" json:"command"`
-	Args    []string          `toml:"args" json:"args"`
-	Env     map[string]string `toml:"env" json:"env"`
-	Dir     string            `toml:"dir" json:"dir"`
+	Alias       string            `toml:"alias" json:"alias"`
+	Command     string            `toml:"command" json:"command"`
+	Args        []string          `toml:"args" json:"args"`
+	Env         map[string]string `toml:"env" json:"env"`
+	SecretEnv   map[string]string `toml:"secret_env" json:"secret_env"`
+	Dir         string            `toml:"dir" json:"dir"`
+	RiskClasses []string          `toml:"risk_classes" json:"risk_classes"`
+}
+
+// HighRiskClasses are the tool classes that need confinement: general SQL,
+// code execution, CAD scripting and browser automation.
+var HighRiskClasses = []string{"general-sql", "code-execution", "cad-scripting", "browser-automation"}
+
+// HighRisk reports whether the server declares any high-risk class.
+func (s Server) HighRisk() bool {
+	for _, c := range s.RiskClasses {
+		if slices.Contains(HighRiskClasses, c) {
+			return true
+		}
+	}
+	return false
 }
 
 // Duration is a time.Duration that reads from a TOML string such as "45s".
@@ -160,12 +254,39 @@ func Parse(raw []byte) (*Config, error) {
 	if err := dec.Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("decode: %w", err)
 	}
-	cfg.applyDefaults()
+	cfg.applyDefaults(presentKeys(generic, "limits"))
 	if err := cfg.check(); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
+
+// presentKeys returns the keys written in the named table of the document.
+func presentKeys(doc map[string]any, table string) map[string]bool {
+	out := map[string]bool{}
+	if t, ok := doc[table].(map[string]any); ok {
+		for k := range t {
+			out[k] = true
+		}
+	}
+	return out
+}
+
+var compiledSchema = func() *jsonschema.Schema {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaJSON))
+	if err != nil {
+		panic("embedded config schema: " + err.Error())
+	}
+	c := jsonschema.NewCompiler()
+	if err := c.AddResource("config.schema.json", doc); err != nil {
+		panic(err)
+	}
+	s, err := c.Compile("config.schema.json")
+	if err != nil {
+		panic("compile config schema: " + err.Error())
+	}
+	return s
+}()
 
 func validate(doc map[string]any) error {
 	// The schema is validated against the JSON form of the TOML document so
@@ -178,25 +299,13 @@ func validate(doc map[string]any) error {
 	if err := json.Unmarshal(js, &jsonDoc); err != nil {
 		return err
 	}
-	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaJSON))
-	if err != nil {
-		return fmt.Errorf("embedded schema: %w", err)
-	}
-	c := jsonschema.NewCompiler()
-	if err := c.AddResource("config.schema.json", schemaDoc); err != nil {
-		return err
-	}
-	sch, err := c.Compile("config.schema.json")
-	if err != nil {
-		return fmt.Errorf("compile schema: %w", err)
-	}
-	if err := sch.Validate(jsonDoc); err != nil {
+	if err := compiledSchema.Validate(jsonDoc); err != nil {
 		return fmt.Errorf("configuration does not match schema: %w", err)
 	}
 	return nil
 }
 
-func (c *Config) applyDefaults() {
+func (c *Config) applyDefaults(limitsSet map[string]bool) {
 	l := &c.Listener
 	if l.Address == "" {
 		l.Address = "127.0.0.1:8443"
@@ -213,42 +322,37 @@ func (c *Config) applyDefaults() {
 	if l.TLSKey == "" {
 		l.TLSKey = "tls/server.key"
 	}
+	if c.AdminListener.Address == "" {
+		c.AdminListener.Address = "127.0.0.1:8444"
+	}
+	if c.Profile.Mode == "" {
+		c.Profile.Mode = "auto"
+	}
+	if c.Log.Level == "" {
+		c.Log.Level = "info"
+	}
+	if c.Log.Format == "" {
+		c.Log.Format = "text"
+	}
 	if c.State.Dir == "" {
 		c.State.Dir = "state"
 	}
 	if c.Policy.File == "" {
 		c.Policy.File = "policy.json"
 	}
-	m := &c.Limits
-	def := func(p *int, v int) {
-		if *p == 0 {
-			*p = v
+	for _, d := range LimitDefaults {
+		if limitsSet[d.Key] {
+			continue
+		}
+		switch v := d.Value.(type) {
+		case int:
+			*d.field(&c.Limits).(*int) = v
+		case int64:
+			*d.field(&c.Limits).(*int64) = v
+		case time.Duration:
+			d.field(&c.Limits).(*Duration).Duration = v
 		}
 	}
-	def64 := func(p *int64, v int64) {
-		if *p == 0 {
-			*p = v
-		}
-	}
-	defD := func(p *Duration, v time.Duration) {
-		if p.Duration == 0 {
-			p.Duration = v
-		}
-	}
-	def64(&m.RequestBodyBytes, 1<<20)
-	def64(&m.ResultBytes, 8<<20)
-	def(&m.ToolConcurrencyPerUser, 4)
-	def(&m.ToolConcurrencyTotal, 16)
-	def(&m.ToolQueue, 32)
-	def(&m.PrincipalCallsPerMin, 60)
-	defD(&m.UpstreamTimeout, 45*time.Second)
-	defD(&m.ClientDeadline, 60*time.Second)
-	defD(&m.SessionMaxLifetime, 8*time.Hour)
-	defD(&m.SessionIdleTimeout, 30*time.Minute)
-	def(&m.SessionsPerPrincipal, 8)
-	def(&m.CatalogTTLMs, 60000)
-	def(&m.CatalogPageSize, 100)
-	def(&m.ListenStreamsPerSess, 2)
 	for i := range c.Principals {
 		if c.Principals[i].Enabled == nil {
 			t := true
@@ -259,6 +363,39 @@ func (c *Config) applyDefaults() {
 
 // check enforces cross-field rules the schema cannot express.
 func (c *Config) check() error {
+	for _, d := range []struct {
+		key string
+		v   Duration
+	}{{"upstream_timeout", c.Limits.UpstreamTimeout}, {"client_deadline", c.Limits.ClientDeadline},
+		{"session_max_lifetime", c.Limits.SessionMaxLifetime}, {"session_idle_timeout", c.Limits.SessionIdleTimeout}} {
+		if d.v.Duration <= 0 {
+			return fmt.Errorf("limits.%s must be a positive duration", d.key)
+		}
+	}
+	if c.Limits.ApprovalHold.Duration < 0 {
+		return fmt.Errorf("limits.approval_hold must not be negative")
+	}
+	if c.Admin.PasswordHash == "" && c.Admin.BootstrapTokenSHA256 == "" {
+		return fmt.Errorf("admin needs password_hash or bootstrap_token_sha256")
+	}
+	if c.Admin.BootstrapTokenExpires != "" {
+		if _, err := time.Parse(time.RFC3339, c.Admin.BootstrapTokenExpires); err != nil {
+			return fmt.Errorf("admin.bootstrap_token_expires: %w", err)
+		}
+	}
+	if sameHostPort(c.AdminListener.Address, c.Listener.Address) {
+		return fmt.Errorf("admin_listener.address must differ from listener.address")
+	}
+	approvers := map[string]bool{}
+	for _, a := range c.Approvers {
+		if approvers[a.Username] {
+			return fmt.Errorf("duplicate approver %q", a.Username)
+		}
+		if a.Username == c.Admin.Username {
+			return fmt.Errorf("approver %q reuses the administrator username", a.Username)
+		}
+		approvers[a.Username] = true
+	}
 	principals := map[string]bool{}
 	for _, p := range c.Principals {
 		if principals[p.ID] {
@@ -282,8 +419,22 @@ func (c *Config) check() error {
 			return fmt.Errorf("duplicate server alias %q", s.Alias)
 		}
 		aliases[s.Alias] = true
+		for k := range s.SecretEnv {
+			if _, dup := s.Env[k]; dup {
+				return fmt.Errorf("server %q: %s is in both env and secret_env", s.Alias, k)
+			}
+		}
 	}
 	return nil
+}
+
+func sameHostPort(a, b string) bool {
+	ah, ap, err1 := net.SplitHostPort(a)
+	bh, bp, err2 := net.SplitHostPort(b)
+	if err1 != nil || err2 != nil {
+		return a == b
+	}
+	return ap == bp && (ah == bh || ah == "localhost" || bh == "localhost")
 }
 
 func (c *Config) resolvePaths() {
@@ -309,6 +460,9 @@ func (c *Config) resolvePaths() {
 // endpoint.
 func (c *Config) ResourceURI() string { return c.Listener.PublicURL + c.Listener.MCPPath }
 
+// AdminURL is the base URL of the control API.
+func (c *Config) AdminURL() string { return "https://" + c.AdminListener.Address }
+
 // FindPrincipal returns the principal record with the given ID.
 func (c *Config) FindPrincipal(id string) *Principal {
 	for i := range c.Principals {
@@ -324,6 +478,16 @@ func (c *Config) FindClient(id string) *Client {
 	for i := range c.Clients {
 		if c.Clients[i].ClientID == id {
 			return &c.Clients[i]
+		}
+	}
+	return nil
+}
+
+// FindApprover returns the Session Approver with the given username.
+func (c *Config) FindApprover(username string) *Approver {
+	for i := range c.Approvers {
+		if c.Approvers[i].Username == username {
+			return &c.Approvers[i]
 		}
 	}
 	return nil
