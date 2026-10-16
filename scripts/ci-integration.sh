@@ -48,13 +48,30 @@ else
   skip "smcp-refserver: cmd/smcp-refserver does not exist yet"
 fi
 
-password=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)
-[ "${#password}" -ge 12 ] || password="itest-password-$RANDOM$RANDOM"
-export SMCP_ADMIN_PASSWORD="$password"
+new_password() {
+  local p
+  p=$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)
+  [ "${#p}" -ge 12 ] || p="itest-password-$RANDOM$RANDOM"
+  printf '%s' "$p"
+}
 
 say "Bootstrapping a new instance in $inst (non-interactive)"
 mkdir -p "$inst"
-"$bin/smcpctl" bootstrap --dir "$inst"
+# Builds that take passwords from files (and sign harnesses in with a
+# separate Session Approver account) are bootstrapped through password
+# files; older builds read SMCP_ADMIN_PASSWORD and sign in as the admin.
+bootstrap_help=$("$bin/smcpctl" bootstrap -h 2>&1 || true)
+if grep -q -- '-admin-password-file' <<<"$bootstrap_help"; then
+  (umask 077 && new_password > "$work/admin.pw" && new_password > "$work/approver.pw")
+  "$bin/smcpctl" bootstrap --dir "$inst" \
+    --admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw"
+  signin_user="approver"
+  signin_password=$(cat "$work/approver.pw")
+else
+  signin_user="admin"
+  signin_password=$(new_password)
+  SMCP_ADMIN_PASSWORD="$signin_password" "$bin/smcpctl" bootstrap --dir "$inst"
+fi
 cfg="$inst/smcp.toml"
 [ -f "$cfg" ] || fail "bootstrap did not write $cfg"
 "$bin/smcpctl" config validate --config "$cfg"
@@ -63,8 +80,8 @@ sandbox="$inst/sandbox"
 marker="smcp-itest-$(date +%s)"
 printf '%s\n' "$marker" > "$sandbox/hello.txt"
 
-# Pin the example server package when requested; the bootstrap template
-# launches it through npx.
+# Pin the example server package when requested; older bootstrap templates
+# launch it through npx.
 if [ -n "${SMCP_FS_SERVER_PKG:-}" ]; then
   sed -i.bak "s#\"@modelcontextprotocol/server-filesystem\"#\"$SMCP_FS_SERVER_PKG\"#" "$cfg" && rm -f "$cfg.bak"
 fi
@@ -94,12 +111,22 @@ done
 say "Driving an MCP client through OAuth and tool calls"
 ca="$inst/state/tls/ca.crt"
 [ -f "$ca" ] || fail "CA certificate not found at $ca"
-"$bin/itest-client" -url "$public_url" -ca "$ca" \
-  -call fs_read_text_file -args "{\"path\":\"$sandbox/hello.txt\"}" -expect "$marker" \
-  || { cat "$log" >&2; fail "MCP client flow"; }
-"$bin/itest-client" -url "$public_url" -ca "$ca" \
-  -call fs_list_directory -args "{\"path\":\"$sandbox\"}" -expect "hello.txt" \
-  || { cat "$log" >&2; fail "MCP client flow (list_directory)"; }
+# The bundled reference server (alias "ref") takes paths relative to its
+# root; the npx filesystem server (alias "fs") takes absolute paths.
+if grep -q '^alias = "ref"' "$cfg"; then
+  read_tool=ref_read_file read_path=hello.txt
+  list_tool=ref_list_files list_path=.
+else
+  read_tool=fs_read_text_file read_path="$sandbox/hello.txt"
+  list_tool=fs_list_directory list_path="$sandbox"
+fi
+export SMCP_ADMIN_PASSWORD="$signin_password"
+"$bin/itest-client" -url "$public_url" -ca "$ca" -username "$signin_user" \
+  -call "$read_tool" -args "{\"path\":\"$read_path\"}" -expect "$marker" \
+  || { cat "$log" >&2; fail "MCP client flow ($read_tool)"; }
+"$bin/itest-client" -url "$public_url" -ca "$ca" -username "$signin_user" \
+  -call "$list_tool" -args "{\"path\":\"$list_path\"}" -expect "hello.txt" \
+  || { cat "$log" >&2; fail "MCP client flow ($list_tool)"; }
 
 # Features the gateway does not provide yet: probe the CLI and report.
 for sub in stop backup restore; do

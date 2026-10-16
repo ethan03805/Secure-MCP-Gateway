@@ -100,6 +100,9 @@ type ElementInfo struct {
 	Subsystem      string   `json:"subsystem"`
 	Implementation string   `json:"implementation"`
 	Packages       []string `json:"packages"`
+	// Note is the free-text summary from docs/status/elements.json; the
+	// site shows it on element pages.
+	Note string `json:"note,omitempty"`
 }
 
 var (
@@ -179,6 +182,7 @@ func mergeElementStatus(els []ElementInfo, path string) ([]ElementInfo, error) {
 		if s.Packages != nil {
 			els[i].Packages = s.Packages
 		}
+		els[i].Note = s.Note
 	}
 	return els, nil
 }

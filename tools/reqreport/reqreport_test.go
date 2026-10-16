@@ -121,7 +121,7 @@ func TestLoadAndMergeElements(t *testing.T) {
 	if els, err = mergeElementStatus(els, st); err != nil {
 		t.Fatal(err)
 	}
-	if els[0].Implementation != "partial" || strings.Join(els[0].Packages, ",") != "internal/edge" || els[1].Implementation != "not-started" {
+	if els[0].Implementation != "partial" || strings.Join(els[0].Packages, ",") != "internal/edge" || els[0].Note != "slice" || els[1].Implementation != "not-started" {
 		t.Fatalf("%+v", els[:2])
 	}
 	bad := writeFile(t, filepath.Join(dir, "bad.json"), `[{"id":"E-01","implementation":"done"}]`)
