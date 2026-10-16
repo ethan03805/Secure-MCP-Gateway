@@ -14,3 +14,4 @@ data/
 state/
 source-cache/
 model-weights/
+.vercel

@@ -1,6 +1,6 @@
 # MCP Servers — FloorPlan
 
-Updated: 2026-10-15
+Updated: 2026-10-15 (site and client brief added)
 
 Scope: `/home/netrisk/Projects/mcp-servers`. Apply the parent `/home/netrisk/Projects/Agent.md` instructions. This map covers directories used by the authorized documentation and local version-control task. No unrelated project directory is changed.
 
@@ -15,6 +15,10 @@ Scope: `/home/netrisk/Projects/mcp-servers`. Apply the parent `/home/netrisk/Pro
 | `mcp-spec/` | Unmodified local reference copy of the official MCP specification, latest released version 2026-07-28 (spec MDX, `schema.ts`/`schema.json`, examples, upstream LICENSE); `README.md` records source, commit and checksum | Read-only external reference; replace by adding a new version subdirectory |
 | `versions/` | Immutable `MCP_Gateway_SRS_V1.md` snapshot and `MCP_Gateway_SRS_V1.validation.json` document-check evidence | Preserve released snapshots; add a new version for later baselines |
 | `CHANGELOG.md` | Baseline history and future versioning procedure | Update with each approved document revision |
+| `Client-Compatibility-Brief.md` | Client compatibility brief (2026-10-15): what Claude Code, Codex CLI and Hermes expect from an MCP server today, protocol-era support, authentication hooks, and the SRS changes needed to meet them (OAuth 2.1 as primary session mechanism, legacy era in baseline, tool-name limits) | Input to the next SRS revision; sources cited |
+| `README.md` | Entry point for the public repository: what the project is, where to start reading, how to rebuild the SRS and the site | Keep in step with FloorPlan |
+| `site/` | Static Next.js website that renders the specification: home, architecture, elements, interfaces, requirements explorer, security controls, client brief, full documents. Parses `ArchitectureV2.md`, `srs_build/req*.txt` and `MCP_Gateway_Security_SRS.md` at build time | Rebuild or redeploy after any document change; `npm ci && npm run build` in `site/` |
+| `vercel.json`, `.vercelignore` | Vercel deployment configuration for the site (build from `site/`, output `site/out`) | Deployment only; no runtime component |
 | `Secure-MCP-Gateway-Research-Brief.md` | Original September 21, 2026 research and recommendations | Preserved unchanged; historical claims require current validation |
 | `archive/` | Original `Secure-MCP-Gateway-Architecture.md` and pre-split `architecture-pre-srs-v1-2026-10-04.md` | Historical reference, preserved byte-for-byte; do not edit |
 | `work/` | Ignored drafts, candidate/numbered requirement records, generation and validation scripts, prior validation evidence | Intermediate documentation work; not production configuration or runtime test evidence |
