@@ -1,0 +1,89 @@
+# Tool call
+
+The path of one `tools/call` from a harness to a backend server and back, as specified in SRS V1.2 (FR-4.3 stage order) and ARCH §18.3. Element IDs are those of `ArchitectureV2.md`.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant H as Harness
+  participant E01 as E-01 Endpoint
+  participant E03 as E-03/E-04 Identity and Session
+  participant E02 as E-02 Protocol Mediator
+  participant E08 as E-08 Access EP
+  participant E06 as E-06 Decision
+  participant E09 as E-09 Request filters
+  participant E07 as E-07 Approval
+  participant E12 as E-12 Coordinator
+  participant E21 as E-21 Journal
+  participant E10 as E-10 Dispatcher
+  participant B as Backend in E-15/E-16
+  participant E11 as E-11 Response filters
+
+  H->>E01: POST /mcp tools/call, Authorization Bearer
+  E01->>E01: Host and Origin checks, header and body bounds before parsing
+  E01->>E03: verify access token
+  E03-->>E01: session (principal, template, pinned revision, taint flag)
+  E01->>E02: framed request
+  E02->>E02: parse, protocol era, method allowlist, header and body agreement
+  E02->>E08: canonical request
+  E08->>E08: public tool name in the session catalog
+  E08->>E06: evaluate against the in-memory snapshot
+  E06-->>E08: permit or deny, obligations, route
+  alt deny or rate limit
+    E08->>E21: decision event (denied)
+    E02-->>H: -31001 or -31005 with reasonCode, correlationId, decisionId, message
+  else permit
+    E08->>E09: request filters named by the obligations
+    E09->>E09: schema-validate, path and URL canonicalization, secret fingerprint, injection tags
+    opt approval obligation (policy, anomaly or session taint)
+      E09->>E07: create pending approval and hold the call (see approval-hold.md)
+      E07-->>E09: approved
+    end
+    E09->>E12: request launch
+    E12->>E12: recheck stop epoch, policy revision, session state
+    E12->>E21: append decision and intent record
+    E21->>E21: flush to stable storage
+    E21-->>E12: flushed
+    E12-->>E10: one-use launch capability
+    E10->>B: acquire instance, tools/call with backend credential
+    B-->>E10: result, buffered and size-bounded
+    E10->>E11: envelope, correlation and output-schema checks
+    E11->>E11: response filters, provenance labels, taint update
+    E11->>E12: request release
+    E12->>E12: recheck stop epoch, policy revision, session state
+    E12->>E21: append outcome and release disposition, flush
+    E12-->>E02: release authorization
+    E02-->>H: result with _meta local.smcpgw/provenance (untrusted)
+  end
+  Note over E21: E-21 feeds the graph mirror from the journal asynchronously. No step waits on the graph (A-9).
+  Note over E01,E11: Every stage emits timing spans and observables to E-29 asynchronously.
+```
+
+## Requirements on this path
+
+| Step | Requirements |
+|---|---|
+| 2 | SR-2.9-1, SR-2.9-2, SR-7.11-1 |
+| 3–4 | FR-2.5, SR-2.1-3, SR-2.11-1 |
+| 6 | FR-1.10, FR-1.11, SR-5.2-1 |
+| 8–10 | FR-1.30, SR-5.5-1, SR-1.3-1, FR-3.10 |
+| 11–12 | FR-1.20, FR-1.51, SR-6.1-1 |
+| 13–14 | FR-4.5, FR-4.16, FR-4.17, SR-1.8-1 |
+| 15–16 | FR-3.14, FR-3.19, SR-5.13-2 |
+| 17–22 | SR-1.17-1, SR-6.2-1, FR-4.13 |
+| 23–24 | FR-4.8, FR-4.9, FR-4.10 |
+| 25–26 | SR-5.20-1, SR-5.9-1, SR-5.13-1, SR-5.13-2 |
+| 27–30 | SR-1.17-2, SR-6.3-1 |
+| 31 | FR-4.12 |
+
+## Implementation as of commit a3193a5
+
+The code in `internal/edge/edge.go` follows the same order with these differences:
+
+- Approval: an approval-obligated call is answered at once with `-31002` (`APPROVAL_REQUIRED`); there is no Approval Service, hold or retry consumption.
+- Request filters: only `schema-validate`, which answers `-32602` with `SCHEMA_INVALID`.
+- Response filters: only the size bound in `internal/backend`; provenance is added with `untrusted: true`.
+- Journal: the `authorized` event is appended after the capability is issued, and the journal flushes only when a segment closes (`internal/audit`), so steps 19–21 and the flush in step 29 are not yet met.
+- Errors carry `reasonCode`, `correlationId` and `decisionId` but not `data.message`.
+- No session taint, anomaly scoring, observation or graph mirror.
+- Backend instances are shared across sessions.

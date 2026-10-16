@@ -1208,7 +1208,7 @@ sequenceDiagram
   AEP->>RQ: apply request filters
   RQ->>AS: score request features
   AS-->>RQ: band + z-scores (restrict-only obligations)
-  RQ->>AP: approval (if obligated; hold mode, Section 18.10)
+  RQ->>AP: approval if obligated (hold mode, Section 18.10)
   RQ->>C: request launch
   C->>AU: append decision + intent to journal D-06, flush
   C-->>D: one-use launch capability
@@ -1222,7 +1222,7 @@ sequenceDiagram
   C-->>G: release authorization
   G-->>H: filtered response
   Note over G,OC: every stage emits observables and timing spans to E-29 (I-29), persisted asynchronously via E-26
-  Note over AU: E-21 feeds the graph mirror from the journal asynchronously; no step waits on E-25
+  Note over AU: E-21 feeds the graph mirror from the journal asynchronously. No step waits on E-25
 ```
 
 ### 18.4 Baseline learning and promotion

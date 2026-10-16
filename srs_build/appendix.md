@@ -100,6 +100,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | The Gateway has no valid policy loaded and is refusing all tool calls. |
 | `JOURNAL_UNAVAILABLE` | `-31004` | The decision intent could not be written to the Evidence Journal | The Gateway could not record this call and did not run it. The operator can see the cause with `smcpctl health`. |
 | `POLICY_REVISION_CHANGED` | `-31004` | The policy changed between decision and launch | The Gateway's policy changed while this call was being checked. Run the request again. |
+| `CAPABILITY` | `-31004` | The one-use launch capability was missing or already used | The Gateway refused to run this call because an internal check failed. Run the request again; if it repeats, give the operator the correlation ID {correlationId}. |
 | `RATE_LIMITED` | `-31005` | A rate limit was reached | Too many tool calls in a short time. Wait a minute and try again. |
 | `QUEUE_FULL` | `-31005` | The dispatch queue is full | The Gateway is busy. Try again shortly. |
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Your Gateway session is not valid. Sign in again. |
