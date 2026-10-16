@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -109,7 +110,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		call := &pipeline.Call{CorrelationID: corr, SessionID: sess.ID, PrincipalID: sess.PrincipalID, Template: sess.Template,
 			Purpose: sess.Purpose, Project: sess.Project, EndUser: sess.EndUser, Server: ref.Server.Alias, Tool: ref.Tool.Name,
 			PublicName: ref.Public, ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision, ManifestSource: ref.Server.ManifestSource,
-			DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, Obligations: dec.Obligations,
+			DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, Obligations: dec.Obligations, DecisiveRules: dec.DecisiveRules,
 			InputSchema: ref.Tool.InputSchema, OutputSchema: ref.Tool.OutputSchema}
 
 		// Request inspection (E-09).
@@ -117,7 +118,8 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		if verdict != nil {
 			var e *jsonrpc.Error
 			if verdict.ReasonCode == pipeline.ReasonSchemaInvalid {
-				raw, _ := json.Marshal(map[string]any{"reasonCode": verdict.ReasonCode, "correlationId": corr, "decisionId": dec.ID, "findings": verdict.Finding})
+				raw, _ := json.Marshal(map[string]any{"reasonCode": verdict.ReasonCode, "correlationId": corr, "decisionId": dec.ID, "findings": verdict.Finding,
+					"message": Message(jsonrpc.CodeInvalidParams, verdict.ReasonCode, nil)})
 				e = &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "arguments do not match the tool schema", Data: raw}
 			} else {
 				e = gatewayError(CodePolicyDenied, "request blocked by inspection", verdict.ReasonCode, corr, dec.ID, map[string]any{"findings": verdict.Finding, "filters": reqApplied})
@@ -185,18 +187,14 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 	}
 }
 
-// approve runs the approval stage. It returns nil when the call may
-// continue.
+// approve runs the approval stage (FR-3.14 to FR-3.22). It returns nil when
+// the call may continue. While the Approver holds the call, its Progress
+// calls commit the response to an event stream and send keep-alives
+// (stream.go).
 func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, args json.RawMessage, req *mcp.CallToolRequest) error {
-	tok := req.Params.GetProgressToken()
-	progress := func(msg string) {
-		if tok == nil || req.Session == nil {
-			return
-		}
-		_ = req.Session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{ProgressToken: tok, Message: msg})
-	}
-	res, err := g.approver.Request(ctx, pipeline.ApprovalRequest{Call: *call, Arguments: args, Hold: g.cfg.Limits.ApprovalHold.Duration, Progress: progress})
+	res, err := g.approver.Request(ctx, pipeline.ApprovalRequest{Call: *call, Arguments: args, Hold: g.cfg.Limits.ApprovalHold.Duration, Progress: g.keepAlive(ctx, req)})
 	if err != nil {
+		g.log.Warn("approval service failed; refusing the call", "err", err, "correlation", c.corr)
 		res = pipeline.ApprovalResult{Outcome: pipeline.Pending, ReasonCode: ReasonApprovalNoSvc,
 			RetryText: "The approval service is unavailable. Retry later or ask the operator."}
 	}
@@ -212,7 +210,11 @@ func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, 
 		if reason == "" {
 			reason = ReasonApprovalDenied
 		}
-		return c.refuse(gatewayError(CodePolicyDenied, "approval denied", reason, c.corr, c.dec.ID, nil),
+		extra := map[string]any{}
+		if res.ApprovalID != "" {
+			extra["approvalId"] = res.ApprovalID
+		}
+		return c.refuse(gatewayError(CodePolicyDenied, "approval denied", reason, c.corr, c.dec.ID, extra),
 			"approval", audit.PhaseDenied, "E-07", "deny", reason, "evaluated")
 	default:
 		reason := res.ReasonCode
@@ -225,7 +227,14 @@ func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, 
 			link = g.consoleURL + "/approvals?correlation=" + url.QueryEscape(c.corr)
 		}
 		if link != "" {
-			extra["consoleUrl"] = link
+			extra["consoleUrl"] = link // retained for clients of the first slice
+			extra["approvalUrl"] = link
+		}
+		if res.ApprovalID != "" {
+			extra["approvalId"] = res.ApprovalID
+		}
+		if !res.ExpiresAt.IsZero() {
+			extra["expiresAt"] = res.ExpiresAt.UTC().Format(time.RFC3339)
 		}
 		return c.refuse(gatewayError(CodeApprovalRequired, "approval required", reason, c.corr, c.dec.ID, extra),
 			"approval", audit.PhaseDenied, "E-07", "pending", reason, "evaluated")

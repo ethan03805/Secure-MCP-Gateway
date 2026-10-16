@@ -72,6 +72,12 @@ Made while hardening the Go slice (PR #8). They interpret the SRS where the code
 - The integration run bootstraps with password files, signs in as the Session Approver, calls the reference server's tools, and checks that `smcpctl stop` refuses calls and `smcpctl resume` restores them.
 - `site/package.json` overrides the postcss copy inside Next 15 to 8.5.28, which fixes GHSA-6g55-p6wh-862q and GHSA-r28c-9q8g-f849; their npm audit allowlist entries are removed.
 
+- E-07 Approval Service (`internal/approval`): persisted one-use approvals bound to session, principal, server, tool and route revisions, canonical argument digest and policy revision; hold mode up to `limits.approval_hold` with keep-alives (progress notifications or SSE comments); `-31001 APPROVAL_DENIED`, `-31002` with `approvalId`, `expiresAt`, `approvalUrl` and the Appendix B message; retry consumption; CP-17 expiry; evidence events for request, approve, deny, expire and consume; `/api/v1/approvals*` control API and `GET /smcp/v1/approvals/{id}` for the harness; `smcpctl approvals list|show|approve|deny|watch`; desktop notifier (`osascript`, `terminal-notifier`, `notify-send` or a command) with no argument values. Docs: `docs/approvals.md`, `docs/api/approvals.md`.
+- E-07: the default `limits.approval_hold` is now 120 s and values above 600 s are refused, matching CP-45 (the first slice used 60 s).
+- E-07: Approver accounts are a new `[[approvals.account]]` table. Session Approver accounts (`[[approver]]`) cannot decide tool-call approvals, following SRS Appendix C; ARCH E-24 says a Session Approver "may only approve harness sign-ins and tool-call approvals", which conflicts with Appendix C and should be corrected in the architecture.
+- E-02: every Gateway error now carries the Appendix B `data.message` (FR-1.51); a `tools/call` is answered as an event stream only while it is held, and as JSON otherwise.
+- E-24: control API role seam (`adminapi.Authenticator`, `HandleRoles`, `HandlePublic`); existing `Handle` routes are Administrator-only and refuse other roles with 403 `role_refused`.
+
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 
 Harness interface revised to match what shipping clients can do (`Client-Compatibility-Brief.md`). No snapshot or tag yet; this is a draft for owner review.

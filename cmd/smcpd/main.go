@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
+	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 )
@@ -43,11 +44,17 @@ func run(cfgPath, level string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	a, err := app.Start(ctx, cfg, app.Options{Log: log})
+	approvals, err := approval.New(approval.Options{Config: cfg, Log: log}) // E-07
+	if err != nil {
+		return fmt.Errorf("approvals: %w", err)
+	}
+	defer approvals.Close()
+	a, err := app.Start(ctx, cfg, app.Options{Log: log, Approver: approvals, Approvals: approvals})
 	if err != nil {
 		return err
 	}
 	defer a.Close()
+	approvals.Start(ctx, a.Evidence, a.Admin, a.Gateway)
 	if err := a.Listen(); err != nil {
 		return err
 	}

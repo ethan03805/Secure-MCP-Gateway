@@ -39,6 +39,7 @@ type Call struct {
 	DecisionID     string
 	PolicyRevision string
 	Obligations    policy.Obligations
+	DecisiveRules  []string // rule IDs that decided the permit (FR-3.18)
 	InputSchema    any
 	OutputSchema   any
 }

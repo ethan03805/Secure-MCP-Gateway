@@ -16,6 +16,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Troubleshooting and reason codes](troubleshooting.md) | FR-18.7 | Written |
 | [Client quick starts](clients/README.md) | FR-18.3 | Written; procedures that use unreleased commands are marked |
 | [Console visual rules](console-style.md) | FR-8.35 | Written |
+| [Tool-call approvals](approvals.md) and [approvals control API](api/approvals.md) | FR-3.14 to FR-3.24, FR-18.4 (part) | Written |
 | [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Format defined; no records yet |
 | [Flows](flows/) | — | Sequence diagrams of the main flows, each with the current implementation's differences |
 | Install guide (`install.md`) | FR-18.1 | To be written with the installer (FR-13) |
