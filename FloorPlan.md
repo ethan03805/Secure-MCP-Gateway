@@ -2,7 +2,7 @@
 
 Updated: 2026-10-15 (site and client brief added)
 
-Scope: `/home/netrisk/Projects/mcp-servers`. Apply the parent `/home/netrisk/Projects/Agent.md` instructions. This map covers directories used by the authorized documentation and local version-control task. No unrelated project directory is changed.
+Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level path. Paths are relative to the repository root.
 
 | Path | Contents | Access / purpose |
 |---|---|---|
@@ -22,7 +22,8 @@ Scope: `/home/netrisk/Projects/mcp-servers`. Apply the parent `/home/netrisk/Pro
 | `Secure-MCP-Gateway-Research-Brief.md` | Original September 21, 2026 research and recommendations | Preserved unchanged; historical claims require current validation |
 | `archive/` | Original `Secure-MCP-Gateway-Architecture.md` and pre-split `architecture-pre-srs-v1-2026-10-04.md` | Historical reference, preserved byte-for-byte; do not edit |
 | `work/` | Ignored drafts, candidate/numbered requirement records, generation and validation scripts, prior validation evidence | Intermediate documentation work; not production configuration or runtime test evidence |
-| `.git/` | Local Git history and annotated version tags | Local history and tags; remote `origin` = https://github.com/netrisk2025/Secure-MCP-Gateway (public; created 2026-10-14) |
+| `.git/` | Git history and annotated version tags (`mcp-gateway-srs-v1` marks the SRS V1 baseline) | Remote `origin` = https://github.com/ethan03805/Secure-MCP-Gateway (public) |
 | `.gitignore` | Exclusions for work material, secrets, graph data, audit payloads, model weights and source caches | Keep sensitive/runtime artifacts out of documentation history |
+| `.github/workflows/` | Continuous integration: SRS regeneration check, site build, Go build and tests | Runs on every push and pull request |
 
 Future source/deployment directories shown in the architecture are planned only. No production application, Neo4j database, MCP server, overlay or client configuration was installed or altered by this documentation task.

@@ -10,7 +10,7 @@
 | Architecture | `ArchitectureV2.md` V2.2 draft — elements E-01…E-33, functions F-01…F-95, interfaces X-01…X-12 and I-01…I-39, GUI modules G-01…G-14, data stores D-01…D-13 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
-| Skill | `/home/netrisk/Projects/mcp-servers/Skills.md` (INCOSE GtWR + project rules) |
+| Skill | `Skills.md` (INCOSE GtWR + project rules) |
 | Status | Draft for owner review. Requirements are not yet implemented or verified. |
 
 ## Contents
@@ -69,7 +69,7 @@ Some requirements apply only when a profile is enabled. Profiles are disabled in
 
 ### 2.1 Imperatives
 
-Imperatives follow `Skills.md` §2.2 and `/home/netrisk/Projects/Resource.md`. **SHALL** is binding and verified. **MUST** appears in this document only when quoting parent controls of `MCP_Gateway_Security_SRS.md`; it is never used as a requirement imperative here. Every requirement in this SRS is a **SHALL**.
+Imperatives follow `Skills.md` §2.2 and the owner's `Resource.md` (not in this repository). **SHALL** is binding and verified. **MUST** appears in this document only when quoting parent controls of `MCP_Gateway_Security_SRS.md`; it is never used as a requirement imperative here. Every requirement in this SRS is a **SHALL**.
 
 > **Note on the parent document:** `MCP_Gateway_Security_SRS.md` writes some measurable leaf controls as MUST at the owner's earlier request. This SRS treats every MUST in that document as a parent control and realizes it with one or more SHALL children allocated to V2 elements.
 
