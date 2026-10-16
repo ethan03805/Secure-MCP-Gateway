@@ -112,8 +112,10 @@ The owner approved the recommendations in Section 4. They are applied in SRS V1.
 | 2025-11-25 era in the baseline | CP-04, FR-1.16, FR-1.17, FR-1.46, SR-5.1-1, SR-5.3-1; SRS §3.3 risk 1 |
 | Adapters inside the system of interest | ARCH E-33 Harness Adapter Kit, F-94, F-95, X-12, A-2; FR-1.48, FR-12.12, FR-12.13, SR-2.3-2, CP-43 |
 | Tool-name limits | FR-1.26, FR-1.49, CP-42 |
+| Client-facing hints (§4.5) | FR-1.50 (approval hint); FR-5.22 (property-name drift rule). Root-level combinators are not normalized because Claude Code flattens them itself |
+| Go SDK dual-era check (§4.3, open item 4) | Done 2026-10-16 in `spikes/go-sdk-dual-era/`: one handler serves both eras in stateless mode. SRS §3.3 risk 1 retired; FR-1.46 reworded so that no `Mcp-Session-Id` is required |
 
-Still open: the client-facing `_meta` hints of Section 4.5, and the first-prototype check of whether the Go SDK serves both eras on one endpoint.
+No items from this brief remain open.
 
 ## Sources
 

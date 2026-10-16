@@ -149,7 +149,7 @@ All selections carry OSI-approved licenses. Exact versions, digests and transiti
 
 ### 3.3 Stack risks to retire in the first prototype phase
 
-1. **MCP SDK revision support.** The 2026-07-28 revision removed `initialize`, sessions and the GET stream. The Go SDK serves 2026-07-28 only with its stateless Streamable HTTP option, and its documentation does not describe one handler serving legacy `initialize` clients at the same time. Confirm in the first prototype that both eras can be served on the CP-01 endpoint (FR-1.46). If they cannot, implement the northbound JSON-RPC layer in the project from `schema.json` and keep the Go SDK for the southbound client only.
+1. **MCP SDK revision support.** *Retired 2026-10-16.* The 2026-07-28 revision removed `initialize`, sessions and the GET stream. The spike in `spikes/go-sdk-dual-era/` shows that `modelcontextprotocol/go-sdk` v1.8.0 serves both eras on one `StreamableHTTPHandler` when `Stateless` is set: 2026-07-28 `server/discover`, `tools/list`, `tools/call` and `subscriptions/listen` (with `notifications/tools/list_changed` delivered on the listen stream) and 2025-11-25 `initialize`, `notifications/initialized`, `tools/list` and `tools/call`, with an `initialize` naming an older version answered with `2025-11-25` as FR-1.17 requires. In the default stateful mode the handler rejects every 2026-07-28 request, so the Gateway uses stateless mode. Legacy clients receive no `Mcp-Session-Id`, which revision 2025-11-25 permits; FR-1.46 is worded accordingly. The SDK's default `cacheScope`, `ttlMs` and `logging` capability must be overridden to meet FR-1.12, FR-1.13 and FR-1.42.
 2. **Neo4j CE write throughput.** Measure the decision-intent and outcome transactions (SR-6.2-1, SR-6.3-1) at the FR-11 reference load. If they miss, keep CE as the system of record and batch non-mandatory graph writes.
 3. **Rootless Podman start latency.** Measure per-session instance cold start. If it is excessive, prefer the `shared` scope for stateless, read-only servers (ARCH OD-3).
 
@@ -763,12 +763,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-1.46 |
 | Parent ID | FR-1 — Northbound MCP server |
-| Statement | The Protocol Mediator (E-02) **SHALL** serve 2025-11-25 clients on the CP-01 endpoint through a separate legacy handler that implements the `initialize` handshake and `Mcp-Session-Id` sessions of that revision. |
+| Statement | The Protocol Mediator (E-02) **SHALL** serve 2025-11-25 clients on the CP-01 endpoint by answering the `initialize` handshake of that revision and accepting their subsequent requests without requiring an `Mcp-Session-Id` header, binding each request to the Gateway session of its bearer token. |
 | Allocation | Elements: E-02 Protocol Mediator; Functions: F-03; External interfaces: X-01 |
 | Verification Method | Test |
-| Verification Statement | Run the 2025-11-25 conformance fixtures against the baseline configuration; confirm they pass and that concurrent 2026-07-28 requests are unaffected. |
-| Source | SEC 5.1; MCP:basic/versioning §Backward Compatibility; CP-04; Client-Compatibility-Brief §2 |
-| Rationale | Codex CLI and Cursor have no published 2026-07-28 support. A baseline that rejects them cannot be used. |
+| Verification Statement | Run the 2025-11-25 conformance fixtures against the baseline configuration, with and without an `Mcp-Session-Id` header; confirm they pass and that concurrent 2026-07-28 requests on the same endpoint are unaffected. |
+| Source | SEC 5.1; MCP:basic/versioning §Backward Compatibility; CP-04; Client-Compatibility-Brief §2; spikes/go-sdk-dual-era |
+| Rationale | Codex CLI and Cursor have no published 2026-07-28 support. A baseline that rejects them cannot be used. Revision 2025-11-25 makes the transport session ID optional, and the Gateway session is the bearer token, so the stateless mode of the MCP Go SDK, which serves both eras on one handler without issuing `Mcp-Session-Id`, satisfies this requirement. |
 
 #### FR-1.47 — Unix-domain-socket harness transport
 
@@ -808,6 +808,19 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Statement | Import a manifest with tools `a.b` and `a_b`; confirm enablement is refused with both names reported. |
 | Source | CP-42; Client-Compatibility-Brief §4.4 |
 | Rationale | Name sanitization must not silently merge two tools. |
+
+#### FR-1.50 — Approval hint on presented tools
+
+| Field | Value |
+|---|---|
+| ID | FR-1.50 |
+| Parent ID | FR-1 — Northbound MCP server |
+| Statement | The Access Enforcement Point (E-08) **SHALL** set `_meta["anthropic/requiresUserInteraction"]` to `true` on each `tools/list` entry whose effective session policy carries an approval obligation for that tool, and **SHALL** omit the key otherwise. |
+| Allocation | Elements: E-08 Access Enforcement Point; Functions: F-19; External interfaces: X-01; Internal interfaces: I-08 |
+| Verification Method | Test |
+| Verification Statement | Publish a template that requires approval for one of two tools; list tools in a session under it; confirm the key is present and `true` on that tool only, and that calling either tool is still decided by the Policy Decision Service (E-06). |
+| Source | Client-Compatibility-Brief §4.5; ARCH §4 E-08; MCP:server/tools §Tool |
+| Rationale | Claude Code prompts the person before each call of a tool carrying this hint, so the person sees the approval in the harness as well as in the Approvals view. The hint is presentation only and never substitutes for the decision. |
 
 ### FR-2 Identity and sessions
 
@@ -1863,12 +1876,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-5.22 |
 | Parent ID | FR-5 — Server trust and execution |
-| Statement | The Local Server Registry (E-14) **SHALL** treat as drift a backend tool whose `inputSchema` is null or invalid, or whose `x-mcp-header` annotations violate MCP constraints. |
+| Statement | The Local Server Registry (E-14) **SHALL** treat as drift a backend tool whose `inputSchema` is null or invalid, whose `inputSchema` declares a property name outside 1 to 64 characters of `A-Z a-z 0-9 _ . -`, or whose `x-mcp-header` annotations violate MCP constraints. |
 | Allocation | Elements: E-14 Local Server Registry; Functions: F-37 |
 | Verification Method | Test |
-| Verification Statement | Serve fixtures with each defect; confirm drift handling. |
-| Source | MCP:server/tools §Tool; MCP:basic/transports/streamable-http §Schema Extension |
-| Rationale | The Gateway must not present invalid tool definitions. |
+| Verification Statement | Serve fixtures with each defect, including a 65-character property name and a name containing a space; confirm drift handling. |
+| Source | MCP:server/tools §Tool; MCP:basic/transports/streamable-http §Schema Extension; Client-Compatibility-Brief §3 |
+| Rationale | The Gateway must not present invalid tool definitions, and Claude Code drops a tool whose property names fall outside this set. Root-level schema combinators are not treated as drift because Claude Code flattens them itself and the Gateway validates arguments against the manifest schema regardless of presentation. |
 
 #### FR-5.23 — Result type handling
 
@@ -6274,7 +6287,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.3, FR-3.4, FR-3.5, FR-3.6, FR-3.7, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-10.37 | SR-1-1, SR-1-3, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-6.9-1, SR-7.9-1 |
 | E-06 | Policy Decision Service | FR-3, FR-3.10, FR-3.11, FR-3.12, FR-3.13, FR-11, FR-11.2 | SR-1-2, SR-1.1-1, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.6-1, SR-1.7-1, SR-1.7-2, SR-1.10-1, SR-1.11-1, SR-1.12-1, SR-1.12-2, SR-1.12-3, SR-1.15-1, SR-1.18-1, SR-1.19-1, SR-1.20-1, SR-3.10-1, SR-5.12-1 |
 | E-07 | Approval Service | FR-3, FR-3.14, FR-3.15, FR-3.16, FR-3.17, FR-3.18 | SR-1.18-2, SR-1.18-3 |
-| E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-4, FR-4.1, FR-4.3, FR-11.5 | SR-1.2-1, SR-2.12-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
+| E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-1.50, FR-4, FR-4.1, FR-4.3, FR-11.5 | SR-1.2-1, SR-2.12-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
 | E-09 | Request Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-8.27, FR-11.5 | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
 | E-10 | Tool Dispatcher | FR-1.32, FR-1.39, FR-1.40, FR-1.41, FR-1.43, FR-4, FR-4.3, FR-4.8, FR-4.9, FR-4.10, FR-4.13, FR-5, FR-5.13, FR-5.14, FR-5.16, FR-5.17, FR-5.18, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.25, FR-5.26, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-5.32, FR-11.5, FR-12.9 | SR-2.10-1, SR-5.1-2, SR-5.3-2, SR-5.6-2, SR-5.7-3, SR-7.2-1, SR-7.6-2, SR-7.12-1 |
 | E-11 | Response Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.12, FR-4.15, FR-8.27, FR-11.5 | SR-2-1, SR-2.12-1, SR-5.7-3, SR-5.9-1, SR-5.10-1, SR-5.13-1, SR-5.14-1, SR-5.18-1, SR-5.20-1, SR-5.20-2 |
@@ -6325,7 +6338,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-16 | Explain decision | FR-3, SR-1.12-3, SR-1.19-1 |
 | F-17 | Request approval | FR-3, FR-3.14, FR-3.18, SR-1.18-3 |
 | F-18 | Record and consume approval | FR-3, FR-3.15, FR-3.16, FR-3.17, FR-8.21, SR-1.18-2 |
-| F-19 | Present session-scoped catalog | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.35, SR-3.12-1, SR-5.4-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
+| F-19 | Present session-scoped catalog | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.35, FR-1.50, SR-3.12-1, SR-5.4-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
 | F-20 | Enforce access decision | FR-1.29, FR-1.30, FR-4.3, SR-1.2-1, SR-2.12-1, SR-5.5-1 |
 | F-21 | Inspect and transform request | FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-8.27, SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
 | F-22 | Serialize released response | FR-1, FR-1.6, FR-1.7, FR-1.13, FR-1.14, FR-1.15, FR-1.18, FR-1.19, FR-1.20, FR-1.31, FR-1.32, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.39, FR-1.42, FR-1.43, FR-5.24, FR-5.25, SR-5.11-1 |
@@ -6407,7 +6420,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Requirements |
 |---|---|
-| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-3.14, FR-3.16, FR-4.12, FR-5.25, FR-12.9, FR-12.12, FR-12.13, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.8-2, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-5.2-1, SR-5.2-2 |
+| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-3.14, FR-3.16, FR-4.12, FR-5.25, FR-12.9, FR-12.12, FR-12.13, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.8-2, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-5.2-1, SR-5.2-2 |
 | X-02 | context only — outside SoI |
 | X-03 | FR-5.1, FR-5.2, FR-5.3 |
 | X-04 | FR-2.19, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.22, FR-8.23, FR-8.24, FR-8.26, FR-8.27, SR-2.5-1, SR-2.8-1, SR-2.9-2 |
@@ -6431,7 +6444,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-05 | FR-2.6, FR-2.7, FR-2.12, FR-2.13, SR-1-2, SR-1.5-1 |
 | I-06 | FR-2.14, FR-2.18, FR-3.1, FR-3.3, FR-3.5, FR-3.6, FR-3.7, FR-3.8, FR-3.9, FR-4.14, FR-5.6, FR-6.2, FR-6.12, FR-7.3, FR-7.6, FR-7.10, FR-7.12, FR-8.1, FR-9.3, FR-10.19, SR-1.19-1, SR-4.3-1 |
 | I-07 | FR-1.27, FR-2.1, FR-3.1, FR-3.2, FR-3.10, FR-9.3, SR-1-1, SR-1.1-1, SR-1.14-1, SR-4.3-1 |
-| I-08 | FR-1.29, FR-3.11, FR-3.12, FR-3.13, SR-1-2 |
+| I-08 | FR-1.29, FR-1.50, FR-3.11, FR-3.12, FR-3.13, SR-1-2 |
 | I-09 | SR-5.12-1 |
 | I-10 | FR-3.14, FR-3.15 |
 | I-11 | FR-4.13 |
@@ -6555,6 +6568,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-1.47 | FR-1 | Test | E-01, E-02 | Unix-domain-socket harness transport |
 | FR-1.48 | FR-1 | Inspection | E-01, E-02, E-04, E-33 | Harness interface specification |
 | FR-1.49 | FR-1 | Test | E-14 | Public name collisions |
+| FR-1.50 | FR-1 | Test | E-08 | Approval hint on presented tools |
 | FR-2 | — | Analysis | E-03, E-04 | Identity and sessions |
 | FR-2.1 | FR-2 | Inspection | E-03 | Principal registry |
 | FR-2.2 | FR-2 | Test | E-04 | Session API |
@@ -6956,8 +6970,8 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 
 | Check | Result |
 |---|---|
-| Requirements | 444 total: 286 FR (12 roots), 158 SR |
-| Verification methods | Analysis 12, Demonstration 27, Inspection 58, Test 347 |
+| Requirements | 445 total: 287 FR (12 roots), 158 SR |
+| Verification methods | Analysis 12, Demonstration 27, Inspection 58, Test 348 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |

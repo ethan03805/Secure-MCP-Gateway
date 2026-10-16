@@ -374,11 +374,11 @@ R: clientInfo is unverified and must not affect behavior.
 
 @FR-1.46 | Legacy era service
 P: FR-1
-S: The Protocol Mediator (E-02) SHALL serve 2025-11-25 clients on the CP-01 endpoint through a separate legacy handler that implements the `initialize` handshake and `Mcp-Session-Id` sessions of that revision.
+S: The Protocol Mediator (E-02) SHALL serve 2025-11-25 clients on the CP-01 endpoint by answering the `initialize` handshake of that revision and accepting their subsequent requests without requiring an `Mcp-Session-Id` header, binding each request to the Gateway session of its bearer token.
 A: E-02; F-03; X-01
-V: Test | Run the 2025-11-25 conformance fixtures against the baseline configuration; confirm they pass and that concurrent 2026-07-28 requests are unaffected.
-SRC: SEC 5.1; MCP:basic/versioning §Backward Compatibility; CP-04; Client-Compatibility-Brief §2
-R: Codex CLI and Cursor have no published 2026-07-28 support. A baseline that rejects them cannot be used.
+V: Test | Run the 2025-11-25 conformance fixtures against the baseline configuration, with and without an `Mcp-Session-Id` header; confirm they pass and that concurrent 2026-07-28 requests on the same endpoint are unaffected.
+SRC: SEC 5.1; MCP:basic/versioning §Backward Compatibility; CP-04; Client-Compatibility-Brief §2; spikes/go-sdk-dual-era
+R: Codex CLI and Cursor have no published 2026-07-28 support. A baseline that rejects them cannot be used. Revision 2025-11-25 makes the transport session ID optional, and the Gateway session is the bearer token, so the stateless mode of the MCP Go SDK, which serves both eras on one handler without issuing `Mcp-Session-Id`, satisfies this requirement.
 
 @FR-1.47 | Unix-domain-socket harness transport
 P: FR-1
@@ -403,6 +403,14 @@ A: E-14; F-36; D-02
 V: Test | Import a manifest with tools `a.b` and `a_b`; confirm enablement is refused with both names reported.
 SRC: CP-42; Client-Compatibility-Brief §4.4
 R: Name sanitization must not silently merge two tools.
+
+@FR-1.50 | Approval hint on presented tools
+P: FR-1
+S: The Access Enforcement Point (E-08) SHALL set `_meta["anthropic/requiresUserInteraction"]` to `true` on each `tools/list` entry whose effective session policy carries an approval obligation for that tool, and SHALL omit the key otherwise.
+A: E-08; F-19; X-01; I-08
+V: Test | Publish a template that requires approval for one of two tools; list tools in a session under it; confirm the key is present and `true` on that tool only, and that calling either tool is still decided by the Policy Decision Service (E-06).
+SRC: Client-Compatibility-Brief §4.5; ARCH §4 E-08; MCP:server/tools §Tool
+R: Claude Code prompts the person before each call of a tool carrying this hint, so the person sees the approval in the harness as well as in the Approvals view. The hint is presentation only and never substitutes for the decision.
 
 ### FR-2 Identity and sessions
 

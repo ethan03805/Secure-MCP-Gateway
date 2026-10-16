@@ -10,6 +10,8 @@ Harness interface revised to match what shipping clients can do (`Client-Compati
 - Reference adapters enter the system of interest: E-33 Harness Adapter Kit, F-94, F-95, X-12 in the architecture; FR-12.12 `smcp-session`, FR-12.13 `smcp-stdio`, SR-2.3-2 and CP-43 in the SRS; FR-1.48 now requires an X-12 ICD.
 - Public tool names limited to 64 characters with `_` as separator (FR-1.26, FR-1.49, CP-42).
 - Architecture document-control row V2.2; OD-2 decided; A-2 and X-01 revised; the Section 8.3 sequence-diagram note fixed so it parses.
+- Client-facing hints from the brief §4.5: new FR-1.50 sets `anthropic/requiresUserInteraction` on approval-obligated tools; FR-5.22 extended with the property-name drift rule.
+- SRS §3.3 risk 1 (Go SDK dual-era service) retired by `spikes/go-sdk-dual-era/`; FR-1.46 reworded to match (no `Mcp-Session-Id` required for 2025-11-25 clients).
 
 ## SRS V1 / architecture 2.0 — 2026-10-04
 
