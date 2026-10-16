@@ -65,17 +65,6 @@ linters:
       # the full rule set.
       - path: _test\.go
         linters: [errcheck, errorlint, gosec, bodyclose]
-      # FOLLOWUP: the decoded hash length is at most 64 bytes, so the
-      # conversion cannot overflow; replace with a checked conversion.
-      - path: internal/keys/password\.go
-        text: G115
-      # FOLLOWUP: unused field `hash` in the journal writer.
-      - path: internal/audit/audit\.go
-        linters: [unused]
-        text: "field hash is unused"
-      # FOLLOWUP: fmt.Sprintf("%s", msg) on a string.
-      - path: internal/edge/filters\.go
-        text: S1025
 
 formatters:
   enable:
