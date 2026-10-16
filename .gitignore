@@ -22,3 +22,7 @@ build/
 smcp.toml
 /policy.json
 sandbox/
+
+# Personal Claude Code settings and agent worktrees
+.claude/settings.local.json
+.claude/worktrees/
