@@ -8,12 +8,12 @@ work/
 *.pem
 *.dump
 *.backup
-secrets/
-audit/
-data/
-state/
-source-cache/
-model-weights/
+/secrets/
+/audit/
+/data/
+/state/
+/source-cache/
+/model-weights/
 .vercel
 
 # Go build output and requirement reports
