@@ -52,6 +52,26 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - New function IDs stay within two digits (F-96 to F-99); notification, hold, metadata scanning, dynamic registration, diagnostic log, metrics and `smcp-connect` extend existing functions F-17, F-34, F-59, F-61 and F-95, because the site parser and other tools read function IDs as `F-dd`.
 - `docs/status/elements.json` records each element's implementation state at commit a3193a5 (17 partial, 16 not started); `docs/flows/` holds seven sequence diagrams with the implementation's current differences.
 
+### Implementation decisions in the first slice
+
+Made while hardening the Go slice (PR #8). They interpret the SRS where the code had to choose; none removes a requirement.
+
+| Decision | Where | Rationale |
+|---|---|---|
+| Harness sign-in uses `[[approver]]` Session Approver accounts, and the Administrator account is refused at the authorization endpoint | `internal/session`, `smcp.toml` `[[approver]]`; FR-2.19, FR-2.23 | Follows the owner decision on approvals: the strongest credential is not used for daily sign-in. FR-2.19 still names the Administrator role as able to sign in; the code is stricter, and the SRS text is to be aligned. |
+| Policy rules can carry a `filters` list of filter IDs; mandatory filters always run, and an obligation naming an unregistered filter refuses the call | `internal/policy`, `internal/pipeline`; FR-4.5, FR-4.6 | Lets policy select optional request and response filters without code changes, and fails closed when a named filter is missing. |
+| `smcpctl policy reload` refuses a changed document that keeps the active revision ID | `internal/edge` `ActivatePolicy`; FR-3.10 | Catalogs and decisions are keyed by revision ID, so two documents under one ID would make evidence ambiguous. |
+| New configuration keys: `[admin_listener]`, `[profile]`, `[log]`, `[[approver]]`, `[admin] bootstrap_token_sha256` and `bootstrap_token_expires`, `[[server]] risk_classes` and `secret_env`, `limits.approval_hold` | `internal/config/config.schema.json` | Needed for the separate control API listener, the profile decision, the diagnostic log, bootstrap without a password on the command line, the SR-4-1 high-risk refusal in Standalone, the secret broker seam and approval hold. `approval_hold` (default 60 s) is not yet a controlled parameter in Appendix A. |
+| The fsynced journal commit of the `authorized` event is the SR-6.2-1 intent record; SR-6.2-1 stays Partial until the graph mirror (E-26) exists | `internal/edge`, `internal/audit` | Applies the owner decision that the journal is the evidence authority. The intent is on disk before the launch capability is issued. |
+| The local CA is name-constrained to loopback names with a 2-year lifetime; the listener certificate lasts 397 days and is reissued at startup within 30 days of expiry | `internal/keys`; SR-2.8-4, CP-53 | Adds the name constraints SR-2.8-4 requires. The lifetimes are still longer than CP-53 (CA 1 year, listener 90 days) and are to be shortened with certificate rotation (FR-17). |
+
+### CI, status data and site
+
+- Required CI jobs `srs`, `go`, `lint`, `site`, `security` and `linux-integration` (PR #5). `tools/reqreport` reports full and partial claims and every unverified requirement (FR-12.10), and merges `docs/status/elements.json` into `status.json`, which CI publishes to the `site-data` branch.
+- The website computes its figures at build time from the repository documents and `status.json` (PR #6).
+- The integration run bootstraps with password files, signs in as the Session Approver, calls the reference server's tools, and checks that `smcpctl stop` refuses calls and `smcpctl resume` restores them.
+- `site/package.json` overrides the postcss copy inside Next 15 to 8.5.28, which fixes GHSA-6g55-p6wh-862q and GHSA-r28c-9q8g-f849; their npm audit allowlist entries are removed.
+
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 
 Harness interface revised to match what shipping clients can do (`Client-Compatibility-Brief.md`). No snapshot or tag yet; this is a draft for owner review.

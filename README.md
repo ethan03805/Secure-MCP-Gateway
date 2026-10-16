@@ -35,15 +35,17 @@ The counts above are those printed by the SRS build (`srs_build/gen.py`) and fou
 
 ## Running the first slice
 
-The slice is the path a tool call takes from a harness to a backend server and back, with the controls the SRS puts on that path. It runs on macOS and Linux. Backend servers run as plain subprocesses: the sandbox, egress broker and installer are not implemented yet.
+The slice is the path a tool call takes from a harness to a backend server and back, with the controls the SRS puts on that path. It runs on macOS and Linux in the Standalone profile: backend servers run as plain subprocesses, health reports `degraded: unconfined`, and the sandbox, egress broker and installer are not implemented yet.
 
 ```
 go build -o build/ ./cmd/...
-./build/smcpctl bootstrap --dir ~/smcp --admin-password '<at least 12 characters>'
+./build/smcpctl bootstrap --dir ~/smcp
 ./build/smcpd --config ~/smcp/smcp.toml
 ```
 
-`bootstrap` writes `smcp.toml` (listener, administrator, principals, OAuth clients, backend servers), `policy.json` (framework profiles and session allow templates) and `state/` (a local CA and listener certificate, the Ed25519 evidence key, the journal). In this slice the example configuration launches the reference filesystem MCP server through `npx` on a sandbox directory. SRS V1.2 replaces both of these behaviors: the password will be read from a prompt or a protected file (SR-7.5-2), and the example will use a signed reference package (FR-14.10).
+`bootstrap` prompts for two passwords (12 or more characters, each entered twice): the Administrator, who uses the control API, and the Session Approver, who approves harness sign-ins. Passwords are never taken from the command line or the environment (SR-7.5-2). Without a terminal, pass `--admin-password-file` and `--approver-password-file`. With `--bootstrap-token`, no Administrator password is set; bootstrap prints a one-use token, valid for 24 hours, and `smcpctl admin redeem --config ~/smcp/smcp.toml` sets the password after smcpd starts.
+
+`bootstrap` writes `smcp.toml` (harness listener on 127.0.0.1:8443, control API listener on 127.0.0.1:8444, Administrator, Session Approver, principals, OAuth clients, backend servers), `policy.json` (framework profiles and session allow templates) and `state/` (a local CA name-constrained to loopback names, the listener certificate, the Ed25519 evidence key, the operator token and the journal). The example configuration runs `smcp-refserver`, a read-only reference server built from `cmd/smcp-refserver`, on `~/smcp/sandbox`. Bootstrap looks for `smcp-refserver` next to `smcpctl`, then on `PATH`, and writes its absolute path into the configuration (`--refserver` overrides this); launch commands that resolve packages at run time, such as `npx` or `uvx`, are refused (SR-3.6-1).
 
 To connect Claude Code:
 
@@ -52,15 +54,29 @@ export NODE_EXTRA_CA_CERTS=~/smcp/state/tls/ca.crt
 claude mcp add --transport http smcp https://127.0.0.1:8443/mcp
 ```
 
-Claude Code discovers the Gateway's OAuth metadata, opens a browser, and the Gateway's sign-in page asks for the administrator password. The token it receives is the Gateway session (FR-2.20); the tools it lists are exactly those the session's template permits (SR-5.4-1), named `<alias>_<tool>` (FR-1.26).
+Claude Code discovers the Gateway's OAuth metadata and opens a browser. Sign in as the Session Approver `approver`; the Administrator account is refused there. The token Claude Code receives is the Gateway session (FR-2.20); the tools it lists are exactly those the session's template permits (SR-5.4-1), named `<alias>_<tool>` (FR-1.26), for example `ref_read_file`.
 
-Other commands: `smcpctl config validate`, `smcpctl health`, `smcpctl journal verify` (checks the hash chain and signatures of the evidence journal, FR-7.5) and `smcpctl hash-password`.
+Other commands:
 
-What the slice does and does not implement is listed per element in `docs/status/elements.json`, and per flow in `docs/flows/`. The requirement report is built with:
+| Command | Does |
+|---|---|
+| `smcpctl health` | Reports health and the active profile |
+| `smcpctl stop --reason <text>` | Emergency stop: every tool call is refused until resumed |
+| `smcpctl resume` | Leaves emergency stop |
+| `smcpctl policy reload` | Validates and activates `policy.json`; a changed document under an already active revision ID is refused |
+| `smcpctl approvals` | Placeholder until the Approval Service (E-07) exists; approval-obligated calls are refused with `-31002` |
+| `smcpctl journal verify` | Checks the hash chain, signatures and anchor of the evidence journal (FR-7.5) |
+| `smcpctl config validate`, `smcpctl hash-password` | Validate a configuration; hash a password for an added Session Approver |
+
+Each takes `--config ~/smcp/smcp.toml`. `stop`, `resume` and `policy reload` authenticate to the control API with the operator token in `state/keys/admin.token`.
+
+What the slice does and does not implement is listed per element in `docs/status/elements.json`, per package in `internal/README.md`, and per flow in `docs/flows/`. The requirement report is built with:
 
 ```
-go test -json ./... | go run ./tools/reqreport -out build/reqreport
+make status        # writes build/reqreport.md, build/reqreport.json and build/status.json
 ```
+
+`make check` runs locally what the required CI jobs check; `make integration` runs the end-to-end script that CI runs on Linux. See `scripts/README.md`.
 
 ## Rebuilding the SRS
 
