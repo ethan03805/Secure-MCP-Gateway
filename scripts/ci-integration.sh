@@ -498,8 +498,24 @@ EOF
 
   local eca="$einst/state/tls/ca.crt"
   ecall() { # tool, args, expected substring
-    "$bin/itest-client" -url "$epublic" -ca "$eca" -call "$1" -args "$2" -expect "$3" \
-      || { cat "$elog" >&2; fail "enforced: $1 $2 (expected \"$3\")"; }
+    # Every run signs in again; the sign-in guard allows 30 requests per
+    # source per minute (authguard), so a refused sign-in waits out the
+    # window once.
+    local out
+    if out=$("$bin/itest-client" -url "$epublic" -ca "$eca" -call "$1" -args "$2" -expect "$3" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+    if printf '%s' "$out" | grep -q 'status 429'; then
+      echo "sign-in rate limit reached; waiting 61 s"
+      sleep 61
+      "$bin/itest-client" -url "$epublic" -ca "$eca" -call "$1" -args "$2" -expect "$3" \
+        || { cat "$elog" >&2; fail "enforced: $1 $2 (expected \"$3\")"; }
+      return 0
+    fi
+    printf '%s\n' "$out" >&2
+    cat "$elog" >&2
+    fail "enforced: $1 $2 (expected \"$3\")"
   }
   say "Enforced profile: the reference server works inside the sandbox"
   ecall ref_read_file '{"path":"hello.txt"}' "$emarker"
