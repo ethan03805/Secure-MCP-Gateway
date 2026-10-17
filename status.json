@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T01:44:45Z",
-  "commit": "677fd2730fe83f6eb7d368d567f886b2dc573659",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/677fd2730fe83f6eb7d368d567f886b2dc573659",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38991927215",
+  "generatedAt": "2026-10-17T01:52:50Z",
+  "commit": "c41de7e2432aa3efc28b89353c9e78db22e06e51",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/c41de7e2432aa3efc28b89353c9e78db22e06e51",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38992480330",
   "tests": {
-    "total": 451,
-    "passed": 440,
+    "total": 491,
+    "passed": 480,
     "failed": 0,
     "skipped": 11,
-    "durationSec": 150.7,
+    "durationSec": 128.7,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 25,
+        "passed": 27,
         "failed": 0,
         "skipped": 0
       },
@@ -150,6 +150,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/library",
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/metrics",
         "passed": 2,
         "failed": 0,
@@ -164,6 +170,12 @@
       {
         "name": "internal/obsstore",
         "passed": 19,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/packaging",
+        "passed": 13,
         "failed": 0,
         "skipped": 0
       },
@@ -248,7 +260,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.8,
+    "totalPct": 74.8,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -268,7 +280,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 38.5
+        "pct": 32.6
       },
       {
         "name": "cmd/smcpd",
@@ -296,7 +308,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 74
+        "pct": 70.7
       },
       {
         "name": "internal/approval",
@@ -312,7 +324,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 85.7
+        "pct": 87.9
       },
       {
         "name": "internal/backup",
@@ -328,7 +340,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 89.9
+        "pct": 89.7
       },
       {
         "name": "internal/consoleapi",
@@ -348,11 +360,11 @@
       },
       {
         "name": "internal/filters",
-        "pct": 89
+        "pct": 88.8
       },
       {
         "name": "internal/graph",
-        "pct": 82.7
+        "pct": 82.6
       },
       {
         "name": "internal/gwtest",
@@ -375,6 +387,10 @@
         "pct": 76.6
       },
       {
+        "name": "internal/library",
+        "pct": 86.1
+      },
+      {
         "name": "internal/metrics",
         "pct": 95.6
       },
@@ -389,6 +405,14 @@
       {
         "name": "internal/ops",
         "pct": 72.6
+      },
+      {
+        "name": "internal/packaging",
+        "pct": 74.4
+      },
+      {
+        "name": "internal/packaging/pkgtest",
+        "pct": 90.5
       },
       {
         "name": "internal/pipeline",
@@ -432,7 +456,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.3
+        "pct": 79.4
       },
       {
         "name": "internal/session",
@@ -462,10 +486,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 124,
-    "partial": 164,
+    "verified": 147,
+    "partial": 174,
     "failing": 0,
-    "unverified": 270,
+    "unverified": 237,
     "byElement": [
       {
         "element": "E-01",
@@ -528,7 +552,7 @@
         "name": "Access Enforcement Point",
         "total": 19,
         "verified": 9,
-        "partial": 1,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -567,16 +591,16 @@
         "element": "E-13",
         "name": "Library Trust Verifier",
         "total": 25,
-        "verified": 0,
-        "partial": 1,
+        "verified": 13,
+        "partial": 9,
         "failing": 0
       },
       {
         "element": "E-14",
         "name": "Local Server Registry",
         "total": 13,
-        "verified": 0,
-        "partial": 2,
+        "verified": 8,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -639,7 +663,7 @@
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
         "total": 10,
-        "verified": 1,
+        "verified": 2,
         "partial": 4,
         "failing": 0
       },
@@ -655,7 +679,7 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 0,
+        "verified": 1,
         "partial": 19,
         "failing": 0
       },
@@ -923,8 +947,10 @@
       {
         "id": "FR-1.27",
         "element": "E-08",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/library.TestRuntimePresentsVerifiedManifest"
+        ]
       },
       {
         "id": "FR-1.28",
@@ -1675,50 +1701,69 @@
       {
         "id": "FR-5.1",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/library.TestLibraryScanAndRevocation"
+        ]
       },
       {
         "id": "FR-5.2",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestImportRequiresEveryComponent"
+        ]
       },
       {
         "id": "FR-5.3",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestLibraryScanAndRevocation",
+          "internal/library.TestPollingImportsAndRevokesWithTeardown"
+        ]
       },
       {
         "id": "FR-5.4",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestImmutableRevisionAndReceipts"
+        ]
       },
       {
         "id": "FR-5.5",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestImmutableRevisionAndReceipts"
+        ]
       },
       {
         "id": "FR-5.6",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestAliasUniqueness"
+        ]
       },
       {
         "id": "FR-5.7",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/library.TestPackagesControlAPI",
+          "internal/library.TestRuntimePresentsVerifiedManifest",
+          "internal/library.TestStateMachineAndAuthorization"
+        ]
       },
       {
         "id": "FR-5.8",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestExpirySuspends"
+        ]
       },
       {
         "id": "FR-5.9",
@@ -1941,8 +1986,10 @@
       {
         "id": "FR-5.39",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestArtifactCacheSharing"
+        ]
       },
       {
         "id": "FR-6",
@@ -3184,74 +3231,109 @@
       {
         "id": "FR-14.1",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestPackageCommands",
+          "internal/packaging.TestBuildNPMAndPyPI",
+          "internal/packaging.TestBuildSignVerifyBinary",
+          "internal/packaging.TestFetchEachArtifactType"
+        ]
       },
       {
         "id": "FR-14.2",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/packaging.TestPinnedReferencesOnly"
+        ]
       },
       {
         "id": "FR-14.3",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/packaging.TestBuildNPMAndPyPI",
+          "internal/packaging.TestBuildSignVerifyBinary"
+        ]
       },
       {
         "id": "FR-14.4",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/packaging.TestLaunchVectorRules"
+        ]
       },
       {
         "id": "FR-14.5",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/packaging.TestBuildSignVerifyBinary"
+        ]
       },
       {
         "id": "FR-14.6",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestPackageCommands",
+          "internal/packaging.TestBuildSignVerifyBinary",
+          "internal/packaging.TestEncryptedSigningKey"
+        ]
       },
       {
         "id": "FR-14.7",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestPackageCommands",
+          "internal/packaging.TestBuildSignVerifyBinary"
+        ]
       },
       {
         "id": "FR-14.8",
         "element": "E-22",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestPackageCommands",
+          "internal/library.TestOperatorAnchorScope"
+        ]
       },
       {
         "id": "FR-14.9",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/packaging.TestReferenceRecipesArePinned"
+        ]
       },
       {
         "id": "FR-14.10",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestBootstrapUsesPackagedServer"
+        ]
       },
       {
         "id": "FR-14.11",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/packaging.TestEmbeddedSchemaMatchesPublished",
+          "internal/packaging.TestManifestSchemaValidation"
+        ]
       },
       {
         "id": "FR-14.12",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestPackageCommands",
+          "internal/library.TestLibraryScanAndRevocation",
+          "internal/library.TestPollingImportsAndRevokesWithTeardown"
+        ]
       },
       {
         "id": "FR-15",
@@ -4124,32 +4206,43 @@
       {
         "id": "SR-3-1",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestSignatureTrust"
+        ]
       },
       {
         "id": "SR-3.1-1",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestSourceEvidenceAndProvenanceBinding"
+        ]
       },
       {
         "id": "SR-3-2",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestArtifactReverifiedAtLaunch",
+          "internal/library.TestMissingTreeRecreatedFromArtifact"
+        ]
       },
       {
         "id": "SR-3.2-1",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestSourceEvidenceAndProvenanceBinding"
+        ]
       },
       {
         "id": "SR-3-3",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestPollingImportsAndRevokesWithTeardown"
+        ]
       },
       {
         "id": "SR-3.3-1",
@@ -4174,14 +4267,18 @@
       {
         "id": "SR-3-5",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestRollbackProtection"
+        ]
       },
       {
         "id": "SR-3.5-1",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/packaging.TestBuildSignVerifyBinary"
+        ]
       },
       {
         "id": "SR-3.6-1",
@@ -4189,6 +4286,8 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestBootstrapAndControlCommands",
+          "internal/library.TestRuntimeRefusals",
+          "internal/packaging.TestLaunchVectorRules",
           "internal/pipeline.TestCheckLaunchSpec",
           "internal/sandbox.TestLaunchRefusesUnsafeInput"
         ]
@@ -4196,20 +4295,28 @@
       {
         "id": "SR-3.7-1",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestEnablementDigestBinding"
+        ]
       },
       {
         "id": "SR-3.8-1",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestDriftAtStartSuspends",
+          "internal/library.TestDriftOnListChangedSuspendsAndTearsDown"
+        ]
       },
       {
         "id": "SR-3.9-1",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/library.TestPackagesControlAPI",
+          "internal/library.TestStateMachineAndAuthorization"
+        ]
       },
       {
         "id": "SR-3.10-1",
@@ -4238,14 +4345,17 @@
       {
         "id": "SR-3.14-1",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestStatefulRefused"
+        ]
       },
       {
         "id": "SR-4-1",
         "element": "E-14",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/library.TestStandaloneRefusesHighRisk",
           "internal/sandbox.TestBackendRegistryUsesConfinedLauncher"
         ]
       },
