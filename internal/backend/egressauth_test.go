@@ -32,12 +32,18 @@ func (p issuingProc) IssueEgress(b pipeline.Binding) (*pipeline.EgressAuth, func
 	p.l.mu.Lock()
 	p.l.issued = append(p.l.issued, b)
 	p.l.mu.Unlock()
-	return &pipeline.EgressAuth{Header: pipeline.EgressAuthHeader, Destinations: []pipeline.EgressCapability{
-			{Host: "api.test", Ports: []int{443}, Tokens: []string{"tok-" + b.CorrelationID}}}}, func() {
-			p.l.mu.Lock()
-			p.l.revoked++
-			p.l.mu.Unlock()
-		}
+	auth := &pipeline.EgressAuth{
+		Header: pipeline.EgressAuthHeader,
+		Destinations: []pipeline.EgressCapability{
+			{Host: "api.test", Ports: []int{443}, Tokens: []string{"tok-" + b.CorrelationID}},
+		},
+	}
+	revoke := func() {
+		p.l.mu.Lock()
+		p.l.revoked++
+		p.l.mu.Unlock()
+	}
+	return auth, revoke
 }
 
 func (l *issuingLauncher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeline.Process, error) {
