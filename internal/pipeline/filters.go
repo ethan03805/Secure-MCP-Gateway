@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -502,13 +503,30 @@ func ValidateArgumentsContext(ctx context.Context, schema any, args json.RawMess
 		}
 	}
 	// The validator cannot be interrupted: past the bound the call is
-	// blocked and the validation finishes on its own goroutine.
+	// blocked and the validation finishes on its own goroutine. The bound
+	// runs from the validator's start, so that on a busy host the wait for
+	// a processor to start it on is not taken for validation time (which
+	// blocked conforming calls under the FR-11 load); the chain's CP-14
+	// deadline still bounds the whole filter.
+	started := make(chan struct{})
 	done := make(chan error, 1)
-	go func() { done <- compiled.Validate(inst) }()
-	timer := time.NewTimer(SchemaValidateTime)
-	defer timer.Stop()
+	go func() {
+		if h := validatorStartHook.Load(); h != nil {
+			(*h)()
+		}
+		close(started)
+		done <- compiled.Validate(inst)
+	}()
 	var finding string
 	WaitUnmeasured(ctx, func() {
+		select {
+		case <-started:
+		case <-ctx.Done():
+			finding = "schema validation did not start before the filter deadline"
+			return
+		}
+		timer := time.NewTimer(SchemaValidateTime)
+		defer timer.Stop()
 		select {
 		case err := <-done:
 			if err != nil {
@@ -530,6 +548,10 @@ func ValidateArgumentsContext(ctx context.Context, schema any, args json.RawMess
 	})
 	return finding
 }
+
+// validatorStartHook, when set by a test, runs on the validator goroutine
+// before validation starts.
+var validatorStartHook atomic.Pointer[func()]
 
 type callContextKey struct{}
 

@@ -116,3 +116,24 @@ func TestSchemaResourceBounds(t *testing.T) {
 		t.Fatalf("aborted after %v", took)
 	}
 }
+
+// TestSchemaBoundStartsWithValidation: the CP-36 time bound counts the
+// validation, not the wait for the validator goroutine to be scheduled, so
+// a conforming call on a busy host is not blocked.
+func TestSchemaBoundStartsWithValidation(t *testing.T) {
+	hook := func() { time.Sleep(2 * SchemaValidateTime) }
+	validatorStartHook.Store(&hook)
+	defer validatorStartHook.Store(nil)
+	schema := map[string]any{"type": "object", "properties": map[string]any{"path": map[string]any{"type": "string"}}, "required": []any{"path"}}
+	if f := ValidateArguments(schema, json.RawMessage(`{"path":"64k.txt"}`)); f != "" {
+		t.Fatalf("conforming arguments blocked: %s", f)
+	}
+	if f := ValidateArguments(schema, json.RawMessage(`{"path":1}`)); f == "" || strings.Contains(f, "exceeded") {
+		t.Fatalf("non-conforming arguments: %q", f)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), SchemaValidateTime/2)
+	defer cancel()
+	if f := ValidateArgumentsContext(ctx, schema, json.RawMessage(`{"path":"x"}`)); !strings.Contains(f, "did not start") {
+		t.Fatalf("validator not started before the deadline: %q", f)
+	}
+}

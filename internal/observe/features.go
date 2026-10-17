@@ -22,21 +22,67 @@ import (
 // Entropy is the Shannon entropy in bits per character over the UTF-8 code
 // points of s (P-028, P-123). The empty string has entropy 0.
 func Entropy(s string) float64 {
+	h, _ := entropyCount(s)
+	return h
+}
+
+// entropyCount returns Entropy(s) and the number of code points in s.
+// ASCII code points are counted in an array; a map holds the others only
+// when there are any (the per-call cost of a large text result is the
+// FR-11.4 budget's).
+func entropyCount(s string) (float64, int) {
 	if s == "" {
-		return 0
+		return 0, 0
 	}
-	counts := map[rune]int{}
+	// Four tables, summed below, so that runs of equal bytes do not
+	// serialize on one counter.
+	var tab [4][utf8.RuneSelf]int
+	var other map[rune]int
 	n := 0
-	for _, r := range s {
-		counts[r]++
+	i := 0
+	for ; i+4 <= len(s); i += 4 {
+		b0, b1, b2, b3 := s[i], s[i+1], s[i+2], s[i+3]
+		if (b0|b1|b2|b3)&0x80 != 0 {
+			break
+		}
+		tab[0][b0]++
+		tab[1][b1]++
+		tab[2][b2]++
+		tab[3][b3]++
+		n += 4
+	}
+	ascii := tab[0]
+	for b := range ascii {
+		ascii[b] += tab[1][b] + tab[2][b] + tab[3][b]
+	}
+	for i < len(s) {
+		if b := s[i]; b < utf8.RuneSelf {
+			ascii[b]++
+			i++
+		} else {
+			r, size := utf8.DecodeRuneInString(s[i:])
+			if other == nil {
+				other = map[rune]int{}
+			}
+			other[r]++
+			i += size
+		}
 		n++
 	}
 	h := 0.0
-	for _, c := range counts {
+	add := func(c int) {
 		p := float64(c) / float64(n)
 		h -= p * math.Log2(p)
 	}
-	return h
+	for _, c := range ascii {
+		if c > 0 {
+			add(c)
+		}
+	}
+	for _, c := range other {
+		add(c)
+	}
+	return h, n
 }
 
 // unicodeControl counts control and format characters other than tab,
@@ -201,9 +247,8 @@ func ResponseFeatures(res *mcp.CallToolResult, validate func(structured any) str
 	if res == nil {
 		return out
 	}
-	raw, err := json.Marshal(res)
-	if err == nil {
-		out["response_bytes"] = int64(len(raw))
+	if n, err := encodedSize(res); err == nil {
+		out["response_bytes"] = n
 	}
 	parts := map[string]int64{}
 	var text strings.Builder
@@ -215,9 +260,11 @@ func ResponseFeatures(res *mcp.CallToolResult, validate func(structured any) str
 			if text.Len() < 4<<20 {
 				text.WriteString(x.Text)
 			}
-			for _, f := range strings.Fields(x.Text) {
-				if looksLikeURL(strings.Trim(f, `"'()<>[],.`)) {
-					urls++
+			if strings.Contains(x.Text, "://") { // looksLikeURL needs a scheme separator
+				for _, f := range strings.Fields(x.Text) {
+					if looksLikeURL(strings.Trim(f, `"'()<>[],.`)) {
+						urls++
+					}
 				}
 			}
 		case *mcp.ImageContent:
@@ -235,9 +282,9 @@ func ResponseFeatures(res *mcp.CallToolResult, validate func(structured any) str
 		}
 	}
 	out["content_parts_by_type"] = parts
-	t := text.String()
-	out["response_entropy"] = Entropy(t)
-	out["response_token_estimate"] = int64(utf8.RuneCountInString(t) / 4)
+	h, runes := entropyCount(text.String())
+	out["response_entropy"] = h
+	out["response_token_estimate"] = int64(runes / 4)
 	out["is_error"] = map[string]any{"is_error": res.IsError}
 	if res.StructuredContent != nil {
 		var v any
@@ -262,3 +309,70 @@ func ResponseFeatures(res *mcp.CallToolResult, validate func(structured any) str
 	out["embedded_url_count"] = int64(urls)
 	return out
 }
+
+// encodedSize is the length of res's JSON encoding (P-120) without
+// encoding the text parts: each is encoded with a one-byte placeholder and
+// its text's encoded length is added (jsonStringLen), which for a large
+// text result avoids encoding, and compacting, the whole text again on the
+// call path.
+func encodedSize(res *mcp.CallToolResult) (int64, error) {
+	cp := *res
+	cp.Content = make([]mcp.Content, len(res.Content))
+	var extra int
+	for i, c := range res.Content {
+		if x, ok := c.(*mcp.TextContent); ok && len(x.Text) > 0 {
+			t := *x
+			t.Text = "x"
+			cp.Content[i] = &t
+			extra += jsonStringLen(x.Text) - 1
+			continue
+		}
+		cp.Content[i] = c
+	}
+	raw, err := json.Marshal(&cp)
+	if err != nil {
+		return 0, err
+	}
+	return int64(len(raw) + extra), nil
+}
+
+// jsonStringLen is the length of s as encoding/json writes it inside a
+// string literal, quotes excluded: HTML-escaped, with control characters,
+// U+2028, U+2029 and invalid UTF-8 (as U+FFFD) escaped as encoding/json
+// does.
+func jsonStringLen(s string) int {
+	n := 0
+	for i := 0; i < len(s); {
+		if b := s[i]; b < utf8.RuneSelf {
+			n += int(jsonASCIILen[b])
+			i++
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		switch {
+		case r == utf8.RuneError && size == 1:
+			n += 6 // \ufffd
+		case r == '\u2028' || r == '\u2029':
+			n += 6
+		default:
+			n += size
+		}
+		i += size
+	}
+	return n
+}
+
+// jsonASCIILen is the encoded length of each ASCII byte in a JSON string.
+var jsonASCIILen = func() (t [utf8.RuneSelf]uint8) {
+	for b := range t {
+		switch {
+		case b == '"' || b == '\\' || b == '\n' || b == '\r' || b == '\t' || b == '\b' || b == '\f':
+			t[b] = 2
+		case b < 0x20 || b == '<' || b == '>' || b == '&':
+			t[b] = 6 // \u00XX
+		default:
+			t[b] = 1
+		}
+	}
+	return t
+}()

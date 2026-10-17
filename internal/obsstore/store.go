@@ -356,8 +356,9 @@ func (b *base) nextName() string {
 	return fmt.Sprintf("part-%d-%06d", time.Now().UTC().UnixNano(), b.seq.Add(1))
 }
 
-// writeJSONL writes rows to path (mode 0600) using the column order of t.
-func writeJSONL(path string, t Table, rows []Row) error {
+// writeJSONL writes rows to path (mode 0600) using the column order of t,
+// and with durable set syncs the file before it returns.
+func writeJSONL(path string, t Table, rows []Row, durable bool) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
@@ -378,9 +379,11 @@ func writeJSONL(path string, t Table, rows []Row) error {
 		f.Close()
 		return err
 	}
-	if err := f.Sync(); err != nil {
-		f.Close()
-		return err
+	if durable {
+		if err := f.Sync(); err != nil {
+			f.Close()
+			return err
+		}
 	}
 	return f.Close()
 }
