@@ -38,8 +38,9 @@ race: ## Run Go tests with the race detector (-short)
 	$(GO) test -race -short ./...
 
 .PHONY: vet
-vet: ## go vet
+vet: ## go vet (including the hostile suite's build tag)
 	$(GO) vet ./...
+	$(GO) vet -tags hostile ./internal/hostile/
 
 .PHONY: fmt
 fmt: ## Format Go code
@@ -112,6 +113,12 @@ status: ## Full tests with coverage, then build/reqreport.{json,md} and build/st
 	@rc=0; $(GO) test -race -json -coverpkg=./... -coverprofile=$(BUILD)/cover.out ./... > $(BUILD)/go-test.json || rc=$$?; \
 	$(GO) run ./tools/reqreport -in $(BUILD)/go-test.json -coverprofile $(BUILD)/cover.out || exit $$?; \
 	exit $$rc
+
+.PHONY: hostile
+hostile: ## Hostile backend fixture suite (SRS Appendix L); writes build/hostile.json and build/hostile.md
+	@mkdir -p $(BUILD)
+	$(GO) test -tags hostile -count=1 -run TestHostileFixtures ./internal/hostile/
+	@cat $(BUILD)/hostile.md
 
 .PHONY: integration
 integration: ## Bootstrap, run smcpd, drive an MCP client, verify the journal
