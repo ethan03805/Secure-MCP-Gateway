@@ -271,6 +271,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - New tests verify FR-9.7 (records, spans and metrics in separate tables, one column per catalog parameter, partitioned by UTC day, both store backends), FR-10.7 (an abnormal call is captured in full with the escalation parameters during 10% sampling), FR-10.20, FR-10.21 and SR-7-1 (through the control API of a running Gateway: promotion refused without authentication and for the Operator and Researcher roles, accepted for the Policy Author, automatic promotion within the configured limits and none beyond them, rollback to an earlier snapshot recorded in the next score, a tampered stored snapshot refused with an integrity event), SR-6-2 (S3 raw-payload fields exported only for an approved campaign with the raw-export grant) and FR-13.10 (`not enforced` in `smcpctl health`, `smcpctl version`, the health document the console status strip shows and the startup log entry).
 - Existing tests now verify FR-10.36 (export written to the export directory and downloaded through the route G-09 uses) and SR-1.13-2 (the template manifest is the one embedded in the signed release binary).
 
+### Partial claims sweep: secret-use evidence and package signing (E-13, E-20)
+
+- Secret-use denials name the secret (FR-6.11): a denial decided before the vault is opened (rate, window, purpose, approval, stop) now carries the secret reference and the version that would have been delivered, read from the vault's metadata; no value is read.
+- New tests verify FR-6.11 (every field on S2 deliveries and on denials, no value in evidence or the diagnostic log) and FR-14.6 (`smcpctl package sign` with a passphrase-protected key and the passphrase from a file or typed at a pseudo-terminal prompt, both signatures verified, keys and passphrases on the command line refused).
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |
