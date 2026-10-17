@@ -295,7 +295,7 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		Profile: Profile{
 			ReadOnlyRoot: true, NoNewPrivileges: true, CapDrop: "ALL", Seccomp: "default",
 			User: rt.User, AppArmor: rt.AppArmorProfile, SELinuxType: rt.SELinuxType, CgroupManager: rt.CgroupManager,
-			AllowSpawn: srv.AllowSpawn, OnDeviation: srv.OnDeviation,
+			AllowSpawn: srv.AllowSpawn || (in.Spec.SpawnsProcesses != nil && *in.Spec.SpawnsProcesses), OnDeviation: srv.OnDeviation,
 		},
 	}
 	if ls.Scope == "" {
