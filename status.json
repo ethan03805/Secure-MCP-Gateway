@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T00:37:29Z",
-  "commit": "6efbf641a3e46e48803d825c29ee9fe7ba60528e",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/6efbf641a3e46e48803d825c29ee9fe7ba60528e",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38987107221",
+  "generatedAt": "2026-10-17T00:44:39Z",
+  "commit": "44ba2ac6f881806e62c5b0a7d4d41ddb98271a9e",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/44ba2ac6f881806e62c5b0a7d4d41ddb98271a9e",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38987648339",
   "tests": {
-    "total": 186,
-    "passed": 181,
-    "failed": 0,
+    "total": 251,
+    "passed": 245,
+    "failed": 1,
     "skipped": 5,
-    "durationSec": 68.5,
+    "durationSec": 71.6,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 9,
+        "passed": 10,
         "failed": 0,
         "skipped": 0
       },
@@ -55,7 +55,7 @@
       },
       {
         "name": "internal/config",
-        "passed": 10,
+        "passed": 11,
         "failed": 0,
         "skipped": 0
       },
@@ -67,14 +67,14 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 17,
+        "passed": 18,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 12,
-        "failed": 0,
+        "passed": 14,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -84,6 +84,12 @@
         "skipped": 2
       },
       {
+        "name": "internal/filters",
+        "passed": 57,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/keys",
         "passed": 4,
         "failed": 0,
@@ -91,7 +97,7 @@
       },
       {
         "name": "internal/pipeline",
-        "passed": 6,
+        "passed": 8,
         "failed": 0,
         "skipped": 0
       },
@@ -146,7 +152,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.2,
+    "totalPct": 77.3,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -154,7 +160,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 23.3
+        "pct": 29.7
       },
       {
         "name": "cmd/smcpd",
@@ -166,7 +172,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 77.7
+        "pct": 75.4
       },
       {
         "name": "internal/approval",
@@ -194,11 +200,15 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.7
+        "pct": 90.4
       },
       {
         "name": "internal/egress",
         "pct": 79.9
+      },
+      {
+        "name": "internal/filters",
+        "pct": 88.9
       },
       {
         "name": "internal/ids",
@@ -210,7 +220,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 87.8
+        "pct": 89.3
       },
       {
         "name": "internal/policy",
@@ -260,10 +270,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 61,
-    "partial": 70,
-    "failing": 0,
-    "unverified": 427,
+    "verified": 72,
+    "partial": 77,
+    "failing": 2,
+    "unverified": 407,
     "byElement": [
       {
         "element": "E-01",
@@ -294,8 +304,8 @@
         "name": "Session Manager",
         "total": 19,
         "verified": 8,
-        "partial": 6,
-        "failing": 0
+        "partial": 5,
+        "failing": 1
       },
       {
         "element": "E-05",
@@ -325,7 +335,7 @@
         "element": "E-08",
         "name": "Access Enforcement Point",
         "total": 19,
-        "verified": 8,
+        "verified": 9,
         "partial": 1,
         "failing": 0
       },
@@ -333,8 +343,8 @@
         "element": "E-09",
         "name": "Request Inspection Pipeline",
         "total": 16,
-        "verified": 0,
-        "partial": 1,
+        "verified": 8,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -349,24 +359,24 @@
         "element": "E-11",
         "name": "Response Inspection Pipeline",
         "total": 10,
-        "verified": 2,
-        "partial": 0,
+        "verified": 5,
+        "partial": 1,
         "failing": 0
       },
       {
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 3,
+        "verified": 2,
         "partial": 2,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-13",
         "name": "Library Trust Verifier",
         "total": 25,
         "verified": 0,
-        "partial": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -422,7 +432,7 @@
         "name": "Secret Broker",
         "total": 7,
         "verified": 0,
-        "partial": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -454,7 +464,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 0,
-        "partial": 4,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -888,8 +898,10 @@
       {
         "id": "FR-1.52",
         "element": "E-08",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestPresentationRescan"
+        ]
       },
       {
         "id": "FR-2",
@@ -981,7 +993,7 @@
       {
         "id": "FR-2.11",
         "element": "E-04",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "internal/e2e.TestSubscriptionsListenEndsWithSession",
           "internal/edge.TestSessionEndCancelsInFlightCall"
@@ -1333,29 +1345,36 @@
       {
         "id": "FR-4.4",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/pipeline.TestFilterRunRecords"
+        ]
       },
       {
         "id": "FR-4.5",
         "element": "E-09",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/e2e.TestPolicyDecisionsAndErrorMapping",
+          "internal/filters.TestRequestFilters",
           "internal/pipeline.TestFilterChainOrderSelectionAndFailClosed"
         ]
       },
       {
         "id": "FR-4.6",
         "element": "E-11",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/filters.TestResponseFilters"
+        ]
       },
       {
         "id": "FR-4.7",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/edge.TestInjectionTagsEndToEnd"
+        ]
       },
       {
         "id": "FR-4.8",
@@ -1386,8 +1405,10 @@
       {
         "id": "FR-4.11",
         "element": "E-11",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestReleaseDispositions"
+        ]
       },
       {
         "id": "FR-4.12",
@@ -1428,20 +1449,28 @@
       {
         "id": "FR-4.16",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/filters.TestCorpusRates",
+          "internal/filters.TestRuleSetVersions"
+        ]
       },
       {
         "id": "FR-4.17",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestInjectionTagsEndToEnd",
+          "internal/filters.TestInjectionFiltersTagOnly"
+        ]
       },
       {
         "id": "FR-4.18",
         "element": "E-11",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/filters.TestDelimitUntrusted"
+        ]
       },
       {
         "id": "FR-5",
@@ -1784,8 +1813,11 @@
       {
         "id": "FR-6.10",
         "element": "E-20",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestRegisteredFingerprintsInResults",
+          "internal/filters.TestSecretArgumentFilter"
+        ]
       },
       {
         "id": "FR-6.11",
@@ -2077,8 +2109,10 @@
       {
         "id": "FR-8.27",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestFiltersCommand"
+        ]
       },
       {
         "id": "FR-8.28",
@@ -3104,8 +3138,10 @@
       {
         "id": "FR-19.5",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestCorpusRates"
+        ]
       },
       {
         "id": "SR-1-1",
@@ -3209,26 +3245,34 @@
       {
         "id": "SR-1.8-2",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestImportMetadataScan"
+        ]
       },
       {
         "id": "SR-1.8-3",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestImportMetadataScan"
+        ]
       },
       {
         "id": "SR-1.8-4",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/filters.TestPathCanonicalization"
+        ]
       },
       {
         "id": "SR-1.8-5",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/filters.TestURLCanonicalization"
+        ]
       },
       {
         "id": "SR-1.9-1",
@@ -3315,7 +3359,7 @@
       {
         "id": "SR-1.17-2",
         "element": "E-12",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/edge.TestSessionEndCancelsInFlightCall"
         ]
@@ -3899,8 +3943,10 @@
       {
         "id": "SR-5.8-1",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestSecretArgumentFilter"
+        ]
       },
       {
         "id": "SR-5.8-2",
@@ -3911,20 +3957,26 @@
       {
         "id": "SR-5.9-1",
         "element": "E-11",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestResponseSurfaces"
+        ]
       },
       {
         "id": "SR-5.9-2",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestImportMetadataScan"
+        ]
       },
       {
         "id": "SR-5.10-1",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/pipeline.TestFilterFailureFailsClosed"
+        ]
       },
       {
         "id": "SR-5.11-1",
@@ -3960,8 +4012,10 @@
       {
         "id": "SR-5.14-1",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/filters.TestUnicodeCorpus"
+        ]
       },
       {
         "id": "SR-5.15-1",
@@ -4575,6 +4629,6 @@
   "hostile": [],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
