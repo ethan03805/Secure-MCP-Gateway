@@ -5,7 +5,7 @@ How a server instance reaches a network destination through the Egress Broker: a
 ```mermaid
 sequenceDiagram
   autonumber
-  participant L as Launcher (standalone wrapper)
+  participant L as Launcher (Podman or standalone wrapper)
   participant E18 as E-18 Egress Broker
   participant S as Server instance
   participant DNS as Host resolver
@@ -48,7 +48,7 @@ sequenceDiagram
 
 `internal/egress` (`proxy.go`, `dial.go`, `inject.go`, `launcher.go`, `nft_linux.go`), built by `egress.FromConfig` in `app.Start` when `[egress] enabled = true`. A refused operation answers with the reason code in `Smcp-Egress-Reason` and records an `egress` event with phase `denied`. Differences from the specification:
 
-- Only the standalone wrapper attaches instances. The rootless Podman launcher refuses `network = "egress"`, so in the enforced profile a sandboxed server has no network and this flow does not run. The nftables confinement of a network namespace exists and is tested by `scripts/ci-egress-netns.sh`, but no launcher uses it yet.
+- In the enforced profile the rootless Podman launcher attaches a server with `network = "egress"` and installs the nftables table `inet smcp_egress` in the container's network namespace (slirp4netns with host loopback) before the server starts; the instance reaches the broker at `10.0.2.2`. `TestIntegrationEgressBroker` and the linux-integration job check on real Podman that direct connections are refused and a proxied request succeeds. The standalone wrapper attaches unconfined subprocesses.
 - In the standalone profile the proxy variables are advisory: a server that ignores them reaches the network directly.
 - Grants come from `[[egress.grant]]` in the configuration, not from policy decision obligations; endpoint variable names come from `endpoint_env`, not from signed manifests.
 - The one-use egress capability in `Smcp-Egress-Auth` (SR-5.16-1) is removed but neither required nor checked.

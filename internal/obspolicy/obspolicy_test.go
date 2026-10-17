@@ -161,6 +161,71 @@ func TestPublishAndApply(t *testing.T) {
 	}
 }
 
+// TestBandActionsAndEscalationObjects publishes the FR-8.14 fields of the
+// Anomaly Response Policy (alert-only bands, the uncharacterized action)
+// and the FR-8.10 fields of the Observation Policy (per-band escalation
+// parameters, per-feature statistics options), and checks validation and
+// the applied configuration.
+func TestBandActionsAndEscalationObjects(t *testing.T) {
+	reqtest.Partial(t, "FR-8.9", "FR-8.10", "FR-8.14")
+	cfg := testConfig(t, "127.0.0.1:0")
+	s, err := Open(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	params := someParams(t)
+	floor := 0.25
+	bad := []struct {
+		kind string
+		body any
+	}{
+		{KindAnomalyResponse, AnomalyResponse{Scoring: "async", EscalateCaptureBand: "normal", RequireApprovalBand: "off", WithholdBand: "off"}},
+		{KindAnomalyResponse, AnomalyResponse{Scoring: "async", Uncharacterized: "suspend", RequireApprovalBand: "off", WithholdBand: "off"}},
+		{KindAnomalyResponse, AnomalyResponse{Scoring: "async", Uncharacterized: "approve", RequireApprovalBand: "off", WithholdBand: "off"}}, // approval needs sync
+		{KindObservationPolicy, ObservationPolicy{PolicyID: "p", Parameters: params, SamplingRate: 0.5, Escalation: map[string][]string{"normal": params}}},
+		{KindObservationPolicy, ObservationPolicy{PolicyID: "p", Parameters: params, SamplingRate: 0.5, Escalation: map[string][]string{"critical": {"no_such_parameter"}}}},
+		{KindObservationPolicy, ObservationPolicy{PolicyID: "p", Parameters: params, SamplingRate: 0.5, Features: []config.ObservationFeature{{Parameter: "request_bytes", Transform: "cube"}}}},
+		{KindObservationPolicy, ObservationPolicy{PolicyID: "p", Parameters: params, SamplingRate: 0.5, Scope: &config.ObservationScope{Frameworks: []string{"not-a-framework"}}}},
+		{KindObservationPolicy, ObservationPolicy{PolicyID: "p", Parameters: params, SamplingRate: 0.5, Scope: &config.ObservationScope{Tools: []string{"echo"}}}},
+	}
+	for _, b := range bad {
+		if _, err := s.Publish(b.kind, body(t, b.body), "admin:admin", ""); !errors.Is(err, ErrInvalid) {
+			t.Errorf("%s %+v: %v", b.kind, b.body, err)
+		}
+	}
+	if _, err := s.Publish(KindAnomalyResponse, body(t, AnomalyResponse{Scoring: "sync", EscalateCaptureBand: "abnormal", Uncharacterized: "approve",
+		RequireApprovalBand: "critical", WithholdBand: "off"}), "policy_author:pat", ""); err != nil {
+		t.Fatal(err)
+	}
+	feats := []config.ObservationFeature{{Parameter: "request_bytes", Transform: "log1p", Robust: true, SigmaFloor: &floor}, {Parameter: "argument_count"}}
+	if _, err := s.Publish(KindObservationPolicy, body(t, ObservationPolicy{PolicyID: "lab", Parameters: params, SamplingRate: 0.2,
+		Escalation: map[string][]string{"abnormal": params[:1], "critical": params[1:]}, Features: feats,
+		Scope: &config.ObservationScope{Principals: []string{"agents-codex"}, Frameworks: []string{"codex"}, Tools: []string{"ref/echo", "ref/read_file"}}}), "policy_author:pat", ""); err != nil {
+		t.Fatal(err)
+	}
+	c := *cfg
+	if err := s.Apply(&c); err != nil {
+		t.Fatal(err)
+	}
+	o := c.Observation
+	if o.EscalateCaptureBand != "abnormal" || o.UncharacterizedAction != "approve" || o.RequireApprovalBand != "critical" {
+		t.Fatalf("anomaly response applied: %+v", o)
+	}
+	if len(o.EscalationBands["abnormal"]) != 1 || len(o.EscalationBands["critical"]) != len(params)-1 || len(o.Baseline.Features) != 2 ||
+		!o.Baseline.Features[0].Robust || *o.Baseline.Features[0].SigmaFloor != 0.25 || o.Baseline.Features[0].Transform != "log1p" ||
+		len(o.Scope.Principals) != 1 || len(o.Scope.Tools) != 2 || o.Scope.Frameworks[0] != "codex" {
+		t.Fatalf("observation policy applied: %+v", o)
+	}
+	// An earlier revision without the new fields keeps the defaults.
+	if _, err := s.Publish(KindAnomalyResponse, []byte(`{"scoring":"async","require_approval_band":"off","withhold_band":"off"}`), "policy_author:pat", ""); err != nil {
+		t.Fatal(err)
+	}
+	c = *cfg
+	if err := s.Apply(&c); err != nil || c.Observation.EscalateCaptureBand != "" || c.Observation.UncharacterizedAction != "" {
+		t.Fatalf("revision without the fields: %v %+v", err, c.Observation)
+	}
+}
+
 type fakeCtl struct{}
 
 func (fakeCtl) Health() edge.Health                                   { return edge.Health{State: "healthy", Causes: []string{}} }

@@ -58,6 +58,8 @@ func (s *Service) status(w http.ResponseWriter, r *http.Request) {
 			"policy_id": eff.PolicyID, "parameters": eff.Parameters, "escalation_parameters": eff.EscalationParameters,
 			"sampling_rate": eff.SamplingRate, "retention": eff.Retention.String(), "scoring": eff.Scoring,
 			"require_approval_band": eff.RequireApprovalBand, "withhold_band": eff.WithholdBand,
+			"escalate_capture_band": eff.EscalateCaptureBand, "uncharacterized": eff.UncharacterizedAction,
+			"escalation_bands": eff.EscalationBands, "features": eff.Baseline.Features, "scope": eff.Scope,
 			"memory_limit_bytes": eff.MemoryLimitBytes, "contexts": eff.Baseline.Contexts, "bands": eff.Baseline.Bands,
 		}
 	}

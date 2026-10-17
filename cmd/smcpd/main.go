@@ -109,7 +109,13 @@ func run(cfgPath, level string) error {
 	if err := objs.Apply(&obsCfg); err != nil {
 		log.Error("published observation objects not applied; smcp.toml settings kept for them", "err", err)
 	}
-	obs, err := analytics.New(analytics.Options{Config: &obsCfg, Log: log}) // SS-10, E-27
+	frameworkOf := func(id string) string { // FR-8.9: principals of the file and of the G-11 directory
+		if p := cfg.FindPrincipal(id); p != nil {
+			return p.Framework
+		}
+		return ""
+	}
+	obs, err := analytics.New(analytics.Options{Config: &obsCfg, Log: log, FrameworkOf: frameworkOf}) // SS-10, E-27
 	if err != nil {
 		return fmt.Errorf("observation: %w", err)
 	}

@@ -117,6 +117,12 @@ A scoring record (snapshot ID, context key, each feature's value, transformed va
 
 `scoring = "async"` (the default) scores the assembled record after the result was released. Its actions are `alert` (the evidence event) and `capture_escalation`; it never changes a call.
 
+The Anomaly Response Policy (G-06) maps each band and the uncharacterized state to restrict-only actions (FR-8.14):
+
+- Every band from `elevated` on alerts. `escalate_capture_band` (default `"elevated"`) is the lowest band that also escalates capture; bands below it alert only, and `"off"` makes every band alert only.
+- `uncharacterized_action` applies to calls whose context has no baseline yet: `"record"` (default, no action), `"escalate"` (capture escalation) or `"approve"` (escalation and, with `scoring = "sync"`, an approval obligation with reason "anomaly context uncharacterized").
+- An escalated call records the policy's parameters, `escalation_parameters`, and the `escalation_bands` parameters of its band and every lower band (FR-8.10).
+
 ### Synchronous scoring
 
 `scoring = "sync"` scores in the probes: request features before launch authorization, response features before release authorization. Records refused before the request probe are scored asynchronously. Two optional obligations, both off by default:
@@ -195,7 +201,10 @@ Every key of the `[observation]` table is optional.
 | `export_dir` | `<state>/exports` | Research exports |
 | `policy_id` | `"default"` | Observation Policy ID in records and spans |
 | `parameters` | every computed S0 and S1 parameter | Captured parameters (IDs or names) |
-| `escalation_parameters` | none | Added for calls at `elevated` or worse |
+| `escalation_parameters` | none | Added for escalated calls |
+| `escalation_bands` | none | Table `elevated`, `abnormal`, `critical` of parameter lists added for escalated calls of that band and higher (FR-8.10) |
+| `escalate_capture_band` | `"elevated"` | Lowest band that escalates capture; lower bands alert only; `"off"` for none (FR-8.14) |
+| `uncharacterized_action` | `"record"` | `record`, `escalate` or `approve` (`approve` needs `sync`) for calls without a baseline (FR-8.14) |
 | `sampling_rate` | `0.1` | Normal-band capture rate (CP-31) |
 | `retention` | `"2160h"` | Partition retention (CP-25) |
 | `queue` | `4096` | Collector and writer queue bound |
@@ -206,6 +215,16 @@ Every key of the `[observation]` table is optional.
 | `scoring` | `"async"` | `off`, `async` or `sync` |
 | `require_approval_band` | `"off"` | `sync` only: band that adds the approval obligation |
 | `withhold_band` | `"off"` | `sync` only: band that withholds the result |
+
+`[observation.scope]` (FR-8.9) limits the calls the Observation Policy samples and escalates; research campaigns keep their own scope. A call is in scope when it matches every non-empty list. Out-of-scope calls are counted as the drop reason `out_of_scope`. `framework_type` is filled from the principal's framework (file or G-11 directory).
+
+| Key | Matches |
+|---|---|
+| `principals` | Principal ID |
+| `frameworks` | Framework type of the principal |
+| `templates` | Session Allow template |
+| `servers` | Server alias |
+| `tools` | `"<server alias>/<backend tool name>"` |
 
 `[observation.baseline]`:
 
@@ -305,7 +324,7 @@ Tool-call reason codes added: `APPROVAL_REQUIRED` (existing code, now also from 
 ## Limits of this release
 
 - Instrumented elements other than the edge's evidence events and the two probes do not yet emit observables (FR-10.1); per-stage, per-rule and per-filter spans with CPU time (FR-10.2) are not recorded.
-- The configuration table is the only Observation Policy; observation policies published through E-05, per-band escalation parameter sets, first-N-per-session capture, and the overhead budget are not implemented.
+- Observation Policies, Audit Profiles, Anomaly Response Policies and the memory budget are published as numbered revisions (`internal/obspolicy`, console G-03, G-04, G-06, G-08) and replace the `[observation]` settings at the next start of smcpd, not at once; they are not part of the signed policy document of E-05. Per-band escalation parameters are part of the Observation Policy; first-N-per-session capture and the overhead budget are not implemented.
 - The scorer uses one snapshot for all scopes; uncharacterized contexts are always treated as normal.
 - The Researcher reads aggregates, not raw records: pseudonymized S2 fields in record listings are not implemented, so the raw record route is closed to that role.
 - Storage tiering, quotas and the memory manager (E-28) are not implemented beyond retention and the DuckDB memory limit.

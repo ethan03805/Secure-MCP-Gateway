@@ -4,6 +4,7 @@ import VerificationBars, { type VerificationRow } from "@/components/charts/Veri
 import TrendChart from "@/components/charts/TrendChart";
 import { loadArch } from "@/lib/parse-arch";
 import { loadStatus, type ReqStatus } from "@/lib/status";
+import { consoleResults } from "@/lib/console-results";
 import {
   REQ_STATUSES,
   REQ_STATUS_MEANING,
@@ -29,6 +30,7 @@ export default function StatusPage() {
   const byEl = new Map(s.requirements.byElement.map((b) => [b.element, b]));
   const covBy = new Map(s.coverage.packages.map((c) => [c.name, c.pct]));
   const r = s.requirements;
+  const cons = consoleResults(s);
 
   const implCount = (k: string) => arch.elements.filter((e) => els.get(e.id)?.implementation === k).length;
   const noData = arch.elements.filter((e) => !els.has(e.id));
@@ -352,7 +354,8 @@ export default function StatusPage() {
         <p>
           Shipping agent CLIs signed in to a running Gateway and driven through one prompt per scenario (sign-in, catalog,
           allowed call, denied call, approval, ungranted tool); each scenario is judged from the evidence journal. The
-          method and the known client findings are in <Link href="/docs/agents-conformance/">the conformance suite</Link>.
+          method and the known client findings are in <Link href="/docs/agents-conformance/">the conformance suite</Link>;
+          per-agent notes are in <Link href="/clients/">Agents</Link>.
         </p>
         {s.agents.length === 0 ? (
           <p className="empty-state">Not yet run. The compatibility job has not reported results for any client.</p>
@@ -431,6 +434,94 @@ export default function StatusPage() {
               </tbody>
             </table>
           </div>
+        )}
+      </Sec>
+
+      <Sec no={`${CH.n}.9`} id="console" title="Console in browsers">
+        <Note label="Totals">
+          <p>
+            {cons.engines.length === 0
+              ? "No console results in this run."
+              : cons.engines.map((e) => `${e.engine}: ${e.passed} passed, ${e.failed} failed`).join("; ") + "."}
+          </p>
+        </Note>
+        <p>
+          Playwright drives the embedded console against a real <code>smcpd</code>: one test per view G-01 to G-14 and
+          its actions, roles, sign-in and browser sessions, the content security policy, and axe-core WCAG 2.2 AA checks
+          of every view in light and dark schemes. The CI job <code>console</code> runs every spec on each engine. The
+          suite is described in <Link href="/docs/console/">the console guide</Link>.
+        </p>
+        {cons.engines.length === 0 ? (
+          <p className="empty-state">Not in this run. The status data has no console/e2e packages.</p>
+        ) : (
+          <>
+            <div className="table-wrap">
+              <table>
+                <caption>Playwright results per browser engine (one version each).</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Engine</th>
+                    <th scope="col" className="num">passed</th>
+                    <th scope="col" className="num">failed</th>
+                    <th scope="col" className="num">skipped</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cons.engines.map((e) => (
+                    <tr key={e.engine}>
+                      <th scope="row">{e.engine}</th>
+                      <td className="num">{e.passed}</td>
+                      <td className="num">{e.failed ? <strong>{e.failed}</strong> : 0}</td>
+                      <td className="num">{e.skipped}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-wrap wide">
+              <table>
+                <caption>
+                  {plural(cons.tests.length, "test")} that claim requirements, per engine. &quot;pass&quot; means no
+                  requirement the test claims is failing; tests that claim no requirement are counted above only.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Test</th>
+                    {cons.engines.map((e) => (
+                      <th key={e.engine} scope="col">
+                        {e.engine}
+                      </th>
+                    ))}
+                    <th scope="col">Requirements</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cons.tests.map((t) => (
+                    <tr key={`${t.spec}-${t.title}`}>
+                      <td>
+                        {t.title}
+                        <span className="pkgs">
+                          <code>{t.spec}</code>
+                        </span>
+                      </td>
+                      {cons.engines.map((e) => (
+                        <td key={e.engine}>
+                          {t.engines[e.engine] === "pass" ? (
+                            <ReqBadge status="verified" text="pass" />
+                          ) : t.engines[e.engine] === "failing-claim" ? (
+                            <ReqBadge status="failing" text="failing claim" />
+                          ) : (
+                            <ReqBadge status="unverified" text="no claim" />
+                          )}
+                        </td>
+                      ))}
+                      <td className="id">{t.requirements.join(", ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Sec>
     </article>

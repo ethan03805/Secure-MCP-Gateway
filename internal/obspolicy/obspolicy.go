@@ -19,8 +19,10 @@
 // What each object sets in [observation]:
 //
 //	audit_profile        retention, escalation_parameters (optional capture above the audit floor)
-//	observation_policy   policy_id, parameters, sampling_rate, baseline.contexts, baseline.bands
-//	anomaly_response     scoring, require_approval_band, withhold_band
+//	observation_policy   policy_id, parameters, sampling_rate, escalation_bands, baseline.contexts,
+//	                     baseline.bands, baseline.feature
+//	anomaly_response     scoring, escalate_capture_band, uncharacterized_action,
+//	                     require_approval_band, withhold_band
 //	memory_budget        memory_limit_bytes
 //
 // The mandatory audit floor (the evidence classes the journal always
@@ -44,6 +46,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/observe"
+	"github.com/ethan03805/secure-mcp-gateway/internal/principals"
 )
 
 // File is the store's path under the state directory.
@@ -68,22 +71,34 @@ type AuditProfile struct {
 }
 
 // ObservationPolicy is what the collector captures and how the baseline is
-// keyed and banded (FR-8.6 to FR-8.10).
+// keyed and banded (FR-8.6 to FR-8.10). Escalation adds parameters for
+// escalated calls of a band and every higher band; Features replaces the
+// baselined features and their statistics options (transform, robust
+// statistics, σ floor). Both are optional: absent, the [observation]
+// settings stay in force.
 type ObservationPolicy struct {
-	PolicyID     string    `json:"policy_id"`
-	Parameters   []string  `json:"parameters"`
-	SamplingRate float64   `json:"sampling_rate"`
-	Contexts     []string  `json:"contexts"`
-	Bands        []float64 `json:"bands"`
+	PolicyID     string                      `json:"policy_id"`
+	Parameters   []string                    `json:"parameters"`
+	SamplingRate float64                     `json:"sampling_rate"`
+	Contexts     []string                    `json:"contexts"`
+	Bands        []float64                   `json:"bands"`
+	Escalation   map[string][]string         `json:"escalation,omitempty"`
+	Features     []config.ObservationFeature `json:"features,omitempty"`
+	Scope        *config.ObservationScope    `json:"scope,omitempty"`
 }
 
-// AnomalyResponse maps the sigma bands to restrict-only actions (FR-8.14):
-// every band alerts and escalates capture; require_approval_band and
-// withhold_band name the lowest band that also needs approval or has its
-// result withheld ("off" for none). Approval and withholding need
+// AnomalyResponse maps the sigma bands and the uncharacterized state to
+// restrict-only actions (FR-8.14): every band from elevated on alerts;
+// escalate_capture_band, require_approval_band and withhold_band name the
+// lowest band that also escalates capture, needs approval or has its
+// result withheld ("off" for none; escalation defaults to elevated).
+// Uncharacterized is the action for a call whose context has no baseline:
+// record (default), escalate or approve. Approval and withholding need
 // synchronous scoring.
 type AnomalyResponse struct {
 	Scoring             string `json:"scoring"`
+	EscalateCaptureBand string `json:"escalate_capture_band,omitempty"`
+	Uncharacterized     string `json:"uncharacterized,omitempty"`
 	RequireApprovalBand string `json:"require_approval_band"`
 	WithholdBand        string `json:"withhold_band"`
 }
@@ -196,16 +211,40 @@ func overlay(o *config.Observation, v any) error {
 		rate := b.SamplingRate
 		o.PolicyID, o.Parameters, o.SamplingRate = b.PolicyID, slices.Clone(b.Parameters), &rate
 		o.Baseline.Contexts, o.Baseline.Bands = slices.Clone(b.Contexts), slices.Clone(b.Bands)
+		if b.Escalation != nil {
+			o.EscalationBands = map[string][]string{}
+			for k, v := range b.Escalation {
+				o.EscalationBands[k] = slices.Clone(v)
+			}
+		}
+		if len(b.Features) > 0 {
+			o.Baseline.Features = slices.Clone(b.Features)
+		}
+		if b.Scope != nil {
+			for _, f := range b.Scope.Frameworks {
+				if !slices.Contains(principals.Frameworks, f) {
+					return fmt.Errorf("%w: scope framework %q is not a known framework type", ErrInvalid, f)
+				}
+			}
+			o.Scope = *b.Scope
+		}
 	case *AnomalyResponse:
 		for _, x := range []string{b.RequireApprovalBand, b.WithholdBand} {
 			if !slices.Contains([]string{"off", "elevated", "abnormal", "critical"}, x) {
 				return fmt.Errorf("%w: a band must be off, elevated, abnormal or critical", ErrInvalid)
 			}
 		}
+		if b.EscalateCaptureBand != "" && !slices.Contains([]string{"off", "elevated", "abnormal", "critical"}, b.EscalateCaptureBand) {
+			return fmt.Errorf("%w: escalate_capture_band must be off, elevated, abnormal or critical", ErrInvalid)
+		}
+		if b.Uncharacterized != "" && !slices.Contains([]string{"record", "escalate", "approve"}, b.Uncharacterized) {
+			return fmt.Errorf("%w: uncharacterized must be record, escalate or approve", ErrInvalid)
+		}
 		if !slices.Contains([]string{"async", "sync", "off"}, b.Scoring) {
 			return fmt.Errorf("%w: scoring must be async, sync or off", ErrInvalid)
 		}
 		o.Scoring, o.RequireApprovalBand, o.WithholdBand = b.Scoring, b.RequireApprovalBand, b.WithholdBand
+		o.EscalateCaptureBand, o.UncharacterizedAction = b.EscalateCaptureBand, b.Uncharacterized
 	case *MemoryBudget:
 		if b.ObservationMemoryLimitBytes < 64<<20 || b.ObservationMemoryLimitBytes > 64<<30 {
 			return fmt.Errorf("%w: observation_memory_limit_bytes must be between 64 MiB and 64 GiB", ErrInvalid)

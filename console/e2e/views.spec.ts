@@ -102,6 +102,10 @@ test("G-03 audit profile tuning: the floor is read-only and the profile publishe
 
 test("G-04 observation workbench: grouped catalog search, presets, cost and preview", async ({ page }) => {
   claims("FR-8.6", "FR-8.7", "FR-8.8", "FR-8.11", "FR-8.12");
+  // FR-8.9 and FR-8.10 are demonstrated in full here: the scope is built
+  // from lists without free text, and each sampling, escalation, context,
+  // feature and band control is set, published and read back.
+  test.info().annotations.push({ type: "requirement", description: "FR-8.9" }, { type: "requirement", description: "FR-8.10" });
   await signIn(page, "/observations");
   await page.getByLabel(/Search parameters/).fill("latency");
   await expect(page.getByRole("checkbox", { name: "Capture end_to_end_latency" })).toBeVisible();
@@ -120,9 +124,36 @@ test("G-04 observation workbench: grouped catalog search, presets, cost and prev
   await page.getByLabel("Normal-band sampling rate (0 to 1)").fill("0.25");
   await page.getByLabel("critical band from |z|").fill("5");
   await page.getByRole("checkbox", { name: "server", exact: true }).check();
+  // Scope of one principal and two tools, chosen from lists (FR-8.9).
+  const principals = page.getByRole("group", { name: "Principals" }).getByRole("checkbox");
+  await expect(principals.first()).toBeVisible();
+  const principal = (await principals.first().locator("xpath=..").innerText()).trim();
+  await principals.first().check();
+  const tools = page.getByRole("group", { name: "Tools" });
+  await tools.getByRole("checkbox", { name: "ref/echo", exact: true }).check();
+  await tools.getByRole("checkbox", { name: "ref/read_file", exact: true }).check();
+  await expect(page.getByRole("group", { name: "Principals" }).getByRole("textbox")).toHaveCount(0);
+  // Per-band escalation parameters and per-feature statistics options (FR-8.10).
+  await page.locator("summary", { hasText: "Escalation parameters per band" }).click();
+  const escRow = page.getByRole("table", { name: "Escalation parameters per band" }).getByRole("row").nth(1);
+  const escParam = (await escRow.getByRole("cell").first().innerText()).trim();
+  await escRow.getByRole("checkbox", { name: `${escParam} abnormal` }).check();
+  await page.locator("summary", { hasText: "Baselined features and statistics" }).click();
+  await page.getByLabel("request_bytes transform").selectOption("none");
+  await page.getByRole("checkbox", { name: "request_bytes robust statistics" }).check();
+  await page.getByLabel("request_bytes sigma floor").fill("0.5");
   const form = page.getByRole("form", { name: "Publish the Observation Policy" });
   await form.getByRole("button", { name: "Publish the Observation Policy" }).click();
   await expect(page.getByText(/Published Observation Policy revision \d+/)).toBeVisible();
+  // The stored Observation Policy carries every control as set.
+  const revs = await page.evaluate(() => fetch("/api/v1/observations/objects/observation_policy").then((r) => r.json()));
+  const body = (revs.revisions ?? revs)[0].body;
+  expect(body.sampling_rate).toBe(0.25);
+  expect(body.bands).toEqual([2, 3, 5]);
+  expect(body.contexts).toContain("server");
+  expect(body.scope).toEqual({ principals: [principal], tools: ["ref/echo", "ref/read_file"] });
+  expect(body.escalation).toEqual({ abnormal: [escParam] });
+  expect(body.features.find((f: { parameter: string }) => f.parameter === "request_bytes")).toMatchObject({ transform: "none", robust: true, sigma_floor: 0.5 });
 });
 
 test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly drill-down", async ({ page }) => {
@@ -153,21 +184,35 @@ test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly dr
 });
 
 test("G-06 anomaly response: only restrict-only actions per band", async ({ page }) => {
-  // Partial: the published object carries the approval and withhold bands;
-  // alert-only versus escalated capture is not a setting of this build.
-  claims("FR-8.14");
+  // FR-8.14 in full: each band and the uncharacterized state is set from
+  // the restrict-only lists only, published, and read back.
+  test.info().annotations.push({ type: "requirement", description: "FR-8.14" });
   await signIn(page, "/anomaly-response");
   await expect(page.getByRole("table", { name: "Current response per band" })).toContainText("uncharacterized");
   const options = await page.getByLabel("critical action").locator("option").allTextContents();
   expect(options).toEqual(["Record and alert", "Alert and escalate capture", "Escalate and require approval", "Require approval and withhold the result"]);
-  await page.getByLabel("elevated action").selectOption("escalate");
+  const un = await page.getByLabel("uncharacterized action").locator("option").allTextContents();
+  expect(un).toEqual(["Record only", "Escalate capture", "Escalate and require approval"]);
+  await page.getByLabel("elevated action").selectOption("alert");
+  await page.getByLabel("abnormal action").selectOption("escalate");
+  await page.getByLabel("critical action").selectOption("approve");
+  await page.getByLabel("uncharacterized action").selectOption("escalate");
+  await expect(page.getByText(/escalate_capture_band = "abnormal"/)).toBeVisible();
+  await expect(page.getByText(/require_approval_band = "critical"/)).toBeVisible();
+  await expect(page.getByText(/uncharacterized_action = "escalate"/)).toBeVisible();
   await page.getByLabel("critical action").selectOption("withhold");
-  await page.getByLabel("abnormal action").selectOption("approve");
   await expect(page.getByText(/withhold_band = "critical"/)).toBeVisible();
-  await expect(page.getByText(/require_approval_band = "abnormal"/)).toBeVisible();
   await expect(page.getByText(/scoring = "sync"/)).toBeVisible();
   await page.getByRole("form", { name: "Publish the Anomaly Response Policy" }).getByRole("button", { name: "Publish the Anomaly Response Policy" }).click();
   await expect(page.getByText(/Published Anomaly Response Policy revision \d+/)).toBeVisible();
+  const revs = await page.evaluate(() => fetch("/api/v1/observations/objects/anomaly_response").then((r) => r.json()));
+  expect((revs.revisions ?? revs)[0].body).toEqual({
+    scoring: "sync",
+    escalate_capture_band: "abnormal",
+    uncharacterized: "escalate",
+    require_approval_band: "critical",
+    withhold_band: "critical",
+  });
 });
 
 test("G-07 performance: throughput, overhead per revision and stage time", async ({ page }) => {

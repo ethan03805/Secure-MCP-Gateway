@@ -14,7 +14,7 @@ const GROUP_ABOUT: Record<string, string> = {
   Reference: "One document per element group: policy, packaging, approvals, filters, secrets, sandbox, egress, the console, the graph mirror, observation, remote access, adapters and the conformance suites.",
   "Client quick starts": "One page per client of SRS Appendix K: connection, sign-in, CA trust, lockdown and doctor.",
   Runbooks: "Procedures for incidents and scheduled maintenance.",
-  "Control API": "Routes of the loopback admin listener, per element. A running Gateway also serves the full route table as GET /api/v1/openapi.json.",
+  "Control API": "Routes of the loopback admin listener, per element. A running Gateway also serves the full route table as GET /api/v1/openapi.json; the Control API chapter renders it.",
   Operations: "Health, logs, metrics, reload, keys, backup, upgrade and removal.",
   Verification: "The verification record format.",
   [ROOT_GROUP]: "The specification documents, background research and the repository's own records.",

@@ -7,6 +7,9 @@ import { loadRequirements } from "@/lib/parse-reqs";
 import { loadSecurity } from "@/lib/parse-sec";
 import { loadFlows } from "@/lib/flows";
 import { loadStatus } from "@/lib/status";
+import { loadMatrix } from "@/lib/matrix";
+import { loadOpenApi } from "@/lib/openapi";
+import { loadReleases } from "@/lib/release";
 import { CHAPTERS, buildCommit, fmtDateTime, fmtPct, shortSha } from "@/lib/site";
 
 /** The README's opening paragraph: what the system is. */
@@ -28,7 +31,9 @@ export default function Home() {
   const implemented = s.elements.filter((e) => e.implementation === "implemented").length;
   const partialEl = s.elements.filter((e) => e.implementation === "partial").length;
   const r = s.requirements;
-  const clientSections = (readDoc("Client-Compatibility-Brief.md").match(/^## /gm) ?? []).length;
+  const matrix = loadMatrix();
+  const api = loadOpenApi();
+  const releases = loadReleases();
 
   const counts: Record<string, string> = {
     "/status/": `${s.tests.passed} of ${s.tests.total} tests passing`,
@@ -38,8 +43,10 @@ export default function Home() {
     "/interfaces/": `${arch.external.length} external, ${arch.internal.length} internal, ${arch.stores.length} stores`,
     "/requirements/": `${reqs.length} requirements`,
     "/security/": `${controls.length} controls`,
-    "/clients/": `${clientSections} sections`,
+    "/clients/": `${matrix.clients.length} clients, ${s.agents.filter((a) => a.result === "pass" && !a.mode.includes("+")).length} passing`,
     "/docs/": `${allDocs().length} documents`,
+    "/control-api/": `${api.operations.length} operations`,
+    "/install/": releases.releases[0] ? `latest ${releases.releases[0].tag}` : releases.source === "remote" ? "no release yet" : "release list unavailable",
   };
 
   return (

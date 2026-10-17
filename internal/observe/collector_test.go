@@ -359,3 +359,69 @@ func TestCatalog(t *testing.T) {
 		t.Fatal("duplicates not merged")
 	}
 }
+
+// TestAnomalyResponseEscalation: the Anomaly Response Policy decides which
+// bands escalate capture (bands below EscalateFrom alert only), whether an
+// uncharacterized call is escalated, and which extra parameters each band
+// adds (FR-8.14, FR-8.10).
+func TestAnomalyResponseEscalation(t *testing.T) {
+	reqtest.Partial(t, "FR-8.14", "FR-8.10", "FR-8.9", "FR-10.7")
+	bands := map[string]string{"e": anomaly.Elevated, "a": anomaly.Abnormal, "c": anomaly.Critical, "u": anomaly.Uncharacterized, "n": anomaly.Normal}
+	fa := &fakeAnalyzer{band: func(r *Record) string { return bands[r.CorrelationID] }}
+	c, _ := newCollector(t, Options{SamplingRate: 0, Parameters: []string{"request_bytes"}, Analyzer: fa,
+		EscalateFrom: anomaly.Abnormal, EscalateUncharacterized: true,
+		EscalationByBand: map[string][]string{anomaly.Abnormal: {"argument_entropy"}, anomaly.Critical: {"argument_string_lengths"}}})
+	for i, id := range []string{"e", "a", "c", "u", "n"} {
+		call(c, id, "s", "read", time.Duration(i)*time.Second, `{"a":"b"}`)
+	}
+	c.Sync()
+	got := map[string]*Record{}
+	for _, r := range fa.records() {
+		got[r.CorrelationID] = r
+	}
+	if got["e"] != nil || got["n"] != nil {
+		t.Fatalf("elevated (alert only) or normal call captured: %v", got)
+	}
+	for _, id := range []string{"a", "c", "u"} {
+		if got[id] == nil || got[id].Capture != "escalated" {
+			t.Fatalf("%s not escalated: %+v", id, got[id])
+		}
+	}
+	has := func(id, p string) bool { _, ok := got[id].Values[p]; return ok }
+	if !has("a", "argument_entropy") || has("a", "argument_string_lengths") {
+		t.Errorf("abnormal call parameters: %v", got["a"].Values)
+	}
+	if !has("c", "argument_entropy") || !has("c", "argument_string_lengths") {
+		t.Errorf("critical call lacks the parameters of abnormal and critical: %v", got["c"].Values)
+	}
+	if has("u", "argument_entropy") {
+		t.Errorf("uncharacterized call got band parameters: %v", got["u"].Values)
+	}
+
+	// Scope (FR-8.9): out-of-scope calls are neither sampled nor
+	// escalated and are counted as out_of_scope; framework_type is filled
+	// from the principal.
+	fa3 := &fakeAnalyzer{band: func(r *Record) string { return bands[r.CorrelationID] }}
+	c3, _ := newCollector(t, Options{SamplingRate: 1, Parameters: []string{"framework_type"}, Analyzer: fa3,
+		FrameworkOf: func(p string) string { return map[string]string{"p-in": "codex"}[p] },
+		InScope:     func(r *Record) bool { return r.Str("framework_type") == "codex" }})
+	call(c3, "n", "in", "read", 0, `{}`)
+	call(c3, "c", "out", "read", time.Second, `{}`)
+	c3.Sync()
+	recs := fa3.records()
+	if len(recs) != 1 || recs[0].CorrelationID != "n" || recs[0].Str("framework_type") != "codex" {
+		t.Fatalf("scoped capture: %+v", recs)
+	}
+	if c3.Drops()[DropOutOfScope] != 1 {
+		t.Fatalf("drops %v", c3.Drops())
+	}
+
+	// EscalateFrom "off": every band alerts only.
+	fa2 := &fakeAnalyzer{band: func(*Record) string { return anomaly.Critical }}
+	c2, _ := newCollector(t, Options{SamplingRate: 0, Analyzer: fa2, EscalateFrom: "off"})
+	call(c2, "x", "s", "read", 0, `{}`)
+	c2.Sync()
+	if len(fa2.records()) != 0 {
+		t.Fatal("capture escalated with escalate_capture_band off")
+	}
+}

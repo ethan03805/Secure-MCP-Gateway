@@ -12,6 +12,8 @@ Parent requirements whose verification is "Review the verification results of ev
 
 Requirements deferred from release 1.0 (SRS Section 2.7, Appendix N) are not part of the requirement set and are not listed.
 
+Updated on 2026-10-17 against the status data of `58a40c1`: entries that tests now verify or partly verify were removed (FR-1.39, FR-1.40, FR-1.49, FR-5.20, FR-5.24, SR-5.6-2, SR-7.2-1 and FR-19.1 after the hostile-suite fixes).
+
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
 ## E-01 Harness Interface Endpoint
@@ -55,7 +57,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-03 Identity & Authentication Service
 
-- FR-2.1 missing: principals are configuration entries without display name, enabled state or credential references; no principal registry or G-11 principal management.
+- FR-2.1 unverified: principals created from the control API (`internal/principals`, G-11) have an enabled state and issued credentials, and file principals can be suspended; no test or record checks every attribute the requirement lists (display name, credential references, element bindings) on both kinds of principal.
 - FR-2.15 missing: UDS peer UID plus bearer key authentication.
 - SR-2.11-3 missing: Client ID Metadata Documents are never fetched; registered metadata-URL client IDs are accepted without a fetch, so the CP-52 allowlist and limits do not exist.
 - SR-2.11-5 unverified: `registration_endpoint` is advertised only with the Remote Access Profile enabled and `client_id_metadata_document_supported` is never advertised; no test covers both settings of both mechanisms (metadata documents cannot be enabled).
@@ -112,24 +114,18 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-10 Tool Dispatcher
 
-- FR-1.39 missing: backend progress is not relayed northbound (Appendix L HF-07 fails).
-- FR-1.40 missing: no progress relay, so no CP-21 progress rate bound.
 - FR-1.43 unverified: the CP-13 client deadline is applied (`internal/edge/pipeline.go` `ClientDeadline`) and maps to `-31008`; no test sets a client deadline shorter than the upstream timeout.
 - FR-5.13 unverified: stdio framing is the SDK's newline-delimited transport behind `frameFilter`; no test asserts single-line UTF-8 messages.
 - FR-5.14 unverified: an invalid stdout line fails the call (Appendix L HF-18 passes in the hostile suite, which runs under a build tag and does not claim requirements in the report).
 - FR-5.19 unverified: the SDK client sends `initialize` and `notifications/initialized`; the requested version is the SDK's latest, not pinned to 2025-11-25, and capabilities are not empty (see SR-5.6-2).
 - FR-5.21 unverified: the complete paged `tools/list` is read at start (`internal/backend/backend.go`, `sess.Tools`); no test pages a backend catalog.
 - FR-5.23 missing: no explicit handling of absent or unrecognized `resultType` from backends.
-- FR-5.24 missing: an `InputRequiredResult` is not mapped to `-31010` (Appendix L HF-25 fails).
 - FR-5.26 missing: cancellation is not propagated southbound with `notifications/cancelled`.
-- FR-5.32 missing: the northbound progress token is passed southbound unchanged instead of a Gateway-generated unique token.
-- SR-5.6-2 missing: the southbound client is built with nil `ClientOptions.Capabilities`, so the SDK declares its default `roots` capability; passing `&mcp.ClientCapabilities{}` in `internal/backend/backend.go` would remove it.
-- SR-7.2-1 missing: a lost response after dispatch is recorded as indeterminate with `-31009` for timeouts, but the side-effect class is not consulted and the slow-drip case fails (Appendix L HF-17).
+- FR-5.32 unverified: the backend now gets a Gateway-issued progress token and relayed progress carries the northbound token (`internal/backend`, `internal/edge/progress.go`); no test claims the requirement and checks that the southbound token is unique per call.
 - SR-7.12-1 missing: northbound cancellation is not propagated southbound.
 
 ## E-11 Response Inspection Pipeline
 
-- FR-19.1 unverified: the hostile fixture server and suite exist (`internal/hostile`, build tag `hostile`) and publish results, but the suite does not claim requirements through `reqtest`, and 7 of 27 rows do not pass.
 - SR-5.20-1 unverified: the SDK client rejects malformed envelopes and uncorrelated IDs, and `CallToolResult` decoding fails on invalid results; no test returns each malformed case and checks that the result is withheld with evidence.
 
 ## E-12 Enforcement Coordinator
@@ -147,7 +143,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-14 Local Server Registry
 
-- FR-1.49 unverified: enablement refuses public-name collisions (Appendix L HF-14 passes in the hostile suite); no claiming test reports both backend tool names.
 - SR-3.11-1 missing: classification overrides do not exist.
 
 ## E-15 Server Runtime Manager
@@ -186,7 +181,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-24 Management Console & Control API
 
 - FR-2.23 missing: Session Approver accounts are configuration entries; no Administrator flow creates them, and no check that the password differs from the Administrator's.
-- FR-8.3 to FR-8.17, FR-8.20, FR-8.21 (G-01 to G-09, G-12, G-13 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each; the tests' partial claims reach the requirement report (`console/e2e/reqreport.ts`), but no Demonstration record exists. Where a requirement names policy objects that do not exist (FR-3.1: Audit Profile, Observation Policy, Anomaly Response Policy and Research Campaign as published policy objects), that part is missing; the G-03 and G-06 editors produce the `[observation]` configuration table instead.
+- FR-8.3 to FR-8.8, FR-8.11 to FR-8.13, FR-8.15 to FR-8.17, FR-8.20, FR-8.21 (G-01 to G-05, G-07 to G-09, G-12, G-13 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each; the tests' partial claims reach the requirement report (`console/e2e/reqreport.ts`), but no Demonstration record exists. Where a requirement names policy objects that do not exist (FR-3.1: Audit Profile, Observation Policy, Anomaly Response Policy and Research Campaign as published policy objects), that part is missing; the G-03 and G-06 editors produce the `[observation]` configuration table instead.
 - FR-8.24 external: the timed first-time-user task has not been run.
 - FR-8.25 unverified: views carry a `Help` section (`console/src/ui.tsx`); help for every policy field and catalog parameter has not been inspected.
 - FR-8.29 unverified: `console/e2e/views.spec.ts` covers loading, empty and error states with partial claims; no test covers all three states for every view.

@@ -8,10 +8,10 @@ The broker is off by default. Enable it with `[egress] enabled = true`.
 
 | Profile | Platform | What the broker does | What stops a server from going around it |
 |---|---|---|---|
-| Enforced | Linux with nftables | Binds the instance's listeners to the sandbox network address and installs nftables rules in the instance's network namespace | The nftables rules: the namespace can reach only the broker's listeners. Everything else, including DNS, is rejected. |
+| Enforced | Linux, rootless Podman launcher with slirp4netns and nftables | Binds the instance's listeners on the host's 127.0.0.1 and passes them to the container as `10.0.2.2:<port>`; the launcher installs nftables rules in the container's network namespace before the server starts | The nftables rules: the namespace can reach only TCP to its own broker listeners. Everything else, including DNS, UDP and ICMP, is rejected. |
 | Standalone | macOS, or Linux without a confining launcher | Binds the instance's listeners on `127.0.0.1` and passes their addresses in the instance environment | Nothing. The proxy variables are advisory: a server that ignores `HTTP_PROXY` or opens sockets itself reaches the network directly. Any local process can also connect to an instance's listeners and use that server's grants. The release label is "not enforced". |
 
-The confining launcher (E-16) attaches each instance through `pipeline.EgressAttacher` with the instance's network namespace. Until that launcher exists every Gateway runs the standalone profile, and egress is advisory.
+The rootless Podman launcher (E-16) attaches each `[[runtime.server]]` with `network = "egress"` through `pipeline.EgressAttacher` and confines the container's network namespace itself, because only the rootless user namespace that owns it can change its nftables rules: `podman create` on slirp4netns with host loopback, `podman init`, then `podman unshare nsenter --net=<namespace> nft -f -` installs table `inet smcp_egress`, reads it back, and only then starts the server. Any failure removes the container. The steps are in [sandbox.md](sandbox.md#egress). In the standalone profile egress is advisory.
 
 ## How an instance reaches a destination
 
@@ -140,5 +140,4 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 - The `secret-fingerprint` filter on outbound URLs, headers and bodies (SR-5.8-2).
 - Grants from policy decision obligations and limits from manifests and Runtime Profiles (FR-5.38 names three sources; the broker applies the configuration and the grant).
 - Endpoint variable names from signed manifests (FR-5.37); today they come from `endpoint_env` in the configuration.
-- Network attachment by the confining launcher (E-16). Rootless Podman needs the broker's listen address to be reachable from the container's namespace; the E-16 launcher chooses that address.
 - Egress observables for the Observation Collector (E-29) beyond the journal events.

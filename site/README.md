@@ -27,6 +27,9 @@ npm run dev
 | `docs/flows/*.md` | `src/lib/flows.ts` | Every file becomes a page under Flows. An empty or missing directory is allowed. |
 | `docs/**/*.md` (except flows) | `src/lib/content.ts` | Every file becomes a page under `/docs/` at its path (`docs/api/policy.md` is `/docs/api/policy/`, a `README.md` is its directory). Order and groups follow the sections of `docs/README.md` that first link each file; subdirectories form their own group. Root documents are listed in `ROOT_DOCS`. Two files mapping to one path fail the build. |
 | `status.json`, `history.json` | `src/lib/status.ts` | Published by CI to the `site-data` branch. See below. |
+| `data/openapi.json` | `src/lib/openapi.ts` | The control API document, written by `go run ./tools/openapi` (`make openapi`) from the Go sources. A Go test fails when it is stale and the regenerate workflow rewrites it on pull requests. Served as `/openapi.json` and rendered by the Control API page. |
+| `docs/clients/matrix.json` | `src/lib/matrix.ts` | The client matrix with per-client notes, joined with the `agents` results of the status data on the Agents page. |
+| GitHub releases API | `src/lib/release.ts` | The five latest releases for the Install page, read once per build with a 5 second timeout (`SITE_RELEASES_URL` overrides the URL; `GITHUB_TOKEN` is sent when set). A failed read is shown on the page and never fails the build. |
 
 ## Status data
 

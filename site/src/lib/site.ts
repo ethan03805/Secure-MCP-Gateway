@@ -16,8 +16,10 @@ export const CHAPTERS = [
   { n: 5, href: "/interfaces/", label: "Interfaces", about: "External and internal interfaces, data stores, console view modules, open decisions." },
   { n: 6, href: "/requirements/", label: "Requirements", about: "Every requirement with its verification status, filterable by root, element, method and status." },
   { n: 7, href: "/security/", label: "Security controls", about: "The control hierarchy and the requirements that realize each control." },
-  { n: 8, href: "/clients/", label: "Clients", about: "What Claude Code, Codex and Hermes expect, and how the specification meets them." },
+  { n: 8, href: "/clients/", label: "Agents", about: "Real agent CLIs through the Gateway: results per client, per-agent notes, cloud agents and the Remote Access Profile." },
   { n: 9, href: "/docs/", label: "Documents", about: "Install, quick start, operator guide, references, client pages, runbooks, control API and the specification, rendered as written." },
+  { n: 10, href: "/control-api/", label: "Control API", about: "Every control API operation with the roles that may use it, from the OpenAPI document generated from the Go sources." },
+  { n: 11, href: "/install/", label: "Install", about: "Published releases, installation, and how to verify an archive (cosign, SHA-256, minisign) and a server package." },
 ] as const;
 
 export type ChapterHref = (typeof CHAPTERS)[number]["href"];

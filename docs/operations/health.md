@@ -31,7 +31,7 @@ An emergency stop (`smcpctl stop`) also makes the reported state `fail-closed`; 
 | `observer_events_dropped` | no | | An evidence observer (graph mirror, Observation Collector) dropped events since the previous evaluation |
 | `evidence_export_failed` | no | | The last evidence export attempt failed (see [backup.md](backup.md)) |
 
-Not yet checked, because the elements that own them are not built: vault availability (E-19), graph mirror and Observation Store reachability (E-25 to E-27) and the memory degradation stage (E-28). Those elements register their own checks with `health.Monitor.Register`.
+The graph mirror (when `[graph] enabled`) and the Observation Store register their own checks with `health.Monitor.Register`; they report `degraded`, never `fail-closed`. Not yet checked: vault availability (E-19) and the memory degradation stage (E-28).
 
 ## Recovery (FR-7.13)
 

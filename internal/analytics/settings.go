@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/anomaly"
@@ -33,6 +34,10 @@ type Settings struct {
 	Scoring          string
 	RequireApproval  string
 	Withhold         string
+	EscalateCapture  string              // lowest band with capture escalation, or "off"
+	Uncharacterized  string              // record, escalate or approve
+	EscalationByBand map[string][]string // extra escalation parameters per band
+	Scope            config.ObservationScope
 	Baseline         baseline.Config
 	SnapshotInterval time.Duration
 	SnapshotRecords  int64
@@ -140,6 +145,48 @@ func Resolve(cfg *config.Config, cat *observe.Catalog) (Settings, error) {
 	}
 	if (s.RequireApproval != "off" || s.Withhold != "off") && s.Scoring != "sync" {
 		return s, fmt.Errorf("observation: require_approval_band and withhold_band need scoring = \"sync\"")
+	}
+	s.EscalateCapture = o.EscalateCaptureBand
+	if s.EscalateCapture == "" {
+		s.EscalateCapture = anomaly.Elevated
+	}
+	if !slices.Contains([]string{"off", anomaly.Elevated, anomaly.Abnormal, anomaly.Critical}, s.EscalateCapture) {
+		return s, fmt.Errorf("observation.escalate_capture_band: %q is not off, elevated, abnormal or critical", s.EscalateCapture)
+	}
+	s.Uncharacterized = o.UncharacterizedAction
+	if s.Uncharacterized == "" {
+		s.Uncharacterized = "record"
+	}
+	if !slices.Contains([]string{"record", "escalate", "approve"}, s.Uncharacterized) {
+		return s, fmt.Errorf("observation.uncharacterized_action: %q is not record, escalate or approve", s.Uncharacterized)
+	}
+	if s.Uncharacterized == "approve" && s.Scoring != "sync" {
+		return s, fmt.Errorf("observation: uncharacterized_action = \"approve\" needs scoring = \"sync\"")
+	}
+	for band, names := range o.EscalationBands {
+		if !slices.Contains([]string{anomaly.Elevated, anomaly.Abnormal, anomaly.Critical}, band) {
+			return s, fmt.Errorf("observation.escalation_bands: %q is not elevated, abnormal or critical", band)
+		}
+		ps, err := cat.Resolve(names)
+		if err != nil {
+			return s, fmt.Errorf("observation.escalation_bands.%s: %w", band, err)
+		}
+		for _, n := range ps {
+			if p, _ := cat.Lookup(n); p.CapturePoint == "periodic" || p.Sensitivity == "S3" {
+				return s, fmt.Errorf("observation.escalation_bands.%s: %s cannot be captured per call", band, p.ID)
+			}
+		}
+		if s.EscalationByBand == nil {
+			s.EscalationByBand = map[string][]string{}
+		}
+		s.EscalationByBand[band] = ps
+	}
+
+	s.Scope = o.Scope
+	for _, t := range o.Scope.Tools {
+		if srv, tool, ok := strings.Cut(t, "/"); !ok || srv == "" || tool == "" || strings.Contains(tool, "/") {
+			return s, fmt.Errorf("observation.scope.tools: %q is not <server alias>/<tool>", t)
+		}
 	}
 
 	b := o.Baseline
