@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -230,8 +231,10 @@ func TestClientsSetupDryRunAndRemove(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("SMCP_HARNESS_ROOT", t.TempDir())
 	code, out, errs := rctl(t, "clients", "setup", "claude-code", "--config", g.CfgPath, "--dry-run", "--system-trust")
+	// The system trust command depends on the platform the test runs on.
+	trust := map[string]string{"darwin": "run: security add-trusted-cert", "linux": "run: sudo update-ca-certificates"}[runtime.GOOS]
 	if code != 0 || !strings.Contains(out, "dry run") || !strings.Contains(out, "NODE_EXTRA_CA_CERTS") || !strings.Contains(out, "allowManagedMcpServersOnly") ||
-		!strings.Contains(out, "run: security add-trusted-cert") {
+		!strings.Contains(out, trust) {
 		t.Fatalf("dry run: %d %s %s", code, out, errs)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".claude.json")); err == nil {
