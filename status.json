@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T06:37:04Z",
-  "commit": "ba54fd5ed2fe79ec08511a2fe0868b6de551cc1f",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ba54fd5ed2fe79ec08511a2fe0868b6de551cc1f",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39010073500",
+  "generatedAt": "2026-10-17T06:47:18Z",
+  "commit": "540daf98ef35c1064fe1d0a57dd8924dacb95da2",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/540daf98ef35c1064fe1d0a57dd8924dacb95da2",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39010707178",
   "tests": {
-    "total": 807,
-    "passed": 790,
+    "total": 825,
+    "passed": 806,
     "failed": 0,
-    "skipped": 17,
-    "durationSec": 438.7,
+    "skipped": 19,
+    "durationSec": 434.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -49,7 +49,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 40,
+        "passed": 41,
         "failed": 0,
         "skipped": 0
       },
@@ -121,7 +121,7 @@
       },
       {
         "name": "internal/config",
-        "passed": 14,
+        "passed": 15,
         "failed": 0,
         "skipped": 0
       },
@@ -270,6 +270,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/posixacl",
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/principals",
         "passed": 2,
         "failed": 0,
@@ -301,13 +307,13 @@
       },
       {
         "name": "internal/sandbox",
-        "passed": 30,
+        "passed": 39,
         "failed": 0,
-        "skipped": 4
+        "skipped": 6
       },
       {
         "name": "internal/secrets",
-        "passed": 23,
+        "passed": 24,
         "failed": 0,
         "skipped": 1
       },
@@ -319,6 +325,12 @@
       },
       {
         "name": "internal/testport",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "packaging/linux",
         "passed": 1,
         "failed": 0,
         "skipped": 0
@@ -350,7 +362,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.1,
+    "totalPct": 75.2,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -374,7 +386,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 38.4
+        "pct": 38.2
       },
       {
         "name": "cmd/smcpd",
@@ -394,7 +406,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 70.8
+        "pct": 70.9
       },
       {
         "name": "internal/anomaly",
@@ -454,7 +466,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 80.8
+        "pct": 81.4
       },
       {
         "name": "internal/filterapi",
@@ -466,7 +478,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.8
+        "pct": 82.9
       },
       {
         "name": "internal/gwtest",
@@ -545,6 +557,10 @@
         "pct": 81.9
       },
       {
+        "name": "internal/posixacl",
+        "pct": 89.7
+      },
+      {
         "name": "internal/principals",
         "pct": 80.8
       },
@@ -566,7 +582,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 85.5
+        "pct": 83.9
       },
       {
         "name": "internal/sandbox/probe",
@@ -574,7 +590,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.1
+        "pct": 79
       },
       {
         "name": "internal/session",
@@ -582,7 +598,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 64.5
+        "pct": 61.3
       },
       {
         "name": "internal/tunnel",
@@ -590,7 +606,7 @@
       },
       {
         "name": "packaging/linux",
-        "pct": 78.6
+        "pct": 85.7
       },
       {
         "name": "scripts/agents",
@@ -2236,9 +2252,12 @@
         "element": "E-20",
         "status": "partial",
         "tests": [
+          "internal/sandbox.TestIntegrationSecretFilesAutoUserNS",
+          "internal/sandbox.TestSecretFilesForAnotherUID",
           "internal/sandbox.TestSecretFilesReachTheSandbox",
           "internal/secrets.TestBrokerLaunchDeliveryModes",
-          "internal/secrets.TestDefaultRuntimeDirIsTmpfs"
+          "internal/secrets.TestDefaultRuntimeDirIsTmpfs",
+          "internal/secrets.TestSecretFilesInheritSandboxReaders"
         ]
       },
       {
@@ -3537,7 +3556,10 @@
           "cmd/smcpctl.TestInstallEnforcedFake",
           "cmd/smcpctl.TestInstallRefusals",
           "internal/sandbox.TestDoctorAllPrerequisitesPresent",
+          "internal/sandbox.TestDoctorChecksTheServerIdentity",
+          "internal/sandbox.TestDoctorReportsTheServerAppArmorProfile",
           "internal/sandbox.TestEnableDelegatedControllers",
+          "internal/sandbox.TestIntegrationServerAppArmorProfile",
           "internal/sandbox.TestPrepareRootfsIgnoresUmask"
         ]
       },
@@ -4821,8 +4843,12 @@
         "element": "E-16",
         "status": "partial",
         "tests": [
+          "internal/sandbox.TestDoctorChecksTheServerIdentity",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
-          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
+          "internal/sandbox.TestIntegrationSecretFilesAutoUserNS",
+          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile",
+          "internal/sandbox.TestRunAsRunsPodmanAsServerIdentity",
+          "internal/sandbox.TestSecretFilesForAnotherUID"
         ]
       },
       {
@@ -4883,6 +4909,7 @@
         "status": "partial",
         "tests": [
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestIntegrationServerAppArmorProfile",
           "internal/sandbox.TestLaunchRefusesUnsafeInput",
           "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile",
           "internal/sandbox.TestPrepareRootfsIgnoresUmask"
@@ -6151,7 +6178,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6186,7 +6213,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41893: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:38639: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
