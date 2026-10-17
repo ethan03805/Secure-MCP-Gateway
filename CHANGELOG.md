@@ -23,6 +23,13 @@ First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3
 - Release label: "not enforced" unless the AT-01 to AT-21 acceptance evidence for the release commit is complete and passing (FR-19.3); there is no automated labelling step yet.
 - The requirement report (`make status`, published on the project site) lists every requirement as verified, partial or unverified; `docs/verification/gap-list.md` lists what no test or record covers.
 
+### Documentation and project site
+
+- Project site: a Control API chapter rendered from `site/data/openapi.json`, which `go run ./tools/openapi` (`make openapi`) writes from `internal/openapi` and the route registrations in the Go sources, with the roles of every operation (`adminapi.DescribeRoute` resolves them as registration does); a Go test fails when the committed file is stale and the regenerate workflow rewrites it on pull requests. The document is also served as `/openapi.json`.
+- Project site: an Install chapter with the published releases (read from the GitHub API at build time) and the verification steps (minisign signature of the checksum file with the key read from `SECURITY.md`, the cosign bundle, SHA-256, `smcpctl package verify`); an Agents chapter replacing the client brief page, with the result and notes of every Appendix K client (new `notes` field in `docs/clients/matrix.json`), including Gemini CLI (needs `GEMINI_API_KEY`), Grok Build, Grok Bot, the ChatGPT agent and Meta Muse (not run), and the Remote Access Profile; a Status section with the console's Playwright results per engine and per test.
+- `docs/status/elements.json`: every element note rewritten from the current code and tests (progress relay, instance restart, FR-5.20 refusal and `-31010`, FR-1.49 collision disabling only the revision, sandbox egress and secret-file mounts, AppArmor and systemd, console cookie sessions, principals and published observation objects, the real-agent results). No implementation state changed.
+- Documentation brought in line with the code: sandbox egress (`egress.md`, `sandbox.md`, the egress and sandbox-launch flows, README), progress relay (`filters.md`, the tool-call flow), instance restart, Appendix C console roles (`operator-guide.md`), anomaly and taint approvals, health checks of the graph mirror and Observation Store, published observation objects, G-10, verification records; the gap list drops the entries that tests now verify or partly verify.
+
 ### Known limitations
 
 - `docs/security-limitations.md` (what the Gateway does not protect against) and `docs/security-review-2026-10.md` (findings of the pre-release review and residual risks).

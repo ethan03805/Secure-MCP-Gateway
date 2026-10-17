@@ -73,7 +73,7 @@ export default function InstallPage() {
           <p className="empty-state">
             No release has been published yet. Until the first tag, build from source (section {CH.n}.2). Pushing a tag{" "}
             <code>v*</code> runs <code>.github/workflows/release.yml</code>, which publishes the archives, the checksum
-            file, SBOMs and the Sigstore bundle described below.
+            file with its minisign signature and Sigstore bundle, and SBOMs.
           </p>
         ) : (
           <>
@@ -140,23 +140,26 @@ export default function InstallPage() {
 
       <Sec no={`${CH.n}.2`} id="install" title="Install">
         <p>
-          <strong>install.sh</strong> (Linux and macOS) downloads the archive for the host and the checksum file, checks
-          the archive&apos;s SHA-256 and installs the binaries into <code>~/.local/bin</code>. It never runs{" "}
-          <code>sudo</code>.
+          <strong>install.sh</strong> (Linux and macOS) downloads the archive for the host, the checksum file and its
+          minisign signature. It verifies the signature with the release key embedded in the script, checks the
+          Sigstore bundle when <code>cosign</code> is installed, then checks the archive&apos;s SHA-256, and installs
+          nothing if any check fails. It installs into <code>~/.local/bin</code> and never runs <code>sudo</code>. On
+          macOS install <code>minisign</code> first (<code>brew install minisign</code>).
         </p>
         <pre className="cmd">
           <code>{`curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version ${tag}`}</code>
         </pre>
         <p>
-          <strong>From source</strong> needs Go (the version in <code>go.mod</code>) and git. Node.js is not needed:
-          the console is committed prebuilt and embedded.
+          <strong>Homebrew</strong>: <code>brew install ethan03805/tap/smcp</code> (checks the archive&apos;s SHA-256
+          from the formula, not the minisign signature). <strong>From source</strong> needs Go (the version in{" "}
+          <code>go.mod</code>) and git; Node.js is not needed, because the console is committed prebuilt and embedded.
         </p>
         <pre className="cmd">
           <code>{`git clone ${REPO_URL}.git
 cd Secure-MCP-Gateway
 go build -trimpath -o build/bin/ ./cmd/...
 export PATH="$PWD/build/bin:$PATH"
-smcpctl bootstrap --dir ~/smcp`}</code>
+smcpctl install          # or: smcpctl bootstrap --dir ~/smcp`}</code>
         </pre>
         <p>
           Then follow the <Link href="/docs/quickstart/">quick start</Link>. macOS runs the Standalone profile,
@@ -166,23 +169,47 @@ smcpctl bootstrap --dir ~/smcp`}</code>
       </Sec>
 
       <Sec no={`${CH.n}.3`} id="verify" title="Verify a release">
-        <Note label="Why two steps">
+        <Note label="Why the checksum file">
           <p>
-            The checksum file binds every archive. The Sigstore bundle binds the checksum file to the release workflow
-            of this repository, so a replaced archive and a replaced checksum file are both detected.
+            The checksum file lists the SHA-256 of every archive. Its minisign signature binds it to the release key, and
+            its Sigstore bundle binds it to the release workflow of this repository, so a replaced archive and a replaced
+            checksum file are both detected.
           </p>
         </Note>
         <ol className="steps">
           <li>
             <p>
-              Download the archive for your platform, <code>smcp_{version}_checksums.txt</code> and{" "}
+              Download the archive for your platform, <code>smcp_{version}_checksums.txt</code>,{" "}
+              <code>smcp_{version}_checksums.txt.minisig</code> and, for the cosign check,{" "}
               <code>smcp_{version}_checksums.txt.sigstore.json</code> from the release.
             </p>
           </li>
           <li>
             <p>
-              Check the checksum file&apos;s signature with <a href="https://docs.sigstore.dev/cosign/">cosign</a>. The
-              release workflow signs it keyless through GitHub OIDC; the command accepts only a certificate issued to{" "}
+              <strong>minisign.</strong>{" "}
+              {key ? (
+                <>
+                  Check the checksum file&apos;s signature with the release key published in{" "}
+                  <a href={`${REPO_URL}/blob/main/SECURITY.md`}>SECURITY.md</a> and embedded in <code>install.sh</code>:{" "}
+                  <code>{key}</code>.
+                </>
+              ) : (
+                <>
+                  No release key is published in <a href={`${REPO_URL}/blob/main/SECURITY.md`}>SECURITY.md</a>, so this
+                  step cannot be done; use the cosign check.
+                </>
+              )}
+            </p>
+            {key && (
+              <pre className="cmd">
+                <code>{`minisign -Vm smcp_${version}_checksums.txt -P ${key}`}</code>
+              </pre>
+            )}
+          </li>
+          <li>
+            <p>
+              <strong>cosign</strong> (optional, independent of the key). The release workflow also signs the checksum
+              file keyless through GitHub OIDC; the command accepts only a certificate issued to{" "}
               <code>.github/workflows/release.yml</code> of this repository.
             </p>
             <pre className="cmd">
@@ -195,32 +222,10 @@ smcpctl bootstrap --dir ~/smcp`}</code>
               <code>{`sha256sum --check --ignore-missing smcp_${version}_checksums.txt   # macOS: shasum -a 256 --check --ignore-missing`}</code>
             </pre>
           </li>
-          <li>
-            <p>
-              <strong>minisign.</strong>{" "}
-              {key ? (
-                <>
-                  Release archives also carry a minisign signature. The release key, published in{" "}
-                  <a href={`${REPO_URL}/blob/main/SECURITY.md`}>SECURITY.md</a> and embedded in <code>install.sh</code>,
-                  is <code>{key}</code>.
-                </>
-              ) : (
-                <>
-                  SRS FR-13.1 asks for minisign-signed archives with the key embedded in <code>install.sh</code>. No
-                  release key is published in <a href={`${REPO_URL}/blob/main/SECURITY.md`}>SECURITY.md</a> yet, so use
-                  the cosign check above. When the key is published this page shows it.
-                </>
-              )}
-            </p>
-            {key && (
-              <pre className="cmd">
-                <code>{`minisign -Vm smcp_${version}_linux_amd64.tar.gz -P ${key}`}</code>
-              </pre>
-            )}
-          </li>
         </ol>
         <p>
-          <code>install.sh</code> performs step 3 itself; it does not run cosign. The residual risk is recorded in the{" "}
+          <code>install.sh</code> performs these checks itself. The procedure for each platform is in the{" "}
+          <Link href="/docs/install/">install guide</Link>; residual risks are in the{" "}
           <Link href="/docs/security-review-2026-10/">security review</Link>.
         </p>
       </Sec>

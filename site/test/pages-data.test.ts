@@ -53,6 +53,8 @@ test("minisign key detection", () => {
   const key = "RWQ" + "A".repeat(53);
   assert.equal(minisignKeyIn(`The key is \`${key}\`.`), key);
   assert.equal(minisignKeyIn("No signed release exists yet."), "");
+  const published = minisignKeyIn(fs.readFileSync(path.join(REPO_ROOT, "SECURITY.md"), "utf8"));
+  assert.match(published, /^RW[A-Za-z0-9+/]{54}$/, "SECURITY.md publishes the release key");
 });
 
 function status(over: Partial<Status>): Status {
