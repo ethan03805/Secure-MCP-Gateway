@@ -94,6 +94,7 @@ func (c *callRun) decisionDetail() map[string]any {
 			"size_limit_bytes": ob.SizeLimit, "timeout_ms": ob.Timeout.Milliseconds(), "egress_grants": append([]string{}, ob.EgressGrants...),
 			"secret_grants": append([]string{}, ob.SecretGrants...), "runtime_profile": ob.RuntimeProfile},
 		"side_effect": d.SideEffect, "source_trust": d.SourceTrust, "tainted": d.Tainted, "duration_us": d.Duration.Microseconds(),
+		"baseline_snapshot_id": d.BaselineSnapshot,
 	}
 	if d.FailedPredicate != "" {
 		m["failed_predicate"] = d.FailedPredicate
@@ -190,6 +191,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, Obligations: dec.Obligations, DecisiveRules: dec.DecisiveRules,
 			InputSchema: ref.Tool.InputSchema, OutputSchema: ref.Tool.OutputSchema,
 			Channel: c.base.Channel, ClientID: c.base.ClientID, ClientAddress: c.base.ClientAddress}
+		call.TraceParent, call.ClientInfo = selfAsserted(req.Params.Meta) // FR-1.44, FR-1.45
 		c.call = call
 		c.prog = g.newProgress(ctx, req, call)
 		defer c.prog.stop()

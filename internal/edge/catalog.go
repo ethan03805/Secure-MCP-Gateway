@@ -18,8 +18,16 @@ import (
 // changes in place when a new policy revision is activated, so methodGate
 // reads it under a lock.
 type catalogSet struct {
-	mu    sync.RWMutex
-	names map[string]bool
+	mu       sync.RWMutex
+	names    map[string]bool
+	revision string // the policy revision the names come from
+}
+
+// rev returns the policy revision of the presented names.
+func (c *catalogSet) rev() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.revision
 }
 
 func (c *catalogSet) has(name string) bool {
@@ -96,8 +104,13 @@ func (g *Gateway) serverOptions() *mcp.ServerOptions {
 	}
 }
 
+// serverInfo identifies the Gateway in every result (FR-1.15): the SDK
+// sets it as _meta.io.modelcontextprotocol/serverInfo on the results it
+// writes, and the edge on the results it writes itself.
+var serverInfo = &mcp.Implementation{Name: "secure-mcp-gateway", Version: backend.Version}
+
 func (g *Gateway) emptyServer(catalog *catalogSet) *mcp.Server {
-	srv := mcp.NewServer(&mcp.Implementation{Name: "secure-mcp-gateway", Version: backend.Version}, g.serverOptions())
+	srv := mcp.NewServer(serverInfo, g.serverOptions())
 	srv.AddReceivingMiddleware(g.methodGate(catalog))
 	return srv
 }
@@ -150,6 +163,7 @@ func (g *Gateway) syncCatalog(ss *sessionServer, snap *policy.Snapshot) {
 		}
 	}
 	ss.catalog.names = want
+	ss.catalog.revision = snap.Revision
 	ss.catalog.mu.Unlock()
 	if len(gone) > 0 {
 		ss.srv.RemoveTools(gone...)
@@ -199,6 +213,9 @@ func (g *Gateway) methodGate(catalog *catalogSet) mcp.Middleware {
 				if p, ok := req.GetParams().(*mcp.CallToolParamsRaw); ok && !catalog.has(p.Name) {
 					return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "Unknown tool"}
 				}
+			}
+			if method == "tools/list" && catalog != nil {
+				return g.pagedList(ctx, catalog, next, method, req)
 			}
 			return next(ctx, method, req)
 		}

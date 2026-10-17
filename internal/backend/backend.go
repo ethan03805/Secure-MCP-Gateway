@@ -733,6 +733,9 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "arguments must be a JSON object"}
 		}
 	}
+	// The southbound request carries only the tool name, the arguments and
+	// the Gateway's own progress token: no harness _meta (trace context,
+	// clientInfo, protocol fields) is forwarded (FR-1.44).
 	params := &mcp.CallToolParams{Name: d.Ref.Tool.Name, Arguments: a}
 	if d.Progress != nil {
 		tok := fmt.Sprintf("smcp-%d", r.progSeq.Add(1))

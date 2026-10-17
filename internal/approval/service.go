@@ -455,10 +455,10 @@ func (s *Service) decide(id string, approve bool, actor, comment string) (Record
 	if approve {
 		state, outcome, reason = StateApproved, "approved", "APPROVAL_GRANTED"
 	}
-	if err := s.rec.Commit(event(&e.r, outcome, reason, map[string]any{"approver": actor, "comment": comment})); err != nil {
+	t := now.UTC()
+	if err := s.rec.Commit(event(&e.r, outcome, reason, map[string]any{"approver": actor, "comment": comment, "decided_at": t.Format(time.RFC3339Nano)})); err != nil {
 		return e.r, fmt.Errorf("%w: %w", ErrAudit, err)
 	}
-	t := now.UTC()
 	e.r.State, e.r.DecidedBy, e.r.DecidedAt, e.r.Comment = state, actor, &t, comment
 	close(e.done)
 	s.broadcastLocked(outcome, &e.r)

@@ -1,6 +1,6 @@
 {
   "catalog": "Secure MCP Gateway Parameter Catalog",
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "source": "ArchitectureV2.md Section 10.3; Secure_MCP_Gateway_SRS.md FR-10.37",
   "fields": {
     "sensitivity": {
@@ -132,6 +132,19 @@
       "sensitivity": "S2",
       "baselinable": false,
       "costClass": "C1"
+    },
+    {
+      "id": "P-009",
+      "name": "trace_parent",
+      "description": "W3C traceparent the harness sent in the request _meta, recorded as self-asserted",
+      "unit": "text",
+      "dataType": "string",
+      "sourceElement": "E-02",
+      "capturePoint": "request-received",
+      "derivation": "Request _meta traceparent when it has the W3C Trace Context format; never forwarded southbound (FR-1.44)",
+      "sensitivity": "S0",
+      "baselinable": false,
+      "costClass": "C0"
     },
     {
       "id": "P-020",

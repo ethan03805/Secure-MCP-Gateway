@@ -118,19 +118,19 @@ R: Results are per session, so they must not be shared by intermediaries.
 
 @FR-1.14 | resultType on results
 P: FR-1
-S: The Protocol Mediator (E-02) SHALL set `resultType` to `"complete"` in every result the Gateway originates.
+S: The Protocol Mediator (E-02) SHALL set `resultType` to `"complete"` in every result the Gateway originates for a 2026-07-28 request.
 A: E-02; F-22; X-01
 V: Test | Collect results from all baseline methods; confirm each carries `resultType: "complete"`.
 SRC: MCP:basic/index §ResultType
-R: `resultType` is mandatory on 2026-07-28 results.
+R: `resultType` is mandatory on 2026-07-28 results. The 2025-11-25 schema does not define it, so legacy-era results (FR-1.46) do not carry it.
 
 @FR-1.15 | Result serverInfo
 P: FR-1
-S: The Protocol Mediator (E-02) SHALL include `_meta.io.modelcontextprotocol/serverInfo` identifying the Gateway in every result the Gateway returns.
+S: The Protocol Mediator (E-02) SHALL include `_meta.io.modelcontextprotocol/serverInfo` identifying the Gateway in every result the Gateway returns for a 2026-07-28 request.
 A: E-02; F-22; X-01
 V: Inspection | Inspect results from each baseline method; confirm the field is present and names the Gateway.
 SRC: MCP:basic/index §Per-response protocol fields
-R: Lets harness adapters identify the Gateway without connection state.
+R: Lets harness adapters identify the Gateway without connection state. In the 2025-11-25 era the Gateway is identified once, by `serverInfo` in the `initialize` result (FR-1.46), and the per-response field does not exist.
 
 @FR-1.16 | Legacy session headers ignored
 P: FR-1

@@ -151,6 +151,9 @@ func run(cfgPath, level string) error {
 		return err
 	}
 	defer a.Close()
+	if obs.Scorer != nil {
+		a.Decider.SetBaseline(obs.Scorer.SnapshotID) // FR-3.11
+	}
 	approvals.Start(ctx, a.Evidence, a.Admin, a.Gateway)
 	obs.Start(ctx, a.Evidence, a.Admin, func() uint64 { return a.Evidence.Dropped()["observation"] })
 	obs.SetMetricSources(analytics.MetricSources{SigningLag: a.Journal.Unsigned, // P-247, P-244 (FR-10.9)

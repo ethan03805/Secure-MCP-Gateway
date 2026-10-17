@@ -20,8 +20,8 @@ const doc = `{
 }`
 
 func TestCompileAndDecide(t *testing.T) {
-	// FR-3.11 also asks for a baseline snapshot ID, which E-30 does not provide yet;
-	// FR-3.2 asks for storage by E-05, which is a file here.
+	// FR-3.11 is verified by TestDecisionRecordFields and FR-3.2 by
+	// internal/policyadmin TestSchemaRejectsWithFieldMessages.
 	reqtest.Verifies(t, "SR-1.3-1")
 	reqtest.Partial(t, "FR-3.2", "FR-3.11")
 	s, err := Compile([]byte(doc))
