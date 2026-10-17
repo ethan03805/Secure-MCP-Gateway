@@ -203,8 +203,6 @@ func (l *Launcher) podman(ctx context.Context, args ...string) *exec.Cmd {
 	return l.run.command(ctx, nil, args...)
 }
 
-func (l *Launcher) podmanEnv(instance map[string]string) []string { return l.run.env(instance) }
-
 // RunAs is the identity that owns the server containers: runtime.run_as,
 // or "" for the Gateway's own identity.
 func (l *Launcher) RunAs() string {
@@ -286,7 +284,7 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 			releaseEgress()
 			return nil, fmt.Errorf("runtime.server %q: %w", spec.Alias, err)
 		}
-		cmd = l.run.command(nil, nil, "start", "--attach", "--interactive", ls.Name)
+		cmd = l.run.instanceCommand(nil, "start", "--attach", "--interactive", ls.Name)
 		release := releaseEgress
 		releaseEgress = func() {
 			// Until the start command runs, the created container is ours
@@ -299,7 +297,7 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 			release()
 		}
 	} else {
-		cmd = l.run.command(nil, values, ls.PodmanArgs()...)
+		cmd = l.run.instanceCommand(values, ls.PodmanArgs()...)
 	}
 	setParentDeath(cmd)
 	stdoutR, stdoutW, err := os.Pipe()

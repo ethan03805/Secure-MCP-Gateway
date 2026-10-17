@@ -115,16 +115,20 @@ func (r runner) env(instance map[string]string) []string {
 	return out
 }
 
-// command builds a Podman command; ctx may be nil for a command that
-// lives as long as its instance.
+// command builds a Podman command bound to ctx.
 func (r runner) command(ctx context.Context, instance map[string]string, args ...string) *exec.Cmd {
 	name, argv := r.argv(args)
-	var cmd *exec.Cmd
-	if ctx == nil {
-		cmd = exec.Command(name, argv...) // #nosec G204 -- fixed binary, argument vector, no shell (SR-4.8-1)
-	} else {
-		cmd = exec.CommandContext(ctx, name, argv...) // #nosec G204 -- as above
-	}
+	return r.prepare(exec.CommandContext(ctx, name, argv...), instance) // #nosec G204 -- fixed binary, argument vector, no shell (SR-4.8-1)
+}
+
+// instanceCommand builds the Podman command that carries an instance's
+// stdio; it lives as long as the instance, not a context.
+func (r runner) instanceCommand(instance map[string]string, args ...string) *exec.Cmd {
+	name, argv := r.argv(args)
+	return r.prepare(exec.Command(name, argv...), instance) // #nosec G204 -- as above
+}
+
+func (r runner) prepare(cmd *exec.Cmd, instance map[string]string) *exec.Cmd {
 	cmd.Env = r.env(instance)
 	if r.runAs != nil {
 		// The Gateway's working directory may be closed to run_as.

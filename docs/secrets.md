@@ -119,7 +119,7 @@ The file is refused when a policy names an undeclared slot or an unknown server,
 | S3 per instance | The path in `file_env`; the file holds the value. | At launch | At instance teardown |
 | S4 environment | The value in `env`. | At launch | Not possible: the value stays in the process environment until the instance exits |
 
-Secret files are created with mode 0600 inside a per-instance directory with mode 0700 under `runtime_dir`, and are overwritten with zeros before they are deleted. When several calls to one server run at once, they share the S2 file; the last one to finish deletes it.
+Secret files are created with mode 0600 inside a per-instance directory with mode 0700 under `runtime_dir`, and are overwritten with zeros before they are deleted. When the sandboxed instance runs under another UID (an auto user namespace, or `[runtime] run_as`), the launcher adds a POSIX ACL entry for exactly that UID to the directory and its files, and later files inherit it ([sandbox.md](sandbox.md), "Environment"); `runtime_dir` then needs a file system with POSIX ACLs, which tmpfs has. When several calls to one server run at once, they share the S2 file; the last one to finish deletes it.
 
 When a version is retired at the end of its rotation overlap, S3 files holding it are rewritten with the current version and S1 grants are rebound, so a rotated secret stops being deliverable at the overlap limit. S4 values cannot be replaced in a running process.
 

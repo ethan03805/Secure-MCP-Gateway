@@ -33,6 +33,8 @@ On macOS, and on Linux without the prerequisites below, the Gateway runs servers
 | `podman-cgroup-v2` | Podman uses cgroup v2 |
 | `cgroup-delegation` | The `memory`, `pids` and `cpu` controllers are delegated to this user |
 | `seccomp` | Podman has seccomp |
+| `run-as` | Only with `runtime.run_as`: the server identity exists and is not root. The Podman checks then run as that identity through sudo, and the `subid` checks read its ranges |
+| `apparmor-server` | Warning only, on AppArmor hosts: the server profile `smcp-server` is loaded in enforce mode (see "AppArmor") |
 
 ```
 smcpctl runtime doctor [--json] [--podman PATH] [--config FILE]
@@ -60,10 +62,12 @@ It verifies every prerequisite first and exits with status 2, listing each missi
 
 | Object | Detail |
 |---|---|
-| Group | `smcp` |
-| Users | `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, `smcp-srv` (system users, no login shell) |
-| Subordinate IDs | 65,536 UIDs and GIDs each for `smcp-core` (runs smcpd and rootless Podman) and `smcp-srv`, in non-overlapping ranges starting at 100000 or after the highest existing range |
-| Directories | `/etc/smcp` (root:smcp 0750); `/var/lib/smcp/{policy,registry,artifacts}` (smcp-core 0700); `/var/lib/smcp/journal` (smcp-evidence 0700); `/var/lib/smcp/keys` (smcp-keys 0700); `/var/lib/smcp/vault` (smcp-vault 0700); `/var/lib/smcp/exports` (smcp-core 0750); `/var/lib/smcp/state` and `/var/lib/smcp/home/smcp-core` (smcp-core 0700); `/var/log/smcp` (0750) |
+| Groups | `smcp`; `smcp-srv` |
+| Users | `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console` (group `smcp`) and `smcp-srv` (group `smcp-srv`, so it cannot read `/etc/smcp`); system users, no login shell |
+| Subordinate IDs | 65,536 UIDs and GIDs each for `smcp-core` (runs smcpd) and `smcp-srv` (runs the server containers with `runtime.run_as`), in non-overlapping ranges starting at 100000 or after the highest existing range |
+| Directories | `/etc/smcp` (root:smcp 0750); `/var/lib/smcp/{policy,registry,artifacts}` (smcp-core 0700); `/var/lib/smcp/journal` (smcp-evidence 0700); `/var/lib/smcp/keys` (smcp-keys 0700); `/var/lib/smcp/vault` (smcp-vault 0700); `/var/lib/smcp/exports` (smcp-core 0750); `/var/lib/smcp/state` and `/var/lib/smcp/home/smcp-core` (smcp-core 0700); `/var/lib/smcp/home/smcp-srv` (smcp-srv 0700); `/var/lib/smcp/srv` (smcp-core:smcp-srv 0750, `runtime.shared_dir`); `/var/log/smcp` (0750) |
+| Server identity | Lingering for `smcp-srv` (its systemd user manager owns `/run/user/<uid>`), `/etc/sudoers.d/smcp-srv` (smcp-core may run Podman, and nothing else, as smcp-srv) and the drop-in `/etc/systemd/system/smcpd.service.d/smcp-srv.conf` (`packaging/linux/setup-server-identity.sh`; see "Server identity") |
+| AppArmor | `/etc/apparmor.d/smcpd` and `/etc/apparmor.d/smcp-server`, loaded in enforce mode when AppArmor is enabled |
 | nftables | `/etc/smcp/smcp.nft`, loaded as table `inet smcp` |
 | systemd units | `/etc/systemd/system/smcp-nftables.service` and `smcpd.service`, enabled |
 | Binaries | With `--bin-dir DIR`: `smcpd`, `smcpctl` and `smcp-refserver` from DIR into `/usr/local/bin` |
@@ -102,10 +106,13 @@ The `[runtime]` table of `smcp.toml`. All keys are optional.
 | `nofile` | 1024 | Open-file limit |
 | `userns_size` | 2048 | UIDs in each instance's user namespace (1024 to 65536) |
 | `user` | `"1000:1000"` | UID:GID inside the container; must be below `userns_size` |
-| `apparmor_profile` | none | Passed as `--security-opt apparmor=<name>` |
+| `apparmor_profile` | none | Passed as `--security-opt apparmor=<name>`. Rootless Podman refuses this option ("Apparmor is not enabled"), so it only works with a rootful Podman, which the Enforced profile does not use; see "AppArmor" for the profile that applies |
 | `selinux_type` | none | Passed as `--security-opt label=type:<type>` |
 | `cgroup_manager` | Podman's default | `"systemd"` or `"cgroupfs"`; use `"cgroupfs"` under `smcpd.service` |
 | `monitor_interval` | `"500ms"` | How often the Runtime Monitor samples each cgroup (50ms to 10s) |
+| `run_as` | none | The server identity (CP-46 `smcp-srv`): every Podman command runs as this user through `sudo -n -E -u <run_as>`, so containers belong to its rootless Podman and subordinate range. Needs `shared_dir`, and `cgroup_manager` unset or `"systemd"`. See "Server identity" |
+| `sudo` | `/usr/bin/sudo` | Absolute path of sudo; only with `run_as` |
+| `shared_dir` | none | Only with `run_as`, and required then: a directory the Gateway writes and `run_as` can read, outside the state directory (`/var/lib/smcp/srv`). It holds the Gateway-built root directory of servers without an image |
 
 Per-server settings, matched by alias. Every `alias` must name a configured `[[server]]`.
 
@@ -132,7 +139,7 @@ write = false              # read-only unless true
 | `memory_bytes`, `cpus`, `pids` | `[runtime]` values | Resource limits for this server |
 | `network` | `"none"` | `"none"`: loopback only. `"egress"`: attached to the Egress Broker and confined to its listeners (see "Egress"); needs `[egress] enabled = true` |
 | `scope` | `"shared"` | Instance scope (FR-5.10). Only `"shared"` (one instance per server) is implemented; `"session"` and `"call"` are refused at load |
-| `userns` | `"auto"` | `"auto"` gives each instance its own range of subordinate UIDs. `"keep-id"` maps the Gateway user into the container so that writable grants on directories the Gateway user owns work; instances of that server then share one mapping |
+| `userns` | `"auto"` | `"auto"` gives each instance its own range of subordinate UIDs. `"keep-id"` maps the identity that runs Podman (the Gateway user, or `run_as`) into the container so that writable grants on directories that user owns work; instances of that server then share one mapping |
 | `allow_spawn` | `false` | Declares that the server may start processes. When false, every process besides the first is a deviation |
 | `on_deviation` | `"alert"` | Containment action for a deviation: record it (`alert`) or also kill the instance (`kill-instance`). Resource-limit breaches always kill |
 | `mount` | none | Host paths granted to this server |
@@ -141,17 +148,56 @@ write = false              # read-only unless true
 
 A mount source must be an existing, clean absolute path (after resolving relative paths), must not contain `,` `=` or a newline, must not be a socket, and must not be, contain or lie inside the Gateway state directory, `/`, `/proc`, `/sys`, `/dev`, `/boot`, `/etc`, `/root`, `/run`, `/var/run`, `/var/lib/containers`, `/var/lib/docker`, `/var/lib/smcp`, `/etc/smcp` or `/run/smcp`. Names containing `docker.sock`, `podman.sock`, `containerd.sock`, `crio.sock`, `dbus` or `systemd` are refused. A target must not be at or below `/`, `/work`, `/tmp`, `/var/tmp`, `/smcp`, `/proc`, `/sys`, `/dev`, `/run` or `/etc`; choose another path such as `/data`.
 
-With `userns = "auto"` the instance runs under a subordinate UID, not the Gateway user. It can read a granted directory only if the files are readable by others (for example mode 0755 for directories and 0644 for files), and write only to a directory that is writable by others. Files it creates belong to that subordinate UID on the host. Use a dedicated directory for writable grants, or `userns = "keep-id"` for the server.
+With `userns = "auto"` the instance runs under a subordinate UID, not the Gateway user. It can read a granted directory only if the files are readable by others (for example mode 0755 for directories and 0644 for files), and write only to a directory that is writable by others. Files it creates belong to that subordinate UID on the host. Use a dedicated directory for writable grants, or `userns = "keep-id"` for the server. With `run_as`, the mount source must also be reachable by the server identity (its Podman resolves it), and `keep-id` maps the server identity, not the Gateway user.
 
 ### Environment
 
 The instance environment is the server's `env` and its resolved `secret_env`. `PATH` and `HOME` of the Gateway are not passed. Values travel in the Podman process environment and are named on the command line (`--env=NAME`), never written there. Names that would configure Podman itself are refused: those starting with `CONTAINERS_`, `PODMAN_`, `BUILDAH_`, `XDG_`, `DBUS_`, `DOCKER_`, `LD_`, `STORAGE_`, `REGISTRY_`, `CONTAINER_`, and `NOTIFY_SOCKET`, `TMPDIR`, `SSL_CERT_*`, the proxy variables, `GODEBUG` and `GOTRACEBACK`.
 
-Secret files (delivery modes S2 and S3, see [secrets.md](secrets.md)) are written by the Secret Broker into a per-instance directory on the host. The sandbox mounts that directory read-only at `/smcp/secrets` and rewrites the file-path variables to match. The files are mode 0600 and belong to the Gateway user, so a server that receives them needs `userns = "keep-id"`; with `"auto"` the launch is refused with a message saying so.
+Secret files (delivery modes S2 and S3, see [secrets.md](secrets.md)) are written by the Secret Broker into a per-instance directory on the host. The sandbox mounts that directory read-only at `/smcp/secrets` and rewrites the file-path variables to match. The files are mode 0600 and belong to the Gateway user. When the instance runs under any other UID (`userns = "auto"`, or `run_as`), the launcher creates the container, reads the host UID that the container user maps to from the created container's `uid_map` (`/proc/<pid>/uid_map` after `podman init`), and adds POSIX ACL entries for exactly that UID: search on the directory and read on each file. Only then does the server start. The broker copies the directory's named-user entries to every file it writes later (per-call S2 files, rotated S3 values). With `run_as` the server identity also gets search on the directory and on its ancestors that the Gateway owns, so that its Podman can resolve the mount source. The owning group and others get nothing, and the directory is scrubbed and removed at teardown as before. The secret runtime directory must be on a file system with POSIX ACLs (tmpfs, ext4, xfs); otherwise the launch fails with a message naming it. With `keep-id` under the Gateway's own identity nothing changes.
+
+## Server identity (`run_as`)
+
+CP-46 names a separate identity, `smcp-srv`, for the server runtime. With
+
+```toml
+[runtime]
+sandbox = "podman"
+run_as = "smcp-srv"
+shared_dir = "/var/lib/smcp/srv"
+```
+
+smcpd (as `smcp-core`) runs every Podman command as `sudo -n -E -u smcp-srv -- <podman> ...`. Rootless Podman runs as the user that starts it, so the containers, their storage (`/var/lib/smcp/home/smcp-srv`), their `conmon` monitors and their subordinate UIDs all belong to `smcp-srv`. A server that escapes its container lands in `smcp-srv`'s range: it cannot read the Gateway's state, keys, journal or configuration (`smcp-srv` is not in group `smcp`), and it cannot signal or trace smcpd.
+
+What the launcher does differently:
+
+- The Podman environment is built for `smcp-srv`: `HOME`, `USER`, `LOGNAME`, `XDG_RUNTIME_DIR=/run/user/<uid>` and `DBUS_SESSION_BUS_ADDRESS` of its user manager. `-E` passes them and the instance values that Podman reads by name (`--env=NAME`); values never appear on a command line.
+- Containers get their cgroups from `smcp-srv`'s systemd user manager (lingering), so `cgroup_manager` must be unset or `"systemd"`; `"cgroupfs"` is refused because the cgroup subtree of `smcpd.service` belongs to `smcp-core`. The Runtime Monitor reads the cgroup files, which are world-readable, as before.
+- The root directory of image-less servers lives in `shared_dir/rootfs`, because the state directory is closed to `smcp-srv`.
+- The egress confinement step (`podman unshare nsenter ... nft`) runs as `smcp-srv`, the owner of the container's user and network namespaces.
+- Secret files get ACL entries for the instance's UID (see "Environment").
+
+Host setup (`packaging/linux/setup-server-identity.sh`, run by `install-enforced.sh`): `smcp-srv` in its own group with home `/var/lib/smcp/home/smcp-srv`; `loginctl enable-linger smcp-srv`; `/var/lib/smcp/srv` (smcp-core:smcp-srv 0750); `/etc/sudoers.d/smcp-srv`:
+
+```
+smcp-core ALL=(smcp-srv) NOPASSWD:SETENV: /usr/bin/podman
+```
+
+and `/etc/systemd/system/smcpd.service.d/smcp-srv.conf`, which orders smcpd after `user@<uid>.service` and adds `ReadWritePaths=-/run/user/<uid>` (Podman's runtime directory; `ProtectSystem=strict` makes `/run` read-only otherwise). The rule lets `smcp-core` run any Podman command as `smcp-srv`, so `smcp-core` controls `smcp-srv`'s containers; the separation protects the Gateway from the servers, not the servers from the Gateway. `smcpctl runtime doctor --config /etc/smcp/smcp.toml` checks the identity and runs `podman info` through the same sudo rule.
+
+Without `run_as`, Podman runs as the Gateway's own identity, as before.
+
+## AppArmor
+
+Rootless Podman cannot apply an AppArmor profile to a container: it refuses `--security-opt apparmor=` without root, and its own default profile is not applied either. The packaged profile `packaging/linux/apparmor/smcp-server` therefore attaches by path: `profile smcp-server /smcp/bin/**`. The Gateway mounts the executable of every server that runs without an image at `/smcp/bin/<name>`, and when the runtime executes that path inside the container's mount namespace, the process enters the profile. No host program lives at `/smcp/bin`. `install-enforced.sh` installs it as `/etc/apparmor.d/smcp-server` and loads it in enforce mode.
+
+The profile adds to the container profile above: it denies reading any process environment in `/proc` (S4 secret values live there, so a helper process the server starts cannot read them), writes below `/smcp`, writes to `/proc` and `/sys` settings, mounts, `pivot_root`, tracing other processes and every capability, following Podman's `containers-default` profile. `cat /proc/<container pid>/attr/current` prints `smcp-server (enforce)`; denials appear in `journalctl -k -g 'profile="smcp-server"'`. Site rules go into `/etc/apparmor.d/local/smcp-server`.
+
+Servers that run from an image execute other paths and are not confined by this profile; Podman's seccomp profile, the dropped capabilities, the user namespace and the read-only root still apply. `smcpctl runtime doctor` warns (`apparmor-server`) while the profile is not loaded.
 
 ## The sandbox profile
 
-Every instance is started as:
+Every instance is started as (with `run_as`, prefixed by `sudo -n -E -u <run_as> --`):
 
 ```
 podman run --interactive --name smcp-<alias>-<id> --label smcp.managed=1 --label smcp.gateway=<gateway id>
@@ -272,5 +318,5 @@ Errors that Podman reports when it starts a container appear in the server's std
 - Declared behavior rules come from `[[runtime.server]]` (`allow_spawn`, `on_deviation`), not yet from signed manifests (E-13).
 - File opens outside mounts and network connection attempts are prevented (read-only root, no network) but not observed: observing them needs eBPF or a seccomp notifier.
 - Mount grants come from the operator's configuration; the intersection with manifest-declared and policy-granted roots (SR-4.6-1) needs manifests and policy roots.
-- The Gateway and rootless Podman run as one identity, `smcp-core`; CP-46's separate `smcp-srv` identity is created with its range but not used. Rootless Podman runs as the user that starts it, so `smcp-srv` would need either a privileged helper that starts Podman as `smcp-srv` or a Podman API service running as `smcp-srv` that smcpd drives remotely; the launcher's `podman unshare` confinement step and its cgroup sampling then need changes too. See [enforced-profile.md](enforced-profile.md).
-- An AppArmor profile is shipped for smcpd itself (`packaging/linux/apparmor/smcpd`, applied by `smcpd.service`). None is shipped for the server containers: Podman applies its default profile where it can, and `apparmor_profile` and `selinux_type` select others.
+- Without `run_as`, the Gateway and rootless Podman run as one identity. With `run_as`, `smcp-core` can run any Podman command as `smcp-srv` (the sudoers rule names the Podman binary, not its arguments), and the `conmon` processes and the Podman client of each instance run as `smcp-srv`: smcpd cannot signal them directly and stops instances through `podman kill`.
+- The `smcp-server` AppArmor profile confines servers started from `/smcp/bin` (image-less servers) only. No SELinux policy module is shipped for servers or smcpd; `selinux_type` passes a type to Podman.
