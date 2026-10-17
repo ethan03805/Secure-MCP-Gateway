@@ -16,16 +16,20 @@ Licensed under the [Apache License 2.0](LICENSE). Security reports: [SECURITY.md
 
 ## Status
 
-**Every architecture element has code and is wired into `smcpd`; none is complete. The published releases are the pre-releases v1.0.0-rc.1 and v1.0.0-rc.2; v1.0.0 is not tagged yet.** The specification baseline is SRS V1.2 with architecture V2.3. Each element's state and main gaps are in [`docs/status/elements.json`](docs/status/elements.json); the requirement report that CI builds from the tests (FR-12.10) lists which requirements are verified, partly verified or not yet verified, and the project site shows both. Produce the report locally with `make status` (writes `build/reqreport.md`).
+**Every architecture element has code and is wired into `smcpd`. Five elements (E-07, E-09, E-17, E-30, E-31) are recorded as implemented: every requirement allocated to them is verified, none is deferred from release 1.0 and no other gap is known; the other 28 are partial (E-16 and E-32 have every requirement verified but ship without an SELinux module and without Parquet in the release archives). This README describes release v1.0.0; the pre-releases v1.0.0-rc.1 and v1.0.0-rc.2 rehearsed the release pipeline.** The specification baseline is SRS V1.2 with architecture V2.3. Each element's state and main gaps are in [`docs/status/elements.json`](docs/status/elements.json); the requirement report that CI builds from the tests (FR-12.10) lists which requirements are verified, partly verified or not yet verified, and the project site shows both. Produce the report locally with `make status` (writes `build/reqreport.md`).
 
-No build is labelled "enforced". A release is labelled "enforced" only when every acceptance scenario AT-01 to AT-21 passes on the Linux Enforced profile for the release commit (FR-19.3); the release workflow applies the label from the status data (`go run ./tools/reqreport label`). Every scenario has a claiming test in `internal/acceptance` or another suite ([docs/acceptance.md](docs/acceptance.md)); AT-07, AT-08, AT-11, AT-12 and AT-17 have no result in the Enforced profile yet, so the label is "not enforced". macOS always runs "not enforced".
+In the CI status data of main `788c8b4`, 413 of the 529 requirements are verified, 95 partly verified and 21 not verified (12 of them parents waiting on their children), none failing; 1,340 of 1,353 Go tests pass and 13 are skipped, with 76% statement coverage. The remaining gaps are listed in [docs/verification/gap-list.md](docs/verification/gap-list.md).
 
-The latest CI figures (tests, coverage, requirement verification per element, acceptance scenarios per profile, performance measurements, real-agent results, hostile-fixture results and filter corpus rates) are on the project site's [Status page](https://secure-mcp-gateway-pearl.vercel.app/status/). The CI runners are not reference hardware, so the FR-11 performance figures are partial claims.
+A release is labelled "enforced" only when every acceptance scenario AT-01 to AT-21 passes on the Linux Enforced profile for the release commit (FR-19.3); the release workflow applies the label from the status data (`go run ./tools/reqreport label`). Every scenario has a claiming test in `internal/acceptance` or another suite ([docs/acceptance.md](docs/acceptance.md)). In the status data of main `788c8b4` all 21 scenarios pass in the Enforced profile and 20 in the Standalone profile (AT-08, worker containment, runs only in the Enforced profile), so that commit's label is "enforced"; the label of v1.0.0 is computed from the CI run of the tagged commit. An installation on macOS, or on Linux without the Enforced prerequisites, always reports "not enforced".
+
+The latest CI figures (tests, coverage, requirement verification per element, acceptance scenarios per profile, performance measurements, real-agent results, hostile-fixture results and filter corpus rates) are on the project site's [Status page](https://secure-mcp-gateway-pearl.vercel.app/status/); the [Install page](https://secure-mcp-gateway-pearl.vercel.app/install/) shows the releases and the results of the tap and reference-package verification workflows. Every FR-11 measurement is within its budget on the 4-CPU CI runners (decision latency 0.03 ms p95, Gateway-added overhead 18.9 ms p95, observation overhead 0.97 ms, console audit queries 803 ms p95, idle memory 103 MiB), but the runners are not reference hardware, so these are partial claims.
+
+The Real agents workflow runs each local client CLI through a Gateway and judges every scenario from the journal: Claude Code 2.1.302, Codex CLI 0.142.2, Hermes Agent 0.17.0, OpenCode 1.15.13 and Goose 1.55.0 pass sign-in, catalog, allowed, denied, approval and ungranted calls. Gemini CLI is not run (no model credentials in CI) and Grok Build has no publicly installable CLI. No cloud agent (Grok Bot, ChatGPT agent, Meta Muse) has a dated run through the Remote Access Profile (FR-15.9).
 
 Known issues that affect first use:
 
 - An installation bootstrapped before the CA fix still has a local CA with IP name constraints, which the native Claude Code build and OpenCode (Bun runtime) reject. `smcpd` warns at startup; `smcpctl keys rotate ca` replaces the CA ([docs/agents-conformance.md](docs/agents-conformance.md)).
-- Until v1.0.0 is tagged, `install.sh` needs `--version v1.0.0-rc.2` (GitHub's latest-release link skips pre-releases), and the Homebrew tap installs v1.0.0-rc.2.
+- `install.sh` without `--version` installs the latest final release; a pre-release needs `--version` (GitHub's latest-release link skips pre-releases). The Homebrew tap formula is replaced by the release workflow of each final release.
 
 ## Scope of v1
 
@@ -47,7 +51,7 @@ Known issues that affect first use:
 ```sh
 # From a release: verifies the minisign signature of the checksum file (and the Sigstore bundle when
 # cosign is installed), then the archive's SHA-256; installs to ~/.local/bin
-curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version v1.0.0-rc.2
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version v1.0.0
 
 # Homebrew
 brew install ethan03805/tap/smcp

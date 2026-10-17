@@ -160,3 +160,96 @@ export function minisignKeyIn(text: string): string {
   const m = /(?:^|[\s`])(RW[A-Za-z0-9+/]{54})(?:$|[\s`])/m.exec(text);
   return m ? m[1] : "";
 }
+
+/**
+ * Results of the separate verification workflows (tap, reference-packages),
+ * which scripts/publish-workflow-result.sh publishes to site-data/workflows.json.
+ *
+ *   SITE_WORKFLOWS_URL  default DEFAULT_WORKFLOWS_URL
+ *
+ * prepareWorkflowSnapshot() runs from next.config.ts; pages read it with
+ * loadWorkflowResults(). A failed request is recorded with its reason.
+ */
+export const DEFAULT_WORKFLOWS_URL =
+  "https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/site-data/workflows.json";
+
+export type WorkflowResult = {
+  workflow: string;
+  requirements: string[];
+  ref: string;
+  commit: string;
+  conclusion: string;
+  date: string;
+  runUrl: string;
+};
+export type WorkflowSnapshot = {
+  source: "remote" | "unavailable";
+  reason: string;
+  url: string;
+  fetchedAt: string;
+  results: WorkflowResult[];
+};
+
+const WORKFLOW_SNAPSHOT_FILE = path.join(process.cwd(), ".status", "workflows.json");
+
+/** Converts site-data/workflows.json; entries without a workflow name or full commit are dropped. Throws when it is not a list. */
+export function parseWorkflowResults(data: unknown): WorkflowResult[] {
+  if (!Array.isArray(data)) throw new Error("workflows.json is not a list");
+  const str = (x: unknown) => (typeof x === "string" ? x : "");
+  return (data as Record<string, unknown>[])
+    .filter((w) => !!w && typeof w === "object" && str(w.workflow) !== "" && /^[0-9a-f]{40}$/.test(str(w.commit)))
+    .map((w) => ({
+      workflow: str(w.workflow),
+      requirements: Array.isArray(w.requirements) ? w.requirements.filter((r): r is string => typeof r === "string") : [],
+      ref: str(w.ref),
+      commit: str(w.commit),
+      conclusion: str(w.conclusion),
+      date: str(w.date),
+      runUrl: /^https:\/\/github\.com\//.test(str(w.runUrl)) ? str(w.runUrl) : "",
+    }))
+    .sort((a, b) => a.workflow.localeCompare(b.workflow));
+}
+
+/** True when a workflow ran for a release tag (tools/reqreport counts it as a full claim), not a branch (partial). */
+export function isReleaseRef(ref: string): boolean {
+  return /^v\d/.test(ref);
+}
+
+export async function prepareWorkflowSnapshot(): Promise<WorkflowSnapshot> {
+  const url = process.env.SITE_WORKFLOWS_URL?.trim() || DEFAULT_WORKFLOWS_URL;
+  let snap: WorkflowSnapshot;
+  try {
+    snap = {
+      source: "remote",
+      reason: "",
+      url,
+      fetchedAt: new Date().toISOString(),
+      results: parseWorkflowResults(await getJSON(url, 5000)),
+    };
+  } catch (e) {
+    snap = {
+      source: "unavailable",
+      reason: e instanceof Error ? e.message : String(e),
+      url,
+      fetchedAt: new Date().toISOString(),
+      results: [],
+    };
+  }
+  fs.mkdirSync(path.dirname(WORKFLOW_SNAPSHOT_FILE), { recursive: true });
+  fs.writeFileSync(WORKFLOW_SNAPSHOT_FILE, JSON.stringify(snap, null, 1));
+  return snap;
+}
+
+export function loadWorkflowResults(): WorkflowSnapshot {
+  try {
+    return JSON.parse(fs.readFileSync(WORKFLOW_SNAPSHOT_FILE, "utf8")) as WorkflowSnapshot;
+  } catch {
+    return {
+      source: "unavailable",
+      reason: "the build did not read the workflow results",
+      url: DEFAULT_WORKFLOWS_URL,
+      fetchedAt: new Date().toISOString(),
+      results: [],
+    };
+  }
+}

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { OPENAPI_FILE, apiDocHref, parseOpenApi } from "../src/lib/openapi.ts";
-import { assetKind, minisignKeyIn, parseReleases } from "../src/lib/release.ts";
+import { assetKind, isReleaseRef, minisignKeyIn, parseReleases, parseWorkflowResults } from "../src/lib/release.ts";
 import { consoleResults } from "../src/lib/console-results.ts";
 import { loadMatrix, resultFor } from "../src/lib/matrix.ts";
 import { REPO_ROOT } from "../src/lib/content.ts";
@@ -47,6 +47,27 @@ test("releases: drafts are dropped and asset kinds are recognized", () => {
   assert.equal(assetKind("smcp_0.1.0_checksums.txt.sigstore.json"), "sigstore");
   assert.equal(assetKind("smcp_0.1.0_linux_amd64.tar.gz.minisig"), "minisign");
   assert.equal(assetKind("smcp_0.1.0_linux_amd64.tar.gz.sbom.json"), "sbom");
+});
+
+test("workflow results: invalid entries are dropped, run links must be GitHub, release refs are recognized", () => {
+  const sha = "4ba218973fd4279d3e385cd4751285417a68103f";
+  const res = parseWorkflowResults([
+    { workflow: "tap", requirements: ["FR-13.3", 7], ref: "v1.0.0-rc.2", commit: sha, conclusion: "success", date: "2026-10-17T22:15:07Z", runUrl: "https://github.com/o/r/actions/runs/1" },
+    { workflow: "reference-packages", requirements: ["FR-14.9"], ref: "main", commit: sha, conclusion: "success", runUrl: "javascript:alert(1)" },
+    { workflow: "short-commit", commit: "4ba2189" },
+    { commit: sha },
+    null,
+  ]);
+  assert.deepEqual(
+    res.map((w) => w.workflow),
+    ["reference-packages", "tap"],
+  );
+  assert.equal(res[0].runUrl, "", "a run link that is not on github.com is dropped");
+  assert.deepEqual(res[1].requirements, ["FR-13.3"]);
+  assert.throws(() => parseWorkflowResults({ workflow: "tap" }), /not a list/);
+  assert.equal(isReleaseRef("v1.0.0"), true);
+  assert.equal(isReleaseRef("v1.0.0-rc.2"), true);
+  assert.equal(isReleaseRef("main"), false);
 });
 
 test("minisign key detection", () => {
