@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T01:02:51Z",
-  "commit": "713580e56c7cbbcaad3003caeb8d1324b1db9b7b",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/713580e56c7cbbcaad3003caeb8d1324b1db9b7b",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38988910895",
+  "generatedAt": "2026-10-17T01:14:56Z",
+  "commit": "b5abf50b85bab4095b1f2ed078665b2ffc7bd594",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/b5abf50b85bab4095b1f2ed078665b2ffc7bd594",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38989838966",
   "tests": {
-    "total": 295,
-    "passed": 290,
+    "total": 319,
+    "passed": 309,
     "failed": 0,
-    "skipped": 5,
-    "durationSec": 101.6,
+    "skipped": 10,
+    "durationSec": 99.6,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 15,
+        "passed": 17,
         "failed": 0,
         "skipped": 0
       },
@@ -37,7 +37,7 @@
       },
       {
         "name": "internal/audit",
-        "passed": 14,
+        "passed": 15,
         "failed": 0,
         "skipped": 0
       },
@@ -79,7 +79,7 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 25,
+        "passed": 26,
         "failed": 0,
         "skipped": 0
       },
@@ -100,6 +100,12 @@
         "passed": 57,
         "failed": 0,
         "skipped": 0
+      },
+      {
+        "name": "internal/graph",
+        "passed": 15,
+        "failed": 0,
+        "skipped": 5
       },
       {
         "name": "internal/health",
@@ -176,7 +182,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.1,
+    "totalPct": 76,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -184,7 +190,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 23.9
+        "pct": 30.4
       },
       {
         "name": "cmd/smcpd",
@@ -208,7 +214,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 80.9
+        "pct": 81.2
       },
       {
         "name": "internal/authguard",
@@ -236,7 +242,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.9
+        "pct": 90.8
       },
       {
         "name": "internal/egress",
@@ -245,6 +251,10 @@
       {
         "name": "internal/filters",
         "pct": 88.9
+      },
+      {
+        "name": "internal/graph",
+        "pct": 82.6
       },
       {
         "name": "internal/health",
@@ -318,10 +328,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 82,
-    "partial": 104,
+    "verified": 83,
+    "partial": 116,
     "failing": 0,
-    "unverified": 372,
+    "unverified": 359,
     "byElement": [
       {
         "element": "E-01",
@@ -520,15 +530,15 @@
         "name": "Graph Database Engine",
         "total": 8,
         "verified": 0,
-        "partial": 0,
+        "partial": 4,
         "failing": 0
       },
       {
         "element": "E-26",
         "name": "Data Access Service",
         "total": 10,
-        "verified": 0,
-        "partial": 0,
+        "verified": 1,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -544,7 +554,7 @@
         "name": "Data Lifecycle & Memory Manager",
         "total": 13,
         "verified": 1,
-        "partial": 3,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -2150,7 +2160,9 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "internal/consoleapi.TestAuditBrowserFiltersPagingAndDetail"
+          "internal/consoleapi.TestAuditBrowserFiltersPagingAndDetail",
+          "internal/graph.TestGraphControlAPI",
+          "internal/graph.TestNeo4jQueriesRetentionAndEngineStatus"
         ]
       },
       {
@@ -2243,26 +2255,38 @@
       {
         "id": "FR-9",
         "element": "E-25",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestGraphMirrorDownDoesNotAffectCalls",
+          "internal/graph.TestUnavailableGraphNeverBlocksOrFailsEvidence"
+        ]
       },
       {
         "id": "FR-9.1",
         "element": "E-25",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestMirrorProjectsCallsSessionsDecisionsAndApprovals",
+          "internal/graph.TestNeo4jSchemaMigrationAndIndexes",
+          "internal/graph.TestSchemaHasConstraintForEveryAppendixDLabel"
+        ]
       },
       {
         "id": "FR-9.2",
         "element": "E-26",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestMigrationsApplyInOrderAndRefuseNewer",
+          "internal/graph.TestNeo4jSchemaMigrationAndIndexes"
+        ]
       },
       {
         "id": "FR-9.3",
         "element": "E-26",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/graph.TestCatalogOneTemplatePerOperation"
+        ]
       },
       {
         "id": "FR-9.4",
@@ -2303,14 +2327,19 @@
       {
         "id": "FR-9.10",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestEngineCheckAndMemorySampling"
+        ]
       },
       {
         "id": "FR-9.11",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestEngineCheckAndMemorySampling",
+          "internal/graph.TestNeo4jQueriesRetentionAndEngineStatus"
+        ]
       },
       {
         "id": "FR-9.12",
@@ -2327,8 +2356,10 @@
       {
         "id": "FR-9.14",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestRetentionDeletesExpiredMirrorRecordsOnly"
+        ]
       },
       {
         "id": "FR-9.15",
@@ -2350,15 +2381,20 @@
         "element": "E-01",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestSmcpdServesWithGraphConfigured",
+          "internal/e2e.TestGraphMirrorDownDoesNotAffectCalls",
           "internal/e2e.TestTransportAndAuthenticationRules",
-          "internal/edge.TestNoSnapshotFailsClosed"
+          "internal/edge.TestNoSnapshotFailsClosed",
+          "internal/graph.TestUnavailableGraphNeverBlocksOrFailsEvidence"
         ]
       },
       {
         "id": "FR-9.18",
         "element": "E-25",
         "status": "unverified",
-        "tests": []
+        "tests": [
+          "internal/graph.TestNeo4jSchemaMigrationAndIndexes"
+        ]
       },
       {
         "id": "FR-10",
@@ -2709,6 +2745,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestGraphCLI",
           "cmd/smcpctl.TestOfflineOpsCommands",
           "cmd/smcpctl.TestOnlineOpsCommands"
         ]
@@ -3446,14 +3483,19 @@
       {
         "id": "SR-1.13-1",
         "element": "E-26",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestNeo4jInjectedTextIsNeverExecuted",
+          "internal/graph.TestParametersAreValidatedAndNeverQueryText"
+        ]
       },
       {
         "id": "SR-1.13-2",
         "element": "E-26",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestTemplateDigestRefusesModifiedSet"
+        ]
       },
       {
         "id": "SR-1.14-1",
@@ -3883,8 +3925,10 @@
       {
         "id": "SR-4.2-1",
         "element": "E-25",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestEngineCheckAndMemorySampling"
+        ]
       },
       {
         "id": "SR-4.2-2",
@@ -4302,7 +4346,10 @@
         "element": "E-21",
         "status": "partial",
         "tests": [
-          "internal/audit.TestExporterCopiesOnce"
+          "internal/audit.TestExporterCopiesOnce",
+          "internal/graph.TestMirrorExactlyOncePerEventAcrossCrashAndRestart",
+          "internal/graph.TestMirrorProjectsCallsSessionsDecisionsAndApprovals",
+          "internal/graph.TestNeo4jMirrorExactlyOnceAfterCrash"
         ]
       },
       {
@@ -4330,8 +4377,10 @@
       {
         "id": "SR-6.14-1",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestRetentionDeletesExpiredMirrorRecordsOnly"
+        ]
       },
       {
         "id": "SR-6.15-1",
@@ -4381,8 +4430,10 @@
       {
         "id": "SR-7.1-1",
         "element": "E-26",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestTransactionFunctionsHoldOnlyDatabaseWork"
+        ]
       },
       {
         "id": "SR-7.2-1",
@@ -4399,8 +4450,11 @@
       {
         "id": "SR-7.4-1",
         "element": "E-25",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/graph.TestEngineCheckAndMemorySampling",
+          "internal/graph.TestNeo4jQueriesRetentionAndEngineStatus"
+        ]
       },
       {
         "id": "SR-7.5-1",
@@ -4783,6 +4837,6 @@
   "hostile": [],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
