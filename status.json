@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T21:10:28Z",
-  "commit": "1c8021fa93d8d90c3e9e1d0d29b0bab49e314ead",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1c8021fa93d8d90c3e9e1d0d29b0bab49e314ead",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39068541788",
+  "generatedAt": "2026-10-17T21:30:08Z",
+  "commit": "0a0640020362b4c6781b1d9e23bca0ca3724c34b",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/0a0640020362b4c6781b1d9e23bca0ca3724c34b",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39069871357",
   "tests": {
-    "total": 1289,
-    "passed": 1269,
+    "total": 1292,
+    "passed": 1272,
     "failed": 2,
     "skipped": 18,
-    "durationSec": 1038.4,
+    "durationSec": 1079.1,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -67,7 +67,7 @@
       },
       {
         "name": "internal/acceptance",
-        "passed": 19,
+        "passed": 20,
         "failed": 0,
         "skipped": 1
       },
@@ -79,7 +79,7 @@
       },
       {
         "name": "internal/acceptance/offline",
-        "passed": 20,
+        "passed": 21,
         "failed": 0,
         "skipped": 0
       },
@@ -139,7 +139,7 @@
       },
       {
         "name": "internal/backup",
-        "passed": 3,
+        "passed": 4,
         "failed": 0,
         "skipped": 0
       },
@@ -498,7 +498,7 @@
       },
       {
         "name": "internal/backup",
-        "pct": 77.8
+        "pct": 78.6
       },
       {
         "name": "internal/baseline",
@@ -526,7 +526,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.3
+        "pct": 91.4
       },
       {
         "name": "internal/egress",
@@ -542,7 +542,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.6
+        "pct": 84
       },
       {
         "name": "internal/gwtest",
@@ -666,7 +666,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 82.5
+        "pct": 80
       },
       {
         "name": "internal/tunnel",
@@ -678,7 +678,7 @@
       },
       {
         "name": "scripts/agents",
-        "pct": 66
+        "pct": 66.2
       },
       {
         "name": "scripts/itest-client",
@@ -700,8 +700,8 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 395,
-    "partial": 106,
+    "verified": 397,
+    "partial": 104,
     "failing": 5,
     "unverified": 23,
     "byElement": [
@@ -925,8 +925,8 @@
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
-        "verified": 5,
-        "partial": 6,
+        "verified": 6,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -965,8 +965,8 @@
         "element": "E-33",
         "name": "Harness Adapter Kit",
         "total": 20,
-        "verified": 5,
-        "partial": 11,
+        "verified": 6,
+        "partial": 10,
         "failing": 0
       }
     ],
@@ -3872,9 +3872,10 @@
       {
         "id": "FR-12.12",
         "element": "E-33",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/adapter.TestSessionHelper"
+          "internal/adapter.TestSessionHelper",
+          "docs/verification/FR-12.12.md:5"
         ]
       },
       {
@@ -6128,11 +6129,13 @@
       {
         "id": "SR-7.7-1",
         "element": "E-28",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT19BackupRestoreRollback",
+          "internal/acceptance.TestBackupUnderLoadComponents",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestAT19BackupRestoreRollback",
+          "internal/acceptance/offline.TestBackupUnderLoadComponents",
           "internal/audit.TestSealUnsignedAndFlush",
           "internal/e2e.TestOpsOnlineBackup",
           "internal/edge.TestDrainStopReleasesInFlightResults"
@@ -6909,7 +6912,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:43955: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:38989: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7026,7 +7029,7 @@
     }
   ],
   "acceptance": {
-    "commit": "1c8021fa93d8d90c3e9e1d0d29b0bab49e314ead",
+    "commit": "0a0640020362b4c6781b1d9e23bca0ca3724c34b",
     "label": "not enforced",
     "reasons": [
       "AT-07 Safe evidence display: no automated or recorded result in the Enforced profile",
@@ -7690,15 +7693,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "1c8021fa93d8d90c3e9e1d0d29b0bab49e314ead",
-    "generatedAt": "2026-10-17T20:53:01Z",
+    "commit": "0a0640020362b4c6781b1d9e23bca0ca3724c34b",
+    "generatedAt": "2026-10-17T21:12:00Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000005615"
+      "runner": "GitHub Actions 1000005668"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7715,7 +7718,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.030347,
+        "value": 0.026209,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7727,7 +7730,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 17.754451,
+        "value": 17.686804,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7739,18 +7742,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 1.225577750000003,
+        "value": 1.280781750000001,
         "budget": 1,
         "samples": 8000,
         "pass": false,
-        "method": "p95 P-213 with observation enabled (16.042 ms, mean of 15.787, 15.951, 16.427, 16.003) minus disabled (14.817 ms, mean of 14.750, 14.508, 14.735, 15.273), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
+        "method": "p95 P-213 with observation enabled (15.358 ms, mean of 15.241, 15.351, 15.951, 14.890) minus disabled (14.078 ms, mean of 14.072, 14.496, 14.118, 13.624), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 816.666291,
+        "value": 816.328923,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7762,7 +7765,7 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 104.30078125,
+        "value": 105.96484375,
         "budget": 4096,
         "samples": 1,
         "pass": true,
