@@ -106,7 +106,8 @@ done
 
 say "The example server is a signed, verified package (FR-14.10)"
 "$bin/smcpctl" package list --config "$cfg"
-if "$bin/smcpctl" health --config "$cfg" | grep -q unverified_servers; then
+"$bin/smcpctl" health --config "$cfg" > "$work/package-health.json"
+if grep -q unverified_servers "$work/package-health.json"; then
   fail "the bootstrap example server is not served from a verified package"
 fi
 
