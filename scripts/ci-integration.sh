@@ -439,6 +439,12 @@ network = "egress"
 [egress]
 enabled = true
 
+# The egress checks pass loopback URLs as tool arguments; the request
+# filter refuses those by default (URL_PRIVATE_ADDRESS). The network
+# confinement and the broker's own grant check are what is tested here.
+[filters.urls]
+allow_private = true
+
 [[egress.grant]]
 server = "net"
 host = "127.0.0.1"
