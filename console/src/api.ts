@@ -1,6 +1,8 @@
-// Control API client. The bearer token is held in sessionStorage for the
-// tab only; the CSP forbids inline and third-party script, which is what
-// keeps it out of reach of injected code.
+// Control API client. The console signs in for a browser session
+// (SR-2.6-1): the session ID is an HttpOnly, Secure, SameSite=Strict cookie
+// that script cannot read, and no bearer token reaches the page. Every
+// state-changing request sends the session's CSRF token and an If-Match
+// precondition with the last ETag the control API answered (SR-8.9-1).
 
 export type Role = "administrator" | "operator" | "policy_author" | "approver" | "session_approver" | "auditor" | "researcher";
 
@@ -22,46 +24,29 @@ export function loginPath(role: Role): string {
   return "/api/v1/console/login";
 }
 
-/** The sign-out route of each account kind. */
-export function logoutPath(role: Role): string {
-  if (role === "administrator") return "/admin/v1/logout";
-  if (role === "approver") return "/api/v1/approvals/logout";
-  return "/api/v1/console/logout";
-}
+/** The sign-out route of a browser session (every account kind). */
+export const logoutPath = "/admin/v1/session/logout";
 
 const loginPaths = new Set(["/admin/v1/login", "/api/v1/approvals/login", "/api/v1/console/login"]);
 
+/** The signed-in browser session as the page knows it (no secret but the CSRF token). */
 export interface Credentials {
-  token: string;
   role: Role;
-  user: string;
+  actor: string;
+  csrf: string;
   expiresAt: number;
 }
 
-const KEY = "smcp.console.credentials";
-
-export function loadCredentials(): Credentials | null {
-  try {
-    const raw = sessionStorage.getItem(KEY);
-    if (!raw) return null;
-    const c = JSON.parse(raw) as Credentials;
-    if (!c.token || c.expiresAt < Date.now()) {
-      sessionStorage.removeItem(KEY);
-      return null;
-    }
-    return c;
-  } catch {
-    return null;
-  }
+/** The answer of a login route in cookie mode, and of GET /api/v1/console/session. */
+export interface SessionAnswer {
+  role: Role;
+  actor: string;
+  csrf_token: string;
+  expires_at: string;
 }
 
-export function saveCredentials(c: Credentials | null): void {
-  try {
-    if (c) sessionStorage.setItem(KEY, JSON.stringify(c));
-    else sessionStorage.removeItem(KEY);
-  } catch {
-    // Storage may be blocked; the session then lasts until reload.
-  }
+export function credentialsOf(a: SessionAnswer): Credentials {
+  return { role: a.role, actor: a.actor, csrf: a.csrf_token, expiresAt: Date.parse(a.expires_at) || Date.now() + 8 * 3600_000 };
 }
 
 /** An error answer of the control API, or a network failure (status 0). */
@@ -81,12 +66,13 @@ export class ApiError extends Error {
   }
 }
 
-let current: Credentials | null = loadCredentials();
+let current: Credentials | null = null;
 let onUnauthorized: (() => void) | null = null;
+/** The control-state revision of the last answer (SR-8.9-1). */
+let revision = "";
 
 export function setCredentials(c: Credentials | null): void {
   current = c;
-  saveCredentials(c);
 }
 export function credentials(): Credentials | null {
   return current;
@@ -95,11 +81,43 @@ export function setUnauthorizedHandler(f: () => void): void {
   onUnauthorized = f;
 }
 
-function headers(json: boolean): Headers {
+function isMutation(method: string): boolean {
+  return method !== "GET" && method !== "HEAD";
+}
+
+export interface RequestOptions {
+  signal?: AbortSignal;
+  /** A refresh the console makes on its own: not user activity for the CP-29 idle limit. */
+  background?: boolean;
+  /** Extra headers (the login routes ask for a cookie session). */
+  headers?: Record<string, string>;
+}
+
+function headers(method: string, json: boolean, o: RequestOptions = {}): Headers {
   const h = new Headers({ Accept: "application/json" });
   if (json) h.set("Content-Type", "application/json");
-  if (current) h.set("Authorization", `Bearer ${current.token}`);
+  if (o.background) h.set("X-SMCP-Background", "1");
+  if (current && isMutation(method)) {
+    h.set("X-CSRF-Token", current.csrf);
+    if (revision) h.set("If-Match", revision);
+  }
+  for (const [k, v] of Object.entries(o.headers ?? {})) h.set(k, v);
   return h;
+}
+
+function noteRevision(res: Response): void {
+  const tag = res.headers.get("ETag");
+  if (tag) revision = tag;
+}
+
+/** Restores the browser session of this tab after a reload; null when there is none. */
+export async function restoreSession(): Promise<Credentials | null> {
+  try {
+    const s = await request<SessionAnswer & { session?: string }>("GET", "/api/v1/console/session", undefined, { background: true });
+    return s.session === "cookie" ? credentialsOf(s) : null;
+  } catch {
+    return null;
+  }
 }
 
 async function parse(res: Response): Promise<unknown> {
@@ -114,26 +132,30 @@ async function parse(res: Response): Promise<unknown> {
 
 function toError(res: Response, body: unknown): ApiError {
   const e = (body as { error?: { code?: string; message?: string } } | null)?.error;
+  if (e?.code === "revision_stale")
+    return new ApiError(res.status, e.code, "The Gateway state changed since this view was last read (another change reached it first). Check the view and submit again.", body);
+  if (e?.code === "csrf_invalid") return new ApiError(res.status, e.code, "The request token of this session was missing or wrong. Reload the page and try again.", body);
   if (e) return new ApiError(res.status, e.code ?? "", e.message ?? res.statusText, body);
   if (res.status === 404 || res.status === 405) return new ApiError(res.status, "", "This route is not served by this Gateway build.", body);
   return new ApiError(res.status, "", typeof body === "string" && body ? body.slice(0, 300) : res.statusText || "request failed", body);
 }
 
-export async function request<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+export async function request<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, o: RequestOptions = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
       method,
-      headers: headers(method === "POST"),
+      headers: headers(method, method === "POST", o),
       body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
-      credentials: "omit",
+      credentials: "same-origin",
       cache: "no-store",
-      signal,
+      signal: o.signal,
     });
   } catch (err) {
     if ((err as Error).name === "AbortError") throw err;
     throw new ApiError(0, "network", "The Gateway did not answer. Check that smcpd is running and that this page is open at the admin listener address.");
   }
+  noteRevision(res);
   const parsed = await parse(res);
   if (!res.ok) {
     const e = toError(res, parsed);
@@ -143,13 +165,20 @@ export async function request<T>(method: "GET" | "POST" | "DELETE", path: string
   return parsed as T;
 }
 
-export const get = <T>(path: string, signal?: AbortSignal) => request<T>("GET", path, undefined, signal);
+export const get = <T>(path: string, signal?: AbortSignal, background = false) => request<T>("GET", path, undefined, { signal, background });
 export const post = <T>(path: string, body?: unknown) => request<T>("POST", path, body);
 export const del = <T>(path: string) => request<T>("DELETE", path);
 
+/** Signs in for a browser session at a login route. */
+export async function signIn(path: string, body: Record<string, string>): Promise<Credentials> {
+  const a = await request<SessionAnswer>("POST", path, body, { headers: { "X-SMCP-Session": "cookie" } });
+  return credentialsOf(a);
+}
+
 /** Fetches a GET route as text (for files the console shows, not saves). */
 export async function getText(path: string): Promise<string> {
-  const res = await fetch(path, { headers: headers(false), credentials: "omit", cache: "no-store" });
+  const res = await fetch(path, { headers: headers("GET", false), credentials: "same-origin", cache: "no-store" });
+  noteRevision(res);
   const text = await res.text();
   if (!res.ok) {
     let body: unknown = text;
@@ -168,9 +197,9 @@ export function asApiError(e: unknown): ApiError {
   return e instanceof ApiError ? e : new ApiError(0, "client", String(e));
 }
 
-/** Downloads a GET response as a file with the bearer token attached. */
+/** Downloads a GET response as a file. */
 export async function download(path: string, fallbackName: string): Promise<void> {
-  const res = await fetch(path, { headers: headers(false), credentials: "omit", cache: "no-store" });
+  const res = await fetch(path, { headers: headers("GET", false), credentials: "same-origin", cache: "no-store" });
   if (!res.ok) throw toError(res, await parse(res));
   const blob = await res.blob();
   const cd = res.headers.get("Content-Disposition") ?? "";
@@ -191,8 +220,9 @@ export interface SSEMessage {
 }
 
 /**
- * Reads a text/event-stream with the bearer token (EventSource cannot send
- * an Authorization header). Reconnects with backoff until aborted.
+ * Reads a text/event-stream over fetch (so that the stream ends with the
+ * session and its headers are under control). Reconnects with backoff until
+ * aborted.
  */
 export function stream(path: string, onMessage: (m: SSEMessage) => void, onState: (open: boolean) => void): () => void {
   const ctl = new AbortController();
@@ -200,7 +230,7 @@ export function stream(path: string, onMessage: (m: SSEMessage) => void, onState
   const run = async () => {
     while (!ctl.signal.aborted) {
       try {
-        const res = await fetch(path, { headers: headers(false), credentials: "omit", cache: "no-store", signal: ctl.signal });
+        const res = await fetch(path, { headers: headers("GET", false, { background: true }), credentials: "same-origin", cache: "no-store", signal: ctl.signal });
         if (!res.ok || !res.body) {
           onState(false);
           if (res.status === 401 || res.status === 403 || res.status === 404) return;

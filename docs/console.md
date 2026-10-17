@@ -24,13 +24,13 @@ Approval links in harness error messages (`data.approvalUrl`) and in desktop not
 
 The roles and their routes are the matrix of SRS Appendix C, listed in [api/console.md](api/console.md#roles). The console asks the Gateway which routes the signed-in role may use (`GET /api/v1/console/session`), lists only the views that role may open and offers only the actions it may take; the control API enforces the same table.
 
-Choose the account kind on the sign-in page (Administrator; Approver; Session Approver; or Operator, Policy Author, Auditor or Researcher, whose role comes from the account), then enter the username and password. A sign-in lasts 30 minutes; when it ends the console returns to the sign-in page and keeps the path you were on. **Sign out** ends the token on the Gateway at once.
+Choose the account kind on the sign-in page (Administrator; Approver; Session Approver; or Operator, Policy Author, Auditor or Researcher, whose role comes from the account), then enter the username and password. A sign-in ends after 15 minutes without use or 8 hours after sign-in (CP-29); live updates the console makes on its own do not count as use. When it ends the console returns to the sign-in page and keeps the path you were on. Reloading the page keeps the sign-in. **Sign out** ends the session on the Gateway at once.
 
 First installation: when `smcpctl bootstrap` ran without `--admin-password-file`, it printed a one-use bootstrap token valid for 24 hours. On the sign-in page select **set the administrator password with a bootstrap token**, enter the token and a password of at least 12 characters, then sign in.
 
 Failed sign-ins are rate limited per source and locked out per account with backoff, as for the control API; the error shows the reason code (`signin_failed`, `rate_limited` with the wait time, `busy`).
 
-The token is kept in the tab's session storage and sent as a bearer header; it is not a cookie, so another site cannot make the browser use it. The page's Content-Security-Policy allows no inline or third-party script.
+The sign-in is a browser session (SR-2.6-1): an `HttpOnly`, `Secure`, `SameSite=Strict` cookie that page script cannot read, with a new session ID at every sign-in. No bearer token reaches the page. Every action that changes Gateway state sends the session's CSRF token and an `If-Match` header with the last control-state revision the console read (SR-8.9-1). When another administrator or `smcpctl` changed the Gateway in between, the action is refused with "The Gateway state changed since this view was last read"; check the view and submit again. The page's Content-Security-Policy allows no inline or third-party script. The protocol is in [api/console.md](api/console.md#browser-sessions).
 
 ## Layout
 
@@ -118,7 +118,7 @@ Each view shows `Loading` while it reads, an empty state that says what would fi
 
 Every action works with the keyboard. **Skip to content** is the first focusable element. Tab moves through the navigation, view controls and table headers; Enter or Space activates; Escape closes a dialog and returns focus. Focus is always visible. Moving to a view moves focus to its heading. State is never shown by color alone: each state has a word and a shape (square for good, diamond for degraded or warning, triangle for failure or refusal, ring for pending). Motion is limited to what the browser does natively and respects reduced-motion settings. The console is checked against WCAG 2.2 AA with axe-core in light and dark schemes in CI; automated checks do not cover every criterion.
 
-Supported browsers (FR-8.30): current Chromium-based browsers, Firefox and Safari on macOS. CI runs the acceptance tests in Chromium only.
+Supported browsers (FR-8.30): current Chromium-based browsers, Firefox and Safari on macOS. CI runs the acceptance and accessibility tests on Playwright's Chromium, Firefox and WebKit engines, one fresh Gateway per engine. Playwright ships one version of each engine, and WebKit is not Safari itself, so the requirement's "two most recent major versions" is not tested.
 
 ## Building the console
 
@@ -128,7 +128,9 @@ The sources are in `console/` (React, TypeScript, Vite; no component library). T
 |---|---|
 | `make console` | `npm ci` if needed, typecheck, and build `console/dist` |
 | `make console-check` | Fails when the committed `console/dist` differs from a fresh build |
-| `make console-e2e` | Builds `smcpd`, bootstraps a temporary instance in `console/.e2e` (with the Secret Vault, the Egress Broker, an account per role and desktop notifications off), and runs the Playwright acceptance tests (`e2e/views.spec.ts` has one test per view) and the accessibility tests against it |
+| `make console-e2e` | For each of Chromium, Firefox and WebKit (`npm run test:e2e`, `e2e/run-browsers.mjs`): builds `smcpd`, bootstraps a temporary instance in `console/.e2e` (with the Secret Vault, the Egress Broker, an account per role and desktop notifications off), and runs the Playwright acceptance tests (`e2e/views.spec.ts` has one test per view, `e2e/session.spec.ts` covers the browser session) and the accessibility tests against it. `npx playwright test --project=chromium` runs one engine |
+
+Requirement claims: tests claim requirements with annotations (`claims()` in `e2e/helpers.ts`; type `requirement-partial`, or `requirement` for a full claim). The reporter `e2e/reqreport.ts` writes them as `build/console-<engine>-test.json` in the `go test -json` format, and `e2e/claims.mjs` adds `build/console-browsers-test.json` with the cross-engine claims: FR-8.30 (partial) when every test passed on all three engines, FR-8.34 when every view G-01 to G-14 has a passing claim of its FR-8 requirement on each engine. The CI `status` job merges these files into the requirement report.
 | `cd console && npm run dev` | Development server on `http://localhost:5173` proxying `/api` and `/admin` to `https://127.0.0.1:8444`; sign-in from the development server is refused by the origin check unless the admin listener is configured for it, so use it for layout work |
 
 After changing anything under `console/src`, run `make console` and commit `console/dist` with the change. The CI job `console` fails when they differ.
@@ -139,6 +141,6 @@ After changing anything under `console/src`, run `make console` and commit `cons
 - G-03, G-04 and G-06 produce the `[observation]` configuration instead of publishing Audit Profiles, Observation Policies or an Anomaly Response Policy, because those policy objects have no control API yet. G-08 shows memory budgets; they are edited in `[graph]` and `[observation]`.
 - The investigation graph needs the graph mirror (`[graph] enabled`, Neo4j); without it the event view shows the journal's phases only. The z-score timeline needs a promoted baseline with characterized contexts.
 - The Researcher's pseudonymized view of S2 fields is not implemented; the raw record route is closed to the Researcher instead. S3 payload grants are not implemented.
-- The console uses bearer tokens, not the cookie session with CSRF token and `If-Match` preconditions of SR-2.6-1 and SR-8.9-1.
+- The `If-Match` revision is one revision of the whole control state, not one per object, so an unrelated change by another client also makes the console re-read before its next action.
 - The journal browser reads the journal files on every request; it has no index, so large journals are slow to page (FR-11.8).
-- Playwright tests do not yet feed the requirement report; their claims are annotations only. CI runs them in Chromium only (FR-8.30 asks for Firefox and WebKit too).
+- Browser coverage is Playwright's engines (one version each), not the two latest releases of each browser that FR-8.30 names.

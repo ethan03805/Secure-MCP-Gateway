@@ -57,11 +57,16 @@ export function useResource<T>(path: string | null, opts: { live?: boolean } = {
   });
   const reload = useCallback(() => setNonce((n) => n + 1), []);
   const v = live ? version : 0;
+  const last = useRef<{ path: string | null; nonce: number } | null>(null);
   useEffect(() => {
     if (!path) return;
+    // A refetch caused only by the live channel is not user activity
+    // (CP-29 idle limit); a new path or an explicit reload is.
+    const background = last.current?.path === path && last.current.nonce === nonce;
+    last.current = { path, nonce };
     const ctl = new AbortController();
     setState((s) => (s.path === path && s.status === "ok" ? { ...s, refreshing: true } : { path, status: "loading", refreshing: false }));
-    get<T>(path, ctl.signal).then(
+    get<T>(path, ctl.signal, background).then(
       (data) => setState({ path, status: "ok", data, refreshing: false }),
       (err: unknown) => {
         if ((err as Error).name === "AbortError") return;

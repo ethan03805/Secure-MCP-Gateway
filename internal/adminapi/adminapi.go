@@ -3,19 +3,22 @@
 // (CP-03), separate from the harness listener so that harness session
 // tokens are never accepted for administration (SR-2.5-1).
 //
-// Authentication is a bearer token in the Authorization header, never a
-// cookie, so a browser cannot attach it to a cross-site request. Two kinds
-// of token are accepted: the local operator token in the state directory
-// (keys/admin.token, used by smcpctl on the same machine) and short-lived
-// administrator session tokens issued by POST /admin/v1/login against the
-// administrator password. Requests are further refused when they carry a
-// foreign Origin or a cross-site Sec-Fetch-Site, and every POST must be
-// application/json; together these make the API CSRF-safe.
+// Clients other than the browser authenticate with a bearer token in the
+// Authorization header: the local operator token in the state directory
+// (keys/admin.token, used by smcpctl on the same machine) or a short-lived
+// sign-in token issued by POST /admin/v1/login against the administrator
+// password. The console instead signs in for a browser session: a
+// Secure, HttpOnly, SameSite=Strict cookie with the CP-29 limits, whose
+// state-changing requests also need a CSRF token and an If-Match revision
+// precondition (browser.go, SR-2.6-1, SR-8.9-1). Requests are further
+// refused when they carry a foreign Origin or a cross-site Sec-Fetch-Site,
+// and every POST must be application/json.
 //
 // Endpoints (all under /admin/v1):
 //
 //	POST login            {username, password} -> {token, expires_in}
 //	POST logout
+//	POST session/logout   end the caller's browser session (browser.go)
 //	POST bootstrap        {token, password}: one-use admin password setup
 //	GET  health           full health report
 //	POST stop             {reason}: emergency stop (FR-4.14), audited
@@ -47,6 +50,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
@@ -104,10 +108,14 @@ type Server struct {
 	operator  [32]byte
 	mux       *http.ServeMux
 
+	rev      atomic.Uint64 // control-state revision (browser.go)
+	revEpoch string
+
 	mu       sync.Mutex
 	sessions map[[32]byte]adminSession
-	authn    []Authenticator // roles.go
-	routes   []RouteInfo     // rolematrix.go
+	browser  map[[32]byte]*browserSession // browser.go
+	authn    []Authenticator              // roles.go
+	routes   []RouteInfo                  // rolematrix.go
 }
 
 type adminSession struct {
@@ -137,9 +145,11 @@ func New(o Options) (*Server, error) {
 		o.Now = time.Now
 	}
 	s := &Server{cfg: o.Config, ctl: o.Controller, rec: o.Evidence, guard: o.Guard, approvals: o.Approvals, log: o.Log, now: o.Now,
-		operator: sha256.Sum256([]byte(tok)), mux: http.NewServeMux(), sessions: map[[32]byte]adminSession{}}
+		operator: sha256.Sum256([]byte(tok)), mux: http.NewServeMux(), sessions: map[[32]byte]adminSession{}, browser: map[[32]byte]*browserSession{},
+		revEpoch: ids.Secret()[:8]}
 	s.HandlePublic("POST /admin/v1/login", s.login)
 	s.HandlePublic("POST /admin/v1/bootstrap", s.bootstrap)
+	s.HandlePublic("POST /admin/v1/session/logout", s.browserLogout)
 	s.Handle("POST /admin/v1/logout", s.logout)
 	s.Handle("GET /admin/v1/health", s.health)
 	s.Handle("POST /admin/v1/stop", s.stop)
@@ -179,6 +189,9 @@ func (s *Server) Handler() http.Handler {
 		if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
 			writeError(w, http.StatusForbidden, "origin_refused", "cross-site requests are refused")
 			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/admin/") {
+			h.Set("ETag", s.Revision()) // SR-8.9-1; mutations replace it (browser.go)
 		}
 		if r.Method == http.MethodPost {
 			mt, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -223,30 +236,23 @@ func bearer(r *http.Request) string {
 	return ""
 }
 
-// authenticated accepts the operator token or a live administrator session
-// token. Session tokens of the harness listener are unknown here.
+// authenticated accepts the operator token, a live administrator session
+// token, a registered authenticator's token, or a browser session cookie
+// (browser.go). A request with an Authorization header is authenticated by
+// it alone. Session tokens of the harness listener are unknown here.
 func (s *Server) authenticated(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tok := bearer(r)
-		sum := sha256.Sum256([]byte(tok))
-		actor := ""
-		if tok != "" && subtle.ConstantTimeCompare(sum[:], s.operator[:]) == 1 {
-			actor = "operator-token"
-		} else if tok != "" {
-			s.mu.Lock()
-			if as, ok := s.sessions[sum]; ok {
-				if s.now().Before(as.expires) {
-					actor = "admin:" + as.user
-				} else {
-					delete(s.sessions, sum)
-				}
+		actor, role := s.tokenActor(tok)
+		done := func() {}
+		if tok == "" {
+			var ok bool
+			actor, role, r, done, ok = s.browserActor(w, r)
+			if !ok {
+				return
 			}
-			s.mu.Unlock()
 		}
-		role := RoleAdministrator
-		if actor == "" {
-			actor, role, _ = s.extraActor(tok)
-		}
+		defer done()
 		if actor == "" {
 			if err := s.rec.Commit(audit.Event{Class: "auth_failure", Origin: "E-24", Outcome: "deny", ReasonCode: "ADMIN_AUTH_FAILED", PolicyStatus: "not_evaluated",
 				Detail: map[string]any{"path": r.URL.Path}}); err != nil {

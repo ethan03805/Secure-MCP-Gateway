@@ -127,7 +127,7 @@ export function toneOf(state: string): Tone {
 }
 
 export function ErrorBlock({ error, retry, what, doing }: { error: ApiError; retry?: () => void; what?: string; doing?: string }) {
-  if (error.status === 403) {
+  if (error.status === 403 && error.code !== "csrf_invalid") {
     return (
       <div className="notice notice-bad" role="alert">
         <p>

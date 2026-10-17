@@ -17,6 +17,7 @@ var ops = []op{
 	// adminapi (E-24 base)
 	{Pattern: "POST /admin/v1/login", Tag: "access", Summary: "Sign in as the Administrator; returns a bearer token valid for 30 minutes", Doc: "console.md"},
 	{Pattern: "POST /admin/v1/logout", Tag: "access", Summary: "End the Administrator session token", Doc: "console.md"},
+	{Pattern: "POST /admin/v1/session/logout", Tag: "access", Summary: "End the caller's browser session (cookie and X-CSRF-Token; SR-2.6-1)", Doc: "console.md"},
 	{Pattern: "POST /admin/v1/bootstrap", Tag: "access", Summary: "Redeem the one-use bootstrap token and set the Administrator password", Doc: "console.md"},
 	{Pattern: "GET /admin/v1/health", Tag: "control", Summary: "Enforcement state, health causes, profile, policy revision and session count", Doc: "console.md"},
 	{Pattern: "POST /admin/v1/stop", Tag: "control", Summary: "Emergency stop: refuse every tool call (FR-4.14)", Doc: "console.md"},

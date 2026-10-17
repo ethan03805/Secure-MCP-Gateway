@@ -2,7 +2,7 @@
 // enforcement state and emergency stop, the navigation of the views the
 // role may open, and the current view.
 import { Component, useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { asApiError, credentials, loginPath, logoutPath, post, roleLabel, setCredentials, setUnauthorizedHandler, type ApiError, type Credentials, type Role } from "./api";
+import { asApiError, loginPath, logoutPath, post, restoreSession, roleLabel, setCredentials, setUnauthorizedHandler, signIn, type ApiError, type Credentials, type Role } from "./api";
 import { LiveProvider, useLive } from "./data";
 import { EmergencyControl, HealthProvider, isStopped, useHealth } from "./health";
 import { PermProvider, usePerm } from "./perm";
@@ -41,9 +41,7 @@ function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void;
       const role: Role = kind === "console" ? "operator" : kind;
       const body: Record<string, string> = { username: user.trim(), password };
       if (kind === "session_approver") body.role = "session_approver";
-      const r = await post<{ token: string; expires_in: number; role?: Role }>(loginPath(role), body);
-      const got = (r.role ?? role) as Role;
-      onSignedIn({ token: r.token, role: got, user: user.trim(), expiresAt: Date.now() + r.expires_in * 1000 });
+      onSignedIn(await signIn(loginPath(role), body));
     } catch (err) {
       setError(asApiError(err));
     } finally {
@@ -197,7 +195,7 @@ function StatusStrip({ cred, onSignOut }: { cred: Credentials; onSignOut: () => 
       <span className="strip-spacer" />
       {(perm.can("POST /admin/v1/stop") || perm.can("POST /admin/v1/resume")) && <EmergencyControl compact />}
       <span className="strip-item">
-        {roleLabel[cred.role]} <Mono>{cred.user || perm.actor}</Mono>
+        {roleLabel[cred.role]} <Mono>{perm.actor || cred.actor}</Mono>
       </span>
       <button type="button" className="btn-quiet" onClick={onSignOut}>
         Sign out
@@ -298,7 +296,8 @@ function Shell({ cred, onSignOut }: { cred: Credentials; onSignOut: () => void }
 }
 
 export function App() {
-  const [cred, setCred] = useState<Credentials | null>(() => credentials());
+  // undefined while the page asks whether this tab still has a session.
+  const [cred, setCred] = useState<Credentials | null | undefined>(undefined);
   const [expired, setExpired] = useState(false);
   useEffect(() => {
     setUnauthorizedHandler(() => {
@@ -306,6 +305,15 @@ export function App() {
       setCred(null);
       setExpired(true);
     });
+    let live = true;
+    void restoreSession().then((c) => {
+      if (!live) return;
+      setCredentials(c);
+      setCred(c);
+    });
+    return () => {
+      live = false;
+    };
   }, []);
   useEffect(() => {
     if (!cred) return;
@@ -320,18 +328,25 @@ export function App() {
     return () => window.clearTimeout(t);
   }, [cred]);
   const signOut = async () => {
-    const c = credentials();
-    if (c) {
-      try {
-        await post(logoutPath(c.role), {});
-      } catch {
-        // The token is dropped locally either way.
-      }
+    try {
+      await post(logoutPath, {});
+    } catch {
+      // The server ends the session on idle in any case.
     }
     setCredentials(null);
     setCred(null);
     setExpired(false);
   };
+  if (cred === undefined) {
+    return (
+      <main className="signin" id="main">
+        <h1>Gateway console</h1>
+        <p className="lede" role="status">
+          Checking the sign-in of this tab.
+        </p>
+      </main>
+    );
+  }
   if (!cred) {
     return (
       <SignIn
@@ -345,7 +360,7 @@ export function App() {
     );
   }
   return (
-    <PermProvider key={cred.token} role={cred.role}>
+    <PermProvider key={cred.csrf} role={cred.role}>
       <Shell cred={cred} onSignOut={() => void signOut()} />
     </PermProvider>
   );
