@@ -17,7 +17,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { bin, mcpCall, work } from "./gateway";
+import { bin, mcpCall, startDedicated, work } from "./gateway";
 import { claims, forget, g, mock, signIn } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
@@ -780,4 +780,220 @@ test("G-10 with the keyboard: retire a second revision, server suspend dialog, p
   await expect(page.getByText(/No egress operation matches/)).toBeVisible();
   await axe(page, "Egress filtered");
   console.log(`G-10/Egress keyboard (${browserName}): ${states} states passed axe`);
+});
+
+// Actions no other acceptance test performed (FR-8.33): G-08 key rotation
+// and graph rebuild, G-14 journal export downloads, Runtime instance kill,
+// and, on a dedicated Gateway so that the shared one keeps its server and
+// its health, G-10 suspend and enable of the running server and the G-01
+// acknowledgment of a latched integrity cause.
+
+function keysStatus(config: string): { listener_certificate: { serial: string }; evidence_public_key: string } {
+  return JSON.parse(execFileSync(join(bin, "smcpctl"), ["keys", "status", "--config", config], { encoding: "utf8" })) as { listener_certificate: { serial: string }; evidence_public_key: string };
+}
+
+test("G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.16", "FR-8.22");
+  test.setTimeout(300_000);
+  await startIn(page, browserName, "Data server and memory", "Data server and memory");
+  const before = keysStatus(g.config);
+  await activate(page, page.getByRole("button", { name: "Rotate the listener certificate" }));
+  await expect(page.getByText("Rotated: tls.")).toBeVisible();
+  await axe(page, "G-08 listener certificate rotated");
+  await fromTop(page);
+  await activate(page, page.getByRole("button", { name: "Rotate the evidence key" }));
+  await expect(page.getByText("Rotated: evidence.")).toBeVisible();
+  await axe(page, "G-08 evidence key rotated");
+  const after = keysStatus(g.config);
+  expect(after.listener_certificate.serial).not.toBe(before.listener_certificate.serial);
+  expect(after.evidence_public_key).not.toBe(before.evidence_public_key);
+  // A harness still connects with the same CA after the listener rotation.
+  const r = await mcpCall(g, "ref_read_file", { path: "hello.txt" }, { expect: g.marker, timeout: "60s" }).done;
+  expect(r.code, r.out).toBe(0);
+
+  // The acceptance Gateway runs without a graph database: the real rebuild
+  // request is refused with the API's reason. The accepted case is then
+  // shown with the control API's 202 answer mocked. An action that reloads
+  // its section can leave focus on the page body (WebKit); each walk then
+  // starts from the top, as a person would.
+  await fromTop(page);
+  await activate(page, page.getByRole("button", { name: "Rebuild from the journal" }));
+  const refused = page.getByRole("alert").filter({ hasText: "Could not complete the rebuild." });
+  await expect(refused).toContainText("the graph mirror is disabled");
+  await expect(refused).toContainText("graph_disabled");
+  await axe(page, "G-08 rebuild refused");
+  await page.route("**/api/v1/graph/rebuild", (rt) => rt.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ status: "queued" }) }));
+  await fromTop(page);
+  await activate(page, page.getByRole("button", { name: "Rebuild from the journal" }));
+  await expect(page.getByText("A rebuild is queued.")).toBeVisible();
+  await axe(page, "G-08 rebuild queued (mocked)");
+  await page.unroute("**/api/v1/graph/rebuild");
+
+  await navTo(page, "Audit investigation", "Audit investigation");
+  for (const [button, ext] of [
+    ["Export CSV", "csv"],
+    ["Export JSON Lines", "jsonl"],
+  ] as const) {
+    const dl = page.waitForEvent("download");
+    await fromTop(page);
+    await activate(page, page.getByRole("button", { name: button }));
+    const d = await dl;
+    expect(d.suggestedFilename()).toMatch(new RegExp(`\\.${ext}$`));
+    const lines = readFileSync(await d.path(), "utf8").trim().split("\n");
+    expect(lines.length).toBeGreaterThan(1);
+    if (ext === "csv") expect(lines[0]).toContain("event_id");
+    else expect(JSON.parse(lines[0]!)).toHaveProperty("event_id");
+    await axe(page, `G-14 ${button} downloaded`);
+  }
+  console.log(`G-08/G-14 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32");
+  test.setTimeout(300_000);
+  const id = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0";
+  let state = "running";
+  let killed: { reason?: string } | null = null;
+  const instance = () => ({
+    instance_id: id,
+    alias: "ref",
+    container: "smcp-ref-0f1e2d3c",
+    state,
+    removed: false,
+    scope: "shared",
+    started: "2026-10-17T12:00:00Z",
+    ...(state === "killed" ? { ended: "2026-10-17T12:05:00Z", kill_reason: killed?.reason } : {}),
+    oom_killed: false,
+    deviations: 0,
+  });
+  await page.route(
+    (u) => u.pathname.startsWith("/api/v1/runtime/instances"),
+    async (rt) => {
+      const p = new URL(rt.request().url()).pathname;
+      if (rt.request().method() === "POST" && p === `/api/v1/runtime/instances/${id}/kill`) {
+        killed = rt.request().postDataJSON() as { reason?: string };
+        state = "killed";
+        return rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ state }) });
+      }
+      if (p === `/api/v1/runtime/instances/${id}`) return rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ instance: instance(), stderr_tail: "" }) });
+      if (p === "/api/v1/runtime/instances") return rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ instances: [instance()] }) });
+      return rt.continue();
+    },
+  );
+  await startIn(page, browserName, "Runtime", "Runtime");
+  await activate(page, page.getByRole("table", { name: "Server instances" }).getByRole("link").first());
+  await expect(page.getByRole("heading", { level: 1, name: "Server instance" })).toBeVisible();
+  await axe(page, "Runtime instance open");
+  await activate(page, page.getByRole("button", { name: "Kill this instance" }));
+  const dialog = page.getByRole("dialog", { name: "Kill this instance" });
+  await expect(dialog).toBeVisible();
+  await typeInto(page, dialog.getByLabel(/Reason/), "keyboard kill test");
+  await axe(page, "Runtime kill dialog filled");
+  await activate(page, dialog.getByRole("button", { name: "Kill", exact: true }));
+  await expect(page.getByText("The instance was killed.")).toBeVisible();
+  expect(killed).toEqual({ reason: "keyboard kill test" });
+  await expect(page.getByRole("definition").filter({ hasText: /^killed$/ })).toBeVisible();
+  await axe(page, "Runtime instance killed");
+  console.log(`Runtime keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway", async ({ browser, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.18", "FR-8.3");
+  test.setTimeout(600_000);
+  const d = await startDedicated(`kbd-dedicated-${browserName}`);
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  try {
+    const page = await context.newPage();
+    tabKey = browserName === "webkit" ? "Alt+Tab" : "Tab";
+    states = 0;
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const signInKbd = async () => {
+      await page.goto(d.adminURL + "/");
+      await tabTo(page, page.getByLabel("Password"));
+      await page.keyboard.type(d.adminPassword);
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("heading", { level: 1, name: "Gateway control" })).toBeVisible();
+      await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
+    };
+    await signInKbd();
+    let r = await mcpCall(d, "ref_read_file", { path: "hello.txt" }, { expect: d.marker, timeout: "60s" }).done;
+    expect(r.code, r.out).toBe(0);
+
+    // G-10: suspend the running server.
+    await navTo(page, "Servers and library", "Servers and library");
+    await activate(page, page.getByRole("link", { name: "Library and trust anchors" }));
+    const revs = page.getByRole("table", { name: "Package revisions" });
+    await expect(revs.getByRole("row").filter({ hasText: "enabled" })).toHaveCount(1);
+    await activate(page, revs.getByRole("button", { name: /^Suspend smcp-ref-filesystem / }));
+    const sd = page.getByRole("dialog", { name: /^Suspend smcp-ref-filesystem / });
+    await typeInto(page, sd.getByLabel("Reason (optional, recorded)"), "keyboard suspend test");
+    await axe(page, "G-10 suspend dialog filled");
+    await activate(page, sd.getByRole("button", { name: "Suspend", exact: true }));
+    await expect(page.getByText(/^Suspended smcp-ref-filesystem .*A running instance was stopped and its tools left the catalog\.$/)).toBeVisible();
+    await expect(revs.getByRole("row").filter({ hasText: "verified-disabled" })).toHaveCount(1);
+    await axe(page, "G-10 suspended");
+    r = await mcpCall(d, "ref_read_file", { path: "hello.txt" }, { expect: d.marker, timeout: "60s" }).done;
+    expect(r.code).not.toBe(0);
+    expect(r.out).toContain("empty tool catalog");
+
+    // G-10: enable it again; servers are launched at start, so smcpd restarts.
+    await fromTop(page);
+    await activate(page, revs.getByRole("button", { name: /^Enable smcp-ref-filesystem / }));
+    const ed = page.getByRole("dialog", { name: /^Enable smcp-ref-filesystem / });
+    await expect(ed).toBeVisible();
+    await axe(page, "G-10 enable dialog");
+    await activate(page, ed.getByRole("button", { name: "Enable", exact: true }));
+    await expect(page.getByText(/^Enabled smcp-ref-filesystem .* as ref\./)).toBeVisible();
+    await expect(revs.getByRole("row").filter({ hasText: "enabled" })).toHaveCount(1);
+    await axe(page, "G-10 enabled");
+    await d.restart();
+    r = await mcpCall(d, "ref_read_file", { path: "hello.txt" }, { expect: d.marker, timeout: "60s" }).done;
+    expect(r.code, r.out).toBe(0);
+
+    // G-01: an unreadable CA bundle latches trust_anchor_invalid, an
+    // integrity cause that needs an acknowledgment (FR-7.13). The check runs
+    // every 30 s.
+    // Console sessions are held in memory and ended with the restart.
+    await signInKbd();
+    const caFile = join(d.dir, "state", "tls", "ca.crt");
+    const ca = readFileSync(caFile);
+    writeFileSync(caFile, "not a certificate\n");
+    const ack = page.getByRole("button", { name: "Acknowledge trust_anchor_invalid" });
+    try {
+      for (let i = 0; i < 18 && !(await ack.isVisible()); i++) {
+        await page.waitForTimeout(5_000);
+        await page.reload();
+        await expect(page.getByRole("heading", { level: 1, name: "Gateway control" })).toBeVisible();
+        await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
+      }
+    } finally {
+      writeFileSync(caFile, ca);
+    }
+    await expect(ack).toBeVisible();
+    await axe(page, "G-01 integrity cause latched");
+    await fromTop(page);
+    await activate(page, ack);
+    await expect(ack).toHaveCount(0);
+    await expect(page.getByRole("table", { name: "Health monitor causes" }).getByRole("row").filter({ hasText: "trust_anchor_invalid" })).toContainText("admin");
+    await axe(page, "G-01 cause acknowledged");
+    // With the bundle restored and the acknowledgment given, the latch is
+    // released once the cause has been clear for 10 s.
+    await expect
+      .poll(
+        () => {
+          try {
+            execFileSync(join(bin, "smcpctl"), ["health", "--require-not-fail-closed", "--config", d.config], { stdio: "ignore" });
+            return "not fail-closed";
+          } catch {
+            return "fail-closed";
+          }
+        },
+        { timeout: 90_000, intervals: [2_000] },
+      )
+      .toBe("not fail-closed");
+    console.log(`G-10/G-01 dedicated keyboard (${browserName}): ${states} states passed axe`);
+  } finally {
+    await context.close();
+    d.stop();
+  }
 });

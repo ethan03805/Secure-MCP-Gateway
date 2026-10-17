@@ -840,10 +840,21 @@ jobs:
         with:
           name: console-enforced-results
           path: build
+      - name: Fetch the results of the separate verification workflows (site-data/workflows.json; FR-13.3 tap, FR-14.9 reference packages)
+        run: |
+          if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null &&
+             git show FETCH_HEAD:workflows.json > build/workflows.json 2>/dev/null &&
+             jq -e 'type == "array"' build/workflows.json >/dev/null; then
+            echo "fetched $(jq length build/workflows.json) workflow results"
+          else
+            rm -f build/workflows.json
+            echo "no published workflow results yet"
+          fi
       - name: Merge the hostile fixture, console acceptance and graph results and their requirement claims (FR-19.2, FR-8.34)
         run: |
           cp build/go-test.json build/all-test.json
           merged=0
+          if [ -s build/workflows.json ]; then merged=1; fi
           if [ -s build/hostile.json ] && jq -e 'type == "array"' build/hostile.json >/dev/null; then
             cat build/hostile-*-test.json >> build/all-test.json 2>/dev/null || true
             merged=1

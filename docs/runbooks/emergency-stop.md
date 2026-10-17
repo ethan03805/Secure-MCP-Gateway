@@ -1,12 +1,12 @@
 # Runbook: emergency stop
 
-Use when tool execution must end now: a server behaves unexpectedly, a policy is wrong and simulation is not an option, or a compromise is suspected. Reference: [../flows/emergency-stop.md](../flows/emergency-stop.md), [../operator-guide.md](../operator-guide.md#emergency-stop). Execution records go in `docs/verification/` (FR-18.8); none is recorded for this runbook yet.
+Use when tool execution must end now: a server behaves unexpectedly, a policy is wrong and simulation is not an option, or a compromise is suspected. Reference: [../flows/emergency-stop.md](../flows/emergency-stop.md), [../operator-guide.md](../operator-guide.md#emergency-stop). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-emergency-stop-2026-10-17.md](../verification/runbooks/runbook-emergency-stop-2026-10-17.md).
 
 ## Stop
 
 1. `smcpctl stop --reason "<what happened>" --config smcp.toml` — expect `"state": "stopped"`. In the console, use **Stop** in the status bar.
 2. `smcpctl health --config smcp.toml` — expect `health: fail-closed` with `emergency_stop` among the gateway causes.
-3. Every MCP request from a harness, including `initialize`, now answers `-31004` with reason `EMERGENCY_STOP` and the message "The Gateway operator has stopped all tool calls." The journal holds an `admin` event with outcome `stopped`, the actor and the reason.
+3. Every MCP request from a harness, including `initialize` and requests without a token, now answers HTTP 503 with the JSON-RPC error `-31004`, reason `EMERGENCY_STOP` and the message "The Gateway operator has stopped all tool calls." A client that signs in first sees the 503 instead of the usual 401 challenge. The journal holds an `admin` event with outcome `stopped`, the actor and the reason.
 4. S1 egress grants and S2 per-call secret files are withdrawn (when the vault is enabled).
 
 What stop does not do in this build: it does not cancel calls already dispatched to a backend, it does not tear down running server instances, and it does not end sessions. A call already past release authorization completes. To end a misbehaving instance as well:

@@ -540,3 +540,68 @@ Observations:
 - The only immutable copy the Secret Broker makes is the S4 environment string (`internal/secrets/broker.go:444`), which the statement allows.
 
 Deviation: as the narrowed statement records, three copies outside the Secret Broker's byte buffers cannot be overwritten in Go: the `NAME=value` entry built for the child process (`internal/pipeline/launch.go:147`) and the runtime's copy at process start, the header string the Egress Broker sets on each S1 request (`internal/egress/inject.go:129`), and the age library's internal decryption buffers. S3 files are removed at teardown (`internal/secrets/broker.go:752` writes them owner-only) but their blocks are not overwritten on disk. No memory snapshot was taken: the garbage collector does not clear freed memory, so a snapshot cannot show the absence of stale copies; the statement no longer asks for one.
+
+## FR-14.5 Provenance statements of the reference packages
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-14.5 |
+| Commit | `1ff838b8305f73af5234cb2c61a4ad6fac353909` |
+| Profile and platform | Standalone; macOS 26.6.2, darwin/arm64, Node 22.23.1, Python 3.11.15 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (verification records task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: built the four reference packages from their recipes with `SMCP_PYTHON=python3.11 scripts/build-reference-packages.sh <dir>` (19:07Z; build, test-key signature, import, enable and one tool call each, all `PASS`; journal `OK: 1 segments, 47 events`), then read each package's `provenance.json`, `manifest.json` and `index.json`, recomputed the SHA-256 of the artifact and of the provenance file, downloaded each source reference from its registry and recomputed its SHA-256, and read the license files and metadata in the sources.
+
+Observations:
+
+| Package | Source reference (kind, digest) | Licenses | Artifact digest in the statement | Recomputed |
+|---|---|---|---|---|
+| `mcp-filesystem@2026.8.31` | `registry-tarball` `https://registry.npmjs.org/@modelcontextprotocol/server-filesystem/-/server-filesystem-2026.8.31.tgz`, `a239da27...491b1a` | `Apache-2.0`, `MIT` | `a8d56c56...983fca` | artifact equal; source download equal |
+| `mcp-memory@2026.8.31` | `registry-tarball` `.../server-memory-2026.8.31.tgz`, `53a606a0...eb504c` | `Apache-2.0`, `MIT` | `6d2c786b...ddbca65` | artifact equal; source download equal |
+| `mcp-git@2026.8.18` | `sdist` `https://files.pythonhosted.org/.../mcp_server_git-2026.8.18.tar.gz`, `96894ca6...08f173f` | `MIT` | `c3d47d2a...12d9c86c` | artifact equal; source download equal |
+| `mcp-fetch@2026.8.18` | `sdist` `.../mcp_server_fetch-2026.8.18.tar.gz`, `da12533c...b7254` | `MIT` | `84e62b7d...640ab9a` | artifact equal; source download equal |
+
+- The statement is written by `smcpctl package build` with the source reference, the licenses and the artifact (`internal/packaging/build.go:255`); its SHA-256 is recorded in the manifest (`internal/packaging/build.go:265`) and in the index that the test key signs (`internal/packaging/build.go:289`). For each package the recomputed SHA-256 of `provenance.json` equals the manifest's `statement_sha256` and the index's `provenance.sha256` (for example memory `af5c2cb1db13b5c47b836a08e67055fe28927c33feff339299784dcb5aec3b5f`), so the signature over the index covers the binding.
+- Verification refuses a statement without a source reference, a 64-hex source digest or license identifiers (`internal/packaging/index.go:233`).
+- License identifiers: the git and fetch sdists contain an MIT `LICENSE` and `License: MIT` in `PKG-INFO`. The filesystem and memory npm tarballs contain no license file; their `package.json` says `SEE LICENSE IN LICENSE`, and the `LICENSE` of `github.com/modelcontextprotocol/servers` states a transition from MIT to Apache-2.0 with code under both. The recipes listed only `MIT`; commit `1ff838b` lists `Apache-2.0` and `MIT` with an operator note (`packaging/reference/filesystem/recipe.json:42`, `packaging/reference/memory/recipe.json:45`), and the packages above were built after that change.
+
+Deviation: the packages were built on a workstation, not by the `reference-packages` workflow of a release tag; the workflow's last successful run (39047692294, 2026-10-17, branch `test/partials-a`) produced statements of the same form, with `MIT` alone for filesystem and memory. The commit above is on branch `docs/verification-records` before it was squash-merged.
+
+## FR-3.18 Approval evidence in G-13 for an anomaly-obligated approval
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-3.18 |
+| Commit | `771cadc7fcb24d18f21215615cebcaf8f5e0d364` |
+| Profile and platform | Standalone; macOS 26.6.2, darwin/arm64; console in Playwright Chromium 1.64.1 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (verification records task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps (19:26:12Z to 19:26:49Z):
+
+1. Bootstrapped a fresh instance (`smcpctl bootstrap --dir inst3 --port 28673 --admin-port 28674 --notify off ...`) and appended to `smcp.toml`: `[limits] principal_calls_per_minute = 100000`; `[observation] sampling_rate = 1.0`, `scoring = "sync"`, `require_approval_band = "abnormal"`, `withhold_band = "off"`; `[observation.baseline] n_min = 20`, `snapshot_records = 0`, `snapshot_interval = "1000h"`; features `request_bytes` and `response_bytes` with `transform = "log1p"`, `sigma_floor = 0.05`. `smcpctl config validate`: `configuration OK`.
+2. Started `smcpd` and made 40 `ref_echo` calls with `{"text":"v000"}` in one session (`itest-client ... -call ref_echo -repeat 40`); `smcpctl observe status`: `assembled 40 captured 40`, `contexts 1 characterized 1`.
+3. `smcpctl observe baseline build` (snapshot `01a14b54-4782-78e9-848f-99fd5724ac42`, 40 records, context `principal=claude-code-local|tool=echo`), then `smcpctl observe baseline promote 01a14b54-4782-78e9-848f-99fd5724ac42`.
+4. Called `ref_echo` with a 50,000-character text. The call was held: the journal recorded `APPROVAL_REQUESTED` for approval `01a14b54-48b8-7bd3-9de0-810da8683185` (`hold_seconds` 120). The template `read-only` has no approval rule for `echo`, so the hold came from the anomaly obligation.
+5. Opened `https://127.0.0.1:28674/approvals/01a14b54-48b8-7bd3-9de0-810da8683185` in the console as the administrator and read the view; then denied the approval (`smcpctl approvals deny ... --yes`), and the held call ended with `approval denied: A person reviewing this call denied it.`
+
+Observations (the G-13 approval view, as displayed):
+
+| Item the requirement lists | Displayed | Source |
+|---|---|---|
+| Public tool name | `Public tool: ref_echo` | `console/src/views/Approvals.tsx:136` |
+| Server revision | `Server revision: smcp-ref-filesystem@0.0.0-dev+9c2c3169cf1c` (and `Tool revision: .../echo`) | `console/src/views/Approvals.tsx:138` |
+| Canonical arguments | `Arguments (canonical, as the server will receive them)` with `{"text": "BBBB..."}`, and `Argument digest: sha256:80ec57db...` | `console/src/views/Approvals.tsx:167` |
+| Decisive rules | `Decisive rules: ro-ref` | `console/src/views/Approvals.tsx:142` |
+| Anomaly band | `Anomaly band: critical` | `console/src/views/Approvals.tsx:149` |
+| Contributing feature | `Contributing feature: request_bytes` | `console/src/views/Approvals.tsx:152` |
+| z-score | `z-score: 160.95` (and `Baseline snapshot: 01a14b54-4782-...`) | `console/src/views/Approvals.tsx:153` |
+
+The Approval Service supplies the anomaly evidence with the approval record (`internal/approval/record.go:66`); `GET /api/v1/approvals/{id}` returned `"anomaly": {"band": "critical", "context": "principal=claude-code-local|tool=echo", "contributing_feature": "request_bytes", "snapshot_id": "01a14b54-4782-78e9-848f-99fd5724ac42", "z_score": 160.94859066750217}`.
+
+Deviation: `smcpctl approvals show` printed `Anomaly  none reported` for this approval: the command printed that text for every approval. It now prints the band, feature, z-score and snapshot (`TestApprovalsShowAnomalyEvidence`); the requirement concerns the approval view, which displayed every item.

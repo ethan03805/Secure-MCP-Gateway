@@ -44,3 +44,26 @@ jobs:
             ${{ runner.temp }}/refpkg/smcpd.log
           if-no-files-found: warn
           retention-days: 14
+
+  # Publishes the result to site-data/workflows.json, where the CI status job
+  # reads it into the requirement report (tools/reqreport -workflows). A run
+  # on a release tag is a full claim on FR-14.9, a run on any other ref a
+  # partial one.
+  publish:
+    name: publish
+    needs: [reference-packages]
+    if: >-
+      always() && (needs.reference-packages.result == 'success' || needs.reference-packages.result == 'failure')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-site-data
+      cancel-in-progress: false
+    env:
+      RESULT: ${{ needs.reference-packages.result }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Publish the reference-package result to the site-data branch
+        run: scripts/publish-workflow-result.sh reference-packages "$RESULT" "$GITHUB_REF_NAME" "$GITHUB_SHA" FR-14.9

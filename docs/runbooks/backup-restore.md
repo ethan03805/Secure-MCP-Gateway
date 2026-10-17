@@ -1,6 +1,6 @@
 # Runbook: backup and restore
 
-Reference: [../operations/backup.md](../operations/backup.md). Execution records go in `docs/verification/` (FR-18.8); none is recorded for this runbook yet. `scripts/ci-integration.sh` runs steps 1 to 6 on every pull request.
+Reference: [../operations/backup.md](../operations/backup.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-backup-restore-2026-10-17.md](../verification/runbooks/runbook-backup-restore-2026-10-17.md). `scripts/ci-integration.sh` runs steps 1 to 6 on every pull request.
 
 ## Back up
 

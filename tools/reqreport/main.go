@@ -70,7 +70,7 @@ func main() {
 
 type options struct {
 	in, out, status, srs, arch, elements, coverprofile, agents, hostile, gomod string
-	records, root, appendix                                                    string
+	records, root, appendix, workflows                                         string
 	commit, conclusion                                                         string
 	failOnFailing                                                              bool
 }
@@ -87,6 +87,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 	flags.StringVar(&o.coverprofile, "coverprofile", "", "Go coverprofile (optional)")
 	flags.StringVar(&o.agents, "agents", "build/agents.json", "harness compatibility results (optional)")
 	flags.StringVar(&o.hostile, "hostile", "build/hostile.json", "hostile fixture results (optional)")
+	flags.StringVar(&o.workflows, "workflows", "build/workflows.json", "results of the separate verification workflows, site-data/workflows.json (optional)")
 	flags.StringVar(&o.gomod, "gomod", "go.mod", "go.mod, for the module path")
 	flags.StringVar(&o.records, "records", "docs/verification", "verification records directory (empty to skip)")
 	flags.StringVar(&o.root, "root", ".", "repository root that record evidence paths are relative to")
@@ -142,9 +143,14 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 	if err != nil {
 		return 2, err
 	}
+	wfs, err := loadWorkflowResults(o.workflows)
+	if err != nil {
+		return 2, err
+	}
 
 	results := buildResults(reqs, log, module)
 	recordWarnings := applyRecords(results, reqs, recs, o.records)
+	recordWarnings = append(recordWarnings, applyWorkflowResults(results, wfs)...)
 	applyChildAnalysis(results, reqs)
 	for _, t := range log.Tests {
 		t.Package = shortPackage(t.Package, module)

@@ -39,5 +39,6 @@
     "spawns_processes": false,
     "resources": { "memory_mib": 256, "pids": 64 }
   },
-  "licenses": ["MIT"]
+  "licenses": ["Apache-2.0", "MIT"],
+  "operator_note": "The npm tarball has no license file; its package.json says SEE LICENSE IN LICENSE, and the LICENSE of github.com/modelcontextprotocol/servers states a transition from MIT to Apache-2.0 with code under both, so both identifiers are listed."
 }

@@ -65,19 +65,30 @@ func (r Record) Label(dir string) string {
 	return filepath.ToSlash(filepath.Join(dir, r.File)) + fmt.Sprintf(":%d", r.Line)
 }
 
-// loadRecords parses every Markdown file in dir except README.md. A
+// loadRecords parses every Markdown file under dir except README.md files. A
 // missing directory yields no records. Evidence paths are checked against
 // root: a reference to a file that does not exist makes the record invalid.
 func loadRecords(dir, root string) ([]Record, error) {
 	if dir == "" {
 		return nil, nil
 	}
-	files, err := filepath.Glob(filepath.Join(dir, "*.md"))
-	if err != nil {
-		return nil, err
-	}
 	if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
+	}
+	// Records may sit in subdirectories, for example the runbook
+	// executions under runbooks/.
+	var files []string
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(path, ".md") {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	sort.Strings(files)
 	var out []Record

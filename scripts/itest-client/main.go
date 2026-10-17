@@ -40,6 +40,7 @@ type options struct {
 	base, mcpPath, ca, username, password, clientID, redirect, scope string
 	call, args, expect                                               string
 	timeout                                                          time.Duration
+	repeat                                                           int
 }
 
 func main() {
@@ -56,6 +57,7 @@ func main() {
 	flag.StringVar(&o.args, "args", "{}", "tool arguments as a JSON object")
 	flag.StringVar(&o.expect, "expect", "", "substring the tool result text must contain")
 	flag.DurationVar(&o.timeout, "timeout", 60*time.Second, "overall timeout")
+	flag.IntVar(&o.repeat, "repeat", 1, "make the tool call this many times in the one session (for example to train a baseline)")
 	flag.Parse()
 	if err := run(o); err != nil {
 		fmt.Fprintln(os.Stderr, "itest-client: FAIL:", err)
@@ -257,23 +259,25 @@ func run(o options) error {
 	if err := json.Unmarshal([]byte(o.args), &args); err != nil {
 		return fmt.Errorf("-args: %w", err)
 	}
-	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: o.call, Arguments: args})
-	if err != nil {
-		return fmt.Errorf("tools/call %s: %w", o.call, err)
-	}
-	var text strings.Builder
-	for _, c := range res.Content {
-		if tc, ok := c.(*mcp.TextContent); ok {
-			text.WriteString(tc.Text)
+	for i := 0; i < max(o.repeat, 1); i++ {
+		res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: o.call, Arguments: args})
+		if err != nil {
+			return fmt.Errorf("tools/call %s: %w", o.call, err)
 		}
+		var text strings.Builder
+		for _, c := range res.Content {
+			if tc, ok := c.(*mcp.TextContent); ok {
+				text.WriteString(tc.Text)
+			}
+		}
+		if res.IsError {
+			return fmt.Errorf("tools/call %s returned a tool error: %s", o.call, text.String())
+		}
+		if o.expect != "" && !strings.Contains(text.String(), o.expect) {
+			return fmt.Errorf("tools/call %s result lacks %q: %s", o.call, o.expect, text.String())
+		}
+		step("tools/call %s returned %d bytes of text", o.call, text.Len())
 	}
-	if res.IsError {
-		return fmt.Errorf("tools/call %s returned a tool error: %s", o.call, text.String())
-	}
-	if o.expect != "" && !strings.Contains(text.String(), o.expect) {
-		return fmt.Errorf("tools/call %s result lacks %q: %s", o.call, o.expect, text.String())
-	}
-	step("tools/call %s returned %d bytes of text", o.call, text.Len())
 	return nil
 }
 
