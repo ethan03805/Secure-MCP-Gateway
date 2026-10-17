@@ -192,3 +192,27 @@ Observations:
 - Optional payload capture by the Observation Collector writes evidence copies for analysis; they are never returned to a request.
 
 Deviation: none.
+
+## SR-7.1-1 No side effects in retryable transactions
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | SR-7.1-1 |
+| Commit | `a84aef79d8670572f206db22563941abb3b0bf47` |
+| Profile and platform | Not profile-specific; source inspection |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (verification task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: searched the module for the Neo4j driver and for every way to open a database transaction (`ExecuteWrite`, `ExecuteRead`, `BeginTransaction`, `database/sql` `Begin` and `BeginTx`), then read each transaction function and everything it calls.
+
+Observations:
+
+- Only `internal/graph/backend.go` imports the Neo4j driver. It opens retryable transaction functions in two places: `Neo4j.Write` (`internal/graph/backend.go:88`) and `Neo4j.Read` (`internal/graph/backend.go:109`).
+- The write function loops over the prepared statements and calls `runTx`; the read function calls `runTx` once. `runTx` (`internal/graph/backend.go:118`) calls only `tx.Run`, `Result.Collect` and `Record.AsMap`, and `driverParams` (`internal/graph/backend.go:58`) only converts parameter maps and slices. No dispatch, egress, file, export, logging or channel operation occurs inside either function; results are returned to the caller, which acts on them after the transaction ends.
+- The Data Access Service reaches the engine only through these two functions: `DAS.write` (`internal/graph/das.go:60`) checks the statement modes and calls `Backend.Write` outside any transaction.
+- The Observation Store (DuckDB) uses `database/sql` with single statements (`internal/obsstore/duckdb.go:87`) and opens no transaction; nothing in the module calls `Begin` or `BeginTx`, so no other retryable transaction function exists.
+- `TestTransactionFunctionsHoldOnlyDatabaseWork` (`internal/graph/catalog_test.go:159`) parses `backend.go` and fails when a transaction function calls anything outside that set, so a later change to these two functions is caught.
+
+Deviation: none.

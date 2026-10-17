@@ -47,14 +47,16 @@ func TestRecordsVerifyInspections(t *testing.T) {
 		record("FR-7", "Analysis", "fail", "2026-10-15", "x") +
 		record("FR-7", "Analysis", "pass", "2026-10-16", "x") + // later pass wins
 		strings.Replace(record("FR-8", "Inspection", "pass", "2026-10-16", ok), "| Executor | tester |\n", "", 1) + // incomplete
-		strings.Replace(record("SR-1-1", "Inspection", "pass", "2026-10-16", ok), recordSHA, "abc123", 1) // short SHA
+		strings.Replace(record("SR-1-1", "Inspection", "pass", "2026-10-16", ok), recordSHA, "abc123", 1) + // short SHA
+		record("FR-1.1", "Test", "pass", "2026-10-16", "manual check") + // supporting record: valid, never counts
+		record("FR-2", "Test", "pass", "2026-10-16", "x") // Test record for an Inspection requirement
 	writeFile(t, filepath.Join(dir, "inspections.md"), content)
 
 	recs, err := loadRecords(dir, root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(recs) != 11 {
+	if len(recs) != 13 {
 		t.Fatalf("%d records parsed (README must be skipped)", len(recs))
 	}
 	if recs[0].Fields["Commit"] != recordSHA || len(recs[0].Evidence) != 1 || recs[0].Evidence[0] != "internal/a/a.go:1" || recs[0].IDs[0] != "FR-2" {
@@ -80,10 +82,13 @@ func TestRecordsVerifyInspections(t *testing.T) {
 	}
 	joined := strings.Join(warnings, "\n")
 	for _, w := range []string{"evidence file internal/a/missing.go does not exist", "FR-4 is verified by Inspection, not Analysis", "FR-1.1 is verified by Test, not Inspection",
-		"inspection without file:line evidence", "missing field Executor", "commit is not a full SHA"} {
+		"inspection without file:line evidence", "missing field Executor", "commit is not a full SHA", "FR-2 is verified by Inspection, not Test"} {
 		if !strings.Contains(joined, w) {
 			t.Errorf("no warning %q in:\n%s", w, joined)
 		}
+	}
+	if strings.Contains(joined, "method Test") || strings.Count(joined, "FR-1.1") != 1 {
+		t.Errorf("a supporting Test record must be accepted without a warning:\n%s", joined)
 	}
 	for _, r := range results {
 		if r.ID == "FR-2" && (len(r.Claims) != 1 || !strings.HasPrefix(r.Claims[0].Test, "docs/verification/inspections.md:")) {

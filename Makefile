@@ -137,7 +137,7 @@ check-full: check site vuln integration console-check console-e2e ## check plus 
 release-snapshot: ## Build release archives locally into build/dist (no publishing)
 	SMCP_BUILD_REFSERVER=$$( [ -d cmd/smcp-refserver ] && echo 1 || echo 0 ) \
 	GORELEASER_CURRENT_TAG=$$(git tag -l 'v*' --sort=-version:refname | head -n1 | grep . || echo v0.0.0) \
-	$(GORELEASER) release --snapshot --clean
+	$(GORELEASER) release --snapshot --clean $$( [ -n "$${MINISIGN_KEY_FILE:-}" ] || echo --skip=sign )
 
 .PHONY: clean
 clean: ## Remove build outputs

@@ -320,6 +320,12 @@ fieldset.choice label {
 .strip .mono {
   color: var(--strip-ink);
 }
+/* The page focus color has 2.5:1 contrast on the dark strip in the light
+   scheme; the strip ink has more than 3:1 on every strip background
+   (WCAG 1.4.11, docs/verification/FR-8.32.md). */
+.strip :focus-visible {
+  outline-color: var(--strip-ink);
+}
 .strip-name {
   font-weight: 600;
 }

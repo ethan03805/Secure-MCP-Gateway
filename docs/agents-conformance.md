@@ -57,7 +57,7 @@ In the `approval` scenario the agent calls `ref_read_file`, the Gateway holds th
 
 A plain `claude -p` has nobody to ask and refuses the call itself ("tool requires user interaction; no prompt available in headless mode"). `--permission-prompt-tool` with an MCP tool is refused too ("MCP tool requires user interaction; not supported via --permission-prompt-tool"). Either refusal is listed in `permission_denials` of the result. The suite treats such a refusal as a failure of the `approval` scenario, because the Gateway hold was not exercised.
 
-This covers one of the four FR-3.25 cases with Claude Code (a held call approved with `smcpctl approvals`). Approval from the console, a denied call and a call that reaches the hold bound, with the recorded transcript in `docs/verification/`, are not covered by this suite.
+This covers one of the four FR-3.25 cases with Claude Code (a held call approved with `smcpctl approvals`). `go run ./scripts/agents -approval-acceptance <transcript.md>` runs all four with Claude Code only: a held call approved from the Approvals view (G-13) in a real browser (`console/e2e/approve-held.mjs`, which needs `npm ci` in `console`), one approved with `smcpctl approvals approve`, one denied from G-13, and one that reaches a 60 s hold bound. It decides each case from the journal and writes the tool result Claude Code received and its final reply to the transcript. The recorded run is [verification/FR-3.25.md](verification/FR-3.25.md).
 
 ## Running it
 

@@ -2,8 +2,9 @@
 #
 # Rendered by scripts/render-brew-formula.sh from a release's checksum file:
 #   scripts/render-brew-formula.sh v0.1.0 build/dist/smcp_0.1.0_checksums.txt > smcp.rb
-# The rendered file belongs in a tap repository (ethan03805/homebrew-tap,
-# Formula/smcp.rb), which does not exist yet.
+# The release workflow publishes the formula to the tap repository
+# ethan03805/homebrew-tap (Formula/smcp.rb) with GoReleaser (`brews` in
+# .goreleaser.yaml); this template is the manual fallback for that step.
 class Smcp < Formula
   desc "Local reference monitor between AI agent harnesses and MCP servers"
   homepage "https://github.com/ethan03805/Secure-MCP-Gateway"

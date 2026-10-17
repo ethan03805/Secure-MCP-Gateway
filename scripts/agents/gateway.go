@@ -82,17 +82,22 @@ func configAppendix(clients []*client) string {
 	return b.String()
 }
 
+// extraConfig is appended to smcp.toml after configAppendix; the FR-3.25
+// approval run sets a short CP-45 hold bound with it.
+var extraConfig string
+
 // gateway is a bootstrapped smcpd instance in a temporary directory.
 type gateway struct {
-	root, work, bin, dir string
-	cfg, ca, journal     string
-	url, endpoint        string
-	approverPassword     string
-	marker               string
-	cmd                  *exec.Cmd
-	exited               chan error
-	log                  *os.File
-	hc                   *http.Client
+	root, work, bin, dir  string
+	cfg, ca, journal      string
+	url, endpoint         string
+	approverPassword      string
+	adminURL, adminPWFile string // control API and console (E-24), Administrator password file
+	marker                string
+	cmd                   *exec.Cmd
+	exited                chan error
+	log                   *os.File
+	hc                    *http.Client
 }
 
 func freePort() (int, error) {
@@ -145,6 +150,7 @@ func startGateway(ctx context.Context, root, work string, clients []*client, dns
 	adminPW, approverPW := newPassword(), newPassword()
 	g.approverPassword = approverPW
 	adminFile, approverFile := filepath.Join(work, "admin.pw"), filepath.Join(work, "approver.pw")
+	g.adminURL, g.adminPWFile = fmt.Sprintf("https://127.0.0.1:%d", adminPort), adminFile
 	if err := os.WriteFile(adminFile, []byte(adminPW), 0o600); err != nil {
 		return nil, err
 	}
@@ -171,7 +177,7 @@ func startGateway(ctx context.Context, root, work string, clients []*client, dns
 	if err != nil {
 		return nil, err
 	}
-	_, err = f.WriteString(configAppendix(clients))
+	_, err = f.WriteString(configAppendix(clients) + extraConfig)
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}

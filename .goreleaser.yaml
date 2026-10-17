@@ -2,6 +2,13 @@
 #
 # Local snapshot (no publishing):  make release-snapshot
 # Release: push a tag v* and .github/workflows/release.yml runs GoReleaser.
+# docs/release-checklist.md is the release procedure.
+#
+# Signing (SRS FR-13.1): the checksum file is signed with the project's
+# minisign key from MINISIGN_KEY_FILE (password in MINISIGN_PASSWORD).
+# `make release-snapshot` passes --skip=sign unless MINISIGN_KEY_FILE is
+# set. The release workflow adds a cosign keyless Sigstore bundle of the
+# same file after GoReleaser (security review RR-01).
 #
 # smcp-refserver is built only when cmd/smcp-refserver exists; the Makefile
 # and the release workflow set SMCP_BUILD_REFSERVER=1 in that case.
@@ -102,6 +109,54 @@ sboms:
     artifacts: archive
     disable: '{{ not (isEnvSet "SMCP_SBOM") }}'
 
+signs:
+  - id: minisign
+    artifacts: checksum
+    cmd: minisign
+    signature: "${artifact}.minisig"
+    stdin: "{{ .Env.MINISIGN_PASSWORD }}\n"
+    args:
+      - -S
+      - -s
+      - "{{ .Env.MINISIGN_KEY_FILE }}"
+      - -m
+      - "${artifact}"
+      - -x
+      - "${signature}"
+      - -t
+      - "smcp {{ .Version }} file:{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+
+# Formula/smcp.rb in the tap ethan03805/homebrew-tap (FR-13.3), for the
+# darwin and linux archives. Uploaded only when HOMEBREW_TAP_TOKEN is set
+# (the release workflow passes the repository secret of that name).
+brews:
+  - name: smcp
+    ids: [smcp]
+    repository:
+      owner: ethan03805
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    commit_author:
+      name: smcp-release
+      email: ethan03805@users.noreply.github.com
+    commit_msg_template: "smcp {{ .Tag }}"
+    homepage: https://github.com/ethan03805/Secure-MCP-Gateway
+    description: Local reference monitor between AI agent harnesses and MCP servers
+    license: Apache-2.0
+    skip_upload: '{{ if isEnvSet "HOMEBREW_TAP_TOKEN" }}auto{{ else }}true{{ end }}'
+    install: |
+      bin.install "smcpd", "smcpctl"
+      %w[smcp-refserver smcp-stdio smcp-session smcp-connect].each { |f| bin.install f if File.exist?(f) }
+    caveats: |
+      Install the Gateway as a launchd agent (macOS) or systemd user unit
+      (Linux), with state, keys and an example configuration:
+        smcpctl install
+      Remove it with smcpctl uninstall before brew uninstall smcp.
+    test: |
+      assert_match "usage: smcpctl", shell_output("#{bin}/smcpctl 2>&1", 2)
+
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
 
@@ -121,5 +176,8 @@ release:
   prerelease: auto
   mode: replace
   footer: |
-    Verify a download: `sha256sum --check --ignore-missing {{ .ProjectName }}_{{ .Version }}_checksums.txt`.
+    Verify the checksum file with the release key from SECURITY.md, then the archives:
+    `minisign -Vm {{ .ProjectName }}_{{ .Version }}_checksums.txt -P RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq`
+    `sha256sum --check --ignore-missing {{ .ProjectName }}_{{ .Version }}_checksums.txt`
+    Homebrew: `brew install ethan03805/tap/smcp`.
     Install: `curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version {{ .Tag }}`

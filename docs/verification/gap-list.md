@@ -97,7 +97,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-07 Approval Service
 
-- FR-3.25 external: the recorded run with interactive Claude Code at the pinned version (four cases and transcript) has not been done.
 - SR-1.18-3 missing: an approval is not re-requested when a request filter transforms action-defining arguments.
 
 ## E-08 Access Enforcement Point
@@ -187,21 +186,17 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-24 Management Console & Control API
 
 - FR-2.23 missing: Session Approver accounts are configuration entries; no Administrator flow creates them, and no check that the password differs from the Administrator's.
-- FR-8.3 to FR-8.17, FR-8.20, FR-8.21 (G-01 to G-09, G-12, G-13 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each, but Playwright results do not reach the requirement report and no Demonstration record exists. Where a requirement names policy objects that do not exist (FR-3.1: Audit Profile, Observation Policy, Anomaly Response Policy and Research Campaign as published policy objects), that part is missing; the G-03 and G-06 editors produce the `[observation]` configuration table instead.
+- FR-8.3 to FR-8.17, FR-8.20, FR-8.21 (G-01 to G-09, G-12, G-13 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each; the tests' partial claims reach the requirement report (`console/e2e/reqreport.ts`), but no Demonstration record exists. Where a requirement names policy objects that do not exist (FR-3.1: Audit Profile, Observation Policy, Anomaly Response Policy and Research Campaign as published policy objects), that part is missing; the G-03 and G-06 editors produce the `[observation]` configuration table instead.
 - FR-8.24 external: the timed first-time-user task has not been run.
 - FR-8.25 unverified: views carry a `Help` section (`console/src/ui.tsx`); help for every policy field and catalog parameter has not been inspected.
-- FR-8.29 unverified: `console/e2e/views.spec.ts` covers loading, empty and error states, but not through the requirement report.
+- FR-8.29 unverified: `console/e2e/views.spec.ts` covers loading, empty and error states with partial claims; no test covers all three states for every view.
 - FR-8.30 external: no browser-support matrix run.
 - FR-8.31 unverified: G-01 shows a first-run checklist (`console/src/views/Control.tsx`); no record compares its items with the requirement's list.
-- FR-8.32, FR-8.33 unverified: no WCAG 2.2 AA or keyboard-only audit of every view (`console/e2e/a11y.spec.ts` runs axe checks) and no claiming test or record.
-- FR-8.34 missing: `console/e2e/views.spec.ts` has a test per view, but `tools/reqreport` reads only `go test -json`, so Playwright tests cannot claim a view's requirement through the report.
+- FR-8.32, FR-8.33 unverified (partial claims): `console/e2e/a11y.spec.ts` runs axe (WCAG 2.2 AA tags) on every view as it loads and tabs through every control of every view in Chromium and Firefox, checking reachability and focus-indicator contrast; the manual check is recorded in `FR-8.32.md`. Missing: axe on every intermediate state of the acceptance tests (FR-8.32), and completing every action with keyboard events only (FR-8.33).
 - FR-8.35 unverified: `docs/console-style.md` holds the checklist; no inspection record against every view.
 - FR-11.8 external: no 30-day reference dataset query latency measurement; the journal has no index (E-21 note).
-- FR-13.1 external: no GitHub Release has been inspected (four archives, checksum file, minisign signature).
-- FR-13.2 missing: `install.sh` verifies the archive's SHA-256 against the checksum file but does not verify a minisign signature over that file with an embedded release public key.
-- FR-13.3 missing: no Homebrew tap formula is published.
-- FR-13.4 missing: smcpctl has no install subcommand (first-time setup is `smcpctl bootstrap` plus `install.sh`), so the idempotent install with `present` and `created` step reports does not exist.
-- FR-13.6 missing: no install subcommand creates the Standalone directories, service unit and configuration as one step.
+- FR-13.1 external: no GitHub Release has been inspected; the release workflow signs the checksum file with minisign (key in `SECURITY.md`), but the SBOMs are separate release assets, not files inside each archive.
+- FR-13.3 external: GoReleaser writes `Formula/smcp.rb` to `ethan03805/homebrew-tap` on release; no release has published it, and no CI job installs from the tap on macOS and Linux and compares digests.
 - FR-19.3 missing: no release-labelling step that checks AT-01 to AT-21 results.
 - FR-19.4 missing: no AT scenario is claimed by an automated test or a `docs/verification/AT-nn.md` record.
 - SR-2.7-1 missing: configuration accepts any `$argon2id$` verifier; one with parameters below CP-28 (64 MiB, t = 3, p = 1) is not refused.

@@ -13,6 +13,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | Document | For |
 |---|---|
 | [Install guide](install.md) | install.sh, Homebrew, building from source, the Linux enforced host, upgrade, rollback, uninstall (FR-18.1) |
+| [Release checklist](release-checklist.md) | Publishing a release: signing key, secrets, snapshot, tag, post-release verification (FR-13.1 to FR-13.3) |
 | [Quick start](quickstart.md) | Bootstrap, start, connect Claude Code or Codex, make a call, approve a held call, verify the journal |
 | [Operator guide](operator-guide.md) | Day-2 operation: accounts and roles, approvals, sessions, policy publication, packages, secrets, emergency stop, backups, keys, reload, logs and metrics, upgrade, remote access (FR-18.4) |
 | [Security Limitations](security-limitations.md) | What the Gateway does not protect against (FR-18.2) |

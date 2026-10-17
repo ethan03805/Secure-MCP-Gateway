@@ -26,4 +26,18 @@ Out of scope: vulnerabilities in third-party MCP servers, agent harnesses or tun
 
 ## Release signing key
 
-Release archives are signed with minisign (SRS FR-13.1). The release public key will be published here with the first release, and `install.sh` embeds the same key. No signed release exists yet.
+Each release's checksum file `smcp_<version>_checksums.txt` is signed with minisign (SRS FR-13.1) as `smcp_<version>_checksums.txt.minisig`. The release public key is:
+
+```
+untrusted comment: minisign public key 064FAC0C64ACCED0
+RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
+```
+
+`install.sh` embeds the same key and refuses to install when the signature does not verify. The checksum file is also signed with Sigstore cosign (keyless, the release workflow's GitHub OIDC identity); `install.sh` checks that bundle when `cosign` is installed. To verify by hand:
+
+```sh
+minisign -Vm smcp_<version>_checksums.txt -P RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
+sha256sum --check --ignore-missing smcp_<version>_checksums.txt
+```
+
+The secret key is held only as GitHub Actions secrets of this repository (used by `.github/workflows/release.yml`) and in an offline copy kept by the maintainer. A key rotation is announced here and in the release notes, and the new key is signed by the old one. No signed release exists yet; the first is v1.0.0.

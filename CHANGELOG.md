@@ -1,8 +1,55 @@
 # MCP Gateway documentation changelog
 
+## v1.0.0 — 2026-10-18 (release candidate; not tagged yet)
+
+First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3. The sections below this one record how it was specified and built; this section is the release note. The tag is made by the procedure in `docs/release-checklist.md` once the last phase-5 pull requests are merged.
+
+### What is in the release
+
+- `smcpd`, the Gateway daemon: an MCP endpoint for local agent harnesses (Streamable HTTP over TLS on loopback, OAuth with Session Approver sign-in), the signed Policy Store and decision point, tool-call approvals with hold mode, request and response inspection, the package library with signed packages and trust anchors, the Secret Vault and Secret Broker, the Egress Broker, the Evidence Journal (hash-chained, signed) with export, health monitoring, the management console (embedded), observation with anomaly scoring, the optional Neo4j graph mirror and the Remote Access Profile for cloud agents.
+- `smcpctl`, the administrative CLI, including the new `smcpctl install` (below), `upgrade` with backup and rollback, and `uninstall` with `--purge`.
+- `smcp-refserver` (the packaged example server), the harness adapters `smcp-session` and `smcp-stdio`, and `smcp-connect` for cloud agents (also on npm).
+- Platforms: macOS (arm64, amd64) and Linux (amd64, arm64). The Enforced profile (every server in a rootless Podman sandbox under systemd, nftables and AppArmor) runs on Linux; macOS and Linux hosts without the prerequisites run the Standalone profile, labelled "not enforced", with health `degraded: unconfined`.
+- Agents tested end to end through the Gateway: Claude Code, Codex, Hermes, OpenCode and Goose (`docs/agents-conformance.md`).
+
+### Install
+
+- `install.sh` downloads the archive for the host, verifies the minisign signature of the checksum file with the embedded release key (`RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq`, also in `SECURITY.md`), checks the Sigstore bundle when cosign is installed, then the archive's SHA-256; it installs nothing when a check fails.
+- Homebrew: `brew install ethan03805/tap/smcp`.
+- `smcpctl install` sets up a Standalone installation (CP-46 directories, keys, configuration, launchd agent or systemd user unit, health check) or, as root on Linux, the Enforced profile. `docs/install.md`.
+
+### Release label and verification
+
+- Release label: "not enforced" unless the AT-01 to AT-21 acceptance evidence for the release commit is complete and passing (FR-19.3); there is no automated labelling step yet.
+- The requirement report (`make status`, published on the project site) lists every requirement as verified, partial or unverified; `docs/verification/gap-list.md` lists what no test or record covers.
+
+### Known limitations
+
+- `docs/security-limitations.md` (what the Gateway does not protect against) and `docs/security-review-2026-10.md` (findings of the pre-release review and residual risks).
+- MCP tools only: resources, prompts, sampling, elicitation and roots are not relayed; backends are local signed packages, not remote MCP servers.
+- The SBOMs are separate release assets rather than files inside each archive (FR-13.1); Homebrew installs are not yet checked by a CI job that installs from the tap (FR-13.3).
+
 ## Unreleased — SRS V1.2 draft, architecture V2.3 draft — 2026-10-16
 
 Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 543 requirements (375 FR in 19 roots, 168 SR) and 16 deferred requirements (Appendix N) with no errors or warnings. No snapshot or tag is made; the release process will make one.
+### Installation and release (FR-13.2 to FR-13.6, security review RR-01)
+
+- `smcpctl install` (`cmd/smcpctl/install.go`). Standalone, on macOS and Linux: creates the CP-46 per-user directories (0700), keys, `smcp.toml` with `[profile] mode = "standalone"` and the log file in the CP-46 log directory, and `policy.json`; writes and loads the launchd agent `com.smcp.gateway` or writes, enables and starts the systemd user unit `smcpd.service`; waits for the control API and refuses `fail-closed`; prints that the installation is not enforced. Enforced, on Linux as root: runs the copy of `packaging/linux/install-enforced.sh` embedded in smcpctl (new package `packaging/linux`), bootstraps state and policy under `/var/lib/smcp` for `smcp-core`, writes `/etc/smcp/smcp.toml` (root:smcp 0640), starts the units and checks health. Every step reports `created` or `present`; a second run reports `present` and changes no file. `smcpctl bootstrap` gained an internal options form (`runBootstrap`) that install uses; its output and configuration are unchanged.
+- Tests: `TestInstallStandalone` runs both the launchd and the systemd path in a temporary home with a fake `launchctl`/`systemctl` that starts the real smcpd, and checks the second run byte for byte; `TestInstallEnforcedFake` checks the embedded tree against `packaging/linux`, the refusal on a missing prerequisite with nothing written, the configuration and ownership, and the second run. A manual run on macOS arm64 with the real launchd (temporary HOME) installed, loaded, reported `health: degraded`, re-ran as all `present`, and `smcpctl uninstall` unloaded and removed the agent.
+- `smcpctl uninstall` finds the configuration `smcpctl install` wrote when `--config` is not given, unloads the launchd agent or disables the systemd units before removing their files, and now also removes the AppArmor profile `/etc/apparmor.d/smcpd` that `install-enforced.sh` loads.
+- `install.sh` verifies the minisign signature of `smcp_<version>_checksums.txt` with the embedded release key before it trusts the checksums, using `minisign` or, when it is absent, OpenSSL 3 (Ed25519 and BLAKE2b-512 through `openssl pkeyutl`); it requires the signed trusted comment to name the checksum file, verifies the Sigstore bundle with `cosign verify-blob` against the release workflow identity when cosign is installed (RR-01) and says when it is not, and installs nothing when any check fails. New options `--base-url`, `--pubkey`, `--no-cosign`. `tools/installsh` tests the script through a local HTTPS server with test keys: intact release installed; modified archive, modified checksum file, other key, missing signature and a trusted comment naming another file refused with no file left outside the temporary directory; with the minisign CLI and with OpenSSL 3; cosign faked for the bundle check.
+- Release signing: the project's minisign key pair was generated (public key in `SECURITY.md`, `docs/install.md`, `docs/release-checklist.md` and `install.sh`; secret key and password in the repository secrets `MINISIGN_SECRET_KEY` and `MINISIGN_PASSWORD`). `.goreleaser.yaml` signs the checksum file with it (`signs`), and `release.yml` installs minisign, checks the signature against the key in `install.sh` and `SECURITY.md`, and keeps the cosign keyless bundle step. `make release-snapshot` signs when `MINISIGN_KEY_FILE` is set and passes `--skip=sign` otherwise.
+- Homebrew tap: the repository `ethan03805/homebrew-tap` exists; `.goreleaser.yaml` (`brews`) writes `Formula/smcp.rb` for the darwin and linux archives when `HOMEBREW_TAP_TOKEN` is set, which `release.yml` passes from the repository secret of that name. GoReleaser v2.18 reports `brews` as deprecated; it still runs.
+- New `docs/release-checklist.md`; `docs/install.md`, `docs/operations/upgrade-uninstall.md` and `SECURITY.md` updated.
+
+Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 558 requirements (385 FR in 19 roots, 173 SR) with no errors or warnings. No snapshot or tag is made; the release process will make one.
+
+### Verification records (FR-3.25, FR-8.32, FR-8.33)
+
+- FR-3.25 is verified by a recorded run: `go run ./scripts/agents -approval-acceptance <file>` drives Claude Code 2.1.302 through a held call approved from G-13 in a real browser (`console/e2e/approve-held.mjs`), one approved with `smcpctl`, one denied from G-13 and one that reaches the hold bound, decides each from the journal and writes the transcript. `docs/verification/FR-3.25.md` and `FR-3.25-transcript.md`.
+- The first run showed that Claude Code shows a failed tool call as the JSON-RPC `error.message` only, so the person saw "approval required" without the approval link. Approval errors now carry `data.message` in `error.message` too (`approval required: This call needs approval. Open <url> ...`); `data` is unchanged. `docs/approvals.md`.
+- `console/e2e/a11y.spec.ts` tabs through every control of every view in both color schemes (Chromium, Firefox) and checks reachability, the absence of positive `tabindex` and 3:1 focus-indicator contrast. It found the light-scheme focus outline at 2.5:1 on the status strip; strip controls now use the strip ink for focus. The manual focus-order, target-size and contrast check is `docs/verification/FR-8.32.md`.
+- `tools/reqreport` accepts a record with method `Test` as a supporting record for a Test-method requirement: validated, not counted, no warning.
 
 ### Linux Enforced profile hardening (E-15 to E-18, FR-13.5)
 

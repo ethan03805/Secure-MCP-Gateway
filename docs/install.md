@@ -2,7 +2,14 @@
 
 How to install, upgrade, roll back and remove the Secure MCP Gateway on each platform and profile (SRS FR-18.1). For a first run after installing, go to the [quick start](quickstart.md).
 
-**Release status.** No release has been published yet. Until the first tag exists, `install.sh` and Homebrew have nothing to download; build from source (below). The release workflow (`.github/workflows/release.yml`) is in place and the sections on release archives describe what it publishes.
+**Release status.** No release has been published yet. Until the first tag (v1.0.0) exists, `install.sh` and Homebrew have nothing to download; build from source (below). The release workflow (`.github/workflows/release.yml`) is in place and the sections on release archives describe what it publishes; [release-checklist.md](release-checklist.md) is the release procedure.
+
+The short path on macOS or Linux, once a release exists:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh   # or: brew install ethan03805/tap/smcp
+smcpctl install          # Standalone: CP-46 directories, keys, smcp.toml, launchd agent or systemd user unit, health check
+```
 
 ## What gets installed
 
@@ -29,16 +36,32 @@ The profile is chosen by `[profile] mode`: `auto` (default) picks enforced when 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh
 # or a fixed version and directory
-sh install.sh --version v0.1.0 --dir "$HOME/.local/bin"
+sh install.sh --version v1.0.0 --dir "$HOME/.local/bin"
 ```
 
-The script detects the OS and architecture, downloads `smcp_<version>_<os>_<arch>.tar.gz` and `smcp_<version>_checksums.txt` from the GitHub release, checks the archive's SHA-256 against the checksum file and installs the binaries into `~/.local/bin` (or `--dir`). It never runs `sudo`; when the directory is not writable it stops and prints the command to run. Options: `--version <tag>`, `--dir <path>`, `--repo <owner/name>`, `--help`.
+The script detects the OS and architecture and downloads `smcp_<version>_<os>_<arch>.tar.gz`, `smcp_<version>_checksums.txt` and `smcp_<version>_checksums.txt.minisig` from the GitHub release. It then, in order:
 
-### Release signature check
+1. verifies the minisign signature of the checksum file with the release public key embedded in the script, and checks that the signed trusted comment names that checksum file (SRS FR-13.2);
+2. when `cosign` is installed, downloads `smcp_<version>_checksums.txt.sigstore.json` and verifies it with `cosign verify-blob` against the release workflow identity (security review RR-01); when `cosign` is not installed it says so;
+3. checks the archive's SHA-256 against the verified checksum file.
 
-`install.sh` verifies the archive against the checksum file. The checksum file itself is signed by the release workflow with Sigstore cosign (keyless, GitHub OIDC) and the bundle is published next to it as `smcp_<version>_checksums.txt.sigstore.json`. Verify it before trusting the checksums:
+If any check fails it installs nothing and removes its temporary directory. Otherwise it installs the binaries into `~/.local/bin` (or `--dir`). It never runs `sudo`; when the directory is not writable it stops and prints the command to run.
+
+The signature check uses `minisign` when it is installed and otherwise OpenSSL 3 (`openssl pkeyutl`, Ed25519 over the BLAKE2b-512 digest). macOS ships LibreSSL as `/usr/bin/openssl`, which cannot do this; install `minisign` first (`brew install minisign`), or use Homebrew for the whole install. Debian 12, Ubuntu 22.04 and later have OpenSSL 3.
+
+Options: `--version <tag>`, `--dir <path>`, `--repo <owner/name>`, `--base-url <url>` (a mirror holding the same files), `--pubkey <key>` (the release key of a fork), `--no-cosign` (skip the cosign check even when cosign is installed), `--help`.
+
+### Release signing key
+
+```
+untrusted comment: minisign public key 064FAC0C64ACCED0
+RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
+```
+
+The same key is in `SECURITY.md` and embedded in `install.sh`. To check a release by hand:
 
 ```sh
+minisign -Vm smcp_<version>_checksums.txt -P RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
 cosign verify-blob --bundle smcp_<version>_checksums.txt.sigstore.json \
   --certificate-identity-regexp '^https://github.com/ethan03805/Secure-MCP-Gateway/.github/workflows/release.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
@@ -46,17 +69,14 @@ cosign verify-blob --bundle smcp_<version>_checksums.txt.sigstore.json \
 sha256sum --check --ignore-missing smcp_<version>_checksums.txt
 ```
 
-`install.sh` does not run `cosign` itself. SRS FR-13.1 asks for minisign-signed archives with the key embedded in `install.sh`; that is not implemented, and `SECURITY.md` will publish the release key with the first release.
-
 ## Option 2: Homebrew (macOS and Linux)
-
-The formula template is `packaging/homebrew/smcp.rb.tmpl`, rendered per release by `scripts/render-brew-formula.sh`. The tap repository (`ethan03805/homebrew-tap`) does not exist yet. Once it does:
 
 ```sh
 brew install ethan03805/tap/smcp
+smcpctl install
 ```
 
-Homebrew checks the archive's SHA-256 from the formula. The formula installs the same binaries as `install.sh`.
+The release workflow writes `Formula/smcp.rb` to the tap repository [ethan03805/homebrew-tap](https://github.com/ethan03805/homebrew-tap) with GoReleaser (`brews` in `.goreleaser.yaml`); its URLs and SHA-256 values are those of the release archives for darwin and linux. Homebrew checks the archive's SHA-256 from the formula; it does not check the minisign signature. The formula installs the same binaries as `install.sh`. `packaging/homebrew/smcp.rb.tmpl` with `scripts/render-brew-formula.sh` renders an equivalent formula by hand.
 
 ## Option 3: from source
 
@@ -72,7 +92,38 @@ export PATH="$PWD/build/bin:$PATH"
 
 Builds with cgo (the default when a C compiler is present) use DuckDB for the Observation Store and can export Parquet. Release archives are built with `CGO_ENABLED=0` and use the JSON Lines store instead ([observation.md](observation.md)).
 
-## Create an instance
+## Install as a service: smcpctl install
+
+`smcpctl install` sets up a complete installation in one idempotent command (SRS FR-13.4 to FR-13.6). It reports every step as `created` or `present` (`updated` when a unit file it wrote earlier has changed); a second run reports `present` throughout and leaves configuration, keys, policy and the journal byte-for-byte unchanged.
+
+**Standalone (macOS and Linux, as your user):**
+
+```sh
+smcpctl install                         # prompts for the administrator and Session Approver passwords
+smcpctl install --admin-password-file a.pw --approver-password-file b.pw --port 8443 --admin-port 8444
+```
+
+| Step | macOS | Linux |
+|---|---|---|
+| CP-46 directories (0700) | `~/Library/Application Support/smcp-gateway/{config,state}`, `~/Library/Logs/smcp-gateway` | `$XDG_CONFIG_HOME/smcp-gateway`, `$XDG_STATE_HOME/smcp-gateway` with `log/`, `$XDG_RUNTIME_DIR/smcp-gateway` |
+| Keys, local CA, reference package | in the state directory (as `smcpctl bootstrap`) | same |
+| `smcp.toml` and `policy.json` | in `config/`, with `[profile] mode = "standalone"` and `[log] file` in the log directory | in the configuration directory, same values |
+| Service | launchd user agent `~/Library/LaunchAgents/com.smcp.gateway.plist`, loaded with `launchctl bootstrap gui/<uid>` | systemd user unit `~/.config/systemd/user/smcpd.service`, enabled and started with `systemctl --user` |
+| Health | waits up to `--health-timeout` (60 s) for the control API; fails on `fail-closed` | same |
+
+It ends by printing that the installation is not enforced. The unit runs the `smcpd` next to `smcpctl` (`--bin-dir` to choose another directory). `--no-start` writes the unit without loading it and skips the health check. Other flags are those of `bootstrap`: `--port`, `--admin-port`, `--metrics-port`, `--notify`, `--sandbox`, `--bootstrap-token`. On Linux a user unit stops at logout unless lingering is on: `loginctl enable-linger "$USER"`. An existing configuration is never rewritten; if it selects another profile, install says so.
+
+**Enforced (Linux, as root):**
+
+```sh
+sudo smcpctl install --profile enforced --admin-password-file a.pw --approver-password-file b.pw
+```
+
+It runs the copy of `packaging/linux/install-enforced.sh` embedded in `smcpctl` with `--bin-dir` set to the directory of `smcpctl` (which must also hold `smcpd` and `smcp-refserver`). That script checks every Section 1.5.1 prerequisite before changing the host and stops naming the missing ones; then it creates the CP-46 service identities and subordinate ranges, the directories, the nftables table, the AppArmor profile (when AppArmor is enabled) and the systemd units, and installs the binaries into `/usr/local/bin`. `smcpctl install` then bootstraps the state into `/var/lib/smcp/state` and the policy into `/var/lib/smcp/policy` (owned by `smcp-core`), writes `/etc/smcp/smcp.toml` (root:smcp 0640) with `[profile] mode = "enforced"`, `[runtime] sandbox = "podman"`, `cgroup_manager = "cgroupfs"`, a mount of `/srv/smcp/sandbox` for the reference server and `[log] file = "/var/log/smcp/smcpd.log"`, starts `smcp-nftables.service` and `smcpd.service`, and checks health.
+
+Remove either installation with `smcpctl uninstall` (below); without `--config` it finds the configuration that install wrote.
+
+## Create an instance by hand
 
 ```sh
 smcpctl bootstrap --dir ~/smcp
@@ -84,9 +135,9 @@ CP-46 names standard locations (`~/Library/Application Support/smcp-gateway/` on
 
 ## Run as a service
 
-`smcpctl` has no command that installs a service on macOS; run `smcpd --config ~/smcp/smcp.toml` in a terminal, or write a launchd user agent with the label `com.smcp.gateway` (`~/Library/LaunchAgents/com.smcp.gateway.plist`). `smcpctl upgrade` and `smcpctl uninstall` find and use that label, or the systemd unit `smcpd.service`, when present.
+`smcpctl install` (above) is the supported way. For an instance made with `bootstrap`, run `smcpd --config ~/smcp/smcp.toml` in a terminal, or write a launchd user agent with the label `com.smcp.gateway` (`~/Library/LaunchAgents/com.smcp.gateway.plist`). `smcpctl upgrade` and `smcpctl uninstall` find and use that label, or the systemd unit `smcpd.service`, when present.
 
-On Linux for the Enforced profile, `packaging/linux/install-enforced.sh` prepares the host as root:
+On Linux for the Enforced profile, `smcpctl install --profile enforced` runs the following script for you; it can also be run directly from a checkout to prepare the host as root:
 
 ```sh
 sudo packaging/linux/install-enforced.sh --check            # prerequisites only; changes nothing

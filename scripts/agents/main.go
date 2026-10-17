@@ -9,6 +9,7 @@
 //	go run ./scripts/agents                       # every installed client, models via the Vercel AI Gateway
 //	go run ./scripts/agents -clients claude-code,codex
 //	go run ./scripts/agents -local                # Claude Code and Codex use your subscription logins
+//	go run ./scripts/agents -approval-acceptance docs/verification/FR-3.25-transcript.md
 //
 // See docs/agents-conformance.md.
 package main
@@ -61,10 +62,18 @@ func main() {
 	flag.IntVar(&o.maxTurns, "max-turns", 4, "agent turn limit per prompt, where the client supports one")
 	flag.BoolVar(&o.dnsOnlyCA, "dns-only-ca", false, "DIAGNOSTIC: reissue the instance CA with DNS-only name constraints (deviates from CP-53; labelled in the results)")
 	flag.BoolVar(&o.brokenGateway, "broken-gateway", false, "FR-15.8 broken-build check: build smcpd with -tags smcp_broken and exit 0 only if every client that runs reaches the Gateway and fails")
+	acceptance := flag.String("approval-acceptance", "", "FR-3.25: run the four approval cases with Claude Code only and write the Markdown transcript to this file")
 	flag.Parse()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	if *acceptance != "" {
+		if err := runApprovalAcceptance(ctx, o, *acceptance, os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, "agents: approval acceptance:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	results, err := run(ctx, o, os.Stdout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "agents:", err)
