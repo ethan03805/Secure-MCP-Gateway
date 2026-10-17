@@ -51,5 +51,5 @@ sequenceDiagram
 - In the enforced profile the rootless Podman launcher attaches a server with `network = "egress"` and installs the nftables table `inet smcp_egress` in the container's network namespace (slirp4netns with host loopback) before the server starts; the instance reaches the broker at `10.0.2.2`. `TestIntegrationEgressBroker` and the linux-integration job check on real Podman that direct connections are refused and a proxied request succeeds. The standalone wrapper attaches unconfined subprocesses.
 - In the standalone profile the proxy variables are advisory: a server that ignores them reaches the network directly.
 - Grants come from `[[egress.grant]]` in the configuration, not from policy decision obligations; endpoint variable names come from `endpoint_env`, not from signed manifests.
-- The one-use egress capability in `Smcp-Egress-Auth` (SR-5.16-1) is removed but neither required nor checked.
+- The one-use egress capability in `Smcp-Egress-Auth` (SR-5.16-1, deferred from release 1.0) is removed but neither required nor checked.
 - Outbound requests are not scanned for secret fingerprints (SR-5.8-2).

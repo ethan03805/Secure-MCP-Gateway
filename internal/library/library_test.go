@@ -482,7 +482,7 @@ func TestArtifactCacheSharing(t *testing.T) {
 
 func TestLibraryScanAndRevocation(t *testing.T) {
 	reqtest.Partial(t, "FR-5.3", "FR-14.12") // interval polling and instance teardown in runtime_test
-	reqtest.Partial(t, "FR-5.1")             // directory library only; no OCI registry library
+	reqtest.Verifies(t, "FR-5.1")            // a package imported from the directory library
 	e := newEnv(t)
 	dst := filepath.Join(e.lib.Dir(), "scan", "1")
 	if err := packaging.CopyPackage(e.pkg(pkgtest.Spec{ID: "scan", Revision: "1"}), dst); err != nil {

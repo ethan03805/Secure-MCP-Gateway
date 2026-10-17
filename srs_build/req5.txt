@@ -1043,14 +1043,15 @@ A: E-18; E-12; F-45; I-25
 V: Test | Replay a used capability and present one for another destination; confirm refusal and header removal.
 SRC: SEC 5.16
 R: Each outbound operation is individually authorized.
+DEFER: A per-operation capability would have to be attached by the server's own HTTP client, and the third-party MCP servers release 1.0 runs do not send one. Release 1.0 authorizes each operation instead by the instance it comes from and the destination: an instance reaches only its own broker listeners (SR-4.5-1), each operation is checked against that instance's current grants before any connection (SR-4.5-2), and the broker removes any `Smcp-Egress-Auth` header it receives. Per-call capabilities are deferred until servers can be given an egress client that carries them.
 
 @SR-5.17-1 | No ambient cookies
 P: SEC-5.17
-S: The Egress Broker (E-18) SHALL strip `Cookie` and `Set-Cookie` headers and SHALL retain no cookie state between operations.
+S: The Egress Broker (E-18) SHALL strip `Cookie` and `Set-Cookie` headers from every operation it relays in clear (plain-HTTP proxy requests and endpoint requests, whose TLS the broker originates) and SHALL retain no cookie state between operations.
 A: E-18; F-45
 V: Test | Have a destination set a cookie; confirm it is not forwarded or replayed.
 SRC: SEC 5.17
-R: No ambient credential state.
+R: No ambient credential state. An HTTPS request through `CONNECT` is a TLS tunnel that the broker relays without interception (it checks the server name, SR-4.5-2), so it cannot see the headers inside; the broker keeps no cookies of its own for any operation.
 
 @SR-5.18-1 | Binary content gate
 P: SEC-5.18
