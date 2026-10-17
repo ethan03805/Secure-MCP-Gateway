@@ -94,6 +94,9 @@ archives:
     files:
       - src: README.md
       - src: CHANGELOG.md
+      - src: docs/icd/*.md
+        dst: docs/icd
+        strip_parent: true
       - src: LICENSE*
         info:
           mode: 0644

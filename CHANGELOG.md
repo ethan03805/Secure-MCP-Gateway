@@ -229,6 +229,12 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - `smcp-stdio` uses the socket when the credential file names `[gateway] socket` and `uds_key`; the old HTTP-over-socket dialing of the adapters is removed.
 - New tests verify FR-1.1 (the process's listening sockets enumerated from the kernel are exactly the TLS, UDS and admin listeners), FR-1.47, FR-2.15 and SR-2.8-3.
 
+### Conformance suite, interface control documents, header characters (FR-12.9, FR-1.19, FR-1.48, SR-5.2-2, SR-5.6-1, FR-1.42)
+
+- New `internal/conformance` (FR-12.9): runs a full Gateway over a scripted backend and drives it with `mcp-spec/2026-07-28/schema/examples`. Every example validates against `schema.json`; the example requests are sent and every response and stream message is validated; the backend serves the Tool, CallToolResult, InputRequiredResult and content-block examples and sends the sampling, elicitation, roots and logging examples during calls; the Gateway's southbound lines are validated as JSON-RPC messages. Every example directory gets a report row; `make conformance` writes `build/conformance.md`. The suite also checks that no undefined code in `-32020` to `-32099`, `-32002` or `-32042` is returned or used in the sources (FR-1.19), and verifies SR-5.6-1 and FR-1.42.
+- `docs/icd/x-01-harness-interface.md` and `docs/icd/x-12-adapter-hooks.md` (FR-1.48), shipped in the release archives; a test checks that they cover the listed topics and every framework of the client matrix.
+- The harness listener answers a request whose header name or value has control characters, or whose header block is malformed, with HTTP 400 and `-32020` instead of net/http's plain-text 400 (`internal/edge/headerconn.go`): it terminates TLS itself and rewrites that fixed response. The harness listener now serves HTTP/1.1 only; clients that offer HTTP/2 fall back by ALPN. A new test verifies SR-5.2-2 on the running Gateway.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

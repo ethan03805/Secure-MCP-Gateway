@@ -38,6 +38,8 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Operations](operations/README.md) | FR-7.11 to FR-7.14, FR-13.7 to FR-13.13, FR-17 | Health, logs, metrics, reload, keys, backup, upgrade, uninstall |
 | [Remote Access Profile](remote-access.md) | FR-16 | Tunnel, remote listener, registrations, device sign-in, limits |
 | [Harness adapters](adapters.md) | FR-12.12, FR-12.13, FR-16.9 | `smcp-session`, `smcp-stdio`, `smcp-connect`, the credential file |
+| [X-01 harness interface ICD](icd/x-01-harness-interface.md) | FR-1.48 | Listeners, both protocol eras, OAuth endpoints and scopes, session API, required headers, error codes, conformance fixtures |
+| [X-12 adapter hooks ICD](icd/x-12-adapter-hooks.md) | FR-1.48 | Adapter hooks, credential file and lockdown per supported framework |
 | [Client setup, lockdown and doctor](harness.md) | FR-15.1 to FR-15.7 | `smcpctl clients setup`, `lockdown`, `doctor` |
 | [Real-agent conformance suite](agents-conformance.md) | FR-15.8, FR-15.10 | `scripts/agents`, the "Real agents" workflow, the broken-build check, known client findings |
 | [Hostile backend fixtures](hostile-fixtures.md) | FR-19.1, FR-19.2, Appendix L | `internal/hostile`, `cmd/smcp-hostile`, the CI job "hostile" |

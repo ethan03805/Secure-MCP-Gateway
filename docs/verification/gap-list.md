@@ -18,7 +18,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-01 Harness Interface Endpoint
 
-- FR-1.48 missing: no X-01 or X-12 interface control document in the release.
 - FR-11.5 external: no p95 overhead measurement for 64 KiB results at eight concurrent calls on reference hardware.
 - FR-12.1 external: no release SBOM license check; needs a release artifact.
 - FR-12.2 unverified: no test runs the baseline functions with outbound Internet blocked.
@@ -28,10 +27,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-02 Protocol Mediator
 
-- FR-1.19 unverified: Gateway codes come from Appendix B (`internal/edge/edge.go`) and reserved codes come from the SDK; the verification also needs the conformance-suite log of FR-12.9, which does not exist.
-- FR-12.9 missing: no automated conformance suite over `mcp-spec/2026-07-28/schema/examples`.
-- SR-5.2-2 missing (partial claim exists): header values with control characters are refused by `net/http` with a plain 400 before any Gateway handler runs, not with `-32020`; the edge cannot answer them without replacing the HTTP server.
-- SR-5.6-1 unverified (partial claim exists): rejection of resources, prompts, completion, logging and tasks methods and the tools-only capabilities are tested; no test or record shows that no server-initiated request reaches the harness.
 
 ## E-03 Identity & Authentication Service
 
