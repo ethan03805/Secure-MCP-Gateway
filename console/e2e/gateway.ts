@@ -186,6 +186,87 @@ export function stop(): void {
   }
 }
 
+/** A second Gateway for tests that change state the shared one must keep (a suspended server, a fail-closed cause). */
+export interface Dedicated extends GatewayInfo {
+  dir: string;
+  /** Stops smcpd and starts it again on the same instance; resolves once it answers. */
+  restart(): Promise<void>;
+  stop(): void;
+}
+
+/**
+ * Bootstraps and starts a dedicated Gateway in console/.e2e/<name> with the
+ * binaries the global setup built, on free ports, with notifications off.
+ * Sign in with a fresh browser context: the session cookie is per host, not
+ * per port, so it would replace the shared Gateway's.
+ */
+export async function startDedicated(name: string): Promise<Dedicated> {
+  const dir = join(work, name);
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  const adminPassword = "console-e2e-dedicated-admin";
+  const sessionApproverPassword = "console-e2e-dedicated-approver";
+  const adminPw = secretFile(`${name}-admin.pw`, adminPassword);
+  const saPw = secretFile(`${name}-approver.pw`, sessionApproverPassword);
+  const ctl = join(bin, "smcpctl");
+  const harness = await freePort();
+  const admin = await freePort();
+  const metrics = await freePort();
+  const instDir = join(dir, "instance");
+  execFileSync(
+    ctl,
+    ["bootstrap", "--dir", instDir, "--port", String(harness), "--admin-port", String(admin), "--metrics-port", String(metrics), "--notify", "off", "--admin-password-file", adminPw, "--approver-password-file", saPw],
+    { stdio: "ignore" },
+  );
+  const config = join(instDir, "smcp.toml");
+  const marker = `console-e2e-${name}-${Date.now()}`;
+  writeFileSync(join(instDir, "sandbox", "hello.txt"), marker + "\n");
+  let p: ChildProcess | null = null;
+  const launch = async () => {
+    p = spawn(join(bin, "smcpd"), ["--config", config], { stdio: ["ignore", "ignore", "ignore"], detached: false });
+    for (let i = 0; i < 120; i++) {
+      if (p.exitCode !== null) throw new Error(`dedicated smcpd ${name} exited during startup`);
+      try {
+        execFileSync(ctl, ["health", "--config", config], { stdio: "ignore" });
+        return;
+      } catch {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+    throw new Error(`dedicated smcpd ${name} did not answer within 60 s`);
+  };
+  const halt = async () => {
+    const q = p;
+    if (!q || q.exitCode !== null) return;
+    const gone = new Promise((ok) => q.once("exit", ok));
+    q.kill("SIGTERM");
+    await gone;
+  };
+  await launch();
+  return {
+    adminURL: `https://127.0.0.1:${admin}`,
+    publicURL: `https://127.0.0.1:${harness}`,
+    ca: join(instDir, "state", "tls", "ca.crt"),
+    config,
+    adminPassword,
+    approverUser: "",
+    approverPassword: "",
+    sessionApproverPassword,
+    roleUsers: {},
+    rolePassword: "",
+    marker,
+    pid: (p as ChildProcess | null)?.pid ?? 0,
+    dir: instDir,
+    restart: async () => {
+      await halt();
+      await launch();
+    },
+    stop: () => {
+      if (p && p.exitCode === null) p.kill("SIGTERM");
+    },
+  };
+}
+
 /** Runs the test MCP client: OAuth sign-in as the Session Approver, then one tool call. */
 export function mcpCall(g: GatewayInfo, tool: string, args: object, opts: { scope?: string; expect?: string; timeout?: string; clientID?: string } = {}) {
   const a = ["-url", g.publicURL, "-ca", g.ca, "-call", tool, "-args", JSON.stringify(args), "-timeout", opts.timeout ?? "150s"];

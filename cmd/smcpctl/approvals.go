@@ -168,6 +168,27 @@ func printList(out io.Writer, v any) {
 	tw.Flush()
 }
 
+// anomalyText is the anomaly evidence of an approval (FR-3.18): band,
+// contributing feature, z-score and baseline snapshot, or "none reported"
+// when the call was not held for an anomaly band.
+func anomalyText(m map[string]any) string {
+	a, ok := m["anomaly"].(map[string]any)
+	if !ok || str(a, "band") == "" {
+		return "none reported"
+	}
+	s := "band " + str(a, "band")
+	if f := str(a, "contributing_feature"); f != "" {
+		s += ", feature " + f
+	}
+	if z, ok := a["z_score"].(float64); ok {
+		s += fmt.Sprintf(", z-score %.2f", z)
+	}
+	if id := str(a, "snapshot_id"); id != "" {
+		s += ", snapshot " + id
+	}
+	return s
+}
+
 // printEvidence prints the FR-3.18 evidence of an approval.
 func printEvidence(out io.Writer, m map[string]any) {
 	tw := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
@@ -191,7 +212,7 @@ func printEvidence(out io.Writer, m map[string]any) {
 		}
 		row("Decisive rules", strings.Join(parts, ", "))
 	}
-	row("Anomaly", "none reported")
+	row("Anomaly", anomalyText(m))
 	row("Session", str(m, "session_id"))
 	row("Principal", str(m, "principal_id"))
 	row("Template", str(m, "template"))
