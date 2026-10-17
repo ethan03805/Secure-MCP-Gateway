@@ -72,6 +72,10 @@ srs-check: ## Fail when the committed SRS differs from srs_build/
 	$(PYTHON) -I srs_build/gen.py . $(BUILD)/srs.md
 	diff -u Secure_MCP_Gateway_SRS.md $(BUILD)/srs.md
 
+.PHONY: openapi
+openapi: ## Regenerate site/data/openapi.json (the control API document) from the Go sources
+	$(GO) run ./tools/openapi
+
 site/node_modules: site/package-lock.json
 	cd site && $(NPM) ci --no-audit --no-fund
 	@touch site/node_modules

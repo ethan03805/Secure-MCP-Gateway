@@ -39,9 +39,9 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Remote Access Profile](remote-access.md) | FR-16 | Tunnel, remote listener, registrations, device sign-in, limits |
 | [Harness adapters](adapters.md) | FR-12.12, FR-12.13, FR-16.9 | `smcp-session`, `smcp-stdio`, `smcp-connect`, the credential file |
 | [Client setup, lockdown and doctor](harness.md) | FR-15.1 to FR-15.7 | `smcpctl clients setup`, `lockdown`, `doctor` |
-| [Real-agent conformance suite](agents-conformance.md) | FR-15.8, FR-15.10 | `scripts/agents`, the "Real agents" workflow, known client findings |
+| [Real-agent conformance suite](agents-conformance.md) | FR-15.8, FR-15.10 | `scripts/agents`, the "Real agents" workflow, the broken-build check, known client findings |
 | [Hostile backend fixtures](hostile-fixtures.md) | FR-19.1, FR-19.2, Appendix L | `internal/hostile`, `cmd/smcp-hostile`, the CI job "hostile" |
-| [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format; no records yet |
+| [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)) and the [gap list](verification/gap-list.md) of unverified requirements |
 
 ## Client quick starts (FR-18.3)
 

@@ -270,9 +270,8 @@ The event also carries the call's correlation, session, principal, decision, pol
 ## Limitations
 
 - A request filter that transforms arguments does not cause a second policy decision (SR-5.12-1). Decisions do not read arguments yet, so the transformed request would get the same decision.
-- Request and response scoring (E-31) and the Observation Collector (E-29) are not built; the evidence event is the only record of filter timing and parameters.
-- Progress notifications from backends are not passed through the response filters.
-- The secret broker that registers fingerprints (E-20) is not built.
+- Request and response scoring (E-31) are not stages of the chains, and the Observation Collector (E-29) records per-call parameters, not per-filter spans with timing (FR-10.2).
+- Relayed progress notifications pass the response chain one message at a time: a blocked message is dropped, a transformed one is relayed as transformed.
 - Path-typed and URL-typed arguments are recognized by schema annotations and names. A server that takes a path under another name needs `argument_names` or `"x-smcp-type": "path"` in its manifest schema.
 - Suspended tools are recorded by the inspector (`Inspector.Suspended()`), not yet in a registry record that the console can show (E-14).
 - The detection corpora are small and written with the rules; see the measured rates above.

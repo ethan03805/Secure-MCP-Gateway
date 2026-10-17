@@ -1,6 +1,7 @@
 # Keeps generated files in step with their sources on pull requests:
 #   - Secure_MCP_Gateway_SRS.md from srs_build/ (python3 -I srs_build/gen.py)
 #   - go.mod and go.sum (go mod tidy)
+#   - site/data/openapi.json from the control API routes (go run ./tools/openapi)
 # When either differs, the job commits the regenerated files to the PR
 # branch. Same-repository PRs only; fork PRs get the normal CI failure.
 #
@@ -62,12 +63,15 @@ jobs:
       - name: go mod tidy
         if: steps.head.outputs.stale != 'true'
         run: go mod tidy
+      - name: Regenerate the control API document
+        if: steps.head.outputs.stale != 'true'
+        run: go run ./tools/openapi
       - name: Commit and push regenerated files
         id: push
         if: steps.head.outputs.stale != 'true'
         run: |
-          changed=$(git status --porcelain -- Secure_MCP_Gateway_SRS.md go.mod go.sum)
-          other=$(git status --porcelain | grep -v -e ' Secure_MCP_Gateway_SRS.md$' -e ' go.mod$' -e ' go.sum$' || true)
+          changed=$(git status --porcelain -- Secure_MCP_Gateway_SRS.md go.mod go.sum site/data/openapi.json)
+          other=$(git status --porcelain | grep -v -e ' Secure_MCP_Gateway_SRS.md$' -e ' go.mod$' -e ' go.sum$' -e ' site/data/openapi.json$' || true)
           if [ -n "$other" ]; then
             echo "::error::Regeneration touched unexpected files:"
             echo "$other"
@@ -77,9 +81,9 @@ jobs:
             echo "Generated files are up to date."
             exit 0
           fi
-          git add Secure_MCP_Gateway_SRS.md go.mod go.sum
+          git add Secure_MCP_Gateway_SRS.md go.mod go.sum site/data/openapi.json
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -m "Regenerate generated files" -m "Secure_MCP_Gateway_SRS.md from srs_build/ and go.mod/go.sum from go mod tidy, by the regenerate workflow."
+            commit -m "Regenerate generated files" -m "Secure_MCP_Gateway_SRS.md from srs_build/, go.mod/go.sum from go mod tidy and site/data/openapi.json from tools/openapi, by the regenerate workflow."
           if git push origin "HEAD:refs/heads/$HEAD_REF"; then
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           else

@@ -82,6 +82,6 @@ sequenceDiagram
 
 - Request and response scoring (E-31) are not stages; scoring is asynchronous by default, with optional synchronous approval and withhold obligations ([../observation.md](../observation.md)).
 - No second decision after a transforming request filter (SR-5.12-1); decisions do not read arguments.
-- Progress notifications from backends are not relayed or filtered.
+- Progress notifications from backends are relayed with the northbound token after the response filters, at most 10 per second per request (CP-21), never after the response; the backend gets a Gateway-issued token.
 - Backend instances are shared across sessions (no per-session or per-call scope).
 - The graph mirror is fed asynchronously from the journal and is never consulted on the call path.

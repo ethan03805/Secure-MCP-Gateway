@@ -221,6 +221,6 @@ writes `<library>/revocations/<id>@<revision>.json` and its signature. Any enrol
 - Only the directory library is implemented; an OCI registry library (FR-5.1) is not.
 - The probe has the host network in the Standalone profile; it is removed only by a confining launcher, which this release does not have.
 - OCI packages need `podman`; they are fetched and verified on any host but were not probed or launched in the automated tests.
-- The revocation feed staleness alert (SR-3-4), the metadata rule set at import (SR-5.9-2), era consistency at start (FR-5.17), operator classification overrides after import (SR-3.11-1) and the console view G-10 are not implemented.
+- The revocation feed staleness alert (SR-3-4), the metadata rule set at import (SR-5.9-2), era consistency at start (FR-5.17), and operator classification overrides after import (SR-3.11-1) are not implemented. The console view G-10 enables, suspends and retires revisions.
 - A revision enabled while `smcpd` runs starts at the next Gateway start.
 - Catalogs built for sessions before a suspension keep listing the suspended tools until they are rebuilt; calls to them are refused.

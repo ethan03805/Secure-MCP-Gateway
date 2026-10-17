@@ -35,7 +35,7 @@ When the Gateway is stopped, `smcpctl backup` writes the archive directly from t
 
 The archive contains the CA key and the evidence-signing key. Keep the passphrase or the age identity separately from the archives.
 
-Scheduled backups (FR-9.16) belong to the Data Lifecycle & Memory Manager (E-28) and are not built yet; run `smcpctl backup` from cron or a systemd timer meanwhile.
+Scheduled backups (FR-9.16) belong to the Data Lifecycle & Memory Manager (E-28) and are not implemented; run `smcpctl backup` from cron or a systemd timer meanwhile.
 
 ## Restore (SR-7.8-1)
 

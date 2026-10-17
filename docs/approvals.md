@@ -141,7 +141,7 @@ Argument values are not written to the journal; only their digest is. If the jou
 
 ## Limitations
 
-- Anomaly-band evidence (feature, z-score, baseline) is shown as "none reported": request scoring (E-31) does not exist yet, so no anomaly obligation reaches the service. Session-taint approvals (`TAINT_APPROVAL`) likewise depend on taint tracking, which is not built.
+- Anomaly-band evidence (feature, z-score, baseline) is shown as "none reported" (FR-3.18): the optional anomaly approval obligation (E-31, `require_approval_band`) and session-taint approvals (`TAINT_APPROVAL`) reach the service, but the scorer's evidence is not carried on the approval record.
 - The console's Approvals view (G-13) is served by the console element; this service provides its data through `/api/v1/approvals` and the watch stream.
 - There are no Auditor, Operator, Policy Author or Researcher accounts yet; only Administrator and Approver tokens reach the approval routes.
 - The real-harness acceptance run with Claude Code (FR-3.25) has not been recorded.

@@ -15,7 +15,7 @@ The Key & Trust Anchor Manager (E-22, `internal/keys`) keeps the Gateway's keys 
 | `keys/admin.token` | Local operator token of the control API |
 | `keys/installation.id` | Installation ID, asked for by `smcpctl uninstall --purge` |
 
-Not yet implemented: TPM sealing, macOS Keychain storage and passphrase encryption of key files (FR-7.9), the client CA for the mTLS profile (FR-7.7), and the key purposes of elements not built yet (FR-7.8).
+Not yet implemented: TPM sealing, macOS Keychain storage and passphrase encryption of key files (FR-7.9), the client CA for the mTLS profile (FR-7.7), and separate keys for every purpose FR-7.8 lists (the research pseudonymization key, for example, is kept by E-32).
 
 ## Lifetimes (CP-53)
 
