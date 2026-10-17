@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -194,6 +195,9 @@ func Attach(ctx context.Context, a *app.App, o Options) (*Runtime, error) {
 	r.recordUpgradeEvent()
 	r.goRun(func() { r.mon.Run(ctx) })
 	r.goRun(func() { r.keyLoop(ctx) })
+	if iv := a.Config.Backup.Interval.Duration; iv > 0 {
+		r.goRun(func() { r.backupLoop(ctx, iv) }) // FR-9.16
+	}
 	if a.Config.Evidence.ExportDir != "" {
 		r.goRun(func() { r.exportLoop(ctx, a.Config.Evidence.ExportInterval.Duration) })
 	}
@@ -365,6 +369,37 @@ func (r *Runtime) commit(outcome, reason, actor string, detail map[string]any) {
 	}
 }
 
+// backupLoop runs a scheduled backup every interval (FR-9.16) with the
+// encryption of [backup]. Each run is the SR-7.7-1 procedure of an
+// on-demand backup and records its result and checksum the same way.
+func (r *Runtime) backupLoop(ctx context.Context, every time.Duration) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+		cfg := r.app.Config.Backup
+		req := BackupRequest{Recipients: cfg.Recipients}
+		if cfg.PassphraseFile != "" {
+			b, err := os.ReadFile(cfg.PassphraseFile)
+			if err != nil {
+				r.log.Error("scheduled backup: passphrase file", "err", err)
+				r.commit("failed", "BACKUP_FAILED", "scheduler", map[string]any{"kind": "backup", "error": err.Error()})
+				continue
+			}
+			req.Passphrase = strings.TrimRight(string(b), "\r\n")
+		}
+		if res, err := r.Backup(req, "scheduler"); err != nil {
+			r.log.Error("scheduled backup failed", "err", err)
+		} else {
+			r.log.Info("scheduled backup written", "path", res.Path, "sha256", res.SHA256)
+		}
+	}
+}
+
 func (r *Runtime) exportLoop(ctx context.Context, every time.Duration) {
 	cfg := r.app.Config
 	ex := &audit.Exporter{JournalDir: r.app.Journal.Dir(), AnchorPath: r.app.Journal.AnchorPath(), ExportDir: cfg.Evidence.ExportDir,
@@ -472,6 +507,10 @@ func (r *Runtime) Reload(actor string) (ReloadResult, error) {
 		case k == "limits.principal_calls_per_minute":
 			r.app.Decider.SetDefaultRate(next.Limits.PrincipalCallsPerMin)
 			upd.Limits.PrincipalCallsPerMin = next.Limits.PrincipalCallsPerMin
+			res.Applied = append(res.Applied, k)
+		case k == "limits.principal_call_burst":
+			r.app.Decider.SetBurst(next.Limits.PrincipalCallBurst)
+			upd.Limits.PrincipalCallBurst = next.Limits.PrincipalCallBurst
 			res.Applied = append(res.Applied, k)
 		default:
 			res.NotApplied = append(res.NotApplied, k)
