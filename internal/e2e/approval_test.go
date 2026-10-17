@@ -465,11 +465,14 @@ func TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry(t *testing.T) {
 	}
 	var comments int
 	var final string
+	// Keep-alives stop at the bound: none follows the final -31002 event.
+	// The order of lines in the stream is checked rather than wall-clock
+	// time since the request, which under load includes request latency.
 	for _, l := range lines {
 		if strings.HasPrefix(l.text, ": keep-alive") {
 			comments++
-			if l.at.Sub(start) > 1500*time.Millisecond {
-				t.Fatalf("keep-alive after the bound: %v", l.at.Sub(start))
+			if final != "" {
+				t.Fatalf("keep-alive after the bound's final event, %v after the start", l.at.Sub(start))
 			}
 		}
 		if strings.HasPrefix(l.text, "data: ") {

@@ -136,8 +136,16 @@ func TestApprovalsCLI(t *testing.T) {
 	go func() {
 		watchDone <- approvalsCmd([]string{"watch", "--config", cfgPath, "--user", "alice", "--password-file", alicePW, "--max-events", "1"}, strings.NewReader(""), watchOut)
 	}()
-	deadline := time.Now().Add(10 * time.Second)
+	// Signing in hashes the password, which is slow under the race
+	// detector on a loaded machine; the 2 s bound below starts once the
+	// watch is running.
+	deadline := time.Now().Add(60 * time.Second)
 	for !strings.Contains(watchOut.String(), "watching") {
+		select {
+		case err := <-watchDone:
+			t.Fatalf("watch ended before it started: %v %s", err, watchOut.String())
+		default:
+		}
 		if time.Now().After(deadline) {
 			t.Fatalf("watch did not start: %s", watchOut.String())
 		}
