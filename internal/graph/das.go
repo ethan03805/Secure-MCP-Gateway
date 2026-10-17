@@ -462,15 +462,20 @@ func (d *DAS) Neighborhood(ctx context.Context, label, id string, limit int) (*N
 // decision, invocation, session, principal, server, tool and policy
 // revisions, and the other phases of the same call.
 type EventPath struct {
-	Event          map[string]any   `json:"event"`
-	Decision       map[string]any   `json:"decision"`
-	Invocation     map[string]any   `json:"invocation"`
-	Session        map[string]any   `json:"session"`
-	Principal      map[string]any   `json:"principal"`
-	ServerRevision map[string]any   `json:"serverRevision"`
-	ToolRevision   map[string]any   `json:"toolRevision"`
-	PolicyRevision map[string]any   `json:"policyRevision"`
-	Phases         []map[string]any `json:"phases"`
+	Event          map[string]any `json:"event"`
+	Decision       map[string]any `json:"decision"`
+	Invocation     map[string]any `json:"invocation"`
+	Session        map[string]any `json:"session"`
+	Principal      map[string]any `json:"principal"`
+	ServerRevision map[string]any `json:"serverRevision"`
+	ToolRevision   map[string]any `json:"toolRevision"`
+	PolicyRevision map[string]any `json:"policyRevision"`
+	// DecisiveRules are the decision's decisive rule revisions and
+	// AuditProfile the Audit Profile revision of its decision event
+	// (SR-6.4-1).
+	DecisiveRules []map[string]any `json:"decisiveRules"`
+	AuditProfile  map[string]any   `json:"auditProfile"`
+	Phases        []map[string]any `json:"phases"`
 }
 
 // EventPath returns the bounded investigation path of an audit event.
@@ -485,7 +490,14 @@ func (d *DAS) EventPath(ctx context.Context, id string, limit int) (*EventPath, 
 	r := rows[0]
 	m := func(k string) map[string]any { v, _ := r[k].(map[string]any); return v }
 	p := &EventPath{Event: m("event"), Decision: m("decision"), Invocation: m("invocation"), Session: m("session"), Principal: m("principal"),
-		ServerRevision: m("serverRevision"), ToolRevision: m("toolRevision"), PolicyRevision: m("policyRevision"), Phases: []map[string]any{}}
+		ServerRevision: m("serverRevision"), ToolRevision: m("toolRevision"), PolicyRevision: m("policyRevision"),
+		AuditProfile: m("auditProfile"), DecisiveRules: []map[string]any{}, Phases: []map[string]any{}}
+	dr, _ := r["decisiveRules"].([]any)
+	for _, x := range dr {
+		if mm, ok := x.(map[string]any); ok {
+			p.DecisiveRules = append(p.DecisiveRules, mm)
+		}
+	}
 	ph, _ := r["phases"].([]any)
 	for _, x := range ph {
 		if mm, ok := x.(map[string]any); ok {

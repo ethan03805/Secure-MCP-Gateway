@@ -459,6 +459,27 @@ func (f *Fake) eventPath(p map[string]any) []Row {
 	if i, _ := row["invocation"].(map[string]any); i != nil {
 		row["toolRevision"] = f.out("Invocation", i["id"].(string), "INVOKED", "ToolRevision")
 	}
+	rules := []any{}
+	row["auditProfile"] = map[string]any(nil)
+	if d, _ := row["decision"].(map[string]any); d != nil {
+		did := d["id"].(string)
+		var ids []string
+		for r := range f.rels {
+			switch {
+			case r.fromLabel == "Decision" && r.from == did && r.typ == "DECIDED_BY" && r.toLabel == "RuleRevision":
+				ids = append(ids, r.to)
+			case r.fromLabel == "AuditEvent" && r.typ == "FOR_DECISION" && r.toLabel == "Decision" && r.to == did:
+				if ap := f.out("AuditEvent", r.from, "RECORDED_UNDER", "PolicyObject"); ap != nil {
+					row["auditProfile"] = ap
+				}
+			}
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			rules = append(rules, copyProps(f.nodes["RuleRevision"][id]))
+		}
+	}
+	row["decisiveRules"] = rules
 	var phases []map[string]any
 	if corr, ok := e["correlationId"].(string); ok {
 		for _, o := range f.nodes["AuditEvent"] {

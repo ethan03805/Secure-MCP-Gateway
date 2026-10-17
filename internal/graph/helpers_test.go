@@ -105,9 +105,14 @@ func callEvents(n int, session, principal string) []audit.Event {
 		}
 		return e
 	}
+	decision := ev("decision", audit.PhaseAuthorized, "E-12", "permit", true)
+	// The decision record as the edge writes it (SR-6.4-1).
+	decision.Detail = map[string]any{"considered_rules": []any{"r1/dev/allow-echo", "r1/dev/deny-write"},
+		"applicable_rules": []any{"r1/dev/allow-echo"}, "decisive_rules": []any{"r1/dev/allow-echo"},
+		"obligations": map[string]any{"audit_profile": "audit_profile@file"}}
 	return []audit.Event{
 		ev("call", audit.PhaseRequested, "E-02", "", false),
-		ev("decision", audit.PhaseAuthorized, "E-12", "permit", true),
+		decision,
 		ev("call", audit.PhaseDispatched, "E-10", "", true),
 		ev("call", audit.PhaseCompleted, "E-10", "ok", true),
 		ev("call", audit.PhaseDelivered, "E-12", "ok", true),

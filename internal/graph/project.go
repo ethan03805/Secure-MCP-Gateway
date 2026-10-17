@@ -11,7 +11,7 @@ import (
 // mirrorLabels are the labels the evidence mirror writes. Rebuild removes
 // exactly these.
 var mirrorLabels = []string{"AuditEvent", "Session", "Principal", "Invocation", "Decision", "PolicyRevision", "PolicyControl",
-	"ServerRevision", "ToolRevision", "Approval"}
+	"ServerRevision", "ToolRevision", "Approval", "RuleRevision", "PolicyObject"}
 
 // labelProps is the property allowlist per mirrored label (Appendix D key
 // properties plus the mirror's bookkeeping). Community Edition has no
@@ -29,6 +29,8 @@ var labelProps = map[string]map[string]bool{
 	"ServerRevision": set(),
 	"ToolRevision":   set("name"),
 	"Approval":       set("sessionId", "state", "argsDigest", "expiresAt", "approver", "publicName", "correlationId"),
+	"RuleRevision":   set("parentId"),
+	"PolicyObject":   set("type"),
 }
 
 func set(keys ...string) map[string]bool {
@@ -67,6 +69,27 @@ func eventTS(ev audit.Event) int64 {
 	}
 	return t.UnixNano()
 }
+
+// strList reads a list of strings from a decoded or in-process detail
+// value.
+func strList(v any) []string {
+	switch l := v.(type) {
+	case []string:
+		return l
+	case []any:
+		out := make([]string, 0, len(l))
+		for _, x := range l {
+			if s, ok := x.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+// maxRuleLinks bounds the rule revisions one decision event projects.
+const maxRuleLinks = 256
 
 func detailMap(d any) map[string]any {
 	if d == nil {
@@ -199,6 +222,9 @@ func (p *projection) add(ev audit.Event) {
 		if ev.Class == "decision" && ev.Phase == audit.PhaseAuthorized {
 			link("link.Invocation.AUTHORIZED_BY.Decision", inv, ev.DecisionID)
 		}
+		if ev.Class == "decision" {
+			p.decisionLinks(ev, node, link)
+		}
 	}
 	if ev.Class == "approval" {
 		d := detailMap(ev.Detail)
@@ -216,5 +242,34 @@ func (p *projection) add(ev audit.Event) {
 			link("link.Approval.FOR_INVOCATION.Invocation", id, inv)
 			link("link.Approval.IN_SESSION.Session", id, ev.SessionID)
 		}
+	}
+}
+
+// decisionLinks projects the decision record of a decision event (SR-6.4-1):
+// the considered, applicable and decisive rule revisions of the decision,
+// each contained in the decision's policy revision, and the effective
+// Audit Profile revision the event was recorded under.
+func (p *projection) decisionLinks(ev audit.Event, node func(string, string, map[string]any), link func(string, string, string)) {
+	d := detailMap(ev.Detail)
+	if d == nil {
+		return
+	}
+	for _, k := range []struct{ key, rel string }{
+		{"considered_rules", "CONSIDERED_RULE"}, {"applicable_rules", "APPLICABLE_RULE"}, {"decisive_rules", "DECIDED_BY"},
+	} {
+		rules := strList(d[k.key])
+		if len(rules) > maxRuleLinks {
+			rules = rules[:maxRuleLinks]
+		}
+		for _, r := range rules {
+			node("RuleRevision", r, props("parentId", ev.PolicyRevision))
+			link("link.PolicyRevision.CONTAINS.RuleRevision", ev.PolicyRevision, r)
+			link("link.Decision."+k.rel+".RuleRevision", ev.DecisionID, r)
+		}
+	}
+	ob, _ := d["obligations"].(map[string]any)
+	if ap, _ := ob["audit_profile"].(string); ap != "" {
+		node("PolicyObject", ap, props("type", "audit_profile"))
+		link("link.AuditEvent.RECORDED_UNDER.PolicyObject", ev.EventID, ap)
 	}
 }

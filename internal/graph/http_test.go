@@ -148,6 +148,12 @@ func TestGraphControlAPI(t *testing.T) {
 	if ph, _ := p["phases"].([]any); len(ph) != 5 {
 		t.Fatalf("phases %v", p["phases"])
 	}
+	if dr, _ := p["decisiveRules"].([]any); len(dr) != 1 || dr[0].(map[string]any)["id"] != "r1/dev/allow-echo" {
+		t.Fatalf("decisive rules %v", p["decisiveRules"])
+	}
+	if ap, _ := p["auditProfile"].(map[string]any); ap["id"] != "audit_profile@file" {
+		t.Fatalf("audit profile %v", p["auditProfile"])
+	}
 
 	c, ql := a.do("GET", "/api/v1/graph/queries", a.operator)
 	if c != 200 || len(ql["queries"].([]any)) != len(CannedQueries) {

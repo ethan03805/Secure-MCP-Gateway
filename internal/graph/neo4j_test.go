@@ -298,6 +298,12 @@ func TestNeo4jQueriesRetentionAndEngineStatus(t *testing.T) {
 	if err != nil || p.Decision["id"] != "dec-1" || p.Principal["id"] != "cc" || p.ToolRevision["id"] != "live-abc/echo" || len(p.Phases) != 5 {
 		t.Fatalf("%+v %v", p, err)
 	}
+	// SR-6.4-1: the path reaches the decisive rule revisions and the
+	// Audit Profile revision through the decision.
+	if len(p.DecisiveRules) != 1 || p.DecisiveRules[0]["id"] != "r1/dev/allow-echo" || p.DecisiveRules[0]["parentId"] != "r1" ||
+		p.AuditProfile["id"] != "audit_profile@file" || p.PolicyRevision["id"] != "r1" {
+		t.Fatalf("decision links: %+v %+v %+v", p.DecisiveRules, p.AuditProfile, p.PolicyRevision)
+	}
 	for _, q := range CannedQueries {
 		params := map[string]string{}
 		if q.Name == "approvals" {
