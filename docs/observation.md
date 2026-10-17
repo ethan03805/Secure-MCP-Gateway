@@ -47,7 +47,7 @@ Raw payloads (S3: P-045, P-145) are not captured in this release; selecting them
 
 ### System meta-metrics
 
-Every `metrics_interval` (default 10 s) a row is written to the `metrics` table with P-240 `throughput` (records assembled per second), P-241 `concurrent_calls` (calls in progress), P-242 `queue_depths` (collector and store writer), P-243 `rss_per_element` (Go runtime memory of `smcpd`), P-245 `observation_ingest_rate` (rows written per second), P-246 `capture_drops`, P-248 `baseline_cache_size` (bytes of the loaded snapshot), P-249 `cpu_per_element` (percent CPU of `smcpd`) and P-250 `store_sizes`. P-244 (graph memory) and P-247 (journal signing lag) are null.
+Every `metrics_interval` (default 10 s) a row is written to the `metrics` table with P-240 `throughput` (records assembled per second), P-241 `concurrent_calls` (calls in progress), P-242 `queue_depths` (collector and store writer), P-243 `rss_per_element` (Go runtime memory of `smcpd`), P-245 `observation_ingest_rate` (rows written per second), P-246 `capture_drops`, P-248 `baseline_cache_size` (bytes of the loaded snapshot), P-249 `cpu_per_element` (percent CPU of `smcpd`), P-250 `store_sizes`, P-244 `graph_memory` (the graph engine's heap use and budget, when the mirror is enabled) and P-247 `journal_signing_lag` (unsigned journal events and the age of the oldest).
 
 P-246 counts drops by reason:
 

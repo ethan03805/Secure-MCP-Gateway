@@ -36,8 +36,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-1.31 unverified: results are returned after response inspection with transformed `content`, `structuredContent` and `isError`; no test asserts all three members after a transforming filter.
 - FR-1.44 missing: `traceparent` is neither recorded as an observation attribute nor stripped from southbound requests by explicit code.
 - FR-1.45 missing: `io.modelcontextprotocol/clientInfo` is not recorded as a self-asserted observation attribute.
-- FR-4.1 missing: no canonical request object with canonicalized arguments, argument digest and receipt time is built for every call; only the Approval Service computes a canonical argument digest.
-- FR-4.2 unverified: a UUIDv7 correlation ID is assigned in `mcpChain` and carried on evidence events; no test traces one call through audit, observation and span records (span records do not exist, FR-10.2).
 - FR-12.9 missing: no automated conformance suite over `mcp-spec/2026-07-28/schema/examples`.
 - FR-18.7 unverified: `docs/troubleshooting.md` exists; no build check fails when an emitted reason code is undocumented.
 - SR-5.2-2 missing (partial claim exists): header values with control characters are refused by `net/http` with a plain 400 before any Gateway handler runs, not with `-32020`; the edge cannot answer them without replacing the HTTP server.
@@ -116,11 +114,9 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 - FR-7.6 missing: no Audit Profile alert rules, so no console alerts from them.
 - SR-6.4-1 missing: events carry decision, policy revision, server and tool revision IDs, but no decisive rule revision IDs (rules are not versioned objects) and no audit profile revision.
-- SR-6.5-1 missing: event origins are element IDs (`E-02`, `E-12`), not the `gateway`, `backend`, `broker`, `admin` labels.
 - SR-6.6-1 missing: payload capture is directed by `[observation]` configuration, not by an evaluated Audit Profile, Observation Policy or Research Campaign.
 - SR-6.8-1 missing: captured payloads are not stored as age-encrypted blobs referenced from the graph.
 - SR-6.12-1 external: the evidence key and checkpoint directory permissions depend on the Enforced installation's identities; not exercised.
-- SR-6.15-1 missing: no purge operation and no deletion receipts.
 - SR-6.18-1 missing: stderr, backend error messages and notifications are not recorded as `server_asserted` evidence.
 
 ## E-22 Key & Trust Anchor Manager
@@ -164,13 +160,11 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-29 Observation Collector
 
 - FR-10.2 missing: no per-stage timing spans with CPU time.
-- FR-10.9 unverified: meta-metrics are sampled by the collector; no test checks P-240 to P-250 at a 10-second interval.
 - FR-10.11 missing: no span-time aggregation by policy revision, rule, filter and Observation Policy.
 - FR-11.4 external: collector overhead not measured.
 
 ## E-31 Anomaly Scorer
 
-- FR-10.29 unverified: score records carry snapshot, context, per-feature values and z-scores, combined score and band; no inspection record of an abnormal call's record including the resulting actions.
 
 ## E-33 Harness adapters
 

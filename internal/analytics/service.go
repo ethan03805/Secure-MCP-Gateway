@@ -73,6 +73,7 @@ type Service struct {
 	writer   *writer
 	storeErr error
 	degrade  *degrader
+	sources  MetricSources // guarded by mu
 
 	mu        sync.Mutex
 	rec       audit.Recorder

@@ -109,6 +109,14 @@ Time per stage, policy revision and Observation Policy, ranked by total time (FR
            "count": 120, "mean": 10.1, "variance": 2.0, "min": 7, "max": 30, "quantiles": [9.8, 15, 28], "total_ms": 1212}]}
 ```
 
+### POST /api/v1/observations/purge
+
+Administrator only. Deletes the observation data (records, spans, metrics and scores, including captured payloads) of every UTC day before `before` (SR-6.15-1).
+
+Request: `{"before": "2026-10-03", "reason": "data subject request"}`; both are required, and `before` may not be after today.
+
+The deletion receipt is committed to the Evidence Journal before anything is deleted: an `observation` event with outcome `purged`, reason `DATA_PURGED` and detail `receipt_id`, `actor`, `reason`, `before`, `partitions` (each `<table>/day=<date>`), `partition_count` and `issued_at`. If it cannot be recorded, nothing is deleted (503 `audit_unavailable`). Response 200: the receipt with `removed`, the partitions deleted.
+
 ## Observation objects
 
 The Audit Profile (G-03), the Observation Policy (G-04), the Anomaly Response Policy (G-06) and the Observation Store memory budget (G-08) are published as numbered, immutable revisions with a SHA-256 digest, actor, time and reason (`internal/obspolicy`, `<state>/observation-objects.json`, mode 0600). The last revision of each kind is active. A revision is validated by resolving the complete observation settings it would produce, exactly as the analytics service does at start, so an invalid combination (an unknown or periodic parameter, approval without synchronous scoring, unordered bands) is refused with 422 `invalid`.

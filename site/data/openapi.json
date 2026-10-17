@@ -3835,6 +3835,52 @@
     ]
    }
   },
+  "/api/v1/observations/purge": {
+   "post": {
+    "description": "Reference: docs/api/observation.md",
+    "operationId": "postObservationsPurge",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Delete observation data of every day before a date; the deletion receipt is journaled first (SR-6.15-1)",
+    "tags": [
+     "observation"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
+  },
   "/api/v1/observations/status": {
    "get": {
     "description": "Reference: docs/api/observation.md",
