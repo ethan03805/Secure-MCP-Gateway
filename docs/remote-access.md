@@ -83,20 +83,43 @@ smcpctl remote disable
 
 `smcpctl remote enable` must run as the Gateway's user (it uses the operator token, an Administrator credential). It:
 
-1. For Tailscale, reads this node's MagicDNS name from `tailscale status --json` and uses `https://<name>` (or `:8443`, `:10000`). Funnel accepts only public ports 443, 8443 and 10000.
-2. Calls `POST /api/v1/remote/enable`, which records a `remote_access_enabled` event and opens the remote listener (FR-16.11). The enabled state is kept in `<state>/remote/state.json` and survives restarts (a `remote_access_resumed` event is recorded at start).
-3. Starts the tunnel: `tailscale funnel --bg --https=<port> https+insecure://<remote address>`, or `cloudflared tunnel --no-autoupdate --url https://<remote address> --no-tls-verify` in the background (log in `<state>/remote/cloudflared.log`). `https+insecure` and `--no-tls-verify` apply only between the connector and the loopback listener, whose certificate comes from the Gateway's own CA; the public side uses the provider's certificate.
-4. Records what it started in `<state>/remote/tunnel.json` so that `disable` can stop it.
+1. Asks the Gateway for its profile (`GET /admin/v1/health`) and, in the Enforced profile, installs the host rules (below) before anything else. If nft refuses them, nothing is enabled.
+2. For Tailscale, reads this node's MagicDNS name from `tailscale status --json` and uses `https://<name>` (or `:8443`, `:10000`). Funnel accepts only public ports 443, 8443 and 10000.
+3. Calls `POST /api/v1/remote/enable`, which records a `remote_access_enabled` event and opens the remote listener (FR-16.11). The enabled state is kept in `<state>/remote/state.json` and survives restarts (a `remote_access_resumed` event is recorded at start).
+4. Starts the tunnel: `tailscale funnel --bg --https=<port> https+insecure://<remote address>`, or `cloudflared tunnel --no-autoupdate --url https://<remote address> --no-tls-verify` in the background (log in `<state>/remote/cloudflared.log`). `https+insecure` and `--no-tls-verify` apply only between the connector and the loopback listener, whose certificate comes from the Gateway's own CA; the public side uses the provider's certificate.
+5. Records what it started in `<state>/remote/tunnel.json` so that `disable` can stop it.
 
 The tunnel must preserve the public `Host` header; if it rewrites `Host` to the loopback address the Gateway answers 421 and `smcpctl remote check` says so.
 
 `smcpctl remote check [--public-url URL] [--ca FILE]` fetches the protected-resource metadata through the public name and reports the provider, the public URL, whether it was reachable and which listener answered. It fails when the name is unreachable, when the Gateway refuses the host, or when the tunnel reaches the local harness listener instead of the remote one (FR-16.2).
 
-`smcpctl remote disable` calls `POST /api/v1/remote/disable` (the listener closes and every remote session ends, recorded as `remote_access_disabled`), then runs `tailscale funnel --https=<port> off` or stops cloudflared.
+`smcpctl remote disable` calls `POST /api/v1/remote/disable` (the listener closes and every remote session ends, recorded as `remote_access_disabled`), then runs `tailscale funnel --https=<port> off` or stops cloudflared, and removes the host rules it installed.
 
-The CLIs are found on the `PATH`; `SMCP_TAILSCALE` and `SMCP_CLOUDFLARED` override the paths. On this project's Mac the tailnet name is `ethans-macbook-air.tail0ffbd0.ts.net`, so the remote MCP URL would be `https://ethans-macbook-air.tail0ffbd0.ts.net/mcp`.
+The CLIs are found on the `PATH`; `SMCP_TAILSCALE`, `SMCP_CLOUDFLARED` and `SMCP_NFT` override the paths. On this project's Mac the tailnet name is `ethans-macbook-air.tail0ffbd0.ts.net`, so the remote MCP URL would be `https://ethans-macbook-air.tail0ffbd0.ts.net/mcp`.
 
-In the Enforced profile SR-4.14-1 also asks `remote enable` to install nftables rules dropping non-loopback connections to the Gateway ports; that is not implemented in this release (the listeners are loopback-only regardless, SR-2.9-3).
+### Host rules
+
+Remote access adds no inbound firewall exception: the tunnel connector runs on the host and reaches the remote listener over loopback. In the Enforced profile `smcpctl remote enable` also installs this nftables table (SR-4.14-1), with the ports taken from the configured CP-02 harness, CP-03 control API, CP-48 remote and CP-51 metrics addresses:
+
+```
+table inet smcp_remote {
+	chain input {
+		type filter hook input priority filter - 10; policy accept;
+		iifname "lo" accept
+		tcp dport { 8443, 8444, 8445, 9464 } counter drop comment "SR-4.14-1: Gateway listeners are reached only through loopback"
+	}
+}
+```
+
+Every TCP connection to those ports that does not arrive on loopback is dropped, so a listener bound to another address by mistake is still unreachable from the network. The table is separate from the base table `inet smcp` that `smcp-nftables.service` loads, so reloading either keeps the other. `--host-rules` chooses: `auto` (default) installs the table in the Enforced profile only; `nftables` installs it on any Linux host; `off` skips it and is refused in the Enforced profile. Loading nftables rules needs root, so in the Enforced profile run `sudo smcpctl remote enable --config /etc/smcp/smcp.toml` (root can read the operator token) and disable it the same way. `smcpctl remote status` shows `host_rules` in the tunnel state. The test `TestHostRulesInNamespace` (CI job linux-integration) checks the table in a network namespace: connections from another host to each port time out and a loopback client still connects.
+
+macOS runs the Standalone profile and has no nftables, and smcpctl does not change pf. The listeners bind loopback only either way (SR-2.9-3). To add the same rule with pf, put this in `/etc/pf.anchors/smcp-remote` (use the ports of your configuration):
+
+```
+block drop in quick on ! lo0 proto tcp from any to any port { 8443 8444 8445 9464 }
+```
+
+then add `anchor "smcp-remote"` and `load anchor "smcp-remote" from "/etc/pf.anchors/smcp-remote"` to `/etc/pf.conf` and run `sudo pfctl -f /etc/pf.conf -e`.
 
 ## Registering and approving clients
 

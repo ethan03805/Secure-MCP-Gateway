@@ -69,8 +69,9 @@ A package signature shows who packaged a server and that it has not changed sinc
 
 These are requirements the release does not meet in full; [verification/gap-list.md](verification/gap-list.md) tracks them.
 
-- **Remote Access host rules (SR-4.14-1):** `smcpctl remote enable` installs no nftables rules in the Enforced profile; the remote listener binds loopback and relies on the tunnel client to reach it.
-- **Secret copies in memory (SR-2.13-2):** delivery buffers are wiped where they are byte slices, but S4 environment delivery and string conversions keep copies in the Gateway's memory that cannot be overwritten.
+- **Remote Access host rules on macOS (SR-4.14-1):** in the Enforced profile `smcpctl remote enable` installs nftables rules that drop non-loopback connections to the Gateway ports. macOS runs only the Standalone profile and has no nftables; the Gateway still binds loopback only, and [remote-access.md](remote-access.md#host-rules) gives a pf anchor that you load yourself.
+- **Secret copies in memory (SR-2.13-2, RR-11):** the Secret Broker overwrites its byte buffers after each delivery, but Go strings cannot be overwritten: the S4 environment value (and the `NAME=value` entry built for the child process), the header the Egress Broker sets on each S1 request and the age library's decryption buffers stay in the Gateway's memory until it is reused. Prefer S1 to S3 over S4.
+- **Command-configured servers (SR-3.6-1, RR-12):** the content address recorded at the first launch covers the command file and file arguments named by absolute path, not modules an interpreter loads from its search path or files the server reads later. Package the server to have its whole tree verified before each launch.
 - **Egress capabilities in the Standalone profile (security review RR-09):** one-use egress capabilities are in the server's memory, so another process of the same user can use them while the call runs; a server configured with `[egress] require_capability = false` is authorized by instance and grant only.
 - **Unpackaged servers (RR-10):** egress grants are checked against a manifest only for packaged servers; set `[packages] require_signed = true` to refuse unpackaged ones.
 - **Session state:** sessions, taint, rate windows and quotas are kept in memory; a restart ends every session (FR-2.16), so harnesses sign in again.

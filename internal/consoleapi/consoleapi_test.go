@@ -126,7 +126,8 @@ command = "/usr/bin/false"
 	}
 	f.store = session.NewStore(cfg, func() *policy.Snapshot { return snap })
 	servers := fakeServers{m: map[string]*backend.Server{"fs": {Alias: "fs", Revision: "live-abc", Era: "2026-07-28", ManifestSource: "live",
-		Tools: []*mcp.Tool{{Name: "read", Description: "Read a file", InputSchema: map[string]any{"type": "object"}}, {Name: "write"}}}}}
+		Tools:          []*mcp.Tool{{Name: "read", Description: "Read a file", InputSchema: map[string]any{"type": "object"}}, {Name: "write"}},
+		SuspendedTools: []pipeline.WithheldTool{{Name: "poisoned", ReasonCode: "METADATA_BLOCKED", Stage: "import", Findings: []pipeline.Finding{{Filter: "metadata-scan", RuleSet: "tool-metadata", Rule: "r1"}}}}}}}
 	pub, err := keys.LoadEvidencePublicKey(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -398,6 +399,13 @@ func TestServersAndCatalog(t *testing.T) {
 	}
 	if list[1].(map[string]any)["state"] != "not_running" {
 		t.Fatalf("off: %v", list[1])
+	}
+	// SR-5.9-2: the tools the registry holds as suspended are listed.
+	if st, _ := fs["suspended_tools"].([]any); len(st) != 1 || st[0].(map[string]any)["name"] != "poisoned" || st[0].(map[string]any)["reason_code"] != "METADATA_BLOCKED" {
+		t.Fatalf("suspended tools: %v", fs["suspended_tools"])
+	}
+	if st, _ := list[1].(map[string]any)["suspended_tools"].([]any); st == nil || len(st) != 0 {
+		t.Fatalf("off: suspended tools %v", list[1])
 	}
 	code, out = f.do("GET", "/api/v1/servers/fs", nil)
 	tools, _ := out["tools"].([]any)

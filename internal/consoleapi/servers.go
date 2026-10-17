@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
 
 // ServerView is the JSON form of a configured backend server.
@@ -28,6 +29,9 @@ type ServerView struct {
 	Launcher        string   `json:"launcher"`
 	Confined        bool     `json:"confined"`
 	OversizedFrames uint64   `json:"oversized_frames"`
+	// SuspendedTools are the revision's tools the registry holds as
+	// suspended by the import-time metadata scan (SR-5.9-2).
+	SuspendedTools []pipeline.WithheldTool `json:"suspended_tools"`
 }
 
 // ToolView is one backend tool of a server.
@@ -53,13 +57,14 @@ func keysOf(m map[string]string) []string {
 func (c *Console) viewServer(sc config.Server, s *backend.Server) ServerView {
 	l := c.d.Servers.Launcher()
 	v := ServerView{Alias: sc.Alias, State: "not_running", Command: sc.Command, Args: append([]string{}, sc.Args...), Dir: sc.Dir,
-		EnvKeys: keysOf(sc.Env), SecretSlots: keysOf(sc.SecretEnv), RiskClasses: append([]string{}, sc.RiskClasses...)}
+		EnvKeys: keysOf(sc.Env), SecretSlots: keysOf(sc.SecretEnv), RiskClasses: append([]string{}, sc.RiskClasses...), SuspendedTools: []pipeline.WithheldTool{}}
 	if l != nil {
 		v.Launcher, v.Confined = l.Name(), l.Confined()
 	}
 	if s != nil {
 		v.State, v.Revision, v.Era, v.Verified, v.ManifestSource, v.ToolCount = "running", s.Revision, s.Era, s.Verified, s.ManifestSource, len(s.Tools)
 		v.OversizedFrames = s.OversizedFrames()
+		v.SuspendedTools = append(v.SuspendedTools, s.SuspendedTools...)
 	}
 	return v
 }

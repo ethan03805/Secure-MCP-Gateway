@@ -516,6 +516,31 @@ Observations:
 
 Deviation: none. The specification was generated without starting a container; the Linux integration test `TestIntegrationSandboxConfinesServer` inspects the effective configuration of a running one.
 
+## SR-2.13-2 Plaintext lifetime
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | SR-2.13-2 |
+| Commit | `bc3e25ad60133c5e89694c8373cda59d8dba8a54` |
+| Profile and platform | Not profile-specific; darwin/arm64 (source inspection and `go test ./internal/secrets ./internal/filters`) |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (security-final task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: read every path from the vault's decryption to the end of a delivery (launch-time S1, S3 and S4 in `Resolve`, redelivery after rotation, per-call S2) and every consumer of a delivered value (the broker's own leak fingerprints, the inspector's fingerprint set, the Egress Broker's S1 grant), listing each byte buffer that holds a decrypted value or an encoding of one and each immutable copy; ran `TestDeliveryBuffersOverwritten` and `TestRegisterBytesForms`.
+
+Observations:
+
+- The vault decrypts into one buffer sized from the ciphertext, so no growing copy is made, and overwrites it on every error path (`internal/secrets/vault.go:388`, `internal/secrets/vault.go:397`, `internal/secrets/vault.go:401`). The value lives only in memory; nothing writes it to the vault files or logs.
+- Launch-time delivery overwrites the decrypted value when the delivery returns (`internal/secrets/broker.go:424`); redelivery after rotation does the same (`internal/secrets/broker.go:588`), and per-call S2 delivery overwrites it after the call file is written and on the suspension path (`internal/secrets/filters.go:206`, `internal/secrets/filters.go:211`). `TestDeliveryBuffersOverwritten` keeps the buffers handed to the fingerprint sinks and finds them all zeros after `Resolve` returns.
+- The broker's leak fingerprints keep only keyed HMACs and overwrite the encoded forms they build (`internal/secrets/fingerprint.go:154`).
+- The inspector's fingerprint set now receives the broker's byte slice (`internal/app/app.go:262`) and builds the Base64, hex and URL-encoded forms in buffers it overwrites after hashing (`internal/filters/fingerprints.go:118`, `internal/filters/fingerprints.go:127`, `internal/filters/fingerprints.go:130`); before this change it took a string and built the forms as strings, leaving nine immutable copies per delivered value. `TestRegisterBytesForms` checks the forms and that they are overwritten.
+- S1: the broker hands the Egress Broker a copy of the value (`internal/secrets/broker.go:466`), which the Egress Broker overwrites when the grant is replaced or withdrawn (`internal/egress/inject.go:85`, `internal/egress/inject.go:97`); the test checks it is all zeros after teardown.
+- The only immutable copy the Secret Broker makes is the S4 environment string (`internal/secrets/broker.go:444`), which the statement allows.
+
+Deviation: as the narrowed statement records, three copies outside the Secret Broker's byte buffers cannot be overwritten in Go: the `NAME=value` entry built for the child process (`internal/pipeline/launch.go:147`) and the runtime's copy at process start, the header string the Egress Broker sets on each S1 request (`internal/egress/inject.go:129`), and the age library's internal decryption buffers. S3 files are removed at teardown (`internal/secrets/broker.go:752` writes them owner-only) but their blocks are not overwritten on disk. No memory snapshot was taken: the garbage collector does not clear freed memory, so a snapshot cannot show the absence of stale copies; the statement no longer asks for one.
+
 ## FR-14.5 Provenance statements of the reference packages
 
 | Field | Content |

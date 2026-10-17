@@ -333,6 +333,7 @@ func (m scanningManifest) Tools(ctx context.Context, spec pipeline.ServerSpec, l
 		m.in.meta.mu.Unlock()
 		m.in.log.Warn("tool suspended by the metadata scan", "server", spec.Alias, "tool", t.Name, "findings", len(fs))
 		m.in.recordBlocked(ctx, "import", "E-14", st)
+		ts.Withheld = append(ts.Withheld, pipeline.WithheldTool{Name: t.Name, ReasonCode: ReasonMetadataBlocked, Stage: "import", Findings: fs})
 	}
 	m.in.meta.mu.Lock()
 	m.in.meta.imported[spec.Alias] = own

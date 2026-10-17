@@ -262,6 +262,11 @@ type Server struct {
 	SecretEnv   map[string]string `toml:"secret_env" json:"secret_env"`
 	Dir         string            `toml:"dir" json:"dir"`
 	RiskClasses []string          `toml:"risk_classes" json:"risk_classes"`
+	// CommandSHA256 optionally pins the hex SHA-256 of the command file of
+	// a command-configured server. Without it the Gateway records the
+	// content address of the command (and of file arguments) at the first
+	// launch and refuses a relaunch whose files changed (SR-3.6-1).
+	CommandSHA256 string `toml:"command_sha256" json:"command_sha256"`
 	// Package names a signed server package (E-13/E-14) instead of a
 	// command: the enabled revision of that server ID is launched from the
 	// content-addressed store. PackageSHA256 optionally pins its artifact
@@ -585,6 +590,9 @@ func (c *Config) check() error {
 		}
 		if s.Package == "" && (s.PackageSHA256 != "" || len(s.Slots) > 0) {
 			return fmt.Errorf("server %q: package_sha256 and slots apply only to a package", s.Alias)
+		}
+		if s.Package != "" && s.CommandSHA256 != "" {
+			return fmt.Errorf("server %q: command_sha256 applies only to a command; pin a package with package_sha256", s.Alias)
 		}
 		for k := range s.SecretEnv {
 			if _, dup := s.Env[k]; dup {

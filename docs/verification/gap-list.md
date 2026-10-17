@@ -22,7 +22,9 @@ Updated on 2026-10-17 by the egress-capability work: SR-5.16-1 is restored from 
 
 Updated on 2026-10-17 by the perf work: FR-11.4 is within its budget in the CI job `perf` (partial claim, no longer missing). The perf harness now takes P-213 from the request's receipt to delivery minus server execution to the backend's response; before, it ended server execution at the completed event, which follows response inspection, and so left response inspection out of FR-11.4 and FR-11.5.
 
-Checked on 2026-10-17 against the status data of main `ee2e851` (386 verified, 117 partial, 26 unverified, none failing); every unverified requirement other than a parent is listed below, together with partly verified requirements whose missing part is external (reference hardware, a release, a person) needs a record rather than a test, or is a single named case (SR-7.9-1).
+Checked on 2026-10-17 against the status data of main `ee2e851` (386 verified, 117 partial, 26 unverified, none failing); every unverified requirement other than a parent is listed below, together with partly verified requirements whose missing part is external (reference hardware, a release, a person) needs a record rather than a test, or was a single named case (SR-7.9-1, since verified).
+
+Updated on 2026-10-17 by the security-final work: SR-4.14-1 is implemented (`smcpctl remote enable` installs nftables host rules; verified by the root namespace test of the linux-integration job, partial claims elsewhere), SR-2.13-2 is narrowed and verified by an inspection record, SR-7.9-1 is verified by AT-19 (a server revision suspended before both rollbacks), and SR-3.6-1, SR-5.8-1, SR-5.9-2 and SR-6.2-1 are verified by new tests. SR-4.9-1 and SR-4.11-1 stay partial: they need each client started at its pinned version with a second server added (real-agent workflow).
 
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
@@ -33,7 +35,6 @@ Updated on 2026-10-17 by the verification records work: FR-18.8 (runbook executi
 - FR-11.5 external: the CI job `perf` measures p95 P-213 (request receipt to delivery minus server execution to the backend's response) for 64 KiB results at eight concurrent calls with synchronous scoring (partial claim, `cmd/smcp-workload`; 17.4 ms and 19.0 ms on 4-CPU runners, 27.1 ms in the run of main `ee2e851`); no measurement on recorded reference hardware. AT-20 in the go job checks only the time before dispatch and after the completed event.
 - FR-12.1 external: every archive of v1.0.0-rc.2 carries `sbom.spdx.json` (FR-13.1 inspection), but no record inspects its license fields; the v1.0.0 SBOM needs the same inspection.
 - FR-12.8 external: the v1.0.0-rc.2 release carries archives, the signed checksum file, the Sigstore bundle and an SBOM per archive; no record inspects the bundle for commit IDs, build recipes, lockfiles and license notices.
-- SR-4.14-1 missing: `smcpctl remote enable` installs no nftables rules in the Enforced profile.
 
 ## E-02 Protocol Mediator
 
@@ -46,7 +47,6 @@ Updated on 2026-10-17 by the verification records work: FR-18.8 (runbook executi
 
 ## E-05 Policy Administration Service
 
-- SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; AT-19 shows a policy rollback and an application rollback (`smcpctl upgrade` to an unhealthy release) leave a principal suspension and a credential revocation in effect. No test suspends a server revision before an application rollback.
 
 ## E-06 Policy Decision Service
 
@@ -74,7 +74,6 @@ Updated on 2026-10-17 by the verification records work: FR-18.8 (runbook executi
 
 ## E-20 Secret Broker
 
-- SR-2.13-2 missing: delivery buffers are wiped where they are byte slices, but S4 environment delivery and string conversions keep copies that cannot be overwritten.
 
 ## E-21 Audit & Evidence Service
 

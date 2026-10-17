@@ -54,11 +54,12 @@ func OptionsFrom(cfg *config.Config) Options {
 var DefaultMandatoryRequest = []string{IDSizeLimit, IDUnicodeControl, IDSecretFingerprint, IDPathCanonicalize, IDURLCanonicalize, IDInjectionDetect}
 
 // DefaultMandatoryResponse are the response filters that run on every call.
-// pii-detect and delimit-untrusted run when a policy rule names them.
+// pii-detect (request and response) and delimit-untrusted run when a
+// policy rule names them.
 var DefaultMandatoryResponse = []string{IDSizeLimit, IDOutputSchema, IDContentTypeGate, IDSecretFingerprint, IDUnicodeControl, IDInjectionMarker}
 
 // Request and response filter IDs with their chain order.
-var requestOrder = map[string]int{IDSizeLimit: 50, IDUnicodeControl: 110, IDSecretFingerprint: 120, IDPathCanonicalize: 130, IDURLCanonicalize: 140, IDInjectionDetect: 150}
+var requestOrder = map[string]int{IDSizeLimit: 50, IDUnicodeControl: 110, IDSecretFingerprint: 120, IDPIIDetect: 125, IDPathCanonicalize: 130, IDURLCanonicalize: 140, IDInjectionDetect: 150}
 var responseOrder = map[string]int{IDSizeLimit: 10, IDOutputSchema: 20, IDContentTypeGate: 30, IDSecretFingerprint: 40, IDUnicodeControl: 50, IDPIIDetect: 60, IDInjectionMarker: 70, IDDelimitUntrusted: 90}
 
 // Inspector owns the loaded rule sets, the fingerprint set, the metadata
@@ -237,9 +238,13 @@ func (in *Inspector) RequestFilters() map[string]pipeline.RequestFilter {
 		IDSizeLimit:         sizeRequest{in.size},
 		IDUnicodeControl:    &ruleRequestFilter{id: IDUnicodeControl, rules: in.source(RuleSetUnicode), reason: ReasonUnicodeControl},
 		IDSecretFingerprint: &ruleRequestFilter{id: IDSecretFingerprint, rules: in.source(RuleSetSecrets), reason: ReasonSecretInArguments, extra: in.fingerprintCheck},
-		IDPathCanonicalize:  in.paths,
-		IDURLCanonicalize:   in.urls,
-		IDInjectionDetect:   &ruleRequestFilter{id: IDInjectionDetect, rules: in.source(RuleSetInjection), forceTag: true},
+		// The data-class rules (the pii rule set) apply to every argument
+		// string with each rule's request action when the call's effective
+		// obligations name pii-detect (SR-5.8-1).
+		IDPIIDetect:        &ruleRequestFilter{id: IDPIIDetect, rules: in.source(RuleSetPII), reason: ReasonDataClass},
+		IDPathCanonicalize: in.paths,
+		IDURLCanonicalize:  in.urls,
+		IDInjectionDetect:  &ruleRequestFilter{id: IDInjectionDetect, rules: in.source(RuleSetInjection), forceTag: true},
 	}
 }
 

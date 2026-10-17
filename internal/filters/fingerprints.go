@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"hash/maphash"
-	"net/url"
 	"strings"
 	"sync"
 	"unicode"
@@ -54,38 +53,94 @@ func (f *FingerprintSet) mac(s string) [32]byte {
 	return out
 }
 
-// encodedForms are the forms FR-6.10 names.
-func encodedForms(v string) []string {
-	return []string{v,
-		base64.StdEncoding.EncodeToString([]byte(v)),
-		base64.RawStdEncoding.EncodeToString([]byte(v)),
-		base64.URLEncoding.EncodeToString([]byte(v)),
-		base64.RawURLEncoding.EncodeToString([]byte(v)),
-		hex.EncodeToString([]byte(v)),
-		strings.ToUpper(hex.EncodeToString([]byte(v))),
-		url.QueryEscape(v),
-		url.PathEscape(v),
+func (f *FingerprintSet) macBytes(b []byte) [32]byte {
+	m := hmac.New(sha256.New, f.key)
+	m.Write(b)
+	var out [32]byte
+	copy(out[:], m.Sum(nil))
+	return out
+}
+
+// encodedFormsBytes are the forms of encodedForms built as byte slices the
+// caller can overwrite. The first is v itself.
+func encodedFormsBytes(v []byte) [][]byte {
+	out := [][]byte{v}
+	for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.RawStdEncoding, base64.URLEncoding, base64.RawURLEncoding} {
+		b := make([]byte, enc.EncodedLen(len(v)))
+		enc.Encode(b, v)
+		out = append(out, b)
 	}
+	lower := make([]byte, hex.EncodedLen(len(v)))
+	hex.Encode(lower, v)
+	upper := make([]byte, len(lower))
+	for i, c := range lower {
+		if c >= 'a' && c <= 'f' {
+			c -= 'a' - 'A'
+		}
+		upper[i] = c
+	}
+	return append(out, lower, upper, escapeBytes(v, true), escapeBytes(v, false))
+}
+
+// escapeBytes is url.QueryEscape (query) or url.PathEscape on bytes.
+func escapeBytes(v []byte, query bool) []byte {
+	const hexdig = "0123456789ABCDEF"
+	out := make([]byte, 0, 3*len(v))
+	for _, c := range v {
+		switch {
+		case 'a' <= c && c <= 'z', 'A' <= c && c <= 'Z', '0' <= c && c <= '9', c == '-', c == '_', c == '.', c == '~':
+			out = append(out, c)
+		case query && c == ' ':
+			out = append(out, '+')
+		case !query && (c == '$' || c == '&' || c == '+' || c == ':' || c == '=' || c == '@'):
+			out = append(out, c)
+		default:
+			out = append(out, '%', hexdig[c>>4], hexdig[c&15])
+		}
+	}
+	return out
 }
 
 // Register adds the fingerprints of value under ref (a secret reference,
 // never the value). Values shorter than the window match only as a whole
 // token.
 func (f *FingerprintSet) Register(ref, value string) {
-	if value == "" {
+	b := []byte(value)
+	f.RegisterBytes(ref, b)
+	clear(b)
+}
+
+// RegisterBytes is Register for a value held in a byte slice (the Secret
+// Broker's deliveries, SR-2.13-2): every encoded form is built in a buffer
+// that is overwritten once its fingerprints are computed, so no immutable
+// copy of the value or of its encodings is left behind. value itself is
+// neither kept nor changed.
+func (f *FingerprintSet) RegisterBytes(ref string, value []byte) {
+	if len(value) == 0 {
 		return
 	}
+	f.registerForms(ref, encodedFormsBytes(value))
+}
+
+// registerForms fingerprints forms (forms[0] is the caller's value) and
+// overwrites every other form.
+func (f *FingerprintSet) registerForms(ref string, forms [][]byte) {
+	defer func() {
+		for _, b := range forms[1:] {
+			clear(b)
+		}
+	}()
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	for _, form := range encodedForms(value) {
-		f.full[f.mac(form)] = ref
+	for _, form := range forms {
+		f.full[f.macBytes(form)] = ref
 		if len(form) < FingerprintWindow {
 			continue
 		}
 		for i := 0; i+FingerprintWindow <= len(form); i++ {
 			w := form[i : i+FingerprintWindow]
-			f.pre[maphash.String(f.seed, w)] = struct{}{}
-			f.windows[f.mac(w)] = ref
+			f.pre[maphash.Bytes(f.seed, w)] = struct{}{}
+			f.windows[f.macBytes(w)] = ref
 		}
 	}
 }

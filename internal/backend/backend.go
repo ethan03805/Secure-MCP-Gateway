@@ -46,6 +46,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"regexp"
 	"slices"
@@ -98,9 +99,16 @@ type Server struct {
 	Tools          []*mcp.Tool
 	Verified       bool   // tool definitions come from a verified manifest
 	ManifestSource string // "live" when unverified
-	cfg            config.Server
-	spec           pipeline.ServerSpec
-	suspended      atomic.Bool
+	// SuspendedTools are the tools of the revision registered as suspended
+	// at import (SR-5.9-2): never indexed, presented or callable.
+	SuspendedTools []pipeline.WithheldTool
+	// Artifact is the content address of a command-configured server,
+	// recorded at its first launch (SR-3.6-1); nil for packaged servers
+	// (content-addressed by the library) and in-process test servers.
+	Artifact  *pipeline.LaunchArtifact
+	cfg       config.Server
+	spec      pipeline.ServerSpec
+	suspended atomic.Bool
 
 	// mu guards cur and ready. ready is nil or closed while cur may be
 	// used; a restart replaces it with an open channel until the new
@@ -483,11 +491,31 @@ func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error
 		return nil, err
 	}
 	s := &Server{Alias: sc.Alias, cfg: sc, spec: spec}
+	if sc.Package == "" {
+		// SR-3.6-1: a command-configured server runs only the files whose
+		// content address is recorded now (or pinned by command_sha256).
+		// A command that is not a file (an in-process test server) has an
+		// empty address, and a relaunch after a file appeared there is
+		// refused like any other change.
+		art, err := pipeline.ContentAddress(spec.Command, spec.Args)
+		switch {
+		case errors.Is(err, fs.ErrNotExist) && sc.CommandSHA256 == "":
+			art = pipeline.LaunchArtifact{Files: map[string]string{}}
+		case err != nil:
+			return nil, err
+		}
+		if sc.CommandSHA256 != "" && sc.CommandSHA256 != art.CommandSHA256 {
+			return nil, fmt.Errorf("%w: command %s has SHA-256 %s, not the configured command_sha256 %s", pipeline.ErrUnpinnedLaunch, spec.Command, art.CommandSHA256, sc.CommandSHA256)
+		}
+		art.Pinned = sc.CommandSHA256 != ""
+		s.Artifact = &art
+	}
 	inst, ts, era, err := r.start(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 	s.Tools, s.Revision, s.Verified, s.ManifestSource, s.Era = ts.Tools, ts.Revision, ts.Verified, ts.Source, era
+	s.SuspendedTools = ts.Withheld
 	s.cur = inst
 	inst.started.Store(true)
 	if !ts.Verified {
@@ -509,6 +537,19 @@ func (r *Registry) withdraw(alias, reason string) {
 // the tool set from the ManifestSource.
 func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.ToolSet, string, error) {
 	sc, spec := s.cfg, s.spec
+	if s.Artifact != nil && s.Revision != "" {
+		// A relaunch runs the recorded artifact or nothing (SR-3.6-1).
+		now, err := pipeline.ContentAddress(spec.Command, spec.Args)
+		if errors.Is(err, fs.ErrNotExist) && s.Artifact.Digest == "" {
+			now, err = pipeline.LaunchArtifact{Files: map[string]string{}}, nil
+		}
+		if err != nil {
+			return nil, pipeline.ToolSet{}, "", err
+		}
+		if changed := s.Artifact.Changed(now); len(changed) > 0 {
+			return nil, pipeline.ToolSet{}, "", fmt.Errorf("%w: %v changed since the server was enabled (recorded %s)", pipeline.ErrUnpinnedLaunch, changed, s.Artifact.Digest)
+		}
+	}
 	secrets, err := r.opts.Secrets.Resolve(ctx, pipeline.SecretRequest{Server: sc.Alias, Refs: sc.SecretEnv})
 	if err != nil {
 		return nil, pipeline.ToolSet{}, "", fmt.Errorf("secrets: %w", err)

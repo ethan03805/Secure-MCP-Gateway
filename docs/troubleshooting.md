@@ -34,6 +34,7 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `ARGUMENTS_TOO_DEEP` | `-31001` | The arguments nest deeper than the size-limit filter allows | Raise `[filters.size]` `argument_depth` if the nesting is legitimate |
 | `UNICODE_CONTROL` | `-31001` | An argument contains bidirectional, zero-width or tag characters | `data.findings` names the rule; see [filters.md](filters.md) for the permitted contexts |
 | `SECRET_IN_ARGUMENTS` | `-31001` | An argument contains a known credential format or a registered secret | The agent tried to send a credential to a tool; check the session's earlier results for how it obtained it |
+| `DATA_CLASS_IN_ARGUMENTS` | `-31001` | An argument matches a data-class rule (`pii` rule set) whose request action is `block`; the built-in rules only tag | `data.findings` names the rule; change the rule-set version pinned in `[filters] rule_versions` if the rule is wrong for this tool |
 | `PATH_INVALID` | `-31001` | A path argument uses an encoded separator, NUL, backslash traversal or `~` | Use a plain absolute or root-relative path |
 | `PATH_OUTSIDE_ROOTS` | `-31001` | A path argument resolves outside the granted roots | Add the directory to `[filters.paths]` `roots` or `server_roots` if access is intended |
 | `URL_INVALID` | `-31001` | A URL argument cannot be parsed or canonicalized | Check the URL; it must be absolute with a host |
@@ -158,6 +159,7 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `KEY_ON_COMMAND_LINE` | Package sign, keygen, revoke | A secret key or passphrase was given as an argument | Pass it in a file or on standard input |
 | `metadata_blocked` | Journal event | A tool description matched a blocking metadata rule and the tool is suspended (SR-5.9-2) | Review the description; ask the packager for a fixed revision |
 | `METADATA_BLOCKED` | Journal `server` event with outcome `metadata_blocked` | Reason code of that event; `detail.findings` names each rule, rule set and version, and `detail.stage` is `import` or `presentation` | As for `metadata_blocked` |
+| `artifact_recorded` | Journal `server` event (E-15) at start | The content address of a command-configured server: `detail.digest` and the SHA-256 of the command file and each absolute file argument (SR-3.6-1). A later relaunch whose files differ is refused and the server is suspended with "changed since the server was enabled" | If the change is intended (an upgrade of the server), restart smcpd so the new files are recorded, or update `command_sha256` |
 | `REDACTED` | Journal `filter` event | A filter removed or replaced content; the result's provenance disposition is `redact` | None |
 | `upgrade_rolled_back` | Journal event | An upgrade failed its health check and the previous version was restored (FR-13.8) | Read the upgrade's log, fix the cause and upgrade again |
 | `MEMORY_LIMIT` | Journal `runtime` event | A sandboxed instance reached its memory limit and was killed ([sandbox](sandbox.md)) | Raise the manifest's memory resource if the use is legitimate |

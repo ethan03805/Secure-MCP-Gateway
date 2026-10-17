@@ -6,12 +6,19 @@
 # egress is blocked while brokered egress to a granted local HTTP server
 # works. No Internet access is used.
 #
+# It then runs TestHostRulesInNamespace (internal/tunnel) as root: the
+# nftables rules of `smcpctl remote enable` (SR-4.14-1) installed in a
+# network namespace drop connections from another host to the Gateway
+# listener ports while a loopback client inside still reaches them.
+#
 # Used by the "linux-integration" CI job; runs on any Linux host with sudo,
 # iproute2 and nf_tables:
 #   scripts/ci-egress-netns.sh
 #
 # Environment:
 #   SMCP_ITEST_DIR  work directory (default: a new temporary directory)
+#   SMCP_TEST_JSON  when set, the go test JSON events of the host-rules test
+#                   are written to this file (merged into the status data)
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -35,3 +42,22 @@ if command -v nft >/dev/null 2>&1; then nft --version; fi
 echo "==> Running TestNetnsEnforcement as root"
 (cd "$work" && "${sudo_cmd[@]}" env SMCP_EGRESS_NETNS_TEST=1 "$bin" \
   -test.run '^TestNetnsEnforcement$' -test.v -test.count=1)
+
+echo "==> Building the tunnel test binary"
+tbin="$work/tunnel.test"
+(cd "$root" && go test -c -o "$tbin" ./internal/tunnel)
+if ! command -v nft >/dev/null 2>&1; then
+  "${sudo_cmd[@]}" apt-get update -qq
+  "${sudo_cmd[@]}" apt-get install -y -qq nftables >/dev/null
+fi
+nft --version
+
+echo "==> Running TestHostRulesInNamespace as root (SR-4.14-1)"
+json=${SMCP_TEST_JSON:-$work/tunnel-test.json}
+mkdir -p "$(dirname "$json")"
+rc=0
+(cd "$work" && "${sudo_cmd[@]}" env SMCP_REMOTE_NFT_TEST=1 "$tbin" \
+  -test.run '^TestHostRulesInNamespace$' -test.v=test2json -test.count=1) |
+  (cd "$root" && go tool test2json -t -p github.com/ethan03805/secure-mcp-gateway/internal/tunnel) > "$json" || rc=$?
+jq -r 'select(.Action == "output") | .Output' "$json" | tr -d '\r' || true
+exit "$rc"

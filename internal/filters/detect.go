@@ -39,6 +39,7 @@ const (
 	ReasonArgumentsTooDeep  = "ARGUMENTS_TOO_DEEP"
 	ReasonUnicodeControl    = "UNICODE_CONTROL"
 	ReasonSecretInArguments = "SECRET_IN_ARGUMENTS"
+	ReasonDataClass         = "DATA_CLASS_IN_ARGUMENTS"
 	ReasonPathInvalid       = "PATH_INVALID"
 	ReasonPathOutsideRoots  = "PATH_OUTSIDE_ROOTS"
 	ReasonURLInvalid        = "URL_INVALID"
