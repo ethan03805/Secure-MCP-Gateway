@@ -1,31 +1,37 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T11:11:52Z",
-  "commit": "5e43a626323809132161cb9fb85bab8c6d71d5a8",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/5e43a626323809132161cb9fb85bab8c6d71d5a8",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39027401793",
+  "generatedAt": "2026-10-17T11:51:43Z",
+  "commit": "76fb76bf8c7012823b008ac84f6c7d5787953133",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/76fb76bf8c7012823b008ac84f6c7d5787953133",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39029817833",
   "tests": {
-    "total": 898,
-    "passed": 881,
-    "failed": 3,
+    "total": 955,
+    "passed": 941,
+    "failed": 0,
     "skipped": 14,
-    "durationSec": 294.9,
+    "durationSec": 406.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
-        "passed": 0,
-        "failed": 2,
+        "passed": 2,
+        "failed": 0,
         "skipped": 0
       },
       {
         "name": "console/e2e/chromium",
-        "passed": 37,
+        "passed": 42,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "console/e2e/firefox",
+        "passed": 42,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "console/e2e/webkit",
-        "passed": 35,
+        "passed": 40,
         "failed": 0,
         "skipped": 2
       },
@@ -43,7 +49,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 42,
+        "passed": 44,
         "failed": 0,
         "skipped": 0
       },
@@ -139,7 +145,7 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 45,
+        "passed": 46,
         "failed": 0,
         "skipped": 0
       },
@@ -271,7 +277,7 @@
       },
       {
         "name": "internal/principals",
-        "passed": 2,
+        "passed": 4,
         "failed": 0,
         "skipped": 0
       },
@@ -331,8 +337,8 @@
       },
       {
         "name": "scripts/agents",
-        "passed": 23,
-        "failed": 1,
+        "passed": 24,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -380,7 +386,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 38.2
+        "pct": 37.7
       },
       {
         "name": "cmd/smcpd",
@@ -396,7 +402,7 @@
       },
       {
         "name": "internal/adminapi",
-        "pct": 81.8
+        "pct": 81.7
       },
       {
         "name": "internal/analytics",
@@ -440,7 +446,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.6
+        "pct": 90.7
       },
       {
         "name": "internal/consoleapi",
@@ -448,7 +454,7 @@
       },
       {
         "name": "internal/consoleauth",
-        "pct": 76.8
+        "pct": 78.6
       },
       {
         "name": "internal/diag",
@@ -472,11 +478,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 83.7
       },
       {
         "name": "internal/gwtest",
-        "pct": 79.7
+        "pct": 80.5
       },
       {
         "name": "internal/harness",
@@ -556,7 +562,7 @@
       },
       {
         "name": "internal/principals",
-        "pct": 80.8
+        "pct": 82.3
       },
       {
         "name": "internal/profile",
@@ -588,15 +594,15 @@
       },
       {
         "name": "internal/session",
-        "pct": 86.6
+        "pct": 86.7
       },
       {
         "name": "internal/testport",
-        "pct": 64.5
+        "pct": 61.3
       },
       {
         "name": "internal/tunnel",
-        "pct": 75.6
+        "pct": 77.2
       },
       {
         "name": "packaging/linux",
@@ -604,7 +610,7 @@
       },
       {
         "name": "scripts/agents",
-        "pct": 66.5
+        "pct": 66.2
       },
       {
         "name": "scripts/itest-client",
@@ -626,10 +632,10 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 270,
-    "partial": 198,
-    "failing": 3,
-    "unverified": 59,
+    "verified": 275,
+    "partial": 201,
+    "failing": 0,
+    "unverified": 54,
     "byElement": [
       {
         "element": "E-01",
@@ -667,7 +673,7 @@
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 18,
-        "verified": 8,
+        "verified": 9,
         "partial": 8,
         "failing": 0
       },
@@ -803,7 +809,7 @@
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
         "total": 8,
-        "verified": 3,
+        "verified": 4,
         "partial": 4,
         "failing": 0
       },
@@ -819,9 +825,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 20,
-        "partial": 39,
-        "failing": 2
+        "verified": 23,
+        "partial": 41,
+        "failing": 0
       },
       {
         "element": "E-25",
@@ -892,8 +898,8 @@
         "name": "Harness Adapter Kit",
         "total": 20,
         "verified": 4,
-        "partial": 11,
-        "failing": 1
+        "partial": 12,
+        "failing": 0
       }
     ],
     "items": [
@@ -1387,6 +1393,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "internal/consoleapi.TestSessionSuspendAndResume",
           "internal/session.TestCreateSelectsTemplateAndLimits",
@@ -1454,6 +1461,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "internal/e2e.TestOAuthSessionAndToolCall",
           "internal/principals.TestDirectory"
@@ -1501,8 +1509,16 @@
       {
         "id": "FR-2.23",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestApproversCommands",
+          "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/firefox.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "internal/e2e.TestSessionApproverAccountFlow",
+          "internal/principals.TestApproverDirectory",
+          "internal/principals.TestApproverRoutes"
+        ]
       },
       {
         "id": "FR-3",
@@ -1513,8 +1529,10 @@
       {
         "id": "FR-3.1",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestPolicyObjectTypes"
+        ]
       },
       {
         "id": "FR-3.2",
@@ -1531,6 +1549,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
+          "console/e2e/firefox.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
           "console/e2e/webkit.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
           "internal/e2e.TestPolicyControlAPI",
           "internal/policystore.TestRevisionRecordAndSignature"
@@ -1573,6 +1592,7 @@
         "tests": [
           "cmd/smcpctl.TestPolicyCommands",
           "console/e2e/chromium.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
+          "console/e2e/firefox.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
           "console/e2e/webkit.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
           "internal/e2e.TestPolicyControlAPI",
           "internal/policyadmin.TestRollback"
@@ -1726,6 +1746,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.console.spec.ts > an administrator approves a held call in the Approvals view",
+          "console/e2e/firefox.console.spec.ts > an administrator approves a held call in the Approvals view",
           "console/e2e/webkit.console.spec.ts > an administrator approves a held call in the Approvals view",
           "docs/verification/FR-3.25.md:5"
         ]
@@ -1858,6 +1879,7 @@
         "tests": [
           "cmd/smcpctl.TestBootstrapAndControlCommands",
           "console/e2e/chromium.console.spec.ts > emergency stop refuses calls and resume restores them",
+          "console/e2e/firefox.console.spec.ts > emergency stop refuses calls and resume restores them",
           "console/e2e/webkit.console.spec.ts > emergency stop refuses calls and resume restores them",
           "internal/adminapi.TestStopResumeAndLogin",
           "internal/e2e.TestPolicyDecisionsAndErrorMapping",
@@ -1961,7 +1983,11 @@
         "element": "E-14",
         "status": "partial",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
+          "console/e2e/firefox.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
+          "console/e2e/firefox.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
+          "console/e2e/webkit.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "internal/library.TestPackagesControlAPI",
           "internal/library.TestRuntimePresentsVerifiedManifest",
@@ -2037,6 +2063,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > Runtime: launcher, prerequisites and instances",
+          "console/e2e/firefox.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "console/e2e/webkit.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "internal/backend.TestServerInitiatedRequestsRefused",
           "internal/hostile.TestHostileFixtures/HF-26"
@@ -2208,6 +2235,7 @@
         "tests": [
           "cmd/smcpctl.TestSecretsCommands",
           "console/e2e/chromium.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
+          "console/e2e/firefox.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "console/e2e/webkit.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "internal/secrets.TestControlAPIReadsNeverReturnValues",
           "internal/secrets.TestVaultReadsReturnMetadataOnly"
@@ -2376,9 +2404,10 @@
       {
         "id": "FR-7.7",
         "element": "E-22",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/keys.TestEnsureKeys"
+          "internal/keys.TestEnsureKeys",
+          "docs/verification/inspections.md:276"
         ]
       },
       {
@@ -2392,8 +2421,16 @@
       {
         "id": "FR-7.10",
         "element": "E-22",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
+          "console/e2e/firefox.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/firefox.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
+          "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/webkit.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
+          "internal/library.TestTrustAnchorRoutes"
+        ]
       },
       {
         "id": "FR-7.11",
@@ -2413,6 +2450,7 @@
         "tests": [
           "cmd/smcpctl.TestDaemonWiresEveryElement",
           "console/e2e/chromium.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
+          "console/e2e/firefox.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
           "console/e2e/webkit.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
           "internal/analytics.TestObservationHealthCheck",
           "internal/e2e.TestOpsMetricsAndHealthGate",
@@ -2451,6 +2489,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > the OpenAPI document describes every route with its roles",
+          "console/e2e/firefox.views.spec.ts > the OpenAPI document describes every route with its roles",
           "console/e2e/webkit.views.spec.ts > the OpenAPI document describes every route with its roles",
           "internal/openapi.TestEveryRouteIsDescribed",
           "internal/openapi.TestServedDocument"
@@ -2463,6 +2502,8 @@
         "tests": [
           "console/e2e/chromium.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/chromium.views.spec.ts > each role sees only its views and actions",
+          "console/e2e/firefox.console.spec.ts > an approver sees only the Approvals view and can deny a call",
+          "console/e2e/firefox.views.spec.ts > each role sees only its views and actions",
           "console/e2e/webkit.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/webkit.views.spec.ts > each role sees only its views and actions",
           "internal/adminapi.TestAppendixCMatrix",
@@ -2480,6 +2521,9 @@
           "console/e2e/chromium.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/chromium.console.spec.ts > emergency stop refuses calls and resume restores them",
           "console/e2e/chromium.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
+          "console/e2e/firefox.console.spec.ts > administrator signs in, sees enforcement state and signs out",
+          "console/e2e/firefox.console.spec.ts > emergency stop refuses calls and resume restores them",
+          "console/e2e/firefox.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
           "console/e2e/webkit.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/webkit.console.spec.ts > emergency stop refuses calls and resume restores them",
           "console/e2e/webkit.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist"
@@ -2491,6 +2535,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
+          "console/e2e/firefox.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back",
           "console/e2e/webkit.views.spec.ts > G-02 policy studio: draft, validate, diff, simulate, publish and roll back"
         ]
       },
@@ -2500,6 +2545,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-03 audit profile tuning: the floor is read-only and the profile publishes",
+          "console/e2e/firefox.views.spec.ts > G-03 audit profile tuning: the floor is read-only and the profile publishes",
           "console/e2e/webkit.views.spec.ts > G-03 audit profile tuning: the floor is read-only and the profile publishes",
           "internal/obspolicy.TestPublishAndApply",
           "internal/obspolicy.TestPublishedObjectsApplyWithoutRestart",
@@ -2512,6 +2558,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview"
         ]
       },
@@ -2521,6 +2568,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview"
         ]
       },
@@ -2530,6 +2578,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview"
         ]
       },
@@ -2540,6 +2589,8 @@
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/chromium.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/webkit.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
           "internal/analytics.TestObservationScope",
@@ -2553,6 +2604,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "internal/observe.TestAnomalyResponseEscalation",
           "internal/obspolicy.TestBandActionsAndEscalationObjects",
@@ -2566,6 +2618,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview"
         ]
       },
@@ -2575,6 +2628,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview"
         ]
       },
@@ -2584,6 +2638,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-05 behavior analytics: snapshot, promotion, distributions and anomaly drill-down",
+          "console/e2e/firefox.views.spec.ts > G-05 behavior analytics: snapshot, promotion, distributions and anomaly drill-down",
           "console/e2e/webkit.views.spec.ts > G-05 behavior analytics: snapshot, promotion, distributions and anomaly drill-down"
         ]
       },
@@ -2593,6 +2648,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
+          "console/e2e/firefox.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
           "console/e2e/webkit.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
           "internal/analytics.TestAnomalyResponseActions",
           "internal/observe.TestAnomalyResponseEscalation",
@@ -2608,6 +2664,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-07 performance: throughput, overhead per revision and stage time",
+          "console/e2e/firefox.views.spec.ts > G-07 performance: throughput, overhead per revision and stage time",
           "console/e2e/webkit.views.spec.ts > G-07 performance: throughput, overhead per revision and stage time"
         ]
       },
@@ -2617,6 +2674,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
+          "console/e2e/firefox.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/webkit.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "internal/obspolicy.TestPublishAndApply",
           "internal/obspolicy.TestPublishedObjectsApplyWithoutRestart",
@@ -2629,6 +2687,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
+          "console/e2e/firefox.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
           "console/e2e/webkit.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary"
         ]
       },
@@ -2637,7 +2696,11 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
+          "console/e2e/firefox.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
+          "console/e2e/firefox.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
+          "console/e2e/webkit.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "internal/consoleapi.TestServersAndCatalog",
           "internal/library.TestTrustAnchorRoutes"
@@ -2649,6 +2712,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "internal/consoleapi.TestSessionSuspendAndResume",
           "internal/consoleapi.TestSessionsListInspectTerminate",
@@ -2665,6 +2729,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
+          "console/e2e/firefox.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "console/e2e/webkit.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke"
         ]
       },
@@ -2676,6 +2741,9 @@
           "console/e2e/chromium.console.spec.ts > an administrator approves a held call in the Approvals view",
           "console/e2e/chromium.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/chromium.views.spec.ts > G-13 approvals: a deep link to one approval opens after sign-in",
+          "console/e2e/firefox.console.spec.ts > an administrator approves a held call in the Approvals view",
+          "console/e2e/firefox.console.spec.ts > an approver sees only the Approvals view and can deny a call",
+          "console/e2e/firefox.views.spec.ts > G-13 approvals: a deep link to one approval opens after sign-in",
           "console/e2e/webkit.console.spec.ts > an administrator approves a held call in the Approvals view",
           "console/e2e/webkit.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/webkit.views.spec.ts > G-13 approvals: a deep link to one approval opens after sign-in"
@@ -2687,6 +2755,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
+          "console/e2e/firefox.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
           "console/e2e/webkit.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
           "internal/consoleapi.TestAuditBrowserFiltersPagingAndDetail",
           "internal/graph.TestGraphControlAPI",
@@ -2699,6 +2768,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.console.spec.ts > an administrator approves a held call in the Approvals view",
+          "console/e2e/firefox.console.spec.ts > an administrator approves a held call in the Approvals view",
           "console/e2e/webkit.console.spec.ts > an administrator approves a held call in the Approvals view",
           "internal/consoleapi.TestEvidenceStream"
         ]
@@ -2712,8 +2782,12 @@
       {
         "id": "FR-8.25",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "console/e2e/chromium.help.spec.ts > every view, policy field and draft form field has inline help",
+          "console/e2e/firefox.help.spec.ts > every view, policy field and draft form field has inline help",
+          "console/e2e/webkit.help.spec.ts > every view, policy field and draft form field has inline help"
+        ]
       },
       {
         "id": "FR-8.26",
@@ -2721,6 +2795,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.console.spec.ts > the console page carries a strict content security policy",
+          "console/e2e/firefox.console.spec.ts > the console page carries a strict content security policy",
           "console/e2e/webkit.console.spec.ts > the console page carries a strict content security policy",
           "internal/consoleapi.TestStaticConsoleCSPAndDeepLinks",
           "internal/e2e.TestConsoleOnRunningGateway"
@@ -2733,6 +2808,7 @@
         "tests": [
           "cmd/smcpctl.TestFiltersCommand",
           "console/e2e/chromium.views.spec.ts > G-02 filter workbench: a redaction profile on synthetic text",
+          "console/e2e/firefox.views.spec.ts > G-02 filter workbench: a redaction profile on synthetic text",
           "console/e2e/webkit.views.spec.ts > G-02 filter workbench: a redaction profile on synthetic text",
           "internal/filterapi.TestScanRoutes",
           "internal/filters.TestScanWorkbench"
@@ -2748,6 +2824,11 @@
           "console/e2e/chromium.console.spec.ts > deep links open after sign-in; missing routes say not available",
           "console/e2e/chromium.views.spec.ts > G-13 approvals: a deep link to one approval opens after sign-in",
           "console/e2e/chromium.views.spec.ts > each role sees only its views and actions",
+          "console/e2e/firefox.console.spec.ts > administrator signs in, sees enforcement state and signs out",
+          "console/e2e/firefox.console.spec.ts > an approver sees only the Approvals view and can deny a call",
+          "console/e2e/firefox.console.spec.ts > deep links open after sign-in; missing routes say not available",
+          "console/e2e/firefox.views.spec.ts > G-13 approvals: a deep link to one approval opens after sign-in",
+          "console/e2e/firefox.views.spec.ts > each role sees only its views and actions",
           "console/e2e/webkit.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/webkit.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/webkit.console.spec.ts > deep links open after sign-in; missing routes say not available",
@@ -2764,6 +2845,9 @@
           "console/e2e/chromium.console.spec.ts > deep links open after sign-in; missing routes say not available",
           "console/e2e/chromium.session.spec.ts > the console reports a stale revision and the retry succeeds",
           "console/e2e/chromium.views.spec.ts > views show loading, empty and error states with the reason code and retry",
+          "console/e2e/firefox.console.spec.ts > deep links open after sign-in; missing routes say not available",
+          "console/e2e/firefox.session.spec.ts > the console reports a stale revision and the retry succeeds",
+          "console/e2e/firefox.views.spec.ts > views show loading, empty and error states with the reason code and retry",
           "console/e2e/webkit.console.spec.ts > deep links open after sign-in; missing routes say not available",
           "console/e2e/webkit.session.spec.ts > the console reports a stale revision and the retry succeeds",
           "console/e2e/webkit.views.spec.ts > views show loading, empty and error states with the reason code and retry"
@@ -2772,7 +2856,7 @@
       {
         "id": "FR-8.30",
         "element": "E-24",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "console/e2e/browsers.TestConsoleSuiteOnEveryBrowser"
         ]
@@ -2783,6 +2867,7 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
+          "console/e2e/firefox.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
           "console/e2e/webkit.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist"
         ]
       },
@@ -2795,8 +2880,15 @@
           "console/e2e/chromium.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/chromium.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (dark)",
           "console/e2e/chromium.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (light)",
+          "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
+          "console/e2e/firefox.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (dark)",
+          "console/e2e/firefox.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (light)",
+          "console/e2e/firefox.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/webkit.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (dark)",
-          "console/e2e/webkit.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (light)"
+          "console/e2e/webkit.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (light)",
+          "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe"
         ]
       },
       {
@@ -2807,13 +2899,19 @@
           "console/e2e/chromium.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
           "console/e2e/chromium.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/chromium.console.spec.ts > emergency stop refuses calls and resume restores them",
-          "console/e2e/webkit.console.spec.ts > emergency stop refuses calls and resume restores them"
+          "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
+          "console/e2e/firefox.console.spec.ts > emergency stop refuses calls and resume restores them",
+          "console/e2e/firefox.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/webkit.console.spec.ts > emergency stop refuses calls and resume restores them",
+          "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe"
         ]
       },
       {
         "id": "FR-8.34",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "console/e2e/browsers.TestConsoleViewsClaimTheirRequirements",
           "tools/reqreport.TestPlaywrightClaims"
@@ -2826,6 +2924,8 @@
         "tests": [
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
+          "console/e2e/firefox.style.spec.ts > every view follows the console visual rules (dark)",
+          "console/e2e/firefox.style.spec.ts > every view follows the console visual rules (light)",
           "console/e2e/webkit.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/webkit.style.spec.ts > every view follows the console visual rules (light)",
           "docs/verification/inspections.md:224"
@@ -3579,6 +3679,7 @@
         "tests": [
           "cmd/smcpctl.TestOnlineOpsCommands",
           "console/e2e/chromium.console.spec.ts > administrator signs in, sees enforcement state and signs out",
+          "console/e2e/firefox.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/webkit.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "internal/e2e.TestOpsMetricsAndHealthGate",
           "internal/health.TestChecks"
@@ -3790,7 +3891,7 @@
       {
         "id": "FR-15.8",
         "element": "E-33",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/policy.TestBrokenBuildTag",
           "scripts/agents.TestBrokenGatewayRun",
@@ -3866,6 +3967,7 @@
         "tests": [
           "cmd/smcpctl.TestClientsApproveCLI",
           "console/e2e/chromium.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
+          "console/e2e/firefox.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/webkit.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "internal/remote.TestDynamicRegistrationNeedsApproval"
         ]
@@ -3919,6 +4021,7 @@
         "tests": [
           "cmd/smcpctl.TestRemoteEnableDisableTailscaleFake",
           "console/e2e/chromium.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
+          "console/e2e/firefox.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/webkit.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "internal/remote.TestDisabledByDefaultAndAdministratorEnable"
         ]
@@ -3990,6 +4093,7 @@
         "tests": [
           "cmd/smcpctl.TestOfflineOpsCommands",
           "console/e2e/chromium.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
+          "console/e2e/firefox.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/webkit.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "internal/backup.TestEncryptedArchives",
           "internal/e2e.TestOpsOnlineBackup"
@@ -4527,6 +4631,8 @@
         "tests": [
           "console/e2e/chromium.session.spec.ts > sign-out ends the session at once",
           "console/e2e/chromium.session.spec.ts > the browser session is an HttpOnly, Secure, SameSite=Strict cookie and survives a reload",
+          "console/e2e/firefox.session.spec.ts > sign-out ends the session at once",
+          "console/e2e/firefox.session.spec.ts > the browser session is an HttpOnly, Secure, SameSite=Strict cookie and survives a reload",
           "console/e2e/webkit.session.spec.ts > sign-out ends the session at once",
           "console/e2e/webkit.session.spec.ts > the browser session is an HttpOnly, Secure, SameSite=Strict cookie and survives a reload",
           "internal/adminapi.TestBrowserSessionEndCancelsRequests",
@@ -4707,8 +4813,15 @@
       {
         "id": "SR-3.3-1",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "console/e2e/chromium.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+          "console/e2e/chromium.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+          "console/e2e/firefox.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+          "console/e2e/firefox.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+          "console/e2e/webkit.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+          "console/e2e/webkit.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view"
+        ]
       },
       {
         "id": "SR-3-4",
@@ -5382,7 +5495,11 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.console.spec.ts > the console page carries a strict content security policy",
+          "console/e2e/chromium.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+          "console/e2e/firefox.console.spec.ts > the console page carries a strict content security policy",
+          "console/e2e/firefox.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
           "console/e2e/webkit.console.spec.ts > the console page carries a strict content security policy",
+          "console/e2e/webkit.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
           "internal/consoleapi.TestAuditExportNeutralisesFormulas",
           "internal/consoleapi.TestStaticConsoleCSPAndDeepLinks",
           "internal/research.TestExportFormatsAndManifest"
@@ -5544,6 +5661,8 @@
         "tests": [
           "console/e2e/chromium.session.spec.ts > mutations without the CSRF token or with a stale revision are refused",
           "console/e2e/chromium.session.spec.ts > the console reports a stale revision and the retry succeeds",
+          "console/e2e/firefox.session.spec.ts > mutations without the CSRF token or with a stale revision are refused",
+          "console/e2e/firefox.session.spec.ts > the console reports a stale revision and the retry succeeds",
           "console/e2e/webkit.session.spec.ts > mutations without the CSRF token or with a stale revision are refused",
           "console/e2e/webkit.session.spec.ts > the console reports a stale revision and the retry succeeds",
           "internal/adminapi.TestBrowserMutationsNeedCSRFAndIfMatch"
@@ -6236,7 +6355,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33139: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:34479: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6292,6 +6411,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
