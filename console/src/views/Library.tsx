@@ -8,7 +8,7 @@ import { del, post } from "../api";
 import { useResource } from "../data";
 import { usePerm } from "../perm";
 import { Link } from "../router";
-import { CheckList, Crumbs, DataTable, Dialog, Done, ErrorBlock, JsonBlock, KV, Loaded, Mono, PageHeader, Section, ShortId, StateLabel, TextField, Time, useAction, type Column, type Tone } from "../ui";
+import { CheckList, Crumbs, DataTable, Dialog, Done, ErrorBlock, EVIDENCE_PAGE_BYTES, JsonBlock, KV, Loaded, Mono, PageHeader, Section, ShortId, StateLabel, TextField, Time, blockText, useAction, utf8Length, type Column, type Tone } from "../ui";
 
 export interface PackageRevision {
   server_id: string;
@@ -167,17 +167,17 @@ export function LibrarySections() {
       render: (r) => (
         <span className="row-actions">
           {r.state !== "enabled" && r.state !== "retired" && r.state !== "revoked" && perm.can(base(r, "enable")) && (
-            <button type="button" className="link" onClick={() => setAct({ kind: "enable", rev: r })}>
+            <button type="button" className="link" aria-label={`Enable ${r.server_id} ${r.revision}`} onClick={() => setAct({ kind: "enable", rev: r })}>
               Enable
             </button>
           )}
           {r.state === "enabled" && perm.can(base(r, "disable")) && (
-            <button type="button" className="link" onClick={() => setAct({ kind: "disable", rev: r })}>
+            <button type="button" className="link" aria-label={`Suspend ${r.server_id} ${r.revision}`} onClick={() => setAct({ kind: "disable", rev: r })}>
               Suspend
             </button>
           )}
           {r.state !== "retired" && perm.can(base(r, "retire")) && (
-            <button type="button" className="link" onClick={() => setAct({ kind: "retire", rev: r })}>
+            <button type="button" className="link" aria-label={`Retire ${r.server_id} ${r.revision}`} onClick={() => setAct({ kind: "retire", rev: r })}>
               Retire
             </button>
           )}
@@ -304,33 +304,74 @@ function EnrollAnchor({ onDone }: { onDone: () => void }) {
   const [key, setKey] = useState("");
   const [classes, setClasses] = useState<string[]>(["low", "moderate"]);
   const [expires, setExpires] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const a = useAction<Anchor>();
+  // FR-7.10: the fingerprint is shown first and the key is enrolled only
+  // after the administrator confirms it.
+  const review = useAction<{ key_id: string; sha256: string }>();
+  const body = { name: name.trim(), public_key: key, classes, ...(expires.trim() ? { expires: expires.trim() } : {}) };
+  const edit = (f: (v: string) => void) => (v: string) => {
+    f(v);
+    review.reset();
+    setConfirmed(false);
+  };
   return (
     <details className="editor">
       <summary>Enroll a trust anchor</summary>
       <form
         className="editor-body"
+        aria-label="Enroll a trust anchor"
         onSubmit={(e) => {
           e.preventDefault();
-          void a.run(() => post("/api/v1/packages/trust", { name: name.trim(), public_key: key, classes, ...(expires.trim() ? { expires: expires.trim() } : {}) }), () => {
+          if (!review.result) {
+            void review.run(() => post("/api/v1/packages/trust", { ...body, preview: true }), () => setConfirmed(false));
+            return;
+          }
+          void a.run(() => post("/api/v1/packages/trust", { ...body, confirm_key_id: review.result!.key_id }), () => {
             setName("");
             setKey("");
+            setConfirmed(false);
+            review.reset();
             onDone();
           });
         }}
       >
-        <TextField label="Anchor name" value={name} onChange={setName} mono required />
+        <TextField label="Anchor name" value={name} onChange={edit(setName)} mono required />
         <div className="field field-wide">
           <label htmlFor="anchor-key">Minisign public key (the .pub file)</label>
-          <textarea id="anchor-key" className="mono" rows={3} value={key} onChange={(e) => setKey(e.target.value)} required spellCheck={false} />
+          <textarea id="anchor-key" className="mono" rows={3} value={key} onChange={(e) => edit(setKey)(e.target.value)} required spellCheck={false} />
         </div>
-        <CheckList legend="Risk classes it may admit" options={["low", "moderate", "high"]} value={classes} onChange={setClasses} />
-        <TextField label="Expires (date, default one year)" value={expires} onChange={setExpires} placeholder="2027-10-16" mono />
+        <CheckList legend="Risk classes it may admit" options={["low", "moderate", "high"]} value={classes} onChange={(v) => (setClasses(v), review.reset(), setConfirmed(false))} />
+        <TextField label="Expires (date, default one year)" value={expires} onChange={edit(setExpires)} placeholder="2027-10-16" mono />
+        {review.error && <ErrorBlock error={review.error} doing="reading the key" />}
+        {review.result && (
+          <div className="notice" role="status" aria-label="Key fingerprint">
+            <p>Compare this fingerprint with the one the key's publisher gave you through another channel before you enroll it.</p>
+            <KV
+              rows={[
+                ["Key ID", <Mono>{review.result.key_id}</Mono>],
+                ["SHA-256", <Mono>{review.result.sha256}</Mono>],
+                ["Risk classes", classes.join(", ")],
+                ["Expires", expires.trim() || "one year from now"],
+              ]}
+            />
+            <label className="check">
+              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+              The key ID matches the publisher's
+            </label>
+          </div>
+        )}
         {a.error && <ErrorBlock error={a.error} />}
         {a.result && <Done>Enrolled {a.result.name} (key {a.result.key_id}).</Done>}
-        <button type="submit" className="btn-primary" disabled={a.busy || !name.trim() || !key.trim() || classes.length === 0}>
-          Enroll anchor
-        </button>
+        {review.result ? (
+          <button type="submit" className="btn-primary" disabled={a.busy || !confirmed}>
+            Enroll anchor
+          </button>
+        ) : (
+          <button type="submit" className="btn-primary" disabled={review.busy || !name.trim() || !key.trim() || classes.length === 0}>
+            Show fingerprint
+          </button>
+        )}
       </form>
     </details>
   );
@@ -370,8 +411,9 @@ export function PackageDetail({ id, rev }: { id: string; rev: string }) {
               />
             </Section>
             <Section title="Signed manifest (publisher content, shown as text)">
+              {/* SR-3.3-1: both blocks share one 256 KiB page budget. */}
               <JsonBlock value={d.manifest} label="Manifest" />
-              <JsonBlock value={d.provenance} label="Provenance statement" />
+              <JsonBlock value={d.provenance} label="Provenance statement" limit={EVIDENCE_PAGE_BYTES - Math.min(EVIDENCE_PAGE_BYTES, utf8Length(blockText(d.manifest)))} />
             </Section>
           </>
         )}

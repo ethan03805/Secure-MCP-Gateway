@@ -8,7 +8,7 @@ import { post } from "../api";
 import { useNow, useResource } from "../data";
 import { usePerm } from "../perm";
 import { Link, match } from "../router";
-import type { PrincipalDirectory, Principals, SessionView } from "../types";
+import type { PrincipalDirectory, Principals, SessionApprovers, SessionView } from "../types";
 import { Crumbs, DataTable, Dialog, Done, ErrorBlock, Help, KV, Loaded, Mono, PageHeader, Section, SelectField, ShortId, StateLabel, TextField, Time, toneOf, useAction, type Column } from "../ui";
 
 function SessionList() {
@@ -352,8 +352,106 @@ function IssueCredential({ principals, onDone }: { principals: string[]; onDone:
   );
 }
 
+/** FR-2.23: the Administrator creates and removes Session Approver accounts. */
+function SessionApproverAccounts() {
+  const res = useResource<SessionApprovers>("/api/v1/approvers");
+  const [removing, setRemoving] = useState("");
+  const [done, setDone] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [repeat, setRepeat] = useState("");
+  const act = useAction<{ username: string }>();
+  const mismatch = repeat !== "" && password !== repeat;
+  return (
+    <>
+      <Loaded res={res} what="Session Approvers" route="/api/v1/approvers">
+        {(d) => (
+          <Section title="Session Approvers">
+            {done && <Done>{done}</Done>}
+            <DataTable
+              caption="Session Approver accounts"
+              rows={d.approvers}
+              rowKey={(a) => a.username}
+              initialSort="user"
+              empty="No Session Approver account exists, so no harness can sign in through OAuth. Create one below."
+              columns={[
+                { key: "user", label: "Username", sort: (a) => a.username, render: (a) => <Mono>{a.username}</Mono> },
+                { key: "source", label: "Defined in", sort: (a) => a.source, render: (a) => (a.source === "file" ? "smcp.toml" : "console") },
+                { key: "created", label: "Created", sort: (a) => a.created_at ?? "", render: (a) => (a.created_at ? <Time value={a.created_at} /> : <span className="muted">file</span>) },
+                { key: "by", label: "Created by", sort: (a) => a.created_by ?? "", render: (a) => (a.created_by ? <Mono>{a.created_by}</Mono> : <span className="muted">file</span>) },
+                {
+                  key: "act",
+                  label: "Action",
+                  render: (a) =>
+                    a.source === "console" ? (
+                      <button type="button" className="btn-danger" onClick={() => setRemoving(a.username)}>
+                        Remove {a.username}
+                      </button>
+                    ) : null,
+                },
+              ]}
+            />
+          </Section>
+        )}
+      </Loaded>
+      <Section title="Add a Session Approver">
+        <form
+          aria-label="Add a Session Approver"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (mismatch) return;
+            void act.run(
+              () => post("/api/v1/approvers", { username: username.trim(), password }),
+              (a) => {
+                setUsername("");
+                setPassword("");
+                setRepeat("");
+                setDone(`Created Session Approver ${a.username}.`);
+                res.reload();
+              },
+            );
+          }}
+        >
+          <p className="small">
+            A Session Approver signs harnesses in at the Gateway's sign-in page and can use nothing else. Give it its own password: the Gateway refuses the
+            Administrator's password.
+          </p>
+          <div className="rule-grid">
+            <TextField label="Username" value={username} onChange={setUsername} required mono hint="lowercase letters, digits, dot, dash or underscore" />
+            <TextField label="Password" type="password" autoComplete="new-password" value={password} onChange={setPassword} required hint="12 or more characters, not the Administrator's" />
+            <TextField label="Repeat password" type="password" autoComplete="new-password" value={repeat} onChange={setRepeat} required />
+          </div>
+          {mismatch && (
+            <p className="notice notice-bad" role="alert">
+              The two passwords differ.
+            </p>
+          )}
+          {act.error && <ErrorBlock error={act.error} doing="creating the Session Approver" />}
+          <button type="submit" className="btn-primary" disabled={act.busy || mismatch || password.length < 12}>
+            Create Session Approver
+          </button>
+        </form>
+      </Section>
+      <ReasonDialog
+        open={removing !== ""}
+        title={`Remove Session Approver ${removing}`}
+        text={<p>The account can no longer sign harnesses in, and its console sessions end. Sessions it approved earlier are not affected.</p>}
+        action="Remove Session Approver"
+        danger
+        route={`/api/v1/approvers/${encodeURIComponent(removing)}/remove`}
+        onClose={() => setRemoving("")}
+        onDone={() => {
+          setDone(`Removed Session Approver ${removing}.`);
+          setRemoving("");
+          res.reload();
+        }}
+      />
+    </>
+  );
+}
+
 /** The read-only principal tables of builds without the principal directory. */
-function PrincipalTables({ withPrincipals }: { withPrincipals: boolean }) {
+function PrincipalTables({ withPrincipals, withApprovers }: { withPrincipals: boolean; withApprovers: boolean }) {
   const res = useResource<Principals>("/api/v1/sessions/principals");
   return (
     <Loaded res={res} what="principals" route="/api/v1/sessions/principals">
@@ -395,16 +493,18 @@ function PrincipalTables({ withPrincipals }: { withPrincipals: boolean }) {
               </Section>
             </>
           )}
-          <Section title="Session Approvers">
-            <DataTable
-              caption="Session Approver accounts"
-              rows={d.session_approvers}
-              rowKey={(a) => a.username}
-              initialSort="user"
-              empty="No Session Approver account exists, so no harness can sign in through OAuth. Create one with smcpctl hash-password and an [[approver]] table."
-              columns={[{ key: "user", label: "Username", sort: (a) => a.username, render: (a) => <Mono>{a.username}</Mono> }]}
-            />
-          </Section>
+          {withApprovers && (
+            <Section title="Session Approvers">
+              <DataTable
+                caption="Session Approver accounts"
+                rows={d.session_approvers}
+                rowKey={(a) => a.username}
+                initialSort="user"
+                empty="No Session Approver account exists, so no harness can sign in through OAuth. The Administrator creates one in this view or with smcpctl approvers add."
+                columns={[{ key: "user", label: "Username", sort: (a) => a.username, render: (a) => <Mono>{a.username}</Mono> }]}
+              />
+            </Section>
+          )}
         </>
       )}
     </Loaded>
@@ -529,6 +629,7 @@ export function Sessions({ path }: { path: string }) {
   const m = match("/sessions/:id", path);
   if (m?.id) return <SessionDetail id={m.id} />;
   const directory = perm.can("GET /api/v1/principals");
+  const approvers = perm.can("POST /api/v1/approvers");
   return (
     <>
       <PageHeader code="G-11" title="Sessions and principals">
@@ -538,12 +639,14 @@ export function Sessions({ path }: { path: string }) {
         <p>
           A session binds one principal to one Session Allow template for a bounded time. Suspending a session refuses its tokens and calls until it is resumed;
           terminating it cancels its calls and revokes its tokens, and the harness must sign in again. Principals and credentials created here are kept in the
-          state directory and take effect at once; those in smcp.toml are edited there and can be suspended here.
+          state directory and take effect at once; those in smcp.toml are edited there and can be suspended here. Session Approver accounts sign harnesses
+          in and do nothing else; the Administrator creates and removes them here, each with its own password.
         </p>
       </Help>
       <SessionList />
       {directory && <PrincipalDirectoryView />}
-      <PrincipalTables withPrincipals={!directory} />
+      {approvers && <SessionApproverAccounts />}
+      {(!directory || !approvers) && <PrincipalTables withPrincipals={!directory} withApprovers={!approvers} />}
     </>
   );
 }

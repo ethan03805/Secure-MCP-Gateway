@@ -28,6 +28,12 @@ type Service struct {
 	Snapshot func() *policy.Snapshot
 	Evidence audit.Recorder
 	Log      *slog.Logger
+	// AdminHash returns the Administrator's password hash; Register
+	// defaults it to the control API's.
+	AdminHash func() string
+	// EndSessions ends the console sessions of an actor; Register
+	// defaults it to the control API's browser sessions.
+	EndSessions func(actor string) int
 }
 
 // Register adds the routes to the control API. Reads are open to the
@@ -43,6 +49,15 @@ func (s *Service) Register(a *adminapi.Server) {
 	a.Handle("POST /api/v1/principals/{id}/enable", s.suspension(false))
 	a.Handle("POST /api/v1/principals/{id}/credentials", s.issue)
 	a.Handle("POST /api/v1/credentials/{client_id}/revoke", s.revoke)
+	if s.AdminHash == nil {
+		s.AdminHash = a.AdminPasswordHash
+	}
+	if s.EndSessions == nil {
+		s.EndSessions = a.EndSessionsOf
+	}
+	a.Handle("GET /api/v1/approvers", s.listApprovers)
+	a.Handle("POST /api/v1/approvers", s.createApprover)
+	a.Handle("POST /api/v1/approvers/{username}/remove", s.removeApprover)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -6,9 +6,10 @@
 // simulation from the journal and publication; and the filter test
 // workbench. Routes: /api/v1/policy* (E-05) and /api/v1/filters* (E-09,
 // E-11).
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { asApiError, get, post, type ApiError } from "../api";
 import { useResource } from "../data";
+import { helpFor, policyHelp } from "../policyhelp";
 import { Can, usePerm } from "../perm";
 import { Link, match, navigate, useLocation } from "../router";
 import {
@@ -368,30 +369,36 @@ function clean<T extends object>(o: T): T {
 
 function RuleRow({ rule, onChange, onRemove, servers, filterIds }: { rule: Rule; onChange: (r: Rule) => void; onRemove: () => void; servers: string[]; filterIds: string[] }) {
   const deny = rule.effect === "deny";
+  const hid = useId();
   return (
     <fieldset className="rule">
       <legend>
         Rule <span className="mono">{rule.id || "(no ID)"}</span>
       </legend>
       <div className="rule-grid">
-        <TextField label="Rule ID" value={rule.id} onChange={(v) => onChange({ ...rule, id: v })} mono required />
-        <SelectField label="Effect" value={rule.effect ?? "permit"} onChange={(v) => onChange(clean({ ...rule, effect: v === "deny" ? "deny" : undefined, ...(v === "deny" ? { approval: undefined, filters: undefined, calls_per_minute: undefined, calls_per_session: undefined, side_effect: undefined, source_trust: undefined } : {}) }))} options={["permit", "deny"]} />
-        <SelectField label="Server" value={rule.server} onChange={(v) => onChange({ ...rule, server: v })} options={[...new Set([rule.server, ...servers])].filter(Boolean)} />
-        <TextField label="Tools (space separated)" value={rule.tools.join(" ")} onChange={(v) => onChange({ ...rule, tools: v.split(/[\s,]+/).filter(Boolean) })} mono hint={deny ? "A deny rule may use * for every tool." : undefined} />
+        <TextField label="Rule ID" value={rule.id} onChange={(v) => onChange({ ...rule, id: v })} mono required hint={helpFor("templates[].rules[].id")} />
+        <SelectField label="Effect" value={rule.effect ?? "permit"} onChange={(v) => onChange(clean({ ...rule, effect: v === "deny" ? "deny" : undefined, ...(v === "deny" ? { approval: undefined, filters: undefined, calls_per_minute: undefined, calls_per_session: undefined, side_effect: undefined, source_trust: undefined } : {}) }))} options={["permit", "deny"]} hint={helpFor("templates[].rules[].effect")} />
+        <SelectField label="Server" value={rule.server} onChange={(v) => onChange({ ...rule, server: v })} options={[...new Set([rule.server, ...servers])].filter(Boolean)} hint={helpFor("templates[].rules[].server")} />
+        <TextField label="Tools (space separated)" value={rule.tools.join(" ")} onChange={(v) => onChange({ ...rule, tools: v.split(/[\s,]+/).filter(Boolean) })} mono hint={helpFor("templates[].rules[].tools")} />
         {!deny && (
           <>
-            <label className="check">
-              <input type="checkbox" checked={!!rule.approval} onChange={(e) => onChange(clean({ ...rule, approval: e.target.checked || undefined }))} />
-              Requires approval
-            </label>
-            <TextField label="Calls per minute" value={rule.calls_per_minute?.toString() ?? ""} onChange={(v) => onChange(clean({ ...rule, calls_per_minute: numOrUndef(v) }))} type="number" />
-            <TextField label="Calls per session" value={rule.calls_per_session?.toString() ?? ""} onChange={(v) => onChange(clean({ ...rule, calls_per_session: numOrUndef(v) }))} type="number" />
-            <SelectField label="Side effect" value={rule.side_effect ?? ""} onChange={(v) => onChange(clean({ ...rule, side_effect: v || undefined }))} options={[["", "from manifest"], "read", "write", "external", "execute"]} />
-            <SelectField label="Source trust" value={rule.source_trust ?? ""} onChange={(v) => onChange(clean({ ...rule, source_trust: v || undefined }))} options={[["", "from manifest"], "trusted", "untrusted"]} />
+            <div className="field">
+              <label className="check">
+                <input type="checkbox" checked={!!rule.approval} onChange={(e) => onChange(clean({ ...rule, approval: e.target.checked || undefined }))} aria-describedby={`${hid}-approval`} />
+                Requires approval
+              </label>
+              <span className="hint" id={`${hid}-approval`}>
+                {helpFor("templates[].rules[].approval")}
+              </span>
+            </div>
+            <TextField label="Calls per minute" value={rule.calls_per_minute?.toString() ?? ""} onChange={(v) => onChange(clean({ ...rule, calls_per_minute: numOrUndef(v) }))} type="number" hint={helpFor("templates[].rules[].calls_per_minute")} />
+            <TextField label="Calls per session" value={rule.calls_per_session?.toString() ?? ""} onChange={(v) => onChange(clean({ ...rule, calls_per_session: numOrUndef(v) }))} type="number" hint={helpFor("templates[].rules[].calls_per_session")} />
+            <SelectField label="Side effect" value={rule.side_effect ?? ""} onChange={(v) => onChange(clean({ ...rule, side_effect: v || undefined }))} options={[["", "from manifest"], "read", "write", "external", "execute"]} hint={helpFor("templates[].rules[].side_effect")} />
+            <SelectField label="Source trust" value={rule.source_trust ?? ""} onChange={(v) => onChange(clean({ ...rule, source_trust: v || undefined }))} options={[["", "from manifest"], "trusted", "untrusted"]} hint={helpFor("templates[].rules[].source_trust")} />
           </>
         )}
       </div>
-      {!deny && <CheckList legend="Optional filters that must run" options={filterIds} value={rule.filters ?? []} onChange={(v) => onChange(clean({ ...rule, filters: v }))} />}
+      {!deny && <CheckList legend="Optional filters that must run" options={filterIds} value={rule.filters ?? []} onChange={(v) => onChange(clean({ ...rule, filters: v }))} hint={helpFor("templates[].rules[].filters")} />}
       <button type="button" className="link" onClick={onRemove}>
         Remove rule {rule.id}
       </button>
@@ -407,10 +414,10 @@ function TemplateEditor({ name, t, onChange, onRemove, servers, filterIds }: { n
       </summary>
       <div className="editor-body">
         <div className="rule-grid">
-          <TextField label="Description" value={t.description ?? ""} onChange={(v) => onChange(clean({ ...t, description: v || undefined }))} />
-          <TextField label="Calls per minute" value={t.calls_per_minute?.toString() ?? ""} onChange={(v) => onChange(clean({ ...t, calls_per_minute: numOrUndef(v) }))} type="number" />
-          <TextField label="Calls per session" value={t.calls_per_session?.toString() ?? ""} onChange={(v) => onChange(clean({ ...t, calls_per_session: numOrUndef(v) }))} type="number" />
-          <SelectField label="Tainted session, non-read tools" value={t.taint_action ?? "approve"} onChange={(v) => onChange(clean({ ...t, taint_action: v === "approve" ? undefined : v }))} options={["approve", "deny"]} />
+          <TextField label="Description" value={t.description ?? ""} onChange={(v) => onChange(clean({ ...t, description: v || undefined }))} hint={helpFor("templates[].description")} />
+          <TextField label="Calls per minute" value={t.calls_per_minute?.toString() ?? ""} onChange={(v) => onChange(clean({ ...t, calls_per_minute: numOrUndef(v) }))} type="number" hint={helpFor("templates[].calls_per_minute")} />
+          <TextField label="Calls per session" value={t.calls_per_session?.toString() ?? ""} onChange={(v) => onChange(clean({ ...t, calls_per_session: numOrUndef(v) }))} type="number" hint={helpFor("templates[].calls_per_session")} />
+          <SelectField label="Tainted session, non-read tools" value={t.taint_action ?? "approve"} onChange={(v) => onChange(clean({ ...t, taint_action: v === "approve" ? undefined : v }))} options={["approve", "deny"]} hint={helpFor("templates[].taint_action")} />
         </div>
         {t.rules.map((r, i) => (
           <RuleRow
@@ -442,10 +449,10 @@ function ProfileEditor({ name, p, templates, onChange, onRemove }: { name: strin
         Framework Profile{" "}<span className="mono">{name}</span>
       </summary>
       <div className="editor-body">
-        <CheckList legend="Templates sessions of this profile may use" options={templates} value={p.templates} onChange={(v) => onChange({ ...p, templates: v, default_template: v.includes(p.default_template) ? p.default_template : (v[0] ?? "") })} />
+        <CheckList legend="Templates sessions of this profile may use" options={templates} value={p.templates} onChange={(v) => onChange({ ...p, templates: v, default_template: v.includes(p.default_template) ? p.default_template : (v[0] ?? "") })} hint={helpFor("framework_profiles[].templates")} />
         <div className="rule-grid">
-          <SelectField label="Default template" value={p.default_template} onChange={(v) => onChange({ ...p, default_template: v })} options={p.templates.length ? p.templates : [""]} />
-          <TextField label="Calls per minute" value={p.calls_per_minute?.toString() ?? ""} onChange={(v) => onChange(clean({ ...p, calls_per_minute: numOrUndef(v) }))} type="number" />
+          <SelectField label="Default template" value={p.default_template} onChange={(v) => onChange({ ...p, default_template: v })} options={p.templates.length ? p.templates : [""]} hint={helpFor("framework_profiles[].default_template")} />
+          <TextField label="Calls per minute" value={p.calls_per_minute?.toString() ?? ""} onChange={(v) => onChange(clean({ ...p, calls_per_minute: numOrUndef(v) }))} type="number" hint={helpFor("framework_profiles[].calls_per_minute")} />
         </div>
         <button type="button" className="link" onClick={onRemove}>
           Remove profile {name}
@@ -455,7 +462,7 @@ function ProfileEditor({ name, p, templates, onChange, onRemove }: { name: strin
   );
 }
 
-function AddNamed({ label, onAdd, taken }: { label: string; onAdd: (name: string) => void; taken: string[] }) {
+function AddNamed({ label, onAdd, taken, help }: { label: string; onAdd: (name: string) => void; taken: string[]; help: string }) {
   const [v, setV] = useState("");
   const bad = v.trim() !== "" && taken.includes(v.trim());
   return (
@@ -469,7 +476,7 @@ function AddNamed({ label, onAdd, taken }: { label: string; onAdd: (name: string
         }
       }}
     >
-      <TextField label={label} value={v} onChange={setV} mono hint={bad ? "That name is in use." : undefined} />
+      <TextField label={label} value={v} onChange={setV} mono hint={bad ? "That name is in use." : help} />
       <button type="submit" disabled={!v.trim() || bad}>
         Add
       </button>
@@ -550,7 +557,7 @@ function Draft() {
         Draft based on <Mono>{base.revision}</Mono>; the active revision is <Mono>{base.active}</Mono>. The draft is kept in this page only until you publish it.
       </p>
       <Section title="Document">
-        <TextField label="Revision ID of the draft" value={doc.revision} onChange={(v) => update({ ...doc, revision: v })} mono required hint="Every published document needs a new revision ID." />
+        <TextField label="Revision ID of the draft" value={doc.revision} onChange={(v) => update({ ...doc, revision: v })} mono required hint={helpFor("revision")} />
       </Section>
       <Section title="Session Allow templates">
         {templates.map((name) => (
@@ -569,7 +576,7 @@ function Draft() {
             }}
           />
         ))}
-        <AddNamed label="New template name" taken={templates} onAdd={(n) => update({ ...doc, templates: { ...doc.templates, [n]: { rules: [] } } })} />
+        <AddNamed label="New template name" help={helpFor("templates")} taken={templates} onAdd={(n) => update({ ...doc, templates: { ...doc.templates, [n]: { rules: [] } } })} />
       </Section>
       <Section title="Framework Profiles">
         {profiles.map((name) => (
@@ -586,7 +593,22 @@ function Draft() {
             }}
           />
         ))}
-        <AddNamed label="New profile name" taken={profiles} onAdd={(n) => update({ ...doc, framework_profiles: { ...doc.framework_profiles, [n]: { templates: [], default_template: "" } } })} />
+        <AddNamed label="New profile name" help={helpFor("framework_profiles")} taken={profiles} onAdd={(n) => update({ ...doc, framework_profiles: { ...doc.framework_profiles, [n]: { templates: [], default_template: "" } } })} />
+      </Section>
+      <Section title="Field reference">
+        <details className="editor">
+          <summary>Help for every policy field</summary>
+          <dl className="kv" data-testid="policy-field-help">
+            {Object.entries(policyHelp).map(([path, text]) => (
+              <div key={path} className="kv-row">
+                <dt>
+                  <Mono>{path}</Mono>
+                </dt>
+                <dd>{text}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
       </Section>
       <Section title="Full document (JSON)">
         <details className="editor">

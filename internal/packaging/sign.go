@@ -82,6 +82,18 @@ func ParsePublicKey(raw []byte) (minisign.PublicKey, error) {
 	return k, err
 }
 
+// Fingerprint returns what an administrator compares before enrolling a
+// trust anchor (FR-7.10): the minisign key ID (the value minisign prints)
+// and the SHA-256 of the canonical key line, in lowercase hex.
+func Fingerprint(raw []byte) (keyID, sha string, err error) {
+	pub, err := ParsePublicKey(raw)
+	if err != nil {
+		return "", "", fmt.Errorf("not a minisign public key: %w", err)
+	}
+	sum := sha256.Sum256([]byte(pub.String()))
+	return KeyID(pub.ID()), hex.EncodeToString(sum[:]), nil
+}
+
 // Sign writes the signer key ID into the package index, then signs the
 // index with key (FR-14.6). The trusted comment names the package.
 func Sign(dir string, key minisign.PrivateKey, now time.Time) error {

@@ -292,15 +292,40 @@ export function KV({ rows }: { rows: [string, ReactNode][] }) {
   );
 }
 
-/** Server-supplied content as escaped text, bounded (SR-3.3-1, SR-6.17-1). */
-export function JsonBlock({ value, label, limit = 256 * 1024 }: { value: unknown; label: string; limit?: number }) {
-  const text = typeof value === "string" ? value : JSON.stringify(value, null, 2) ?? "";
-  const cut = text.length > limit;
+/** The page budget for server-supplied evidence text (SR-3.3-1). */
+export const EVIDENCE_PAGE_BYTES = 256 * 1024;
+
+/** The text a JsonBlock shows for a value. */
+export function blockText(value: unknown): string {
+  return typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "");
+}
+
+/** The UTF-8 length of a string. */
+export function utf8Length(s: string): number {
+  return new TextEncoder().encode(s).length;
+}
+
+/** Cuts a string to at most limit UTF-8 bytes without splitting a character. */
+export function cutUtf8(s: string, limit: number): string {
+  const b = new TextEncoder().encode(s);
+  if (b.length <= limit) return s;
+  return new TextDecoder().decode(b.slice(0, Math.max(0, limit))).replace(/�+$/, "");
+}
+
+/** Server-supplied content as escaped text, bounded in UTF-8 bytes (SR-3.3-1, SR-6.17-1). */
+export function JsonBlock({ value, label, limit = EVIDENCE_PAGE_BYTES }: { value: unknown; label: string; limit?: number }) {
+  const text = blockText(value);
+  const size = utf8Length(text);
+  const cut = size > limit;
   return (
     <figure className="json">
       <figcaption>{label}</figcaption>
-      <pre tabIndex={0}>{cut ? text.slice(0, limit) : text}</pre>
-      {cut && <p className="small muted">Shown: the first {limit / 1024} KiB of {Math.ceil(text.length / 1024)} KiB.</p>}
+      <pre tabIndex={0}>{cut ? cutUtf8(text, limit) : text}</pre>
+      {cut && (
+        <p className="small muted">
+          Shown: the first {Math.floor(limit / 1024)} KiB of {Math.ceil(size / 1024)} KiB.
+        </p>
+      )}
     </figure>
   );
 }
@@ -454,18 +479,20 @@ export function SelectField({
   onChange,
   options,
   name,
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: (string | [string, string])[];
   name?: string;
+  hint?: ReactNode;
 }) {
   const id = useId();
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      <select id={id} name={name} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select id={id} name={name} value={value} onChange={(e) => onChange(e.target.value)} aria-describedby={hint ? id + "-hint" : undefined}>
         {options.map((o) => {
           const [v, l] = typeof o === "string" ? [o, o] : o;
           return (
@@ -475,15 +502,26 @@ export function SelectField({
           );
         })}
       </select>
+      {hint && (
+        <span className="hint" id={id + "-hint"}>
+          {hint}
+        </span>
+      )}
     </div>
   );
 }
 
 /** A group of checkboxes choosing several of a fixed list (no free text). */
-export function CheckList({ legend, options, value, onChange }: { legend: string; options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+export function CheckList({ legend, options, value, onChange, hint }: { legend: string; options: string[]; value: string[]; onChange: (v: string[]) => void; hint?: ReactNode }) {
+  const id = useId();
   return (
-    <fieldset className="checklist">
+    <fieldset className="checklist" aria-describedby={hint ? id + "-hint" : undefined}>
       <legend>{legend}</legend>
+      {hint && (
+        <span className="hint" id={id + "-hint"}>
+          {hint}
+        </span>
+      )}
       {options.length === 0 && <span className="muted small">none available</span>}
       {options.map((o) => (
         <label key={o}>

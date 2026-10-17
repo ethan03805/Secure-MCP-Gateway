@@ -289,6 +289,11 @@ func StillAuthenticated(r *http.Request) bool {
 
 func actorOf(r *http.Request) string { a, _ := r.Context().Value(actorKey{}).(string); return a }
 
+// AdminPasswordHash returns the Administrator's password hash, "" before
+// bootstrap redemption. FR-2.23 uses it to refuse a Session Approver
+// password equal to the Administrator's.
+func (s *Server) AdminPasswordHash() string { return s.adminHash() }
+
 // adminHash returns the administrator password hash: from configuration,
 // else from the state file written by bootstrap, else "".
 func (s *Server) adminHash() string {

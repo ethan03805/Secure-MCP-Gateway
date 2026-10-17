@@ -10,11 +10,20 @@ R: Developing and testing policy is the owner's primary research purpose.
 
 @FR-3.1 | Policy object types
 P: FR-3
-S: The Policy Administration Service (E-05) SHALL support the policy object types Framework Profile, Session Allow Policy Template, Secret Use Policy, Response Policy, Audit Profile, Observation Policy, Anomaly Response Policy, Research Campaign and Runtime Profile.
-A: E-05; F-10; I-06; I-07; D-01
-V: Test | Create, validate and publish one object of each type; confirm each is stored and evaluable.
+S: The Gateway SHALL support the policy object types Framework Profile and Session Allow Policy Template in the signed policy document of the Policy Administration Service (E-05), Secret Use Policy in the Secret Broker (E-20), Audit Profile, Observation Policy and Anomaly Response Policy as published observation objects of the Management Console & Control API (E-24), and Research Campaign in the Research Dataset Service (E-32), each validated before it takes effect and kept under a revision or object identifier.
+A: E-05; E-20; E-24; E-32; F-10; I-06; I-07; D-01
+V: Test | Create, validate and publish or activate one object of each type; confirm each is stored under its identifier and evaluated by its element.
+SRC: ARCH §7.2; OWNER (release 1.0 object homes)
+R: These objects compose the Allow-policy model. Release 1.0 keeps each object with the element that evaluates it rather than in one document: the policy document holds what the decision path evaluates, and secret-use, observation and research objects are validated and versioned by their own services with their own control API routes and roles (Appendix C). Response Policy and Runtime Profile objects are deferred (FR-3.26).
+
+@FR-3.26 | Response Policy and Runtime Profile objects
+P: FR-3
+S: The Policy Administration Service (E-05) SHALL support Response Policy and Runtime Profile objects as published, versioned policy objects.
+A: E-05; E-11; E-15; F-10; I-06; D-01
+V: Test | Create, validate and publish one Response Policy and one Runtime Profile; confirm each is stored and evaluated by E-11 and E-15.
 SRC: ARCH §7.2
-R: These objects compose the Allow-policy model.
+R: Separately published response and runtime objects let a policy author change response handling and instance limits without editing configuration.
+DEFER: Release 1.0 sets response handling with the `filters` obligations of permit rules and the `[filters]` configuration (where a requirement names the Response Policy, release 1.0 reads that configuration), and runtime limits with the verified manifest and the `[runtime]` configuration. Instance scopes that would need a Runtime Profile are already deferred (FR-5.10). Separate Response Policy and Runtime Profile objects need a publication path, schema and simulation support that release 1.0 does not have.
 
 @FR-3.2 | Policy schema
 P: FR-3

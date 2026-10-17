@@ -125,6 +125,12 @@ function CatalogView() {
       <PageHeader code="G-10" title="Tool catalog">
         <p>The public tools a session is offered, per Session Allow template of the active policy.</p>
       </PageHeader>
+      <Help>
+        <p>
+          Each table lists the tools one template grants: the public name a harness sees, the server and rule behind it, whether calls need approval and which
+          optional filters run. A tool marked as not offered is named by a rule but no running server provides it. Change the grants in the Policy studio (G-02).
+        </p>
+      </Help>
       <Tabs current="catalog" />
       <Loaded res={res} what="the catalog" route="/api/v1/catalog">
         {(c) => (
@@ -176,7 +182,9 @@ export function Servers({ path }: { path: string }) {
           <p>
             A revision is <strong>enabled</strong> (it runs under its alias), <strong>verified-disabled</strong> (suspended; it can be enabled again),{" "}
             <strong>retired</strong> (final) or <strong>revoked</strong> (by a signed revocation entry). A running server that drifts from its signed manifest or
-            whose manifest expires is suspended; the reason is shown under packaged servers. Enabling usually needs a restart of smcpd.
+            whose manifest expires is suspended; the reason is shown under packaged servers. Enabling usually needs a restart of smcpd. A trust anchor is
+            enrolled in two steps: the console first shows the key's fingerprint, and enrolls it only after you confirm that the key ID matches the one the
+            publisher gave you.
           </p>
         </Help>
         <Tabs current="library" />

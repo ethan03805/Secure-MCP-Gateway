@@ -142,7 +142,9 @@ Request:
 
 `public_key` is the content of the minisign `.pub` file (`smcpctl package keygen`). `classes` defaults to `low` and `moderate`; `expires` is a date or an RFC 3339 time, default one year.
 
-Response `201`: `{"name": "team", "key_id": "7B3357B76507695D", "classes": ["low", "moderate"], "expires": "2027-10-17T00:00:00Z"}`. Errors: 400 `bad_request` (body or expiry), 400 `invalid_anchor` (key, name, class, expiry in the past, key or name already enrolled), 503 `audit_unavailable` (nothing was enrolled). Evidence: class `package`, origin `E-13`, outcome `anchor_enrolled`, reason `TRUST_ANCHOR_ENROLLED`, with the actor, anchor name, key ID, classes and expiry.
+Enrollment takes two requests (FR-7.10). The first carries `"preview": true` and changes nothing: response `200` `{"key_id": "7B3357B76507695D", "sha256": "<64 hex digits of the SHA-256 of the key line>", "name", "classes", "expires"}`. The administrator compares the key ID with the one the publisher gave out of band; the second request repeats the body with `"confirm_key_id": "7B3357B76507695D"` instead of `preview`. A request without `confirm_key_id` answers 400 `confirmation_required`, one with another key ID 400 `fingerprint_mismatch`; neither enrolls anything. G-10 shows the fingerprint between the two requests and enrolls only after the confirmation box is checked.
+
+Response `201`: `{"name": "team", "key_id": "7B3357B76507695D", "classes": ["low", "moderate"], "expires": "2027-10-17T00:00:00Z"}`. Errors: 400 `bad_request` (body or expiry), 400 `invalid_anchor` (key, name, class, expiry in the past, key or name already enrolled), 400 `confirmation_required`, 400 `fingerprint_mismatch`, 503 `audit_unavailable` (nothing was enrolled). Evidence: class `package`, origin `E-13`, outcome `anchor_enrolled`, reason `TRUST_ANCHOR_ENROLLED`, with the actor, anchor name, key ID, SHA-256 fingerprint, `fingerprint_confirmed`, classes and expiry.
 
 ## DELETE /api/v1/packages/trust/{name}
 

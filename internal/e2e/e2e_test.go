@@ -274,6 +274,13 @@ func (f *fixture) oauthLogin(scope string) (access, refresh string, tokenBody ma
 
 // oauthLoginClient is oauthLogin for another registered public client.
 func (f *fixture) oauthLoginClient(scope, clientID string) (access, refresh string, tokenBody map[string]any) {
+	f.t.Helper()
+	return f.oauthLoginAs(scope, clientID, "approver", approverPassword, nil)
+}
+
+// oauthLoginAs is oauthLoginClient signing in as the given Session
+// Approver; page, when set, receives the sign-in page.
+func (f *fixture) oauthLoginAs(scope, clientID, user, password string, page func(string)) (access, refresh string, tokenBody map[string]any) {
 	t := f.t
 	t.Helper()
 	// Discovery (FR-2.17).
@@ -297,9 +304,12 @@ func (f *fixture) oauthLoginClient(scope, clientID string) (access, refresh stri
 	if r.StatusCode != 200 || !strings.Contains(string(body), "<form") {
 		t.Fatalf("authorize GET: %d %s", r.StatusCode, body)
 	}
+	if page != nil {
+		page(string(body))
+	}
 	form := q
-	form.Set("username", "approver")
-	form.Set("password", approverPassword)
+	form.Set("username", user)
+	form.Set("password", password)
 	r, _ = f.postForm(asm["authorization_endpoint"].(string), form)
 	if r.StatusCode != 302 {
 		t.Fatalf("authorize POST: %d", r.StatusCode)

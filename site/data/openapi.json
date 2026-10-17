@@ -923,6 +923,141 @@
     ]
    }
   },
+  "/api/v1/approvers": {
+   "get": {
+    "description": "Reference: docs/api/console.md",
+    "operationId": "getApprovers",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Session Approver accounts of smcp.toml and the principal directory (no password hashes)",
+    "tags": [
+     "sessions"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   },
+   "post": {
+    "description": "Reference: docs/api/console.md",
+    "operationId": "postApprovers",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Create a Session Approver account whose password differs from the Administrator's",
+    "tags": [
+     "sessions"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
+  },
+  "/api/v1/approvers/{username}/remove": {
+   "post": {
+    "description": "Reference: docs/api/console.md",
+    "operationId": "postApproversUsernameRemove",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "username",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Remove a Session Approver account of the directory and end its console sessions",
+    "tags": [
+     "sessions"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
+  },
   "/api/v1/audit/events": {
    "get": {
     "description": "Reference: docs/api/console.md",
