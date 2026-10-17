@@ -175,6 +175,9 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 ### Exact historical links in the evidence mirror (E-21, E-26)
 
 - The graph mirror projects the rule revisions of each decision record (`RuleRevision`, contained in the policy revision, linked from the decision by `CONSIDERED_RULE`, `APPLICABLE_RULE` and `DECIDED_BY`) and the effective Audit Profile revision (`PolicyObject`, linked from the decision event by `RECORDED_UNDER`). The event path query returns the decisive rules and the audit profile. Templates digest updated. A new end-to-end test verifies SR-6.4-1 on a real tool call.
+### Server-asserted evidence (E-10, E-15, E-21)
+
+- A server instance's stderr, the messages of the JSON-RPC errors it returns and the notifications it sends are recorded as `server_asserted` events attributed to the server revision and instance (SR-6.18-1): batched once a second, at most 16 per second per instance, text cut to 4 KiB with delivered secret values redacted. `docs/sandbox.md` describes the events. A new end-to-end test verifies SR-6.18-1.
 
 ### Owner decisions applied
 

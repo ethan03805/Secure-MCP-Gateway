@@ -50,6 +50,12 @@ type Process interface {
 	Stderr() string
 }
 
+// StderrReader is implemented by a Process whose diagnostic output can be
+// read incrementally (Ring.Since), for server-asserted evidence (SR-6.18-1).
+type StderrReader interface {
+	StderrSince(off uint64) (text string, next, skipped uint64)
+}
+
 // Launcher starts server instances (E-15 Server Runtime Manager, E-16
 // Execution Sandbox). Confined reports whether instances run inside a
 // sandbox; the standalone profile has an unconfined launcher.
@@ -220,12 +226,14 @@ type Ring struct {
 	Max int
 	mu  sync.Mutex
 	buf []byte
+	n   uint64 // bytes written in total
 }
 
 // Write implements io.Writer and never fails.
 func (b *Ring) Write(p []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	b.n += uint64(len(p))
 	if len(p) >= b.Max {
 		b.buf = append(b.buf[:0], p[len(p)-b.Max:]...)
 		return len(p), nil
@@ -240,6 +248,30 @@ func (b *Ring) Write(p []byte) (int, error) {
 	}
 	return len(p), nil
 }
+
+// Since returns the retained output written after offset off (a value
+// returned by an earlier call, or 0) and the offset to pass next. Output
+// written after off that the ring no longer holds is skipped; skipped
+// reports how many bytes that was.
+func (b *Ring) Since(off uint64) (text string, next, skipped uint64) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	t := b.buf
+	if len(t) > b.Max {
+		t = t[len(t)-b.Max:]
+	}
+	start := b.n - uint64(len(t)) // offset of t[0]
+	if off < start {
+		skipped, off = start-off, start
+	}
+	if off > b.n {
+		off = b.n
+	}
+	return string(t[off-start:]), b.n, skipped
+}
+
+// StderrSince implements StderrReader.
+func (p *subprocess) StderrSince(off uint64) (string, uint64, uint64) { return p.stderr.Since(off) }
 
 // Tail returns the retained output (at most Max bytes, the most recent),
 // trimmed.
