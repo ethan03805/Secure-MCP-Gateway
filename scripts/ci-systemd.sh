@@ -76,7 +76,8 @@ sudo -n test -S "/run/user/$srv_uid/bus" || fail "smcp-srv has no user manager b
 sudo -n test -f /etc/sudoers.d/smcp-srv || fail "no sudoers rule for smcp-srv"
 sudo -n test -f /etc/systemd/system/smcpd.service.d/smcp-srv.conf || fail "no smcpd.service drop-in for smcp-srv"
 podman_path=$(command -v podman)
-sudo -n -u smcp-core sudo -n -E -u smcp-srv -- "$podman_path" --version || fail "smcp-core cannot run Podman as smcp-srv"
+sudo -n -u smcp-core env -i PATH=/usr/bin:/bin XDG_RUNTIME_DIR="/run/user/$srv_uid" HOME=/var/lib/smcp/home/smcp-srv \
+  sudo -n -E -u smcp-srv -- "$podman_path" --version || fail "smcp-core cannot run Podman as smcp-srv"
 if sudo -n -u smcp-core sudo -n -u smcp-srv -- /bin/true 2>/dev/null; then fail "the sudoers rule lets smcp-core run more than Podman as smcp-srv"; fi
 if sudo -n -u smcp-srv test -r /etc/smcp; then fail "smcp-srv can read /etc/smcp"; fi
 echo "smcp-srv: uid $srv_uid, group $(id -gn smcp-srv), subuid $(grep '^smcp-srv:' /etc/subuid)"
