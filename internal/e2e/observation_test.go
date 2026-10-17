@@ -284,8 +284,12 @@ func (of *obsFixture) journal() []audit.Event {
 }
 
 func TestSynchronousAnomalyObligation(t *testing.T) {
-	reqtest.Partial(t, "FR-4.15", "SR-1.12-2", "FR-10.28")
-	reqtest.Verifies(t, "SR-1.19-1", "SR-1.12-3")
+	// SR-1.12-2: a normal permitted call stays a plain permit, an abnormal
+	// permitted call gains the approval obligation (the only action the
+	// scorer can add before dispatch), and denied calls with a normal and
+	// with an abnormal band stay denied.
+	reqtest.Partial(t, "FR-4.15", "FR-10.28")
+	reqtest.Verifies(t, "SR-1.19-1", "SR-1.12-3", "SR-1.12-2")
 	of := startObservation(t, `sampling_rate = 1.0
 scoring = "sync"
 require_approval_band = "abnormal"
@@ -352,6 +356,12 @@ sigma_floor = 0.05
 	jerr, denied := callErr(t, cs, "t_echo", map[string]any{"text": "v998"})
 	if jerr == nil || denied["reasonCode"] != "QUOTA_EXHAUSTED" {
 		t.Fatalf("quota: %v %v", jerr, denied)
+	}
+	// SR-1.12-2: the denial stands for a call whose band would be
+	// abnormal too; a band never turns it into a permit or an approval.
+	jerr, deniedAbnormal := callErr(t, cs, "t_echo", map[string]any{"text": strings.Repeat("B", 50000)})
+	if jerr == nil || jerr.Code == edge.CodeApprovalRequired || deniedAbnormal["reasonCode"] != "QUOTA_EXHAUSTED" {
+		t.Fatalf("denied abnormal call: %v %v", jerr, deniedAbnormal)
 	}
 	checkExplanations(t, of, res.Snapshot.ID, normalID, data["decisionId"].(string), denied["decisionId"].(string))
 }

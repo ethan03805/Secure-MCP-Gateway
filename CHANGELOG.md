@@ -222,6 +222,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - A valid W3C `traceparent` and the `io.modelcontextprotocol/clientInfo` of a `tools/call` request become observation attributes: new catalog parameter P-009 `trace_parent` and P-003 `harness_adapter_version` (`name/version`, self-asserted); catalog version 1.1.0. Neither reaches the decision request or the evidence, and the southbound request carries no harness `_meta`. New tests verify FR-1.44 and FR-1.45.
 - The empty complete result that ends a listen stream now carries `_meta.io.modelcontextprotocol/serverInfo`. FR-1.14 and FR-1.15 are narrowed to 2026-07-28 results (the 2025-11-25 schema defines neither field) and verified on every baseline method.
 - New tests verify FR-1.31 (content, structuredContent and isError as a response filter left them) and FR-1.41 (closing the event stream of an in-flight call sends `notifications/cancelled` southbound within 1 second).
+### Partial claims sweep: policy and approvals (E-05 to E-08)
+
+- Decisions carry the behavior baseline snapshot ID the Anomaly Scorer has loaded (`policy.Decision.BaselineSnapshot`, set through `Decider.SetBaseline`; smcpd passes the scorer's snapshot), and the decision record in the journal has `baseline_snapshot_id` (FR-3.11).
+- Approve and deny events carry `decided_at` beside `approver` and `comment` (FR-3.17, `docs/approvals.md`).
+- New tests verify FR-3.2 (missing field, wrong type and unknown enumeration value rejected with the field path, nothing stored), FR-3.5 (a 50-fixture scenario against a draft that removes one grant), FR-3.8 (export, import into a clean instance, identical decisions), FR-3.11, FR-3.17, SR-1-2 (each layer denies alone), SR-1.15-1 (the state directory as a crash at each activation step leaves it; the decider swaps only after the control record is renamed) and SR-1.18-2 (every binding field, expiry, single use, CP-17 bound). Existing tests now verify SR-1.14-1 (PUT, PATCH and DELETE on revision routes, other content under a published ID, rollback onto one), SR-1.12-2 (a denied call with an abnormal band stays denied) and FR-3.19 (the progress-token keep-alive form in the same run as the SSE comment form).
 
 ### UDS Harness Profile (FR-1.1, FR-1.47, FR-2.15, SR-2.8-3)
 
