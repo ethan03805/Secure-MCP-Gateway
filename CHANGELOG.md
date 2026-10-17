@@ -267,6 +267,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - SRS: FR-15.3 now covers the Appendix K clients whose configuration location is recorded, and requires doctor to say for the others (Grok Build, to be confirmed at pinning) that their servers are not listed, which it does.
 - New tests verify FR-13.9 (smcpd configured for the Enforced profile on a host without Podman and nftables on the PATH exits naming both; on a non-Linux host the refusal names the platform and the claim stays partial) and FR-15.3 (every server of every recorded client listed and the non-Gateway ones flagged, in each scope the client has, and the Grok Build statement).
 
+### Partial claims sweep: secret-use evidence and package signing (E-13, E-20)
+
+- Secret-use denials name the secret (FR-6.11): a denial decided before the vault is opened (rate, window, purpose, approval, stop) now carries the secret reference and the version that would have been delivered, read from the vault's metadata; no value is read.
+- New tests verify FR-6.11 (every field on S2 deliveries and on denials, no value in evidence or the diagnostic log) and FR-14.6 (`smcpctl package sign` with a passphrase-protected key and the passphrase from a file or typed at a pseudo-terminal prompt, both signatures verified, keys and passphrases on the command line refused).
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |
