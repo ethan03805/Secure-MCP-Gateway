@@ -28,6 +28,11 @@
   --strip-ink: #f4f5f0;
   --strip-muted: #b7c1ba;
   --row-current: #e3ebe2;
+  /* Chart series (validated categorical slots 1 to 3) and chart chrome. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --chart-grid: #e1e5de;
 
   --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -64,6 +69,10 @@
     --strip-ink: #e4e8e2;
     --strip-muted: #a8b3ab;
     --row-current: #233029;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --chart-grid: #29312c;
     color-scheme: dark;
   }
 }
@@ -90,6 +99,10 @@
   --strip-ink: #e4e8e2;
   --strip-muted: #a8b3ab;
   --row-current: #233029;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --chart-grid: #29312c;
   color-scheme: dark;
 }
 
@@ -255,7 +268,8 @@ input[type="radio"] {
   gap: 0.2rem;
   margin-bottom: 0.6rem;
 }
-.field > span {
+.field > span,
+.field > label {
   font-size: var(--fs-1);
   color: var(--ink-2);
   font-weight: 600;
@@ -797,6 +811,310 @@ dialog input {
 }
 .signin form > button {
   margin: 0.25rem 0 0.75rem;
+}
+
+/* Editors and forms --------------------------------------------------- */
+.hint {
+  font-size: var(--fs-1);
+  color: var(--ink-3);
+}
+.block {
+  display: block;
+}
+.choice-stack {
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 28px;
+  margin-bottom: 0.6rem;
+}
+.check input,
+.checklist input,
+table.params input {
+  width: 1rem;
+  height: 1rem;
+  min-height: 0;
+  accent-color: var(--moss);
+}
+fieldset.checklist {
+  border: 0;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 1rem;
+}
+fieldset.checklist legend {
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.2rem;
+}
+fieldset.checklist label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 24px;
+}
+.rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0 0.75rem;
+  align-items: end;
+}
+fieldset.rule {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 0.4rem 0 0;
+  padding: 0.5rem 0 0.4rem;
+}
+fieldset.rule legend {
+  font-size: var(--fs-2);
+  font-weight: 600;
+  padding: 0 0.4rem 0 0;
+}
+details.editor {
+  border-top: 1px solid var(--rule);
+  padding: 0.3rem 0;
+}
+details.editor > summary {
+  cursor: pointer;
+  min-height: 28px;
+  padding: 0.2rem 0;
+  font-weight: 600;
+}
+.tab-lede {
+  margin-top: 0.6rem;
+}
+.field input:not([type="checkbox"]):not([type="radio"]) {
+  max-width: 36rem;
+}
+.editor-body {
+  padding: 0.3rem 0 0.4rem 0.9rem;
+  border-left: 1px solid var(--rule-strong);
+}
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0 0.75rem;
+}
+.inline-form > button {
+  margin-bottom: 0.6rem;
+}
+.filter-actions .field {
+  margin-bottom: 0;
+}
+.row-actions {
+  display: inline-flex;
+  gap: 0.75rem;
+}
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+textarea.mono {
+  width: 100%;
+  max-width: 64rem;
+  font-size: var(--fs-2);
+}
+td .field {
+  margin: 0.2rem 0;
+}
+td .field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+table.params td {
+  height: auto;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+/* Charts ------------------------------------------------------------- */
+figure.chart {
+  margin: 0.6rem 0 0.9rem;
+  max-width: 64rem;
+}
+figure.chart figcaption {
+  font-size: var(--fs-2);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.chart-plot {
+  position: relative;
+}
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+.chart svg:focus-visible,
+.chart g:focus-visible {
+  outline: 2px solid var(--focus);
+}
+.chart .grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+.chart .axis {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+.chart .tick {
+  fill: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.chart .crosshair {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+.chart .threshold {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+.chart .ringed {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.chart .bar-active path {
+  opacity: 0.8;
+}
+.chart .dot {
+  cursor: pointer;
+}
+.tooltip {
+  position: absolute;
+  top: 0.25rem;
+  min-width: 9rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  font-size: var(--fs-1);
+  pointer-events: none;
+}
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+ul.legend {
+  display: flex;
+  gap: 1rem;
+  list-style: none;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  font-size: var(--fs-1);
+  color: var(--ink-2);
+}
+ul.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+details.chart-table summary {
+  cursor: pointer;
+  font-size: var(--fs-1);
+  color: var(--moss);
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+}
+.meter {
+  max-width: 40rem;
+  margin: 0.5rem 0;
+}
+.meter-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: var(--fs-2);
+}
+.meter-track {
+  height: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+}
+.meter-fill {
+  height: 100%;
+  background: var(--ok);
+}
+.meter-warn .meter-fill {
+  background: var(--warn);
+}
+.meter-bad .meter-fill {
+  background: var(--bad);
+}
+
+/* Investigation graph ---------------------------------------------------- */
+figure.graph {
+  margin: 0.4rem 0 0.6rem;
+}
+figure.graph figcaption {
+  font-size: var(--fs-2);
+  color: var(--ink-2);
+  margin-bottom: 0.35rem;
+}
+.graph-scroll {
+  overflow-x: auto;
+  background: var(--surface);
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.gedge line {
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+.gedge text {
+  fill: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+.gnode {
+  cursor: pointer;
+}
+.gnode rect {
+  fill: var(--paper);
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+.gnode:hover rect {
+  stroke: var(--ink);
+}
+.gnode:focus-visible {
+  outline: none;
+}
+.gnode:focus-visible rect {
+  stroke: var(--focus);
+  stroke-width: 2;
+}
+.gnode-current rect {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.gnode-label {
+  fill: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+}
+.gnode-sub {
+  fill: var(--ink-3);
+  font-weight: 400;
+}
+.gnode-id {
+  fill: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
 }
 
 /* Small screens -------------------------------------------------------- */

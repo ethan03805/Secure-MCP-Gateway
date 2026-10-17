@@ -8,10 +8,11 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 )
 
-// Application roles of SRS Appendix C that the control API distinguishes
-// today. The operator token and administrator session tokens carry
+// Application roles of SRS Appendix C (the others are in rolematrix.go).
+// The operator token and administrator session tokens carry
 // RoleAdministrator; other roles come from an Authenticator registered by
-// the element that owns the accounts (E-07 registers Approver accounts).
+// the element that owns the accounts (E-07 registers Approver accounts,
+// internal/consoleauth the remaining roles).
 const (
 	RoleAdministrator = "administrator"
 	RoleApprover      = "approver"
@@ -25,8 +26,8 @@ type Authenticator interface {
 }
 
 // AddAuthenticator registers an additional token authenticator. Tokens it
-// accepts reach only the routes registered with HandleRoles that name the
-// token's role; Handle routes stay Administrator-only.
+// accepts reach only the routes whose roles (the HandleRoles list plus the
+// Appendix C matrix of rolematrix.go) include the token's role.
 func (s *Server) AddAuthenticator(a Authenticator) {
 	s.mu.Lock()
 	s.authn = append(s.authn, a)
@@ -36,13 +37,16 @@ func (s *Server) AddAuthenticator(a Authenticator) {
 // HandleRoles registers an authenticated route that accepts the
 // Administrator and the listed roles.
 func (s *Server) HandleRoles(pattern string, h http.HandlerFunc, roles ...string) {
-	s.mux.Handle(pattern, s.authenticatedRoles(h, roles))
+	roles = mergeRoles(pattern, roles)
+	s.record(pattern, roles, false)
+	s.mux.Handle(pattern, s.authenticatedRoles(pattern, h, roles))
 }
 
 // HandlePublic registers a route without bearer authentication, for an
 // element's own sign-in endpoint. The listener's host, origin and
 // content-type checks still apply.
 func (s *Server) HandlePublic(pattern string, h http.HandlerFunc) {
+	s.record(pattern, nil, true)
 	s.mux.HandleFunc(pattern, h)
 }
 
@@ -75,10 +79,11 @@ func (s *Server) extraActor(tok string) (actor, role string, ok bool) {
 // authenticatedRoles authenticates like Handle routes and additionally
 // accepts actors of the listed roles from registered authenticators. An
 // authenticated actor without one of the roles is refused with 403.
-func (s *Server) authenticatedRoles(next http.HandlerFunc, roles []string) http.Handler {
+func (s *Server) authenticatedRoles(pattern string, next http.HandlerFunc, roles []string) http.Handler {
+	narrow := refine[pattern]
 	return s.authenticated(func(w http.ResponseWriter, r *http.Request) {
 		role := RoleOf(r)
-		if role != RoleAdministrator && !slices.Contains(roles, role) {
+		if role != RoleAdministrator && (!slices.Contains(roles, role) || (narrow != nil && !narrow(role, r))) {
 			if err := s.rec.Commit(audit.Event{Class: "auth_failure", Origin: "E-24", Outcome: "deny", ReasonCode: "ADMIN_ROLE_REFUSED", PolicyStatus: "not_evaluated",
 				Detail: map[string]any{"path": r.URL.Path, "actor": actorOf(r), "role": role}}); err != nil {
 				s.log.Error("evidence write failed", "err", err)

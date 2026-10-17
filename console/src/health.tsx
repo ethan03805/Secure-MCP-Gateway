@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { ApiError, post } from "./api";
 import { useResource, type Resource } from "./data";
+import { usePerm } from "./perm";
 import type { Health } from "./types";
 import { Dialog, ErrorBlock } from "./ui";
 
@@ -23,6 +24,9 @@ export const causeText: Record<string, string> = {
   emergency_stop: "Emergency stop is in effect. No call is dispatched or released until an operator resumes.",
   no_decision_snapshot: "No policy snapshot is loaded, so every call is refused.",
   evidence_unavailable: "The evidence journal cannot record events, so every call is refused.",
+  audit_capacity: "The disk holding the journal is below its free-space reserve.",
+  graph_unavailable: "The graph mirror is unavailable. Enforcement is not affected.",
+  vault_locked: "The secret vault is locked, so servers that need secrets do not start.",
 };
 
 export function isStopped(h?: Health): boolean {
@@ -37,8 +41,11 @@ export function EmergencyControl({ compact = false }: { compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [warning, setWarning] = useState("");
+  const perm = usePerm();
   if (!health || health.status !== "ok") return null;
   const stopped = isStopped(health.data);
+  if (stopped && !perm.can("POST /admin/v1/resume")) return <span className={compact ? "strip-item" : "small"}>Resume needs an Administrator</span>;
+  if (!stopped && !perm.can("POST /admin/v1/stop")) return null;
   const close = () => {
     setOpen(false);
     setError(null);

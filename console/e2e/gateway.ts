@@ -1,7 +1,9 @@
 // Starts a real Gateway for the Playwright acceptance tests: builds smcpd,
 // smcpctl, the reference server and the test MCP client, bootstraps a new
-// instance in console/.e2e, adds an Approver account, moves the listeners
-// to free ports and runs smcpd until teardown.
+// instance in console/.e2e, adds an Approver account and an account for
+// every other Appendix C role, enables the Secret Vault (passphrase key
+// source) and the Egress Broker, turns desktop notifications off, moves
+// the listeners to free ports and runs smcpd until teardown.
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -24,6 +26,9 @@ export interface GatewayInfo {
   approverUser: string;
   approverPassword: string;
   sessionApproverPassword: string;
+  /** Console accounts by role (Operator, Policy Author, Auditor, Researcher); all use rolePassword. */
+  roleUsers: Record<string, string>;
+  rolePassword: string;
   marker: string;
   pid: number;
 }
@@ -74,8 +79,38 @@ export async function start(): Promise<GatewayInfo> {
   let toml = readFileSync(config, "utf8");
   toml = toml.replaceAll("127.0.0.1:8443", `127.0.0.1:${harness}`).replaceAll("127.0.0.1:8444", `127.0.0.1:${admin}`);
   writeFileSync(config, toml);
+  const remotePort = await freePort();
   const hash = execFileSync(ctl, ["hash-password", "--password-file", apPw], { encoding: "utf8" }).trim();
-  appendFileSync(config, `\n[[approvals.account]]\nusername = "alice"\npassword_hash = "${hash}"\n`);
+  const rolePassword = "console-e2e-role-password";
+  const roleHash = execFileSync(ctl, ["hash-password", "--password-file", secretFile("role.pw", rolePassword)], { encoding: "utf8" }).trim();
+  const roleUsers: Record<string, string> = { operator: "olga", policy_author: "pat", auditor: "aud", researcher: "rita" };
+  const vaultPw = secretFile("vault.pw", "console-e2e-vault-passphrase");
+  // Tables go before the arrays of tables so no key lands in the wrong table.
+  appendFileSync(
+    config,
+    [
+      "",
+      "[approvals]",
+      'notify = "off"',
+      "",
+      "[egress]",
+      "enabled = true",
+      "",
+      "[remote]",
+      `address = "127.0.0.1:${remotePort}"`,
+      "",
+      "[secrets]",
+      'key_source = "passphrase"',
+      `passphrase_file = "${vaultPw}"`,
+      "",
+      "[[approvals.account]]",
+      'username = "alice"',
+      `password_hash = "${hash}"`,
+      ...Object.entries(roleUsers).flatMap(([role, user]) => ["", "[[console.account]]", `username = "${user}"`, `password_hash = "${roleHash}"`, `role = "${role}"`]),
+      "",
+    ].join("\n"),
+  );
+  execFileSync(ctl, ["secrets", "init", "--config", config, "--passphrase-file", vaultPw], { stdio: "inherit" });
   const marker = `console-e2e-${Date.now()}`;
   writeFileSync(join(inst, "sandbox", "hello.txt"), marker + "\n");
   proc = spawn(join(bin, "smcpd"), ["--config", config], { stdio: ["ignore", "pipe", "pipe"], detached: false });
@@ -91,6 +126,8 @@ export async function start(): Promise<GatewayInfo> {
     approverUser: "alice",
     approverPassword,
     sessionApproverPassword,
+    roleUsers,
+    rolePassword,
     marker,
     pid: proc.pid ?? 0,
   };

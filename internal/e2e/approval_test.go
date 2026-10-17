@@ -366,7 +366,11 @@ func TestApprovalRoles(t *testing.T) {
 	if st, _ := af.admin("GET", "/api/v1/approvals", alice, nil); st != 200 {
 		t.Fatalf("approver list: %d", st)
 	}
-	for _, p := range [][2]string{{"POST", "/admin/v1/stop"}, {"GET", "/admin/v1/health"}, {"POST", "/admin/v1/policy/reload"}} {
+	// Every role may read health (Appendix C, "View health and status").
+	if st, _ := af.admin("GET", "/admin/v1/health", alice, nil); st != 200 {
+		t.Fatalf("approver health: %d", st)
+	}
+	for _, p := range [][2]string{{"POST", "/admin/v1/stop"}, {"POST", "/admin/v1/resume"}, {"POST", "/admin/v1/policy/reload"}} {
 		var body any
 		if p[0] == "POST" {
 			body = map[string]any{}

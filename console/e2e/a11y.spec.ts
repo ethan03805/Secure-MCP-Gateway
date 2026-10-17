@@ -27,6 +27,11 @@ const paths = [
   "/egress",
   "/runtime",
   "/remote",
+  "/library",
+  "/policy/draft",
+  "/policy/filters",
+  "/audit/graph",
+  "/research/new",
 ];
 
 for (const scheme of ["light", "dark"] as const) {

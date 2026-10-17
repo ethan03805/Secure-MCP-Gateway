@@ -1,6 +1,6 @@
 # Control API: packages
 
-Routes of the Library Trust Verifier (E-13) and Local Server Registry (E-14) on the control API (admin listener, CP-03). They are registered by `internal/library` through `adminapi.Server.Handle`, so the control API's rules apply: a bearer token (the operator token in `<state>/keys/admin.token` or an administrator session token from `POST /admin/v1/login`), no foreign `Origin` or cross-site `Sec-Fetch-Site`, and `Content-Type: application/json` on every POST (an empty object `{}` when there is no body). A request without a valid token gets `401` and an `auth_failure` evidence event. A successful authentication is the Administrator action that enabling requires (SR-3.9-1).
+Routes of the Library Trust Verifier (E-13) and Local Server Registry (E-14) on the control API (admin listener, CP-03). They are registered by `internal/library` through `adminapi.Server.Handle`, so the control API's rules apply: a bearer token (the operator token in `<state>/keys/admin.token` or an administrator session token from `POST /admin/v1/login`); reads are also open to Operators and Auditors and suspension (`disable`) and scans to Operators ([console.md](console.md#roles)), no foreign `Origin` or cross-site `Sec-Fetch-Site`, and `Content-Type: application/json` on every POST (an empty object `{}` when there is no body). A request without a valid token gets `401` and an `auth_failure` evidence event. A successful authentication is the Administrator action that enabling requires (SR-3.9-1).
 
 Errors have the control API's form: `{"error": {"code": "<reason code>", "message": "<text>"}}`. Refusals are `409` with a reason code from the [packaging guide](../packaging-guide.md#reason-codes); an unknown revision is `404` `PACKAGE_UNKNOWN`; a malformed body is `400` `bad_request`.
 
@@ -123,3 +123,21 @@ The 100 most recent import receipts (FR-5.4), newest first.
 ```
 
 `result` is `accepted`, `rejected` (with `reason_code` and `error`) or `unchanged`.
+
+## POST /api/v1/packages/trust
+
+Enrolls a trust anchor (FR-14.8), the control API form of `smcpctl trust add`. Administrator-only. The anchors file is read at every import, so the anchor admits packages from the next library scan.
+
+Request:
+
+```json
+{"name": "team", "public_key": "untrusted comment: minisign public key …\nRWQ…", "classes": ["low", "moderate"], "expires": "2027-10-16"}
+```
+
+`public_key` is the content of the minisign `.pub` file (`smcpctl package keygen`). `classes` defaults to `low` and `moderate`; `expires` is a date or an RFC 3339 time, default one year.
+
+Response `201`: `{"name": "team", "key_id": "7B3357B76507695D", "classes": ["low", "moderate"], "expires": "2027-10-17T00:00:00Z"}`. Errors: 400 `bad_request` (body or expiry), 400 `invalid_anchor` (key, name, class, expiry in the past, key or name already enrolled), 503 `audit_unavailable` (nothing was enrolled). Evidence: class `package`, origin `E-13`, outcome `anchor_enrolled`, reason `TRUST_ANCHOR_ENROLLED`, with the actor, anchor name, key ID, classes and expiry.
+
+## DELETE /api/v1/packages/trust/{name}
+
+Removes a trust anchor by name or key ID (`smcpctl trust remove`). Administrator-only. Revisions already imported stay in the library. Response `200`: `{"removed": "team"}`. Errors: 404 `not_found`, 503 `audit_unavailable`. Evidence: outcome `anchor_removed`, reason `TRUST_ANCHOR_REMOVED`.

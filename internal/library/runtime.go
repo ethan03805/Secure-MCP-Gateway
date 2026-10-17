@@ -48,6 +48,8 @@ type Runtime struct {
 	suspend    func(alias, reason string) bool
 	stop       chan struct{}
 	done       chan struct{}
+
+	trustMu sync.Mutex // serializes trust anchor changes (trust_api.go)
 }
 
 // Binding is the state of one packaged [[server]] entry.

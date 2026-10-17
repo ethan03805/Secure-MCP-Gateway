@@ -3,22 +3,23 @@
 // version number on every change; every mounted resource refetches when it
 // changes, keeping the old data on screen while it does (FR-8.23).
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { ApiError, credentials, get, stream } from "./api";
+import { ApiError, get, stream } from "./api";
 
 interface Live {
   version: number;
   connected: boolean;
+  /** False when the role may read no live channel. */
+  available: boolean;
   lastEvent: string;
 }
-const LiveContext = createContext<Live>({ version: 0, connected: false, lastEvent: "" });
+const LiveContext = createContext<Live>({ version: 0, connected: false, available: false, lastEvent: "" });
 
-export function LiveProvider({ children }: { children: ReactNode }) {
-  const [live, setLive] = useState<Live>({ version: 0, connected: false, lastEvent: "" });
+/** Keeps the live channel at path open; null when the role has none. */
+export function LiveProvider({ path, children }: { path: string | null; children: ReactNode }) {
+  const [live, setLive] = useState<Live>({ version: 0, connected: false, available: path !== null, lastEvent: "" });
   const timer = useRef<number | undefined>(undefined);
-  const role = credentials()?.role;
   useEffect(() => {
-    if (!role) return;
-    const path = role === "administrator" ? "/api/v1/audit/stream" : "/api/v1/approvals/watch";
+    if (!path) return;
     const stop = stream(
       path,
       (m) => {
@@ -33,7 +34,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       stop();
       window.clearTimeout(timer.current);
     };
-  }, [role]);
+  }, [path]);
   return <LiveContext.Provider value={live}>{children}</LiveContext.Provider>;
 }
 

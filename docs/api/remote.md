@@ -2,7 +2,7 @@
 
 Routes of the Remote Access Profile (`internal/remote`) on the control API (admin listener, CP-03). The listener's rules apply: loopback TLS, `Host` must name the admin listener, a foreign `Origin` or cross-site `Sec-Fetch-Site` is refused with 403 `origin_refused`, POST bodies must be `application/json` (up to 64 KiB), responses carry `Cache-Control: no-store`.
 
-Every route requires the Administrator role: the operator token (`<state>/keys/admin.token`) or an administrator session token from `POST /admin/v1/login`. A missing or unknown token gets 401 `unauthenticated`; a token of another role (for example an Approver token) gets 403 `role_refused`. Errors have the form `{"error": {"code": "<code>", "message": "<text>"}}`.
+Enabling and disabling the profile and revoking a registration need the Administrator. Session Approvers (`[[approver]]`, signed in with `POST /api/v1/console/login` and `"role": "session_approver"`) may list, approve and deny client registrations and read the profile state, which Operators may read too (Appendix C; [console.md](console.md#roles)). A missing or unknown token gets 401 `unauthenticated`; a token of a role the route does not admit (for example an Approver token) gets 403 `role_refused`. Errors have the form `{"error": {"code": "<code>", "message": "<text>"}}`.
 
 ## GET /api/v1/remote
 

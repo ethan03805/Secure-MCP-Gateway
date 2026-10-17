@@ -33,6 +33,7 @@ type Config struct {
 	Admin         Admin         `toml:"admin" json:"admin"`
 	Approvers     []Approver    `toml:"approver" json:"approver"`
 	Approvals     Approvals     `toml:"approvals" json:"approvals"`
+	Console       Console       `toml:"console" json:"console"` // E-24 role accounts (console.go)
 	Policy        Policy        `toml:"policy" json:"policy"`
 	Limits        Limits        `toml:"limits" json:"limits"`
 	Profile       Profile       `toml:"profile" json:"profile"`

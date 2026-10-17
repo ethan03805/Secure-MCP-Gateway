@@ -2,7 +2,34 @@
 // tab only; the CSP forbids inline and third-party script, which is what
 // keeps it out of reach of injected code.
 
-export type Role = "administrator" | "approver";
+export type Role = "administrator" | "operator" | "policy_author" | "approver" | "session_approver" | "auditor" | "researcher";
+
+/** Display names of the Appendix C roles. */
+export const roleLabel: Record<Role, string> = {
+  administrator: "Administrator",
+  operator: "Operator",
+  policy_author: "Policy Author",
+  approver: "Approver",
+  session_approver: "Session Approver",
+  auditor: "Auditor",
+  researcher: "Researcher",
+};
+
+/** The sign-in route of each account kind. */
+export function loginPath(role: Role): string {
+  if (role === "administrator") return "/admin/v1/login";
+  if (role === "approver") return "/api/v1/approvals/login";
+  return "/api/v1/console/login";
+}
+
+/** The sign-out route of each account kind. */
+export function logoutPath(role: Role): string {
+  if (role === "administrator") return "/admin/v1/logout";
+  if (role === "approver") return "/api/v1/approvals/logout";
+  return "/api/v1/console/logout";
+}
+
+const loginPaths = new Set(["/admin/v1/login", "/api/v1/approvals/login", "/api/v1/console/login"]);
 
 export interface Credentials {
   token: string;
@@ -92,7 +119,7 @@ function toError(res: Response, body: unknown): ApiError {
   return new ApiError(res.status, "", typeof body === "string" && body ? body.slice(0, 300) : res.statusText || "request failed", body);
 }
 
-export async function request<T>(method: "GET" | "POST", path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+export async function request<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -110,7 +137,7 @@ export async function request<T>(method: "GET" | "POST", path: string, body?: un
   const parsed = await parse(res);
   if (!res.ok) {
     const e = toError(res, parsed);
-    if (res.status === 401 && current && path !== "/admin/v1/login" && path !== "/api/v1/approvals/login") onUnauthorized?.();
+    if (res.status === 401 && current && !loginPaths.has(path)) onUnauthorized?.();
     throw e;
   }
   return parsed as T;
@@ -118,6 +145,28 @@ export async function request<T>(method: "GET" | "POST", path: string, body?: un
 
 export const get = <T>(path: string, signal?: AbortSignal) => request<T>("GET", path, undefined, signal);
 export const post = <T>(path: string, body?: unknown) => request<T>("POST", path, body);
+export const del = <T>(path: string) => request<T>("DELETE", path);
+
+/** Fetches a GET route as text (for files the console shows, not saves). */
+export async function getText(path: string): Promise<string> {
+  const res = await fetch(path, { headers: headers(false), credentials: "omit", cache: "no-store" });
+  const text = await res.text();
+  if (!res.ok) {
+    let body: unknown = text;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      // keep text
+    }
+    throw toError(res, body);
+  }
+  return text;
+}
+
+/** Normalizes anything thrown into an ApiError. */
+export function asApiError(e: unknown): ApiError {
+  return e instanceof ApiError ? e : new ApiError(0, "client", String(e));
+}
 
 /** Downloads a GET response as a file with the bearer token attached. */
 export async function download(path: string, fallbackName: string): Promise<void> {

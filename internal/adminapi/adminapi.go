@@ -107,6 +107,7 @@ type Server struct {
 	mu       sync.Mutex
 	sessions map[[32]byte]adminSession
 	authn    []Authenticator // roles.go
+	routes   []RouteInfo     // rolematrix.go
 }
 
 type adminSession struct {
@@ -137,8 +138,8 @@ func New(o Options) (*Server, error) {
 	}
 	s := &Server{cfg: o.Config, ctl: o.Controller, rec: o.Evidence, guard: o.Guard, approvals: o.Approvals, log: o.Log, now: o.Now,
 		operator: sha256.Sum256([]byte(tok)), mux: http.NewServeMux(), sessions: map[[32]byte]adminSession{}}
-	s.mux.HandleFunc("POST /admin/v1/login", s.login)
-	s.mux.HandleFunc("POST /admin/v1/bootstrap", s.bootstrap)
+	s.HandlePublic("POST /admin/v1/login", s.login)
+	s.HandlePublic("POST /admin/v1/bootstrap", s.bootstrap)
 	s.Handle("POST /admin/v1/logout", s.logout)
 	s.Handle("GET /admin/v1/health", s.health)
 	s.Handle("POST /admin/v1/stop", s.stop)
@@ -149,10 +150,13 @@ func New(o Options) (*Server, error) {
 	return s, nil
 }
 
-// Handle registers an authenticated route for the Administrator role
-// (HandleRoles admits other roles).
+// Handle registers an authenticated route for the Administrator role and
+// the roles the Appendix C matrix admits to the pattern (rolematrix.go);
+// HandleRoles admits further roles.
 func (s *Server) Handle(pattern string, h http.HandlerFunc) {
-	s.mux.Handle(pattern, s.authenticatedRoles(h, nil))
+	roles := mergeRoles(pattern, nil)
+	s.record(pattern, roles, false)
+	s.mux.Handle(pattern, s.authenticatedRoles(pattern, h, roles))
 }
 
 // Handler returns the listener's handler with the host, origin and
