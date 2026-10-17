@@ -283,6 +283,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 
 - Secret-use denials name the secret (FR-6.11): a denial decided before the vault is opened (rate, window, purpose, approval, stop) now carries the secret reference and the version that would have been delivered, read from the vault's metadata; no value is read.
 - New tests verify FR-6.11 (every field on S2 deliveries and on denials, no value in evidence or the diagnostic log) and FR-14.6 (`smcpctl package sign` with a passphrase-protected key and the passphrase from a file or typed at a pseudo-terminal prompt, both signatures verified, keys and passphrases on the command line refused).
+### Partial claims sweep: configuration reload and scheduled backups (E-23, E-28)
+
+- SRS: CP-50 names the keys release 1.0 applies at reload: `log.level`, `limits.principal_calls_per_minute` and `limits.principal_call_burst` (now applied too). Every other key is reported as `restart_required`; servers are enabled and disabled at run time through G-10 and clients managed in G-11, not by a reload. `not_applied_until_restart` stays in the reload result and is empty. `docs/operations/logging-metrics-reload.md`.
+- Scheduled backups (FR-9.16): `[backup] interval` with `recipients` or `passphrase_file` makes the running Gateway take a backup every interval by the SR-7.7-1 procedure, recorded with the actor `scheduler`; the configuration is refused when an interval has no encryption source. `docs/operations/backup.md`, `docs/operations/README.md`.
+- Tests verify FR-17.9 (the existing reload test, with the queue bound now reported as restart-bound) and FR-9.16 (a scheduled backup and on-demand backups with and without an optional part, each with a recorded checksum matching the archive and every component after decryption).
 
 ### Partial claims sweep: approvals, content gate and secret bindings (E-05, E-07, E-11, E-20)
 

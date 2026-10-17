@@ -469,11 +469,10 @@ func TestOpsOnlineBackup(t *testing.T) {
 
 func TestOpsConfigReload(t *testing.T) {
 	// FR-17.9: an invalid file keeps the running configuration; a changed
-	// rate limit applies with the session intact; a changed listener
-	// address is reported as needing a restart. Other CP-50 reloadable
-	// keys are reported as applied only at restart in this build
-	// (partial).
-	reqtest.Partial(t, "FR-17.9")
+	// rate limit (a CP-50 reloadable key) applies with the session intact;
+	// a changed listener address and a changed queue bound (not reloadable)
+	// are reported as needing a restart.
+	reqtest.Verifies(t, "FR-17.9")
 	f := startOps(t, "", nil)
 	access, _, _ := f.oauthLogin("")
 	cs := f.mcpClient(access)
@@ -506,7 +505,8 @@ func TestOpsConfigReload(t *testing.T) {
 		}
 		return false
 	}
-	if !has(res.Applied, "limits.principal_calls_per_minute") || !has(res.RestartRequired, "listener.address") || !has(res.NotApplied, "limits.tool_queue") {
+	if !has(res.Applied, "limits.principal_calls_per_minute") || !has(res.RestartRequired, "listener.address") || !has(res.RestartRequired, "limits.tool_queue") ||
+		len(res.NotApplied) != 0 {
 		t.Fatalf("reload result %+v", res)
 	}
 	if f.app.Decider.DefaultRate() != 2 {

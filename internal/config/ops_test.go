@@ -130,7 +130,8 @@ func TestDiffAndReloadableKeys(t *testing.T) {
 			t.Errorf("diff lacks %s: %v", k, d)
 		}
 	}
-	for k, reloadable := range map[string]bool{"limits.tool_queue": true, "log.level": true, "client.new": true, "server.fs.enabled": true,
+	for k, reloadable := range map[string]bool{"log.level": true, "limits.principal_calls_per_minute": true, "limits.principal_call_burst": true,
+		"limits.tool_queue": false, "client.new": false, "server.fs.enabled": false,
 		"listener.address": false, "state.dir": false, "profile.mode": false, "server.fs.command": false, "log.format": false} {
 		if ReloadableKey(k) != reloadable {
 			t.Errorf("ReloadableKey(%s) = %v", k, !reloadable)

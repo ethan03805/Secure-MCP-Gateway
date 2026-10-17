@@ -59,6 +59,12 @@ const DefaultEvidenceQuota = 10 << 30
 // Backup configures where `smcpctl backup` writes archives (D-15).
 type Backup struct {
 	Dir string `toml:"dir" json:"dir"`
+	// Interval schedules backups (FR-9.16); zero runs them on demand only.
+	// A scheduled backup is encrypted to Recipients (age public keys) or
+	// with the passphrase read from PassphraseFile.
+	Interval       Duration `toml:"interval" json:"interval"`
+	PassphraseFile string   `toml:"passphrase_file" json:"passphrase_file"`
+	Recipients     []string `toml:"recipients" json:"recipients"`
 }
 
 // Defaults of the operations sections (CP-50, CP-51).
@@ -121,6 +127,14 @@ func (c *Config) applyOpsDefaults() error {
 	if c.Backup.Dir == "" {
 		c.Backup.Dir = "backups"
 	}
+	if iv := c.Backup.Interval.Duration; iv != 0 {
+		if iv < time.Second {
+			return errors.New("backup.interval must be at least 1s")
+		}
+		if c.Backup.PassphraseFile == "" && len(c.Backup.Recipients) == 0 {
+			return errors.New("backup.interval needs backup.passphrase_file or backup.recipients: scheduled backups are encrypted (FR-17.6)")
+		}
+	}
 	if c.Metrics.Enabled {
 		for _, other := range []string{c.Listener.Address, c.AdminListener.Address} {
 			if sameHostPort(c.Metrics.Address, other) {
@@ -140,6 +154,9 @@ func (c *Config) resolveOpsPaths(res func(*string)) {
 	}
 	res(&c.Evidence.ExportDir)
 	res(&c.Backup.Dir)
+	if c.Backup.PassphraseFile != "" {
+		res(&c.Backup.PassphraseFile)
+	}
 }
 
 var schemaVersionLine = regexp.MustCompile(`(?m)^schema_version\s*=\s*[0-9]+[ \t]*(#.*)?$`)
@@ -233,10 +250,7 @@ func ReloadableKey(key string) bool {
 }
 
 var reloadablePrefixes = []*regexp.Regexp{
-	regexp.MustCompile(`^limits\.`),
-	regexp.MustCompile(`^server\.[^.]+\.enabled$`),
-	regexp.MustCompile(`^client(\.|$)`),
 	regexp.MustCompile(`^log\.level$`),
-	regexp.MustCompile(`^remote\.limits\.`),
-	regexp.MustCompile(`^notify\.`),
+	regexp.MustCompile(`^limits\.principal_calls_per_minute$`),
+	regexp.MustCompile(`^limits\.principal_call_burst$`),
 }

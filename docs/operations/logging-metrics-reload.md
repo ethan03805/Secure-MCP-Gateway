@@ -55,9 +55,9 @@ $ smcpctl reload
 
 | List | Keys |
 |---|---|
-| `applied` | `log.level`, `limits.principal_calls_per_minute` |
-| `not_applied_until_restart` | the other CP-50 reloadable keys: other `limits.*`, `server[].enabled`, `client[]`, `remote.limits.*`, `notify.*`. This build applies them at the next restart. |
-| `restart_required` | every other key, including listener addresses, `state.dir` and `profile` |
+| `applied` | the CP-50 reloadable keys: `log.level`, `limits.principal_calls_per_minute`, `limits.principal_call_burst` |
+| `not_applied_until_restart` | always empty in this release (kept for compatibility) |
+| `restart_required` | every other key, including listener addresses, `state.dir`, `profile` and the other `limits.*`. Servers are enabled and disabled at run time from the console (G-10) and clients managed in G-11, not by a reload. |
 
 A key reported in `restart_required` or `not_applied_until_restart` stays reported on later reloads until the Gateway restarts.
 
