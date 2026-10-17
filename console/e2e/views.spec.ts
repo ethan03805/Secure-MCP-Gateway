@@ -357,9 +357,24 @@ test("G-11 remote access: enable, disable and decide a client registration", asy
 });
 
 test("G-12 secrets: write-only create, rotate, impact and revoke", async ({ page }) => {
-  claims("FR-8.20", "FR-6.2");
+  claims("FR-6.2");
+  // FR-8.20 in full: create, rotate (with the reference-impact preview)
+  // and revoke from G-12; neither value appears on any page or in any
+  // control API response the console receives.
+  test.info().annotations.push({ type: "requirement", description: "FR-8.20" });
   const value = "e2e-secret-value-1234567890";
   const rotated = "e2e-rotated-value-0987654321";
+  const leaks: string[] = [];
+  page.on("response", async (r) => {
+    if (!r.url().includes("/api/v1/")) return;
+    const body = await r.text().catch(() => "");
+    if (body.includes(value) || body.includes(rotated)) leaks.push(r.url());
+  });
+  const shown = async () => {
+    const text = await page.locator("body").innerText();
+    expect(text).not.toContain(value);
+    expect(text).not.toContain(rotated);
+  };
   await signIn(page, "/secrets");
   await expect(page.getByRole("heading", { name: "Vault" })).toBeVisible();
   await page.getByText("Create a secret").click();
@@ -369,8 +384,10 @@ test("G-12 secrets: write-only create, rotate, impact and revoke", async ({ page
   await page.getByRole("button", { name: "Create secret" }).click();
   await expect(page.getByText("Created e2e-token as version 1.")).toBeVisible();
   await expect(page.getByLabel(/^Value/)).toHaveValue("");
+  await shown();
   await page.getByRole("table", { name: "Secrets" }).getByRole("link", { name: "e2e-token" }).click();
   await expect(page.getByRole("table", { name: "References to e2e-token" }).or(page.getByText(/Nothing references this secret/))).toBeVisible();
+  await shown();
   await page.getByRole("button", { name: "Rotate" }).click();
   await page.getByLabel("New value (write-only)").fill(rotated);
   await page.getByRole("dialog", { name: "Rotate e2e-token" }).getByRole("button", { name: "Rotate" }).click();
@@ -382,6 +399,8 @@ test("G-12 secrets: write-only create, rotate, impact and revoke", async ({ page
   await page.getByRole("dialog", { name: "Revoke e2e-token" }).getByRole("button", { name: "Revoke e2e-token" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Secrets" })).toBeVisible();
   await expect(page.getByRole("table", { name: "Secrets" }).or(page.getByText(/No secret is stored/))).not.toContainText("e2e-token");
+  await shown();
+  expect(leaks).toEqual([]);
 });
 
 test("G-13 approvals: a deep link to one approval opens after sign-in", async ({ page, browser }) => {
@@ -535,7 +554,14 @@ test("each role sees only its views and actions", async ({ page }) => {
 
 test("the OpenAPI document describes every route with its roles", async ({ request }) => {
   claims("FR-8.1");
-  const login = await request.post(g.adminURL + "/admin/v1/login", { data: { username: "admin", password: g.adminPassword }, headers: { Origin: g.adminURL } });
+  const post = () => request.post(g.adminURL + "/admin/v1/login", { data: { username: "admin", password: g.adminPassword }, headers: { Origin: g.adminURL } });
+  let login = await post();
+  if (login.status() === 429) {
+    // The suite signs in many times; wait out the per-source sign-in limit once.
+    await new Promise((r) => setTimeout(r, (Number(login.headers()["retry-after"]) || 5) * 1000 + 250));
+    login = await post();
+  }
+  expect(login.status(), await login.text()).toBe(200);
   const { token } = (await login.json()) as { token: string };
   const res = await request.get(g.adminURL + "/api/v1/openapi.json", { headers: { Authorization: `Bearer ${token}` } });
   expect(res.status()).toBe(200);
