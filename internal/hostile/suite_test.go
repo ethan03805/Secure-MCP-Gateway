@@ -610,7 +610,11 @@ func dnsEscape(t *testing.T) (string, bool) {
 	cs, _ := g.client(nil)
 	o := g.call(cs, "h_resolve", map[string]any{}, nil)
 	time.Sleep(200 * time.Millisecond)
-	_, brokerRefusal := g.waitEvent(time.Second, func(e audit.Event) bool { return e.Class == "egress" && e.Outcome == "deny" })
+	// The fixture presents the call's egress capability (SR-5.16-1), so the
+	// refusal must be the broker's address check (SR-5.15-2).
+	_, brokerRefusal := g.waitEvent(time.Second, func(e audit.Event) bool {
+		return e.Class == "egress" && e.Outcome == "deny" && e.ReasonCode == "EGRESS_ADDRESS_REFUSED"
+	})
 	var n note
 	n.add("fixture report: %s %q", o, o.text)
 	n.add("direct DNS queries reaching the loopback DNS canary: %d", dns.count())

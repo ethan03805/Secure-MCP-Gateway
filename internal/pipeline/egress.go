@@ -3,6 +3,8 @@ package pipeline
 import (
 	"context"
 	"net/netip"
+	"slices"
+	"time"
 )
 
 // EgressAttacher connects one server instance to the Egress Broker (E-18).
@@ -79,6 +81,11 @@ type EgressAttachment struct {
 	// Close stops the instance's listeners and removes its rules. It is
 	// safe to call more than once.
 	Close func() error
+	// Issue, when set, mints the one-use egress capabilities of one call
+	// to this instance (SR-5.16-1). The launcher exposes it through the
+	// Process it returns (EgressIssuer). Nil when the broker does not
+	// require capabilities.
+	Issue func(Binding) (*EgressAuth, func())
 }
 
 // NoEgress attaches nothing: the instance gets no egress variables. It is
@@ -88,4 +95,86 @@ type NoEgress struct{}
 // Attach implements EgressAttacher.
 func (NoEgress) Attach(context.Context, EgressRequest) (*EgressAttachment, error) {
 	return &EgressAttachment{Env: map[string]string{}, Close: func() error { return nil }}, nil
+}
+
+// EgressAuthMeta is the _meta key under which the Gateway delivers the
+// one-use egress capabilities of a call to the server instance (CP-23
+// prefix, SR-5.16-1).
+const EgressAuthMeta = "local.smcpgw/egress_auth"
+
+// EgressAuthHeader is the request header in which an instance presents
+// one egress capability to the Egress Broker.
+const EgressAuthHeader = "Smcp-Egress-Auth"
+
+// EgressAuth is the set of one-use egress capabilities minted for one
+// call to one instance. Each token authorizes exactly one brokered
+// operation (one proxy request, one CONNECT tunnel or one endpoint
+// request) to the destination of its grant while the call is in
+// progress.
+type EgressAuth struct {
+	Header       string             `json:"header"`
+	ExpiresAt    time.Time          `json:"expires_at"`
+	Destinations []EgressCapability `json:"destinations"`
+}
+
+// EgressCapability lists the tokens for one granted destination: the
+// grant's host (an exact name, a "*.suffix" wildcard or an IP literal)
+// and ports, and the endpoint variable when the grant has one.
+type EgressCapability struct {
+	Host     string   `json:"host"`
+	Ports    []int    `json:"ports"`
+	Endpoint string   `json:"endpoint_env,omitempty"`
+	Tokens   []string `json:"tokens"`
+}
+
+// Take returns an unused token of the first destination whose host is
+// exactly host and whose ports include port, and removes it from the
+// list; "" when none is left.
+func (a *EgressAuth) Take(host string, port int) string {
+	if a == nil {
+		return ""
+	}
+	for i := range a.Destinations {
+		d := &a.Destinations[i]
+		if d.Host == host && slices.Contains(d.Ports, port) && len(d.Tokens) > 0 {
+			t := d.Tokens[0]
+			d.Tokens = d.Tokens[1:]
+			return t
+		}
+	}
+	return ""
+}
+
+// EgressIssuer mints the egress capabilities of one call. The Tool
+// Dispatcher (E-10) calls IssueEgress with the call's binding before it
+// sends tools/call to the instance and calls revoke after the call
+// returns; revoke invalidates every token of the call that was not used.
+// A nil EgressAuth means the instance has no capabilities to receive.
+type EgressIssuer interface {
+	IssueEgress(b Binding) (auth *EgressAuth, revoke func())
+}
+
+// ProcessUnwrapper is implemented by Process wrappers so that optional
+// interfaces of the wrapped process (EgressIssuer) stay reachable.
+type ProcessUnwrapper interface {
+	Unwrap() Process
+}
+
+// EgressIssuerOf returns the EgressIssuer of p or of a process it wraps,
+// or nil.
+func EgressIssuerOf(p Process) EgressIssuer {
+	for range 16 {
+		if p == nil {
+			return nil
+		}
+		if is, ok := p.(EgressIssuer); ok {
+			return is
+		}
+		u, ok := p.(ProcessUnwrapper)
+		if !ok {
+			return nil
+		}
+		p = u.Unwrap()
+	}
+	return nil
 }

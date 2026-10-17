@@ -1,6 +1,6 @@
 # Egress Broker (E-18)
 
-The Egress Broker is the only path from a backend server instance to a network destination. It forwards an operation only when a grant for the instance's server alias names the destination host, port and method, resolves the destination name itself, refuses reserved addresses, bounds size, duration and rate, and records every operation in the evidence journal.
+The Egress Broker is the only path from a backend server instance to a network destination. It forwards an operation only when a grant for the instance's server alias names the destination host, port and method and the instance presents an unused one-use capability of the call it is serving, resolves the destination name itself, refuses reserved addresses, bounds size, duration and rate, and records every operation in the evidence journal.
 
 The broker is off by default. Enable it with `[egress] enabled = true`.
 
@@ -9,7 +9,7 @@ The broker is off by default. Enable it with `[egress] enabled = true`.
 | Profile | Platform | What the broker does | What stops a server from going around it |
 |---|---|---|---|
 | Enforced | Linux, rootless Podman launcher with slirp4netns and nftables | Binds the instance's listeners on the host's 127.0.0.1 and passes them to the container as `10.0.2.2:<port>`; the launcher installs nftables rules in the container's network namespace before the server starts | The nftables rules: the namespace can reach only TCP to its own broker listeners. Everything else, including DNS, UDP and ICMP, is rejected. |
-| Standalone | macOS, or Linux without a confining launcher | Binds the instance's listeners on `127.0.0.1` and passes their addresses in the instance environment | Nothing. The proxy variables are advisory: a server that ignores `HTTP_PROXY` or opens sockets itself reaches the network directly. Any local process can also connect to an instance's listeners and use that server's grants. The release label is "not enforced". |
+| Standalone | macOS, or Linux without a confining launcher | Binds the instance's listeners on `127.0.0.1` and passes their addresses in the instance environment | Nothing. The proxy variables are advisory: a server that ignores `HTTP_PROXY` or opens sockets itself reaches the network directly. Any local process can connect to an instance's listeners, but without a capability of a current call its operations are refused. The release label is "not enforced". |
 
 The rootless Podman launcher (E-16) attaches each `[[runtime.server]]` with `network = "egress"` through `pipeline.EgressAttacher` and confines the container's network namespace itself, because only the rootless user namespace that owns it can change its nftables rules: `podman create` on slirp4netns with host loopback, `podman init`, then `podman unshare nsenter --net=<namespace> nft -f -` installs table `inet smcp_egress`, reads it back, and only then starts the server. Any failure removes the container. The steps are in [sandbox.md](sandbox.md#egress). In the standalone profile egress is advisory.
 
@@ -21,6 +21,28 @@ Each instance gets its own listeners, so the broker knows which server sends eac
 - **Endpoints.** A grant with `endpoint_env` also gets a plain-HTTP listener whose base URL is passed in that variable, for example `API_URL=http://127.0.0.1:41871`. A request to `$API_URL/v1/items?x=1` is sent to `https://<host>:<port>/v1/items?x=1`. The broker originates TLS and validates the destination certificate against the system trust store. Endpoints follow redirects to destinations the instance is also granted, re-validating each target, at most 3 times. Public-fetch grants are served only through an endpoint.
 
 Variables from the broker replace configured `[server.env]` variables of the same name.
+
+## One-use capabilities
+
+With `[egress] require_capability = true` (the default) every operation needs a one-use capability (SR-5.16-1). An operation is one plain-HTTP proxy request, one `CONNECT` tunnel or one endpoint request; the redirects an endpoint follows belong to the operation.
+
+1. When the Tool Dispatcher sends `tools/call` to an instance attached to the broker, the broker mints `capability_tokens` tokens (default 8) for each current grant of the server. Each token is 256 bits of randomness, bound to the instance, to that grant (host and ports) and to the call's correlation ID, decision ID and policy revision. The broker keeps only their SHA-256 digests.
+2. The tokens reach the server in the request's `_meta` under `local.smcpgw/egress_auth`:
+
+   ```json
+   {"_meta": {"local.smcpgw/egress_auth": {
+     "header": "Smcp-Egress-Auth",
+     "expires_at": "2026-10-17T15:20:00Z",
+     "destinations": [
+       {"host": "api.example.com", "ports": [443], "endpoint_env": "API_URL", "tokens": ["smcpe_...", "smcpe_..."]}
+     ]}}}
+   ```
+
+3. The server sends one token in the `Smcp-Egress-Auth` header of each operation: on the absolute-form request to the proxy, on the `CONNECT` request, or on the endpoint request. It takes a token of the destination whose host (exact, or `*.suffix` covering the name) and ports match.
+4. After the grant check the broker spends the token, whether the operation is then forwarded or refused, records the call's IDs in the operation record and its evidence, and removes the header before forwarding. A missing token, a token already spent, one the broker does not know (forged, expired or revoked), and one minted for another instance or another grant are refused with the reason codes below before any connection is made.
+5. When the call returns, its unused tokens are revoked. A token of a call that never returns expires after 10 minutes.
+
+A server therefore reaches the network only while it is serving a call, and at most `capability_tokens` operations per destination per call. Egress at server start (before the first call) is refused. Third-party servers whose HTTP client cannot attach the header need `require_capability = false`; their operations are then authorized by instance and grant only, the header is still removed, and `smcpctl egress status` reports `require_capability: false`. AT-10 is run with capabilities required.
 
 **S1 secret headers (FR-6.6).** The broker implements `pipeline.SecretHeaderInjector` for the Secret Broker (E-20). An S1 binding names a header, a template such as `Bearer {secret}` and a destination (`host` or `host:port`). The broker inserts the header on endpoint requests to that destination, where it originates the TLS itself, and replaces any value the instance sent for that header. It never inserts a header into forward-proxy requests (plain HTTP, or CONNECT tunnels it does not terminate), and it applies the header again on each redirect hop, so a redirect to another host loses it. A grant is withdrawn, and its value overwritten, at instance teardown, emergency stop and broker shutdown. `smcpd` connects the two brokers when `[egress] enabled = true` and `[secrets]` is configured.
 
@@ -57,6 +79,10 @@ dial_timeout = "10s"           # default 10s; DNS, TCP connect, TLS handshake, C
 requests_per_minute = 60       # default 60; per server alias, all instances together
 bytes_per_minute = 67108864    # default 64 MiB; per server alias, both directions
 recent_records = 256           # default 256; operation records kept for the control API
+require_capability = true      # default true: each operation needs a one-use capability of the current call
+capability_tokens = 8          # default 8; capabilities per grant delivered with each call (1 to 256)
+resolvers = []                 # optional DNS servers ("ip:port") the broker asks instead of the host's resolver
+ca_file = ""                   # optional PEM file of CAs trusted, besides the system store, for endpoint TLS
 
 [[egress.grant]]
 server = "web"                 # server alias (required)
@@ -78,6 +104,8 @@ Rules checked when the configuration loads:
 - `class = "public-fetch"` needs `endpoint_env` and `methods = ["GET"]`. Public-fetch permits HTTPS GET only, without a request body, `Authorization` header, upgrade or CONNECT.
 - `addresses` entries must be IP addresses.
 - `methods` are upper case: `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `CONNECT-TLS`.
+- `resolvers` entries are IP addresses with ports.
+- For a packaged server, every grant must stay within the egress capabilities of its signed manifest (`capabilities.egress`): a manifest rule must cover the grant's host (the same name, or a `*.suffix` rule covering it), and for each granted port and method a covering rule must list both. Otherwise the server is not started; its entry in the `servers` list of `GET /api/v1/packages` and the `server_not_started` event carry `EGRESS_EXCEEDS_MANIFEST` and name the exceeded dimension (host, port or method). This is checked when the Gateway starts.
 
 Grants come from the configuration until the policy service (E-05, E-06) provides egress grants from decision obligations. The broker reads the current grants on every operation.
 
@@ -93,7 +121,7 @@ Each operation writes journal events of class `egress` and origin `E-18`:
 | `denied` | `deny` | The operation was refused before forwarding, or a redirect or address was refused |
 | `failed` | `terminated` | A forwarded operation was cut by a limit, a timeout or an upstream failure |
 
-The event detail holds the operation record: `id`, `time`, `instance`, `server`, `mode` (`connect`, `http` or `endpoint`), `method`, `host`, `port`, `path`, `sni`, `grant`, `resolved` (every address the name resolved to), `address` (the address dialed), `address_class`, `redirects`, `decision` (`allowed` or `denied`), `reason`, `detail`, `status`, `bytes_up`, `bytes_down`, `duration_ms` and `injected_headers` (names of S1 headers the broker inserted). Query strings, header values and bodies are not recorded.
+The event detail holds the operation record: `id`, `time`, `instance`, `server`, `mode` (`connect`, `http` or `endpoint`), `method`, `host`, `port`, `path`, `sni`, `grant`, `resolved` (every address the name resolved to), `address` (the address dialed), `address_class`, `redirects`, `decision` (`allowed` or `denied`), `reason`, `detail`, `status`, `bytes_up`, `bytes_down`, `duration_ms`, `injected_headers` (names of S1 headers the broker inserted), `capability` (`consumed`, `missing`, `invalid`, `replayed` or `mismatch`; absent when capabilities are not required) and `correlation_id`, `decision_id` and `policy_revision` of the call the capability was minted for. The event itself carries the same three IDs, so an operation joins the call that authorized it. Query strings, header values, tokens and bodies are not recorded.
 
 ## Commands
 
@@ -129,6 +157,10 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 | `EGRESS_REDIRECT_REFUSED` | 403 | An endpoint was redirected to an ungranted, non-HTTPS or malformed target, or more than 3 times | Grant the redirect target, or call the final URL directly |
 | `EGRESS_PUBLIC_FETCH_PROFILE` | 403 | A public-fetch grant was used with a request body, an `Authorization` header or as plain HTTP through the proxy (CONNECT and methods other than GET are refused with `EGRESS_METHOD_REFUSED`) | Public-fetch is for anonymous HTTPS GET through its endpoint |
 | `EGRESS_EVIDENCE_UNAVAILABLE` | 503 | The journal refused the authorization event | See `smcpctl health`; the journal must be writable |
+| `EGRESS_CAPABILITY_REQUIRED` | 403 | The operation carried no `Smcp-Egress-Auth` header | Send a token from the `local.smcpgw/egress_auth` metadata of the current call, or set `require_capability = false` for servers that cannot |
+| `EGRESS_CAPABILITY_INVALID` | 403 | The token is unknown, expired or revoked (its call has ended), or the header appears more than once | Use a token of the call being served |
+| `EGRESS_CAPABILITY_REPLAYED` | 403 | The token was already spent by an earlier operation | Use a new token for each operation; raise `capability_tokens` if a call needs more |
+| `EGRESS_CAPABILITY_MISMATCH` | 403 | The token was minted for another instance or for another grant's destination | Take the token from the destination entry that matches the host and port |
 | `EGRESS_SECRET_DETECTED` | 403 | A registered secret (a value the Secret Broker delivered) appears in the URL, a header or the body of a brokered HTTP request; only the header the broker inserts for S1 delivery is exempt (SR-5.8-2). The bytes of a CONNECT tunnel are TLS the broker does not terminate and are not scanned | Deliver the credential as S1 so the broker inserts it, instead of sending it from the server |
 
 ## Kernel test
@@ -137,7 +169,6 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 
 ## Not yet implemented
 
-- One-use egress capabilities in `Smcp-Egress-Auth` (SR-5.16-1) are deferred from release 1.0 (SRS Appendix N): third-party servers do not send them. Each operation is authorized by the instance it comes from and its current grants (SR-4.5-2); the header is removed before forwarding.
 - The `secret-fingerprint` filter on outbound URLs, headers and bodies (SR-5.8-2).
 - Grants from policy decision obligations and limits from manifests and Runtime Profiles (FR-5.38 names three sources; the broker applies the configuration and the grant).
 - Endpoint variable names from signed manifests (FR-5.37); today they come from `endpoint_env` in the configuration.

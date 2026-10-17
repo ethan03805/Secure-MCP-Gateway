@@ -109,11 +109,15 @@ address = %[11]q
 #   export_dir = "/Volumes/backup/smcp-evidence"
 #
 # Egress Broker (E-18): servers reach the network only through per-instance
-# proxies with per-server grants. Advisory in the standalone profile.
+# proxies with per-server grants. Advisory in the standalone profile. A
+# grant must stay within the egress capabilities of the server's signed
+# manifest (the reference server declares none), and each operation needs
+# a one-use capability that the Gateway delivers with the call
+# (docs/egress.md).
 #   [egress]
 #   enabled = true
 #   [[egress.grant]]
-#   server = "ref"
+#   server = "web"
 #   host = "api.example.com"
 #   methods = ["GET"]
 #

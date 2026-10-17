@@ -936,6 +936,18 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 	if inst == nil || s.suspended.Load() {
 		return nil, ErrSuspended
 	}
+	// SR-5.16-1: the instance receives the one-use egress capabilities of
+	// this call; the unused ones are revoked when the call returns.
+	if is := pipeline.EgressIssuerOf(inst.proc); is != nil {
+		auth, revoke := is.IssueEgress(d.Binding)
+		defer revoke()
+		if auth != nil {
+			if params.Meta == nil {
+				params.Meta = mcp.Meta{}
+			}
+			params.Meta[pipeline.EgressAuthMeta] = auth
+		}
+	}
 	res, err := inst.session.CallTool(cctx, params)
 	if err != nil {
 		var we *jsonrpc.Error

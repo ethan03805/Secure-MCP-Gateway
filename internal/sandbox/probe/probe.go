@@ -16,13 +16,16 @@
 //	alloc        allocates and touches the given number of MiB
 //	identity     reports uid, gid and the uid_map of the process
 //	http_get     fetches a URL through the proxy in HTTP_PROXY, if any
-//	             ("blocked: ..." or "status <code>: <body>")
+//	             ("blocked: ..." or "status <code>: <body>"), presenting
+//	             the egress capability delivered with the call for that
+//	             destination, when there is one (SR-5.16-1)
 package probe
 
 import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -30,10 +33,13 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
 
 // SleepArg makes the binary sleep instead of serving (used by spawn).
@@ -74,6 +80,35 @@ func text(s string) *mcp.CallToolResult {
 // failure is the expected outcome, not an error.
 func blocked(err error) (*mcp.CallToolResult, any, error) {
 	return text("blocked: " + err.Error()), nil, nil
+}
+
+// egressToken returns the one-use egress capability delivered in the
+// call's _meta for the destination of rawURL, or "" when none was
+// delivered (SR-5.16-1).
+func egressToken(req *mcp.CallToolRequest, rawURL string) string {
+	if req == nil || req.Params == nil || req.Params.Meta == nil {
+		return ""
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil {
+		port = 80
+		if u.Scheme == "https" {
+			port = 443
+		}
+	}
+	raw, err := json.Marshal(req.Params.Meta[pipeline.EgressAuthMeta])
+	if err != nil {
+		return ""
+	}
+	var a pipeline.EgressAuth
+	if json.Unmarshal(raw, &a) != nil {
+		return ""
+	}
+	return a.Take(u.Hostname(), port)
 }
 
 // Server returns the probe MCP server.
@@ -139,7 +174,8 @@ func Server() *mcp.Server {
 			return text(fmt.Sprintf("allocated %d MiB", len(b)>>20)), nil, nil
 		})
 	mcp.AddTool(s, &mcp.Tool{Name: "http_get", Description: "Fetch a URL through the Egress Broker proxy (HTTP_PROXY)."},
-		func(ctx context.Context, _ *mcp.CallToolRequest, a urlArgs) (*mcp.CallToolResult, any, error) {
+		func(ctx context.Context, r *mcp.CallToolRequest, a urlArgs) (*mcp.CallToolResult, any, error) {
+			tok := egressToken(r, a.URL)
 			// The proxy is used for every destination, loopback included
 			// (http.ProxyFromEnvironment would bypass it for 127.0.0.1).
 			tr := &http.Transport{Proxy: nil, DisableKeepAlives: true}
@@ -149,11 +185,17 @@ func Server() *mcp.Server {
 					return blocked(err)
 				}
 				tr.Proxy = http.ProxyURL(pu)
+				if tok != "" {
+					tr.ProxyConnectHeader = http.Header{pipeline.EgressAuthHeader: {tok}}
+				}
 			}
 			c := &http.Client{Transport: tr, Timeout: 10 * time.Second}
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.URL, nil)
 			if err != nil {
 				return blocked(err)
+			}
+			if tok != "" {
+				req.Header.Set(pipeline.EgressAuthHeader, tok)
 			}
 			resp, err := c.Do(req) // #nosec G704 -- the probe's purpose is to attempt egress
 			if err != nil {

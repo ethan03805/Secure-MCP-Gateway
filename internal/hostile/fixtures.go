@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -224,7 +225,7 @@ var fixtures = map[string]*fixture{
 	"HF-23": {tools: withEcho(tool("connect", "Open a network connection.", nil)), handlers: map[string]handler{
 		"connect": func(s *server, id json.RawMessage, _ callParams) { s.reply(id, text(dialCanary(s.cfg.CanaryAddr))) }}},
 	"HF-24": {tools: withEcho(tool("resolve", "Resolve a name.", nil)), handlers: map[string]handler{
-		"resolve": func(s *server, id json.RawMessage, _ callParams) { s.reply(id, text(resolveCanary(s.cfg))) }}},
+		"resolve": func(s *server, id json.RawMessage, p callParams) { s.reply(id, text(resolveCanary(s.cfg, p.Meta))) }}},
 	"HF-25": {tools: withEcho(tool("ask", "Ask for input.", nil)), handlers: map[string]handler{
 		"ask": func(s *server, id json.RawMessage, _ callParams) {
 			s.reply(id, map[string]any{"resultType": "input_required", "requestState": "c21jcC1ob3N0aWxl",
@@ -369,8 +370,10 @@ func dialCanary(addr string) string {
 // resolveCanary sends a DNS query for canary.invalid to the loopback DNS
 // canary (direct resolution), then asks the Egress Broker's forward proxy,
 // when the instance has one, to CONNECT to localhost at the TCP canary: a
-// name whose answer is a loopback address (HF-24).
-func resolveCanary(c Config) string {
+// name whose answer is a loopback address (HF-24). It presents the egress
+// capability the Gateway delivered with the call, so that the broker's
+// refusal is the address check, not a missing capability.
+func resolveCanary(c Config, meta map[string]any) string {
 	direct := "blocked: no DNS canary"
 	if c.CanaryDNS != "" {
 		r := &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -393,15 +396,20 @@ func resolveCanary(c Config) string {
 	}
 	broker := "no-proxy"
 	if p := os.Getenv("HTTPS_PROXY"); p != "" && c.CanaryAddr != "" {
-		broker = proxyConnect(strings.TrimPrefix(p, "http://"), c.CanaryAddr)
+		broker = proxyConnect(strings.TrimPrefix(p, "http://"), c.CanaryAddr, egressTokens(meta))
 	}
 	return "direct=" + direct + " broker=" + broker
 }
 
-func proxyConnect(proxy, canary string) string {
+func proxyConnect(proxy, canary string, caps []egressDest) string {
 	_, port, err := net.SplitHostPort(canary)
 	if err != nil {
 		return "error: " + err.Error()
+	}
+	pn, _ := strconv.Atoi(port)
+	hdr := ""
+	if tok := tokenFor(caps, "localhost", pn, "", 0); tok != "" {
+		hdr = egressAuthHeader + ": " + tok + "\r\n"
 	}
 	conn, err := net.DialTimeout("tcp", proxy, 2*time.Second) // #nosec G704 -- the instance's own Egress Broker proxy address
 	if err != nil {
@@ -409,7 +417,7 @@ func proxyConnect(proxy, canary string) string {
 	}
 	defer conn.Close()
 	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
-	_, _ = fmt.Fprintf(conn, "CONNECT localhost:%s HTTP/1.1\r\nHost: localhost:%s\r\n\r\n", port, port)
+	_, _ = fmt.Fprintf(conn, "CONNECT localhost:%s HTTP/1.1\r\nHost: localhost:%s\r\n%s\r\n", port, port, hdr)
 	buf := make([]byte, 128)
 	n, _ := conn.Read(buf)
 	line, _, _ := strings.Cut(string(buf[:n]), "\r\n")

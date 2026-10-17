@@ -16,7 +16,10 @@
 // answer cannot redirect the connection (rebinding). Request size,
 // response size, duration, request rate and byte rate are bounded. Tunnels
 // are spliced without TLS interception. Each operation is recorded as
-// evidence with host, port, address, bytes and decision.
+// evidence with host, port, address, bytes and decision. With
+// RequireCapability, each operation must also present a one-use
+// capability minted for the call the instance is serving (SR-5.16-1,
+// capability.go).
 //
 // In the enforced profile the confining launcher passes the instance's
 // network namespace and the broker installs nftables rules in it so that
@@ -54,9 +57,10 @@ const Origin = "E-18"
 // MaxRedirects bounds the redirects an endpoint follows (SR-5.15-1).
 const MaxRedirects = 3
 
-// AuthHeader is the egress capability header (CP-23). The broker removes
-// it before forwarding.
-const AuthHeader = "Smcp-Egress-Auth"
+// AuthHeader is the egress capability header (CP-23, SR-5.16-1). The
+// broker checks it when capabilities are required and removes it before
+// forwarding.
+const AuthHeader = pipeline.EgressAuthHeader
 
 // ReasonHeader carries the reason code of a refusal to the instance.
 const ReasonHeader = "Smcp-Egress-Reason"
@@ -141,8 +145,16 @@ type Options struct {
 	Rules RuleInstaller
 	// Recent is the number of operation records kept for the control API.
 	Recent int
-	Log    *slog.Logger
-	Now    func() time.Time
+	// RequireCapability makes the broker forward an operation only with a
+	// one-use capability minted for the current call (SR-5.16-1,
+	// capability.go). FromConfig sets it unless [egress]
+	// require_capability = false.
+	RequireCapability bool
+	// CapabilityTokens is the number of tokens minted per grant and call;
+	// default DefaultCapabilityTokens.
+	CapabilityTokens int
+	Log              *slog.Logger
+	Now              func() time.Time
 }
 
 // Broker is the Egress Broker. It implements pipeline.EgressAttacher.
@@ -161,6 +173,7 @@ type Broker struct {
 	closed    bool
 
 	headers headerSet // S1 header grants (inject.go)
+	caps    capStore  // one-use egress capabilities (capability.go)
 }
 
 type serverLimiter struct {
@@ -222,8 +235,13 @@ func FromConfig(cfg *config.Config, rec audit.Recorder, log *slog.Logger) (*Brok
 	for _, s := range cfg.Servers {
 		servers = append(servers, s.Alias)
 	}
+	res, roots, err := destinationTrust(e)
+	if err != nil {
+		return nil, err
+	}
 	return New(Options{Grants: NewStaticGrants(gs), Evidence: rec, Servers: servers, Log: log, Recent: e.RecentRecords,
-		ProxyEnv: e.ProxyEnv == nil || *e.ProxyEnv,
+		ProxyEnv: e.ProxyEnv == nil || *e.ProxyEnv, Resolver: res, RootCAs: roots,
+		RequireCapability: e.RequireCapability == nil || *e.RequireCapability, CapabilityTokens: e.CapabilityTokens,
 		Limits: Limits{RequestBytes: e.RequestBytes, ResponseBytes: e.ResponseBytes, OperationTimeout: e.OperationTimeout.Duration,
 			DialTimeout: e.DialTimeout.Duration, RequestsPerMinute: e.RequestsPerMinute, BytesPerMinute: e.BytesPerMinute}})
 }
@@ -346,7 +364,11 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 	if !in.enforced {
 		b.o.Log.Warn("egress for this instance is advisory: the standalone profile does not confine its network", "server", in.alias, "proxy", in.proxyURL)
 	}
-	return &pipeline.EgressAttachment{ID: in.id, Env: env, Enforced: in.enforced, Allow: slices.Clone(allow), Close: func() error { return b.detach(in) }}, nil
+	att = &pipeline.EgressAttachment{ID: in.id, Env: env, Enforced: in.enforced, Allow: slices.Clone(allow), Close: func() error { return b.detach(in) }}
+	if b.o.RequireCapability {
+		att.Issue = func(bnd pipeline.Binding) (*pipeline.EgressAuth, func()) { return b.issue(in, bnd) }
+	}
+	return att, nil
 }
 
 func (b *Broker) detach(in *instance) error {
