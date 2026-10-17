@@ -22,6 +22,19 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `EVAL_BOUND` | `-31001` | The decision exceeded CP-12 (more than 256 candidate rules for the server, or 500 ms) | Split the template's rules for that server |
 | `APPROVAL_DENIED` | `-31001` | An approver denied the call | None; the decision is recorded with the approver's identity |
 | `TAINT_DENIED` | `-31001` | The session has read untrusted content and the template denies writing or external tools | Start a new session, or change the template's `taint_action` to `approve` |
+| `ARGUMENTS_INVALID` | `-31001` | The arguments are not valid JSON | Fix the client; the harness sent malformed arguments |
+| `ARGUMENTS_TOO_LARGE` | `-31001` | The arguments exceed the size-limit filter's bound | Send less data per call, or raise `[filters.size]` `argument_bytes` or `string_bytes` |
+| `ARGUMENTS_TOO_DEEP` | `-31001` | The arguments nest deeper than the size-limit filter allows | Raise `[filters.size]` `argument_depth` if the nesting is legitimate |
+| `UNICODE_CONTROL` | `-31001` | An argument contains bidirectional, zero-width or tag characters | `data.findings` names the rule; see [filters.md](filters.md) for the permitted contexts |
+| `SECRET_IN_ARGUMENTS` | `-31001` | An argument contains a known credential format or a registered secret | The agent tried to send a credential to a tool; check the session's earlier results for how it obtained it |
+| `PATH_INVALID` | `-31001` | A path argument uses an encoded separator, NUL, backslash traversal or `~` | Use a plain absolute or root-relative path |
+| `PATH_OUTSIDE_ROOTS` | `-31001` | A path argument resolves outside the granted roots | Add the directory to `[filters.paths]` `roots` or `server_roots` if access is intended |
+| `URL_INVALID` | `-31001` | A URL argument cannot be parsed or canonicalized | Check the URL; it must be absolute with a host |
+| `URL_NOT_ALLOWED` | `-31001` | The URL's scheme or host is not allowed, or it carries user information | Adjust `[filters.urls]` `schemes`, `hosts` or `deny_hosts` |
+| `URL_PRIVATE_ADDRESS` | `-31001` | The URL names a loopback, private, link-local or reserved destination | Set `[filters.urls]` `allow_private = true` only if the tool must reach local services |
+| `FILTER_UNAVAILABLE` | `-31001` | A policy rule names a filter ID that is not registered | Correct the rule's `filters` list; `smcpctl filters rules` and [filters.md](filters.md) list the IDs |
+| `FILTER_ERROR` | `-31001`, `-31003` | A required filter failed (fail closed) | Look up the correlation ID in the journal; the `filter` event names the filter |
+| `FILTER_TIMEOUT` | `-31001`, `-31003` | A filter chain exceeded the CP-14 deadline (default 2 s) | Narrow the request, or raise `[filters]` `deadline` |
 | `APPROVAL_REQUIRED` | `-31002` | The call needs a person's approval | Open `data.approvalUrl` or run `smcpctl approvals list`, approve, then repeat the same request |
 | `TAINT_APPROVAL` | `-31002` | Approval required because the session has read untrusted content | As `APPROVAL_REQUIRED` |
 | `APPROVAL_EXPIRED` | `-31002` | The approval expired (CP-17) while the call was held | Repeat the request to ask for a new approval; decide within `approvals.lifetime` |
@@ -68,6 +81,8 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `PROFILE_UNCONFINED` | Server enablement | A `high`-risk server cannot be enabled in the Standalone profile (SR-4-1) |
 | `REMOTE_BACKEND_UNSUPPORTED` | Package import | The manifest names a network endpoint; remote backends are out of scope (FR-14.4) |
 | `metadata_blocked` | Journal event | A tool description matched a blocking metadata rule and the tool is suspended (SR-5.9-2) |
+| `METADATA_BLOCKED` | Journal `server` event with outcome `metadata_blocked` | Reason code of that event; `detail.findings` names each rule, rule set and version, and `detail.stage` is `import` or `presentation` |
+| `REDACTED` | Journal `filter` event | A filter removed or replaced content; the result's provenance disposition is `redact` |
 | `refresh_token_reuse` | Journal event | A rotated refresh token was presented again; the session was ended (SR-2.11-4) |
 | `upgrade_rolled_back` | Journal event | An upgrade failed its health check and the previous version was restored (FR-13.8) |
 | `MEMORY_LIMIT` | Journal `runtime` event | A sandboxed instance reached its memory limit and was killed ([sandbox](sandbox.md)) |

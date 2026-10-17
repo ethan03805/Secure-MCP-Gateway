@@ -119,6 +119,9 @@ func (g *Gateway) syncCatalog(ss *sessionServer, snap *policy.Snapshot) {
 		if ref == nil {
 			continue // policy names a tool no enabled server provides
 		}
+		if g.screen != nil && g.screen.Present(context.Background(), ref.Server.Alias, ref.Server.Revision, ref.Tool) != nil {
+			continue // FR-1.52: blocked by the active metadata rule set
+		}
 		want[ref.Public] = true
 		t := &mcp.Tool{
 			Name:        ref.Public,

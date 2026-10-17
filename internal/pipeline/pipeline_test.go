@@ -44,7 +44,8 @@ func schemaCall() *Call {
 }
 
 func TestFilterChainOrderSelectionAndFailClosed(t *testing.T) {
-	// FR-4.5 names seven filters; only schema-validate exists.
+	// Chain mechanics with schema-validate; the other FR-4.5 filters are
+	// verified in internal/filters.
 	reqtest.Partial(t, "FR-4.5")
 	var calls []string
 	f := NewFilters()

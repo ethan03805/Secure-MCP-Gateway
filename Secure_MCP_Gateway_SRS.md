@@ -7624,6 +7624,19 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `EVAL_BOUND` | `-31001` | The evaluation exceeded the CP-12 deadline or candidate-rule bound (SR-1.20-1) | The Gateway could not finish checking this call within its limits and refused it. Ask the operator to simplify the policy. |
 | `APPROVAL_DENIED` | `-31001` | An approver denied the call | A person reviewing this call denied it. |
 | `TAINT_DENIED` | `-31001` | The session is tainted and the template denies this side-effect class | This session has read untrusted content, so tools that write or send data are blocked. Start a new session to use them. |
+| `ARGUMENTS_INVALID` | `-31001` | The arguments are not valid JSON (`size-limit` and argument filters) | The request arguments could not be read. |
+| `ARGUMENTS_TOO_LARGE` | `-31001` | The arguments exceed the `size-limit` byte or string bound | The request is too large for this tool. Send less data in one call. |
+| `ARGUMENTS_TOO_DEEP` | `-31001` | The arguments nest deeper than the `size-limit` depth bound | The request is nested too deeply. Simplify the arguments. |
+| `UNICODE_CONTROL` | `-31001` | An argument contains bidirectional, invisible or tag characters (`unicode-control`) | The request contains hidden or direction-changing characters. Remove them and try again. |
+| `SECRET_IN_ARGUMENTS` | `-31001` | An argument contains a known credential format or a registered secret (`secret-fingerprint`, SR-5.8-1) | The request appears to contain a password, key or token, so it was not sent. Remove the secret and try again. |
+| `PATH_INVALID` | `-31001` | A path argument uses an encoded separator, NUL, backslash traversal, home-relative or remote file form (`path-canonicalize`) | A file path in the request is not allowed in this form. Use a plain path. |
+| `PATH_OUTSIDE_ROOTS` | `-31001` | A path argument resolves outside the granted roots (`path-canonicalize`, SR-1.8-4) | A file path in the request is outside the folders this tool may use. |
+| `URL_INVALID` | `-31001` | A URL argument cannot be parsed or canonicalized (`url-canonicalize`) | A web address in the request is not valid. |
+| `URL_NOT_ALLOWED` | `-31001` | A URL argument's scheme or host is not allowed, or it carries user information (`url-canonicalize`, SR-1.8-5) | A web address in the request is not allowed for this tool. |
+| `URL_PRIVATE_ADDRESS` | `-31001` | A URL argument names a loopback, private, link-local or reserved destination (`url-canonicalize`) | A web address in the request points to a local or private network address, which this tool may not use. |
+| `FILTER_UNAVAILABLE` | `-31001` | The decision's obligations name a filter that is not registered | The Gateway could not run a required check for this tool. Give the operator the correlation ID {correlationId}. |
+| `FILTER_ERROR` | `-31001`, `-31003` | A required filter failed; the request is blocked or the result withheld (SR-5.10-1) | A Gateway safety check failed, so the call was stopped. Give the operator the correlation ID {correlationId}. |
+| `FILTER_TIMEOUT` | `-31001`, `-31003` | A filter chain exceeded the CP-14 deadline (SR-5.10-1) | A Gateway safety check took too long, so the call was stopped. Try a smaller request. |
 | `APPROVAL_REQUIRED` | `-31002` | The call is waiting for a person to approve it | This call needs approval. Open {approvalUrl} to approve it, then run the same request again. |
 | `TAINT_APPROVAL` | `-31002` | Approval required because the session is tainted | This session has read untrusted content, so this tool needs approval. Open {approvalUrl} to approve it, then run the same request again. |
 | `FILTER_BLOCKED` | `-31003` | A required response filter blocked the result | The tool's result was withheld by a Gateway content filter. The operator can see why in the audit record {correlationId}. |

@@ -42,6 +42,7 @@ type Config struct {
 	Servers       []Server      `toml:"server" json:"server"`
 	Runtime       Runtime       `toml:"runtime" json:"runtime"` // E-15, E-16, E-17 (runtime.go)
 	Egress        Egress        `toml:"egress" json:"egress"`
+	Filters       Filters       `toml:"filters" json:"filters"` // E-09, E-11 (filters.go)
 
 	// Dir is the directory of the configuration file; set by Load.
 	Dir string `toml:"-" json:"-"`

@@ -27,6 +27,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/egress"
+	"github.com/ethan03805/secure-mcp-gateway/internal/filters"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
@@ -73,6 +74,7 @@ type App struct {
 	TLS          keys.TLSStatus
 	Egress       *egress.Broker       // nil unless [egress] enabled = true
 	Policy       *policyadmin.Service // E-05: signed Policy Store, /api/v1/policy*
+	Inspector    *filters.Inspector
 
 	log       *slog.Logger
 	janitor   time.Duration
@@ -144,6 +146,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	for name, obs := range o.Observers {
 		a.Evidence.AddObserver(name, obs, 0)
 	}
+	if err = a.startInspection(cfg, &o); err != nil { // E-09, E-11, metadata scan (inspection.go)
+		return a, err
+	}
 
 	if o.Launcher == nil {
 		o.Launcher = pipeline.SubprocessLauncher{}
@@ -188,7 +193,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 	if a.Gateway, err = edge.New(edge.Deps{Config: cfg, Store: a.Store, OAuth: a.OAuth, Decider: a.Decider, Registry: a.Registry,
 		Evidence: a.Evidence, EvidenceErr: a.Journal.Err, Log: o.Log, Profile: a.Profile, Approver: o.Approver, Filters: o.Filters,
-		Capabilities: a.Capabilities, ConsoleURL: o.ConsoleURL, PolicyFault: a.Policy.Fault}); err != nil {
+		Capabilities: a.Capabilities, ConsoleURL: o.ConsoleURL, PolicyFault: a.Policy.Fault, Screen: a.Inspector}); err != nil {
 		return a, err
 	}
 	a.Policy.Bind(a.Gateway)

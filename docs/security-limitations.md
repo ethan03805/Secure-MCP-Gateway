@@ -45,7 +45,7 @@ A cloud agent runs on the vendor's computer. Installing the Gateway inside that 
 
 ### 7. Detection filters are heuristics
 
-The secret-fingerprint, injection, PII, Unicode-control and metadata filters match versioned rule sets. Each rule set has measured false-positive and false-negative rates on its labelled corpus (FR-19.5); rates on real traffic will differ. A determined attacker can phrase content to avoid any fixed rule set.
+The secret-fingerprint, injection, PII, Unicode-control and metadata filters match versioned rule sets. Each rule set has measured false-positive and false-negative rates on its labelled corpus (FR-19.5); rates on real traffic will differ. The current rates are in [filters.md](filters.md#labelled-corpora-and-measured-rates-fr-195). A determined attacker can phrase content to avoid any fixed rule set.
 
 ### 8. Prompt-injection findings are tags only
 
