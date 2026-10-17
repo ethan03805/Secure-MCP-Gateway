@@ -41,6 +41,12 @@ keeps today's behavior, and test the default.
 | `diag` | all | Diagnostic logger (slog); daemon logger with rotating JSON Lines file and redaction of sensitive attribute names. Not evidence; never logs secrets, tokens or arguments. |
 | `ids` | all | UUIDv7 identifiers and 256-bit secrets. |
 | `reqtest` | FR-12.10 | `Verifies` and `Partial` requirement claims in tests. |
+| `remote` | E-01, E-03 (FR-16) | Remote Access Profile: loopback remote listener with CP-49 bounds and limits, public-name host check, RFC 7591 registration with operator approval, authorization-code and device grants, `/api/v1/remote*` and `/api/v1/clients*`. Wired in `cmd/smcpd`. |
+| `adapter` | E-33 | CP-43 credential file, session acquisition and refresh, stdio relay; `smcp-session`, `smcp-stdio`, `smcp-connect` (`cmd/`). npm twin in `packaging/npm/smcp-connect`. |
+| `harness` | E-33 | Client setup, lockdown profiles and doctor checks for the Appendix K clients (`smcpctl clients setup`, `lockdown`, `doctor`). |
+| `tunnel` | E-33 | Tailscale Funnel and Cloudflare quick tunnel drivers and the public-name check (`smcpctl remote`). |
+| `channel` | FR-16.8 | Request origin (local or remote) carried in the context and applied to evidence events. |
+| `gwtest` | tests | Starts a full Gateway with an in-process backend and a fake tunnel for tests. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
 | `egress` | E-18 | Egress Broker: per-instance forward proxy and destination endpoints, grants, pinned DNS, reserved-address refusal, limits, evidence, nftables confinement of sandbox namespaces, `/api/v1/egress` routes. See `docs/egress.md`. |
 
@@ -87,8 +93,7 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 ## Elements not yet started
 
 E-17 Runtime Monitor, E-18 Egress Broker, E-25 to E-28
-Data Server, E-29 to E-32 Observation and Analytics, E-33 Harness Adapter
-Kit. E-17 and E-18 attach to the confining launcher; E-25 to E-29 attach as
+Data Server, E-29 to E-32 Observation and Analytics. E-17 and E-18 attach to the confining launcher; E-25 to E-29 attach as
 evidence observers and must not gate enforcement.
 
 ## Residual gaps in what exists

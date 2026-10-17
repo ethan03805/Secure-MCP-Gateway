@@ -347,6 +347,12 @@ func (in *Inspector) record(call *pipeline.Call, stage string, runs []pipeline.F
 		DecisionID: call.DecisionID, PolicyRevision: call.PolicyRevision, ServerRevision: call.ServerRevision, ToolRevision: call.ToolRevision,
 		Outcome: outcome, ReasonCode: reason, PolicyStatus: "evaluated",
 		Detail: map[string]any{"stage": stage, "filters": entries, "parameters": params}}
+	if call.Channel != "" { // FR-16.8
+		ev.Channel, ev.ClientID, ev.ClientAddress = call.Channel, call.ClientID, call.ClientAddress
+		if call.ClientAddress != "" {
+			ev.ClientAddressSource = "server-asserted"
+		}
+	}
 	if err := in.evidence.Record(ev); err != nil {
 		// The journal's sticky error fails the Gateway closed for later
 		// calls; this call's own terminal events will fail the same way.

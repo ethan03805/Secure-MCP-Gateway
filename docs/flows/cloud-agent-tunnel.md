@@ -36,6 +36,13 @@ sequenceDiagram
   Note over A,T: The tunnel provider terminates public TLS and can read the traffic. The agent's own browser, terminal and connectors do not pass through the Gateway (FR-18.2).
 ```
 
-## Implementation as of commit a3193a5
+## Implementation
 
-Not implemented. `internal/edge` refuses to start a non-loopback listener and has no second listener, registration endpoint, remote limits or `smcp-connect`.
+Implemented in `internal/remote` (listener, OAuth, registration, limits), `internal/channel` (remote origin on evidence), `internal/tunnel` and `cmd/smcpctl/remote.go` (tunnels), and `internal/adapter` plus `packaging/npm/smcp-connect` (`smcp-connect`). Differences from the diagram:
+
+- Templates allowed for remote sessions come from `remote.templates` in the configuration, not a `remote_allowed` mark in the Framework Profile.
+- `smcp-connect` signs in with the device authorization grant (`/oauth/device_authorization`, `/oauth/device`) instead of the authorization-code redirect, because it usually runs on a computer without the person's browser.
+- In the Enforced profile, `smcpctl remote enable` does not yet install the nftables rules of SR-4.14-1.
+- Events written by the Approval Service for held remote calls do not yet carry the remote origin fields.
+
+See `docs/remote-access.md`.

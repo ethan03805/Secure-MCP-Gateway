@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
+	"github.com/ethan03805/secure-mcp-gateway/internal/channel"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
@@ -76,6 +77,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		c := &callRun{g: g, corr: corr, base: audit.Event{CorrelationID: corr, SessionID: sess.ID, PrincipalID: sess.PrincipalID,
 			ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision}}
+		channel.From(ctx).Apply(&c.base) // FR-16.8
 		side, trust := toolClasses(ref)
 		// The requested event carries the canonical request, so that policy
 		// simulation can replay recorded calls (FR-3.5).
@@ -119,7 +121,8 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			Purpose: sess.Purpose, Project: sess.Project, EndUser: sess.EndUser, Server: ref.Server.Alias, Tool: ref.Tool.Name,
 			PublicName: ref.Public, ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision, ManifestSource: ref.Server.ManifestSource,
 			DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, Obligations: dec.Obligations, DecisiveRules: dec.DecisiveRules,
-			InputSchema: ref.Tool.InputSchema, OutputSchema: ref.Tool.OutputSchema}
+			InputSchema: ref.Tool.InputSchema, OutputSchema: ref.Tool.OutputSchema,
+			Channel: c.base.Channel, ClientID: c.base.ClientID, ClientAddress: c.base.ClientAddress}
 
 		// Request inspection (E-09).
 		args, reqApplied, verdict := g.filters.RunRequest(ctx, call, req.Params.Arguments)

@@ -51,6 +51,10 @@ Control API (running Gateway; backup and keys also work offline):
   egress           Egress Broker status, grants and recent connections (smcpctl egress -h)
   runtime          sandboxed server instances and enforced-profile checks (smcpctl runtime help)
   secrets          secret vault: init (offline), list, show, set, rotate, rm, impact, resume, reload
+  remote           Remote Access Profile: enable, disable, status, check (tunnels)
+  clients          remote client registrations; harness setup (clients setup <client>)
+  lockdown         apply, show or remove a client lockdown profile
+  doctor           report non-Gateway MCP servers, readable Gateway paths, CA trust
 
 Every command takes --config <file> (default smcp.toml).
 `
@@ -113,6 +117,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = observeCmd(args[1:], stdout)
 	case args[0] == "admin" && sub("redeem"):
 		err = redeem(args[2:], stdout)
+	case args[0] == "remote":
+		err = remoteCmd(args[1:], stdout)
+	case args[0] == "clients" || args[0] == "client":
+		err = clientsCmd(args[1:], stdout)
+	case args[0] == "lockdown":
+		err = lockdownCmd(args[1:], stdout)
+	case args[0] == "doctor":
+		err = doctorCmd(args[1:], stdout)
 	case args[0] == "egress":
 		err = egressCmd(args[1:], stdout)
 	case args[0] == "runtime":

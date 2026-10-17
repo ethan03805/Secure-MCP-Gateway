@@ -4807,7 +4807,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-16.4 |
 | Parent ID | FR-16 — Remote Access Profile |
-| Statement | The Harness Interface Endpoint (E-01) **SHALL** serve on the remote listener only the MCP endpoint and the OAuth metadata, authorization, token and registration endpoints, and **SHALL** answer every other path with HTTP 404. |
+| Statement | The Harness Interface Endpoint (E-01) **SHALL** serve on the remote listener only the MCP endpoint and the OAuth metadata, authorization, token, registration, device authorization and device verification endpoints, and **SHALL** answer every other path with HTTP 404. |
 | Allocation | Elements: E-01 Harness Interface Endpoint; Functions: F-01; External interfaces: X-13 |
 | Verification Method | Test |
 | Verification Statement | Request the session API, health, metrics and console paths through the remote listener; confirm 404 for each. |
@@ -6593,7 +6593,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-4.14-2 |
 | Parent ID | SEC-4.14 — Overlay least privilege (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | When the Remote Access Profile is enabled, the Harness Interface Endpoint (E-01) **SHALL** require on the remote listener an access token issued to an approved client for every request except OAuth metadata, authorization, token and registration requests. |
+| Statement | When the Remote Access Profile is enabled, the Harness Interface Endpoint (E-01) **SHALL** require on the remote listener an access token issued to an approved client for every request except OAuth metadata, authorization, token, registration, device authorization and device verification requests. |
 | Allocation | Elements: E-01 Harness Interface Endpoint, E-03 Identity & Authentication Service; Functions: F-01, F-04; External interfaces: X-13 |
 | Verification Method | Test |
 | Verification Statement | Send MCP requests through the tunnel without a token, with a token from a pending client and with a valid token; confirm `-31006` for the first two and success for the third. |
@@ -7577,7 +7577,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-38 | Instance idle teardown | 10 min | New |
 | CP-39 | MRTR `requestState` lifetime | 5 min | New |
 | CP-40 | Research pseudonym function | HMAC-SHA-256, per-dataset key | ARCH §4 E-32 |
-| CP-41 | OAuth parameters | Authorization-code grant; PKCE `S256` only; resource URI `https://127.0.0.1:8443/mcp` (Remote Access listener: the configured public URL followed by `/mcp`); scope prefix `smcp:` with `template`, `purpose`, `project`, `user`; access-token lifetime = CP-18 idle timeout; refresh-token lifetime = CP-18 maximum lifetime; client-secret lifetime = CP-15; `iss` in authorization responses | New |
+| CP-41 | OAuth parameters | Authorization-code grant (Remote Access listener also: the RFC 8628 device authorization grant used by `smcp-connect`, device code lifetime 10 min, poll interval 5 s); PKCE `S256` only; resource URI `https://127.0.0.1:8443/mcp` (Remote Access listener: the configured public URL followed by `/mcp`); scope prefix `smcp:` with `template`, `purpose`, `project`, `user`; access-token lifetime = CP-18 idle timeout; refresh-token lifetime = CP-18 maximum lifetime; client-secret lifetime = CP-15; `iss` in authorization responses | New |
 | CP-42 | Public tool names | `<alias>_<tool>`; alias `[a-z0-9]{1,16}`; tool part `[A-Za-z0-9_]`; whole name ≤ 64 characters | New |
 | CP-43 | Adapter credential file | `$XDG_CONFIG_HOME/smcp/credentials.toml` (default `~/.config/smcp/`), mode 0600; refresh at 50% of access-token lifetime | New |
 | CP-44 | Manifest classes | Risk class `low`, `moderate` or `high`; `high` = general SQL, code or shell execution, CAD scripting, browser automation, or process spawning beyond the declared argument vector (SEC 3.13). Side-effect class per tool: `read`, `write`, `external`, `execute`. `source_trust` per tool: `trusted` (content originates from the operator's own data) or `untrusted` (content from the Internet, third parties or other agents) | New |

@@ -14,7 +14,10 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 |---|---|---|
 | [Security Limitations](security-limitations.md) | FR-18.2 | Written |
 | [Troubleshooting and reason codes](troubleshooting.md) | FR-18.7 | Written |
-| [Client quick starts](clients/README.md) | FR-18.3 | Written; procedures that use unreleased commands are marked |
+| [Client quick starts](clients/README.md) | FR-18.3 | Written per client; no client run at a pinned version yet |
+| [Harness adapters](adapters.md): `smcp-session`, `smcp-stdio`, `smcp-connect` | FR-12.12, FR-12.13, FR-16.9 | Written |
+| [Client setup, lockdown and doctor](harness.md) | FR-15.1 to FR-15.7 | Written |
+| [Remote Access Profile](remote-access.md) and [remote control API](api/remote.md) | FR-16 | Written |
 | [Console visual rules](console-style.md) | FR-8.35 | Written |
 | [Tool-call approvals](approvals.md) and [approvals control API](api/approvals.md) | FR-3.14 to FR-3.24, FR-18.4 (part) | Written |
 | [Request and response filters](filters.md) | FR-4.4 to FR-4.18, SR-5.9-2, FR-1.52 | Written |

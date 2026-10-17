@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "updated": "2026-10-16",
-  "note": "Client matrix of SRS Appendix K (FR-15.10). pinnedVersion null means the matrix job has not yet pinned and run the client. Mechanisms marked confirm=true are taken from vendor documentation and are not yet verified against a pinned version.",
+  "note": "Client matrix of SRS Appendix K (FR-15.10). pinnedVersion null means the matrix job has not yet pinned and run the client. Mechanisms marked confirm=true are taken from vendor documentation and are not yet verified against a pinned version. Cloud agent entries carry tunnelProvider, registrationMode and agentBuild for the dated manual record of FR-15.9; null until a run is recorded.",
   "clients": [
     {
       "client": "Claude Code",
@@ -11,11 +11,18 @@
       "connectionMode": "streamable-http",
       "fallbackMode": "smcp-stdio",
       "session": "oauth",
-      "lockdown": { "mechanism": "managed-settings.json: allowedMcpServers, managed-only allowlist, permissions.deny Read and Edit on Gateway paths", "confirm": true },
-      "caTrust": { "mechanism": "NODE_EXTRA_CA_CERTS", "confirm": false },
+      "lockdown": {
+        "mechanism": "managed-settings.json: allowedMcpServers, managed-only allowlist, permissions.deny Read and Edit on Gateway paths",
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "NODE_EXTRA_CA_CERTS",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "fail",
-      "lastRun": "2026-10-16"
+      "lastRun": "2026-10-16",
+      "quickStart": "docs/clients/claude-code.md"
     },
     {
       "client": "Codex CLI",
@@ -25,11 +32,18 @@
       "connectionMode": "streamable-http",
       "fallbackMode": "smcp-stdio",
       "session": "oauth or http_headers_helper with smcp-session",
-      "lockdown": { "mechanism": "requirements.toml MCP server allowlist matched by name and transport", "confirm": true },
-      "caTrust": { "mechanism": "CODEX_CA_CERTIFICATE (PEM bundle; include the public roots for the model endpoint)", "confirm": false },
+      "lockdown": {
+        "mechanism": "requirements.toml MCP server allowlist matched by name and transport",
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "CODEX_CA_CERTIFICATE (PEM bundle; include the public roots for the model endpoint)",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "pass",
-      "lastRun": "2026-10-16"
+      "lastRun": "2026-10-16",
+      "quickStart": "docs/clients/codex.md"
     },
     {
       "client": "Hermes Agent",
@@ -39,11 +53,18 @@
       "connectionMode": "streamable-http",
       "fallbackMode": "smcp-stdio",
       "session": "oauth or static header from smcp-session",
-      "lockdown": { "mechanism": null, "confirm": true },
-      "caTrust": { "mechanism": "ssl_verify CA bundle path", "confirm": false },
+      "lockdown": {
+        "mechanism": null,
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "ssl_verify CA bundle path",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "pass",
-      "lastRun": "2026-10-16"
+      "lastRun": "2026-10-16",
+      "quickStart": "docs/clients/hermes.md"
     },
     {
       "client": "OpenCode",
@@ -53,11 +74,18 @@
       "connectionMode": "streamable-http",
       "fallbackMode": "smcp-stdio",
       "session": "oauth or headers from smcp-session",
-      "lockdown": { "mechanism": "opencode.json mcp and permission settings", "confirm": true },
-      "caTrust": { "mechanism": "NODE_EXTRA_CA_CERTS", "confirm": false },
+      "lockdown": {
+        "mechanism": "opencode.json mcp and permission settings",
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "NODE_EXTRA_CA_CERTS",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "fail",
-      "lastRun": "2026-10-16"
+      "lastRun": "2026-10-16",
+      "quickStart": "docs/clients/opencode.md"
     },
     {
       "client": "Gemini CLI",
@@ -67,11 +95,18 @@
       "connectionMode": "streamable-http",
       "fallbackMode": "smcp-stdio",
       "session": "oauth or headers",
-      "lockdown": { "mechanism": "system settings mcpServers and server allowlist; enterprise admin controls", "confirm": true },
-      "caTrust": { "mechanism": "NODE_EXTRA_CA_CERTS", "confirm": true },
+      "lockdown": {
+        "mechanism": "system settings mcpServers and server allowlist; enterprise admin controls",
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "NODE_EXTRA_CA_CERTS",
+        "confirm": true
+      },
       "label": "gateway-available",
       "lastResult": "not-run",
-      "lastRun": null
+      "lastRun": null,
+      "quickStart": "docs/clients/gemini-cli.md"
     },
     {
       "client": "Goose",
@@ -81,11 +116,18 @@
       "connectionMode": "stdio extension (smcp-stdio)",
       "fallbackMode": "streamable-http",
       "session": "headers from smcp-session",
-      "lockdown": { "mechanism": "GOOSE_ALLOWLIST YAML allowlist matched on the extension command", "confirm": true },
-      "caTrust": { "mechanism": "SSL_CERT_FILE on Linux; macOS system keychain only", "confirm": false },
+      "lockdown": {
+        "mechanism": "GOOSE_ALLOWLIST YAML allowlist matched on the extension command",
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "SSL_CERT_FILE on Linux; macOS system keychain only",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "pass",
-      "lastRun": "2026-10-16"
+      "lastRun": "2026-10-16",
+      "quickStart": "docs/clients/goose.md"
     },
     {
       "client": "Grok Build",
@@ -95,11 +137,18 @@
       "connectionMode": null,
       "fallbackMode": "smcp-stdio",
       "session": null,
-      "lockdown": { "mechanism": null, "confirm": true },
-      "caTrust": { "mechanism": null, "confirm": true },
+      "lockdown": {
+        "mechanism": null,
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": null,
+        "confirm": true
+      },
       "label": "gateway-available",
       "lastResult": "not-run",
-      "lastRun": null
+      "lastRun": null,
+      "quickStart": "docs/clients/grok-build.md"
     },
     {
       "client": "Grok Bot",
@@ -109,11 +158,21 @@
       "connectionMode": "remote-access (tunnel)",
       "fallbackMode": "smcp-connect",
       "session": "oauth with operator-approved dynamic registration or pre-registered client",
-      "lockdown": { "mechanism": "vendor admin MCP allowlist, where offered", "confirm": true },
-      "caTrust": { "mechanism": "public TLS at the tunnel provider", "confirm": false },
+      "lockdown": {
+        "mechanism": "vendor admin MCP allowlist, where offered",
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "public TLS at the tunnel provider",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "not-run",
-      "lastRun": null
+      "lastRun": null,
+      "tunnelProvider": null,
+      "registrationMode": "dynamic client registration with operator approval, or pre-registered",
+      "agentBuild": null,
+      "quickStart": "docs/clients/cloud-agents.md"
     },
     {
       "client": "ChatGPT agent (dots)",
@@ -123,11 +182,21 @@
       "connectionMode": "remote-access (tunnel, including the vendor MCP tunnel where offered)",
       "fallbackMode": "smcp-connect",
       "session": "oauth with operator-approved dynamic registration or pre-registered client",
-      "lockdown": { "mechanism": "workspace admin connector and MCP controls, where offered", "confirm": true },
-      "caTrust": { "mechanism": "public TLS at the tunnel provider", "confirm": false },
+      "lockdown": {
+        "mechanism": "workspace admin connector and MCP controls, where offered",
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "public TLS at the tunnel provider",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "not-run",
-      "lastRun": null
+      "lastRun": null,
+      "tunnelProvider": null,
+      "registrationMode": "dynamic client registration with operator approval, or pre-registered",
+      "agentBuild": null,
+      "quickStart": "docs/clients/cloud-agents.md"
     },
     {
       "client": "Meta Muse",
@@ -137,11 +206,21 @@
       "connectionMode": "remote-access (tunnel)",
       "fallbackMode": "smcp-connect",
       "session": null,
-      "lockdown": { "mechanism": null, "confirm": true },
-      "caTrust": { "mechanism": "public TLS at the tunnel provider", "confirm": false },
+      "lockdown": {
+        "mechanism": null,
+        "confirm": true
+      },
+      "caTrust": {
+        "mechanism": "public TLS at the tunnel provider",
+        "confirm": false
+      },
       "label": "gateway-available",
       "lastResult": "not-run",
-      "lastRun": null
+      "lastRun": null,
+      "tunnelProvider": null,
+      "registrationMode": "dynamic client registration with operator approval, or pre-registered",
+      "agentBuild": null,
+      "quickStart": "docs/clients/cloud-agents.md"
     }
   ]
 }

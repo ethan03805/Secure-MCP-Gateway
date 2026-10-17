@@ -35,6 +35,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
+	"github.com/ethan03805/secure-mcp-gateway/internal/channel"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
@@ -146,6 +147,21 @@ type Gateway struct {
 	mu      sync.Mutex
 	servers map[string]*sessionServer
 	track   *tracker // in-flight requests, calls and listen streams per session
+
+	// remoteMetadataURL returns the Remote Access listener's protected
+	// resource metadata URL for 401 responses there (FR-16.3).
+	remoteMetadataURL func() string
+}
+
+// MCPHandler returns the MCP endpoint handler (authentication, session
+// binding, the FR-4.3 pipeline) without the harness listener's host and
+// origin checks, for the Remote Access listener (internal/remote), which
+// applies its own (FR-16.3, FR-16.4) and marks the request context with
+// channel.Origin. metadataURL is advertised in WWW-Authenticate on 401
+// for remote requests.
+func (g *Gateway) MCPHandler(metadataURL func() string) http.Handler {
+	g.remoteMetadataURL = metadataURL
+	return g.mcpChain(http.HandlerFunc(g.serveMCP))
 }
 
 type sessionServer struct {
@@ -524,12 +540,19 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			writeRPCError(w, http.StatusServiceUnavailable, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", reason, corr, "", nil))
 			return
 		}
-		sess, err := g.store.Authenticate(session.Bearer(r), "tls") // FR-2.5, SR-2.1-3
+		org := channel.From(r.Context())
+		sess, err := g.store.Authenticate(session.Bearer(r), org.Listener()) // FR-2.5, SR-2.1-3; FR-16.1 binds remote sessions to the remote listener
 		if err != nil {
-			if aerr := g.evidence.Commit(audit.Event{Class: "auth_failure", Origin: "E-03", CorrelationID: corr, Outcome: "deny", ReasonCode: "SESSION_INVALID", PolicyStatus: "not_evaluated"}); aerr != nil {
+			ev := audit.Event{Class: "auth_failure", Origin: "E-03", CorrelationID: corr, Outcome: "deny", ReasonCode: "SESSION_INVALID", PolicyStatus: "not_evaluated"}
+			org.Apply(&ev)
+			if aerr := g.evidence.Commit(ev); aerr != nil {
 				g.log.Error("evidence write failed", "err", aerr)
 			}
-			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, g.oauth.ResourceMetadataURL()))
+			prm := g.oauth.ResourceMetadataURL()
+			if org.Channel == channel.Remote && g.remoteMetadataURL != nil {
+				prm = g.remoteMetadataURL()
+			}
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, prm))
 			writeRPCError(w, http.StatusUnauthorized, gatewayError(CodeSessionInvalid, "session invalid", "SESSION_INVALID", corr, "", nil))
 			return
 		}
@@ -540,6 +563,10 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			kind = kindListen
 		}
 		defer g.track.add(sess.ID, kind, cancel)()
+		if org.Channel == channel.Remote {
+			org.ClientID = sess.ClientID
+			ctx = channel.With(ctx, org)
+		}
 		ctx = context.WithValue(ctx, ctxSession, sess)
 		ctx = context.WithValue(ctx, ctxCorrelation, corr)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -577,8 +604,12 @@ func (g *Gateway) sessionEnded(s session.Session) {
 			_ = ms.Close()
 		}
 	}
-	if err := g.evidence.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: s.ID, PrincipalID: s.PrincipalID, Outcome: s.State, ReasonCode: s.EndReason, PolicyStatus: "not_evaluated",
-		Detail: map[string]any{"cancelled_calls": cancelled}}); err != nil {
+	ev := audit.Event{Class: "session", Origin: "E-04", SessionID: s.ID, PrincipalID: s.PrincipalID, Outcome: s.State, ReasonCode: s.EndReason, PolicyStatus: "not_evaluated",
+		Detail: map[string]any{"cancelled_calls": cancelled}}
+	if s.Listener == channel.Remote {
+		channel.Origin{Channel: channel.Remote, ClientID: s.ClientID, ClientAddress: s.ClientAddress}.Apply(&ev)
+	}
+	if err := g.evidence.Commit(ev); err != nil {
 		g.log.Error("evidence write failed", "err", err)
 	}
 }

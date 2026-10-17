@@ -66,7 +66,11 @@ type Session struct {
 	MaxDeadline    time.Time
 	EndedAt        time.Time
 	Listener       string
+	// ClientAddress is the tunnel-supplied caller address at creation
+	// (Remote Access Profile); a server-asserted value, not verified.
+	ClientAddress string
 
+	idle        time.Duration // idle timeout of this session; 0 = CP-18
 	accessHash  string
 	refreshHash string
 	usedRefresh []string // rotated-out refresh verifiers of this session's family
@@ -180,6 +184,13 @@ type CreateParams struct {
 	Claims         Claims
 	ApprovedBy     string
 	Listener       string
+	// Remote Access Profile (FR-16.12): a non-zero MaxLifetime or
+	// IdleTimeout replaces the CP-18 value for this session, and a non-nil
+	// AllowedTemplates refuses a resolved template that is not listed.
+	MaxLifetime      time.Duration
+	IdleTimeout      time.Duration
+	AllowedTemplates []string
+	ClientAddress    string
 }
 
 // Tokens are the secrets returned once at creation or refresh.
@@ -221,6 +232,9 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 	} else if !slices.Contains(prof.Templates, tmpl) {
 		return nil, Tokens{}, ErrNoTemplate
 	}
+	if p.AllowedTemplates != nil && !slices.Contains(p.AllowedTemplates, tmpl) {
+		return nil, Tokens{}, fmt.Errorf("%w: template %q is not allowed on this listener", ErrNoTemplate, tmpl)
+	}
 	// Only this principal's sessions are checked, so creation does not scan
 	// the whole table.
 	for _, e := range s.active[p.PrincipalID] {
@@ -230,13 +244,20 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 		return nil, Tokens{}, ErrTooManySessions
 	}
 	now := s.now()
+	idle, maxLife := s.cfg.Limits.SessionIdleTimeout.Duration, s.cfg.Limits.SessionMaxLifetime.Duration
+	if p.IdleTimeout > 0 {
+		idle = p.IdleTimeout
+	}
+	if p.MaxLifetime > 0 {
+		maxLife = p.MaxLifetime
+	}
 	sess := &Session{
 		ID: ids.New(), PrincipalID: pr.ID, Framework: pr.Framework, Profile: pr.Profile, ClientID: p.ClientID,
 		Template: tmpl, PolicyRevision: snap.Revision,
 		Purpose: p.Claims.Purpose, Project: p.Claims.Project, EndUser: p.Claims.EndUser,
 		ApprovedBy: p.ApprovedBy, HarnessVersion: p.HarnessVersion, State: StateActive,
-		CreatedAt: now, IdleDeadline: now.Add(s.cfg.Limits.SessionIdleTimeout.Duration),
-		MaxDeadline: now.Add(s.cfg.Limits.SessionMaxLifetime.Duration), Listener: p.Listener,
+		CreatedAt: now, IdleDeadline: now.Add(idle),
+		MaxDeadline: now.Add(maxLife), Listener: p.Listener, ClientAddress: p.ClientAddress, idle: p.IdleTimeout,
 	}
 	if sess.IdleDeadline.After(sess.MaxDeadline) {
 		sess.IdleDeadline = sess.MaxDeadline
@@ -287,7 +308,11 @@ func (s *Store) endLocked(e *Session, state, reason string) {
 }
 
 func (s *Store) touchLocked(e *Session) {
-	e.IdleDeadline = s.now().Add(s.cfg.Limits.SessionIdleTimeout.Duration)
+	idle := s.cfg.Limits.SessionIdleTimeout.Duration
+	if e.idle > 0 {
+		idle = e.idle
+	}
+	e.IdleDeadline = s.now().Add(idle)
 	if e.IdleDeadline.After(e.MaxDeadline) {
 		e.IdleDeadline = e.MaxDeadline
 	}
@@ -429,6 +454,15 @@ func (s *Store) Run(ctx context.Context, interval time.Duration) {
 			s.Sweep()
 		}
 	}
+}
+
+// ExpiresInFor is the access-token lifetime in seconds of one session: its
+// own idle timeout when it has one, otherwise CP-18.
+func (s *Store) ExpiresInFor(sess *Session) int {
+	if sess != nil && sess.idle > 0 {
+		return int(sess.idle.Seconds())
+	}
+	return s.ExpiresIn()
 }
 
 // ExpiresIn is the access-token lifetime in seconds (CP-18 idle timeout).
