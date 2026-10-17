@@ -47,6 +47,7 @@ Some Test-method requirements are verified by a GitHub Actions workflow that is 
 - [inspections.md](inspections.md): Inspection and Analysis records.
 - [FR-8.32.md](FR-8.32.md): the manual focus-order, target-size and contrast check of the console (supporting record).
 - [FR-3.25.md](FR-3.25.md): the real-harness approval run with Claude Code, with its [transcript](FR-3.25-transcript.md).
+- [FR-12.12.md](FR-12.12.md): Claude Code and Codex CLI connecting through `smcp-session` (Demonstration).
 - [FR-13.3.md](FR-13.3.md): the Homebrew tap installation run of v1.0.0-rc.2 on macOS and Ubuntu (supporting record).
 - [runbooks/](runbooks/README.md): the runbook execution records and the FR-18.8 Inspection record.
 - [FR-8.24.md](FR-8.24.md): the scripted, timed G-04 first-time task (supporting record; the Demonstration with three people is not done).
