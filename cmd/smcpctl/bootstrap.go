@@ -68,13 +68,18 @@ client_id = "https://claude.ai/api/mcp/oauth/client-metadata"
 principal = "claude-code-local"
 redirect_uris = ["http://localhost:*/callback", "http://127.0.0.1:*/callback"]
 
-# Backend MCP servers. The command must be an absolute path to a local
-# artifact; package runners such as npx or uvx are refused (SR-3.6-1). The
-# reference server below ships with the Gateway and offers read-only tools.
+# Backend MCP servers. Each is a signed package (smcpctl package list): the
+# enabled revision of the named server ID is launched from the
+# content-addressed store under state/packages, after its artifact digest is
+# checked against package_sha256 and the signed manifest. Package runners
+# such as npx or uvx are refused (SR-3.6-1). The reference server below ships
+# with the Gateway, was packaged by bootstrap and offers read-only tools on
+# the directory bound to its "root" slot.
 [[server]]
 alias = "ref"
-command = %[6]q
-args = ["--root", %[7]q]
+package = %[6]q
+package_sha256 = %[7]q
+slots = { root = %[8]q }
 `
 
 const examplePolicy = `{
@@ -191,7 +196,11 @@ func bootstrap(args []string, out io.Writer) error {
 	}
 	listen := fmt.Sprintf("127.0.0.1:%d", *port)
 	if writeCfg {
-		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", *adminPort), adminLine, approverHash, *refserver, *sandbox)
+		refSHA, err := bootstrapRefPackage(stateDir, *refserver, out)
+		if err != nil {
+			return err
+		}
+		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", *adminPort), adminLine, approverHash, RefPackageID, refSHA, *sandbox)
 		if err := os.WriteFile(cfgPath, []byte(body), 0o600); err != nil {
 			return err
 		}

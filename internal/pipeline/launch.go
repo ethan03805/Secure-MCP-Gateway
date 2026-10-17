@@ -81,7 +81,11 @@ func CheckLaunchSpec(spec ServerSpec) error {
 	}
 	if base == "docker" || base == "podman" {
 		run := slices.Contains(spec.Args, "run") || slices.Contains(spec.Args, "pull")
-		pinned := slices.ContainsFunc(spec.Args, func(a string) bool { return strings.Contains(a, "@sha256:") })
+		// An image by digest, or a local OCI archive whose digest the
+		// Library Trust Verifier checks before launch (SR-3-2).
+		pinned := slices.ContainsFunc(spec.Args, func(a string) bool {
+			return strings.Contains(a, "@sha256:") || strings.HasPrefix(a, "oci-archive:/")
+		})
 		if run && !pinned {
 			return fmt.Errorf("%w: container image must be referenced by digest", ErrUnpinnedLaunch)
 		}

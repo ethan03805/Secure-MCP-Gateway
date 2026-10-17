@@ -355,6 +355,7 @@ func (g *Gateway) mapDispatchError(c *callRun, sessionID string, err error) erro
 	case errors.As(err, &we):
 		return c.refuse(we, "call", audit.PhaseFailed, "E-10", "failed", "INVALID_ARGUMENTS", "evaluated")
 	}
+	g.log.Warn("dispatch failed", "server_revision", c.base.ServerRevision, "err", err)
 	return c.refuse(gatewayError(CodeBackendError, "dispatch failed", "DISPATCH_FAILED", corr, dec.ID, nil),
 		"call", audit.PhaseFailed, "E-10", "failed", "DISPATCH_FAILED", "evaluated")
 }

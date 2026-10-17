@@ -75,6 +75,9 @@ type Server struct {
 	Verified       bool   // tool definitions come from a verified manifest
 	ManifestSource string // "live" when unverified
 	cfg            config.Server
+	spec           pipeline.ServerSpec
+	live           pipeline.LiveLister
+	suspended      atomic.Bool
 	session        *mcp.ClientSession
 	proc           pipeline.Process
 	filter         *frameFilter
@@ -94,9 +97,12 @@ type Registry struct {
 	launcher pipeline.Launcher
 	caps     pipeline.CapabilityChecker
 	log      *slog.Logger
-	servers  map[string]*Server
-	tools    map[string]*ToolRef
-	public   []string
+	watcher  pipeline.ManifestWatcher // nil unless the ManifestSource watches list_changed
+
+	smu     sync.RWMutex // guards servers, tools and public (Suspend changes them)
+	servers map[string]*Server
+	tools   map[string]*ToolRef
+	public  []string
 
 	mu       sync.Mutex // guards perPrinc and waiting
 	perPrinc map[string]*fifo
@@ -167,35 +173,50 @@ func Start(ctx context.Context, servers []config.Server, opts Options) (*Registr
 	}
 	r := &Registry{limits: opts.Limits, launcher: opts.Launcher, caps: opts.Capabilities, log: opts.Log,
 		servers: map[string]*Server{}, tools: map[string]*ToolRef{}, perPrinc: map[string]*fifo{}, total: newFIFO(opts.Limits.Total)}
+	r.watcher, _ = opts.Manifests.(pipeline.ManifestWatcher)
 	for _, sc := range servers {
 		s, err := r.launch(ctx, sc, opts)
+		if errors.Is(err, pipeline.ErrServerSuspended) {
+			// A suspended revision (drift, changed artifact) keeps the rest
+			// of the catalog running; the source recorded the evidence.
+			r.log.Error("server not started: revision suspended", "alias", sc.Alias, "err", err)
+			continue
+		}
 		if err != nil {
 			r.Close()
 			return nil, fmt.Errorf("server %q: %w", sc.Alias, err)
 		}
-		r.servers[s.Alias] = s
-		seen := map[string]string{} // public -> backend name
-		for _, t := range s.Tools {
-			if err := CheckToolDefinition(t); err != nil {
-				r.Close()
-				return nil, fmt.Errorf("server %q tool %q: drift: %w", sc.Alias, t.Name, err)
-			}
-			pub := PublicName(s.Alias, t.Name)
-			if len(pub) > 64 {
-				r.Close()
-				return nil, fmt.Errorf("server %q tool %q: public name %q exceeds 64 characters (CP-42)", sc.Alias, t.Name, pub)
-			}
-			if prev, dup := seen[pub]; dup {
-				r.Close()
-				return nil, fmt.Errorf("server %q: tools %q and %q both map to public name %q (FR-1.49)", sc.Alias, prev, t.Name, pub)
-			}
-			seen[pub] = t.Name
-			r.tools[pub] = &ToolRef{Public: pub, Server: s, Tool: t, Revision: s.Revision + "/" + t.Name}
-			r.public = append(r.public, pub)
+		if err := r.index(s); err != nil {
+			r.Close()
+			return nil, err
 		}
 	}
-	sort.Strings(r.public)
 	return r, nil
+}
+
+// index adds a launched server and its tools to the public-name index.
+func (r *Registry) index(s *Server) error {
+	r.smu.Lock()
+	defer r.smu.Unlock()
+	r.servers[s.Alias] = s
+	seen := map[string]string{} // public -> backend name
+	for _, t := range s.Tools {
+		if err := CheckToolDefinition(t); err != nil {
+			return fmt.Errorf("server %q tool %q: drift: %w", s.Alias, t.Name, err)
+		}
+		pub := PublicName(s.Alias, t.Name)
+		if len(pub) > 64 {
+			return fmt.Errorf("server %q tool %q: public name %q exceeds 64 characters (CP-42)", s.Alias, t.Name, pub)
+		}
+		if prev, dup := seen[pub]; dup {
+			return fmt.Errorf("server %q: tools %q and %q both map to public name %q (FR-1.49)", s.Alias, prev, t.Name, pub)
+		}
+		seen[pub] = t.Name
+		r.tools[pub] = &ToolRef{Public: pub, Server: s, Tool: t, Revision: s.Revision + "/" + t.Name}
+		r.public = append(r.public, pub)
+	}
+	sort.Strings(r.public)
+	return nil
 }
 
 // envelopeBytes is the allowance for the JSON-RPC envelope and content
@@ -226,7 +247,16 @@ func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (
 	limit := int(opts.Limits.ResultBytes) + envelopeBytes
 	ff := newFrameFilter(proc, limit)
 	transport := &mcp.IOTransport{Reader: ff, Writer: procCloser{proc}, MaxLineLength: limit + 1024}
-	client := mcp.NewClient(&mcp.Implementation{Name: "secure-mcp-gateway", Version: Version}, nil)
+	var started atomic.Pointer[Server]
+	var copts *mcp.ClientOptions
+	if r.watcher != nil {
+		copts = &mcp.ClientOptions{ToolListChangedHandler: func(context.Context, *mcp.ToolListChangedRequest) {
+			if s := started.Load(); s != nil {
+				go r.listChanged(s) //nolint:gosec // the notification context ends with the handler; the re-check has its own timeout
+			}
+		}}
+	}
+	client := mcp.NewClient(&mcp.Implementation{Name: "secure-mcp-gateway", Version: Version}, copts)
 	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	sess, err := client.Connect(cctx, transport, nil)
@@ -234,7 +264,7 @@ func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (
 		proc.Close()
 		return nil, fmt.Errorf("connect %s: %w (stderr: %s)", sc.Command, err, proc.Stderr())
 	}
-	s := &Server{Alias: sc.Alias, cfg: sc, session: sess, proc: proc, filter: ff}
+	s := &Server{Alias: sc.Alias, cfg: sc, spec: spec, session: sess, proc: proc, filter: ff}
 	if ir := sess.InitializeResult(); ir != nil && ir.ProtocolVersion != "" {
 		s.Era = ir.ProtocolVersion
 	}
@@ -249,12 +279,14 @@ func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (
 		}
 		return tools, nil
 	}
+	s.live = live
 	ts, err := opts.Manifests.Tools(cctx, spec, live)
 	if err != nil {
 		sess.Close()
 		return nil, err
 	}
 	s.Tools, s.Revision, s.Verified, s.ManifestSource = ts.Tools, ts.Revision, ts.Verified, ts.Source
+	started.Store(s)
 	if !ts.Verified {
 		r.log.Warn("server tool definitions are unverified (live list; no signed manifest)", "alias", sc.Alias, "revision", ts.Revision)
 	}
@@ -273,13 +305,78 @@ func (w procCloser) Close() error                { return w.p.Close() }
 var Version = "0.0.0-dev"
 
 // Resolve maps a public name to its backend tool.
-func (r *Registry) Resolve(public string) *ToolRef { return r.tools[public] }
+func (r *Registry) Resolve(public string) *ToolRef {
+	r.smu.RLock()
+	defer r.smu.RUnlock()
+	return r.tools[public]
+}
 
 // PublicNames returns every public name in ascending order (FR-1.25).
-func (r *Registry) PublicNames() []string { return append([]string(nil), r.public...) }
+func (r *Registry) PublicNames() []string {
+	r.smu.RLock()
+	defer r.smu.RUnlock()
+	return append([]string(nil), r.public...)
+}
 
-// Servers returns the launched servers by alias.
-func (r *Registry) Servers() map[string]*Server { return r.servers }
+// Servers returns the launched, not suspended servers by alias.
+func (r *Registry) Servers() map[string]*Server {
+	r.smu.RLock()
+	defer r.smu.RUnlock()
+	out := make(map[string]*Server, len(r.servers))
+	for k, v := range r.servers {
+		out[k] = v
+	}
+	return out
+}
+
+// ErrSuspended refuses a call to a suspended server.
+var ErrSuspended = errors.New("server suspended")
+
+// Suspend removes a server's tools from the index and tears its instance
+// down (SR-3.8-1, SR-3-3). Calls already holding a ToolRef are refused with
+// ErrSuspended. It reports false when no running server has the alias.
+func (r *Registry) Suspend(alias, reason string) bool {
+	r.smu.Lock()
+	s := r.servers[alias]
+	if s == nil {
+		r.smu.Unlock()
+		return false
+	}
+	s.suspended.Store(true)
+	delete(r.servers, alias)
+	kept := r.public[:0]
+	for _, pub := range r.public {
+		if ref := r.tools[pub]; ref != nil && ref.Server == s {
+			delete(r.tools, pub)
+			continue
+		}
+		kept = append(kept, pub)
+	}
+	r.public = kept
+	r.smu.Unlock()
+	r.log.Error("server suspended and torn down", "alias", alias, "reason", reason)
+	if s.session != nil {
+		_ = s.session.Close()
+	}
+	return true
+}
+
+// listChanged re-checks a server's tool list against its manifest after a
+// notifications/tools/list_changed and suspends it on drift.
+func (r *Registry) listChanged(s *Server) {
+	if s.suspended.Load() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err := r.watcher.ListChanged(ctx, s.spec, s.live)
+	switch {
+	case errors.Is(err, pipeline.ErrServerSuspended):
+		r.Suspend(s.Alias, err.Error())
+	case err != nil:
+		r.log.Warn("tool list re-check failed", "alias", s.Alias, "err", err)
+	}
+}
 
 // Launcher returns the launcher in use.
 func (r *Registry) Launcher() pipeline.Launcher { return r.launcher }
@@ -319,6 +416,9 @@ type Dispatch struct {
 func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, error) {
 	if d.Ref == nil {
 		return nil, errors.New("dispatch without a tool")
+	}
+	if d.Ref.Server != nil && d.Ref.Server.suspended.Load() {
+		return nil, ErrSuspended
 	}
 	if d.Binding.PublicName != d.Ref.Public {
 		return nil, &CapabilityError{pipeline.ErrCapabilityMismatch}
@@ -432,6 +532,8 @@ func (s *Server) OversizedFrames() uint64 {
 // ordering is the Process's shutdown sequence).
 func (r *Registry) Close() {
 	r.inFlight.Wait()
+	r.smu.RLock()
+	defer r.smu.RUnlock()
 	for _, s := range r.servers {
 		if s.session != nil {
 			_ = s.session.Close()

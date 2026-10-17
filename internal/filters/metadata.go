@@ -341,6 +341,15 @@ func (m scanningManifest) Tools(ctx context.Context, spec pipeline.ServerSpec, l
 	return ts, nil
 }
 
+// ListChanged forwards notifications/tools/list_changed to the wrapped
+// source when it watches them (signed packages: drift suspends the server).
+func (m scanningManifest) ListChanged(ctx context.Context, spec pipeline.ServerSpec, live pipeline.LiveLister) error {
+	if w, ok := m.inner.(pipeline.ManifestWatcher); ok {
+		return w.ListChanged(ctx, spec, live)
+	}
+	return nil
+}
+
 // Present implements pipeline.ToolScreen (FR-1.52): before a tool enters a
 // session catalog the active rule sets are applied again, so a rule-set
 // change after import takes effect. The first blocking result per server

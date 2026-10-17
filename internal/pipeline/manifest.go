@@ -35,6 +35,20 @@ type ManifestSource interface {
 	Tools(ctx context.Context, spec ServerSpec, live LiveLister) (ToolSet, error)
 }
 
+// ErrServerSuspended is returned (wrapped) by a ManifestSource or Launcher
+// when a server revision has been suspended, for example on manifest drift
+// (SR-3.8-1) or a changed artifact (SR-3-2). The registry starts without
+// that server instead of failing startup.
+var ErrServerSuspended = errors.New("server revision suspended")
+
+// ManifestWatcher is optionally implemented by a ManifestSource. The
+// registry calls ListChanged when a running server sends
+// notifications/tools/list_changed; an error wrapping ErrServerSuspended
+// suspends the server and tears its instance down (SR-3.8-1).
+type ManifestWatcher interface {
+	ListChanged(ctx context.Context, spec ServerSpec, live LiveLister) error
+}
+
 // LiveManifest is the default ManifestSource: it presents the live tool
 // list, flagged as unverified. Its revision is "live-" and the first 16 hex
 // digits of the SHA-256 of the sorted list.

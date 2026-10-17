@@ -414,7 +414,7 @@ R: The registry is the source of the capability ceiling and the catalog.
 
 @FR-5.6 | Server alias
 P: FR-5
-S: The Local Server Registry (E-14) SHALL assign each server a unique alias of 1 to 32 characters drawn from `a-z 0-9 _ -`, defaulting to the manifest server ID and editable by an administrator.
+S: The Local Server Registry (E-14) SHALL assign each server a unique alias of 1 to 16 characters drawn from `a-z 0-9` (CP-42), defaulting to the manifest `server.alias` and editable by an administrator.
 A: E-14; F-36; I-06
 V: Test | Register two servers whose default aliases collide; confirm enablement of the second is blocked until a unique alias is set.
 SRC: FR-1.26; MCP:server/tools §Tool Names

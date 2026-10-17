@@ -144,9 +144,7 @@ func TestBootstrapAndControlCommands(t *testing.T) {
 	}
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	raw, _ := os.ReadFile(cfgPath)
-	if strings.Contains(string(raw), `command = "npx"`) || !strings.Contains(string(raw), filepath.Join(binDir, "smcp-refserver")) {
-		t.Fatalf("example config does not use the packaged reference server:\n%s", raw)
-	}
+	checkPackagedBootstrap(t, dir, string(raw))
 	if st, _ := os.Stat(cfgPath); st.Mode().Perm() != 0o600 {
 		t.Fatalf("config mode %o", st.Mode().Perm())
 	}
