@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T21:51:17Z",
-  "commit": "ed5b4235a438f46ea1f593a74da5b9a42b641380",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ed5b4235a438f46ea1f593a74da5b9a42b641380",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39071237070",
+  "generatedAt": "2026-10-17T22:31:58Z",
+  "commit": "788c8b423b70ea362d792d1cb7ad88f203834971",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/788c8b423b70ea362d792d1cb7ad88f203834971",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39074209285",
   "tests": {
-    "total": 1337,
-    "passed": 1323,
-    "failed": 1,
+    "total": 1353,
+    "passed": 1340,
+    "failed": 0,
     "skipped": 13,
-    "durationSec": 1007.1,
+    "durationSec": 1028.2,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -19,7 +19,7 @@
       },
       {
         "name": "console/e2e/chromium",
-        "passed": 54,
+        "passed": 58,
         "failed": 0,
         "skipped": 0
       },
@@ -31,13 +31,13 @@
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 54,
+        "passed": 58,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "console/e2e/webkit",
-        "passed": 54,
+        "passed": 58,
         "failed": 0,
         "skipped": 0
       },
@@ -55,7 +55,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 53,
+        "passed": 54,
         "failed": 0,
         "skipped": 0
       },
@@ -307,8 +307,8 @@
       },
       {
         "name": "internal/perf/run",
-        "passed": 4,
-        "failed": 1,
+        "passed": 5,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -433,7 +433,7 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 17,
+        "passed": 20,
         "failed": 0,
         "skipped": 0
       }
@@ -468,7 +468,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 38.1
+        "pct": 38.3
       },
       {
         "name": "cmd/smcpd",
@@ -544,11 +544,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.5
       },
       {
         "name": "internal/egress",
-        "pct": 82.4
+        "pct": 82.3
       },
       {
         "name": "internal/filterapi",
@@ -560,7 +560,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 83.5
       },
       {
         "name": "internal/gwtest",
@@ -668,7 +668,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 84.2
+        "pct": 84.1
       },
       {
         "name": "internal/sandbox/probe",
@@ -684,11 +684,11 @@
       },
       {
         "name": "internal/testport",
-        "pct": 77.5
+        "pct": 82.5
       },
       {
         "name": "internal/tunnel",
-        "pct": 81.1
+        "pct": 79.9
       },
       {
         "name": "packaging/linux",
@@ -712,16 +712,16 @@
       },
       {
         "name": "tools/reqreport",
-        "pct": 84.2
+        "pct": 84.8
       }
     ]
   },
   "requirements": {
     "total": 529,
-    "verified": 408,
-    "partial": 97,
-    "failing": 1,
-    "unverified": 23,
+    "verified": 413,
+    "partial": 95,
+    "failing": 0,
+    "unverified": 21,
     "byElement": [
       {
         "element": "E-01",
@@ -775,8 +775,8 @@
         "element": "E-07",
         "name": "Approval Service",
         "total": 13,
-        "verified": 12,
-        "partial": 1,
+        "verified": 13,
+        "partial": 0,
         "failing": 0
       },
       {
@@ -823,8 +823,8 @@
         "element": "E-13",
         "name": "Library Trust Verifier",
         "total": 25,
-        "verified": 19,
-        "partial": 4,
+        "verified": 20,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -839,8 +839,8 @@
         "element": "E-15",
         "name": "Server Runtime Manager",
         "total": 9,
-        "verified": 8,
-        "partial": 1,
+        "verified": 9,
+        "partial": 0,
         "failing": 0
       },
       {
@@ -911,7 +911,7 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 26,
+        "verified": 28,
         "partial": 42,
         "failing": 0
       },
@@ -952,8 +952,8 @@
         "name": "Observation Collector",
         "total": 14,
         "verified": 7,
-        "partial": 6,
-        "failing": 1
+        "partial": 7,
+        "failing": 0
       },
       {
         "element": "E-30",
@@ -1811,11 +1811,13 @@
       {
         "id": "FR-3.18",
         "element": "E-07",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestApprovalsCLI",
+          "cmd/smcpctl.TestApprovalsShowAnomalyEvidence",
           "internal/approval.TestApprovalRecordEvidence",
-          "internal/e2e.TestAnomalyApprovalCarriesEvidence"
+          "internal/e2e.TestAnomalyApprovalCarriesEvidence",
+          "docs/verification/inspections.md:577"
         ]
       },
       {
@@ -2696,14 +2698,17 @@
           "console/e2e/chromium.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/chromium.console.spec.ts > emergency stop refuses calls and resume restores them",
           "console/e2e/chromium.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
+          "console/e2e/chromium.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/chromium.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
           "console/e2e/firefox.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/firefox.console.spec.ts > emergency stop refuses calls and resume restores them",
           "console/e2e/firefox.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
+          "console/e2e/firefox.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/firefox.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
           "console/e2e/webkit.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/webkit.console.spec.ts > emergency stop refuses calls and resume restores them",
           "console/e2e/webkit.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
+          "console/e2e/webkit.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/webkit.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist"
         ]
       },
@@ -2741,10 +2746,13 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "console/e2e/chromium.firsttime.spec.ts > G-04 first-time task, scripted: a scoped Observation Policy of 10 parameters, timed",
           "console/e2e/chromium.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.firsttime.spec.ts > G-04 first-time task, scripted: a scoped Observation Policy of 10 parameters, timed",
           "console/e2e/firefox.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/webkit.firsttime.spec.ts > G-04 first-time task, scripted: a scoped Observation Policy of 10 parameters, timed",
           "console/e2e/webkit.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview"
         ]
@@ -2876,10 +2884,13 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/chromium.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/chromium.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/firefox.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/firefox.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/webkit.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/webkit.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/webkit.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "internal/obspolicy.TestPublishAndApply",
           "internal/obspolicy.TestPublishedObjectsApplyWithoutRestart",
@@ -2905,14 +2916,17 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
+          "console/e2e/chromium.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/chromium.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "console/e2e/firefox.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
+          "console/e2e/firefox.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/firefox.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/firefox.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/firefox.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "console/e2e/webkit.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
+          "console/e2e/webkit.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/webkit.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
@@ -2979,10 +2993,13 @@
         "status": "partial",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/chromium.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/chromium.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/firefox.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/firefox.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
           "console/e2e/webkit.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/webkit.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/webkit.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
           "internal/consoleapi.TestAuditBrowserFiltersPagingAndDetail",
           "internal/graph.TestGraphControlAPI",
@@ -3003,8 +3020,12 @@
       {
         "id": "FR-8.24",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "console/e2e/chromium.firsttime.spec.ts > G-04 first-time task, scripted: a scoped Observation Policy of 10 parameters, timed",
+          "console/e2e/firefox.firsttime.spec.ts > G-04 first-time task, scripted: a scoped Observation Policy of 10 parameters, timed",
+          "console/e2e/webkit.firsttime.spec.ts > G-04 first-time task, scripted: a scoped Observation Policy of 10 parameters, timed"
+        ]
       },
       {
         "id": "FR-8.25",
@@ -3117,11 +3138,14 @@
           "console/e2e/chromium.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/chromium.keyboard.spec.ts > G-05 behavior analytics with the keyboard: build, promote and drill down",
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/chromium.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/chromium.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
+          "console/e2e/chromium.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/chromium.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/chromium.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/chromium.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
           "console/e2e/chromium.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
+          "console/e2e/chromium.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
@@ -3133,11 +3157,14 @@
           "console/e2e/firefox.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/firefox.keyboard.spec.ts > G-05 behavior analytics with the keyboard: build, promote and drill down",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/firefox.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/firefox.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
+          "console/e2e/firefox.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/firefox.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/firefox.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/firefox.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
           "console/e2e/firefox.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
+          "console/e2e/firefox.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/firefox.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/webkit.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
           "console/e2e/webkit.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
@@ -3149,11 +3176,14 @@
           "console/e2e/webkit.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/webkit.keyboard.spec.ts > G-05 behavior analytics with the keyboard: build, promote and drill down",
           "console/e2e/webkit.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/webkit.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/webkit.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
+          "console/e2e/webkit.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/webkit.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/webkit.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/webkit.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
           "console/e2e/webkit.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
+          "console/e2e/webkit.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe"
         ]
       },
@@ -3171,11 +3201,14 @@
           "console/e2e/chromium.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/chromium.keyboard.spec.ts > G-05 behavior analytics with the keyboard: build, promote and drill down",
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/chromium.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/chromium.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
+          "console/e2e/chromium.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/chromium.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/chromium.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/chromium.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
           "console/e2e/chromium.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
+          "console/e2e/chromium.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
@@ -3186,11 +3219,14 @@
           "console/e2e/firefox.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/firefox.keyboard.spec.ts > G-05 behavior analytics with the keyboard: build, promote and drill down",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/firefox.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/firefox.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
+          "console/e2e/firefox.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/firefox.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/firefox.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/firefox.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
           "console/e2e/firefox.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
+          "console/e2e/firefox.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/firefox.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/webkit.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
           "console/e2e/webkit.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
@@ -3201,11 +3237,14 @@
           "console/e2e/webkit.keyboard.spec.ts > G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish",
           "console/e2e/webkit.keyboard.spec.ts > G-05 behavior analytics with the keyboard: build, promote and drill down",
           "console/e2e/webkit.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/webkit.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/webkit.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
+          "console/e2e/webkit.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/webkit.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
           "console/e2e/webkit.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/webkit.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
           "console/e2e/webkit.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
+          "console/e2e/webkit.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe"
         ]
       },
@@ -3746,7 +3785,7 @@
       {
         "id": "FR-11.4",
         "element": "E-29",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/perf/run.TestPerfFR_11_4"
         ]
@@ -3826,10 +3865,11 @@
       {
         "id": "FR-12.3",
         "element": "E-15",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/sandbox.TestDoctorAllPrerequisitesPresent",
-          "internal/sandbox.TestDoctorUsesConfiguredCgroupManager"
+          "internal/sandbox.TestDoctorUsesConfiguredCgroupManager",
+          "docs/verification/FR-12.3.md:5"
         ]
       },
       {
@@ -3891,9 +3931,12 @@
           "tools/reqreport.TestLoadRequirements",
           "tools/reqreport.TestLoadRequirementsSkipsDeferred",
           "tools/reqreport.TestParseTestLog",
+          "tools/reqreport.TestPublishWorkflowResult",
+          "tools/reqreport.TestRecordsInSubdirectories",
           "tools/reqreport.TestRecordsVerifyInspections",
           "tools/reqreport.TestRunCountsRecords",
-          "tools/reqreport.TestRunWritesContractDocuments"
+          "tools/reqreport.TestRunWritesContractDocuments",
+          "tools/reqreport.TestWorkflowResultsClaimRequirements"
         ]
       },
       {
@@ -3953,8 +3996,10 @@
       {
         "id": "FR-13.3",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "workflow tap at v1.0.0-rc.2 (4ba218973fd4, 2026-10-17T22:15:07Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39074221187"
+        ]
       },
       {
         "id": "FR-13.4",
@@ -4105,12 +4150,13 @@
       {
         "id": "FR-14.5",
         "element": "E-13",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
-          "internal/packaging.TestBuildSignVerifyBinary"
+          "internal/packaging.TestBuildSignVerifyBinary",
+          "docs/verification/inspections.md:548"
         ]
       },
       {
@@ -4150,7 +4196,8 @@
         "tests": [
           "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow",
           "internal/acceptance/offline/enforced.TestAT17OfflineEngineeringWorkflow",
-          "internal/packaging.TestReferenceRecipesArePinned"
+          "internal/packaging.TestReferenceRecipesArePinned",
+          "workflow reference-packages at main (788c8b423b70, 2026-10-17T22:15:41Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39074222847"
         ]
       },
       {
@@ -4574,9 +4621,10 @@
       {
         "id": "FR-18.8",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "cmd/smcpctl.TestDocumentationSetFR18"
+          "cmd/smcpctl.TestDocumentationSetFR18",
+          "docs/verification/runbooks/FR-18.8.md:5"
         ]
       },
       {
@@ -6962,7 +7010,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6997,7 +7045,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44431: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:38013: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7114,7 +7162,7 @@
     }
   ],
   "acceptance": {
-    "commit": "ed5b4235a438f46ea1f593a74da5b9a42b641380",
+    "commit": "788c8b423b70ea362d792d1cb7ad88f203834971",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -7806,15 +7854,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "ed5b4235a438f46ea1f593a74da5b9a42b641380",
-    "generatedAt": "2026-10-17T21:34:27Z",
+    "commit": "788c8b423b70ea362d792d1cb7ad88f203834971",
+    "generatedAt": "2026-10-17T22:14:45Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000005707"
+      "runner": "GitHub Actions 1000005748"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7831,7 +7879,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.028543,
+        "value": 0.030207,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7843,7 +7891,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 19.460942,
+        "value": 18.870283,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7855,18 +7903,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 1.7762685000000005,
+        "value": 0.9666885000000001,
         "budget": 1,
         "samples": 8000,
-        "pass": false,
-        "method": "p95 P-213 with observation enabled (16.435 ms, mean of 16.936, 16.341, 16.206, 16.258) minus disabled (14.659 ms, mean of 14.750, 14.230, 14.642, 15.013), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
+        "pass": true,
+        "method": "p95 P-213 with observation enabled (16.255 ms, mean of 16.466, 16.583, 16.009, 15.961) minus disabled (15.288 ms, mean of 15.802, 15.338, 14.887, 15.125), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 803.846849,
+        "value": 802.676273,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7878,7 +7926,7 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 100.67578125,
+        "value": 102.81640625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
