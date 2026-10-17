@@ -62,7 +62,7 @@ export NODE_EXTRA_CA_CERTS=~/smcp/state/tls/ca.crt
 claude mcp add --transport http smcp https://127.0.0.1:8443/mcp
 ```
 
-Claude Code discovers the Gateway's OAuth metadata and opens a browser. Sign in as `approver`. The tools Claude Code lists are those of the session's template, named `mcp__smcp__ref_<tool>`. `smcpctl clients setup claude-code` writes the same configuration (`--dry-run` shows it first).
+Claude Code discovers the Gateway's OAuth metadata and opens a browser. Sign in as `approver`. The tools Claude Code lists are those of the session's template, named `mcp__smcp__ref_<tool>`. `smcpctl clients setup claude-code --no-lockdown` writes the same configuration (`--dry-run` shows it first; without `--no-lockdown` it also applies the lockdown profile, which needs `sudo`).
 
 Known issue: the native Claude Code build (Bun runtime) rejects the IP name constraints of the Gateway's local CA ("unsupported name constraint type") and does not connect over HTTPS. Until that is resolved, use the stdio adapter below (`smcpctl clients setup claude-code --stdio`). See [clients/claude-code.md](clients/claude-code.md).
 
