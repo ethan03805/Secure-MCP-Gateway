@@ -41,4 +41,5 @@ A record that does not meet these rules is reported as a warning and not counted
 ## Files
 
 - [inspections.md](inspections.md): Inspection and Analysis records.
+- [FR-3.25.md](FR-3.25.md): the real-harness approval run with Claude Code, with its [transcript](FR-3.25-transcript.md).
 - [gap-list.md](gap-list.md): requirements that are not verified, grouped by element, with what is missing.

@@ -97,7 +97,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-07 Approval Service
 
-- FR-3.25 external: the recorded run with interactive Claude Code at the pinned version (four cases and transcript) has not been done.
 - SR-1.18-3 missing: an approval is not re-requested when a request filter transforms action-defining arguments.
 
 ## E-08 Access Enforcement Point
@@ -195,7 +194,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-8.30 external: no browser-support matrix run.
 - FR-8.31 unverified: G-01 shows a first-run checklist (`console/src/views/Control.tsx`); no record compares its items with the requirement's list.
 - FR-8.32, FR-8.33 unverified: no WCAG 2.2 AA or keyboard-only audit of every view (`console/e2e/a11y.spec.ts` runs axe checks) and no claiming test or record.
-- FR-8.34 missing: `console/e2e/views.spec.ts` has a test per view, but `tools/reqreport` reads only `go test -json`, so Playwright tests cannot claim a view's requirement through the report.
 - FR-8.35 unverified: `docs/console-style.md` holds the checklist; no inspection record against every view.
 - FR-11.8 external: no 30-day reference dataset query latency measurement; the journal has no index (E-21 note).
 - FR-13.1 external: no GitHub Release has been inspected (four archives, checksum file, minisign signature).
