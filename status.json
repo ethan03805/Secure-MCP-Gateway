@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T08:52:23Z",
-  "commit": "49eafd9ea3a9ff071b0402d05f818b20a23ff3cc",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/49eafd9ea3a9ff071b0402d05f818b20a23ff3cc",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39018487204",
+  "generatedAt": "2026-10-17T09:02:20Z",
+  "commit": "d34f504fbedd3ed3d9296e511574824bbeeaa530",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d34f504fbedd3ed3d9296e511574824bbeeaa530",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39019093334",
   "tests": {
-    "total": 891,
-    "passed": 876,
-    "failed": 1,
+    "total": 895,
+    "passed": 881,
+    "failed": 0,
     "skipped": 14,
-    "durationSec": 424.4,
+    "durationSec": 444.9,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -115,8 +115,8 @@
       },
       {
         "name": "internal/baseline",
-        "passed": 11,
-        "failed": 1,
+        "passed": 12,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -151,13 +151,13 @@
       },
       {
         "name": "internal/edge",
-        "passed": 47,
+        "passed": 48,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/egress",
-        "passed": 15,
+        "passed": 16,
         "failed": 0,
         "skipped": 2
       },
@@ -205,7 +205,7 @@
       },
       {
         "name": "internal/library",
-        "passed": 28,
+        "passed": 30,
         "failed": 0,
         "skipped": 0
       },
@@ -414,7 +414,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 71
+        "pct": 71.4
       },
       {
         "name": "internal/approval",
@@ -462,11 +462,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.7
+        "pct": 92.6
       },
       {
         "name": "internal/egress",
-        "pct": 80.9
+        "pct": 81.3
       },
       {
         "name": "internal/filterapi",
@@ -506,7 +506,7 @@
       },
       {
         "name": "internal/library",
-        "pct": 85.3
+        "pct": 84.1
       },
       {
         "name": "internal/metrics",
@@ -534,7 +534,7 @@
       },
       {
         "name": "internal/packaging",
-        "pct": 74.9
+        "pct": 75
       },
       {
         "name": "internal/packaging/pkgtest",
@@ -632,10 +632,10 @@
   },
   "requirements": {
     "total": 543,
-    "verified": 250,
-    "partial": 203,
-    "failing": 1,
-    "unverified": 89,
+    "verified": 256,
+    "partial": 202,
+    "failing": 0,
+    "unverified": 85,
     "byElement": [
       {
         "element": "E-01",
@@ -705,8 +705,8 @@
         "element": "E-09",
         "name": "Request Inspection Pipeline",
         "total": 16,
-        "verified": 9,
-        "partial": 7,
+        "verified": 10,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -737,7 +737,7 @@
         "element": "E-13",
         "name": "Library Trust Verifier",
         "total": 25,
-        "verified": 13,
+        "verified": 14,
         "partial": 9,
         "failing": 0
       },
@@ -745,7 +745,7 @@
         "element": "E-14",
         "name": "Local Server Registry",
         "total": 13,
-        "verified": 9,
+        "verified": 10,
         "partial": 3,
         "failing": 0
       },
@@ -777,7 +777,7 @@
         "element": "E-18",
         "name": "Egress Broker",
         "total": 9,
-        "verified": 4,
+        "verified": 5,
         "partial": 4,
         "failing": 0
       },
@@ -825,7 +825,7 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 20,
+        "verified": 21,
         "partial": 40,
         "failing": 0
       },
@@ -873,9 +873,9 @@
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 8,
+        "verified": 9,
         "partial": 2,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-31",
@@ -3219,7 +3219,7 @@
       {
         "id": "FR-10.18",
         "element": "E-30",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestSnapshotTriggersAndImmutability"
@@ -4342,8 +4342,9 @@
       {
         "id": "SR-1.8-1",
         "element": "E-09",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/edge.TestArgumentSchemaValidation",
           "internal/hostile.TestHostileFixtures/HF-13"
         ]
       },
@@ -4810,8 +4811,10 @@
       {
         "id": "SR-3-4",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestStaleRevocationFeedBlocksImports"
+        ]
       },
       {
         "id": "SR-3.4-1",
@@ -4890,8 +4893,10 @@
       {
         "id": "SR-3.11-1",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestClassificationOverridesOnlyTighten"
+        ]
       },
       {
         "id": "SR-3.12-1",
@@ -5171,8 +5176,10 @@
       {
         "id": "SR-5.8-2",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/egress.TestSecretFingerprintOnEgress"
+        ]
       },
       {
         "id": "SR-5.9-1",
@@ -5559,8 +5566,10 @@
       {
         "id": "SR-7.5-1",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestBootstrapTokenFlow"
+        ]
       },
       {
         "id": "SR-7.5-2",
@@ -6335,7 +6344,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45477: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35005: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6391,6 +6400,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
