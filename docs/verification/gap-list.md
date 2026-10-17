@@ -75,13 +75,11 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-22 Key & Trust Anchor Manager
 
-- FR-7.10 unverified: enrollment needs the confirmed key ID (`POST /api/v1/packages/trust` with `preview` then `confirm_key_id`, `smcpctl trust add --key-id`), and G-10 shows the fingerprint, classes and expiry before the confirmation (`console/e2e/views.spec.ts`, `keyboard.spec.ts`, `internal/library` `TestTrustAnchorRoutes`). The Demonstration record is missing.
 
 ## E-24 Management Console & Control API
 
 - FR-8.4 to FR-8.8, FR-8.11 to FR-8.13, FR-8.15 to FR-8.17 (G-02 to G-05, G-07 to G-09 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each; the tests' partial claims reach the requirement report (`console/e2e/reqreport.ts`), but no Demonstration record exists. The G-03, G-04 and G-06 editors publish the Audit Profile, Observation Policy and Anomaly Response Policy objects of FR-3.1.
 - FR-8.24 external: the timed first-time-user task has not been run.
-- FR-8.25 unverified: every view has a help section, every G-02 draft field is described by its help and the G-02 field reference covers every policy schema field (`console/src/policyhelp.ts`, checked by `console/e2e/help.spec.ts`); catalog parameters show their catalog descriptions in G-04. The Inspection record (each view and 30 parameters) is missing.
 - FR-8.29 unverified: `console/e2e/views.spec.ts` covers loading, empty and error states with partial claims; no test covers all three states for every view.
 - FR-8.30 external: no browser-support matrix run.
 - FR-8.31 unverified: G-01 shows a first-run checklist (`console/src/views/Control.tsx`); no record compares its items with the requirement's list.
