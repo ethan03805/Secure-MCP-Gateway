@@ -39,18 +39,26 @@ test("administrator signs in, sees enforcement state and signs out", async ({ pa
 });
 
 test("emergency stop refuses calls and resume restores them", async ({ page }) => {
-  claims("FR-8.3", "FR-4.14", "FR-8.33");
+  claims("FR-4.14", "FR-8.33");
+  // FR-8.3 in full: G-01 shows enforcement state, health causes, policy
+  // revision and session count, and its stop and resume actions update
+  // the state display within 2 seconds.
+  test.info().annotations.push({ type: "requirement", description: "FR-8.3" });
   await signIn(page);
   await expect(page.getByRole("heading", { level: 1, name: "Gateway control" })).toBeVisible();
+  const strip = page.getByTestId("status-strip");
+  await expect(strip).toContainText(/policy \S+/);
+  await expect(strip).toContainText(/\d+ sessions?/);
+  await expect(strip).toContainText(/healthy|degraded|fail-closed/);
+  await expect(page.getByRole("table", { name: "Health monitor causes" })).toBeVisible();
   await page.getByTestId("emergency-button").click();
   const dialog = page.getByRole("dialog", { name: "Emergency stop" });
   await expect(dialog).toBeVisible();
   // Keyboard only: type the reason and submit with Enter.
   await page.keyboard.type("console acceptance test");
   await page.keyboard.press("Enter");
+  await expect(strip).toContainText("emergency stop", { timeout: 2_000 });
   await expect(dialog).toBeHidden();
-  const strip = page.getByTestId("status-strip");
-  await expect(strip).toContainText("emergency stop");
   await expect(page.getByText("Emergency stop is in effect")).toBeVisible();
 
   const refused = await mcpCall(g, "ref_read_file", { path: "hello.txt" }, { expect: g.marker, timeout: "30s" }).done;
@@ -59,7 +67,7 @@ test("emergency stop refuses calls and resume restores them", async ({ page }) =
 
   await page.getByTestId("emergency-button").click();
   await page.getByRole("dialog", { name: "Resume the Gateway" }).getByRole("button", { name: "Resume the Gateway" }).click();
-  await expect(strip).not.toContainText("emergency stop");
+  await expect(strip).not.toContainText("emergency stop", { timeout: 2_000 });
   const ok = await mcpCall(g, "ref_read_file", { path: "hello.txt" }, { expect: g.marker, timeout: "60s" }).done;
   expect(ok.code, ok.out).toBe(0);
 
@@ -70,14 +78,19 @@ test("emergency stop refuses calls and resume restores them", async ({ page }) =
 });
 
 test("an administrator approves a held call in the Approvals view", async ({ page }) => {
-  claims("FR-8.21", "FR-8.23", "FR-3.25");
+  claims("FR-8.23", "FR-3.25");
+  // FR-8.21 in full: the pending list shows the remaining validity, and
+  // G-13 approves one held call and denies another.
+  test.info().annotations.push({ type: "requirement", description: "FR-8.21" });
   await signIn(page, "/approvals");
   await expect(page.getByRole("heading", { level: 1, name: "Approvals" })).toBeVisible();
   const call = mcpCall(g, "ref_read_file", { path: "hello.txt" }, { scope: "smcp:template:approval-demo", expect: g.marker });
   try {
     // The list updates from the live stream; no reload.
-    const row = page.getByRole("table", { name: "Approvals: pending" }).getByRole("link", { name: "ref_read_file" });
+    const pending = page.getByRole("table", { name: "Approvals: pending" });
+    const row = pending.getByRole("link", { name: "ref_read_file" });
     await expect(row).toBeVisible({ timeout: 60_000 });
+    await expect(pending.getByRole("row").filter({ has: page.getByRole("link", { name: "ref_read_file" }) }).getByRole("cell").nth(5)).toHaveText(/^[0-5]:[0-5]\d$/); // Valid for
     await row.click();
     await expect(page.getByRole("heading", { level: 1, name: "Approval" })).toBeVisible();
     await expect(page.getByText("hello.txt")).toBeVisible();
@@ -96,6 +109,22 @@ test("an administrator approves a held call in the Approvals view", async ({ pag
   await page.getByRole("link", { name: "Approvals", exact: true }).first().click();
   await page.getByRole("link", { name: "consumed", exact: true }).click();
   await expect(page.getByRole("table", { name: "Approvals: consumed" })).toContainText("ref_read_file");
+
+  // Deny a second held call from G-13; the harness gets the denial.
+  await page.getByRole("link", { name: "pending", exact: true }).click();
+  const denied = mcpCall(g, "ref_read_file", { path: "hello.txt" }, { scope: "smcp:template:approval-demo", expect: g.marker });
+  try {
+    const row = page.getByRole("table", { name: "Approvals: pending" }).getByRole("link", { name: "ref_read_file" });
+    await expect(row).toBeVisible({ timeout: 60_000 });
+    await row.click();
+    await page.getByRole("button", { name: "Deny this call" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Denied." })).toBeVisible();
+    const r = await denied.done;
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/denied|31001|APPROVAL_DENIED/i);
+  } finally {
+    denied.kill();
+  }
 });
 
 test("an approver sees only the Approvals view and can deny a call", async ({ page }) => {
