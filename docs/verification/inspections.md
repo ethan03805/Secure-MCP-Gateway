@@ -293,3 +293,74 @@ Observations:
 - The key inventory names one file per purpose, with `server_ca` mapped to `tls/ca.key` and no other purpose sharing it (`internal/keys/rotate.go:460`).
 
 Deviation: none for the release 1.0 statement. A separate client CA does not exist; it is FR-7.15, deferred.
+
+## FR-7.10 Trust anchor enrollment
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-7.10 |
+| Commit | `76fb76bf8c7012823b008ac84f6c7d5787953133` |
+| Profile and platform | Standalone; darwin/arm64 (Chromium 1248, Playwright 1.64.1) |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (console gap task) |
+| Method | Demonstration |
+| Result | pass |
+
+Steps: at the commit above, started the console acceptance Gateway (`console/e2e/global-setup.ts`) and ran `npx playwright test --project=chromium e2e/views.spec.ts -g "G-10"`. The first G-10 test (`console/e2e/views.spec.ts:581`) creates a minisign key with `smcpctl package keygen`, opens G-10 "Library and trust anchors", fills "Enroll a trust anchor" with the name `e2e-rev2`, the public key, risk class `low` only (moderate unchecked) and expiry 2027-10-16, and presses "Show fingerprint".
+
+Observations:
+
+- G-10 showed a "Key fingerprint" panel with the key ID printed by `keygen`, the 64-digit SHA-256 of the key line, the risk class `low` and the expiry, and the "Enroll anchor" button stayed disabled; the trust anchor table did not list `e2e-rev2` at that point (`console/src/views/Library.tsx:302`).
+- After the box "The key ID matches the publisher's" was checked, "Enroll anchor" enrolled the key; the trust anchor row showed the same key ID, class `low` (not `moderate`) and an expiry in 2027.
+- The control API enforces the step for every client: an enrollment without `confirm_key_id` answers 400 `confirmation_required`, one with another key ID 400 `fingerprint_mismatch` (`internal/library/trust_api.go:60`, `internal/library/trust_api.go:63`); the enrollment event records the key ID, the SHA-256 fingerprint, `fingerprint_confirmed` and the classes and expiry (`internal/library/trust_api.go:92`). `smcpctl trust add` needs `--key-id` or the key ID typed at a prompt.
+- The test passed.
+
+Deviation: the Gateway was built from the `main` commit above, not a release commit.
+
+## FR-8.18 G-10 Servers & Library
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-8.18 |
+| Commit | `76fb76bf8c7012823b008ac84f6c7d5787953133` |
+| Profile and platform | Standalone; darwin/arm64 (Chromium 1248, Playwright 1.64.1) |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (console gap task) |
+| Method | Demonstration |
+| Result | pass |
+
+Steps: in the same run as the FR-7.10 record, the two G-10 tests of `console/e2e/views.spec.ts` (`:581` and `:653`): a second revision `99.0.0-e2e` of `smcp-ref-filesystem` was built from a recipe, signed with the newly enrolled key and installed with `smcpctl package install` through the running Gateway; it was retired from G-10; then the enabled bootstrap revision was suspended and enabled again from G-10.
+
+Observations:
+
+- The "Package revisions" table listed both revisions with state, "Why" (the state reason, where drift and revocation causes appear), alias, risk class, signing anchor (the attestation) and manifest digest (`console/src/views/Library.tsx:159`, `console/src/views/Library.tsx:162`). The new revision showed `verified-disabled`, signed by `e2e-rev2`.
+- Retire: the row action "Retire smcp-ref-filesystem 99.0.0-e2e" (`console/src/views/Library.tsx:180`) opened a dialog stating that retiring is final; after confirmation with a reason the page said "Retired smcp-ref-filesystem 99.0.0-e2e. This cannot be undone.", the row showed `retired` and offered no further action, and the enabled revision was unaffected.
+- Suspend: the enabled revision changed to `verified-disabled` with the message that a running instance was stopped. Enable: it changed back to `enabled`; the enable dialog offers the alias (`console/src/views/Library.tsx:112`).
+- Trust-anchor actions: enrollment with the fingerprint step (FR-7.10 record) and removal of `e2e-anchor` and `e2e-rev2` from the trust anchor table.
+- The package detail page showed the signed manifest and provenance statement as text.
+- Both tests passed.
+
+Deviation: the Gateway was built from the `main` commit above, not a release commit.
+
+## FR-8.25 Inline help
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-8.25 |
+| Commit | `76fb76bf8c7012823b008ac84f6c7d5787953133` |
+| Profile and platform | Standalone; darwin/arm64 (Chromium 1248, Playwright 1.64.1) |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (console gap task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: at the commit above, ran `npx playwright test --project=chromium e2e/help.spec.ts` and a scratch Playwright script that read the G-04 parameter tables, then read the help sources.
+
+Observations:
+
+- Views: each of the 19 views of the view list (G-01 to G-14, Egress, Runtime, Remote access, the catalog and the library) has one "Help for this view" section with text (`console/e2e/help.spec.ts:12`).
+- Policy fields: the G-02 field reference lists help for all 32 fields of `internal/policy/policy.schema.json`, and every control of the draft editor (document, template, rule and profile fields) is described by its help text through `aria-describedby` (`console/src/policyhelp.ts:7`, `console/e2e/help.spec.ts:54`).
+- Catalog parameters: G-04 lists the 92 catalog parameters with their descriptions. A sample of 30 (every third row): P-022, P-061, P-082, P-085, P-203, P-210, P-207, P-240, P-243, P-246, P-249, P-161, P-213, P-027, P-030, P-041, P-044, P-006, P-021, P-063, P-066, P-202, P-122, P-125, P-140, P-143, P-209, P-104, P-107, P-002; each showed a description (for example P-022 "Server ID and revision targeted by the call", P-213 "Gateway-added overhead: end-to-end minus server execution minus approval wait").
+- Local loading: view and policy help is part of the embedded console bundle, and parameter descriptions come from the catalog the Gateway serves (`docs/parameters.json` built into the binary); the help test records no request to another origin.
+
+Deviation: none.
