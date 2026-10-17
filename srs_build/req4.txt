@@ -652,11 +652,11 @@ R: A floating reference would let the registry change the code after review.
 
 @FR-14.3 | Manifest from live tool list
 P: FR-14
-S: The `smcpctl package build` command SHALL start the artifact once in a throwaway working directory with no secrets, the environment allowlist of the manifest and, in the Enforced profile, no network, read its tool list through the era probe of FR-5.16, and SHALL write a manifest conforming to Appendix J containing the tools, their schemas, description digests and era, and the operator-supplied risk class, side-effect classes, `source_trust`, capability ceiling and secret slots.
+S: The `smcpctl package build` command SHALL start the artifact once in a throwaway working directory with no secrets, the environment allowlist of the manifest and, in the Enforced profile, no network, read its tool list through the legacy handshake of FR-5.19 and `tools/list`, and SHALL write a manifest conforming to Appendix J containing the tools, their schemas, description digests and era, and the operator-supplied risk class, side-effect classes, `source_trust`, capability ceiling and secret slots.
 A: E-13; F-96; F-34; X-02
 V: Test | Package each reference server; validate each manifest against `docs/schemas/manifest.schema.json`; confirm the tools equal the live `tools/list` and that no secret or network access was available to the packaging run in the Enforced profile.
 SRC: OWNER (generate the manifest from a live tools/list at packaging time); SEC 3.5; SEC 3.7
-R: The manifest records exactly what the operator reviewed; the throwaway run is the quarantine probe.
+R: The manifest records exactly what the operator reviewed; the throwaway run is the quarantine probe. The era probe of FR-5.16 is deferred, so release 1.0 probes with the 2025-11-25 `initialize` handshake and records that era in the manifest.
 
 @FR-14.4 | Local servers only
 P: FR-14

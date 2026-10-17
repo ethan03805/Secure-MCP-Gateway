@@ -127,6 +127,22 @@ call() {
   "$bin/itest-client" -url "https://127.0.0.1:18543" -ca "$inst/state/tls/ca.crt" -call "$1" -args "$2" -expect "$3" \
     || { cat "$work/smcpd.log" >&2; fail "tool call $1"; }
 }
+# approve_next approves the next pending approval as the operator. The
+# fetch tool's side-effect class is external, so its call carries the
+# approval floor (SR-1.18-1) and is held until a person approves it.
+approve_next() {
+  for _ in $(seq 1 120); do
+    id=$("$bin/smcpctl" approvals list --json --config "$cfg" 2>/dev/null |
+      "$py" -c 'import json, sys; a = json.load(sys.stdin).get("approvals") or []; print(a[0]["id"] if a else "")') || id=""
+    if [ -n "$id" ]; then
+      "$bin/smcpctl" approvals approve "$id" --yes --comment "reference package check" --config "$cfg"
+      return 0
+    fi
+    sleep 0.5
+  done
+  echo "no approval to approve" >&2
+  return 1
+}
 for r in $only; do
   say "Calling one tool of $r"
   case $r in
@@ -137,7 +153,10 @@ for r in $only; do
       if [ "${SMCP_REFPKG_OFFLINE:-0}" = 1 ]; then
         echo "SKIP: fetch call (SMCP_REFPKG_OFFLINE=1)"
       else
+        approve_next &
+        approver=$!
         call fetch_fetch '{"url": "https://example.com/"}' "Example Domain"
+        wait "$approver" || fail "the fetch call's approval was not given"
       fi ;;
   esac
 done

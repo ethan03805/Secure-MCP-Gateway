@@ -31,7 +31,8 @@ func (f *fixture) withPrincipals() {
 		f.t.Fatal(err)
 	}
 	f.cfg.SetDirectory(d)
-	(&principals.Service{Dir: d, Sessions: f.app.Store, Snapshot: f.app.Decider.Snapshot, Evidence: f.app.Evidence, Log: diag.Discard()}).Register(f.app.Admin)
+	(&principals.Service{Dir: d, Sessions: f.app.Store, Snapshot: f.app.Decider.Snapshot, Evidence: f.app.Evidence, Log: diag.Discard(),
+		Gate: f.app.Gateway.Serialize}).Register(f.app.Admin)
 }
 
 // issueClient creates a public OAuth client credential for a principal
@@ -177,8 +178,7 @@ func TestRevocationUnderLoad(t *testing.T) {
 // TestPolicyRollbackKeepsRevocations: rolling the policy back to a revision
 // published before a credential revocation, a principal suspension and a
 // server suspension leaves all three in effect: they live outside the
-// policy document (SR-7.9-1; rolling back the application version is not
-// exercised here).
+// policy document (SR-7.9-1; the application rollback is AT-19).
 func TestPolicyRollbackKeepsRevocations(t *testing.T) {
 	reqtest.Partial(t, "SR-7.9-1")
 	f := start(t, "")

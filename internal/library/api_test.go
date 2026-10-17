@@ -85,7 +85,7 @@ func (f *apiFixture) do(method, path, token string, body any) (int, map[string]a
 }
 
 func TestPackagesControlAPI(t *testing.T) {
-	reqtest.Partial(t, "SR-3.9-1", "FR-5.7") // console view G-10 not built
+	reqtest.Partial(t, "SR-3.9-1") // FR-5.7: TestEnablementStatesAndCatalog
 	r := newRuntime(t, fixtureDesc)
 	if _, err := r.lib.Import(r.pkg(pkgtest.Spec{ID: "api-pkg", Revision: "2.0.0", Alias: "ap"}), ImportOptions{}); err != nil {
 		t.Fatal(err)

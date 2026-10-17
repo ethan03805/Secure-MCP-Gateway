@@ -390,3 +390,53 @@ Observations:
 - Installed binaries report the release version: `smcpd 1.0.0-rc.2`, `smcpctl 1.0.0-rc.2`, `smcp-stdio 1.0.0-rc.2`, `smcp-session 1.0.0-rc.2`, `smcp-connect 1.0.0-rc.2`.
 
 Deviation: the inspected release is a pre-release candidate. v1.0.0 is built by the same workflow and configuration; the release checklist repeats this inspection for it.
+
+## SR-1.1-1 Single policy source
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | SR-1.1-1 |
+| Commit | `39e7e703c7e7251d8453f66a17f0b9536af3b33e` |
+| Profile and platform | Not profile-specific; source inspected on darwin/arm64 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (partial claims sweep, E-05 to E-18) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: read every path by which a snapshot reaches the Policy Decision Service and every input of a decision; listed the packages the decision path imports with `go list -deps ./internal/policy ./internal/policystore ./internal/policyadmin ./internal/edge` and searched the policy packages for environment reads.
+
+Observations:
+
+- At start the only snapshot source is `policyadmin.Load` (`internal/app/app.go:179`): it returns the active revision of the signed Policy Store, and reads the policy file only when the store has no active revision, importing it as the first signed revision before use (`internal/policyadmin/service.go:84`). The decider is created from that snapshot (`internal/app/app.go:291`).
+- At run time the snapshot changes only through `Gateway.ActivatePolicy` (`internal/edge/edge.go:465`), which ends in `Decider.Replace` (`internal/edge/edge.go:490`, `internal/policy/policy.go:667`). Its callers are the Policy Administration Service after it stored, signed and activated a revision (`internal/policyadmin/service.go:234`) and the `policy/reload` route of the control API (`internal/adminapi/adminapi.go:460`), whose controller is the same service: the reloaded file is published through the store (`internal/policyadmin/service.go:172`). `Decider.Activate` (`internal/policy/policy.go:658`) has no caller outside tests.
+- A decision reads the snapshot, the request built by the edge, rate and quota counters and the session's taint mark (`internal/policy/policy.go:742`). The obligation context set at `internal/app/app.go:293` adds the observation objects, size and time bounds, egress and secret grants and runtime profile in force as obligations; it supplies no permit, deny or route rule and no rule filter.
+- None of `internal/policy`, `internal/policystore`, `internal/policyadmin` and `internal/edge` imports `internal/graph` (the `go list -deps` output has no graph package), so no edit to the graph mirror can reach a decision. No `os.Getenv` or `os.LookupEnv` call exists in the three policy packages.
+
+Deviation: none. The audit and observation settings and the mandatory filters are kept outside the policy document in release 1.0, as the SR-1.1-1 rationale states.
+
+## FR-5.9 Launch specification
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-5.9 |
+| Commit | `39e7e703c7e7251d8453f66a17f0b9536af3b33e` |
+| Profile and platform | Standalone host, darwin/arm64; launch specification generated for the Podman launcher (`[runtime] sandbox = "podman"`) |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (partial claims sweep, E-05 to E-18) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: built `smcpctl` and `smcp-refserver` from the commit, ran `smcpctl bootstrap` (which packages, signs, imports and enables the reference server `smcp-ref-filesystem` with its `root` slot bound to the instance's `sandbox` directory), added `[runtime] sandbox = "podman"` and a `[[runtime.server]]` entry for `ref` granting that directory, ran `smcpctl runtime spec` (`cmd/smcpctl/runtime.go:129`), and compared the printed launch specification with the revision's signed manifest (`state/packages/revisions/smcp-ref-filesystem/<revision>/manifest.json`) and the Runtime Profile defaults.
+
+Observations:
+
+- Artifact digest: `sha256:86eb3e6b…aefd0`, equal to the manifest's `artifact.sha256`; the command is the unpacked artifact under `state/packages/unpacked/<sha256>/` (resolved from the enabled revision, `internal/library/runtime.go:161`), mounted read-only at `/smcp/bin/smcp-refserver` (`internal/sandbox/spec.go:341`).
+- Argument vector: `/smcp/bin/smcp-refserver --root <sandbox dir>`, the manifest's `launch.argv` `["smcp-refserver", "--root", "{root}"]` with the `root` slot substituted.
+- Environment allowlist: `env_names` empty; the manifest declares no environment variables and no secret slot, and the specification lists names only (`internal/sandbox/spec.go:407`).
+- Mounts: the executable (read-only) and the granted `root` directory, read-only, as the manifest's `capabilities.filesystem` slot `root` mode `ro` and the `[[runtime.server.mount]]` grant state (`internal/sandbox/spec.go:373`).
+- Network attachment: `none`; the manifest declares no egress and the Runtime Profile entry requests none.
+- Resource limits: memory 536870912 bytes, 1 CPU, 128 PIDs, 64 MiB tmpfs, 1024 open files: the Runtime Profile defaults (CP-24), chosen per field from the server entry or the profile (`internal/sandbox/spec.go:288`).
+- Sandbox profile: read-only root, no new privileges, all capabilities dropped, default seccomp, `userns=auto:size=2048`, user `1000:1000`, `allow_spawn` false because the manifest declares `spawns_processes` false (`internal/sandbox/spec.go:298`), deviation action `alert`.
+- The Podman argument vector printed with it carries the same values (`--read-only`, `--cap-drop=all`, `--network=none`, `--memory=536870912`, `--pids-limit=128`, the two `--mount` options).
+
+Deviation: none. The specification was generated without starting a container; the Linux integration test `TestIntegrationSandboxConfinesServer` inspects the effective configuration of a running one.

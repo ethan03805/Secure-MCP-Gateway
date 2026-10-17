@@ -159,7 +159,9 @@ func (c *callRun) auditFailure(err error) error {
 // toolHandler is the per-call enforcement pipeline (FR-4.3): authenticate
 // (mcpChain), session check, decision, request inspection, approval,
 // launch authorization, dispatch, response inspection, release
-// authorization. Request and response scoring (E-31) are not yet stages.
+// authorization. Request scoring and response scoring (E-31) are the
+// observation probes, mandatory filters that run after every other filter
+// of the request and response chains (FR-4.3, TestStageOrder).
 func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		received := time.Now()
@@ -306,7 +308,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		// exists.
 		binding := pipeline.Binding{CorrelationID: corr, DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, PublicName: ref.Public}
 		endLaunch := c.stage(pipeline.SpanLaunchAuthorization)
-		capID, err := g.authorizeLaunch(c, sess.ID, binding)
+		capID, err := g.authorizeLaunch(c, sess, ref, binding)
 		endLaunch()
 		if err != nil {
 			return nil, err
@@ -454,24 +456,34 @@ func harnessVisible(e *jsonrpc.Error) *jsonrpc.Error {
 
 // authorizeLaunch rechecks state under the barrier, commits the decision
 // intent ("authorized") durably and only then issues the capability.
-func (g *Gateway) authorizeLaunch(c *callRun, sessionID string, b pipeline.Binding) (string, error) {
+// SR-1.17-1: the recheck covers the policy revision, the session state,
+// the principal and credential state and the server revision state, each
+// as the gate sees it now, so a revocation completed after the decision
+// refuses the launch.
+func (g *Gateway) authorizeLaunch(c *callRun, sess session.Session, ref *backend.ToolRef, b pipeline.Binding) (string, error) {
 	g.gate.RLock()
 	defer g.gate.RUnlock()
-	reason := ""
+	reason, code := "", int64(CodeGatewayFailClosed)
 	switch {
 	case g.stopped.Load():
 		reason = ReasonEmergencyStop
 	case g.decider.Snapshot() == nil || g.decider.Snapshot().Revision != b.PolicyRevision:
 		reason = ReasonRevisionChanged
-	case !g.store.IsActive(sessionID):
+	case !g.store.IsActive(sess.ID):
 		reason = ReasonSessionState
+	case g.principalDisabled(sess.PrincipalID):
+		reason, code = policy.ReasonPrincipalDisabled, CodePolicyDenied
+	case g.cfg.CredentialRevoked(sess.ClientID):
+		reason, code = policy.ReasonCredentialInvalid, CodePolicyDenied
+	case ref.Server.Suspended() || g.reg.Resolve(ref.Public) == nil || g.reg.Resolve(ref.Public).Server != ref.Server:
+		reason, code = policy.ReasonRevisionNotEnabled, CodePolicyDenied
 	case g.evidenceErr() != nil:
 		reason = ReasonJournalUnavailable
 	case len(g.healthGate()) > 0: // E-23 critical cause (SR-6.11-1, SR-7.10-1)
 		reason = ReasonFailClosed
 	}
 	if reason != "" {
-		return "", c.refuse(gatewayError(CodeGatewayFailClosed, "launch refused", reason, c.corr, c.dec.ID, nil),
+		return "", c.refuse(gatewayError(code, "launch refused", reason, c.corr, c.dec.ID, nil),
 			"call", audit.PhaseDenied, "E-12", "deny", reason, "evaluated")
 	}
 	if err := c.commit("decision", audit.PhaseAuthorized, "E-12", "permit", c.dec.ReasonCode, "evaluated", c.decisionDetail()); err != nil {
@@ -550,13 +562,17 @@ func (g *Gateway) policyRequest(sess session.Session, ref *backend.ToolRef, side
 		Server: ref.Server.Alias, Tool: ref.Tool.Name, SideEffect: side, SourceTrust: trust, Arguments: args,
 		SessionInactive: !g.store.IsActive(sess.ID), RevisionNotEnabled: ref.Server.Suspended(),
 		RoutesKnown: true, RiskClasses: ref.Server.RiskClasses()}
-	if p := g.cfg.FindPrincipal(sess.PrincipalID); p != nil && p.Enabled != nil && !*p.Enabled {
-		r.PrincipalDisabled = true
-	}
+	r.PrincipalDisabled = g.principalDisabled(sess.PrincipalID)
 	if live := g.reg.Resolve(ref.Public); live != nil && live.Server == ref.Server && !ref.Server.Suspended() {
 		r.Routes = []string{ref.Server.Alias}
 	}
 	return r
+}
+
+// principalDisabled reports whether the principal is disabled or suspended.
+func (g *Gateway) principalDisabled(id string) bool {
+	p := g.cfg.FindPrincipal(id)
+	return p != nil && p.Enabled != nil && !*p.Enabled
 }
 
 // mapDispatchError maps a dispatcher error to an Appendix B error and

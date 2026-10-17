@@ -14,11 +14,10 @@ import (
 // TestPolicyReferenceExamples is the documentation check of FR-18.5: every
 // policy document example in docs/policy-reference.md compiles against the
 // schema and the publication checks, and every field the schema defines is
-// described there. It does not cover the policy object types, predicate
-// operators and obligations that do not exist yet (FR-3.1, SR-1.7-1,
-// FR-3.12).
+// described there. TestPolicyReferenceCoversEveryObject checks the other
+// object types, the predicate operators and the obligations.
 func TestPolicyReferenceExamples(t *testing.T) {
-	reqtest.Partial(t, "FR-18.5")
+	reqtest.Verifies(t, "FR-18.5")
 	raw, err := os.ReadFile("../../docs/policy-reference.md")
 	if err != nil {
 		t.Fatal(err)

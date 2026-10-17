@@ -61,6 +61,9 @@ type Record struct {
 	DecisionID     string          `json:"decision_id,omitempty"`
 	DecisiveRules  []string        `json:"decisive_rules"`
 	Arguments      json.RawMessage `json:"arguments"`
+	// Anomaly is the Anomaly Scorer's evidence when an anomaly band
+	// required the approval: band, contributing feature and z-score.
+	Anomaly *pipeline.AnomalyEvidence `json:"anomaly,omitempty"`
 
 	// Origin of the call (FR-16.8): set when it arrived on the Remote
 	// Access listener, and applied to every approval event.

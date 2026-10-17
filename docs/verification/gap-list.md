@@ -38,20 +38,17 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-05 Policy Administration Service
 
-- FR-18.5 partial: `internal/policy` `TestPolicyReferenceExamples` compiles every policy example in `docs/policy-reference.md` and checks that every schema field is described; object types, predicate operators and obligations that do not exist (FR-3.1, SR-1.7-1, FR-3.12) cannot be described.
-- SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; rolling back the application version is not exercised, and there are no revocation epochs.
+- SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; AT-19 shows a policy rollback and an application rollback (`smcpctl upgrade` to an unhealthy release) leave a principal suspension and a credential revocation in effect. No test suspends a server revision before an application rollback.
 
 ## E-06 Policy Decision Service
 
 - FR-11.2 external: the CI job `perf` measures p95 decision latency for 100,000 decisions with 256 candidate rules and eight callers (partial claim); no measurement on recorded reference hardware.
-- SR-1.10-1 partial: obligations combine restrict-only across the permit rule, template, profile, approval predicate, approval floor and taint (`TestObligationPrecedence`); overlapping permits are refused at publication (SR-1.9-1), so several applicable permits are never combined.
 
 ## E-08 Access Enforcement Point
 
 
 ## E-12 Enforcement Coordinator
 
-- SR-1.2-2 unverified (partial claim exists): a failed decision-intent commit refuses launch with `-31004` and `JOURNAL_UNAVAILABLE`; no test makes the journal directory unwritable during traffic or stops the graph database during traffic.
 - SR-4.1-1 external: distinct CP-46 service identities are prepared by `packaging/linux/install-enforced.sh`; running processes on an Enforced host have not been inspected.
 
 ## E-13 Library Trust Verifier

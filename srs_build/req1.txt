@@ -224,9 +224,9 @@ R: Claude Code drops a tool whose prefixed name exceeds 128 characters and Herme
 P: FR-1
 S: The Access Enforcement Point (E-08) SHALL build each presented tool definition (`title`, `description`, `inputSchema`, `outputSchema`, `annotations`) from the verified manifest of the enabled server revision.
 A: E-08; E-14; F-19; X-01; I-07
-V: Test | Change a backend's live tool description without changing the manifest; confirm the presented description still matches the manifest.
+V: Test | Compare a packaged server's presented tool definitions with its verified manifest; then change the backend's live tool description without changing the manifest; confirm the changed description is never presented (the drift check of SR-3.8-1 suspends the revision and withdraws its tools).
 SRC: ARCH §6.3; SEC 3.7
-R: Presented definitions must be the curated, signed definitions.
+R: Presented definitions must be the curated, signed definitions. A changed live description is drift, so the revision is suspended (SR-3.8-1) rather than presented with the manifest's description; either way the live text never reaches the harness.
 
 @FR-1.28 | x-mcp-header removal
 P: FR-1

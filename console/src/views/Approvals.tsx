@@ -146,7 +146,14 @@ function ApprovalDetail({ id }: { id: string }) {
                   ["Template", opt(r.template)],
                   ["Requested", <Time value={r.created_at} />],
                   ["Expires", <Time value={r.expires_at} />],
-                  ["Anomaly evidence", r.anomaly ? <Mono>{JSON.stringify(r.anomaly)}</Mono> : none],
+                  ["Anomaly band", r.anomaly ? <Mono>{r.anomaly.band}</Mono> : none],
+                  ...(r.anomaly
+                    ? ([
+                        ["Contributing feature", opt(r.anomaly.contributing_feature)],
+                        ["z-score", <Mono>{r.anomaly.z_score.toFixed(2)}</Mono>],
+                        ["Baseline snapshot", opt(r.anomaly.snapshot_id)],
+                      ] as [string, ReactNode][])
+                    : []),
                   ...(r.decided_by
                     ? ([
                         ["Decided by", <Mono>{r.decided_by}</Mono>],
