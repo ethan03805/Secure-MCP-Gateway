@@ -800,6 +800,7 @@ test("G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboa
   await activate(page, page.getByRole("button", { name: "Rotate the listener certificate" }));
   await expect(page.getByText("Rotated: tls.")).toBeVisible();
   await axe(page, "G-08 listener certificate rotated");
+  await fromTop(page);
   await activate(page, page.getByRole("button", { name: "Rotate the evidence key" }));
   await expect(page.getByText("Rotated: evidence.")).toBeVisible();
   await axe(page, "G-08 evidence key rotated");
@@ -812,13 +813,17 @@ test("G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboa
 
   // The acceptance Gateway runs without a graph database: the real rebuild
   // request is refused with the API's reason. The accepted case is then
-  // shown with the control API's 202 answer mocked.
+  // shown with the control API's 202 answer mocked. An action that reloads
+  // its section can leave focus on the page body (WebKit); each walk then
+  // starts from the top, as a person would.
+  await fromTop(page);
   await activate(page, page.getByRole("button", { name: "Rebuild from the journal" }));
   const refused = page.getByRole("alert").filter({ hasText: "Could not complete the rebuild." });
   await expect(refused).toContainText("the graph mirror is disabled");
   await expect(refused).toContainText("graph_disabled");
   await axe(page, "G-08 rebuild refused");
   await page.route("**/api/v1/graph/rebuild", (rt) => rt.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ status: "queued" }) }));
+  await fromTop(page);
   await activate(page, page.getByRole("button", { name: "Rebuild from the journal" }));
   await expect(page.getByText("A rebuild is queued.")).toBeVisible();
   await axe(page, "G-08 rebuild queued (mocked)");
@@ -830,6 +835,7 @@ test("G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboa
     ["Export JSON Lines", "jsonl"],
   ] as const) {
     const dl = page.waitForEvent("download");
+    await fromTop(page);
     await activate(page, page.getByRole("button", { name: button }));
     const d = await dl;
     expect(d.suggestedFilename()).toMatch(new RegExp(`\\.${ext}$`));
@@ -931,6 +937,7 @@ test("G-10 suspend and enable of the running server and G-01 health acknowledgme
     expect(r.out).toContain("empty tool catalog");
 
     // G-10: enable it again; servers are launched at start, so smcpd restarts.
+    await fromTop(page);
     await activate(page, revs.getByRole("button", { name: /^Enable smcp-ref-filesystem / }));
     const ed = page.getByRole("dialog", { name: /^Enable smcp-ref-filesystem / });
     await expect(ed).toBeVisible();

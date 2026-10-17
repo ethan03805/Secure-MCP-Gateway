@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -85,5 +86,77 @@ func TestRecordsInSubdirectories(t *testing.T) {
 	results := buildResults(reqs, &TestLog{}, "example.com/m")
 	if w := applyRecords(results, reqs, recs, "docs/verification"); len(w) != 0 || results[0].Status != StatusVerified {
 		t.Fatalf("%s %q", results[0].Status, w)
+	}
+}
+
+// TestPublishWorkflowResult runs scripts/publish-workflow-result.sh against
+// a local bare repository standing in for origin: the entry of the same
+// workflow is replaced, other workflows' entries are kept, and the file
+// reads back as workflow results.
+func TestPublishWorkflowResult(t *testing.T) {
+	reqtest.Verifies(t, "FR-12.10")
+	for _, tool := range []string{"bash", "git", "jq"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skipf("%s not installed", tool)
+		}
+	}
+	script, err := filepath.Abs(filepath.Join("..", "..", "scripts", "publish-workflow-result.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	env := append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com", "GIT_CONFIG_GLOBAL=/dev/null")
+	vcs := func(wd string, args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = wd
+		cmd.Env = env
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	bare := filepath.Join(dir, "origin.git")
+	vcs(dir, "init", "-q", "--bare", bare)
+	seed := filepath.Join(dir, "seed")
+	vcs(dir, "init", "-q", seed)
+	vcs(seed, "switch", "-q", "--orphan", "site-data")
+	old := `[{"workflow":"reference-packages","requirements":["FR-14.9"],"ref":"main","commit":"` + recordSHA + `","conclusion":"success","date":"2026-10-17T10:00:00Z","runUrl":"x"},` +
+		`{"workflow":"tap","requirements":["FR-13.3"],"ref":"v1.0.0-rc.1","commit":"` + recordSHA + `","conclusion":"failure","date":"2026-10-16T10:00:00Z","runUrl":"y"}]`
+	writeFile(t, filepath.Join(seed, "workflows.json"), old)
+	vcs(seed, "add", "workflows.json")
+	vcs(seed, "commit", "-q", "-m", "seed")
+	vcs(seed, "push", "-q", bare, "site-data")
+	clone := filepath.Join(dir, "clone")
+	vcs(dir, "init", "-q", clone)
+	vcs(clone, "commit", "-q", "--allow-empty", "-m", "main")
+	vcs(clone, "remote", "add", "origin", bare)
+
+	cmd := exec.Command("bash", script, "tap", "success", "v1.0.0-rc.2", recordSHA, "FR-13.3")
+	cmd.Dir = clone
+	cmd.Env = append(env, "GITHUB_SERVER_URL=https://github.com", "GITHUB_REPOSITORY=o/r", "GITHUB_RUN_ID=7")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("publish: %v\n%s", err, out)
+	}
+	got := filepath.Join(dir, "got.json")
+	writeFile(t, got, vcs(bare, "show", "site-data:workflows.json"))
+	wfs, err := loadWorkflowResults(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wfs) != 2 || wfs[0].Workflow != "reference-packages" || wfs[0].RunURL != "x" {
+		t.Fatalf("other workflow not kept: %+v", wfs)
+	}
+	if w := wfs[1]; w.Workflow != "tap" || w.Ref != "v1.0.0-rc.2" || w.Conclusion != "success" || w.RunURL != "https://github.com/o/r/actions/runs/7" || len(w.Requirements) != 1 || w.Requirements[0] != "FR-13.3" {
+		t.Fatalf("tap entry: %+v", w)
+	}
+
+	// A short commit is refused before anything is written.
+	bad := exec.Command("bash", script, "tap", "success", "v1.0.0", "abc123", "FR-13.3")
+	bad.Dir = clone
+	bad.Env = env
+	if out, err := bad.CombinedOutput(); err == nil || !strings.Contains(string(out), "not a full SHA") {
+		t.Fatalf("short commit accepted: %v\n%s", err, out)
 	}
 }
