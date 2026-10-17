@@ -20,9 +20,12 @@ Licensed under the [Apache License 2.0](LICENSE). Security reports: [SECURITY.md
 
 No build is labelled "enforced". A release is labelled "enforced" only when every acceptance scenario AT-01 to AT-21 passes on the Linux Enforced profile (FR-19.3). macOS always runs "not enforced".
 
+The latest CI figures (tests, coverage, requirement verification per element, real-agent results and hostile-fixture results) are on the project site's [Status page](https://secure-mcp-gateway-pearl.vercel.app/status/).
+
 Known issues that affect first use:
 
-- The native Claude Code build and OpenCode (Bun runtime) reject the IP name constraints of the Gateway's local CA and do not connect over HTTPS. Use the `smcp-stdio` adapter for them ([docs/agents-conformance.md](docs/agents-conformance.md)).
+- An installation bootstrapped before the CA fix still has a local CA with IP name constraints, which the native Claude Code build and OpenCode (Bun runtime) reject. `smcpd` warns at startup; `smcpctl keys rotate ca` replaces the CA ([docs/agents-conformance.md](docs/agents-conformance.md)).
+- Sandboxed servers have no network: the Egress Broker does not yet attach to the rootless Podman launcher, so `network = "egress"` is refused in the Enforced profile.
 - The installer and Homebrew have no release to download until the first tag; build from source.
 
 ## Scope of v1
@@ -101,7 +104,9 @@ The confidential client this needs, approvals, emergency stop and journal verifi
 | [`FloorPlan.md`](FloorPlan.md) | What every path in the repository is for |
 | [`CHANGELOG.md`](CHANGELOG.md) | Baseline and implementation history with the reason for each change |
 
-The project site renders the specification, the element and requirement status, the flows and these documents.
+The [project site](https://secure-mcp-gateway-pearl.vercel.app) renders the specification, the element and requirement status, the flows and every document under `docs/`.
+
+The management console is served by `smcpd` on the admin listener (`https://127.0.0.1:8444`). Each Appendix C role signs in with its own account (Administrator, Operator, Policy Author, Auditor, Researcher, Approver, Session Approver) and sees only the views and actions its role allows; `GET /api/v1/openapi.json` describes every control API route ([docs/console.md](docs/console.md)).
 
 ## Verify
 
@@ -110,6 +115,8 @@ make check         # what the required CI jobs check: SRS build, go build, vet, 
                    # go test -race -short, golangci-lint, site typecheck
 make status        # full tests with coverage; writes build/reqreport.{md,json} and build/status.json
 make integration   # bootstrap, run smcpd, drive an MCP client, rotate keys, back up, restore, upgrade
+make hostile       # the hostile backend fixtures of SRS Appendix L; writes build/hostile.{md,json}
+make console-e2e   # Playwright acceptance tests of the console against a real smcpd
 ```
 
 Against a running instance: `smcpctl journal verify` checks the evidence journal's hash chain, signatures, key transitions and anchor; `smcpctl doctor` reports MCP servers configured in your clients that bypass the Gateway. `scripts/agents` runs real agent CLIs through a Gateway and judges each scenario from the journal ([docs/agents-conformance.md](docs/agents-conformance.md)). See `scripts/README.md` for the CI scripts.
@@ -127,11 +134,13 @@ The build fails on any traceability error, on unknown requirement or parameter r
 ```sh
 cd site
 npm ci
+npm test           # unit tests of the document list
 npm run build      # static export to site/out
+npm run check-out  # every docs/ file has a page; every internal link and anchor resolves
 npm run dev        # local preview
 ```
 
-The site is a static Next.js export. It parses `ArchitectureV2.md`, `srs_build/req*.txt`, `MCP_Gateway_Security_SRS.md`, `docs/flows/` and the user documents directly, so a change to any of them changes the site on the next build. Deployment is configured by `vercel.json` at the repository root.
+The site is a static Next.js export. It parses `ArchitectureV2.md`, `srs_build/req*.txt`, `MCP_Gateway_Security_SRS.md`, `docs/flows/` and every Markdown file under `docs/` directly, so a change to any of them changes the site on the next build. Deployment is configured by `vercel.json` at the repository root.
 
 ## Reference material
 

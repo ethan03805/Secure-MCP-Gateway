@@ -154,7 +154,7 @@ The caller address is whatever the tunnel connector reports. Tailscale Funnel an
 | `session` | `deny` | `REMOTE_TEMPLATE_REFUSED` | Requested template not in `remote.templates` |
 | `session` | `refreshed` | `REFRESH` | Token refresh |
 
-Call events (`requested`, `authorized`, `dispatched`, `delivered`, denials) of remote calls carry the same remote fields. Events written by the Approval Service for held remote calls do not yet carry them.
+Call events (`requested`, `authorized`, `dispatched`, `delivered`, denials) of remote calls carry the same remote fields, and so do the Approval Service's events for held remote calls.
 
 ## Control API
 

@@ -171,7 +171,77 @@ export default function StatusPage() {
         </div>
       </Sec>
 
-      <Sec no={`${CH.n}.3`} id="verification" title="Requirement verification by element">
+      <Sec no={`${CH.n}.3`} id="element-notes" title="Element status and notes">
+        <Note label="Source">
+          <p>
+            Notes come from <code>docs/status/elements.json</code> through status.json. Requirement counts are those
+            allocated to the element.
+          </p>
+        </Note>
+        <p>
+          What each element has in code and its main gaps, with the requirements allocated to it by verification status.
+          The counts link to the element&apos;s requirements.
+        </p>
+        <div className="table-wrap wide">
+          <table className="notes">
+            <caption>
+              {arch.elements.length} elements in architecture order. Requirement columns: verified, partial, failing, and
+              the total allocated.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Element</th>
+                <th scope="col">State</th>
+                <th scope="col">Note</th>
+                <th scope="col" className="num">
+                  verified
+                </th>
+                <th scope="col" className="num">
+                  partial
+                </th>
+                <th scope="col" className="num">
+                  failing
+                </th>
+                <th scope="col" className="num">
+                  total
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {arch.elements.map((e) => {
+                const st = els.get(e.id);
+                const b = byEl.get(e.id);
+                const q = (status?: ReqStatus) =>
+                  `/requirements/?element=${encodeURIComponent(e.id)}${status ? `&status=${status}` : ""}`;
+                return (
+                  <tr key={e.id} id={`note-${e.id}`}>
+                    <th scope="row">
+                      <span className="id">{e.id}</span> <Link href={`/elements/${e.id}/`}>{e.name}</Link>
+                      {st && st.packages.length > 0 && (
+                        <span className="pkgs">
+                          {st.packages.map((p) => (
+                            <code key={p}>{p}</code>
+                          ))}
+                        </span>
+                      )}
+                    </th>
+                    <td>
+                      <ImplBadge impl={st?.implementation} />
+                    </td>
+                    <td className="note-text">{st?.note ? st.note : <span className="nil">none</span>}</td>
+                    <td className="num">{b ? <Link href={q("verified")}>{b.verified}</Link> : 0}</td>
+                    <td className="num">{b ? <Link href={q("partial")}>{b.partial}</Link> : 0}</td>
+                    <td className="num">{b?.failing ? <Link href={q("failing")}><strong>{b.failing}</strong></Link> : 0}</td>
+                    <td className="num">{b ? <Link href={q()}>{b.total}</Link> : 0}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Sec>
+
+      <Sec no={`${CH.n}.4`} id="verification" title="Requirement verification by element">
         <Note label="Totals">
           <p>
             {r.verified} verified, {r.partial} partial, {r.failing} failing, {r.unverified} unverified, of {r.total}{" "}
@@ -190,7 +260,7 @@ export default function StatusPage() {
         />
       </Sec>
 
-      <Sec no={`${CH.n}.4`} id="tests" title="Tests and coverage">
+      <Sec no={`${CH.n}.5`} id="tests" title="Tests and coverage">
         <Note label="Run">
           <p>
             {s.tests.total} tests in {plural(s.tests.packages.length, "package")}, {s.tests.durationSec.toFixed(1)} s of
@@ -232,7 +302,7 @@ export default function StatusPage() {
         </div>
       </Sec>
 
-      <Sec no={`${CH.n}.5`} id="trends" title="Trends">
+      <Sec no={`${CH.n}.6`} id="trends" title="Trends">
         <p>
           One point per CI run on main, from history.json, which keeps the last 200 runs. Points are spaced by run, not
           by time, because runs are irregular.
@@ -272,16 +342,24 @@ export default function StatusPage() {
         />
       </Sec>
 
-      <Sec no={`${CH.n}.6`} id="agents" title="Real-agent compatibility">
+      <Sec no={`${CH.n}.7`} id="agents" title="Real-agent compatibility">
+        <Note label="Totals">
+          <p>
+            {s.agents.filter((a) => a.result === "pass").length} pass, {s.agents.filter((a) => a.result === "fail").length}{" "}
+            fail, {s.agents.filter((a) => a.result === "not-run").length} not run, of {plural(s.agents.length, "client")}.
+          </p>
+        </Note>
         <p>
-          Shipping agent harnesses connected to a running Gateway: whether each can authenticate, list tools and complete
-          a call.
+          Shipping agent CLIs signed in to a running Gateway and driven through one prompt per scenario (sign-in, catalog,
+          allowed call, denied call, approval, ungranted tool); each scenario is judged from the evidence journal. The
+          method and the known client findings are in <Link href="/docs/agents-conformance/">the conformance suite</Link>.
         </p>
         {s.agents.length === 0 ? (
           <p className="empty-state">Not yet run. The compatibility job has not reported results for any client.</p>
         ) : (
           <div className="table-wrap wide">
             <table>
+              <caption>Latest result per client from the Real agents workflow.</caption>
               <thead>
                 <tr>
                   <th scope="col">Client</th>
@@ -309,8 +387,18 @@ export default function StatusPage() {
         )}
       </Sec>
 
-      <Sec no={`${CH.n}.7`} id="hostile" title="Hostile fixtures">
-        <p>Deliberately malicious MCP servers and requests, each with the behaviour the Gateway must show.</p>
+      <Sec no={`${CH.n}.8`} id="hostile" title="Hostile fixtures">
+        <Note label="Totals">
+          <p>
+            {s.hostile.filter((h) => h.pass).length} pass, {s.hostile.filter((h) => !h.pass).length} fail, of{" "}
+            {plural(s.hostile.length, "fixture")}.
+          </p>
+        </Note>
+        <p>
+          Deliberately malicious MCP servers and requests from SRS Appendix L, each run against the real Gateway with the
+          behaviour it must show. Observed results cover the standalone and, where the host allows, the enforced profile.
+          The fixtures are described in <Link href="/docs/hostile-fixtures/">the hostile fixture suite</Link>.
+        </p>
         {s.hostile.length === 0 ? (
           <p className="empty-state">Not yet run. No hostile-fixture results have been reported.</p>
         ) : (

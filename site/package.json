@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "npx serve out",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --no-warnings --test \"test/**/*.test.ts\"",
+    "check-out": "node scripts/check-out.mjs"
   },
   "dependencies": {
     "@fontsource-variable/newsreader": "^5.3.0",

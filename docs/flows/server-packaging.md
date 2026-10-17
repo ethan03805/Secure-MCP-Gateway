@@ -45,6 +45,6 @@ Implemented in `internal/packaging` (formats, build, probe, minisign signing and
 
 - Only the directory library is scanned; there is no OCI registry library (FR-5.1).
 - The probe runs with the host network in the Standalone profile; network removal needs a confining launcher (E-16).
-- Enabling is done by `smcpctl package enable` or `POST /api/v1/packages/{id}/{revision}/enable`; the console view G-10 does not exist yet. A revision enabled while `smcpd` runs is launched at the next start.
+- Enabling is done by `smcpctl package enable`, `POST /api/v1/packages/{id}/{revision}/enable` or **Enable** in the console view G-10 (Servers and library). A revision enabled while `smcpd` runs is launched at the next start.
 - Instances are torn down by the backend registry (`Registry.Suspend`); there is no separate E-15 instance manager.
 - `smcpctl bootstrap` packages the bundled `smcp-refserver`, signs it with a one-time key enrolled for the `low` class, and writes it as the example's only backend (FR-14.10).

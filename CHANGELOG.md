@@ -202,6 +202,14 @@ Made while hardening the Go slice (PR #8). They interpret the SRS where the code
 - The console no longer stores a token in session storage; a reloaded page continues the session through `GET /api/v1/console/session`, which now returns the CSRF token of a browser session.
 - Playwright on Chromium, Firefox and WebKit (FR-8.30), one fresh Gateway per engine (`npm run test:e2e`, `e2e/run-browsers.mjs`); `e2e/session.spec.ts` checks the cookie, CSRF and revision behavior in each browser.
 - Playwright claims reach the requirement report (FR-8.34): the reporter `console/e2e/reqreport.ts` writes `build/console-<engine>-test.json` in the `go test -json` format and `console/e2e/claims.mjs` adds the cross-engine claims of FR-8.30 (partial) and FR-8.34. The `console` CI job uploads them as `console-results` and the `status` job merges them with the Go and hostile results; `status` now also waits for `console`, so a failing console job makes the recorded CI conclusion a failure.
+### Site and documentation refresh (phase 4)
+
+- Documents chapter: every Markdown file under `docs/` (except `docs/flows/`) is found by walking the tree at build time and rendered at a path that mirrors it (`/docs/api/policy/`, `/docs/clients/claude-code/`, `/docs/runbooks/emergency-stop/`); order and grouping follow the sections of `docs/README.md`. Each page has a rail listing the other documents of its group and previous and next links. Relative links to flows go to the Flows chapter, directory links to their README page.
+- Status page: new section "Element status and notes" with each element's state, packages, note and allocated requirements by status (linking to the filtered requirement list); totals and source links for the real-agent and hostile-fixture tables.
+- Interfaces chapter: the function catalog (F-xx), so function references on element, interface and requirement pages resolve.
+- Flows: new sequence diagrams for the enforced sandbox launch, secret delivery, egress through the broker, and remote access enable with device sign-in, each with the differences of the current code. Stale differences corrected in the packaging, emergency-stop, approval and cloud-agent flows (G-10 exists, Operators may stop, approval events carry the remote origin).
+- Site checks: `npm test` (unit tests of the document list, run by `make check`) and `npm run check-out`, which fails when a `docs/` file has no page or any internal link or anchor in the export does not resolve; both run in the `site` CI job and `make site`.
+- `docs/status/elements.json`, `README.md` and `FloorPlan.md` brought up to date with phase 3: console roles, OpenAPI, S1 header injection, health checks of the graph mirror and Observation Store, the Claude Code and OpenCode CA fix, the hostile fixture suite.
 
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 

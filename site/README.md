@@ -10,7 +10,9 @@ documents at build time; implementation, test, coverage and verification figures
 
 ```
 npm ci
+npm test            # unit tests (test/*.test.ts, node --test with type stripping)
 npm run build       # static export to out/
+npm run check-out   # after a build: every docs/ file has a page, every internal link and anchor resolves
 npm run typecheck   # tsc --noEmit
 npm run dev
 ```
@@ -23,6 +25,7 @@ npm run dev
 | `srs_build/req*.txt` | `src/lib/parse-reqs.ts` | The requirement source records, not the generated SRS. |
 | `MCP_Gateway_Security_SRS.md` | `src/lib/parse-sec.ts` | |
 | `docs/flows/*.md` | `src/lib/flows.ts` | Every file becomes a page under Flows. An empty or missing directory is allowed. |
+| `docs/**/*.md` (except flows) | `src/lib/content.ts` | Every file becomes a page under `/docs/` at its path (`docs/api/policy.md` is `/docs/api/policy/`, a `README.md` is its directory). Order and groups follow the sections of `docs/README.md` that first link each file; subdirectories form their own group. Root documents are listed in `ROOT_DOCS`. Two files mapping to one path fail the build. |
 | `status.json`, `history.json` | `src/lib/status.ts` | Published by CI to the `site-data` branch. See below. |
 
 ## Status data

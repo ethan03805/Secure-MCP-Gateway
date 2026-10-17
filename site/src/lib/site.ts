@@ -17,7 +17,7 @@ export const CHAPTERS = [
   { n: 6, href: "/requirements/", label: "Requirements", about: "Every requirement with its verification status, filterable by root, element, method and status." },
   { n: 7, href: "/security/", label: "Security controls", about: "The control hierarchy and the requirements that realize each control." },
   { n: 8, href: "/clients/", label: "Clients", about: "What Claude Code, Codex and Hermes expect, and how the specification meets them." },
-  { n: 9, href: "/docs/", label: "Documents", about: "The source documents, rendered as written." },
+  { n: 9, href: "/docs/", label: "Documents", about: "Install, quick start, operator guide, references, client pages, runbooks, control API and the specification, rendered as written." },
 ] as const;
 
 export type ChapterHref = (typeof CHAPTERS)[number]["href"];

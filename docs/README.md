@@ -86,6 +86,10 @@ Sequence diagrams of the main flows, each with the differences of the current im
 | OAuth sign-in | [flows/oauth-sign-in.md](flows/oauth-sign-in.md) |
 | Approval in hold mode | [flows/approval-hold.md](flows/approval-hold.md) |
 | Server packaging and admission | [flows/server-packaging.md](flows/server-packaging.md) |
+| Enforced sandbox launch | [flows/enforced-sandbox-launch.md](flows/enforced-sandbox-launch.md) |
+| Secret delivery | [flows/secrets-delivery.md](flows/secrets-delivery.md) |
+| Egress through the broker | [flows/egress.md](flows/egress.md) |
+| Remote access: enable and device sign-in | [flows/remote-access.md](flows/remote-access.md) |
 | Cloud agent through a tunnel | [flows/cloud-agent-tunnel.md](flows/cloud-agent-tunnel.md) |
 | Emergency stop | [flows/emergency-stop.md](flows/emergency-stop.md) |
 | Evidence journal verification | [flows/journal-verification.md](flows/journal-verification.md) |

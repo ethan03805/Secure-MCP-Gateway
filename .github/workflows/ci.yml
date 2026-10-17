@@ -159,8 +159,14 @@ jobs:
       - name: Typecheck
         run: npx --no-install tsc --noEmit
         working-directory: site
+      - name: Unit tests
+        run: npm test
+        working-directory: site
       - name: Build
         run: npm run build
+        working-directory: site
+      - name: Check pages and internal links
+        run: npm run check-out
         working-directory: site
 
   security:

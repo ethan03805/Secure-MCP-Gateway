@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import GithubSlugger from "github-slugger";
-import { REPO_ROOT, readDoc } from "./content";
+import { REPO_ROOT, flowSlug, readDoc } from "./content";
 import { parseDiagram, type ParsedDiagram } from "./diagram";
 
 export type Flow = {
@@ -42,7 +42,7 @@ function flowDocs(): Flow[] {
     const md = fs.readFileSync(path.join(dir, f), "utf8");
     const title = (md.match(/^# (.+)$/m)?.[1] ?? f.replace(/\.md$/, "").replace(/[-_]/g, " ")).trim();
     return {
-      slug: f.replace(/\.md$/, "").toLowerCase().replace(/[^a-z0-9-]+/g, "-"),
+      slug: flowSlug(f),
       title,
       file: `${FLOW_DIR}/${f}`,
       origin: "flow" as const,
