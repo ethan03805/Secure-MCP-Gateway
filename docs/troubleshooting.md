@@ -70,40 +70,139 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `UPSTREAM_TIMEOUT` | `-31009` | The server stopped responding; it may have acted | Check whether the action happened before repeating it |
 | `INSTANCE_FAILED` | `-31009` | The server process ended while a write, external, execute or unclassified tool was running; it may have acted | Check whether the action happened before repeating it; the server was restarted |
 | `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The server returned an `InputRequiredResult` (elicitation, sampling or roots); the Gateway does not relay such requests | The MRTR Relay Profile is not implemented; use a tool that does not ask the client for input |
+| `CANCELLED` | `-31009` | The harness cancelled the call after it was sent to the server; the action may have happened | Check the tool's effect before retrying; the journal records the call as `indeterminate` |
+| `CAPABILITY_INVALID` | `-31004` | The dispatcher refused the call because its dispatch capability was missing, expired or already used (FR-4.13) | Report it with the correlation ID; a correct Gateway never produces it |
+| `SESSION_ENDED` | `-31006` | The session was terminated or revoked while the call was running | Sign in again; the call's outcome is `indeterminate`, so check its effect before retrying |
+| `FILTER_WITHHELD` | `-31003` | A response filter withheld the result without naming its own reason | Look up the correlation ID; the `filter` event names the filter and its finding |
+| `ANOMALY_WITHHELD` | `-31003` | The Anomaly Response Policy withholds results in this call's sigma band | Review the score in G-06; if the call is normal, promote a new baseline or raise `withhold_band` |
 | `SCHEMA_INVALID` | `-32602` | Arguments do not match the tool's input schema | `data.findings` lists the violations |
 
 ## Reason codes seen by operators only
 
 These appear in the evidence journal, the diagnostic log or command output, not in harness errors.
 
-| Reason code | Where | Meaning |
-|---|---|---|
-| `PERMIT` | Journal decision events | The decision permitted the call |
-| `APPROVAL_REQUESTED`, `APPROVAL_GRANTED`, `APPROVAL_DENIED`, `APPROVAL_EXPIRED`, `APPROVAL_CONSUMED` | Journal `approval` events (E-07) | Lifecycle of a tool-call approval; see `docs/approvals.md` |
-| `APPROVER_SIGNIN`, `APPROVER_SIGNIN_FAILED` | Journal events | Approver account sign-in on the control API |
-| `ADMIN_ROLE_REFUSED` | Journal `auth_failure` events | An authenticated account's role does not permit the control API route (control API 403 `role_refused`) |
-| `role_refused`, `not_pending`, `signin_failed`, `audit_unavailable` | Control API error codes | See `docs/api/approvals.md` |
-| `POLICY_PUBLISHED`, `POLICY_ROLLED_BACK`, `POLICY_IMPORTED`, `POLICY_ACTIVATED` | Journal admin events | A policy revision was stored or activated; see `docs/policy-reference.md` |
-| `POLICY_INVALID`, `POLICY_CONFLICT`, `POLICY_ACTIVATION_FAILED` | Journal admin events, control API | A publication was refused |
-| `POLICY_SIGNATURE` | Journal admin event, health cause `policy_signature` or `policy_invalid` (detail `cause`) | The active policy revision did not verify at start, or verified but failed the schema or cross-reference checks; the Gateway is fail-closed |
-| `POLICY_SIMULATED` | Journal admin events | A policy simulation ran |
-| `SESSION_END` | Journal session events | A session ended (expiry, termination or revocation) |
-| `PROFILE_UNCONFINED` | Server enablement | A `high`-risk server cannot be enabled in the Standalone profile (SR-4-1) |
-| `REMOTE_BACKEND_UNSUPPORTED` | Package import | The manifest names a network endpoint; remote backends are out of scope (FR-14.4) |
-| `metadata_blocked` | Journal event | A tool description matched a blocking metadata rule and the tool is suspended (SR-5.9-2) |
-| `METADATA_BLOCKED` | Journal `server` event with outcome `metadata_blocked` | Reason code of that event; `detail.findings` names each rule, rule set and version, and `detail.stage` is `import` or `presentation` |
-| `REDACTED` | Journal `filter` event | A filter removed or replaced content; the result's provenance disposition is `redact` |
-| `refresh_token_reuse` | Journal event | A rotated refresh token was presented again; the session was ended (SR-2.11-4) |
-| `upgrade_rolled_back` | Journal event | An upgrade failed its health check and the previous version was restored (FR-13.8) |
-| `MEMORY_LIMIT` | Journal `runtime` event | A sandboxed instance reached its memory limit and was killed ([sandbox](sandbox.md)) |
-| `PIDS_LIMIT` | Journal `runtime` event | A sandboxed instance reached its PID limit and was killed |
-| `UNDECLARED_PROCESS` | Journal `runtime` event | A sandboxed server without `allow_spawn` started a process |
-| `EXEC_INTO_INSTANCE` | Journal `runtime` event | Someone ran `podman exec` in a server's container |
-| `OPERATOR_KILL` | Journal `runtime` event | An administrator killed an instance with `smcpctl runtime kill` |
-| `INSTANCE_EXITED_UNEXPECTEDLY` | Journal `runtime` event | A server instance ended without being asked to; its tools fail until the Gateway restarts |
-| `MONITOR_UNAVAILABLE` | Journal `runtime` event | The Runtime Monitor could not find an instance's cgroup |
-| `HEALTH_FAIL_CLOSED`, `HEALTH_DEGRADED`, `HEALTH_HEALTHY` | Journal `health` events | The health monitor changed state; the detail lists the causes (`docs/operations/health.md`) |
-| `HEALTH_ACK` | Journal event | An administrator acknowledged a latched integrity cause |
-| `CONFIG_RELOADED`, `CONFIG_INVALID` | Journal event, `smcpctl reload` | A configuration reload was applied or rejected (`docs/operations/logging-metrics-reload.md`) |
-| `LISTENER_CERT_ROTATED`, `LISTENER_CERT_RENEWED`, `SERVER_CA_ROTATION_STARTED`, `SERVER_CA_ACTIVATED`, `EVIDENCE_KEY_ROTATED` | Journal `key_rotated` events | A certificate or key was rotated (`docs/operations/keys.md`) |
-| `BACKUP_WRITTEN`, `BACKUP_FAILED`, `BACKUP_DRAIN_TIMEOUT`, `BACKUP_UNENCRYPTED_REFUSED` | Journal event, `smcpctl backup` | Result of a backup request (`docs/operations/backup.md`) |
+| Reason code | Where | Meaning | What to do |
+|---|---|---|---|
+| `PERMIT` | Journal `decision` events | The decision permitted the call | None |
+| `APPROVAL_REQUESTED`, `APPROVAL_GRANTED`, `APPROVAL_DENIED`, `APPROVAL_EXPIRED`, `APPROVAL_CONSUMED` | Journal `approval` events (E-07) | Lifecycle of a tool-call approval; see `docs/approvals.md` | Decide pending approvals in G-07; an expired approval means the harness must call again |
+| `APPROVER_SIGNIN`, `APPROVER_SIGNIN_FAILED` | Journal events | Approver account sign-in on the control API | Repeated failures: check who is signing in; the account locks at the failure limit |
+| `ADMIN_SIGNIN`, `ADMIN_SIGNIN_FAILED` | Journal `admin` and `auth_failure` events | Administrator sign-in on the control API succeeded or failed | Repeated failures: check who is signing in; reset the password with `smcpctl hash-password` if it is lost |
+| `ADMIN_AUTH_FAILED` | Journal `auth_failure` events | A control API request carried a missing, expired or invalid bearer token | Sign in again; for scripts, use the operator token in the state directory |
+| `CONSOLE_SIGNIN`, `CONSOLE_SIGNIN_FAILED` | Journal `admin` and `auth_failure` events | Console account sign-in succeeded or failed | Repeated failures: check who is signing in; console accounts are `[[console.account]]` entries |
+| `BROWSER_SESSION_STARTED` | Journal `admin` events | A console browser session was created after sign-in | None |
+| `CSRF_TOKEN_INVALID` | Journal `auth_failure` events, control API 403 | A console request carried a missing or wrong CSRF token | Reload the console; repeated events from a page you did not open suggest a cross-site request attempt |
+| `BOOTSTRAP_REDEEMED`, `BOOTSTRAP_TOKEN_INVALID` | Journal `admin` and `auth_failure` events | The one-use bootstrap credential set the Administrator password, or an expired, used or wrong bootstrap credential was presented | Run `smcpctl bootstrap` again for a new credential if the first one expired |
+| `ADMIN_ROLE_REFUSED` | Journal `auth_failure` events | An authenticated account's role does not permit the control API route (control API 403 `role_refused`) | Use an account with the role the route needs (Appendix C) |
+| `role_refused`, `not_pending`, `signin_failed`, `audit_unavailable` | Control API error codes | See `docs/api/approvals.md` | Follow the error's `message`; `audit_unavailable` means the journal refused the event (`smcpctl health`) |
+| `POLICY_PUBLISHED`, `POLICY_ROLLED_BACK`, `POLICY_IMPORTED`, `POLICY_ACTIVATED` | Journal admin events | A policy revision was stored or activated; see `docs/policy-reference.md` | None |
+| `POLICY_INVALID`, `POLICY_CONFLICT`, `POLICY_ACTIVATION_FAILED` | Journal admin events, control API | A publication was refused | Fix the document as the error's findings describe; `POLICY_CONFLICT` means another revision became active first, so start from it |
+| `POLICY_SIGNATURE` | Journal admin event, health cause `policy_signature` or `policy_invalid` (detail `cause`) | The active policy revision did not verify at start, or verified but failed the schema or cross-reference checks; the Gateway is fail-closed | Roll back to a good revision (`smcpctl policy rollback`) and keep the state directory for investigation |
+| `POLICY_SIMULATED` | Journal admin events | A policy simulation ran | None |
+| `SECRET_USE_POLICY_ACTIVATED`, `SECRET_USE_POLICY_INVALID` | Journal `admin` events | A Secret Use Policy revision was activated, or refused as invalid | Fix the policy as the control API error describes |
+| `OBSERVATION_OBJECT_PUBLISHED` | Journal `admin` events | An Audit Profile, Observation Policy, Anomaly Response Policy or memory budget revision was published | None |
+| `SESSION_END` | Journal session events | A session ended (expiry, termination or revocation) | None; the harness signs in again |
+| `SESSION_API` | Journal `session` events | A session was created or terminated through the session API (`smcp-session`, `smcp-stdio`) rather than the browser flow | None |
+| `REFRESH` | Journal `session` events | A session's tokens were refreshed | None |
+| `refresh_token_reuse` | Journal event | A rotated refresh token was presented again; the session was ended (SR-2.11-4) | Find which copy of the harness holds the old token; a reused token may mean it was copied |
+| `CLIENT_AUTH_FAILED` | Journal `auth_failure` events | An OAuth client failed authentication (wrong secret or unknown client) | Check the client's registration (`[[client]]` or G-11) and its secret |
+| `AUTH_CODE_REUSE` | Journal `auth_failure` events | An authorization code was redeemed a second time; the session it created was ended | Find the duplicate redemption; a reused code may mean it was intercepted |
+| `DCR_PENDING` | Journal `client_registration` and `auth_failure` events | A dynamic client registration is stored and waits for an administrator, or a pending client tried to use it | Approve or deny it in G-11 (`POST /api/v1/clients/{id}/approve` or `/deny`) |
+| `DCR_APPROVED`, `DCR_DENIED`, `DCR_REVOKED` | Journal `client_registration` events | An administrator decided a dynamic registration | None |
+| `DEVICE_APPROVED`, `DEVICE_DENIED` | Journal `device_authorization` events | A Session Approver approved or denied a device authorization request | None |
+| `REMOTE_ACCESS_ENABLED`, `REMOTE_ACCESS_DISABLED`, `REMOTE_ACCESS_RESUMED` | Journal `remote_access` events | The Remote Access Profile was enabled, disabled, or resumed at start | None |
+| `REMOTE_LOCKOUT`, `REMOTE_APPROVER_LOCKOUT` | Journal `auth_failure` events | A client ID, caller address or Session Approver reached the remote failure limit and is locked out for a while | Check the source of the failures before clearing; see `docs/remote-access.md` |
+| `REMOTE_TEMPLATE_REFUSED` | Journal `session` events | A remote sign-in asked for a template not in `remote.templates` | Add the template to `[remote] templates` if remote sessions should use it |
+| `PROFILE_UNCONFINED` | Server enablement | A `high`-risk server cannot be enabled in the Standalone profile (SR-4-1) | Run it on an Enforced host, or do not enable it |
+| `REMOTE_BACKEND_UNSUPPORTED` | Package import | The manifest names a network endpoint; remote backends are out of scope (FR-14.4) | Package the server as a stdio server |
+| `SERVER_NOT_ENABLED` | Journal `server` event at start | A configured server revision could not be enabled; the detail gives the reason and the rest of the Gateway runs | Fix the reason in the detail (tool names, manifest, collision) and restart |
+| `ALIAS_CONFLICT` | Package enable | The alias is invalid or used by another enabled server | Choose another alias |
+| `PUBLIC_NAME_COLLISION` | Package enable | Two tools map to one public name, or a name exceeds 64 characters | Change the alias, or ask the packager to rename the tool |
+| `STATEFUL_UNCONTRACTED` | Package enable | The manifest declares stateful tools without a handle contract | Ask the packager to declare the server stateless; stateful servers are not supported in release 1.0 |
+| `STATE_TRANSITION_REFUSED` | Package enable, disable, retire | The change is not allowed from the revision's current state | Check the revision's state with `GET /api/v1/packages` |
+| `PACKAGE_NOT_ENABLED` | Start | A `[[server]]` entry names a package with no enabled revision | Enable a revision in G-10, or remove the entry |
+| `PACKAGE_PIN_MISMATCH` | Start | `package_sha256` differs from the enabled artifact | Update the pin to the enabled revision's digest, or enable the pinned revision |
+| `PACKAGE_UNKNOWN` | Control API, CLI | No such package revision | List revisions with `GET /api/v1/packages` |
+| `UNSIGNED_SERVER_REFUSED` | Start | `require_signed` is set and a `[[server]]` entry uses `command` | Package the server, or turn off `require_signed` |
+| `REGISTRY_LOCKED` | Package import and enable | Another package operation holds the registry lock | Retry when the other operation has finished |
+| `IMPORT_FAILED` | Package import receipt | The import failed for a reason the receipt's detail gives | Fix the cause named in the receipt and import again |
+| `DOWNGRADE_REFUSED` | Package import | A higher revision of the server is installed | Import a newer revision, or retire the installed one first |
+| `REVISION_CONFLICT` | Package import | The revision exists with a different package index | Ask the packager to issue a new revision number |
+| `REVOKED` | Package import | The revision is on the revocation feed | Do not use it; import a fixed revision |
+| `REVOCATION_INVALID` | Revocation scan | A revocation entry is malformed or unsigned | Check the feed source; the entry is ignored |
+| `REVOCATION_FEED_STALE` | Package import, health cause `revocation_feed_stale` | The revocation feed has not been read for more than 24 hours (CP-34); imports are refused (SR-3-4) | Restore access to the feed; imports resume after the next successful read |
+| `CLASSIFICATION_OVERRIDDEN`, `CLASSIFICATION_LOOSENING_REFUSED`, `CLASSIFICATION_TOOL_UNKNOWN` | Journal events, control API | A tool classification override was stored, refused because it would loosen the manifest's classification, or named an unknown tool (SR-3.11-1) | Overrides can only tighten; name a tool the revision serves |
+| `ARTIFACT_TAMPERED` | Launch | The stored artifact or its unpacked tree changed after import | Treat the host as suspect; re-import the package from its source |
+| `MANIFEST_DRIFT` | Start, `list_changed` | The live tool list differs from the signed manifest; the revision is suspended | Ask the packager for a new revision; do not use the server until then |
+| `MANIFEST_EXPIRED` | Package enable, scan | The manifest's expiry or re-curation date has passed | Import a re-curated revision |
+| `MANIFEST_SCHEMA` | Package verify, import | The manifest violates Appendix J or a rule the schema cannot express | Fix the manifest (`smcpctl package verify` names the rule) |
+| `MANIFEST_VERSION_UNSUPPORTED` | Package verify, import | `manifest_version` is not 1 | Rebuild the package with this release's tools |
+| `PACKAGE_INDEX_INVALID` | Package verify, import | The index is malformed or names another package than the manifest | Rebuild the package |
+| `PACKAGE_INDEX_MISSING`, `PACKAGE_SIGNATURE_MISSING`, `PACKAGE_MANIFEST_MISSING`, `PACKAGE_PROVENANCE_MISSING`, `PACKAGE_ARTIFACT_MISSING`, `SIGNER_KEY_ID_MISSING` | Package verify, import | A package component is missing (FR-5.2) | Rebuild or re-download the package |
+| `SIGNATURE_INVALID` | Package verify, import | The signature does not verify, or names another key than the index | Do not use the package; obtain it again from the packager |
+| `SIGNER_UNKNOWN` | Package verify, import | The signer is neither the given key nor an enrolled trust anchor | Enroll the packager's key in G-10 after confirming its fingerprint |
+| `ANCHOR_EXPIRED` | Package verify, import | The signing trust anchor has expired | Renew the anchor with the packager's current key |
+| `ANCHOR_SCOPE` | Package verify, import | The package's risk class is outside the anchor's classes | Widen the anchor's classes if intended, or use another anchor |
+| `TRUST_ANCHOR_ENROLLED`, `TRUST_ANCHOR_REMOVED` | Journal events | A trust anchor was enrolled or removed | None |
+| `DIGEST_MISMATCH` | Package build, verify, import | A fetched file, listed file or lock entry does not match its digest | Re-download; a persistent mismatch means the source changed |
+| `PROVENANCE_BINDING` | Package verify, import | The provenance statement names another artifact, source or package (SR-3.2-1) | Rebuild the package |
+| `SOURCE_EVIDENCE_MISSING` | Package verify, import | The provenance statement lacks a source digest or licenses (SR-3.1-1) | Rebuild the package with complete provenance |
+| `UNPINNED_LAUNCH` | Package verify, import, start | The launch vector runs a package runner, installer or shell (SR-3.6-1) | Package a pinned executable instead |
+| `UNPINNED_REFERENCE` | Package build | The artifact reference has no exact version or digest | Pin the version or digest in the recipe |
+| `ERA_UNSUPPORTED` | Package build | The server negotiated a protocol version a manifest cannot declare | Build against a server version that speaks a supported protocol version |
+| `FETCH_FAILED` | Package build | The registry or file could not be read | Check network access and the reference |
+| `PROBE_FAILED` | Package build | The server did not start, did not answer or listed no tools | Run the server by hand and check its stderr |
+| `KEY_ON_COMMAND_LINE` | Package sign, keygen, revoke | A secret key or passphrase was given as an argument | Pass it in a file or on standard input |
+| `metadata_blocked` | Journal event | A tool description matched a blocking metadata rule and the tool is suspended (SR-5.9-2) | Review the description; ask the packager for a fixed revision |
+| `METADATA_BLOCKED` | Journal `server` event with outcome `metadata_blocked` | Reason code of that event; `detail.findings` names each rule, rule set and version, and `detail.stage` is `import` or `presentation` | As for `metadata_blocked` |
+| `REDACTED` | Journal `filter` event | A filter removed or replaced content; the result's provenance disposition is `redact` | None |
+| `upgrade_rolled_back` | Journal event | An upgrade failed its health check and the previous version was restored (FR-13.8) | Read the upgrade's log, fix the cause and upgrade again |
+| `MEMORY_LIMIT` | Journal `runtime` event | A sandboxed instance reached its memory limit and was killed ([sandbox](sandbox.md)) | Raise the manifest's memory resource if the use is legitimate |
+| `PIDS_LIMIT` | Journal `runtime` event | A sandboxed instance reached its PID limit and was killed | Raise the manifest's PID resource if the use is legitimate |
+| `UNDECLARED_PROCESS` | Journal `runtime` event | A sandboxed server without `allow_spawn` started a process | Investigate the server; set `allow_spawn` only if the packager declares process spawning |
+| `EXEC_INTO_INSTANCE` | Journal `runtime` event | Someone ran `podman exec` in a server's container | Find who ran it; nobody should enter a server container |
+| `OPERATOR_KILL` | Journal `runtime` event | An administrator killed an instance with `smcpctl runtime kill` | None |
+| `INSTANCE_EXITED_UNEXPECTEDLY` | Journal `runtime` event | A server instance ended without being asked to; its tools fail until the Gateway restarts | Check the server's stderr (`smcpctl runtime show`) and the `server_asserted` events |
+| `MONITOR_UNAVAILABLE` | Journal `runtime` event | The Runtime Monitor could not find an instance's cgroup | Check cgroup v2 delegation on the host (`docs/sandbox.md`) |
+| `HEALTH_FAIL_CLOSED`, `HEALTH_DEGRADED`, `HEALTH_HEALTHY` | Journal `health` events | The health monitor changed state; the detail lists the causes (`docs/operations/health.md`) | Clear the listed causes; `smcpctl health` shows the current ones |
+| `HEALTH_ACK` | Journal event | An administrator acknowledged a latched integrity cause | None |
+| `JOURNAL_RECOVERED` | Journal `journal` event at start | The journal's last segment ended in a partial record after a crash, and the Gateway truncated it to the last complete record | Run `smcpctl journal verify`; keep a copy of the directory if verification fails |
+| `CONFIG_RELOADED`, `CONFIG_INVALID` | Journal event, `smcpctl reload` | A configuration reload was applied or rejected (`docs/operations/logging-metrics-reload.md`) | Fix the configuration as `smcpctl reload` reports |
+| `LISTENER_CERT_ROTATED`, `LISTENER_CERT_RENEWED`, `SERVER_CA_ROTATION_STARTED`, `SERVER_CA_ACTIVATED`, `EVIDENCE_KEY_ROTATED` | Journal `key_rotated` events | A certificate or key was rotated (`docs/operations/keys.md`) | None |
+| `BACKUP_WRITTEN`, `BACKUP_FAILED`, `BACKUP_DRAIN_TIMEOUT`, `BACKUP_UNENCRYPTED_REFUSED` | Journal event, `smcpctl backup` | Result of a backup request (`docs/operations/backup.md`) | On failure, follow the message; give a passphrase file for encrypted backups |
+| `SECRET_APPROVAL_REQUIRED` | Journal `secret` events | An S2 binding requires approval but the decision carries none | Make the policy rule approval-obligated |
+| `SECRET_DELIVERY_FAILED` | Journal `secret` events | Writing the secret file or binding the header failed | Check `runtime_dir` permissions and free space |
+| `SECRET_EXPIRED` | Journal `secret` events | The secret's expiry has passed | Rotate it and update `--expires`, or create a new one |
+| `SECRET_MODE_UNAVAILABLE` | Journal `secret` events | S1 delivery without an Egress Broker | Set `[egress] enabled = true`, or use S3 or S2 |
+| `SECRET_NOT_FOUND` | Journal `secret` events | The bound secret is not in the vault | `smcpctl secrets set NAME` |
+| `SECRET_NOT_GRANTED` | Journal `secret` events | A `secret_env` entry has no Secret Use Policy | Add a policy for the slot, or remove the entry |
+| `SECRET_NO_INSTANCE` | Journal `secret` events | No running instance prepared the S2 slot | Check that the server started; reload does not add S2 slots to running instances |
+| `SECRET_OUTSIDE_WINDOW` | Journal `secret` events | Outside `not_before`, `not_after`, `hours`, or the S4 waiver expired | Wait for the window or change the policy |
+| `SECRET_PURPOSE_MISMATCH` | Journal `secret` events | The S2 `session_purpose` differs from the session's purpose | Sign in with the right purpose |
+| `SECRET_RATE_LIMITED` | Journal `secret` events | The S2 `calls_per_minute` was reached | Retry later, or raise the limit |
+| `SECRET_SUSPENDED` | Journal `secret` events | A leak of this secret was detected | Review, rotate if needed, then `smcpctl secrets resume NAME` |
+| `SECRET_UNAVAILABLE` | Journal `secret` events | The value could not be decrypted | Check the vault files and key |
+| `SECRET_VERSION_RETIRED` | Journal `secret` events | A pinned secret version was retired | Remove or update `version` in the policy |
+| `SECRET_RETIRED` | Journal `secret` events | A secret version was retired (rotated, removed, or its overlap window elapsed) | None |
+| `EGRESS_NO_GRANT` | Journal `egress` events, 403 to the server | No grant of the server names this host and port | Add an `[[egress.grant]]` for the server if the destination is intended |
+| `EGRESS_METHOD_REFUSED` | Journal `egress` events, 403 | The destination is granted, but not for this method (or not for `CONNECT-TLS`) | Add the method to the grant's `methods` |
+| `EGRESS_ADDRESS_REFUSED` | Journal `egress` events, 403 | The destination resolves only to reserved addresses | If the destination is a local service on purpose, list its exact address in `addresses` |
+| `EGRESS_BAD_REQUEST` | Journal `egress` events, 400 | A malformed target, a request form the proxy or endpoint does not accept, or a protocol upgrade | Use the proxy for absolute URLs and CONNECT, and the endpoint for paths |
+| `EGRESS_PUBLIC_FETCH_PROFILE` | Journal `egress` events, 403 | A public-fetch grant was used with a body, an `Authorization` header or plain HTTP | Public-fetch is for anonymous GET over HTTPS; use an `api` grant otherwise |
+| `EGRESS_REDIRECT_REFUSED` | Journal `egress` events, 403 | An endpoint was redirected to an ungranted, non-HTTPS or malformed target, or more than 3 times | Grant the redirect target, or call the final URL directly |
+| `EGRESS_RATE_LIMITED` | Journal `egress` events, 429 | The server's `requests_per_minute` was reached | Raise the limit or reduce the server's request rate |
+| `EGRESS_BYTE_RATE_LIMITED` | Journal `egress` events, 429 or connection cut | The server's `bytes_per_minute` was reached | Raise the limit |
+| `EGRESS_REQUEST_TOO_LARGE` | Journal `egress` events, 413 or connection cut | The request body or tunnel upload is above the limit | Raise `request_bytes` |
+| `EGRESS_RESPONSE_TOO_LARGE` | Journal `egress` events, 502 or connection cut | The response body or tunnel download is above the limit | Raise `response_bytes` |
+| `EGRESS_TIMEOUT` | Journal `egress` events, 504 or connection cut | `operation_timeout` (or the grant's `timeout`) was reached | Raise the timeout |
+| `EGRESS_DNS_FAILED` | Journal `egress` events, 502 | The broker could not resolve the name | Check the host's DNS |
+| `EGRESS_UPSTREAM_FAILED` | Journal `egress` events, 502 | Connection, TLS validation or protocol failure at the destination | Check the destination and its certificate |
+| `EGRESS_NOT_TLS` | Journal `egress` events, connection closed | A CONNECT tunnel did not start with a TLS ClientHello | Tunnels carry TLS only; use plain-HTTP proxying for `http://` |
+| `EGRESS_SNI_MISMATCH` | Journal `egress` events, connection closed | The TLS server name differs from the CONNECT host, or is missing | The server must connect with the granted host name as SNI |
+| `EGRESS_EVIDENCE_UNAVAILABLE` | Journal `egress` events, 503 | The journal refused the authorization event | See `smcpctl health`; the journal must be writable |
+| `EGRESS_SECRET_DETECTED` | Journal `egress` events, 403 | An outbound request carried a known secret value outside its granted delivery (SR-5.8-2) | Investigate the server; rotate the secret if it may have leaked |
+| `ANOMALY_ELEVATED`, `ANOMALY_ABNORMAL`, `ANOMALY_CRITICAL` | Journal `anomaly` events | A call scored in that sigma band against its baseline; the detail carries the score and the actions taken | Review the call in G-06; promote a new baseline if the behavior is the new normal |
+| `BASELINE_PROMOTED`, `BASELINE_AUTO_PROMOTED`, `BASELINE_ROLLED_BACK` | Journal events | A baseline snapshot was promoted by an operator or automatically, or rolled back | None |
+| `BASELINE_DIGEST_MISMATCH` | Journal `integrity` event | A stored baseline snapshot does not match its recorded digest and was not loaded | Roll back to an earlier snapshot or rebuild the baseline; keep the store for investigation |
+| `CAMPAIGN_QUOTA_REACHED` | Journal `research` events | A research campaign reached its record quota and completed | Export its dataset; create a new campaign to continue |
+| `DATA_PURGED` | Journal events, `POST /api/v1/observations/purge` | Observation data was purged; the event is the deletion receipt (SR-6.15-1) | None |
+| `GRAPH_REBUILD` | Journal `admin` events | An administrator asked for the graph mirror to be rebuilt from the journal | Wait for the mirror's state to return to `ready` (`smcpctl graph status`) |
