@@ -181,6 +181,41 @@
           }
         }
       }
+    },
+    "egress": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "proxy_env": { "type": "boolean" },
+        "request_bytes": { "type": "integer", "minimum": 1024 },
+        "response_bytes": { "type": "integer", "minimum": 1024 },
+        "operation_timeout": { "$ref": "#/$defs/duration" },
+        "dial_timeout": { "$ref": "#/$defs/duration" },
+        "requests_per_minute": { "type": "integer", "minimum": 1 },
+        "bytes_per_minute": { "type": "integer", "minimum": 65536 },
+        "recent_records": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "grant": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["server", "host", "methods"],
+            "properties": {
+              "server": { "type": "string", "pattern": "^[a-z0-9]{1,16}$" },
+              "host": { "type": "string", "pattern": "^((\\*\\.)?[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\\.?|[0-9.]+|[0-9A-Fa-f:.]+)$" },
+              "ports": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+              "methods": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT-TLS"] } },
+              "class": { "type": "string", "enum": ["api", "public-fetch"] },
+              "addresses": { "type": "array", "items": { "type": "string", "minLength": 2 } },
+              "endpoint_env": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]{0,63}$" },
+              "request_bytes": { "type": "integer", "minimum": 0 },
+              "response_bytes": { "type": "integer", "minimum": 0 },
+              "timeout": { "$ref": "#/$defs/duration" }
+            }
+          }
+        }
+      }
     }
   },
   "required": ["admin"]
