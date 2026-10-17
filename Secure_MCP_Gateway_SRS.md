@@ -7692,7 +7692,7 @@ One person may hold several roles; on a single-user installation the Administrat
 
 ## Appendix D — Graph data model (mirror)
 
-The graph holds a **mirror** of policy, registry, session and audit records, fed from the Policy Store (D-01) and the Evidence Journal (D-06), and is the system of record only for the behavior model (`BaselineContext`, `FeatureStat`, `BaselineSnapshot`, `AbnormalEvent`) and the Parameter Catalog copy (A-9). Every label has a uniqueness constraint on `id` (FR-9.1). Required-property and cardinality checks are enforced by the Data Access Service, because Community Edition lacks Enterprise existence constraints.
+The graph holds a **mirror** of policy, registry, session and audit records, fed from the Policy Store (D-01) and the Evidence Journal (D-06), and is the system of record only for the behavior model (`BaselineContext`, `FeatureStat`, `BaselineSnapshot`, `AbnormalEvent`) and the Parameter Catalog copy (A-9). Every label has a uniqueness constraint on `id` (FR-9.1). Required-property and cardinality checks are enforced by the Data Access Service, because Community Edition lacks Enterprise existence constraints. The evidence mirror derives `AuditEvent`, `Session`, `Principal`, `Invocation` (keyed by correlation ID), `Decision`, `PolicyRevision`, `PolicyControl`, `ServerRevision`, `ToolRevision` and `Approval` from journal events; `Checkpoint` records the mirror's journal position and the schema version (FR-9.2).
 
 | Node label | Key properties | Owner |
 |---|---|---|
@@ -7721,8 +7721,9 @@ The graph holds a **mirror** of policy, registry, session and audit records, fed
 | `TARGETED`, `SELECTED_ROUTE` | Decision → ServerRevision / RouteRevision |
 | `SCORED_AGAINST` | Decision → BaselineSnapshot |
 | `AUTHORIZED_BY` | Invocation → Decision |
-| `FOR_DECISION`, `FOR_INVOCATION`, `OBSERVED_FROM`, `RECORDED_UNDER`, `HAS_EXPORT` | AuditEvent → Decision / Invocation / ServerRevision / PolicyObject / OutboxRecord |
-| `IN_SESSION`, `OF_PRINCIPAL` | Decision, Session → Session, Principal |
+| `INVOKED` | Invocation → ToolRevision |
+| `FOR_DECISION`, `FOR_INVOCATION`, `OBSERVED_FROM`, `RECORDED_UNDER`, `HAS_EXPORT` | AuditEvent → Decision / Invocation / ServerRevision / PolicyObject or PolicyRevision / OutboxRecord; `FOR_INVOCATION` also Approval → Invocation |
+| `IN_SESSION`, `OF_PRINCIPAL` | Decision, Invocation, Approval, AuditEvent, Session → Session, Principal |
 | `HAS_CONTEXT`, `HAS_STAT`, `INCLUDES`, `IN_CONTEXT`, `NEXT_TOOL` | Principal/ToolRevision → BaselineContext → FeatureStat; BaselineSnapshot → FeatureStat; AbnormalEvent → BaselineContext; ToolRevision → ToolRevision |
 | `USES_SECRET` | SecretUse → SecretRef, Decision |
 | `VERIFIED_BY`, `SIGNED_BY` | ServerRevision → ImportReceipt → TrustAnchor |

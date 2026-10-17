@@ -276,6 +276,46 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # Graph mirror integration tests (E-25, E-26, E-28) against Neo4j
+  # Community Edition in a service container. Not a required check.
+  graph:
+    name: graph
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      neo4j:
+        image: neo4j:2026.05.0-community
+        env:
+          NEO4J_AUTH: neo4j/smcp-ci-graph-password
+          NEO4J_server_http_enabled: "false"
+          NEO4J_dbms_usage__report_enabled: "false"
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 7687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p smcp-ci-graph-password 'RETURN 1'"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Graph tests against Neo4j
+        env:
+          SMCP_NEO4J_URL: bolt://127.0.0.1:7687
+          SMCP_NEO4J_USER: neo4j
+          SMCP_NEO4J_PASSWORD: smcp-ci-graph-password
+        run: |
+          go test -race -count=1 -p 1 -v ./internal/graph/... ./internal/e2e/ -run 'Neo4j|Graph'
+          go test -count=1 -v ./cmd/smcpctl/ -run 'Graph'
+
   # Publishes status.json and history.json to the orphan branch site-data and
   # asks Vercel to rebuild the site. Runs only for pushes to main. The
   # site-data branch never starts a workflow: CI and the other workflows run

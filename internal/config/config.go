@@ -43,6 +43,7 @@ type Config struct {
 	Runtime       Runtime       `toml:"runtime" json:"runtime"` // E-15, E-16, E-17 (runtime.go)
 	Egress        Egress        `toml:"egress" json:"egress"`
 	Filters       Filters       `toml:"filters" json:"filters"` // E-09, E-11 (filters.go)
+	Graph         Graph         `toml:"graph" json:"graph"`
 
 	// Operations (E-21 export, E-22, E-23); see ops.go.
 	SchemaVersion int      `toml:"schema_version" json:"schema_version"`
@@ -113,6 +114,25 @@ type Admin struct {
 type Approver struct {
 	Username     string `toml:"username" json:"username"`
 	PasswordHash string `toml:"password_hash" json:"password_hash"`
+}
+
+// Graph configures the graph mirror (E-25, E-26, E-28). Defaults are
+// applied by internal/graph; see docs/graph.md.
+type Graph struct {
+	Enabled           bool     `toml:"enabled" json:"enabled"`
+	URI               string   `toml:"uri" json:"uri"`
+	Username          string   `toml:"username" json:"username"`
+	PasswordFile      string   `toml:"password_file" json:"password_file"`
+	Database          string   `toml:"database" json:"database"`
+	Retention         Duration `toml:"retention" json:"retention"`
+	RetentionInterval Duration `toml:"retention_interval" json:"retention_interval"`
+	CatchUpInterval   Duration `toml:"catchup_interval" json:"catchup_interval"`
+	MemoryInterval    Duration `toml:"memory_interval" json:"memory_interval"`
+	BatchSize         int      `toml:"batch_size" json:"batch_size"`
+	Queue             int      `toml:"queue" json:"queue"`
+	HeapBytes         int64    `toml:"heap_bytes" json:"heap_bytes"`
+	PageCacheBytes    int64    `toml:"page_cache_bytes" json:"page_cache_bytes"`
+	RequireHardening  bool     `toml:"require_hardening" json:"require_hardening"`
 }
 
 // Policy points at the policy document (E-05 draft in this slice).

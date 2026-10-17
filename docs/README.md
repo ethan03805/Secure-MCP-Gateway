@@ -19,6 +19,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Tool-call approvals](approvals.md) and [approvals control API](api/approvals.md) | FR-3.14 to FR-3.24, FR-18.4 (part) | Written |
 | [Request and response filters](filters.md) | FR-4.4 to FR-4.18, SR-5.9-2, FR-1.52 | Written |
 | [Management console](console.md) and [console control API](api/console.md) | FR-8.1 to FR-8.35 (part), FR-18.4 (part) | Written for the views built so far |
+| [Graph mirror](graph.md) and [graph control API](api/graph.md) | FR-9.1 to FR-9.3, FR-9.18 (E-25, E-26, E-28 graph part) | Written |
 | [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Format defined; no records yet |
 | [Flows](flows/) | — | Sequence diagrams of the main flows, each with the current implementation's differences |
 | [Server sandbox](sandbox.md) | FR-12.3, FR-13.5, SR-4.5-1 to SR-4.7-2 | Written: enforced-profile prerequisites, Linux installer, `[runtime]` configuration, sandbox profile, Runtime Monitor evidence, `smcpctl runtime` |

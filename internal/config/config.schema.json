@@ -292,6 +292,26 @@
         }
       }
     },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "uri": { "type": "string", "pattern": "^(bolt|neo4j)(\\+s|\\+ssc)?://(127\\.0\\.0\\.1|localhost|\\[::1\\])(:[0-9]{1,5})?$" },
+        "username": { "type": "string", "pattern": "^[A-Za-z0-9_.-]{1,64}$" },
+        "password_file": { "type": "string", "minLength": 1 },
+        "database": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,62}$" },
+        "retention": { "$ref": "#/$defs/duration" },
+        "retention_interval": { "$ref": "#/$defs/duration" },
+        "catchup_interval": { "$ref": "#/$defs/duration" },
+        "memory_interval": { "$ref": "#/$defs/duration" },
+        "batch_size": { "type": "integer", "minimum": 1, "maximum": 5000 },
+        "queue": { "type": "integer", "minimum": 16, "maximum": 1048576 },
+        "heap_bytes": { "type": "integer", "minimum": 134217728 },
+        "page_cache_bytes": { "type": "integer", "minimum": 8388608 },
+        "require_hardening": { "type": "boolean" }
+      }
+    },
     "server": {
       "type": "array",
       "items": {
