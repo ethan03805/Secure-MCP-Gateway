@@ -50,6 +50,7 @@ keeps today's behavior, and test the default.
 | `channel` | FR-16.8 | Request origin (local or remote) carried in the context and applied to evidence events. |
 | `gwtest` | tests | Starts a full Gateway with an in-process backend and a fake tunnel for tests. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
+| `hostile` | FR-19.1, FR-19.2 | Hostile backend fixture server for every SRS Appendix L row (also `cmd/smcp-hostile`) and the suite (build tag `hostile`) that runs the Gateway against each fixture and writes `build/hostile.json`. See `docs/hostile-fixtures.md`. |
 | `egress` | E-18 | Egress Broker: per-instance forward proxy and destination endpoints, grants, pinned DNS, reserved-address refusal, limits, evidence, nftables confinement of sandbox namespaces, `/api/v1/egress` routes. See `docs/egress.md`. |
 | `sandbox` | E-15, E-16, E-17 | Rootless Podman launcher (`sandbox.Launcher`, `Confined() == true`), launch specification, Runtime Monitor (cgroup sampling, inotify, `podman events`), FR-5.27 shutdown, `sandbox.Doctor` prerequisite checks, `/api/v1/runtime*`. Selected by `[runtime] sandbox = "podman"`; see `docs/sandbox.md`. |
 | `observe` | E-29 | Observation Collector: an audit observer plus the mandatory `observe-request` and `observe-response` probes; one record per call with the computed Parameter Catalog parameters, sampling, capture escalation, drop counts, meta-metrics. |

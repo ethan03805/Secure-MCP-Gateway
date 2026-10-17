@@ -316,6 +316,71 @@ jobs:
           go test -race -count=1 -p 1 -v ./internal/graph/... ./internal/e2e/ -run 'Neo4j|Graph'
           go test -count=1 -v ./cmd/smcpctl/ -run 'Graph'
 
+  # Hostile backend fixture suite (SRS Appendix L, FR-19.1, FR-19.2): the
+  # real Gateway against each misbehaving fixture, in the Standalone profile
+  # and, where rootless Podman works on the runner, in the Enforced profile.
+  # A row whose defense is missing is reported with pass=false in
+  # build/hostile.json; the job still succeeds. Not a required check.
+  hostile:
+    name: hostile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Vet the suite
+        run: go vet -tags hostile ./internal/hostile/
+      - name: Standalone profile
+        run: |
+          mkdir -p build
+          if ! go test -tags hostile -count=1 -json -run TestHostileFixtures ./internal/hostile/ > build/hostile-standalone-test.json; then
+            echo "::warning::hostile suite (standalone): a harness check failed; see build/hostile-standalone-test.json"
+          fi
+      - name: Enforced profile (rootless Podman sandbox)
+        run: |
+          if ! command -v podman >/dev/null 2>&1; then
+            echo "podman not installed; enforced rows stay not asserted"
+            exit 0
+          fi
+          # Rootless Podman delegates cgroup controllers through the user's
+          # systemd instance; a runner may have no user session (as in
+          # scripts/ci-integration.sh).
+          if ! podman info --format '{{.Host.CgroupControllers}}' 2>/dev/null | grep -q memory; then
+            sudo -n loginctl enable-linger "$(id -un)" || true
+            for _ in $(seq 1 20); do [ -S "/run/user/$(id -u)/bus" ] && break; sleep 0.5; done
+            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+            podman system migrate >/dev/null 2>&1 || true
+          fi
+          if ! CGO_ENABLED=0 SMCP_HOSTILE_PROFILE=enforced go test -tags hostile -count=1 -json -run TestHostileFixtures ./internal/hostile/ > build/hostile-enforced-test.json; then
+            echo "::warning::hostile suite (enforced): a harness check failed; see build/hostile-enforced-test.json"
+          fi
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f build/hostile.md ]; then cat build/hostile.md >> "$GITHUB_STEP_SUMMARY"; else echo "no hostile results" >> "$GITHUB_STEP_SUMMARY"; fi
+          jq -r -s 'map(select(.Action == "output" and (.Output | test("pass=|skip|enforced profile unavailable")))) | .[].Output' build/hostile-*-test.json 2>/dev/null || true
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hostile-results
+          path: |
+            build/hostile.json
+            build/hostile.md
+            build/hostile-standalone.json
+            build/hostile-enforced.json
+            build/hostile-standalone-test.json
+            build/hostile-enforced-test.json
+          if-no-files-found: warn
+          retention-days: 14
+
   # Publishes status.json and history.json to the orphan branch site-data and
   # asks Vercel to rebuild the site. Runs only for pushes to main. The
   # site-data branch never starts a workflow: CI and the other workflows run
@@ -326,7 +391,7 @@ jobs:
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration]
+    needs: [srs, go, lint, site, security, linux-integration, hostile]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -345,6 +410,19 @@ jobs:
         with:
           name: go-results
           path: build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: hostile-results
+          path: build
+      - name: Merge the hostile fixture results and their requirement claims (FR-19.2)
+        run: |
+          if [ -s build/hostile.json ] && jq -e 'type == "array"' build/hostile.json >/dev/null; then
+            cat build/go-test.json build/hostile-*-test.json > build/all-test.json 2>/dev/null || cp build/go-test.json build/all-test.json
+            go run ./tools/reqreport -in build/all-test.json -coverprofile build/cover.out -hostile build/hostile.json -fail-on-failing=false
+          else
+            echo "no hostile results"
+          fi
       - name: Merge the latest real-agent results (agents workflow, site-data/agents.json)
         run: |
           if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null &&
