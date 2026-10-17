@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T01:35:37Z",
-  "commit": "4db5c638d547bba499d2d23b1970b4fc3e4f8d5b",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/4db5c638d547bba499d2d23b1970b4fc3e4f8d5b",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38991293276",
+  "generatedAt": "2026-10-17T01:44:45Z",
+  "commit": "677fd2730fe83f6eb7d368d567f886b2dc573659",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/677fd2730fe83f6eb7d368d567f886b2dc573659",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38991927215",
   "tests": {
-    "total": 422,
-    "passed": 411,
+    "total": 451,
+    "passed": 440,
     "failed": 0,
     "skipped": 11,
-    "durationSec": 130.9,
+    "durationSec": 150.7,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,13 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 19,
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/adapter",
+        "passed": 8,
         "failed": 0,
         "skipped": 0
       },
@@ -126,6 +132,12 @@
         "skipped": 5
       },
       {
+        "name": "internal/harness",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/health",
         "passed": 5,
         "failed": 0,
@@ -186,6 +198,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/remote",
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/reqtest",
         "passed": 1,
         "failed": 0,
@@ -230,15 +248,27 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.4,
+    "totalPct": 75.8,
     "packages": [
+      {
+        "name": "cmd/smcp-connect",
+        "pct": 0
+      },
       {
         "name": "cmd/smcp-refserver",
         "pct": 73.1
       },
       {
+        "name": "cmd/smcp-session",
+        "pct": 0
+      },
+      {
+        "name": "cmd/smcp-stdio",
+        "pct": 0
+      },
+      {
         "name": "cmd/smcpctl",
-        "pct": 33.7
+        "pct": 38.5
       },
       {
         "name": "cmd/smcpd",
@@ -247,6 +277,10 @@
       {
         "name": "console",
         "pct": 75
+      },
+      {
+        "name": "internal/adapter",
+        "pct": 67.3
       },
       {
         "name": "internal/adminapi",
@@ -289,8 +323,12 @@
         "pct": 85.1
       },
       {
+        "name": "internal/channel",
+        "pct": 100
+      },
+      {
         "name": "internal/config",
-        "pct": 90.9
+        "pct": 89.9
       },
       {
         "name": "internal/consoleapi",
@@ -302,7 +340,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.8
+        "pct": 91
       },
       {
         "name": "internal/egress",
@@ -310,11 +348,19 @@
       },
       {
         "name": "internal/filters",
-        "pct": 88.9
+        "pct": 89
       },
       {
         "name": "internal/graph",
         "pct": 82.7
+      },
+      {
+        "name": "internal/gwtest",
+        "pct": 79.5
+      },
+      {
+        "name": "internal/harness",
+        "pct": 83.4
       },
       {
         "name": "internal/health",
@@ -365,6 +411,10 @@
         "pct": 94.7
       },
       {
+        "name": "internal/remote",
+        "pct": 66.2
+      },
+      {
         "name": "internal/reqtest",
         "pct": 91.7
       },
@@ -374,7 +424,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 85
+        "pct": 86.2
       },
       {
         "name": "internal/sandbox/probe",
@@ -382,11 +432,15 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.4
+        "pct": 79.3
       },
       {
         "name": "internal/session",
-        "pct": 83.6
+        "pct": 84.6
+      },
+      {
+        "name": "internal/tunnel",
+        "pct": 77.2
       },
       {
         "name": "scripts/agents",
@@ -408,17 +462,17 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 115,
-    "partial": 148,
+    "verified": 124,
+    "partial": 164,
     "failing": 0,
-    "unverified": 295,
+    "unverified": 270,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 32,
-        "verified": 6,
-        "partial": 2,
+        "verified": 10,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -433,7 +487,7 @@
         "element": "E-03",
         "name": "Identity & Authentication Service",
         "total": 14,
-        "verified": 2,
+        "verified": 4,
         "partial": 4,
         "failing": 0
       },
@@ -442,7 +496,7 @@
         "name": "Session Manager",
         "total": 19,
         "verified": 8,
-        "partial": 6,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -578,7 +632,7 @@
         "name": "Audit & Evidence Service",
         "total": 24,
         "verified": 5,
-        "partial": 4,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -602,7 +656,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 0,
-        "partial": 18,
+        "partial": 19,
         "failing": 0
       },
       {
@@ -673,8 +727,8 @@
         "element": "E-33",
         "name": "Harness Adapter Kit",
         "total": 20,
-        "verified": 0,
-        "partial": 2,
+        "verified": 3,
+        "partial": 12,
         "failing": 0
       }
     ],
@@ -3000,14 +3054,20 @@
       {
         "id": "FR-12.12",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/adapter.TestSessionHelper"
+        ]
       },
       {
         "id": "FR-12.13",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/adapter.TestRelayUnixSocket",
+          "internal/adapter.TestStdioBridgeRawEquivalence",
+          "internal/adapter.TestStdioBridgeWithSDKClient"
+        ]
       },
       {
         "id": "FR-13",
@@ -3202,44 +3262,60 @@
       {
         "id": "FR-15.1",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/harness.TestClaudeCodeLockdownProfile"
+        ]
       },
       {
         "id": "FR-15.2",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/harness.TestClaudeCodeLockdownProfile"
+        ]
       },
       {
         "id": "FR-15.3",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/harness.TestDoctorInventory"
+        ]
       },
       {
         "id": "FR-15.4",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/harness.TestDoctorReadablePathsStandalone"
+        ]
       },
       {
         "id": "FR-15.5",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestDoctorExitAndJSON"
+        ]
       },
       {
         "id": "FR-15.6",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestClientsSetupDryRunAndRemove",
+          "internal/harness.TestLockdownReversible"
+        ]
       },
       {
         "id": "FR-15.7",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestClientsSetupDryRunAndRemove",
+          "internal/harness.TestSetupCATrustAndConnection"
+        ]
       },
       {
         "id": "FR-15.8",
@@ -3274,56 +3350,80 @@
       {
         "id": "FR-16.1",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/remote.TestRemoteSessionAndOriginEvidence"
+        ]
       },
       {
         "id": "FR-16.2",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestRemoteCheck",
+          "cmd/smcpctl.TestRemoteEnableCloudflareFake",
+          "cmd/smcpctl.TestRemoteEnableDisableTailscaleFake"
+        ]
       },
       {
         "id": "FR-16.3",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/remote.TestPublicNameAndMetadata"
+        ]
       },
       {
         "id": "FR-16.4",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/remote.TestRemoteEndpointSet"
+        ]
       },
       {
         "id": "FR-16.5",
         "element": "E-03",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestClientsApproveCLI",
+          "internal/remote.TestDynamicRegistrationNeedsApproval"
+        ]
       },
       {
         "id": "FR-16.6",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/remote.TestLockoutAndRates",
+          "internal/remote.TestOAuthSourceRate"
+        ]
       },
       {
         "id": "FR-16.7",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/remote.TestRequestBounds"
+        ]
       },
       {
         "id": "FR-16.8",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/remote.TestRemoteSessionAndOriginEvidence"
+        ]
       },
       {
         "id": "FR-16.9",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/adapter.TestConnectThroughTunnel",
+          "internal/adapter.TestNPMConnect",
+          "internal/remote.TestDeviceGrant"
+        ]
       },
       {
         "id": "FR-16.10",
@@ -3334,14 +3434,19 @@
       {
         "id": "FR-16.11",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestRemoteEnableDisableTailscaleFake",
+          "internal/remote.TestDisabledByDefaultAndAdministratorEnable"
+        ]
       },
       {
         "id": "FR-16.12",
         "element": "E-04",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/remote.TestRemoteSessionAndOriginEvidence"
+        ]
       },
       {
         "id": "FR-17",
@@ -3853,8 +3958,10 @@
       {
         "id": "SR-2.3-2",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/adapter.TestCredentialFileMode"
+        ]
       },
       {
         "id": "SR-2.4-1",
@@ -3952,8 +4059,10 @@
       {
         "id": "SR-2.11-2",
         "element": "E-03",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/remote.TestDynamicRegistrationNeedsApproval"
+        ]
       },
       {
         "id": "SR-2.11-3",
@@ -4240,14 +4349,18 @@
       {
         "id": "SR-4.9-1",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/harness.TestDoctorInventory"
+        ]
       },
       {
         "id": "SR-4.11-1",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/harness.TestClaudeCodeLockdownProfile"
+        ]
       },
       {
         "id": "SR-4.13-1",
@@ -4264,8 +4377,10 @@
       {
         "id": "SR-4.14-2",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/remote.TestRemoteRequiresApprovedClientToken"
+        ]
       },
       {
         "id": "SR-5.1-1",
