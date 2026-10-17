@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-16T23:39:26Z",
-  "commit": "8b8cb8c95aeaede2c8d9e8480fe3770ce8319a6f",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/8b8cb8c95aeaede2c8d9e8480fe3770ce8319a6f",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38982426870",
+  "generatedAt": "2026-10-17T00:02:35Z",
+  "commit": "c125e1945e0a6eac216910817c06184845488289",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/c125e1945e0a6eac216910817c06184845488289",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38984375242",
   "tests": {
-    "total": 89,
-    "passed": 89,
+    "total": 107,
+    "passed": 107,
     "failed": 0,
     "skipped": 0,
-    "durationSec": 33.8,
+    "durationSec": 50.8,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,13 +19,19 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 3,
+        "passed": 4,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/adminapi",
-        "passed": 5,
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/approval",
+        "passed": 11,
         "failed": 0,
         "skipped": 0
       },
@@ -61,13 +67,13 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 9,
+        "passed": 12,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 10,
+        "passed": 12,
         "failed": 0,
         "skipped": 0
       },
@@ -116,7 +122,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 73.4,
+    "totalPct": 76.9,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -124,7 +130,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 0
+        "pct": 42.8
       },
       {
         "name": "cmd/smcpd",
@@ -132,15 +138,19 @@
       },
       {
         "name": "internal/adminapi",
-        "pct": 77.3
+        "pct": 81.1
       },
       {
         "name": "internal/app",
-        "pct": 75.3
+        "pct": 77.4
+      },
+      {
+        "name": "internal/approval",
+        "pct": 84.8
       },
       {
         "name": "internal/audit",
-        "pct": 81.4
+        "pct": 81.6
       },
       {
         "name": "internal/authguard",
@@ -152,7 +162,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 87.7
+        "pct": 88.3
       },
       {
         "name": "internal/diag",
@@ -160,7 +170,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 87.7
+        "pct": 90.7
       },
       {
         "name": "internal/ids",
@@ -202,10 +212,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 45,
-    "partial": 33,
+    "verified": 50,
+    "partial": 42,
     "failing": 0,
-    "unverified": 480,
+    "unverified": 466,
     "byElement": [
       {
         "element": "E-01",
@@ -220,7 +230,7 @@
         "name": "Protocol Mediator",
         "total": 43,
         "verified": 8,
-        "partial": 5,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -259,8 +269,8 @@
         "element": "E-07",
         "name": "Approval Service",
         "total": 13,
-        "verified": 0,
-        "partial": 0,
+        "verified": 5,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -396,7 +406,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 0,
-        "partial": 1,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -820,8 +830,12 @@
       {
         "id": "FR-1.51",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay",
+          "internal/e2e.TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry",
+          "internal/edge.TestReasonMessages"
+        ]
       },
       {
         "id": "FR-1.52",
@@ -1117,68 +1131,104 @@
       {
         "id": "FR-3.14",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/approval.TestHoldApprovedContinuesAndConsumes",
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
+        ]
       },
       {
         "id": "FR-3.15",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/approval.TestHoldBoundFallbackAndRetry",
+          "internal/e2e.TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry"
+        ]
       },
       {
         "id": "FR-3.16",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/approval.TestExpiry",
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
+        ]
       },
       {
         "id": "FR-3.17",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/approval.TestDenyDuringHold",
+          "internal/approval.TestHoldApprovedContinuesAndConsumes",
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
+        ]
       },
       {
         "id": "FR-3.18",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestApprovalsCLI"
+        ]
       },
       {
         "id": "FR-3.19",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/approval.TestHoldApprovedContinuesAndConsumes",
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay",
+          "internal/e2e.TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry"
+        ]
       },
       {
         "id": "FR-3.20",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/approval.TestHoldApprovedContinuesAndConsumes",
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
+        ]
       },
       {
         "id": "FR-3.21",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/approval.TestDenyDuringHold",
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
+        ]
       },
       {
         "id": "FR-3.22",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/approval.TestHoldBoundFallbackAndRetry",
+          "internal/approval.TestRecordsSurviveRestart",
+          "internal/e2e.TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry"
+        ]
       },
       {
         "id": "FR-3.23",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestApprovalsCLI",
+          "internal/approval.TestDesktopNotification",
+          "internal/approval.TestMissingNotifierBinary"
+        ]
       },
       {
         "id": "FR-3.24",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestApprovalsCLI",
+          "internal/e2e.TestApprovalRoles"
+        ]
       },
       {
         "id": "FR-3.25",
@@ -1771,8 +1821,10 @@
       {
         "id": "FR-8.2",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/adminapi.TestRoleSeam"
+        ]
       },
       {
         "id": "FR-8.3",
@@ -3148,8 +3200,13 @@
       {
         "id": "SR-1.18-2",
         "element": "E-07",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/approval.TestCanonicalDigest",
+          "internal/approval.TestExpiry",
+          "internal/approval.TestHoldBoundFallbackAndRetry",
+          "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
+        ]
       },
       {
         "id": "SR-1.18-3",
