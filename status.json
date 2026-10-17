@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T00:10:26Z",
-  "commit": "adb1b9b6b6203f2a78853d184008de4e29a970b0",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/adb1b9b6b6203f2a78853d184008de4e29a970b0",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38984956929",
+  "generatedAt": "2026-10-17T00:29:37Z",
+  "commit": "1d4ecbe92539e3c9d38e610eb607366c9b71669d",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1d4ecbe92539e3c9d38e610eb607366c9b71669d",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38986499316",
   "tests": {
-    "total": 129,
-    "passed": 127,
-    "failed": 0,
-    "skipped": 2,
-    "durationSec": 58.8,
+    "total": 160,
+    "passed": 154,
+    "failed": 1,
+    "skipped": 5,
+    "durationSec": 66.2,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 5,
+        "passed": 7,
         "failed": 0,
         "skipped": 0
       },
@@ -55,7 +55,7 @@
       },
       {
         "name": "internal/config",
-        "passed": 7,
+        "passed": 10,
         "failed": 0,
         "skipped": 0
       },
@@ -73,8 +73,8 @@
       },
       {
         "name": "internal/edge",
-        "passed": 12,
-        "failed": 0,
+        "passed": 11,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -114,6 +114,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/sandbox",
+        "passed": 23,
+        "failed": 0,
+        "skipped": 3
+      },
+      {
         "name": "internal/session",
         "passed": 10,
         "failed": 0,
@@ -128,7 +134,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 77.1,
+    "totalPct": 76.7,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -136,7 +142,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 39.9
+        "pct": 34.2
       },
       {
         "name": "cmd/smcpd",
@@ -144,7 +150,7 @@
       },
       {
         "name": "internal/adminapi",
-        "pct": 81.1
+        "pct": 80.8
       },
       {
         "name": "internal/app",
@@ -168,7 +174,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.6
+        "pct": 91.7
       },
       {
         "name": "internal/diag",
@@ -176,7 +182,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.7
+        "pct": 90.5
       },
       {
         "name": "internal/egress",
@@ -192,7 +198,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 86.8
+        "pct": 87.8
       },
       {
         "name": "internal/policy",
@@ -207,11 +213,23 @@
         "pct": 91.7
       },
       {
+        "name": "internal/sandbox",
+        "pct": 85
+      },
+      {
+        "name": "internal/sandbox/probe",
+        "pct": 0
+      },
+      {
         "name": "internal/session",
         "pct": 83.4
       },
       {
         "name": "scripts/itest-client",
+        "pct": 0
+      },
+      {
+        "name": "scripts/sandbox-probe",
         "pct": 0
       },
       {
@@ -223,9 +241,9 @@
   "requirements": {
     "total": 558,
     "verified": 54,
-    "partial": 48,
-    "failing": 0,
-    "unverified": 456,
+    "partial": 62,
+    "failing": 2,
+    "unverified": 440,
     "byElement": [
       {
         "element": "E-01",
@@ -256,8 +274,8 @@
         "name": "Session Manager",
         "total": 19,
         "verified": 7,
-        "partial": 6,
-        "failing": 0
+        "partial": 5,
+        "failing": 1
       },
       {
         "element": "E-05",
@@ -319,9 +337,9 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 3,
+        "verified": 2,
         "partial": 2,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-13",
@@ -336,15 +354,15 @@
         "name": "Local Server Registry",
         "total": 13,
         "verified": 0,
-        "partial": 1,
+        "partial": 2,
         "failing": 0
       },
       {
         "element": "E-15",
         "name": "Server Runtime Manager",
         "total": 11,
-        "verified": 0,
-        "partial": 2,
+        "verified": 1,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -352,7 +370,7 @@
         "name": "Execution Sandbox",
         "total": 5,
         "verified": 0,
-        "partial": 1,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -360,7 +378,7 @@
         "name": "Runtime Monitor",
         "total": 3,
         "verified": 0,
-        "partial": 0,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -408,7 +426,7 @@
         "name": "Health & Safety Monitor",
         "total": 13,
         "verified": 0,
-        "partial": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -416,7 +434,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 0,
-        "partial": 3,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -943,7 +961,7 @@
       {
         "id": "FR-2.11",
         "element": "E-04",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "internal/e2e.TestSubscriptionsListenEndsWithSession",
           "internal/edge.TestSessionEndCancelsInFlightCall"
@@ -1442,8 +1460,15 @@
       {
         "id": "FR-5.9",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestRuntimeCommands",
+          "internal/sandbox.TestBackendRegistryUsesConfinedLauncher",
+          "internal/sandbox.TestBuildWithImageAndEgress",
+          "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestLaunchRunsServerThroughPodmanWithoutShell",
+          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
+        ]
       },
       {
         "id": "FR-5.10",
@@ -1460,8 +1485,10 @@
       {
         "id": "FR-5.12",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestUnexpectedExitIsRecorded"
+        ]
       },
       {
         "id": "FR-5.13",
@@ -1552,8 +1579,10 @@
       {
         "id": "FR-5.27",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestShutdownSequenceEscalates"
+        ]
       },
       {
         "id": "FR-5.28",
@@ -1588,20 +1617,37 @@
       {
         "id": "FR-5.33",
         "element": "E-17",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestIntegrationMonitorContainment",
+          "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestMonitorExecEventIsDeviation",
+          "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
+          "internal/sandbox.TestMonitorUndeclaredProcessAlertsOrKills",
+          "internal/sandbox.TestReadCgroup"
+        ]
       },
       {
         "id": "FR-5.34",
         "element": "E-17",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestIntegrationMonitorContainment",
+          "internal/sandbox.TestMonitorExecEventIsDeviation",
+          "internal/sandbox.TestMonitorUndeclaredProcessAlertsOrKills"
+        ]
       },
       {
         "id": "FR-5.35",
         "element": "E-17",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestIntegrationMonitorContainment",
+          "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
+          "internal/sandbox.TestMonitorKillsOnPidsBreach",
+          "internal/sandbox.TestMonitorUndeclaredProcessAlertsOrKills",
+          "internal/sandbox.TestRuntimeAPI"
+        ]
       },
       {
         "id": "FR-5.36",
@@ -1617,7 +1663,8 @@
         "status": "partial",
         "tests": [
           "internal/egress.TestEndpoints",
-          "internal/egress.TestWrapLauncher"
+          "internal/egress.TestWrapLauncher",
+          "internal/sandbox.TestBuildWithImageAndEgress"
         ]
       },
       {
@@ -2473,8 +2520,10 @@
       {
         "id": "FR-12.3",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestDoctorAllPrerequisitesPresent"
+        ]
       },
       {
         "id": "FR-12.4",
@@ -2584,8 +2633,10 @@
       {
         "id": "FR-13.5",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestDoctorAllPrerequisitesPresent"
+        ]
       },
       {
         "id": "FR-13.6",
@@ -2608,8 +2659,11 @@
       {
         "id": "FR-13.9",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestDoctorNamesEachMissingPrerequisite",
+          "internal/sandbox.TestFromConfigRefusesWithoutPrerequisites"
+        ]
       },
       {
         "id": "FR-13.10",
@@ -3203,7 +3257,7 @@
       {
         "id": "SR-1.17-2",
         "element": "E-12",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/edge.TestSessionEndCancelsInFlightCall"
         ]
@@ -3439,8 +3493,10 @@
       {
         "id": "SR-2.14-1",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestLaunchRunsServerThroughPodmanWithoutShell"
+        ]
       },
       {
         "id": "SR-3-1",
@@ -3508,7 +3564,8 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestBootstrapAndControlCommands",
-          "internal/pipeline.TestCheckLaunchSpec"
+          "internal/pipeline.TestCheckLaunchSpec",
+          "internal/sandbox.TestLaunchRefusesUnsafeInput"
         ]
       },
       {
@@ -3562,8 +3619,10 @@
       {
         "id": "SR-4-1",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestBackendRegistryUsesConfinedLauncher"
+        ]
       },
       {
         "id": "SR-4.1-1",
@@ -3574,8 +3633,11 @@
       {
         "id": "SR-4.1-2",
         "element": "E-16",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
+        ]
       },
       {
         "id": "SR-4.2-1",
@@ -3600,7 +3662,10 @@
         "element": "E-16",
         "status": "partial",
         "tests": [
-          "internal/egress.TestAttachNetwork"
+          "internal/egress.TestAttachNetwork",
+          "internal/sandbox.TestEgressRequestFailsClosed",
+          "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
         ]
       },
       {
@@ -3616,26 +3681,41 @@
       {
         "id": "SR-4.6-1",
         "element": "E-16",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestLaunchRefusesUnsafeInput"
+        ]
       },
       {
         "id": "SR-4.7-1",
         "element": "E-16",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestLaunchRefusesUnsafeInput",
+          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
+        ]
       },
       {
         "id": "SR-4.7-2",
         "element": "E-16",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/config.TestRuntimeDefaults",
+          "internal/sandbox.TestIntegrationMonitorContainment",
+          "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
+          "internal/sandbox.TestMonitorKillsOnPidsBreach",
+          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
+        ]
       },
       {
         "id": "SR-4.8-1",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/sandbox.TestLaunchRunsServerThroughPodmanWithoutShell"
+        ]
       },
       {
         "id": "SR-4.9-1",
@@ -4431,6 +4511,6 @@
   "hostile": [],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
