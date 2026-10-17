@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
@@ -123,9 +124,39 @@ func runtimeDoctor(args []string, out io.Writer) error {
 	return nil
 }
 
+// egressListenerPlaceholder stands for the address of an Egress Broker
+// listener, which the broker opens per instance at launch.
+const egressListenerPlaceholder = "http://10.0.2.2:<port>"
+
+// egressPreview returns the Egress Broker variables an instance of alias
+// receives (FR-5.37): the proxy variables, unless [egress] proxy_env is
+// false, and one base-URL variable per grant with an endpoint_env. The
+// listener ports are chosen at launch, so the values are placeholders. It
+// returns nil when the instance is not attached to the broker.
+func egressPreview(cfg *config.Config, alias, network string) map[string]string {
+	if !cfg.Egress.Enabled || network != "egress" {
+		return nil
+	}
+	env := map[string]string{}
+	if cfg.Egress.ProxyEnv == nil || *cfg.Egress.ProxyEnv {
+		for _, k := range []string{"HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"} {
+			env[k] = egressListenerPlaceholder
+		}
+		env["NO_PROXY"], env["no_proxy"] = "", ""
+	}
+	for _, g := range cfg.Egress.Grants {
+		if g.Server == alias && g.EndpointEnv != "" {
+			env[g.EndpointEnv] = egressListenerPlaceholder
+		}
+	}
+	return env
+}
+
 // runtimeSpec prints the launch specification and Podman argument vector
 // of every configured server without starting anything (FR-5.9
-// inspection). Environment values are not printed, only their names.
+// inspection). Environment values are not printed, only their names; the
+// Egress Broker variables (egress_env) are addresses, shown with a
+// placeholder for the per-instance listener port.
 func runtimeSpec(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("runtime spec", flag.ContinueOnError)
 	cfgPath := fs.String("config", "smcp.toml", "configuration file")
@@ -170,8 +201,10 @@ func runtimeSpec(args []string, out io.Writer) error {
 			srv.Scope = "shared"
 		}
 		ls, err := sandbox.Build(sandbox.BuildInput{Runtime: cfg.Runtime, Server: srv,
-			Spec:    pipeline.ServerSpec{Alias: s.Alias, Command: s.Command, Args: s.Args, Env: env, Dir: s.Dir, RiskClasses: s.RiskClasses, HighRisk: s.HighRisk()},
-			Network: network, InstanceID: "<instance-id>", Gateway: "<gateway-id>",
+			Spec: pipeline.ServerSpec{Alias: s.Alias, Command: s.Command, Args: s.Args, Env: env, Dir: s.Dir, RiskClasses: s.RiskClasses, HighRisk: s.HighRisk(),
+				Runtime: s.Runtime, ArtifactRoot: s.ArtifactRoot, Roots: backend.SpecRoots(s)},
+			Network: network, EgressEnv: egressPreview(cfg, s.Alias, srv.Network),
+			InstanceID: "<instance-id>", Gateway: "<gateway-id>",
 			Rootfs: filepath.Join(cfg.State.Dir, "runtime", "rootfs"), StateDir: cfg.State.Dir})
 		if err != nil {
 			return fmt.Errorf("server %q: %w", s.Alias, err)

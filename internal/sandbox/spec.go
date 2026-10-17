@@ -322,9 +322,22 @@ func Build(in BuildInput) (LaunchSpec, error) {
 	if image == "" {
 		image = rt.Image
 	}
+	interpreted := in.Spec.Runtime == "node" || in.Spec.Runtime == "python"
 	if image != "" {
+		// A packaged node or python server runs on the interpreter of its
+		// image (found on the image's PATH), not on the host interpreter
+		// its launch specification names.
+		argv0 := in.Spec.Command
+		switch in.Spec.Runtime {
+		case "node":
+			argv0 = "node"
+		case "python":
+			argv0 = "python3"
+		}
 		ls.Artifact = Artifact{Command: in.Spec.Command, Image: image, Digest: imageDigest(image)}
-		ls.Argv = append([]string{in.Spec.Command}, in.Spec.Args...)
+		ls.Argv = append([]string{argv0}, in.Spec.Args...)
+	} else if interpreted {
+		return LaunchSpec{}, fmt.Errorf("%w: server %q is a %s package; in the sandbox it needs an image with that interpreter: set image in its runtime.server entry", ErrNoArtifact, in.Spec.Alias, in.Spec.Runtime)
 	} else {
 		st, err := os.Stat(in.Spec.Command)
 		if err != nil || !st.Mode().IsRegular() {
@@ -356,7 +369,29 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		ls.Mounts = append(ls.Mounts, Mount{Source: d, Target: SecretDir})
 	}
 
-	for _, m := range srv.Mounts {
+	if interpreted && in.Spec.ArtifactRoot != "" {
+		// The verified artifact tree of a node or python package: its
+		// arguments name files in it. Created by the Gateway's package
+		// library under the state directory, so the state-directory overlap
+		// rule of CheckMountSource does not apply to it.
+		r := in.Spec.ArtifactRoot
+		if !filepath.IsAbs(r) || filepath.Clean(r) != r || strings.ContainsAny(r, ",=\n") {
+			return LaunchSpec{}, fmt.Errorf("%w: artifact tree %q must be a clean absolute path without commas, equals signs or newlines", ErrMountRefused, r)
+		}
+		if err := checkTarget(r); err != nil {
+			return LaunchSpec{}, err
+		}
+		ls.Mounts = append(ls.Mounts, Mount{Source: r, Target: r})
+	}
+
+	grants := srv.Mounts
+	if in.Spec.Roots != nil {
+		var err error
+		if grants, err = IntersectRoots(srv.Alias, srv.Mounts, in.Spec.Roots); err != nil {
+			return LaunchSpec{}, err
+		}
+	}
+	for _, m := range grants {
 		target := m.Target
 		if target == "" {
 			target = m.Source
@@ -408,6 +443,69 @@ func Build(in BuildInput) (LaunchSpec, error) {
 	}
 	slices.Sort(ls.EnvNames)
 	return ls, nil
+}
+
+// IntersectRoots restricts a server's Runtime Profile mount grants to the
+// filesystem slots its verified manifest declares (SR-4.6-1): a grant
+// within a declared root is mounted as granted; a declared root within a
+// grant is mounted alone, at the matching place under the grant's target;
+// either way the mount is writable only when the grant asks for write and
+// the manifest declares the slot read-write. A grant that meets no
+// declared root is refused, so a configuration that would expose more
+// than the manifest asks for fails at launch instead of being narrowed
+// silently. roots holds the bound slots; nil means the server has no
+// manifest (a configured command), and the grants are returned unchanged.
+func IntersectRoots(alias string, grants []config.RuntimeMount, roots []pipeline.Root) ([]config.RuntimeMount, error) {
+	if roots == nil {
+		return grants, nil
+	}
+	within := func(p, root string) bool {
+		return p == root || strings.HasPrefix(p, strings.TrimSuffix(root, "/")+"/")
+	}
+	var out []config.RuntimeMount
+	seen := map[string]bool{}
+	add := func(m config.RuntimeMount) {
+		key := m.Source + "\x00" + m.Target
+		if !seen[key] {
+			seen[key] = true
+			out = append(out, m)
+		}
+	}
+	for _, g := range grants {
+		src := filepath.Clean(g.Source)
+		target := g.Target
+		if target == "" {
+			target = src
+		}
+		met := false
+		for _, r := range roots {
+			root := filepath.Clean(r.Path)
+			switch {
+			case within(src, root):
+				add(config.RuntimeMount{Source: src, Target: target, Write: g.Write && r.Write})
+				met = true
+			case within(root, src):
+				rel, err := filepath.Rel(src, root)
+				if err != nil {
+					return nil, err
+				}
+				add(config.RuntimeMount{Source: root, Target: filepath.Join(target, rel), Write: g.Write && r.Write})
+				met = true
+			}
+		}
+		if !met {
+			names := []string{}
+			for _, r := range roots {
+				names = append(names, r.Slot+"="+r.Path)
+			}
+			if len(names) == 0 {
+				names = append(names, "none")
+			}
+			return nil, fmt.Errorf("%w: runtime.server %q grants %q, which is outside every filesystem slot its manifest declares (%s) (SR-4.6-1)",
+				ErrMountRefused, alias, g.Source, strings.Join(names, ", "))
+		}
+	}
+	return out, nil
 }
 
 // reservedEnvPrefixes are variable names that would change the behavior of

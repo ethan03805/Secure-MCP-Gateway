@@ -193,9 +193,9 @@ func TestIntegrationSandboxConfinesServer(t *testing.T) {
 	ins := podmanInspect(t, h.l, name)
 	hc := ins["HostConfig"].(map[string]any)
 	if hc["ReadonlyRootfs"] != true || hc["NetworkMode"] != "none" || hc["Privileged"] != false || fmt.Sprint(hc["PidMode"]) == "host" ||
-		fmt.Sprint(hc["IpcMode"]) == "host" || hc["Memory"].(float64) != 512<<20 || hc["PidsLimit"].(float64) != 128 {
-		t.Errorf("host config: ReadonlyRootfs=%v NetworkMode=%v Privileged=%v PidMode=%v IpcMode=%v Memory=%v PidsLimit=%v",
-			hc["ReadonlyRootfs"], hc["NetworkMode"], hc["Privileged"], hc["PidMode"], hc["IpcMode"], hc["Memory"], hc["PidsLimit"])
+		fmt.Sprint(hc["IpcMode"]) == "host" || hc["Memory"].(float64) != 512<<20 || hc["PidsLimit"].(float64) != 128 || fmt.Sprint(hc["NanoCpus"]) != "1e+09" {
+		t.Errorf("host config: ReadonlyRootfs=%v NetworkMode=%v Privileged=%v PidMode=%v IpcMode=%v Memory=%v PidsLimit=%v NanoCpus=%v",
+			hc["ReadonlyRootfs"], hc["NetworkMode"], hc["Privileged"], hc["PidMode"], hc["IpcMode"], hc["Memory"], hc["PidsLimit"], hc["NanoCpus"])
 	}
 	if devs, _ := hc["Devices"].([]any); len(devs) != 0 {
 		t.Errorf("devices %v", devs)
@@ -225,21 +225,49 @@ func TestIntegrationSandboxConfinesServer(t *testing.T) {
 	eventually(t, 5*time.Second, "cgroup sample", func() bool { return h.l.Instances()[0].Usage.MemoryCurrent > 0 })
 }
 
+// TestIntegrationMonitorContainment exceeds each cgroup limit from the
+// probe (SR-4.7-2): memory (the kernel kills at the limit), CPU (busy
+// goroutines get no more than the CPU quota), PIDs (forking past the limit
+// is refused and the monitor kills the instance). The CP-24 defaults are
+// checked on a real container by TestIntegrationSandboxConfinesServer.
 func TestIntegrationMonitorContainment(t *testing.T) {
-	reqtest.Partial(t, "SR-4.7-2", "FR-5.33", "FR-5.34", "FR-5.35")
+	reqtest.Verifies(t, "SR-4.7-2")
+	reqtest.Partial(t, "FR-5.33", "FR-5.34", "FR-5.35")
 	h := realHarness(t, itRuntime(t,
+		config.RuntimeServer{Alias: "cpu", CPUs: 0.25},
 		config.RuntimeServer{Alias: "oom", MemoryBytes: 64 << 20},
 		config.RuntimeServer{Alias: "spawn"},
 		config.RuntimeServer{Alias: "fork", Pids: 40, AllowSpawn: true},
 	))
 
-	// Memory: the kernel kills at the cgroup limit; the instance ends and
-	// the evidence names the limit.
-	p, err := h.l.Launch(context.Background(), h.spec("oom"))
+	// CPU: four busy goroutines for two seconds get at most the quota of a
+	// quarter CPU (with slack for scheduling); unconfined they would use
+	// several CPU-seconds.
+	p, err := h.l.Launch(context.Background(), h.spec("cpu"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := connect(t, p)
+	var cpuMS, wallMS int
+	if got := callText(t, s, "burn", map[string]any{"workers": 4, "ms": 2000}); func() bool {
+		_, err := fmt.Sscanf(got, "cpu_ms=%d wall_ms=%d", &cpuMS, &wallMS)
+		return err != nil
+	}() {
+		t.Fatalf("burn: %q", got)
+	}
+	t.Logf("cpus=0.25: %d ms CPU in %d ms wall", cpuMS, wallMS)
+	if wallMS < 1900 || float64(cpuMS) > 0.4*float64(wallMS) {
+		t.Errorf("CPU limit of 0.25 not enforced: %d ms CPU in %d ms wall", cpuMS, wallMS)
+	}
+	p.Close()
+
+	// Memory: the kernel kills at the cgroup limit; the instance ends and
+	// the evidence names the limit.
+	p, err = h.l.Launch(context.Background(), h.spec("oom"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = connect(t, p)
 	_, _ = s.CallTool(context.Background(), mcpCall("alloc", map[string]any{"mib": 256}))
 	eventually(t, 10*time.Second, "memory evidence", func() bool {
 		return findEvent(h.mem.Events(), "limit_breach", ReasonMemoryLimit) != nil || findEvent(h.mem.Events(), "instance_exited", ReasonMemoryLimit) != nil

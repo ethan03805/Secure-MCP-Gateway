@@ -65,6 +65,11 @@ type Options struct {
 	// GrantReader gives uid the permission bits perm on path (tests;
 	// default posixacl.AddUser).
 	GrantReader func(path string, uid int, perm uint16) error
+	// GrantDeclaredSlots mounts every filesystem slot a launch
+	// specification declares (its Roots), with the slot's mode, in place
+	// of the runtime.server mount grants. smcpctl package build uses it
+	// for its probe, whose slots are empty throwaway directories (SR-3.5-1).
+	GrantDeclaredSlots bool
 }
 
 // Launcher is the confining pipeline.Launcher of the enforced profile.
@@ -226,6 +231,12 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 	}
 	if srv.OnDeviation == "" {
 		srv.OnDeviation = "alert"
+	}
+	if l.o.GrantDeclaredSlots {
+		srv.Mounts = nil
+		for _, r := range spec.Roots {
+			srv.Mounts = append(srv.Mounts, config.RuntimeMount{Source: r.Path, Write: r.Write})
+		}
 	}
 	id := ids.New()
 	network := NetworkNone

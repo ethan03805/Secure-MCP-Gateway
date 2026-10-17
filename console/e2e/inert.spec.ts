@@ -6,7 +6,7 @@
 // of G-10's evidence display with a manifest and a provenance statement of
 // 1 MiB each.
 import { expect, test, type Page } from "@playwright/test";
-import { claims, go, signIn } from "./helpers";
+import { claims, g, go, signIn } from "./helpers";
 
 const HOSTILE = `<img src=x data-xss onerror="window.__smcpXSS=1"><script data-xss>window.__smcpXSS=1</script><a data-xss href="javascript:window.__smcpXSS=1">x</a>`;
 const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -78,9 +78,9 @@ async function inert(page: Page, where: string) {
 
 test("hostile strings in server metadata and evidence are shown as inert text in every view", async ({ page }) => {
   claims("SR-3.3-1", "SR-6.17-1");
-  // Acceptance scenario AT-07 (with the bound test below); the console
-  // suite's Gateway runs the Standalone profile.
-  test.info().annotations.push({ type: "scenario", description: "AT-07 profile=standalone" });
+  // Acceptance scenario AT-07 (with the bound test below), claimed in the
+  // profile the Gateway reports (Enforced with SMCP_E2E_PROFILE=enforced).
+  test.info().annotations.push({ type: "scenario", description: `AT-07 profile=${g.profile || "standalone"}` });
   test.setTimeout(300_000);
   const dialogs: string[] = [];
   page.on("dialog", (d) => {
@@ -114,7 +114,7 @@ test("G-10 bounds evidence text to 256 KiB per page", async ({ page }) => {
   // The whole of SR-3.3-1: G-10 evidence with HTML, script and very large
   // files is rendered inert and bounded.
   test.info().annotations.push({ type: "requirement", description: "SR-3.3-1" });
-  test.info().annotations.push({ type: "scenario", description: "AT-07 profile=standalone" });
+  test.info().annotations.push({ type: "scenario", description: `AT-07 profile=${g.profile || "standalone"}` });
   const big = (n: number) => (HOSTILE + "é漢").repeat(Math.ceil(n / (HOSTILE.length + 5))).slice(0, n);
   await signIn(page, "/library");
   await page.route("**/api/v1/packages/big-pkg/1.0.0", (r) =>

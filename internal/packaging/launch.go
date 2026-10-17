@@ -87,6 +87,16 @@ func ResolveLaunch(in LaunchInput) (pipeline.ServerSpec, error) {
 		}
 	}
 	oci := m.Launch.Runtime == "oci"
+	spec.Runtime = m.Launch.Runtime
+	if !oci {
+		spec.ArtifactRoot = in.Root
+	}
+	spec.Roots = []pipeline.Root{}
+	for _, fs := range m.Capabilities.Filesystem {
+		if p, ok := in.Slots[fs.Slot]; ok {
+			spec.Roots = append(spec.Roots, pipeline.Root{Slot: fs.Slot, Path: filepath.Clean(p), Write: fs.Mode == "rw"})
+		}
+	}
 	subst := func(s string) (string, error) {
 		var err error
 		out := placeholderRE.ReplaceAllStringFunc(s, func(ph string) string {

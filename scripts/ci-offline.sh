@@ -13,10 +13,17 @@
 #   SMCP_REFPKG_DIR  directory with pkg-filesystem, pkg-git and reference-test.pub
 #   SMCP_NODE        absolute path of node (default: node on PATH)
 #   SMCP_PYTHON      absolute path of python3 (default: python3 on PATH)
+#   SMCP_ACCEPTANCE_PROFILE  "enforced" to run the suite in the Enforced
+#                    profile (rootless Podman, which must work for the
+#                    invoking user; XDG_RUNTIME_DIR, DBUS_SESSION_BUS_ADDRESS,
+#                    SMCP_AT17_NODE_IMAGE and SMCP_AT17_PYTHON_IMAGE are
+#                    passed on, and the images must already be pulled)
+#   SMCP_OFFLINE_RUN  -test.run pattern (default: every test)
 #
 # The output is `go test -json` events with the package name
-# .../internal/acceptance/offline, so tools/reqreport keeps these results
-# apart from the same tests run online.
+# .../internal/acceptance/offline (.../offline/enforced in the Enforced
+# profile), so tools/reqreport keeps these results apart from the same
+# tests run online.
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -54,18 +61,26 @@ envs=(
   "SMCP_PYTHON=$python"
 )
 pkg=github.com/ethan03805/secure-mcp-gateway/internal/acceptance/offline
+if [ "${SMCP_ACCEPTANCE_PROFILE:-}" = enforced ]; then
+  pkg=$pkg/enforced
+  envs+=("SMCP_ACCEPTANCE_PROFILE=enforced")
+  for v in XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS SMCP_AT17_NODE_IMAGE SMCP_AT17_PYTHON_IMAGE SMCP_ENFORCED_CGROUP_MANAGER; do
+    if [ -n "${!v:-}" ]; then envs+=("$v=${!v}"); fi
+  done
+fi
+run=${SMCP_OFFLINE_RUN:-.}
 
 echo "==> Running the suite in a network namespace with loopback only"
 rc=0
 sudo -n unshare -n -- /bin/sh -c '
   set -e
   ip link set lo up
-  uid=$1 gid=$2 dir=$3 pkg=$4 bin=$5
-  shift 5
+  uid=$1 gid=$2 dir=$3 pkg=$4 bin=$5 run=$6
+  shift 6
   cd "$dir"
   exec setpriv --reuid="$uid" --regid="$gid" --init-groups -- env -i "$@" \
-    go tool test2json -p "$pkg" "$bin" -test.v -test.count=1 -test.timeout=40m
-' _ "$(id -u)" "$(id -g)" "$root/internal/acceptance" "$pkg" "$work/acceptance.test" "${envs[@]}" > "$out" || rc=$?
+    go tool test2json -p "$pkg" "$bin" -test.v -test.count=1 -test.timeout=40m -test.run "$run"
+' _ "$(id -u)" "$(id -g)" "$root/internal/acceptance" "$pkg" "$work/acceptance.test" "$run" "${envs[@]}" > "$out" || rc=$?
 
 passed=$(grep -c '"Action":"pass","Package":"'"$pkg"'","Test"' "$out" || true)
 failed=$(grep -c '"Action":"fail","Package":"'"$pkg"'","Test"' "$out" || true)

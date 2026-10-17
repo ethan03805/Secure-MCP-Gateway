@@ -612,6 +612,17 @@ func TestResolveLaunch(t *testing.T) {
 	if err := pipeline.CheckLaunchSpec(spec); err != nil {
 		t.Errorf("podman oci-archive refused: %v", err)
 	}
+	// The launch specification carries the manifest's runtime and declared
+	// slots for the sandbox (SR-4.6-1); an OCI package has no artifact tree.
+	if spec.Runtime != "oci" || spec.ArtifactRoot != "" || len(spec.Roots) != 1 || spec.Roots[0] != (pipeline.Root{Slot: "data", Path: data, Write: true}) {
+		t.Errorf("runtime %q tree %q roots %v", spec.Runtime, spec.ArtifactRoot, spec.Roots)
+	}
+	node := &packaging.Manifest{Artifact: packaging.ArtifactInfo{Type: "npm"}, Launch: packaging.Launch{Runtime: "node", Argv: []string{"node", "dist/index.js"}}}
+	tree := t.TempDir()
+	if spec, err := packaging.ResolveLaunch(packaging.LaunchInput{Manifest: node, Alias: "n", Root: tree, Interp: packaging.Interpreters{Node: "/usr/bin/node"}}); err != nil ||
+		spec.Runtime != "node" || spec.ArtifactRoot != tree || spec.Roots == nil || len(spec.Roots) != 0 {
+		t.Errorf("node: %v runtime %q tree %q roots %#v", err, spec.Runtime, spec.ArtifactRoot, spec.Roots)
+	}
 	if _, err := packaging.ResolveLaunch(packaging.LaunchInput{Manifest: m, Interp: packaging.Interpreters{Podman: "/usr/bin/podman"}}); err == nil {
 		t.Error("unbound slot accepted")
 	}
