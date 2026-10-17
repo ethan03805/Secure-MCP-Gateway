@@ -186,7 +186,7 @@ func (f *Filters) RunRequest(ctx context.Context, call *Call, args json.RawMessa
 	if missing := f.Unavailable(call.Obligations.Filters); len(missing) > 0 {
 		return args, nil, &RequestVerdict{Action: Block, ReasonCode: ReasonFilterUnavailable, Finding: "required filters unavailable: " + strings.Join(missing, ", ")}
 	}
-	ctx, cancel := context.WithTimeout(ctx, deadline)
+	ctx, cancel := context.WithTimeout(withCallContext(ctx), deadline)
 	defer cancel()
 	var applied []string
 	var runs []FilterRun
@@ -238,7 +238,7 @@ func (f *Filters) RunResponse(ctx context.Context, call *Call, res *mcp.CallTool
 	deadline := f.deadlineLocked()
 	f.mu.RUnlock()
 	insp := call.inspection()
-	ctx, cancel := context.WithTimeout(ctx, deadline)
+	ctx, cancel := context.WithTimeout(withCallContext(ctx), deadline)
 	defer cancel()
 	var applied []string
 	var runs []FilterRun
@@ -417,4 +417,22 @@ func ValidateArguments(schema any, args json.RawMessage) string {
 		return msg
 	}
 	return ""
+}
+
+type callContextKey struct{}
+
+func withCallContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, callContextKey{}, ctx)
+}
+
+// CallContext returns the context the chain was run with, which lives as
+// long as the call. A filter receives a context bounded by the CP-14 chain
+// deadline that ends when the chain returns; a filter that ties cleanup to
+// the end of the call (the S2 secret file of E-20) waits on this one
+// instead. Outside a chain it returns ctx.
+func CallContext(ctx context.Context) context.Context {
+	if c, ok := ctx.Value(callContextKey{}).(context.Context); ok {
+		return c
+	}
+	return ctx
 }

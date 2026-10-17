@@ -44,6 +44,8 @@ type Config struct {
 	Egress        Egress        `toml:"egress" json:"egress"`
 	Filters       Filters       `toml:"filters" json:"filters"` // E-09, E-11 (filters.go)
 	Graph         Graph         `toml:"graph" json:"graph"`
+	// Secrets enables the Secret Vault and Broker (E-19, E-20) when present.
+	Secrets *Secrets `toml:"secrets" json:"secrets"`
 
 	// Operations (E-21 export, E-22, E-23); see ops.go.
 	SchemaVersion int      `toml:"schema_version" json:"schema_version"`
@@ -226,6 +228,17 @@ type Server struct {
 	SecretEnv   map[string]string `toml:"secret_env" json:"secret_env"`
 	Dir         string            `toml:"dir" json:"dir"`
 	RiskClasses []string          `toml:"risk_classes" json:"risk_classes"`
+}
+
+// Secrets configures the Secret Vault (E-19) and Secret Broker (E-20).
+// Defaults and path resolution are applied by internal/secrets.
+type Secrets struct {
+	VaultDir        string   `toml:"vault_dir" json:"vault_dir"`
+	KeySource       string   `toml:"key_source" json:"key_source"`
+	PassphraseFile  string   `toml:"passphrase_file" json:"passphrase_file"`
+	UsePolicyFile   string   `toml:"use_policy_file" json:"use_policy_file"`
+	RuntimeDir      string   `toml:"runtime_dir" json:"runtime_dir"`
+	RotationOverlap Duration `toml:"rotation_overlap" json:"rotation_overlap"`
 }
 
 // HighRiskClasses are the tool classes that need confinement: general SQL,

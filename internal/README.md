@@ -26,6 +26,7 @@ keeps today's behavior, and test the default.
 | `policystore` | E-05 (D-01) | Signed Policy Store: Ed25519 policy-signing key, immutable revision files named by digest, signed policy-control record with atomic activation. |
 | `policyadmin` | E-05 | Load at start (import or verify, fail-closed on `policy_signature`), publish, rollback, simulate from the journal, the `/api/v1/policy*` control API routes, and the `adminapi.Controller` wrapper that sends `policy/reload` through the store. |
 | `audit` | E-21 | Signed hash-chained journal with group-committed fsync, crash recovery, external anchor, verifier; evidence-key transition records (`RotateKey`), `Seal`, unsigned-event measurement, evidence export (`Exporter`); `Fanout` with non-blocking observers; `Memory` for tests. |
+| `secrets` | E-19, E-20 | Age-encrypted vault, Secret Use Policy, broker (S1 to S4 delivery, leak fingerprints, leak and S2 filters, emergency-stop withdrawal), `/api/v1/secrets` routes. |
 | `keys` | E-22 (part) | CP-53 name-constrained local server CA, listener certificate and renewal, CA rotation with overlap, evidence key and pending-key rotation, `CertReloader` for listeners, key inventory, operator token, installation ID, Argon2id. |
 | `health` | E-23 | Health & Safety Monitor: checks, states, fail-closed latch with 10 s recovery and acknowledgment, `Gate` for the edge. |
 | `metrics` | E-23 | Loopback Prometheus exposition fed by an evidence observer and the journal's fsync timing. |
@@ -74,7 +75,7 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 | Catalog screen | `pipeline.ToolScreen` (`Present(ctx, server, revision, tool) error`), `edge.Deps.Screen` | nil (present all) | `filters.Inspector` re-applies the metadata rule sets before presentation (FR-1.52). |
 | Launch | `pipeline.Launcher` (`Launch(ctx, ServerSpec) (Process, error)`, `Confined()`) | `SubprocessLauncher` (unconfined); `InProcessLauncher` for tests | `internal/sandbox.Launcher` (E-15, E-16, E-17): rootless Podman, selected by `[runtime] sandbox = "podman"` in `cmd/smcpd`; see docs/sandbox.md. |
 | Manifests | `pipeline.ManifestSource` (`Tools(ctx, spec, live) (ToolSet, error)`) | `LiveManifest`: live `tools/list`, `Verified: false` | E-13/E-14 agent: signed package manifests (minisign), drift check against the live list, `smcpctl package build|sign|verify`. Health reports `unverified_manifests` until then. |
-| Secrets | `pipeline.SecretBroker` (`Resolve(ctx, SecretRequest)`) | `NoSecrets`: a server with `secret_env` does not start | E-19/E-20 agent: vault and broker; record each secret use as evidence. |
+| Secrets | `pipeline.SecretBroker` (`Resolve(ctx, SecretRequest)`), `pipeline.SecretFingerprints`, `pipeline.SecretHeaderInjector` | `NoSecrets`: a server with `secret_env` does not start | `internal/secrets` (E-19, E-20), enabled by `[secrets]` through `secrets.Configure` in `cmd/smcpd`; see `docs/secrets.md`. Filters and E-29 scan delivered values with `Broker.Fingerprints()`; E-18 implements `SecretHeaderInjector` for S1. |
 | Evidence observers | `audit.Observer`, registered through `app.Options.Observers` | none | E-29 collector, E-26 graph mirror, E-27 store. Observers get events after the journal accepted them, on their own goroutine with a bounded queue; a full queue drops and counts (`Fanout.Dropped`). They can never block or fail a call. |
 | Control API routes | `adminapi.Server.Handle(pattern, handler)` | health, stop, resume, policy reload, approvals placeholder, login, bootstrap | E-24 agent: console backend routes; the same bearer authentication, origin and JSON content-type rules apply. Handlers read the authenticated actor with `adminapi.ActorOf(r)`. E-05 registers `/api/v1/policy*` from `policyadmin`. |
 | Launch capability | `pipeline.Capabilities` (issue) and `pipeline.CapabilityChecker` (consume) | one-use ledger shared by edge and backend | Bound to correlation ID, decision ID, policy revision and public tool name (FR-4.13). |
@@ -85,7 +86,7 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 
 ## Elements not yet started
 
-E-17 Runtime Monitor, E-18 Egress Broker, E-19 Secret Vault, E-25 to E-28
+E-17 Runtime Monitor, E-18 Egress Broker, E-25 to E-28
 Data Server, E-29 to E-32 Observation and Analytics, E-33 Harness Adapter
 Kit. E-17 and E-18 attach to the confining launcher; E-25 to E-29 attach as
 evidence observers and must not gate enforcement.

@@ -49,6 +49,7 @@ Control API (running Gateway; backup and keys also work offline):
   admin redeem     set the administrator password with the one-use bootstrap token
   egress           Egress Broker status, grants and recent connections (smcpctl egress -h)
   runtime          sandboxed server instances and enforced-profile checks (smcpctl runtime help)
+  secrets          secret vault: init (offline), list, show, set, rotate, rm, impact, resume, reload
 
 Every command takes --config <file> (default smcp.toml).
 `
@@ -113,6 +114,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = egressCmd(args[1:], stdout)
 	case args[0] == "runtime":
 		err = runtimeCmd(args[1:], stdout)
+	case args[0] == "secrets":
+		err = secretsCmd(args[1:], stdout)
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":
 		fmt.Fprint(stdout, usage)
 		return 0

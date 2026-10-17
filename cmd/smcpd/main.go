@@ -24,6 +24,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
+	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
 )
 
 func main() {
@@ -82,6 +83,11 @@ func run(cfgPath, level string) error {
 		rt.Start(ctx)
 		defer rt.Close()
 	}
+	sec, err := secrets.Configure(cfg, &opts, nil, log) // E-19, E-20; nil when [secrets] is absent
+	if err != nil {
+		return fmt.Errorf("secrets: %w", err)
+	}
+	defer sec.Close()
 	a, err := app.Start(ctx, cfg, opts)
 	if err != nil {
 		return err
@@ -114,6 +120,8 @@ func run(cfgPath, level string) error {
 	mirror.Register(a.Admin)
 	mirror.Start(ctx, a.Evidence)
 	defer mirror.Close()
+	sec.Attach(a.Admin, a.Registry)
+	go sec.Run(ctx, 0)
 	if err := a.Listen(); err != nil {
 		return err
 	}

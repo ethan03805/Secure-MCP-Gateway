@@ -138,3 +138,42 @@ func TestFilterRunRecords(t *testing.T) {
 		}
 	}
 }
+
+type ctxProbe struct {
+	got chan context.Context
+}
+
+func (ctxProbe) ID() string { return "ctx-probe" }
+func (p ctxProbe) FilterRequest(ctx context.Context, _ *Call, args json.RawMessage) (RequestVerdict, error) {
+	p.got <- ctx
+	return RequestVerdict{Action: Pass}, nil
+}
+
+// A filter's context ends with the chain; CallContext outlives it.
+func TestCallContextOutlivesChain(t *testing.T) {
+	f := NewFilters()
+	p := ctxProbe{got: make(chan context.Context, 1)}
+	if err := f.RegisterRequest(p, Registration{Order: 999, Mandatory: true}); err != nil {
+		t.Fatal(err)
+	}
+	outer, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if _, _, v := f.RunRequest(outer, &Call{InputSchema: map[string]any{"type": "object"}}, json.RawMessage(`{}`)); v != nil {
+		t.Fatalf("blocked: %+v", v)
+	}
+	fctx := <-p.got
+	if fctx.Err() == nil {
+		t.Fatal("filter context still live after the chain returned")
+	}
+	cc := CallContext(fctx)
+	if cc.Err() != nil {
+		t.Fatal("call context ended with the chain")
+	}
+	cancel()
+	if cc.Err() == nil {
+		t.Fatal("call context did not follow the caller")
+	}
+	if CallContext(outer) != outer {
+		t.Fatal("outside a chain CallContext must return ctx")
+	}
+}
