@@ -15,6 +15,9 @@ directory inside the repository.
 | `auto-update-prs.sh` | workflow `auto-update` | Label auto-merge PRs that conflict with main `needs-rebase` (does not push) |
 | `npm-audit-gate.sh` | CI job `security`, `make vuln` | `npm audit` at high severity with the reviewed allowlist in `.github/npm-audit-allowlist.json` |
 | `render-brew-formula.sh` | release maintainers | Render `packaging/homebrew/smcp.rb.tmpl` for a release |
+| `release-sbom.sh` | GoReleaser before hook | Write `build/sbom/sbom.spdx.json`, the SBOM placed in every release archive (FR-13.1) |
+| `ci-systemd.sh` | `ci-integration.sh` (enforced section) | `smcpctl install --profile enforced` twice, then smcpd.service under systemd with servers as `smcp-srv` |
+| `ci-install-standalone.sh` | CI job `install-standalone` | `smcpctl install` with the runner's systemd user manager or launchd, a second install, uninstall |
 
 ## Merge queue
 

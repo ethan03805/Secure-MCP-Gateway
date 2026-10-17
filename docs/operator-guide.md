@@ -165,11 +165,11 @@ The console's Audit view (`/audit`) browses, filters, exports (CSV, JSON Lines) 
 ## Upgrade and removal
 
 ```sh
-smcpctl upgrade --release <dir> --passphrase-file backup.pass
+smcpctl upgrade --release <dir with the downloaded release files> --passphrase-file backup.pass
 smcpctl uninstall [--purge]
 ```
 
-The upgrade takes a backup, swaps binaries, migrates the configuration, waits for health and rolls back automatically on failure. Reference: [install.md](install.md#upgrade-and-rollback), [operations/upgrade-uninstall.md](operations/upgrade-uninstall.md); runbook: [runbooks/upgrade-rollback.md](runbooks/upgrade-rollback.md).
+The upgrade verifies the release's minisign signature and archive checksum, takes a backup, swaps binaries, migrates the configuration, waits for health and rolls back automatically on failure. Reference: [install.md](install.md#upgrade-and-rollback), [operations/upgrade-uninstall.md](operations/upgrade-uninstall.md); runbook: [runbooks/upgrade-rollback.md](runbooks/upgrade-rollback.md).
 
 ## Remote access for cloud agents
 

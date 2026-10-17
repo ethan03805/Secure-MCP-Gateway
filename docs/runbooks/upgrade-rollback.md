@@ -4,7 +4,7 @@ Reference: [../operations/upgrade-uninstall.md](../operations/upgrade-uninstall.
 
 ## Upgrade
 
-1. Download and verify the release archive (install guide), unpack it into `DIR`, and confirm `DIR/SHA256SUMS` lists `smcpd` and `smcpctl` (`cd DIR && sha256sum smcpd smcpctl > SHA256SUMS` if the release ships only the archive checksum).
+1. Download the release's `smcp_<version>_checksums.txt`, its `.minisig` and the archive for the host into `DIR`, unchanged (`gh release download <tag> -R ethan03805/Secure-MCP-Gateway -D DIR -p 'smcp_<version>_checksums.txt*' -p 'smcp_<version>_<os>_<arch>.tar.gz'`). The upgrade verifies the signature and the checksum itself.
 2. `smcpctl upgrade --config smcp.toml --release DIR --passphrase-file /secure/backup.pass`
    (add `--start-cmd` and `--stop-cmd` when the Gateway is not run by launchd or systemd).
 3. Expect `upgrade complete`. `smcpctl version --config smcp.toml` shows the new version.

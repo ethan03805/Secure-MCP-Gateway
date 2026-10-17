@@ -47,15 +47,6 @@ func sha(t *testing.T, p string) string {
 	return hex.EncodeToString(s[:])
 }
 
-func writeSums(t *testing.T, dir string, names ...string) {
-	t.Helper()
-	var b strings.Builder
-	for _, n := range names {
-		fmt.Fprintf(&b, "%s  %s\n", sha(t, filepath.Join(dir, n)), n)
-	}
-	writeFile(t, dir, "SHA256SUMS", b.String())
-}
-
 func TestOfflineOpsCommands(t *testing.T) {
 	// FR-12.7 operations subcommands offline: version, config migrate,
 	// keys status and rotate --offline, backup (refusal and passphrase),
@@ -246,35 +237,15 @@ func TestUninstallKeepsEvidenceAndPurge(t *testing.T) {
 	}
 }
 
-func TestVerifyRelease(t *testing.T) {
-	reqtest.Partial(t, "FR-13.7")
-	rel := t.TempDir()
-	writeFile(t, rel, "smcpd", "a")
-	writeFile(t, rel, "smcpctl", "b")
-	if err := verifyRelease(rel); err == nil {
-		t.Fatal("release without SHA256SUMS")
-	}
-	writeSums(t, rel, "smcpd")
-	if err := verifyRelease(rel); err == nil || !strings.Contains(err.Error(), "smcpctl") {
-		t.Fatalf("missing smcpctl: %v", err)
-	}
-	writeSums(t, rel, "smcpd", "smcpctl")
-	if err := verifyRelease(rel); err != nil {
-		t.Fatal(err)
-	}
-	writeFile(t, rel, "smcpd", "tampered")
-	if err := verifyRelease(rel); err == nil || !strings.Contains(err.Error(), "mismatch") {
-		t.Fatalf("tampered: %v", err)
-	}
-}
-
 func TestUpgradeAndRollback(t *testing.T) {
 	// FR-13.7: backup, dispatch stopped, binaries swapped, migration run,
 	// new version started and healthy within the bound. FR-13.8: a release
 	// that never becomes healthy is rolled back to the previous binaries
 	// and the pre-upgrade backup, and the previous version records
-	// upgrade_rolled_back. The release signature (FR-13.2) and a failing
-	// migration are not exercised (partial).
+	// upgrade_rolled_back. Both releases are signed release directories
+	// that pass the FR-13.2 checks (TestVerifyReleaseDir covers the
+	// refusals). A failing migration and the launchd and systemd service
+	// paths are not exercised (partial).
 	reqtest.Partial(t, "FR-13.7", "FR-13.8")
 	if testing.Short() {
 		t.Skip("builds a second release")
@@ -284,17 +255,23 @@ func TestUpgradeAndRollback(t *testing.T) {
 	for _, n := range []string{"smcpd", "smcpctl"} {
 		copyBin(t, filepath.Join(binDir, n), filepath.Join(inst, n))
 	}
-	// The new release: version 9.9.9.
-	rel := t.TempDir()
+	// The new release: version 9.9.9, as a signed release directory.
+	built := t.TempDir()
 	goTool, _ := exec.LookPath("go")
+	newBins := map[string][]byte{}
 	for _, pkg := range []string{"smcpd", "smcpctl"} {
-		cmd := exec.Command(goTool, "build", "-ldflags", "-X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version=9.9.9", "-o", filepath.Join(rel, pkg), "../"+pkg)
+		cmd := exec.Command(goTool, "build", "-ldflags", "-X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version=9.9.9", "-o", filepath.Join(built, pkg), "../"+pkg)
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			t.Fatal(err)
 		}
+		b, err := os.ReadFile(filepath.Join(built, pkg))
+		if err != nil {
+			t.Fatal(err)
+		}
+		newBins[pkg] = b
 	}
-	writeSums(t, rel, "smcpd", "smcpctl")
+	rel, pubkey, _ := testRelease(t, "9.9.9", newBins)
 	pidFile := filepath.Join(dir, "smcpd.pid")
 	logFile := filepath.Join(dir, "smcpd.out")
 	start := fmt.Sprintf(`nohup %q --config "$SMCP_CONFIG" >>%q 2>&1 & echo $! > %q`, filepath.Join(inst, "smcpd"), logFile, pidFile)
@@ -316,7 +293,7 @@ func TestUpgradeAndRollback(t *testing.T) {
 	waitUp()
 	pw := writeFile(t, t.TempDir(), "pw", "upgrade backup pass\n")
 	up := func(release string) (string, error) {
-		cmd := exec.Command(filepath.Join(inst, "smcpctl"), "upgrade", "--config", cfg, "--release", release, "--bin-dir", inst,
+		cmd := exec.Command(filepath.Join(inst, "smcpctl"), "upgrade", "--config", cfg, "--release", release, "--pubkey", pubkey, "--bin-dir", inst,
 			"--passphrase-file", pw, "--start-cmd", start, "--stop-cmd", stop, "--health-timeout", "20s")
 		var b bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &b, &b
@@ -328,24 +305,26 @@ func TestUpgradeAndRollback(t *testing.T) {
 		b, _ := os.ReadFile(logFile)
 		t.Fatalf("upgrade: %v\n%s\nsmcpd log:\n%s", err, out, b)
 	}
-	if !strings.Contains(out, "backup written") || !strings.Contains(out, "dispatch stopped") || !strings.Contains(out, "version 9.9.9") || !strings.Contains(out, "upgrade complete") {
+	if !strings.Contains(out, "release verified: signature of smcp_9.9.9_checksums.txt") || !strings.Contains(out, "backup written") || !strings.Contains(out, "dispatch stopped") || !strings.Contains(out, "version 9.9.9") || !strings.Contains(out, "upgrade complete") {
 		t.Fatalf("upgrade output:\n%s", out)
 	}
 	if v := strings.TrimSpace(mustCtl(t, "version", "--short")); v == "9.9.9" {
 		t.Fatal("test harness binary changed") // sanity: binDir is untouched
 	}
-	if sha(t, filepath.Join(inst, "smcpd")) != sha(t, filepath.Join(rel, "smcpd")) || sha(t, filepath.Join(inst, "smcpd.prev")) != sha(t, filepath.Join(binDir, "smcpd")) {
+	if sha(t, filepath.Join(inst, "smcpd")) != sha(t, filepath.Join(built, "smcpd")) || sha(t, filepath.Join(inst, "smcpd.prev")) != sha(t, filepath.Join(binDir, "smcpd")) {
 		t.Fatal("binaries not swapped with .prev kept")
 	}
 
 	// A fault-injected release whose daemon never becomes healthy.
-	bad := t.TempDir()
-	writeFile(t, bad, "smcpd", "#!/bin/sh\nexit 1\n")
-	_ = os.Chmod(filepath.Join(bad, "smcpd"), 0o755)
-	copyBin(t, filepath.Join(rel, "smcpctl"), filepath.Join(bad, "smcpctl"))
-	writeSums(t, bad, "smcpd", "smcpctl")
+	badDir, badKey, _ := testRelease(t, "9.9.10", map[string][]byte{"smcpd": []byte("#!/bin/sh\nexit 1\n"), "smcpctl": newBins["smcpctl"]})
+	// An unsigned or wrongly signed release is refused before anything
+	// changes.
+	if out, err := up(badDir); err == nil || !strings.Contains(out, "release verification failed, nothing changed") {
+		t.Fatalf("release signed by another key: %v\n%s", err, out)
+	}
+	pubkey = badKey
 	goodSmcpd := sha(t, filepath.Join(inst, "smcpd"))
-	out, err = up(bad)
+	out, err = up(badDir)
 	if err == nil || !strings.Contains(out, "rolling back") || !strings.Contains(out, "previous version is running") {
 		t.Fatalf("rollback: %v\n%s", err, out)
 	}

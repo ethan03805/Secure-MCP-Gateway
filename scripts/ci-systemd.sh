@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Enforced profile under real systemd: installs packaging/linux with
-# install-enforced.sh, bootstraps an instance as smcp-core, starts
-# smcpd.service with runtime.run_as = "smcp-srv", checks health, makes tool
+# Enforced profile under real systemd: installs it with
+# `smcpctl install --profile enforced` (FR-13.5: packaging/linux, the
+# bootstrap as smcp-core, /etc/smcp/smcp.toml, smcpd.service started and
+# healthy), runs the install a second time and checks that nothing changed
+# (FR-13.4), adds the sandbox probe and a secret vault to the installed
+# configuration, restarts smcpd.service with runtime.run_as = "smcp-srv", makes tool
 # calls that run in rootless Podman containers of the separate server
 # identity smcp-srv (CP-46), delivers an S3 secret file to a server in an
 # auto user namespace, stops the service and verifies the evidence journal.
@@ -25,7 +28,6 @@
 #                      default 8643)
 set -euo pipefail
 
-root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 bin=${1:?usage: ci-systemd.sh BIN_DIR STATIC_DIR WORK_DIR}
 sbin=${2:?usage: ci-systemd.sh BIN_DIR STATIC_DIR WORK_DIR}
 work=${3:?usage: ci-systemd.sh BIN_DIR STATIC_DIR WORK_DIR}
@@ -44,24 +46,53 @@ fail() {
 }
 
 state_root=/var/lib/smcp/state
-inst=$state_root/gw
 cfg=/etc/smcp/smcp.toml
-share=/srv/smcp-itest-share
+share=/srv/smcp/sandbox # the reference server's mount, created by smcpctl install
+ci=/var/lib/smcp/ci     # files this script adds: vault passphrase, policies
 as_core() { sudo -n -u smcp-core env XDG_RUNTIME_DIR=/run/smcp HOME=/var/lib/smcp/home/smcp-core "$@"; }
 probe_bin=/srv/smcp-itest-bin
 
-say "installing packaging/linux (install-enforced.sh --bin-dir)"
+say "smcpctl install --profile enforced (FR-13.5)"
 stage="$work/systemd-bin"
 mkdir -p "$stage"
 cp "$bin/smcpd" "$bin/smcpctl" "$stage/"
 cp "$sbin/smcp-refserver" "$stage/"
-sudo -n "$root/packaging/linux/install-enforced.sh" --bin-dir "$stage" | tee "$work/systemd-install.log" | grep -v '^present' || true
-grep -q '^created file /etc/systemd/system/smcpd.service\|^present file /etc/systemd/system/smcpd.service\|^updated file /etc/systemd/system/smcpd.service' "$work/systemd-install.log" \
-  || fail "the installer did not install smcpd.service"
+install_args=(install --profile enforced --bin-dir "$stage"
+  --admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw"
+  --port "$port" --admin-port "$((port + 1))" --metrics-port "$((port + 2))" --notify off)
+# shellcheck disable=SC2024 # the log belongs to the runner
+if ! sudo -n "$stage/smcpctl" "${install_args[@]}" > "$work/systemd-install.log" 2>&1; then
+  cat "$work/systemd-install.log" >&2
+  fail "smcpctl install --profile enforced"
+fi
+grep -v '^present' "$work/systemd-install.log" || true
+grep -Eq '^(created|present|updated) file /etc/systemd/system/smcpd.service' "$work/systemd-install.log" \
+  || fail "smcpctl install did not install smcpd.service"
+grep -q "^created configuration $cfg" "$work/systemd-install.log" || fail "smcpctl install did not write $cfg"
+grep -q '^health: ' "$work/systemd-install.log" || fail "smcpctl install did not report the health of the started Gateway"
+if grep -q '^health: fail-closed' "$work/systemd-install.log"; then fail "the installed Gateway is fail-closed"; fi
+sudo -n systemctl is-active --quiet smcpd.service || fail "smcpctl install did not start smcpd.service"
+[ "$(sudo -n stat -c '%U:%G %a' "$cfg")" = "root:smcp 640" ] || fail "$cfg is $(sudo -n stat -c '%U:%G %a' "$cfg"), not root:smcp 640"
+[ "$(sudo -n stat -c '%U' "$state_root/journal")" = smcp-core ] || fail "the state directory is not smcp-core's"
 if [ -d /sys/kernel/security/apparmor ]; then
   sudo -n aa-status 2>/dev/null | grep -qx '   smcpd' || sudo -n aa-status 2>/dev/null | grep -q ' smcpd$' || fail "AppArmor profile smcpd is not loaded"
   echo "AppArmor profile smcpd is loaded"
 fi
+
+say "a second smcpctl install changes nothing (FR-13.4)"
+digests() {
+  { sudo -n find "$cfg" /var/lib/smcp/policy "$state_root/keys" "$state_root/tls" /etc/systemd/system/smcpd.service \
+    -type f -exec sha256sum {} + 2>/dev/null || true; } | sort
+}
+digests > "$work/install-digests-1"
+[ -s "$work/install-digests-1" ] || fail "no installed files to compare"
+# shellcheck disable=SC2024 # the log belongs to the runner
+sudo -n "$stage/smcpctl" "${install_args[@]}" > "$work/systemd-install2.log" 2>&1 || { cat "$work/systemd-install2.log" >&2; fail "second smcpctl install"; }
+if grep -E '^(created|updated) ' "$work/systemd-install2.log"; then fail "the second smcpctl install changed the host"; fi
+grep -q "^present configuration $cfg" "$work/systemd-install2.log" || fail "the second smcpctl install did not report the configuration present"
+digests > "$work/install-digests-2"
+diff "$work/install-digests-1" "$work/install-digests-2" || fail "the second smcpctl install changed configuration, keys, policy or units"
+echo "second run: $(grep -c '^present' "$work/systemd-install2.log") steps present, none created or updated"
 
 say "server identity smcp-srv (CP-46)"
 srv_uid=$(id -u smcp-srv)
@@ -82,23 +113,17 @@ if sudo -n -u smcp-core sudo -n -u smcp-srv -- /bin/true 2>/dev/null; then fail 
 if sudo -n -u smcp-srv test -r /etc/smcp; then fail "smcp-srv can read /etc/smcp"; fi
 echo "smcp-srv: uid $srv_uid, group $(id -gn smcp-srv), subuid $(grep '^smcp-srv:' /etc/subuid)"
 
-say "bootstrapping $inst as smcp-core"
+say "adding the sandbox probe, a policy and a secret vault to the installed Gateway"
+sudo -n systemctl stop smcpd.service
 marker="smcp-systemd-$(date +%s)"
-sudo -n install -d -o root -g root -m 0755 "$share"
 printf '%s\n' "$marker" | sudo -n tee "$share/hello.txt" >/dev/null
 sudo -n chmod 0644 "$share/hello.txt"
-sudo -n install -o smcp-core -g smcp -m 0600 "$work/admin.pw" "$state_root/admin.pw"
-sudo -n install -o smcp-core -g smcp -m 0600 "$work/approver.pw" "$state_root/approver.pw"
-sudo -n rm -rf "$inst"
-as_core /usr/local/bin/smcpctl bootstrap --dir "$inst" --port "$port" --admin-port "$((port + 1))" --notify off \
-  --refserver /usr/local/bin/smcp-refserver --sandbox "$share" \
-  --admin-password-file "$state_root/admin.pw" --approver-password-file "$state_root/approver.pw" >/dev/null
-sudo -n rm -f "$state_root/admin.pw" "$state_root/approver.pw"
+sudo -n install -d -o smcp-core -g smcp -m 0700 "$ci"
 # The sandbox probe (statically linked) as a second server.
 sudo -n install -d -o root -g root -m 0755 "$probe_bin"
 sudo -n install -o root -g root -m 0755 "$sbin/sandbox-probe" "$probe_bin/sandbox-probe"
 head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$work/vault-pass"
-sudo -n install -o smcp-core -g smcp -m 0600 "$work/vault-pass" "$inst/vault-pass"
+sudo -n install -o smcp-core -g smcp -m 0600 "$work/vault-pass" "$ci/vault-pass"
 secret_value="s3-secret-$(date +%s)-$RANDOM"
 secret_sum="sha256:$(printf '%s' "$secret_value" | sha256sum | cut -d' ' -f1)"
 cat > "$work/systemd-policy.json" <<'EOF'
@@ -116,7 +141,7 @@ cat > "$work/systemd-policy.json" <<'EOF'
   }
 }
 EOF
-sudo -n install -o smcp-core -g smcp -m 0600 "$work/systemd-policy.json" "$inst/policy.json"
+sudo -n install -o smcp-core -g smcp -m 0600 "$work/systemd-policy.json" "$ci/policy.json"
 cat > "$work/secret-use.json" <<'EOF'
 {
   "revision": "ci-1",
@@ -124,28 +149,17 @@ cat > "$work/secret-use.json" <<'EOF'
   "policies": [ { "id": "probe-token", "secret": "probe-token", "server": "probe", "slot": "token", "mode": "S3", "tools": ["*"], "purpose": "ci secret file" } ]
 }
 EOF
-sudo -n install -o smcp-core -g smcp -m 0600 "$work/secret-use.json" "$inst/secret-use.json"
+sudo -n install -o smcp-core -g smcp -m 0600 "$work/secret-use.json" "$ci/secret-use.json"
 
-# The unit reads /etc/smcp/smcp.toml; relative paths of the bootstrap
-# configuration resolve against /etc/smcp, so they become absolute.
-sudo -n cat "$inst/smcp.toml" | sed \
-  -e "s|^dir = \"state\"|dir = \"$inst/state\"|" \
-  -e "s|^file = \"policy.json\"|file = \"$inst/policy.json\"|" > "$work/smcp.toml"
-grep -q "^dir = \"$inst/state\"" "$work/smcp.toml" || fail "the bootstrap configuration has no relative state directory to rewrite"
+# The installed configuration already selects the enforced profile, the
+# Podman sandbox as smcp-srv and the reference server's mount; the policy
+# file moves to $ci (the installed policy is already in the Policy Store,
+# so the new file is published with smcpctl policy reload).
+sudo -n cat "$cfg" | sed -e "s|^file = \"/var/lib/smcp/policy/policy.json\"|file = \"$ci/policy.json\"|" > "$work/smcp.toml"
+grep -q "^file = \"$ci/policy.json\"" "$work/smcp.toml" || fail "the installed configuration has no policy file to replace"
+grep -q '^mode = "enforced"' "$work/smcp.toml" || fail "the installed configuration does not select the enforced profile"
+grep -q '^run_as = "smcp-srv"' "$work/smcp.toml" || fail "the installed configuration does not run servers as smcp-srv"
 cat >> "$work/smcp.toml" <<EOF
-
-[profile]
-mode = "enforced"
-
-[runtime]
-sandbox = "podman"
-run_as = "smcp-srv"
-shared_dir = "/var/lib/smcp/srv"
-
-[[runtime.server]]
-alias = "ref"
-[[runtime.server.mount]]
-source = "$share"
 
 [[server]]
 alias = "probe"
@@ -156,11 +170,11 @@ alias = "probe"
 
 [secrets]
 key_source = "passphrase"
-passphrase_file = "$inst/vault-pass"
+passphrase_file = "$ci/vault-pass"
 EOF
 sudo -n install -o root -g smcp -m 0640 "$work/smcp.toml" "$cfg"
 as_core /usr/local/bin/smcpctl config validate --config "$cfg" || fail "config validate"
-as_core /usr/local/bin/smcpctl secrets init --key-source passphrase --passphrase-file "$inst/vault-pass" --config "$cfg" >/dev/null || fail "secrets init"
+as_core /usr/local/bin/smcpctl secrets init --key-source passphrase --passphrase-file "$ci/vault-pass" --config "$cfg" >/dev/null || fail "secrets init"
 
 wait_healthy() {
   local ready=""
@@ -184,10 +198,11 @@ say "starting smcpd.service"
 sudo -n systemctl daemon-reload
 sudo -n systemctl start smcpd.service || fail "systemctl start smcpd.service"
 wait_healthy
+as_core /usr/local/bin/smcpctl policy reload --config "$cfg" || fail "policy reload"
 
 say "an S3 secret for the probe (userns = \"auto\", run as smcp-srv)"
 printf '%s' "$secret_value" | as_core /usr/local/bin/smcpctl secrets set probe-token --value-file - --config "$cfg" >/dev/null || fail "secrets set"
-printf 'use_policy_file = "%s"\n' "$inst/secret-use.json" >> "$work/smcp.toml"
+printf 'use_policy_file = "%s"\n' "$ci/secret-use.json" >> "$work/smcp.toml"
 sudo -n install -o root -g smcp -m 0640 "$work/smcp.toml" "$cfg"
 as_core /usr/local/bin/smcpctl config validate --config "$cfg" || fail "config validate with the Secret Use Policy"
 sudo -n systemctl restart smcpd.service || fail "systemctl restart smcpd.service"
@@ -207,7 +222,7 @@ fi
 
 say "a tool call through the sandbox"
 # shellcheck disable=SC2024 # the copy belongs to the runner, only the read needs root
-sudo -n cat "$inst/state/tls/ca.crt" > "$work/systemd-ca.crt"
+sudo -n cat "$state_root/tls/ca.crt" > "$work/systemd-ca.crt"
 SMCP_SIGNIN_PASSWORD=$(cat "$work/approver.pw")
 export SMCP_SIGNIN_PASSWORD
 "$bin/itest-client" -url "https://127.0.0.1:$port" -ca "$work/systemd-ca.crt" \
@@ -264,6 +279,6 @@ say "stopping smcpd.service"
 sudo -n systemctl stop smcpd.service
 if sudo -n systemctl is-active --quiet smcpd.service; then fail "smcpd.service still active after stop"; fi
 as_core /usr/local/bin/smcpctl journal verify --config "$cfg" || fail "journal verify after stop"
-sudo -n grep -rqs '"instance_launched"' "$inst/state/journal" || fail "no instance_launched evidence in the journal"
+sudo -n grep -rqs '"instance_launched"' "$state_root/journal" || fail "no instance_launched evidence in the journal"
 sudo -n systemctl disable --quiet smcpd.service
 say "passed"

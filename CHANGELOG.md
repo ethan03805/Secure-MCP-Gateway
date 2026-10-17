@@ -16,6 +16,7 @@ First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3
 
 - `install.sh` downloads the archive for the host, verifies the minisign signature of the checksum file with the embedded release key (`RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq`, also in `SECURITY.md`), checks the Sigstore bundle when cosign is installed, then the archive's SHA-256; it installs nothing when a check fails.
 - Homebrew: `brew install ethan03805/tap/smcp`.
+- Archives contain the SBOM (`sbom.spdx.json`) beside the binaries; `smcpctl upgrade` verifies a downloaded release's minisign signature and checksum before it changes anything.
 - `smcpctl install` sets up a Standalone installation (CP-46 directories, keys, configuration, launchd agent or systemd user unit, health check) or, as root on Linux, the Enforced profile. `docs/install.md`.
 
 ### Release label and verification
@@ -44,7 +45,18 @@ First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3
 
 - `docs/security-limitations.md` (what the Gateway does not protect against) and `docs/security-review-2026-10.md` (findings of the pre-release review and residual risks).
 - MCP tools only: resources, prompts, sampling, elicitation and roots are not relayed; backends are local signed packages, not remote MCP servers.
-- The SBOMs are separate release assets rather than files inside each archive (FR-13.1); Homebrew installs are not yet checked by a CI job that installs from the tap (FR-13.3).
+- The tap check (FR-13.3) and the SBOM inside each archive (FR-13.1) first run for real on a published release; until then only the pre-release `v1.0.0-rc.1` exercised the pipeline, and GoReleaser did not push a formula for it.
+
+### Release pipeline rehearsal (FR-13.1, FR-13.3, FR-13.5, FR-13.6, FR-13.7)
+
+- `v1.0.0-rc.1` was tagged on main `200719d` and the release workflow published it as a pre-release on the first run: four archives, the checksum file, its `.minisig`, the Sigstore bundle and one SBOM per archive. GoReleaser skipped the Homebrew formula because the release is a pre-release (`skip_upload: auto`). On macOS arm64, `install.sh --version v1.0.0-rc.1` verified the minisign signature, the Sigstore bundle and the checksum and installed the six binaries; `smcpctl upgrade` with the downloaded release directory upgraded a running instance to it.
+- Each archive now contains `sbom.spdx.json` (FR-13.1): `scripts/release-sbom.sh`, a GoReleaser before hook, writes it with syft from `go.mod`, `go.sum` and the console's npm lock file. The release workflow checks every archive for the six binaries, `README.md`, `CHANGELOG.md`, `LICENSE` and the SBOM, and runs the linux-amd64 binaries' `--version`.
+- `smcpd`, `smcp-session`, `smcp-stdio` and `smcp-connect` take `--version` (the rc.1 `smcpd` rejected it).
+- `smcpctl upgrade --release DIR` now takes the downloaded release files (checksum file, `.minisig`, archive for the host) and verifies them as `install.sh` does (FR-13.7 with FR-13.2): the minisign signature with the release key embedded in `smcpctl` (`--pubkey` for a fork), the signed trusted comment, the archive's SHA-256; only then is the archive extracted. The unsigned `SHA256SUMS` layout is gone. It also installs `smcp-stdio` and `smcp-session`. `scripts/ci-integration.sh` signs its test releases with a throwaway key and checks that an upgrade to a release signed by another key is refused.
+- New workflow `tap` (FR-13.3): on macOS and Ubuntu it waits for the tap to hold the formula for the tag, runs `brew install ethan03805/tap/smcp` and `brew test`, fetches the archive with `install.sh` and compares the SHA-256 of every installed binary with the archive's. The release workflow dispatches it after a release whose formula was pushed (a release published with `GITHUB_TOKEN` starts no `release: published` workflow); it also runs on a release published by hand. The repository variable `SMCP_TAP_PRERELEASE=true` makes GoReleaser push the formula for a pre-release, to rehearse the tap.
+- `scripts/ci-systemd.sh` installs the Enforced profile with `smcpctl install --profile enforced` (FR-13.5) instead of `install-enforced.sh` plus a manual bootstrap, checks the started unit and health, runs the install a second time and compares the digests of configuration, keys, policy and the unit (FR-13.4).
+- New CI job `install-standalone` (Ubuntu and macOS, not required): `scripts/ci-install-standalone.sh` runs `smcpctl install` with the runner's real systemd user manager or launchd, checks directories, unit, configuration value, notice, service state and health, installs again and compares digests, then uninstalls and verifies the kept journal (FR-13.6, FR-13.4).
+- `docs/release-checklist.md` records what the rehearsal showed.
 
 ## Unreleased — SRS V1.2 draft, architecture V2.3 draft — 2026-10-16
 

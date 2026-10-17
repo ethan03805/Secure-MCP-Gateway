@@ -5,19 +5,26 @@
 ```
 smcpctl upgrade --release DIR \
   (--passphrase-file FILE | --recipient age1... --identity-file FILE) \
-  [--bin-dir DIR] [--start-cmd CMD --stop-cmd CMD] [--health-timeout 60s]
+  [--bin-dir DIR] [--start-cmd CMD --stop-cmd CMD] [--health-timeout 60s] [--pubkey KEY]
 ```
 
-`DIR` is an unpacked release: the binaries (`smcpd`, `smcpctl`, and `smcp-refserver` and `smcp-connect` when present) and a `SHA256SUMS` file in `sha256sum` format listing them. `--bin-dir` is where the installed binaries are (default: the directory of the running `smcpctl`).
+`DIR` holds the downloaded GitHub release files, unchanged: `smcp_<version>_checksums.txt`, `smcp_<version>_checksums.txt.minisig` and the archive for this host, `smcp_<version>_<os>_<arch>.tar.gz`. For example:
+
+```
+gh release download v1.0.0 -R ethan03805/Secure-MCP-Gateway -D ~/smcp-v1.0.0 \
+  -p 'smcp_1.0.0_checksums.txt*' -p 'smcp_1.0.0_darwin_arm64.tar.gz'
+```
+
+`--bin-dir` is where the installed binaries are (default: the directory of the running `smcpctl`). `--pubkey` replaces the minisign release key from `SECURITY.md` (for a fork that signs its own releases).
 
 The Gateway is started and stopped through the installed service unit (launchd agent `com.smcp.gateway` on macOS, systemd units `smcpd.service` on Linux (system units from `packaging/linux/install-enforced.sh`, or a user unit)), or through `--start-cmd` and `--stop-cmd`, which are run with `sh -c` and get `SMCP_CONFIG` set to the absolute configuration path.
 
 Steps:
 
-1. Verify every file listed in `SHA256SUMS`; `smcpd` and `smcpctl` must be listed. A mismatch stops the upgrade before anything changes. (The release signature check of the downloaded archive is done by the installer, FR-13.2.)
+1. Verify the release as `install.sh` does (FR-13.2): the minisign signature of the checksum file with the release key embedded in `smcpctl` (the key in `SECURITY.md`), the signed trusted comment naming that file, and the archive's SHA-256 against the verified checksum file. Only then is the archive extracted into a temporary directory; it must contain `smcpd` and `smcpctl`. Any failure stops the upgrade with `release verification failed, nothing changed`.
 2. Take an encrypted backup (online when the Gateway runs; see [backup.md](backup.md)).
 3. Stop dispatch (`POST /admin/v1/stop`, reason `upgrade`) and stop the Gateway.
-4. Install the new binaries; each replaced binary is kept as `<name>.prev`.
+4. Install the new binaries (`smcpd`, `smcpctl`, `smcp-refserver`, `smcp-connect`, `smcp-stdio`, `smcp-session`, those the archive has); each replaced binary is kept as `<name>.prev`.
 5. Run the new release's `smcpctl config migrate`, limited to 120 s (CP-47).
 6. Start the Gateway and wait up to 60 s (CP-47, `--health-timeout`) for it to answer with a state other than `fail-closed` and the new version.
 
@@ -53,7 +60,7 @@ Prints the installation ID and asks the operator to type it; any other input sto
 
 | Message | Meaning |
 |---|---|
-| `release verification failed, nothing changed` | A file does not match `SHA256SUMS`, or `smcpd`/`smcpctl` is not listed |
+| `release verification failed, nothing changed` | The checksum file's minisign signature does not verify with the release key, its trusted comment names another file, the archive does not match the checksum file, the directory lacks a file, or the archive lacks `smcpd` or `smcpctl` |
 | `pre-upgrade backup failed, nothing changed` | See [backup.md](backup.md) |
 | `no service manager unit is installed for the Gateway; pass --start-cmd and --stop-cmd` | No unit was found |
 | `--recipient needs --identity-file` | A rollback must be able to decrypt the pre-upgrade backup |
