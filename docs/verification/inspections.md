@@ -390,3 +390,78 @@ Observations:
 - Installed binaries report the release version: `smcpd 1.0.0-rc.2`, `smcpctl 1.0.0-rc.2`, `smcp-stdio 1.0.0-rc.2`, `smcp-session 1.0.0-rc.2`, `smcp-connect 1.0.0-rc.2`.
 
 Deviation: the inspected release is a pre-release candidate. v1.0.0 is built by the same workflow and configuration; the release checklist repeats this inspection for it.
+
+## SR-2.13-1 Vault encryption
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | SR-2.13-1 |
+| Commit | `e0a7b06c05ef4cf6d828c5352fdb9c13599d04a0` |
+| Profile and platform | Not profile-specific; darwin/arm64 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (partials sweep, E-19 to E-22) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: read the vault's encryption and key-source code; ran `go test ./internal/secrets -run 'TestVaultRecordIsEncryptedWithAge|TestVaultUnlockFailures' -v` (both pass), which creates and rotates a secret in a passphrase vault and reads the store and master-key files back.
+
+Observations:
+
+- The master key is an age X25519 identity generated at vault creation (`internal/secrets/vault.go:194`); only its recipient is written to the store.
+- Every secret version is encrypted with `age.Encrypt` to that recipient before it is stored (`internal/secrets/vault.go:367`); the stored record holds only the ciphertext (`internal/secrets/vault.go:106`). The test finds no plaintext and the `age-encryption.org/v1` header on every version (`internal/secrets/vault_test.go:86`).
+- Key sources: the passphrase source wraps the identity with an age scrypt recipient (`internal/secrets/keysource.go:161`), and the test finds the master-key file age-encrypted with no `AGE-SECRET-KEY` text; the Keychain source stores it with `security add-generic-password` (`internal/secrets/keysource.go:108`).
+
+Deviation: none against the narrowed statement (the master key is held by the vault's key sources, not by the files of `internal/keys`; SRS rationale).
+
+## SR-2.3-1 Bearer key generation
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | SR-2.3-1 |
+| Commit | `e0a7b06c05ef4cf6d828c5352fdb9c13599d04a0` |
+| Profile and platform | Not profile-specific; darwin/arm64 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (partials sweep, E-19 to E-22) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: searched `internal` and `cmd` for every place a token, code, secret or bearer key is generated (`ids.Secret`, `rand.Read`) and stored; ran `go test ./cmd/smcpctl -run TestUDSKey` and `go test ./internal/session -run TestAuthenticateAndLifetimes` (pass).
+
+Observations:
+
+- One generator: `ids.Secret` returns 32 bytes (256 bits) from `crypto/rand` (`internal/ids/ids.go:24`).
+- Session, access and refresh tokens: `ids.Secret` (`internal/session/session.go:312`); the table keeps only their SHA-256 hashes (`internal/session/session.go:306`, lookup `internal/session/session.go:371`, rotation `internal/session/session.go:406`).
+- Authorization codes: `ids.Secret` (`internal/session/oauth.go:399`), stored under their SHA-256 hash (`internal/session/oauth.go:411`); the remote listener does the same (`internal/remote/oauth.go:590`).
+- Client secrets: `ids.Secret` with an Argon2id verifier for credentials issued in G-11 (`internal/principals/principals.go:291`, `internal/principals/principals.go:292`) and for approved registrations (`internal/remote/oauth.go:338`, `internal/remote/oauth.go:342`).
+- UDS bearer keys: `smcpctl uds key` generates them with `ids.Secret` and prints only the Argon2id verifier for `key_hash` (`cmd/smcpctl/udskey.go:31`, `cmd/smcpctl/udskey.go:32`); the listener verifies against that hash (`internal/edge/uds.go:275`).
+
+Deviation: none against the narrowed statement (Argon2id rather than SHA-256 for client secrets and UDS keys; SRS rationale).
+
+## FR-7.8 Key purposes
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-7.8 |
+| Commit | `e0a7b06c05ef4cf6d828c5352fdb9c13599d04a0` |
+| Profile and platform | Not profile-specific; darwin/arm64 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (partials sweep, E-19 to E-22) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: listed every key the Gateway generates or loads (searched for `GenerateKey`, `GenerateX25519Identity`, `rand.Read` into key buffers, `NewScryptRecipient` and password files) and checked that each is used for one purpose only.
+
+Observations:
+
+- Server CA: a P-256 key of its own (`internal/keys/keys.go:170`). Server TLS: a separate P-256 key signed by the CA (`internal/keys/keys.go:252`).
+- Policy signing: an Ed25519 key in `keys/policy.key` (`internal/policystore/store.go:50`, generated at `internal/policystore/store.go:191`).
+- Evidence signing: a separate Ed25519 key (`internal/keys/keys.go:405`), replaced at rotation by a new one (`internal/keys/rotate.go:311`).
+- Vault master: an age X25519 identity (`internal/secrets/vault.go:194`).
+- Backup encryption: the operator's passphrase (scrypt) or age recipients (`internal/backup/backup.go:72`, `internal/backup/backup.go:80`); no Gateway key is used.
+- Cursor protection: a random 32-byte key per process (`internal/edge/edge.go:237`).
+- Leak-fingerprint keying: random per-process keys in the inspector and the broker (`internal/filters/fingerprints.go:42`, `internal/secrets/fingerprint.go:69`).
+- Research pseudonymization: a new key per dataset (`internal/research/export.go:103`).
+- Data Server credentials: the graph engine password file (`internal/graph/mirror.go:23`).
+- No key appears in more than one of these uses: each is generated in, and read only by, the code listed.
+
+Deviation: none against the narrowed statement (no client CA, MRTR or payload-encryption key in release 1.0; SRS rationale).

@@ -28,6 +28,7 @@ Offline:
   journal export   copy closed journal segments and the anchor to an export directory
   config migrate   rewrite the configuration to this release's schema_version
   hash-password    print an Argon2id hash of a password (prompt or --password-file)
+  uds key          generate a UDS bearer key into a 0600 file and print its key_hash
   package          build, sign, verify, install and manage server packages (smcpctl package help)
   trust            enroll, list and remove package signing keys (trust anchors)
   filters          list, export and test the inspection rule sets (rules, export, scan)
@@ -88,6 +89,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = trustCmd(args[1:], stdout)
 	case args[0] == "hash-password":
 		err = hashPassword(args[1:], stdout)
+	case args[0] == "uds":
+		err = udsCmd(args[1:], stdout)
 	case args[0] == "filters":
 		err = filtersCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "health":
