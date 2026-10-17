@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T03:54:27Z",
-  "commit": "217535b947629c7e2edf1ab8c57b4209d9e7d4dc",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/217535b947629c7e2edf1ab8c57b4209d9e7d4dc",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39000153158",
+  "generatedAt": "2026-10-17T04:01:31Z",
+  "commit": "a09e91c0f1835f835f0441f7c698b5e5ae2a43e6",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a09e91c0f1835f835f0441f7c698b5e5ae2a43e6",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39000593563",
   "tests": {
-    "total": 691,
-    "passed": 678,
+    "total": 699,
+    "passed": 686,
     "failed": 0,
     "skipped": 13,
-    "durationSec": 343.4,
+    "durationSec": 332.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -247,7 +247,7 @@
       },
       {
         "name": "internal/policy",
-        "passed": 19,
+        "passed": 20,
         "failed": 0,
         "skipped": 0
       },
@@ -307,7 +307,7 @@
       },
       {
         "name": "scripts/agents",
-        "passed": 15,
+        "passed": 22,
         "failed": 0,
         "skipped": 0
       },
@@ -364,7 +364,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 68.8
+        "pct": 68.9
       },
       {
         "name": "internal/anomaly",
@@ -372,7 +372,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 72.2
+        "pct": 71.9
       },
       {
         "name": "internal/approval",
@@ -436,7 +436,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.6
+        "pct": 82.7
       },
       {
         "name": "internal/gwtest",
@@ -500,7 +500,7 @@
       },
       {
         "name": "internal/policy",
-        "pct": 92.9
+        "pct": 92.5
       },
       {
         "name": "internal/policyadmin",
@@ -536,7 +536,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.1
+        "pct": 79.2
       },
       {
         "name": "internal/session",
@@ -544,11 +544,11 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 75.6
+        "pct": 77.2
       },
       {
         "name": "scripts/agents",
-        "pct": 75.7
+        "pct": 73.9
       },
       {
         "name": "scripts/itest-client",
@@ -3693,9 +3693,17 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
+          "internal/policy.TestBrokenBuildTag",
+          "scripts/agents.TestBrokenGatewayRun",
+          "scripts/agents.TestBrokenVerdict",
+          "scripts/agents.TestCanUseToolAnswer",
+          "scripts/agents.TestClaudeCodeControlProtocol",
+          "scripts/agents.TestDeniedInResult",
           "scripts/agents.TestJournalAssertions",
           "scripts/agents.TestMatrixClientsCovered",
-          "scripts/agents.TestReferenceRun"
+          "scripts/agents.TestPromptsSayToolNotResource",
+          "scripts/agents.TestReferenceRun",
+          "scripts/agents.TestStreamJSONSession"
         ]
       },
       {
@@ -6011,7 +6019,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6046,7 +6054,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44553: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37689: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
