@@ -134,6 +134,59 @@
         }
       }
     },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sandbox": { "type": "string", "enum": ["none", "podman"] },
+        "podman": { "type": "string", "minLength": 1 },
+        "image": { "type": "string", "pattern": "@sha256:[0-9a-f]{64}$" },
+        "memory_bytes": { "type": "integer", "minimum": 16777216 },
+        "cpus": { "type": "number", "exclusiveMinimum": 0, "maximum": 1024 },
+        "pids": { "type": "integer", "minimum": 8 },
+        "tmpfs_bytes": { "type": "integer", "minimum": 1048576 },
+        "nofile": { "type": "integer", "minimum": 64, "maximum": 1048576 },
+        "userns_size": { "type": "integer", "minimum": 1024, "maximum": 65536 },
+        "user": { "type": "string", "pattern": "^[0-9]{1,10}:[0-9]{1,10}$" },
+        "apparmor_profile": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+        "selinux_type": { "type": "string", "pattern": "^[a-z0-9_]{1,128}$" },
+        "cgroup_manager": { "type": "string", "enum": ["systemd", "cgroupfs"] },
+        "monitor_interval": { "$ref": "#/$defs/duration" },
+        "server": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["alias"],
+            "properties": {
+              "alias": { "type": "string", "pattern": "^[a-z0-9]{1,16}$" },
+              "image": { "type": "string", "pattern": "@sha256:[0-9a-f]{64}$" },
+              "memory_bytes": { "type": "integer", "minimum": 16777216 },
+              "cpus": { "type": "number", "exclusiveMinimum": 0, "maximum": 1024 },
+              "pids": { "type": "integer", "minimum": 8 },
+              "network": { "type": "string", "enum": ["none", "egress"] },
+              "scope": { "type": "string", "enum": ["shared", "session", "call"] },
+              "userns": { "type": "string", "enum": ["auto", "keep-id"] },
+              "allow_spawn": { "type": "boolean" },
+              "on_deviation": { "type": "string", "enum": ["alert", "kill-instance"] },
+              "mount": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["source"],
+                  "properties": {
+                    "source": { "type": "string", "minLength": 1 },
+                    "target": { "type": "string", "pattern": "^/" },
+                    "write": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "server": {
       "type": "array",
       "items": {

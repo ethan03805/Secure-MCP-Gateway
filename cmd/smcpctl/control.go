@@ -54,7 +54,7 @@ func (c *adminClient) do(method, path string, body any) (map[string]any, int, er
 		}
 		rd = bytes.NewReader(b)
 	}
-	req, err := http.NewRequest(method, c.base+path, rd)
+	req, err := http.NewRequest(method, c.base+path, rd) // #nosec G704 -- base is the configured loopback admin listener; subcommands escape path segments
 	if err != nil {
 		return nil, 0, err
 	}
@@ -64,7 +64,7 @@ func (c *adminClient) do(method, path string, body any) (map[string]any, int, er
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
-	resp, err := c.http.Do(req)
+	resp, err := c.http.Do(req) // #nosec G704 -- as above
 	if err != nil {
 		return nil, 0, fmt.Errorf("control API at %s: %w", c.base, err)
 	}

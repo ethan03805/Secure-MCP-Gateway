@@ -52,6 +52,14 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - New function IDs stay within two digits (F-96 to F-99); notification, hold, metadata scanning, dynamic registration, diagnostic log, metrics and `smcp-connect` extend existing functions F-17, F-34, F-59, F-61 and F-95, because the site parser and other tools read function IDs as `F-dd`.
 - `docs/status/elements.json` records each element's implementation state at commit a3193a5 (17 partial, 16 not started); `docs/flows/` holds seven sequence diagrams with the implementation's current differences.
 
+### Implementation: server sandbox (E-15, E-16, E-17)
+
+- `internal/sandbox`: a confining `pipeline.Launcher` that runs each backend in rootless Podman with a read-only root, all capabilities dropped, no-new-privileges, Podman's default seccomp profile, a distinct user-namespace range per instance, network `none`, CP-24 cgroup limits, tmpfs `/work` and `/tmp`, and only the operator's mount grants (read-only unless granted write). Environment values reach Podman by name, never on its command line. `Confined()` is true, so a capable Linux host resolves to the enforced profile.
+- Runtime Monitor: cgroup sampling on an interval and on kernel change notifications, the Podman event stream, `process_created`, `deviation`, `limit_breach`, `instance_killed` and `instance_exited` evidence, and a kill on memory or PID limit breach.
+- `pipeline.EgressAttacher` with the default `NoEgress`: the seam through which the Egress Broker (E-18) gives an instance a network and endpoint variables.
+- `[runtime]` configuration table and `[[runtime.server]]` entries; `smcpctl runtime doctor|spec|status|instances|show|kill`; control routes `/api/v1/runtime*`; `sandbox.Doctor` for `smcpctl doctor`; smcpd refuses to start in the enforced profile when a prerequisite is missing, naming each one.
+- `packaging/linux/`: idempotent `install-enforced.sh` (identities, subordinate IDs, CP-46 directories, nftables table `inet smcp`, systemd units) and `smcpd.service`. `scripts/ci-integration.sh` gains an enforced-profile run that proves a sandboxed probe server cannot open network sockets or write outside its mount. Documentation: `docs/sandbox.md`, `docs/api/runtime.md`.
+
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 
 Harness interface revised to match what shipping clients can do (`Client-Compatibility-Brief.md`). No snapshot or tag yet; this is a draft for owner review.

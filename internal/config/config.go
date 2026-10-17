@@ -39,6 +39,7 @@ type Config struct {
 	Principals    []Principal   `toml:"principal" json:"principal"`
 	Clients       []Client      `toml:"client" json:"client"`
 	Servers       []Server      `toml:"server" json:"server"`
+	Runtime       Runtime       `toml:"runtime" json:"runtime"` // E-15, E-16, E-17 (runtime.go)
 
 	// Dir is the directory of the configuration file; set by Load.
 	Dir string `toml:"-" json:"-"`
@@ -353,6 +354,7 @@ func (c *Config) applyDefaults(limitsSet map[string]bool) {
 			d.field(&c.Limits).(*Duration).Duration = v
 		}
 	}
+	c.Runtime.applyDefaults(c.Profile.Mode)
 	for i := range c.Principals {
 		if c.Principals[i].Enabled == nil {
 			t := true
@@ -413,6 +415,9 @@ func (c *Config) check() error {
 			return fmt.Errorf("client %q names unknown principal %q", cl.ClientID, cl.Principal)
 		}
 	}
+	if err := c.Runtime.check(c); err != nil {
+		return err
+	}
 	aliases := map[string]bool{}
 	for _, s := range c.Servers {
 		if aliases[s.Alias] {
@@ -454,6 +459,7 @@ func (c *Config) resolvePaths() {
 	for i := range c.Servers {
 		res(&c.Servers[i].Dir)
 	}
+	c.Runtime.resolvePaths(c.Dir)
 }
 
 // ResourceURI is the CP-41 resource indicator: the public URL of the MCP
