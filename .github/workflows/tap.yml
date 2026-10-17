@@ -101,3 +101,29 @@ jobs:
             if [ "$status" = 0 ]; then echo "equal those in the release archive."; else echo "differ from the release archive."; fi
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
+
+  # Publishes the result to site-data/workflows.json, where the CI status job
+  # reads it into the requirement report (tools/reqreport -workflows).
+  publish:
+    name: publish
+    needs: [tap]
+    if: >-
+      always() && (needs.tap.result == 'success' || needs.tap.result == 'failure')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-site-data
+      cancel-in-progress: false
+    env:
+      TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
+      RESULT: ${{ needs.tap.result }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Publish the tap result to the site-data branch
+        run: |
+          commit=$(git rev-list -n 1 "refs/tags/$TAG")
+          scripts/publish-workflow-result.sh tap "$RESULT" "$TAG" "$commit" FR-13.3
