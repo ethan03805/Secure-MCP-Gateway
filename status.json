@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T02:35:34Z",
-  "commit": "ff7e2df21aebaae58cc4f24ea9d300f04256a663",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ff7e2df21aebaae58cc4f24ea9d300f04256a663",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38995304906",
+  "generatedAt": "2026-10-17T02:41:10Z",
+  "commit": "ef055504ca267b32c87b79fdde4a27e06cc05441",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ef055504ca267b32c87b79fdde4a27e06cc05441",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38995699560",
   "tests": {
-    "total": 564,
-    "passed": 552,
-    "failed": 1,
-    "skipped": 11,
-    "durationSec": 147.1,
+    "total": 578,
+    "passed": 565,
+    "failed": 0,
+    "skipped": 13,
+    "durationSec": 122.7,
     "packages": [
       {
         "name": "cmd/smcp-hostile",
@@ -25,8 +25,8 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 31,
-        "failed": 1,
+        "passed": 33,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -43,7 +43,7 @@
       },
       {
         "name": "internal/analytics",
-        "passed": 4,
+        "passed": 5,
         "failed": 0,
         "skipped": 0
       },
@@ -54,8 +54,14 @@
         "skipped": 0
       },
       {
+        "name": "internal/app",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/approval",
-        "passed": 11,
+        "passed": 12,
         "failed": 0,
         "skipped": 0
       },
@@ -115,13 +121,13 @@
       },
       {
         "name": "internal/edge",
-        "passed": 15,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/egress",
-        "passed": 13,
+        "passed": 14,
         "failed": 0,
         "skipped": 2
       },
@@ -133,7 +139,7 @@
       },
       {
         "name": "internal/graph",
-        "passed": 15,
+        "passed": 16,
         "failed": 0,
         "skipped": 5
       },
@@ -157,9 +163,9 @@
       },
       {
         "name": "internal/keys",
-        "passed": 8,
+        "passed": 12,
         "failed": 0,
-        "skipped": 0
+        "skipped": 2
       },
       {
         "name": "internal/library",
@@ -247,7 +253,7 @@
       },
       {
         "name": "internal/secrets",
-        "passed": 22,
+        "passed": 23,
         "failed": 0,
         "skipped": 1
       },
@@ -272,7 +278,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 74.4,
+    "totalPct": 74.6,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -296,7 +302,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 30.5
+        "pct": 32.5
       },
       {
         "name": "cmd/smcpd",
@@ -316,7 +322,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 65.3
+        "pct": 68.8
       },
       {
         "name": "internal/anomaly",
@@ -324,11 +330,11 @@
       },
       {
         "name": "internal/app",
-        "pct": 70.7
+        "pct": 72.2
       },
       {
         "name": "internal/approval",
-        "pct": 84.8
+        "pct": 84.9
       },
       {
         "name": "internal/audit",
@@ -348,7 +354,7 @@
       },
       {
         "name": "internal/baseline",
-        "pct": 85
+        "pct": 85.2
       },
       {
         "name": "internal/channel",
@@ -372,7 +378,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 79.9
+        "pct": 80.6
       },
       {
         "name": "internal/filters",
@@ -380,7 +386,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.6
+        "pct": 82.9
       },
       {
         "name": "internal/gwtest",
@@ -404,7 +410,7 @@
       },
       {
         "name": "internal/keys",
-        "pct": 76.6
+        "pct": 76.3
       },
       {
         "name": "internal/library",
@@ -424,7 +430,7 @@
       },
       {
         "name": "internal/ops",
-        "pct": 72.6
+        "pct": 72.4
       },
       {
         "name": "internal/packaging",
@@ -464,7 +470,7 @@
       },
       {
         "name": "internal/research",
-        "pct": 79.4
+        "pct": 80.9
       },
       {
         "name": "internal/sandbox",
@@ -476,7 +482,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.4
+        "pct": 79.2
       },
       {
         "name": "internal/session",
@@ -506,9 +512,9 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 148,
-    "partial": 182,
-    "failing": 4,
+    "verified": 149,
+    "partial": 185,
+    "failing": 0,
     "unverified": 224,
     "byElement": [
       {
@@ -747,9 +753,9 @@
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 8,
-        "partial": 0,
-        "failing": 3
+        "verified": 9,
+        "partial": 2,
+        "failing": 0
       },
       {
         "element": "E-31",
@@ -764,8 +770,8 @@
         "name": "Research Dataset Service",
         "total": 9,
         "verified": 6,
-        "partial": 2,
-        "failing": 1
+        "partial": 3,
+        "failing": 0
       },
       {
         "element": "E-33",
@@ -1132,7 +1138,8 @@
         "tests": [
           "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay",
           "internal/e2e.TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry",
-          "internal/edge.TestReasonMessages"
+          "internal/edge.TestReasonMessages",
+          "internal/edge.TestTimeoutCodesMatchAppendixB"
         ]
       },
       {
@@ -1509,6 +1516,7 @@
         "element": "E-07",
         "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestDaemonWiresEveryElement",
           "internal/approval.TestHoldApprovedContinuesAndConsumes",
           "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
         ]
@@ -2082,6 +2090,8 @@
         "element": "E-20",
         "status": "partial",
         "tests": [
+          "internal/app.TestSecretBrokerWiring",
+          "internal/egress.TestSecretHeaderInjection",
           "internal/secrets.TestBrokerLaunchDeliveryModes"
         ]
       },
@@ -2117,12 +2127,14 @@
         "element": "E-20",
         "status": "partial",
         "tests": [
+          "internal/app.TestSecretBrokerWiring",
           "internal/filters.TestRegisteredFingerprintsInResults",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-08",
           "internal/secrets.TestBrokerLeakDetectionNorthbound",
           "internal/secrets.TestFingerprintSetHoldsNoPlaintext",
           "internal/secrets.TestFingerprintsDetectEncodedForms",
+          "internal/secrets.TestFingerprintsOnRegister",
           "internal/secrets.TestFingerprintsShortValueAndRedaction"
         ]
       },
@@ -2250,7 +2262,10 @@
         "element": "E-23",
         "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestDaemonWiresEveryElement",
+          "internal/analytics.TestObservationHealthCheck",
           "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/graph.TestMirrorHealthCheck",
           "internal/health.TestStatesAndCauses"
         ]
       },
@@ -2804,7 +2819,7 @@
       {
         "id": "FR-10.18",
         "element": "E-30",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestSnapshotTriggersAndImmutability"
@@ -2821,7 +2836,7 @@
       {
         "id": "FR-10.20",
         "element": "E-30",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestPromotionManualAndAutomatic",
@@ -2831,7 +2846,7 @@
       {
         "id": "FR-10.21",
         "element": "E-30",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/anomaly.TestRollbackScoresRecordSnapshot",
@@ -2953,7 +2968,7 @@
       {
         "id": "FR-10.36",
         "element": "E-32",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/e2e.TestObservationThroughGateway"
@@ -3526,6 +3541,7 @@
         "element": "E-21",
         "status": "partial",
         "tests": [
+          "internal/approval.TestRemoteOriginOnApprovalEvents",
           "internal/remote.TestRemoteSessionAndOriginEvidence"
         ]
       },
@@ -4150,7 +4166,8 @@
         "element": "E-22",
         "status": "verified",
         "tests": [
-          "internal/keys.TestCP53ServerCA"
+          "internal/keys.TestCP53ServerCA",
+          "internal/keys.TestServerCAAcceptedByTLSStacks"
         ]
       },
       {
@@ -4648,6 +4665,7 @@
         "element": "E-09",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestDaemonWiresEveryElement",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-09",
           "internal/secrets.TestBrokerLeakDetectionNorthbound"
@@ -5688,7 +5706,7 @@
       "attack": "Slow-drip response",
       "expected": "Call ends at the CP-13 deadline with `-31009` `UPSTREAM_TIMEOUT`; instance restarted",
       "fixture": "HF-17",
-      "observed": "standalone: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo failed) | enforced: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo failed)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo failed) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo failed)",
       "pass": false,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5711,7 +5729,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo answered) | enforced: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo answered)",
       "pass": false,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5722,7 +5740,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5757,7 +5775,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45505: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:43711: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5813,6 +5831,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
