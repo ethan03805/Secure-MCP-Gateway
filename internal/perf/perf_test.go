@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -183,5 +184,38 @@ func TestCaptureMeasurement(t *testing.T) {
 	}
 	if m := captureMeasurement(runs[:1]); m.Pass || m.Note == "" {
 		t.Fatalf("one condition only: %+v", m)
+	}
+}
+
+// TestOverheadsFromReceiptToDeliveryWithoutServerTime: P-213 runs from the
+// request's receipt to delivery minus server execution, which ends at the
+// backend's response (responded_at), not at the completed event that
+// follows response inspection.
+func TestOverheadsFromReceiptToDeliveryWithoutServerTime(t *testing.T) {
+	state := t.TempDir()
+	at := func(ms int) string {
+		return time.Unix(1700000000, 0).UTC().Add(time.Duration(ms) * time.Millisecond).Format(time.RFC3339Nano)
+	}
+	lines := []string{
+		`{"type":"event","class":"call","phase":"requested","correlation_id":"c1","time":"` + at(2) + `","detail":{"received_at":"` + at(0) + `"}}`,
+		`{"type":"event","class":"call","phase":"dispatched","correlation_id":"c1","time":"` + at(5) + `"}`,
+		`{"type":"event","class":"call","phase":"completed","correlation_id":"c1","time":"` + at(30) + `","detail":{"responded_at":"` + at(15) + `"}}`,
+		`{"type":"event","class":"call","phase":"delivered","correlation_id":"c1","time":"` + at(32) + `"}`,
+		`{"type":"event","class":"call","phase":"requested","correlation_id":"c2","time":"` + at(2) + `"}`,
+	}
+	dir := filepath.Join(state, "journal")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "segment-000001.jsonl"), []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := (&instance{state: state}).overheads()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 32 ms end to end minus 10 ms of server execution; c2 is incomplete.
+	if len(got) != 1 || got[0] != 22 {
+		t.Fatalf("overheads %v, want [22]", got)
 	}
 }

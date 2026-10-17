@@ -111,7 +111,7 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	p95 = Quantile(syncScoring, 0.95)
 	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.5", Name: "Gateway-added overhead (P-213)", Metric: "p95", Unit: "ms",
 		Value: p95, Budget: BudgetOverheadMs, Ceiling: CeilingOverheadMs, Samples: len(syncScoring), Pass: p95 <= BudgetOverheadMs,
-		Method: fmt.Sprintf("real smcpd with synchronous scoring, %d concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (requested to dispatched plus completed to delivered)", o.Callers)})
+		Method: fmt.Sprintf("real smcpd with synchronous scoring, %d concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (request receipt to delivered, minus dispatched to the backend's response)", o.Callers)})
 	// Four instances of each condition in the order of CaptureOrder, so
 	// that warm-up and drift on the runner affect both conditions alike;
 	// the p95 of each condition is the mean of its runs' p95. With two runs

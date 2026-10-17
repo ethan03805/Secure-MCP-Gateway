@@ -222,12 +222,15 @@ func waitHealth(t *testing.T, g *gateway, ok func(map[string]any) bool, what str
 	}
 }
 
-// callTimings returns, per delivered call, the gateway-added overhead in
-// milliseconds (requested to dispatched plus completed to delivered) and
-// the decision time of its launch authorization.
+// callTimings returns, per delivered call, the gateway-added overhead P-213
+// in milliseconds (the request's receipt, received_at of the requested
+// event, to the delivered event, minus server execution from the
+// dispatched event to the backend's response, responded_at of the
+// completed event, which is written after response inspection) and the
+// decision time of its launch authorization.
 func callTimings(t *testing.T, evs []event) (overhead, decision []float64) {
 	t.Helper()
-	type marks struct{ req, disp, comp, del time.Time }
+	type marks struct{ recv, disp, resp, del time.Time }
 	m := map[string]*marks{}
 	for _, e := range evs {
 		c := e.str("correlation_id")
@@ -239,11 +242,13 @@ func callTimings(t *testing.T, evs []event) (overhead, decision []float64) {
 		}
 		switch {
 		case e.str("class") == "call" && e.str("phase") == "requested":
-			m[c].req = parseTime(t, e.str("time"))
+			at, _ := e.detail()["received_at"].(string)
+			m[c].recv = parseTime(t, at)
 		case e.str("class") == "call" && e.str("phase") == "dispatched":
 			m[c].disp = parseTime(t, e.str("time"))
 		case e.str("class") == "call" && e.str("phase") == "completed":
-			m[c].comp = parseTime(t, e.str("time"))
+			at, _ := e.detail()["responded_at"].(string)
+			m[c].resp = parseTime(t, at)
 		case e.str("class") == "call" && e.str("phase") == "delivered":
 			m[c].del = parseTime(t, e.str("time"))
 		case e.str("class") == "decision" && e.str("phase") == "authorized":
@@ -253,10 +258,10 @@ func callTimings(t *testing.T, evs []event) (overhead, decision []float64) {
 		}
 	}
 	for _, x := range m {
-		if x.req.IsZero() || x.disp.IsZero() || x.comp.IsZero() || x.del.IsZero() {
+		if x.recv.IsZero() || x.disp.IsZero() || x.resp.IsZero() || x.del.IsZero() {
 			continue
 		}
-		overhead = append(overhead, float64(x.disp.Sub(x.req)+x.del.Sub(x.comp))/float64(time.Millisecond))
+		overhead = append(overhead, float64(x.del.Sub(x.recv)-x.resp.Sub(x.disp))/float64(time.Millisecond))
 	}
 	return overhead, decision
 }

@@ -5,7 +5,9 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -99,5 +101,30 @@ func TestResponseFeaturesURLsAndBytes(t *testing.T) {
 		if v["embedded_url_count"] != int64(want) {
 			t.Fatalf("embedded_url_count %v, want %d", v["embedded_url_count"], want)
 		}
+	}
+}
+
+// TestServerExecutionEndsAtResponse: the completed event is written after
+// response inspection, so server execution (P-101) ends at its
+// responded_at, and response inspection counts in P-213.
+func TestServerExecutionEndsAtResponse(t *testing.T) {
+	c, fa := newCollector(t, Options{SamplingRate: 1, Parameters: DefaultCatalog().DefaultParameters()})
+	base := audit.Event{CorrelationID: "corr-r", SessionID: "s", PrincipalID: "p", ServerRevision: "live-abc", ToolRevision: "live-abc/read"}
+	ev := func(phase audit.Phase, d time.Duration, detail any) {
+		e := base
+		e.Class, e.Phase, e.Time, e.Detail = "call", phase, ts(d), detail
+		c.Observe(e)
+	}
+	ev(audit.PhaseRequested, 0, nil)
+	ev(audit.PhaseDispatched, 3*time.Millisecond, nil)
+	ev(audit.PhaseCompleted, 13*time.Millisecond, map[string]any{"responded_at": ts(8 * time.Millisecond)})
+	ev(audit.PhaseDelivered, 15*time.Millisecond, nil)
+	c.Sync()
+	recs := fa.records()
+	if len(recs) != 1 {
+		t.Fatalf("%d records", len(recs))
+	}
+	if v := recs[0].Values; v["server_execution_time"] != 5.0 || v["gateway_overhead"] != 10.0 {
+		t.Fatalf("server execution %v, overhead %v; want 5 and 10", v["server_execution_time"], v["gateway_overhead"])
 	}
 }

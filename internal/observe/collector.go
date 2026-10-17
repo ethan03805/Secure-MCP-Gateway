@@ -520,6 +520,16 @@ func (c *Collector) onEvent(ev *audit.Event) {
 		p.dispatched = ts
 	case ev.Phase == audit.PhaseCompleted:
 		p.completed = ts
+		// The completed event follows response inspection; the backend's
+		// response time ends server execution (P-101).
+		if d, ok := ev.Detail.(map[string]any); ok {
+			if at, ok := d["responded_at"].(string); ok {
+				p.completed = parseTime(at)
+			}
+		}
+		if p.completed.IsZero() {
+			p.completed = ts
+		}
 	}
 	if ev.DecisionID != "" {
 		p.sawDecision = true

@@ -88,7 +88,11 @@ func (c *callRun) event(class string, phase audit.Phase, origin, outcome, reason
 // Evidence writes wait for the journal (its lock, and for a commit the
 // group fsync), so they are made outside the stage's CPU measurement.
 func (c *callRun) record(class string, phase audit.Phase, origin, outcome, reason, status string) error {
-	ev := c.event(class, phase, origin, outcome, reason, status, nil)
+	return c.recordDetail(class, phase, origin, outcome, reason, status, nil)
+}
+
+func (c *callRun) recordDetail(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) error {
+	ev := c.event(class, phase, origin, outcome, reason, status, detail)
 	var err error
 	c.spans.Wait(func() { err = c.g.evidence.Record(ev) })
 	return err
@@ -340,6 +344,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		}
 		var res *mcp.CallToolResult
 		c.spans.Wait(func() { res, err = g.reg.Call(cctx, dispatch) })
+		responded := time.Now()
 		endDispatch()
 		c.prog.stop() // FR-1.40: no progress after the final response
 		if err != nil {
@@ -378,7 +383,11 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		if res.IsError {
 			outcome = "tool_error"
 		}
-		if err := c.record("call", audit.PhaseCompleted, "E-10", outcome, "", "evaluated"); err != nil {
+		// The completed event follows response inspection; responded_at is
+		// when the backend's response arrived, the end of server execution
+		// (P-101) for P-213.
+		if err := c.recordDetail("call", audit.PhaseCompleted, "E-10", outcome, "", "evaluated",
+			map[string]any{"responded_at": responded.UTC().Format(time.RFC3339Nano)}); err != nil {
 			return nil, c.auditFailure(err)
 		}
 		// Release authorization under the barrier (SR-1.17-2); the delivered
