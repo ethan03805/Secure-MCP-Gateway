@@ -183,6 +183,10 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - `docs/troubleshooting.md` now explains every reason code the source emits: five harness codes were added (`CANCELLED`, `CAPABILITY_INVALID`, `SESSION_ENDED`, `FILTER_WITHHELD`, `ANOMALY_WITHHELD`), and the operator table gained a "What to do" column and rows for the sign-in, session, remote access, package, trust, secret, egress, anomaly, baseline and lifecycle codes.
 - New build check `TestReasonCodesDocumented` (`internal/edge`): it scans the Go source for reason codes (including the codes built from a prefix and a state) and fails when one has no row in the guide or its row has no next action. It verifies FR-18.7.
 
+### No result before release (SR-5.11-1)
+
+- New test `TestNoResultBeforeRelease` (`internal/edge`) verifies SR-5.11-1: while a three-part backend result waits in the response inspection, a plain request receives nothing (not even headers) and a request with a progress token receives only the inspected progress notifications; the result's parts arrive only after the delivered event is committed.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |
