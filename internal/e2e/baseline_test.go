@@ -176,13 +176,20 @@ sigma_floor = 0.05
 	if of.obs.Scorer.SnapshotID() != a {
 		t.Fatalf("loaded %s after the refused load", of.obs.Scorer.SnapshotID())
 	}
-	found := false
-	for _, ev := range of.journal() {
-		if ev.Class == "integrity" && ev.ReasonCode == "BASELINE_DIGEST_MISMATCH" {
-			found = true
+	// The test observer receives the event from the journal fan-out queue.
+	found := func() bool {
+		of.mu.Lock()
+		defer of.mu.Unlock()
+		for _, ev := range of.events {
+			if ev.Class == "integrity" && ev.ReasonCode == "BASELINE_DIGEST_MISMATCH" {
+				return true
+			}
 		}
+		return false
 	}
-	if !found {
-		t.Fatal("no integrity event for the tampered snapshot")
+	for deadline := time.Now().Add(10 * time.Second); !found(); time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("no integrity event for the tampered snapshot")
+		}
 	}
 }
