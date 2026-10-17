@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T12:15:13Z",
-  "commit": "1e88e910f55d5d114af6e4e5a178292c5f626339",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1e88e910f55d5d114af6e4e5a178292c5f626339",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39031124403",
+  "generatedAt": "2026-10-17T12:24:45Z",
+  "commit": "98b8532dd7eae01ac477586e19ccdef50d9034c0",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/98b8532dd7eae01ac477586e19ccdef50d9034c0",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39031847175",
   "tests": {
-    "total": 969,
-    "passed": 955,
-    "failed": 0,
+    "total": 989,
+    "passed": 972,
+    "failed": 3,
     "skipped": 14,
-    "durationSec": 552.9,
+    "durationSec": 476,
     "packages": [
       {
         "name": "console/e2e/browsers",
-        "passed": 2,
-        "failed": 0,
+        "passed": 1,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -25,8 +25,8 @@
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 42,
-        "failed": 0,
+        "passed": 40,
+        "failed": 2,
         "skipped": 0
       },
       {
@@ -50,6 +50,12 @@
       {
         "name": "cmd/smcpctl",
         "passed": 44,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "docs",
+        "passed": 1,
         "failed": 0,
         "skipped": 0
       },
@@ -126,6 +132,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/conformance",
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/consoleapi",
         "passed": 12,
         "failed": 0,
@@ -145,13 +157,13 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 47,
+        "passed": 49,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 59,
+        "passed": 64,
         "failed": 0,
         "skipped": 0
       },
@@ -398,7 +410,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 67.3
+        "pct": 68.2
       },
       {
         "name": "internal/adminapi",
@@ -446,7 +458,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.7
+        "pct": 90.3
       },
       {
         "name": "internal/consoleapi",
@@ -462,11 +474,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 93.1
+        "pct": 90.1
       },
       {
         "name": "internal/egress",
-        "pct": 80.6
+        "pct": 80.5
       },
       {
         "name": "internal/filterapi",
@@ -478,11 +490,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 84.1
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.5
+        "pct": 79.7
       },
       {
         "name": "internal/harness",
@@ -632,16 +644,16 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 294,
-    "partial": 187,
-    "failing": 0,
-    "unverified": 49,
+    "verified": 304,
+    "partial": 182,
+    "failing": 2,
+    "unverified": 42,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 12,
+        "verified": 16,
         "partial": 5,
         "failing": 0
       },
@@ -649,16 +661,16 @@
         "element": "E-02",
         "name": "Protocol Mediator",
         "total": 43,
-        "verified": 34,
-        "partial": 7,
+        "verified": 39,
+        "partial": 4,
         "failing": 0
       },
       {
         "element": "E-03",
         "name": "Identity & Authentication Service",
         "total": 13,
-        "verified": 7,
-        "partial": 4,
+        "verified": 9,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -825,9 +837,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 23,
-        "partial": 41,
-        "failing": 0
+        "verified": 22,
+        "partial": 40,
+        "failing": 2
       },
       {
         "element": "E-25",
@@ -912,8 +924,10 @@
       {
         "id": "FR-1.1",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestHarnessListenerSet"
+        ]
       },
       {
         "id": "FR-1.2",
@@ -1058,8 +1072,10 @@
       {
         "id": "FR-1.19",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/conformance.TestConformanceSuite"
+        ]
       },
       {
         "id": "FR-1.20",
@@ -1244,8 +1260,9 @@
       {
         "id": "FR-1.42",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/conformance.TestConformanceSuite",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -1286,14 +1303,18 @@
       {
         "id": "FR-1.47",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestUDSHarnessTransport"
+        ]
       },
       {
         "id": "FR-1.48",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "docs.TestInterfaceControlDocuments"
+        ]
       },
       {
         "id": "FR-1.49",
@@ -1376,9 +1397,10 @@
       {
         "id": "FR-2.5",
         "element": "E-03",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/edge.TestTokenPresentation",
           "internal/session.TestAuthenticateAndLifetimes"
         ]
       },
@@ -1456,8 +1478,10 @@
       {
         "id": "FR-2.15",
         "element": "E-03",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestUDSPeerAndKey"
+        ]
       },
       {
         "id": "FR-2.17",
@@ -2873,7 +2897,7 @@
       {
         "id": "FR-8.30",
         "element": "E-24",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "console/e2e/browsers.TestConsoleSuiteOnEveryBrowser"
         ]
@@ -2937,7 +2961,7 @@
       {
         "id": "FR-8.35",
         "element": "E-24",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
@@ -3553,8 +3577,10 @@
       {
         "id": "FR-12.9",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/conformance.TestConformanceSuite"
+        ]
       },
       {
         "id": "FR-12.10",
@@ -4679,8 +4705,10 @@
       {
         "id": "SR-2.8-3",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestUDSSocketMode"
+        ]
       },
       {
         "id": "SR-2.8-4",
@@ -5131,8 +5159,9 @@
       {
         "id": "SR-5.2-2",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/e2e.TestHeaderControlCharacters",
           "internal/edge.TestHeaderBodyAgreement"
         ]
       },
@@ -5164,8 +5193,9 @@
       {
         "id": "SR-5.6-1",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/conformance.TestConformanceSuite",
           "internal/edge.TestUnqualifiedFeaturesRejected"
         ]
       },
@@ -6342,7 +6372,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6377,7 +6407,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37429: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33819: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6433,6 +6463,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
