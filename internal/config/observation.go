@@ -51,8 +51,41 @@ type Observation struct {
 	// WithholdBand: with sync scoring, a result whose response band is at
 	// least this band is withheld. "off" (default) or a band.
 	WithholdBand string `toml:"withhold_band" json:"withhold_band"`
+	// EscalateCaptureBand is the lowest band whose calls get capture
+	// escalation; lower bands alert only (FR-8.14). "elevated" (default),
+	// "abnormal", "critical" or "off" (alert only at every band).
+	EscalateCaptureBand string `toml:"escalate_capture_band" json:"escalate_capture_band"`
+	// UncharacterizedAction is the restrict-only action for a call whose
+	// context has no baseline yet: "record" (default), "escalate" (capture
+	// escalation) or "approve" (escalation and, with sync scoring, an
+	// approval obligation).
+	UncharacterizedAction string `toml:"uncharacterized_action" json:"uncharacterized_action"`
+	// EscalationBands adds escalation parameters per band (FR-8.10): the
+	// parameters of a band are captured for escalated calls of that band
+	// and every higher band, in addition to EscalationParameters.
+	EscalationBands map[string][]string `toml:"escalation_bands" json:"escalation_bands"`
+	// Scope limits the calls the Observation Policy samples and escalates
+	// (FR-8.9); empty lists match every call. Research campaigns keep
+	// their own scope.
+	Scope ObservationScope `toml:"scope" json:"scope"`
 	// Baseline configures the Behavior Baseline Engine and the bands.
 	Baseline ObservationBaseline `toml:"baseline" json:"baseline"`
+}
+
+// ObservationScope selects calls by principal ID, framework type, session
+// template, server alias and tool ("<server alias>/<backend tool name>").
+// A call is in scope when it matches every non-empty list.
+type ObservationScope struct {
+	Principals []string `toml:"principals" json:"principals,omitempty"`
+	Frameworks []string `toml:"frameworks" json:"frameworks,omitempty"`
+	Templates  []string `toml:"templates" json:"templates,omitempty"`
+	Servers    []string `toml:"servers" json:"servers,omitempty"`
+	Tools      []string `toml:"tools" json:"tools,omitempty"`
+}
+
+// Empty reports whether the scope matches every call.
+func (s ObservationScope) Empty() bool {
+	return len(s.Principals)+len(s.Frameworks)+len(s.Templates)+len(s.Servers)+len(s.Tools) == 0
 }
 
 // ObservationBaseline configures E-30 and E-31.

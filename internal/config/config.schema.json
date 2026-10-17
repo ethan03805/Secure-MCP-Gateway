@@ -179,6 +179,28 @@
         "scoring": { "enum": ["off", "async", "sync"] },
         "require_approval_band": { "enum": ["off", "elevated", "abnormal", "critical"] },
         "withhold_band": { "enum": ["off", "elevated", "abnormal", "critical"] },
+        "escalate_capture_band": { "enum": ["off", "elevated", "abnormal", "critical"] },
+        "uncharacterized_action": { "enum": ["record", "escalate", "approve"] },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "principals": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "frameworks": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "templates": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "servers": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "tools": { "type": "array", "items": { "type": "string", "pattern": "^[^/]+/[^/]+$" } }
+          }
+        },
+        "escalation_bands": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "elevated": { "type": "array", "items": { "type": "string" } },
+            "abnormal": { "type": "array", "items": { "type": "string" } },
+            "critical": { "type": "array", "items": { "type": "string" } }
+          }
+        },
         "baseline": {
           "type": "object",
           "additionalProperties": false,

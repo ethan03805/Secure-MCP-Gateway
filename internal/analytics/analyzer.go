@@ -68,17 +68,39 @@ func (a *analyzer) input(s baseline.Sample) anomaly.Input {
 	return anomaly.Input{Context: a.Baselines.ContextKey(s), Numeric: s.Numeric, Categorical: s.Categorical}
 }
 
+// bandActions are the asynchronous restrict-only actions of the Anomaly
+// Response Policy for a band (FR-8.14): elevated and worse alert, bands
+// from EscalateCapture on also escalate capture, and the uncharacterized
+// state escalates capture when its action is escalate or approve.
+func (s Settings) bandActions(band string) []string {
+	if band == anomaly.Uncharacterized {
+		if s.Uncharacterized == "escalate" || s.Uncharacterized == "approve" {
+			return []string{"capture_escalation"}
+		}
+		return nil
+	}
+	if anomaly.Rank(band) < anomaly.Rank(anomaly.Elevated) {
+		return nil
+	}
+	acts := []string{"alert"}
+	if s.EscalateCapture != "off" && anomaly.Rank(band) >= anomaly.Rank(s.EscalateCapture) {
+		acts = append(acts, "capture_escalation")
+	}
+	return acts
+}
+
 // Score scores assembled records asynchronously (FR-10.28): with async
 // scoring every record, with sync scoring the records that never reached
-// the request inspection stage (refused earlier). Actions are alert-only.
+// the request inspection stage (refused earlier). Actions are alert and
+// capture escalation only.
 func (a *analyzer) Score(r *observe.Record) *anomaly.Result {
 	if a.S.Scoring == "off" {
 		return nil
 	}
 	prev, _ := r.Values["previous_tool"].(string)
 	res := a.Scorer.Score(a.input(a.sample(r, prev)))
-	if anomaly.Rank(res.Band) >= anomaly.Rank(anomaly.Elevated) {
-		res.Actions = []string{"alert", "capture_escalation"}
+	if acts := a.S.bandActions(res.Band); len(acts) > 0 {
+		res.Actions = acts
 	}
 	a.svc().writeScoreLater(r, &res, "async")
 	return &res
@@ -136,10 +158,15 @@ func (p *requestProbe) FilterRequest(_ context.Context, call *pipeline.Call, arg
 	if s.S.Scoring == "sync" {
 		st := time.Now()
 		res := p.score(call, vals)
-		res.Actions = append([]string{"sync"}, res.Actions...)
-		if s.S.RequireApproval != "off" && anomaly.Rank(res.Band) >= anomaly.Rank(s.S.RequireApproval) {
+		res.Actions = append([]string{"sync"}, s.S.bandActions(res.Band)...)
+		switch {
+		case s.S.RequireApproval != "off" && anomaly.Rank(res.Band) >= anomaly.Rank(s.S.RequireApproval):
 			call.RequireApproval = true
 			call.ApprovalReason = "anomaly band " + res.Band
+			res.Actions = append(res.Actions, "require_approval")
+		case res.Band == anomaly.Uncharacterized && s.S.Uncharacterized == "approve":
+			call.RequireApproval = true
+			call.ApprovalReason = "anomaly context uncharacterized"
 			res.Actions = append(res.Actions, "require_approval")
 		}
 		pr.Score = &res
