@@ -55,6 +55,7 @@ type Config struct {
 	// (SetDirectory); not part of the file.
 	directory Directory
 	Remote    Remote   `toml:"remote" json:"remote"`
+	UDS       UDS      `toml:"uds" json:"uds"` // UDS Harness Profile (uds.go)
 	Packages  Packages `toml:"packages" json:"packages"`
 
 	// Operations (E-21 export, E-22, E-23); see ops.go.
@@ -343,6 +344,7 @@ func Parse(raw []byte) (*Config, error) {
 		return nil, err
 	}
 	cfg.Remote.applyDefaults(cfg.AdminListener.Address)
+	cfg.UDS.applyDefaults()
 	if err := cfg.check(); err != nil {
 		return nil, err
 	}
@@ -557,6 +559,9 @@ func (c *Config) check() error {
 	if err := c.checkRemote(); err != nil {
 		return err
 	}
+	if err := c.checkUDS(); err != nil {
+		return err
+	}
 	return c.Egress.check(aliases)
 }
 
@@ -577,6 +582,7 @@ func (c *Config) resolvePaths() {
 	}
 	res(&c.State.Dir)
 	res(&c.Policy.File)
+	res(&c.UDS.Path)
 	// TLS paths default relative to the state directory.
 	for _, p := range []*string{&c.Listener.TLSCert, &c.Listener.TLSKey} {
 		if !filepath.IsAbs(*p) {

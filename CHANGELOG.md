@@ -229,6 +229,19 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Approve and deny events carry `decided_at` beside `approver` and `comment` (FR-3.17, `docs/approvals.md`).
 - New tests verify FR-3.2 (missing field, wrong type and unknown enumeration value rejected with the field path, nothing stored), FR-3.5 (a 50-fixture scenario against a draft that removes one grant), FR-3.8 (export, import into a clean instance, identical decisions), FR-3.11, FR-3.17, SR-1-2 (each layer denies alone), SR-1.15-1 (the state directory as a crash at each activation step leaves it; the decider swaps only after the control record is renamed) and SR-1.18-2 (every binding field, expiry, single use, CP-17 bound). Existing tests now verify SR-1.14-1 (PUT, PATCH and DELETE on revision routes, other content under a published ID, rollback onto one), SR-1.12-2 (a denied call with an abnormal band stays denied) and FR-3.19 (the progress-token keep-alive form in the same run as the SSE comment form).
 
+### UDS Harness Profile (FR-1.1, FR-1.47, FR-2.15, SR-2.8-3)
+
+- New optional `[uds]` table: the Gateway listens on a Unix-domain socket (CP-02 default `/run/smcp/harness.sock`) created with mode 0660 and owned by the configured group (default `smcp-harness`). The socket carries newline-delimited JSON-RPC; the first message (`local.smcpgw/authenticate`) must carry the bearer key registered in `[[uds.peer]]` for the kernel-reported peer UID, otherwise `-31006` and the connection closes. Later messages go through the same chain as the TLS endpoint; `notifications/cancelled` cancels a request in flight, listen streams keep their `subscriptionId`, closing the socket ends the session (`internal/edge/uds.go`, `docs/harness.md`).
+- `smcp-stdio` uses the socket when the credential file names `[gateway] socket` and `uds_key`; the old HTTP-over-socket dialing of the adapters is removed.
+- New tests verify FR-1.1 (the process's listening sockets enumerated from the kernel are exactly the TLS, UDS and admin listeners), FR-1.47, FR-2.15 and SR-2.8-3.
+- FR-2.5 is changed in the SRS (and CP-23): on the UDS listener the session is bound to the connection that authenticated, instead of a per-message `_meta["local.smcpgw/session"]` token, so relays forward messages unchanged; a new test verifies FR-2.5.
+
+### Conformance suite, interface control documents, header characters (FR-12.9, FR-1.19, FR-1.48, SR-5.2-2, SR-5.6-1, FR-1.42)
+
+- New `internal/conformance` (FR-12.9): runs a full Gateway over a scripted backend and drives it with `mcp-spec/2026-07-28/schema/examples`. Every example validates against `schema.json`; the example requests are sent and every response and stream message is validated; the backend serves the Tool, CallToolResult, InputRequiredResult and content-block examples and sends the sampling, elicitation, roots and logging examples during calls; the Gateway's southbound lines are validated as JSON-RPC messages. Every example directory gets a report row; `make conformance` writes `build/conformance.md`. The suite also checks that no undefined code in `-32020` to `-32099`, `-32002` or `-32042` is returned or used in the sources (FR-1.19), and verifies SR-5.6-1 and FR-1.42.
+- `docs/icd/x-01-harness-interface.md` and `docs/icd/x-12-adapter-hooks.md` (FR-1.48), shipped in the release archives; a test checks that they cover the listed topics and every framework of the client matrix.
+- The harness listener answers a request whose header name or value has control characters, or whose header block is malformed, with HTTP 400 and `-32020` instead of net/http's plain-text 400 (`internal/edge/headerconn.go`): it terminates TLS itself and rewrites that fixed response. The harness listener now serves HTTP/1.1 only; clients that offer HTTP/2 fall back by ALPN. A new test verifies SR-5.2-2 on the running Gateway.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

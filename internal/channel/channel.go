@@ -16,6 +16,7 @@ import (
 const (
 	Local  = "tls"    // CP-02 harness listener
 	Remote = "remote" // CP-48 Remote Access listener
+	UDS    = "uds"    // CP-02 Unix-domain-socket listener (UDS Harness Profile)
 )
 
 // AddressSource labels a tunnel-supplied address (FR-16.8).
@@ -23,7 +24,7 @@ const AddressSource = "server-asserted"
 
 // Origin describes where a request came from.
 type Origin struct {
-	Channel       string // Local or Remote
+	Channel       string // Local, Remote or UDS
 	ClientID      string // OAuth client ID when known
 	ClientAddress string // tunnel-supplied caller address (remote only)
 }
@@ -39,8 +40,9 @@ func From(ctx context.Context) Origin { o, _ := ctx.Value(key{}).(Origin); retur
 
 // Listener is the session listener name for the origin.
 func (o Origin) Listener() string {
-	if o.Channel == Remote {
-		return Remote
+	switch o.Channel {
+	case Remote, UDS:
+		return o.Channel
 	}
 	return Local
 }

@@ -161,6 +161,29 @@
         }
       }
     },
+    "uds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "path": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "group": { "type": "string", "minLength": 1 },
+        "peer": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["uid", "principal", "key_hash"],
+            "properties": {
+              "uid": { "type": "integer", "minimum": 0 },
+              "principal": { "type": "string", "minLength": 1 },
+              "key_hash": { "type": "string", "minLength": 1 },
+              "template": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
     "observation": {
       "type": "object",
       "additionalProperties": false,

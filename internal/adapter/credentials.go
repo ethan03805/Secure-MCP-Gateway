@@ -35,9 +35,11 @@ type GatewaySection struct {
 	// (FR-12.13); remote access through a public tunnel leaves it empty and
 	// uses the system roots.
 	CAFile string `toml:"ca_file,omitempty"`
-	// Socket is the UDS listener path, used instead of TCP when the UDS
-	// Harness Profile is enabled.
+	// Socket is the UDS harness socket, used instead of the URL when the
+	// UDS Harness Profile is enabled (smcp-stdio only; RunUDS).
 	Socket string `toml:"socket,omitempty"`
+	// UDSKey is the bearer key registered for this user in [[uds.peer]].
+	UDSKey string `toml:"uds_key,omitempty"`
 }
 
 // ClientSection is the OAuth client of the principal.

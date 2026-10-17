@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -21,6 +23,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adapter"
 	"github.com/ethan03805/secure-mcp-gateway/internal/gwtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
@@ -326,42 +329,56 @@ func TestStdioBridgeRawEquivalence(t *testing.T) {
 	}
 }
 
+// TestRelayUnixSocket: with [gateway] socket and uds_key in the
+// credential file, smcp-stdio authenticates on the Gateway's UDS harness
+// socket and relays newline-delimited messages unchanged in both
+// directions (FR-12.13 with the UDS Harness Profile).
 func TestRelayUnixSocket(t *testing.T) {
 	reqtest.Partial(t, "FR-12.13")
-	dir, err := os.MkdirTemp("/tmp", "smcp-uds-")
+	dir, err := os.MkdirTemp("", "smcp-uds-")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 	sock := filepath.Join(dir, "h.sock")
-	var seen atomic.Value
-	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		seen.Store(r.Header.Get("Authorization") + "|" + r.Header.Get("Mcp-Method"))
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[]}}`))
-	}))
-	ln, err := netListenUnix(sock)
+	u, err := user.Current()
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv.Listener = ln
-	srv.StartTLS()
-	defer srv.Close()
-	caFile := filepath.Join(dir, "ca.pem")
-	if err := os.WriteFile(caFile, pemCert(srv), 0o600); err != nil {
-		t.Fatal(err)
+	grp, err := user.LookupGroupId(u.Gid)
+	if err != nil {
+		t.Skipf("primary group: %v", err)
 	}
-	h, err := adapter.NewHTTPClient(adapter.GatewaySection{URL: "https://example.com/mcp", Socket: sock, CAFile: caFile})
+	const key = "adapter uds key 0123456789"
+	hash, err := keys.HashPassword(key)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var out bytes.Buffer
-	r := &adapter.Relay{URL: "https://example.com/mcp", HTTP: h, Tokens: staticToken("tok"), In: strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}` + "\n"), Out: &out}
-	if err := r.Run(context.Background()); err != nil {
-		t.Fatal(err)
+	gwtest.Start(t, fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = %q\n[[uds.peer]]\nuid = %d\nprincipal = \"cc\"\nkey_hash = %q\n",
+		sock, grp.Name, os.Getuid(), hash))
+	write := func(k string) string {
+		path := filepath.Join(dir, "cred-"+k[:3]+".toml")
+		body := fmt.Sprintf("[gateway]\nurl = \"https://unused.invalid/mcp\"\nsocket = %q\nuds_key = %q\n[client]\nid = \"unused\"\n", sock, k)
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
 	}
-	if !strings.Contains(out.String(), `"tools":[]`) || seen.Load() != "Bearer tok|tools/list" {
-		t.Fatalf("out %q seen %v", out.String(), seen.Load())
+	meta := `"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}`
+	in := `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{` + meta + `}}` + "\n" +
+		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"t_echo","arguments":{"text":"via socket"},` + meta + `}}` + "\n"
+	var out, errOut bytes.Buffer
+	if code := adapter.StdioMain([]string{"--credentials", write(key)}, strings.NewReader(in), &out, &errOut); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != 2 || !strings.Contains(out.String(), `"t_echo"`) || !strings.Contains(out.String(), "echo:via socket") {
+		t.Fatalf("relayed output: %q", out.String())
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := adapter.StdioMain([]string{"--credentials", write("wrong key 0123456789")}, strings.NewReader(in), &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "refused the socket session") {
+		t.Fatalf("wrong key: exit %d: %s %s", code, out.String(), errOut.String())
 	}
 }
 

@@ -127,6 +127,12 @@ hostile: ## Hostile backend fixture suite (SRS Appendix L); writes build/hostile
 	$(GO) test -tags hostile -count=1 -run TestHostileFixtures ./internal/hostile/
 	@cat $(BUILD)/hostile.md
 
+.PHONY: conformance
+conformance: ## MCP conformance suite over the schema examples (FR-12.9); writes build/conformance.md
+	@mkdir -p $(BUILD)
+	SMCP_CONFORMANCE_REPORT=$(CURDIR)/$(BUILD)/conformance.md $(GO) test -count=1 -run TestConformanceSuite ./internal/conformance/
+	@cat $(BUILD)/conformance.md
+
 .PHONY: integration
 integration: ## Bootstrap, run smcpd, drive an MCP client, verify the journal
 	scripts/ci-integration.sh

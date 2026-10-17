@@ -111,8 +111,9 @@ func TestRequiredRequestMetadata(t *testing.T) {
 // a different value) or a missing required header is rejected with HTTP
 // 400 and -32020 before any processing.
 //
-// SR-5.2-2 is partial: a header value with control characters is refused
-// by net/http with a plain 400 before the Gateway runs, not with -32020.
+// SR-5.2-2 is partial here: header values with control characters are
+// refused before any handler runs, which only the full listener shows
+// (internal/e2e.TestHeaderControlCharacters).
 func TestHeaderBodyAgreement(t *testing.T) {
 	reqtest.Verifies(t, "SR-5.2-1")
 	reqtest.Partial(t, "SR-5.2-2")

@@ -91,6 +91,12 @@ func e2eLimits(extra string) string {
 
 func start(t *testing.T, extraLimits string) *fixture {
 	t.Helper()
+	return startWith(t, extraLimits, "")
+}
+
+// startWith is start with extraTOML appended to the configuration.
+func startWith(t *testing.T, extraLimits, extraTOML string) *fixture {
+	t.Helper()
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
 	if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
@@ -138,8 +144,9 @@ command = %q
 args = ["-test.run=NONE"]
 [server.env]
 SMCP_E2E_BACKEND = "1"
+%s
 `, port, port, adminPort, stateDir, mustHash(t, "admin password 12"), mustHash(t, approverPassword), filepath.Join(dir, "policy.json"),
-		e2eLimits(extraLimits), clientID, mustHash(t, "helper-secret-123"), exe)
+		e2eLimits(extraLimits), clientID, mustHash(t, "helper-secret-123"), exe, extraTOML)
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	if err := os.WriteFile(cfgPath, []byte(toml), 0o600); err != nil {
 		t.Fatal(err)

@@ -138,6 +138,8 @@ type harnessOpts struct {
 	raw func(ctx context.Context, in io.Reader, out io.Writer) error
 	// manifests replaces the live tool list (icons_test.go).
 	manifests pipeline.ManifestSource
+	// toml is appended to the configuration (uds_test.go).
+	toml string
 }
 
 // limitsTOML is the harness's [limits] body: the defaults below, with any
@@ -174,7 +176,8 @@ profile = "dev"
 [[server]]
 alias = "t"
 command = "/inproc/t"
-`, addr, addr, limitsTOML(o.limits))
+%s
+`, addr, addr, limitsTOML(o.limits), o.toml)
 	cfg, err := config.Parse([]byte(toml))
 	if err != nil {
 		t.Fatal(err)
