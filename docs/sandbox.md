@@ -65,7 +65,7 @@ It verifies every prerequisite first and exits with status 2, listing each missi
 | Groups | `smcp`; `smcp-srv` |
 | Users | `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console` (group `smcp`) and `smcp-srv` (group `smcp-srv`, so it cannot read `/etc/smcp`); system users, no login shell |
 | Subordinate IDs | 65,536 UIDs and GIDs each for `smcp-core` (runs smcpd) and `smcp-srv` (runs the server containers with `runtime.run_as`), in non-overlapping ranges starting at 100000 or after the highest existing range |
-| Directories | `/etc/smcp` (root:smcp 0750); `/var/lib/smcp/{policy,registry,artifacts}` (smcp-core 0700); `/var/lib/smcp/journal` (smcp-evidence 0700); `/var/lib/smcp/keys` (smcp-keys 0700); `/var/lib/smcp/vault` (smcp-vault 0700); `/var/lib/smcp/exports` (smcp-core 0750); `/var/lib/smcp/state` and `/var/lib/smcp/home/smcp-core` (smcp-core 0700); `/var/lib/smcp/home` (root 0755); `/var/lib/smcp/home/smcp-srv` (smcp-srv 0700); `/var/lib/smcp/srv` (smcp-core:smcp-srv 0750, `runtime.shared_dir`); `/var/log/smcp` (0750) |
+| Directories | `/etc/smcp` (root:smcp 0750); `/var/lib/smcp/{policy,registry,artifacts}` (smcp-core 0700); `/var/lib/smcp/journal` (smcp-evidence 0700); `/var/lib/smcp/keys` (smcp-keys 0700); `/var/lib/smcp/vault` (smcp-vault 0700); `/var/lib/smcp/exports` (smcp-core 0750); `/var/lib/smcp/state` and `/var/lib/smcp/home/smcp-core` (smcp-core 0700); `/var/lib/smcp/home` (root 0755); `/var/lib/smcp/home/smcp-srv` (smcp-srv 0700); `/var/lib/smcp/srv` (smcp-core:smcp-srv 0751, `runtime.shared_dir`); `/var/log/smcp` (0750) |
 | Server identity | Lingering for `smcp-srv` (its systemd user manager owns `/run/user/<uid>`), `/etc/sudoers.d/smcp-srv` (smcp-core may run Podman, and nothing else, as smcp-srv) and the drop-in `/etc/systemd/system/smcpd.service.d/smcp-srv.conf` (`packaging/linux/setup-server-identity.sh`; see "Server identity") |
 | AppArmor | `/etc/apparmor.d/smcpd` and `/etc/apparmor.d/smcp-server`, loaded in enforce mode when AppArmor is enabled |
 | nftables | `/etc/smcp/smcp.nft`, loaded as table `inet smcp` |
@@ -177,7 +177,7 @@ What the launcher does differently:
 - The egress confinement step (`podman unshare nsenter ... nft`) runs as `smcp-srv`, the owner of the container's user and network namespaces.
 - Secret files get ACL entries for the instance's UID (see "Environment").
 
-Host setup (`packaging/linux/setup-server-identity.sh`, run by `install-enforced.sh`): `smcp-srv` in its own group with home `/var/lib/smcp/home/smcp-srv`; `loginctl enable-linger smcp-srv`; `/var/lib/smcp/srv` (smcp-core:smcp-srv 0750); `/etc/sudoers.d/smcp-srv`:
+Host setup (`packaging/linux/setup-server-identity.sh`, run by `install-enforced.sh`): `smcp-srv` in its own group with home `/var/lib/smcp/home/smcp-srv`; `loginctl enable-linger smcp-srv`; `/var/lib/smcp/srv` (smcp-core:smcp-srv 0751); `/etc/sudoers.d/smcp-srv`:
 
 ```
 smcp-core ALL=(smcp-srv) NOPASSWD:SETENV: /usr/bin/podman

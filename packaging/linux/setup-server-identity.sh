@@ -17,7 +17,7 @@
 #     which owns /run/user/<uid> (Podman's runtime directory) and the user
 #     bus through which Podman creates the containers' cgroups in a subtree
 #     delegated to smcp-srv;
-#   - /var/lib/smcp/srv (smcp-core:smcp-srv 0750), runtime.shared_dir: the
+#   - /var/lib/smcp/srv (smcp-core:smcp-srv 0751), runtime.shared_dir: the
 #     Gateway-built root directory of image-less servers, which smcp-srv
 #     must read and the state directory does not allow;
 #   - /etc/sudoers.d/smcp-srv: smcp-core may run Podman, and only Podman,
@@ -65,7 +65,7 @@ ensure_dir() { # path owner group mode
   fi
 }
 ensure_dir "$home" "$srv" "$srv" 0700
-ensure_dir "$shared" smcp-core "$srv" 0750
+ensure_dir "$shared" smcp-core "$srv" 0751
 
 if [ -e "/var/lib/systemd/linger/$srv" ]; then
   say present "lingering for $srv"
