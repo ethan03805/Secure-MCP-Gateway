@@ -278,6 +278,10 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 
 - Declared behavior from the manifest (FR-5.34): the launcher wrapper of the package library passes the signed manifest's `capabilities.spawns_processes` with the launch (`pipeline.ServerSpec.SpawnsProcesses`), and the sandbox allows process creation when the manifest or `allow_spawn` declares it; any other new process is an `UNDECLARED_PROCESS` deviation. `docs/sandbox.md`.
 - New tests verify FR-5.34, FR-4.15 (with synchronous scoring an abnormal request gets the approval obligation and is never dispatched, and an abnormal response is withheld after dispatch and never delivered) and FR-10.28 (with asynchronous scoring an abnormal call is released, scored after its delivered event, and its score carries no blocking action).
+### Partial claims sweep: observation, baselines, research and labelling (E-23 to E-32)
+
+- New tests verify FR-9.7 (records, spans and metrics in separate tables, one column per catalog parameter, partitioned by UTC day, both store backends), FR-10.7 (an abnormal call is captured in full with the escalation parameters during 10% sampling), FR-10.20, FR-10.21 and SR-7-1 (through the control API of a running Gateway: promotion refused without authentication and for the Operator and Researcher roles, accepted for the Policy Author, automatic promotion within the configured limits and none beyond them, rollback to an earlier snapshot recorded in the next score, a tampered stored snapshot refused with an integrity event), SR-6-2 (S3 raw-payload fields exported only for an approved campaign with the raw-export grant) and FR-13.10 (`not enforced` in `smcpctl health`, `smcpctl version`, the health document the console status strip shows and the startup log entry).
+- Existing tests now verify FR-10.36 (export written to the export directory and downloaded through the route G-09 uses) and SR-1.13-2 (the template manifest is the one embedded in the signed release binary).
 
 ### Partial claims sweep: secret-use evidence and package signing (E-13, E-20)
 
