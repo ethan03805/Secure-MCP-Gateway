@@ -39,3 +39,5 @@ sequenceDiagram
 ## Implementation as of commit a3193a5
 
 `audit.Verify` in `internal/audit/audit.go` performs every step above except key transitions, which do not exist yet. A segment left unclosed by a crash is renamed aside when the journal reopens, so the chain continues from the last closed segment.
+
+Update with the operations work (E-21, E-22): key transitions exist. `smcpctl journal verify` starts from `keys/evidence-genesis.pub` (or `--key`); a footer with `next_key` hands the chain to that key after its signature verifies under the outgoing key, and the segment must also hold the `key_rotated` event naming the same key. The anchor records the public key that signed it and must be signed by the key in force for the segment it names or by that segment's next key. A segment left unclosed by a crash is sealed in place and marked `recovered`. See `docs/operations/keys.md`.

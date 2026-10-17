@@ -5,15 +5,15 @@
 // (CP-28). Keys are files with mode 0600 under the state directory; TPM
 // sealing and passphrase encryption (FR-7.9) are not yet implemented.
 //
-// Certificate lifetimes: the server CA is valid for CALifetime (two years)
-// and is name-constrained to the loopback names, so a leaked CA key cannot
-// mint certificates for any public name. Leaf certificates are valid for
-// LeafLifetime (397 days, the CA/Browser Forum ceiling). RotateIfDue
-// reissues the leaf from the existing CA when it is within RotateBefore of
-// expiry and reports when the CA itself needs replacing; smcpd calls it at
-// startup. Replacing the CA is an operator action (rerun Ensure after moving
-// the old tls directory aside) because every client trust store must be
-// updated with it.
+// Certificate lifetimes (CP-53): the server CA is valid for CALifetime (365
+// days), has path length 0 and is name-constrained to DNS localhost, the
+// configured listener names, IP 127.0.0.0/8 and ::1/128, so a leaked CA key
+// cannot mint certificates for any public name. Listener certificates are
+// valid for LeafLifetime (90 days) and are reissued when RotateBefore (30
+// days) remain; smcpd calls RotateIfDue at startup and the operations
+// runtime calls it daily. Replacing the CA is an operator action with an
+// overlap period (rotate.go) because client trust stores must learn the new
+// CA.
 package keys
 
 import (
@@ -48,17 +48,30 @@ const (
 	EvidencePubFile  = "keys/evidence.pub"
 	AdminTokenFile   = "keys/admin.token"
 	EvidenceKeyBytes = ed25519.SeedSize
+	// EvidenceGenesisFile is the public key that signed the first journal
+	// segment: the trust root `smcpctl journal verify` starts from when the
+	// evidence key has been rotated (FR-17.8).
+	EvidenceGenesisFile = "keys/evidence-genesis.pub"
+	// InstallationIDFile names this installation; `smcpctl uninstall
+	// --purge` asks the operator to type it (FR-13.12).
+	InstallationIDFile = "keys/installation.id"
 )
 
-// Certificate lifetimes.
+// Certificate lifetimes (CP-53).
 const (
-	CALifetime   = 2 * 365 * 24 * time.Hour
-	LeafLifetime = 397 * 24 * time.Hour
+	CALifetime   = 365 * 24 * time.Hour
+	LeafLifetime = 90 * 24 * time.Hour
 	RotateBefore = 30 * 24 * time.Hour
 )
 
-// loopbackIPs are always permitted by the CA name constraints.
+// loopbackIPs are always in the listener certificate.
 var loopbackIPs = []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
+
+// loopbackRanges are always permitted by the CA name constraints (CP-53).
+var loopbackRanges = []*net.IPNet{
+	{IP: net.IPv4(127, 0, 0, 0).To4(), Mask: net.CIDRMask(8, 32)},
+	{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)},
+}
 
 // Ensure creates any missing key material under stateDir. names are the
 // listener host names or IP literals the leaf certificate must cover in
@@ -84,7 +97,28 @@ func Ensure(stateDir string, names ...string) error {
 			return fmt.Errorf("admin token: %w", err)
 		}
 	}
+	if _, err := EnsureInstallationID(stateDir); err != nil {
+		return fmt.Errorf("installation id: %w", err)
+	}
 	return nil
+}
+
+// EnsureInstallationID returns the installation ID, creating it when
+// missing.
+func EnsureInstallationID(stateDir string) (string, error) {
+	p := filepath.Join(stateDir, InstallationIDFile)
+	if b, err := os.ReadFile(p); err == nil {
+		if id := strings.TrimSpace(string(b)); id != "" {
+			return id, nil
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		return "", err
+	}
+	id := ids.New()
+	return id, WriteFileAtomic(p, []byte(id+"\n"), 0o600)
 }
 
 func exists(p string) bool {
@@ -114,23 +148,43 @@ func leafNames(names []string) (dns []string, ips []net.IP) {
 }
 
 func generateTLS(stateDir string, names []string) error {
-	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	caCert, caKey, caDER, caKeyDER, err := newCA(time.Now(), names)
 	if err != nil {
 		return err
 	}
+	if err := writePEM(filepath.Join(stateDir, CACertFile), "CERTIFICATE", caDER, 0o644); err != nil {
+		return err
+	}
+	if err := writePEM(filepath.Join(stateDir, CAKeyFile), "EC PRIVATE KEY", caKeyDER, 0o600); err != nil {
+		return err
+	}
 	dns, ips := leafNames(names)
-	var ipNets []*net.IPNet
+	return issueLeaf(stateDir, caCert, caKey, dns, ips)
+}
+
+// newCA creates a CP-53 server CA: 365 days, path length 0, name
+// constraints DNS localhost plus the listener names, IP 127.0.0.0/8 and
+// ::1/128 plus any other listener IP.
+func newCA(now time.Time, names []string) (*x509.Certificate, *ecdsa.PrivateKey, []byte, []byte, error) {
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	dns, ips := leafNames(names)
+	ipNets := append([]*net.IPNet(nil), loopbackRanges...)
 	for _, ip := range ips {
+		if ip.IsLoopback() {
+			continue
+		}
 		bits := 32
 		if ip.To4() == nil {
 			bits = 128
 		}
 		ipNets = append(ipNets, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
 	}
-	now := time.Now()
 	caTmpl := &x509.Certificate{
 		SerialNumber:          serial(),
-		Subject:               pkix.Name{CommonName: "Secure MCP Gateway server CA"},
+		Subject:               pkix.Name{CommonName: "Secure MCP Gateway server CA", SerialNumber: now.UTC().Format("20060102T150405Z")},
 		NotBefore:             now.Add(-time.Hour),
 		NotAfter:              now.Add(CALifetime),
 		IsCA:                  true,
@@ -144,26 +198,65 @@ func generateTLS(stateDir string, names []string) error {
 	}
 	caDER, err := x509.CreateCertificate(rand.Reader, caTmpl, caTmpl, &caKey.PublicKey, caKey)
 	if err != nil {
-		return err
+		return nil, nil, nil, nil, err
 	}
 	caCert, err := x509.ParseCertificate(caDER)
 	if err != nil {
-		return err
+		return nil, nil, nil, nil, err
 	}
 	caKeyDER, err := x509.MarshalECPrivateKey(caKey)
 	if err != nil {
-		return err
+		return nil, nil, nil, nil, err
 	}
-	if err := writePEM(filepath.Join(stateDir, CACertFile), "CERTIFICATE", caDER, 0o644); err != nil {
-		return err
+	return caCert, caKey, caDER, caKeyDER, nil
+}
+
+// ErrOutsideConstraints is returned when a listener certificate is
+// requested for a name the server CA's name constraints do not permit
+// (SR-2.8-4).
+var ErrOutsideConstraints = errors.New("name is outside the server CA name constraints")
+
+// permitted reports whether the CA's name constraints allow the name.
+func permitted(ca *x509.Certificate, dns string, ip net.IP) bool {
+	if ip != nil {
+		for _, r := range ca.PermittedIPRanges {
+			if r.Contains(ip) {
+				return true
+			}
+		}
+		return len(ca.PermittedIPRanges) == 0
 	}
-	if err := writePEM(filepath.Join(stateDir, CAKeyFile), "EC PRIVATE KEY", caKeyDER, 0o600); err != nil {
-		return err
+	for _, d := range ca.PermittedDNSDomains {
+		if strings.EqualFold(dns, d) || strings.HasSuffix(strings.ToLower(dns), "."+strings.ToLower(strings.TrimPrefix(d, "."))) {
+			return true
+		}
 	}
-	return issueLeaf(stateDir, caCert, caKey, dns, ips)
+	return len(ca.PermittedDNSDomains) == 0
+}
+
+// splitPermitted separates the names the CA permits from those it does not.
+func splitPermitted(ca *x509.Certificate, dns []string, ips []net.IP) (okDNS []string, okIPs []net.IP, outside []string) {
+	for _, d := range dns {
+		if permitted(ca, d, nil) {
+			okDNS = append(okDNS, d)
+		} else {
+			outside = append(outside, d)
+		}
+	}
+	for _, ip := range ips {
+		if permitted(ca, "", ip) {
+			okIPs = append(okIPs, ip)
+		} else {
+			outside = append(outside, ip.String())
+		}
+	}
+	return okDNS, okIPs, outside
 }
 
 func issueLeaf(stateDir string, caCert *x509.Certificate, caKey *ecdsa.PrivateKey, dns []string, ips []net.IP) error {
+	if _, _, outside := splitPermitted(caCert, dns, ips); len(outside) > 0 {
+		return fmt.Errorf("%w: %s", ErrOutsideConstraints, strings.Join(outside, ", "))
+	}
 	srvKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return err
@@ -203,11 +296,16 @@ type TLSStatus struct {
 	LeafNotAfter time.Time
 	CADue        bool // the CA expires within RotateBefore; operator action needed
 	LeafRotated  bool // RotateIfDue reissued the leaf
+	// Uncovered lists listener names the CA's name constraints do not
+	// permit; the listener certificate does not cover them. Rotating the
+	// CA (`smcpctl keys rotate ca`) adds them.
+	Uncovered []string
 }
 
 // RotateIfDue reissues the leaf certificate from the existing CA when it
 // expires within RotateBefore or does not cover names, and reports the CA
-// state. It never replaces the CA.
+// state. It never replaces the CA. Names outside the CA name constraints
+// are left out of the leaf and reported in Uncovered.
 func RotateIfDue(stateDir string, now time.Time, names ...string) (TLSStatus, error) {
 	var st TLSStatus
 	caCert, err := loadCert(filepath.Join(stateDir, CACertFile))
@@ -221,6 +319,7 @@ func RotateIfDue(stateDir string, now time.Time, names ...string) (TLSStatus, er
 	st.CANotAfter, st.LeafNotAfter = caCert.NotAfter, leaf.NotAfter
 	st.CADue = now.Add(RotateBefore).After(caCert.NotAfter)
 	dns, ips := leafNames(names)
+	dns, ips, st.Uncovered = splitPermitted(caCert, dns, ips)
 	covers := true
 	for _, d := range dns {
 		if leaf.VerifyHostname(d) != nil {
@@ -235,18 +334,10 @@ func RotateIfDue(stateDir string, now time.Time, names ...string) (TLSStatus, er
 	if covers && !now.Add(RotateBefore).After(leaf.NotAfter) {
 		return st, nil
 	}
-	if st.CADue {
-		return st, errors.New("server CA expires within the rotation window; replace the CA")
+	if !now.Before(caCert.NotAfter) {
+		return st, errors.New("server CA has expired; rotate it with `smcpctl keys rotate ca --overlap 0`")
 	}
-	b, err := os.ReadFile(filepath.Join(stateDir, CAKeyFile))
-	if err != nil {
-		return st, err
-	}
-	blk, _ := pem.Decode(b)
-	if blk == nil {
-		return st, errors.New("CA key is not PEM")
-	}
-	caKey, err := x509.ParseECPrivateKey(blk.Bytes)
+	caKey, err := loadECKey(filepath.Join(stateDir, CAKeyFile))
 	if err != nil {
 		return st, err
 	}
@@ -322,7 +413,22 @@ func generateEvidenceKey(stateDir string) error {
 	if err := WriteFileAtomic(filepath.Join(stateDir, EvidenceKeyFile), []byte(seed+"\n"), 0o600); err != nil {
 		return err
 	}
-	return WriteFileAtomic(filepath.Join(stateDir, EvidencePubFile), []byte(hex.EncodeToString(pub)+"\n"), 0o644)
+	if err := WriteFileAtomic(filepath.Join(stateDir, EvidencePubFile), []byte(hex.EncodeToString(pub)+"\n"), 0o644); err != nil {
+		return err
+	}
+	return WriteFileAtomic(filepath.Join(stateDir, EvidenceGenesisFile), []byte(hex.EncodeToString(pub)+"\n"), 0o644)
+}
+
+func loadECKey(path string) (*ecdsa.PrivateKey, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	blk, _ := pem.Decode(b)
+	if blk == nil {
+		return nil, fmt.Errorf("%s: not PEM", path)
+	}
+	return x509.ParseECPrivateKey(blk.Bytes)
 }
 
 // LoadEvidenceKey returns the Ed25519 signing key from the state directory.

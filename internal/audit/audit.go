@@ -21,7 +21,12 @@
 // its file hash and the total event count. Verify compares the journal with
 // the anchor, so deleting trailing segments is detected. Replacing the anchor
 // with an older signed copy is not detected locally; copying the anchor off
-// the machine (evidence export, FR-7.14) closes that gap.
+// the machine (evidence export, FR-7.14, export.go) closes that gap.
+//
+// Evidence-key rotation (FR-17.7, FR-17.8): RotateKey closes the open
+// segment with a footer, signed by the outgoing key, whose next_key names
+// the incoming key; Verify starts from the trust root (the key of segment
+// 1) and follows these records.
 //
 // Graph and analytics persistence of events (E-26, E-27, E-29) are mirrors
 // fed through Fanout observers and never gate a call.
@@ -156,6 +161,9 @@ type Journal struct {
 	recovered []Recovery
 	ticker    *time.Ticker
 	stopTick  chan struct{}
+	firstAt   time.Time // time of the first event in the open segment
+	nextKey   string    // set by RotateKey for the footer being written
+	flushObs  atomic.Pointer[func(time.Duration)]
 }
 
 const (
@@ -179,7 +187,11 @@ type footer struct {
 	BodySHA256     string `json:"body_sha256"`
 	Recovered      bool   `json:"recovered,omitempty"`
 	TruncatedBytes int64  `json:"truncated_bytes,omitempty"`
-	Signature      string `json:"signature"` // base64 Ed25519 over signingBytes
+	// NextKey is set on the last segment signed by an outgoing evidence key:
+	// the hex Ed25519 public key that signs the following segments
+	// (key-transition record, FR-17.7). It is covered by the signature.
+	NextKey   string `json:"next_key,omitempty"`
+	Signature string `json:"signature"` // base64 Ed25519 over signingBytes
 }
 
 func (f footer) signingBytes() []byte {
@@ -194,7 +206,10 @@ type anchor struct {
 	SegmentSHA256 string `json:"segment_sha256"`
 	EventsTotal   int64  `json:"events_total"`
 	Time          string `json:"time"`
-	Signature     string `json:"signature"`
+	// Key is the hex public key that signed the anchor. Anchors written
+	// before evidence-key rotation existed omit it.
+	Key       string `json:"key,omitempty"`
+	Signature string `json:"signature"`
 }
 
 func (a anchor) signingBytes() []byte {
@@ -218,6 +233,7 @@ func Open(dir string, key ed25519.PrivateKey, opts Options) (*Journal, error) {
 	if err != nil {
 		return nil, err
 	}
+	var last *footer
 	for i, s := range segs {
 		path := filepath.Join(dir, s.name)
 		ft, err := readFooter(path)
@@ -227,6 +243,10 @@ func Open(dir string, key ed25519.PrivateKey, opts Options) (*Journal, error) {
 		if ft == nil {
 			if i != len(segs)-1 {
 				return nil, fmt.Errorf("%s is not closed and is not the last segment; run `smcpctl journal verify` and investigate before starting", s.name)
+			}
+			// Recovery signs the crashed segment, so the key must be right first.
+			if err := checkTransition(last, key); err != nil {
+				return nil, err
 			}
 			rec, err := j.recoverSegment(s.seq, path)
 			if err != nil {
@@ -241,8 +261,16 @@ func Open(dir string, key ed25519.PrivateKey, opts Options) (*Journal, error) {
 		}
 		j.prevHash, j.seq = sum, s.seq
 		j.total += int64(ft.Events)
+		last = ft
 	}
-	if a, err := readAnchor(opts.AnchorPath, key.Public().(ed25519.PublicKey)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	pub := key.Public().(ed25519.PublicKey)
+	transition := last != nil && last.NextKey != ""
+	if len(j.recovered) == 0 {
+		if err := checkTransition(last, key); err != nil {
+			return nil, err
+		}
+	}
+	if a, err := readAnchor(opts.AnchorPath, pub, transition); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	} else if err == nil && a.Segment > j.seq {
 		return nil, fmt.Errorf("anchor %s names segment %d but the journal ends at segment %d: trailing segments are missing; move the anchor aside only after investigating", opts.AnchorPath, a.Segment, j.seq)
@@ -257,9 +285,39 @@ func Open(dir string, key ed25519.PrivateKey, opts Options) (*Journal, error) {
 		}
 	}
 	j.stopTick = make(chan struct{})
-	j.ticker = time.NewTicker(opts.MaxAge / 4)
+	j.ticker = time.NewTicker(tickInterval(opts.MaxAge))
 	go j.ageLoop()
 	return j, nil
+}
+
+// checkTransition refuses a key other than the one the last key-transition
+// record hands the chain to; any other key would break verification.
+func checkTransition(last *footer, key ed25519.PrivateKey) error {
+	if last == nil || last.NextKey == "" {
+		return nil
+	}
+	pub := hex.EncodeToString(key.Public().(ed25519.PublicKey))
+	if last.NextKey != pub {
+		return fmt.Errorf("the journal's last key-transition record names evidence key %s, but the configured key is %s: finish or undo the key rotation before starting", last.NextKey, pub)
+	}
+	return nil
+}
+
+// tickInterval is how often the age loop checks the open segment.
+func tickInterval(maxAge time.Duration) time.Duration {
+	return min(maxAge/4, time.Second)
+}
+
+// ageDue reports whether the open segment must close because of its age.
+// A segment closes MaxAge after it opened, and also slightly before its
+// first event is MaxAge old, so that the oldest unsigned event never
+// exceeds MaxAge (the CP-27 stop threshold) because of tick granularity.
+func (j *Journal) ageDue(now time.Time) bool {
+	if j.count == 0 {
+		return false
+	}
+	margin := 2 * tickInterval(j.opts.MaxAge)
+	return now.Sub(j.opened) >= j.opts.MaxAge || now.Sub(j.firstAt) >= j.opts.MaxAge-margin
 }
 
 // Recovered lists the segments sealed by crash recovery during Open.
@@ -336,7 +394,7 @@ func (j *Journal) ageLoop() {
 			return
 		case <-j.ticker.C:
 			j.mu.Lock()
-			if !j.closed && j.err == nil && j.count > 0 && j.opts.Now().Sub(j.opened) >= j.opts.MaxAge {
+			if !j.closed && j.err == nil && j.ageDue(j.opts.Now()) {
 				if err := j.rotateLocked(); err != nil {
 					j.fail(err)
 				}
@@ -424,6 +482,9 @@ func (j *Journal) Append(ev Event, durable bool) (Event, error) {
 		Type string `json:"type"`
 		Event
 	}{lineEvent, ev}
+	if j.count == 0 {
+		j.firstAt = j.opts.Now()
+	}
 	if err := j.writeLine(line); err != nil {
 		j.fail(err)
 		err = j.err
@@ -477,8 +538,12 @@ func (j *Journal) syncTo(gen uint64) error {
 	target, f := j.written, j.file
 	j.fileMu.RLock()
 	j.mu.Unlock()
+	start := time.Now()
 	err := f.Sync()
 	j.fileMu.RUnlock()
+	if obs := j.flushObs.Load(); obs != nil && err == nil {
+		(*obs)(time.Since(start))
+	}
 	if err != nil {
 		j.mu.Lock()
 		j.fail(err)
@@ -506,11 +571,120 @@ func (j *Journal) rotateLocked() error {
 	return j.openSegment()
 }
 
+// SetFlushObserver registers a function called with the duration of every
+// successful journal fsync (metrics, FR-17.5). Nil removes it.
+func (j *Journal) SetFlushObserver(f func(time.Duration)) {
+	if f == nil {
+		j.flushObs.Store(nil)
+		return
+	}
+	j.flushObs.Store(&f)
+}
+
+// Unsigned reports the number of events in the open segment, which are not
+// yet covered by a segment signature, and the time of the oldest of them
+// (zero when there are none). The Health & Safety Monitor compares them
+// with the CP-27 stop thresholds.
+func (j *Journal) Unsigned() (int, time.Time) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if j.count == 0 {
+		return 0, time.Time{}
+	}
+	return j.count, j.firstAt
+}
+
+// Seal closes the open segment, signing every event appended so far, and
+// opens the next one. Backups seal before copying the journal (SR-7.7-1).
+func (j *Journal) Seal() error {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if err := j.usableLocked(); err != nil {
+		return err
+	}
+	if err := j.rotateLocked(); err != nil {
+		j.fail(err)
+		return j.err
+	}
+	return nil
+}
+
+func (j *Journal) usableLocked() error {
+	if j.err != nil {
+		return j.err
+	}
+	if j.closed {
+		return errors.New("journal closed")
+	}
+	return nil
+}
+
+// RotateKey replaces the evidence-signing key (FR-17.7). It appends a
+// key_rotated event naming both public keys, closes the open segment with
+// a footer signed by the outgoing key whose next_key field names the
+// incoming key (the key-transition record), rewrites the anchor under the
+// incoming key and opens the next segment, which the incoming key signs.
+// The caller persists the new key; until it does, a restart refuses to
+// open the journal with the old key.
+func (j *Journal) RotateKey(next ed25519.PrivateKey) error {
+	if len(next) != ed25519.PrivateKeySize {
+		return errors.New("new evidence key is not an Ed25519 private key")
+	}
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if err := j.usableLocked(); err != nil {
+		return err
+	}
+	oldPub := hex.EncodeToString(j.key.Public().(ed25519.PublicKey))
+	newPub := hex.EncodeToString(next.Public().(ed25519.PublicKey))
+	if oldPub == newPub {
+		return errors.New("new evidence key equals the current key")
+	}
+	ev := Event{EventID: ids.New(), Time: j.opts.Now().UTC().Format(time.RFC3339Nano), Class: "journal", Origin: "E-22", Outcome: "key_rotated",
+		ReasonCode: "EVIDENCE_KEY_ROTATED", PolicyStatus: "not_evaluated", Detail: map[string]any{"previous_key": oldPub, "next_key": newPub}}
+	if j.count == 0 {
+		j.firstAt = j.opts.Now()
+	}
+	if err := j.writeLine(struct {
+		Type string `json:"type"`
+		Event
+	}{lineEvent, ev}); err != nil {
+		j.fail(err)
+		return j.err
+	}
+	j.count++
+	j.total++
+	j.written++
+	j.nextKey = newPub
+	if err := j.closeSegmentLocked(nil); err != nil {
+		j.fail(err)
+		return j.err
+	}
+	j.key = next
+	if err := j.writeAnchor(j.prevHash); err != nil {
+		j.fail(err)
+		return j.err
+	}
+	if err := j.openSegment(); err != nil {
+		j.fail(err)
+		return j.err
+	}
+	return nil
+}
+
+// PublicKey returns the key that signs the open segment.
+func (j *Journal) PublicKey() ed25519.PublicKey {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.key.Public().(ed25519.PublicKey)
+}
+
 // closeSegmentLocked writes the signed footer, fsyncs and closes the
 // segment, then writes the anchor.
 func (j *Journal) closeSegmentLocked(rec *Recovery) error {
 	ft := footer{Type: lineFooter, Segment: j.seq, Events: j.count, ClosedAt: j.opts.Now().UTC().Format(time.RFC3339Nano),
-		BodySHA256: hex.EncodeToString(j.hasher.Sum(nil))}
+		BodySHA256: hex.EncodeToString(j.hasher.Sum(nil)), NextKey: j.nextKey}
+	j.nextKey = ""
 	if rec != nil {
 		ft.Recovered, ft.TruncatedBytes = true, rec.TruncatedBytes
 	}
@@ -537,7 +711,8 @@ func (j *Journal) closeSegmentLocked(rec *Recovery) error {
 }
 
 func (j *Journal) writeAnchor(segSHA string) error {
-	a := anchor{Type: "anchor", Segment: j.seq, SegmentSHA256: segSHA, EventsTotal: j.total, Time: j.opts.Now().UTC().Format(time.RFC3339Nano)}
+	a := anchor{Type: "anchor", Segment: j.seq, SegmentSHA256: segSHA, EventsTotal: j.total, Time: j.opts.Now().UTC().Format(time.RFC3339Nano),
+		Key: hex.EncodeToString(j.key.Public().(ed25519.PublicKey))}
 	a.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(j.key, a.signingBytes()))
 	b, err := json.Marshal(a)
 	if err != nil {
@@ -626,7 +801,27 @@ func readFooter(path string) (*footer, error) {
 	return &ft, nil
 }
 
-func readAnchor(path string, pub ed25519.PublicKey) (*anchor, error) {
+// readAnchor reads and verifies the anchor under pub. With anyKey set, an
+// anchor signed by the key it names is also accepted: Open uses it right
+// after a key transition, when a crash may have left the anchor signed by
+// the outgoing key.
+func readAnchor(path string, pub ed25519.PublicKey, anyKey bool) (*anchor, error) {
+	a, err := parseAnchor(path)
+	if err != nil {
+		return nil, err
+	}
+	if a.verify(pub) {
+		return a, nil
+	}
+	if anyKey && a.Key != "" {
+		if k, err := hex.DecodeString(a.Key); err == nil && a.verify(k) {
+			return a, nil
+		}
+	}
+	return nil, fmt.Errorf("anchor %s: signature invalid", path)
+}
+
+func parseAnchor(path string) (*anchor, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -635,11 +830,12 @@ func readAnchor(path string, pub ed25519.PublicKey) (*anchor, error) {
 	if err := json.Unmarshal(b, &a); err != nil || a.Type != "anchor" {
 		return nil, fmt.Errorf("anchor %s is not an anchor record", path)
 	}
-	sig, err := base64.StdEncoding.DecodeString(a.Signature)
-	if err != nil || !ed25519.Verify(pub, a.signingBytes(), sig) {
-		return nil, fmt.Errorf("anchor %s: signature invalid", path)
-	}
 	return &a, nil
+}
+
+func (a *anchor) verify(pub ed25519.PublicKey) bool {
+	sig, err := base64.StdEncoding.DecodeString(a.Signature)
+	return err == nil && len(pub) == ed25519.PublicKeySize && ed25519.Verify(pub, a.signingBytes(), sig)
 }
 
 func fileSHA256(path string) (string, error) {
@@ -704,6 +900,20 @@ type Report struct {
 	TruncatedTail bool     // the trailing open segment ends in an incomplete or invalid line
 	Recovered     []string // segments sealed by crash recovery; events after the truncation point are lost
 	AnchorSegment int      // segment named by the anchor; 0 when no segment has closed yet
+	// Keys lists the hex evidence public keys in the order they signed,
+	// starting with the trust root; one entry per key transition follows.
+	Keys []string
+	// Transitions lists the segments whose footer is a key-transition
+	// record.
+	Transitions []int
+}
+
+// CurrentKey is the key that signs segments after the last transition.
+func (r Report) CurrentKey() string {
+	if len(r.Keys) == 0 {
+		return ""
+	}
+	return r.Keys[len(r.Keys)-1]
 }
 
 // Findings returns the report's warnings as sentences.
@@ -735,8 +945,18 @@ func Verify(dir string, pub ed25519.PublicKey) (Report, error) {
 // unclosed segment is. A missing anchor when segments have closed, an anchor
 // that names a missing segment, and an anchor that disagrees with the
 // journal are failures.
+//
+// pub is the trust root: the key that signed segment 1. Key-transition
+// records are followed (FR-17.8): a footer whose next_key is set, and whose
+// signature verifies under the key in force, hands the chain to next_key,
+// which must then sign every later segment until the next transition. The
+// segment holding a transition must also contain the key_rotated event
+// naming the same key. The anchor must be signed by the key in force for
+// the segment it names or by that segment's next key.
 func VerifyWith(dir string, pub ed25519.PublicKey, vo VerifyOptions) (Report, error) {
 	var rep Report
+	rep.Keys = []string{hex.EncodeToString(pub)}
+	segKey := map[int][2]ed25519.PublicKey{} // segment -> {signing key, next key}
 	if vo.AnchorPath == "" {
 		vo.AnchorPath = DefaultAnchorPath(dir)
 	}
@@ -809,6 +1029,21 @@ func VerifyWith(dir string, pub ed25519.PublicKey, vo VerifyOptions) (Report, er
 		if err != nil || !ed25519.Verify(pub, ft.signingBytes(), sig) {
 			return rep, fmt.Errorf("%s: signature invalid", s.name)
 		}
+		keys := [2]ed25519.PublicKey{pub, nil}
+		if ft.NextKey != "" {
+			next, err := hex.DecodeString(ft.NextKey)
+			if err != nil || len(next) != ed25519.PublicKeySize {
+				return rep, fmt.Errorf("%s: key-transition record names an invalid key", s.name)
+			}
+			if !hasTransitionEvent(lines[1:len(lines)-1], ft.NextKey) {
+				return rep, fmt.Errorf("%s: key-transition footer without a matching key_rotated event", s.name)
+			}
+			keys[1] = next
+			pub = next
+			rep.Keys = append(rep.Keys, ft.NextKey)
+			rep.Transitions = append(rep.Transitions, s.seq)
+		}
+		segKey[s.seq] = keys
 		if ft.Segment != s.seq {
 			return rep, fmt.Errorf("%s: footer names segment %d", s.name, ft.Segment)
 		}
@@ -826,7 +1061,7 @@ func VerifyWith(dir string, pub ed25519.PublicKey, vo VerifyOptions) (Report, er
 		closed[s.seq] = closedSeg{prev, cumulative}
 		lastClosed = s.seq
 	}
-	a, err := readAnchor(vo.AnchorPath, pub)
+	a, err := parseAnchor(vo.AnchorPath)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		if lastClosed > 0 {
@@ -835,6 +1070,9 @@ func VerifyWith(dir string, pub ed25519.PublicKey, vo VerifyOptions) (Report, er
 		return rep, nil
 	case err != nil:
 		return rep, err
+	}
+	if !anchorSigned(a, segKey, rep.Keys) {
+		return rep, fmt.Errorf("anchor %s: signature invalid", vo.AnchorPath)
 	}
 	rep.AnchorSegment = a.Segment
 	cs, ok := closed[a.Segment]
@@ -849,6 +1087,40 @@ func VerifyWith(dir string, pub ed25519.PublicKey, vo VerifyOptions) (Report, er
 		return rep, fmt.Errorf("anchor counts %d events through segment %d, journal has %d", a.EventsTotal, a.Segment, cs.events)
 	}
 	return rep, nil
+}
+
+// anchorSigned checks the anchor's signature: under the key in force for the
+// segment it names (or that segment's next key), or, when the segment is
+// not in the journal, under any key of the chain so that the missing
+// segments are reported rather than a signature failure.
+func anchorSigned(a *anchor, segKey map[int][2]ed25519.PublicKey, chain []string) bool {
+	if k, ok := segKey[a.Segment]; ok {
+		return a.verify(k[0]) || (k[1] != nil && a.verify(k[1]))
+	}
+	for _, h := range chain {
+		if k, err := hex.DecodeString(h); err == nil && a.verify(k) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasTransitionEvent reports whether the segment's event lines contain the
+// key_rotated event that names next.
+func hasTransitionEvent(lines []string, next string) bool {
+	for i := len(lines) - 1; i >= 0; i-- {
+		var line struct {
+			Type string `json:"type"`
+			Event
+		}
+		if json.Unmarshal([]byte(lines[i]), &line) != nil || line.Type != lineEvent || line.Outcome != "key_rotated" {
+			continue
+		}
+		if d, ok := line.Detail.(map[string]any); ok && d["next_key"] == next {
+			return true
+		}
+	}
+	return false
 }
 
 // ReadEvents returns every event of the journal in order, including events in

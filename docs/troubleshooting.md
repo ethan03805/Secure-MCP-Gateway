@@ -92,3 +92,8 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `OPERATOR_KILL` | Journal `runtime` event | An administrator killed an instance with `smcpctl runtime kill` |
 | `INSTANCE_EXITED_UNEXPECTEDLY` | Journal `runtime` event | A server instance ended without being asked to; its tools fail until the Gateway restarts |
 | `MONITOR_UNAVAILABLE` | Journal `runtime` event | The Runtime Monitor could not find an instance's cgroup |
+| `HEALTH_FAIL_CLOSED`, `HEALTH_DEGRADED`, `HEALTH_HEALTHY` | Journal `health` events | The health monitor changed state; the detail lists the causes (`docs/operations/health.md`) |
+| `HEALTH_ACK` | Journal event | An administrator acknowledged a latched integrity cause |
+| `CONFIG_RELOADED`, `CONFIG_INVALID` | Journal event, `smcpctl reload` | A configuration reload was applied or rejected (`docs/operations/logging-metrics-reload.md`) |
+| `LISTENER_CERT_ROTATED`, `LISTENER_CERT_RENEWED`, `SERVER_CA_ROTATION_STARTED`, `SERVER_CA_ACTIVATED`, `EVIDENCE_KEY_ROTATED` | Journal `key_rotated` events | A certificate or key was rotated (`docs/operations/keys.md`) |
+| `BACKUP_WRITTEN`, `BACKUP_FAILED`, `BACKUP_DRAIN_TIMEOUT`, `BACKUP_UNENCRYPTED_REFUSED` | Journal event, `smcpctl backup` | Result of a backup request (`docs/operations/backup.md`) |

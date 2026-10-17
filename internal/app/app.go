@@ -56,6 +56,9 @@ type Options struct {
 	JanitorInterval time.Duration
 	// ConsoleURL is the base of approval deep links (default the admin URL).
 	ConsoleURL string
+	// HealthGate is the Health & Safety Monitor's fail-closed gate (E-23,
+	// internal/health); default none.
+	HealthGate func() []string
 }
 
 // App is a started Gateway.
@@ -192,7 +195,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		o.ConsoleURL = cfg.AdminURL()
 	}
 	if a.Gateway, err = edge.New(edge.Deps{Config: cfg, Store: a.Store, OAuth: a.OAuth, Decider: a.Decider, Registry: a.Registry,
-		Evidence: a.Evidence, EvidenceErr: a.Journal.Err, Log: o.Log, Profile: a.Profile, Approver: o.Approver, Filters: o.Filters,
+		Evidence: a.Evidence, EvidenceErr: a.Journal.Err, HealthGate: o.HealthGate, Log: o.Log, Profile: a.Profile, Approver: o.Approver, Filters: o.Filters,
 		Capabilities: a.Capabilities, ConsoleURL: o.ConsoleURL, PolicyFault: a.Policy.Fault, Screen: a.Inspector}); err != nil {
 		return a, err
 	}
