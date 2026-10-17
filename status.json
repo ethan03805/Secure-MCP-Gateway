@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T04:57:34Z",
-  "commit": "68383a115b7be333eaecd909f38078e4ceb9c159",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/68383a115b7be333eaecd909f38078e4ceb9c159",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39004164425",
+  "generatedAt": "2026-10-17T05:21:28Z",
+  "commit": "a84aef79d8670572f206db22563941abb3b0bf47",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a84aef79d8670572f206db22563941abb3b0bf47",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39005625297",
   "tests": {
-    "total": 767,
-    "passed": 753,
+    "total": 768,
+    "passed": 754,
     "failed": 0,
     "skipped": 14,
-    "durationSec": 282,
+    "durationSec": 269.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -325,7 +325,7 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 12,
+        "passed": 13,
         "failed": 0,
         "skipped": 0
       }
@@ -585,16 +585,16 @@
     ]
   },
   "requirements": {
-    "total": 558,
+    "total": 543,
     "verified": 182,
-    "partial": 214,
+    "partial": 213,
     "failing": 0,
-    "unverified": 162,
+    "unverified": 148,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
-        "total": 32,
+        "total": 31,
         "verified": 11,
         "partial": 5,
         "failing": 0
@@ -650,7 +650,7 @@
       {
         "element": "E-08",
         "name": "Access Enforcement Point",
-        "total": 19,
+        "total": 18,
         "verified": 11,
         "partial": 3,
         "failing": 0
@@ -666,9 +666,9 @@
       {
         "element": "E-10",
         "name": "Tool Dispatcher",
-        "total": 31,
+        "total": 22,
         "verified": 6,
-        "partial": 7,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -762,7 +762,7 @@
       {
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
-        "total": 10,
+        "total": 8,
         "verified": 2,
         "partial": 4,
         "failing": 0
@@ -794,7 +794,7 @@
       {
         "element": "E-26",
         "name": "Data Access Service",
-        "total": 10,
+        "total": 9,
         "verified": 1,
         "partial": 4,
         "failing": 0
@@ -810,7 +810,7 @@
       {
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
-        "total": 13,
+        "total": 12,
         "verified": 1,
         "partial": 7,
         "failing": 0
@@ -1362,12 +1362,6 @@
       {
         "id": "FR-2.13",
         "element": "E-04",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-2.14",
-        "element": "E-22",
         "status": "unverified",
         "tests": []
       },
@@ -1983,24 +1977,6 @@
         "tests": []
       },
       {
-        "id": "FR-5.16",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-5.17",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-5.18",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "FR-5.19",
         "element": "E-10",
         "status": "unverified",
@@ -2049,12 +2025,6 @@
         ]
       },
       {
-        "id": "FR-5.25",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "FR-5.26",
         "element": "E-10",
         "status": "unverified",
@@ -2066,32 +2036,6 @@
         "status": "partial",
         "tests": [
           "internal/sandbox.TestShutdownSequenceEscalates"
-        ]
-      },
-      {
-        "id": "FR-5.28",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-5.29",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-5.30",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-5.31",
-        "element": "E-10",
-        "status": "partial",
-        "tests": [
-          "internal/hostile.TestHostileFixtures/HF-03"
         ]
       },
       {
@@ -2172,6 +2116,12 @@
         "tests": [
           "internal/library.TestArtifactCacheSharing"
         ]
+      },
+      {
+        "id": "FR-5.40",
+        "element": "E-10",
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-6",
@@ -2380,12 +2330,6 @@
         "tests": [
           "internal/keys.TestEnsureKeys"
         ]
-      },
-      {
-        "id": "FR-7.9",
-        "element": "E-22",
-        "status": "unverified",
-        "tests": []
       },
       {
         "id": "FR-7.10",
@@ -2947,12 +2891,6 @@
         "tests": []
       },
       {
-        "id": "FR-9.13",
-        "element": "E-28",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "FR-9.14",
         "element": "E-28",
         "status": "partial",
@@ -3459,6 +3397,7 @@
           "tools/reqreport.TestLessID",
           "tools/reqreport.TestLoadAndMergeElements",
           "tools/reqreport.TestLoadRequirements",
+          "tools/reqreport.TestLoadRequirementsSkipsDeferred",
           "tools/reqreport.TestParseTestLog",
           "tools/reqreport.TestRecordsVerifyInspections",
           "tools/reqreport.TestRunCountsRecords",
@@ -4522,12 +4461,6 @@
         ]
       },
       {
-        "id": "SR-2.8-2",
-        "element": "E-01",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "SR-2.8-3",
         "element": "E-01",
         "status": "unverified",
@@ -4607,12 +4540,6 @@
       {
         "id": "SR-2.11-5",
         "element": "E-03",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "SR-2.12-1",
-        "element": "E-08",
         "status": "unverified",
         "tests": []
       },
@@ -4842,12 +4769,6 @@
         ]
       },
       {
-        "id": "SR-4.3-1",
-        "element": "E-26",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "SR-4.5-1",
         "element": "E-16",
         "status": "partial",
@@ -4964,12 +4885,6 @@
         ]
       },
       {
-        "id": "SR-5.1-2",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "SR-5.2-1",
         "element": "E-02",
         "status": "verified",
@@ -4992,12 +4907,6 @@
         "tests": [
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
-      },
-      {
-        "id": "SR-5.3-2",
-        "element": "E-10",
-        "status": "unverified",
-        "tests": []
       },
       {
         "id": "SR-5.4-1",
@@ -6163,7 +6072,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6198,7 +6107,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35471: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40409: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
