@@ -85,6 +85,9 @@ digests() {
     -type f -exec sha256sum {} + 2>/dev/null || true; } | sort
 }
 digests > "$work/install-digests-1"
+sudo -n stat -c '%U:%G %a %n' /var/lib/smcp/home/smcp-srv /var/lib/smcp/home/smcp-core /var/lib/smcp/srv || true
+sudo -n ls -la /var/lib/smcp/home/smcp-srv || true
+sudo -n getfacl -p /var/lib/smcp/home/smcp-srv 2>/dev/null || true
 [ -s "$work/install-digests-1" ] || fail "no installed files to compare"
 # shellcheck disable=SC2024 # the log belongs to the runner
 sudo -n "$stage/smcpctl" "${install_args[@]}" > "$work/systemd-install2.log" 2>&1 || { cat "$work/systemd-install2.log" >&2; fail "second smcpctl install"; }
