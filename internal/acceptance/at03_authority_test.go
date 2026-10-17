@@ -158,10 +158,14 @@ func TestAT03PolicyAuthorityAndOutage(t *testing.T) {
 	pw := writeFile(t, t.TempDir(), "neo4j.pw", "unused-password\n", 0o600)
 	g.appendConfig(fmt.Sprintf("\n[graph]\nenabled = true\nuri = \"bolt://127.0.0.1:%d\"\npassword_file = %q\n", testport.Free(t), pw))
 	g.start()
-	if st := fmt.Sprint(g.health()["state"]); st != "degraded" {
-		t.Fatalf("health with the graph database down: %v", g.health())
-	}
+	// Requests are served at once, while the mirror is still connecting.
 	cs = g.session(g.token(""))
+	g.mustCall(cs, "ref_echo", map[string]any{"text": "mirror-connecting"}, "mirror-connecting")
+	// Health becomes degraded for the unavailable graph mirror (not only
+	// for the Standalone profile's unconfined servers).
+	waitHealth(t, g, func(st map[string]any) bool {
+		return st["state"] == "degraded" && strings.Contains(fmt.Sprint(st["causes"]), "graph_mirror_unavailable")
+	}, "degraded with graph_mirror_unavailable")
 	g.mustCall(cs, "ref_echo", map[string]any{"text": "graph-down"}, "graph-down")
 	if _, isErr, err := call(cs, "ref_echo", map[string]any{"text": strings.Repeat("x", 10) + " AKIAIOSFODNN7EXAMPLE"}); err == nil && !isErr {
 		t.Fatal("a credential in the arguments was not refused")
@@ -176,7 +180,7 @@ func TestAT03PolicyAuthorityAndOutage(t *testing.T) {
 			refusals++
 		}
 	}
-	if permits < 3 || refusals < 1 {
+	if permits < 4 || refusals < 1 {
 		t.Fatalf("journal during the outage: %d delivered, %d refused", permits, refusals)
 	}
 	if out := g.mustCtl("journal", "verify"); !strings.Contains(out, "journal OK") {

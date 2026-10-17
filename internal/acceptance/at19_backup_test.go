@@ -1,17 +1,25 @@
 package acceptance
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"aead.dev/minisign"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
@@ -157,6 +165,7 @@ func upgradeRollback(t *testing.T, g *gateway, pass string) {
 			t.Fatal(err)
 		}
 	}
+	files := map[string][]byte{"smcpd": []byte("#!/bin/sh\nexit 1\n")}
 	for _, b := range []string{"smcpd", "smcpctl"} {
 		raw, err := os.ReadFile(filepath.Join(binDir, b))
 		if err != nil {
@@ -164,17 +173,12 @@ func upgradeRollback(t *testing.T, g *gateway, pass string) {
 		}
 		writeFile(t, installed, b, string(raw), 0o755)
 		if b == "smcpctl" {
-			writeFile(t, badrel, b, string(raw), 0o755)
+			files[b] = raw
 		}
 	}
-	writeFile(t, badrel, "smcpd", "#!/bin/sh\nexit 1\n", 0o755)
-	var sums strings.Builder
-	for _, b := range []string{"smcpd", "smcpctl"} {
-		raw, _ := os.ReadFile(filepath.Join(badrel, b))
-		s := sha256.Sum256(raw)
-		fmt.Fprintf(&sums, "%s  %s\n", hex.EncodeToString(s[:]), b)
-	}
-	writeFile(t, badrel, "SHA256SUMS", sums.String(), 0o644)
+	// A release directory as GitHub serves it, signed with a throwaway
+	// minisign key (smcpctl upgrade verifies releases as install.sh does).
+	pubkey := signedRelease(t, badrel, "9.9.10", files)
 	pidfile, logf := filepath.Join(work, "smcpd.pid"), filepath.Join(work, "smcpd.log")
 	start := fmt.Sprintf(`nohup %q --config "$SMCP_CONFIG" >>%q 2>&1 & echo $! > %q`, filepath.Join(installed, "smcpd"), logf, pidfile)
 	stopCmd := fmt.Sprintf(`p=$(cat %q 2>/dev/null); [ -n "$p" ] && kill "$p" 2>/dev/null; while [ -n "$p" ] && kill -0 "$p" 2>/dev/null; do sleep 0.1; done; true`, pidfile)
@@ -195,7 +199,7 @@ func upgradeRollback(t *testing.T, g *gateway, pass string) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	cmd := exec.Command(filepath.Join(installed, "smcpctl"), "upgrade", "--config", g.cfg, "--release", badrel, "--bin-dir", installed,
+	cmd := exec.Command(filepath.Join(installed, "smcpctl"), "upgrade", "--config", g.cfg, "--release", badrel, "--pubkey", pubkey, "--bin-dir", installed,
 		"--passphrase-file", pass, "--start-cmd", start, "--stop-cmd", stopCmd, "--health-timeout", "10s")
 	out, err := cmd.CombinedOutput()
 	if err == nil || !strings.Contains(string(out), "previous version is running") {
@@ -228,4 +232,48 @@ func (g *gateway) expectSuspended(when string) {
 	if text, isErr, err := call(cs, "ref_echo", map[string]any{"text": when}); err == nil && !isErr {
 		g.t.Fatalf("the suspended principal was served %s: %q", when, text)
 	}
+}
+
+// signedRelease writes a release directory for this platform: the archive
+// holding files, smcp_<version>_checksums.txt and its minisign signature
+// with GoReleaser's trusted comment. It returns the public key.
+func signedRelease(t *testing.T, dir, version string, files map[string][]byte) string {
+	t.Helper()
+	pub, priv, err := minisign.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	names := make([]string, 0, len(files))
+	for n := range files {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		if err := tw.WriteHeader(&tar.Header{Name: n, Mode: 0o755, Size: int64(len(files[n])), Typeflag: tar.TypeReg, ModTime: time.Now()}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write(files[n]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	archive := fmt.Sprintf("smcp_%s_%s_%s.tar.gz", version, runtime.GOOS, runtime.GOARCH)
+	writeFile(t, dir, archive, buf.String(), 0o644)
+	sum := sha256.Sum256(buf.Bytes())
+	sumsName := fmt.Sprintf("smcp_%s_checksums.txt", version)
+	sums := fmt.Sprintf("%s  %s\n", hex.EncodeToString(sum[:]), archive)
+	writeFile(t, dir, sumsName, sums, 0o644)
+	r := minisign.NewReader(strings.NewReader(sums))
+	_, _ = r.Read(make([]byte, len(sums)+1))
+	sig := r.SignWithComments(priv, "smcp "+version+" file:"+sumsName, "signature from the acceptance test key")
+	writeFile(t, dir, sumsName+".minisig", string(sig), 0o644)
+	return pub.String()
 }
