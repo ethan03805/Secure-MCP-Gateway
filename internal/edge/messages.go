@@ -26,6 +26,7 @@ var reasonMessages = map[string]string{
 	"ARGUMENTS_TOO_LARGE":        "The request is too large for this tool. Send less data in one call.",
 	"ARGUMENTS_TOO_DEEP":         "The request is nested too deeply. Simplify the arguments.",
 	"UNICODE_CONTROL":            "The request contains hidden or direction-changing characters. Remove them and try again.",
+	"DATA_CLASS_IN_ARGUMENTS":    "The request contains personal or classified data that this tool may not receive, so it was not sent. Remove it and try again.",
 	"SECRET_IN_ARGUMENTS":        "The request appears to contain a password, key or token, so it was not sent. Remove the secret and try again.",
 	"PATH_INVALID":               "A file path in the request is not allowed in this form. Use a plain path.",
 	"PATH_OUTSIDE_ROOTS":         "A file path in the request is outside the folders this tool may use.",

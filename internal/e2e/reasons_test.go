@@ -28,6 +28,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/filters"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policystore"
@@ -42,7 +43,7 @@ import (
 // reasonTools lists the backend's tools; the schema of each is an object
 // with the named string properties ("n" is an integer).
 var reasonTools = map[string][]string{
-	"echo": {"text"}, "read_file": {"path"}, "fetch": {"url"}, "count": {"n"}, "pick": {"choice"},
+	"echo": {"text"}, "read_file": {"path"}, "fetch": {"url"}, "count": {"n"}, "pick": {"choice"}, "pii_tool": {"text"},
 	"leak": nil, "bidi": nil, "bad_result": nil, "garble": nil, "ask": nil, "crash": nil, "crash_read": nil,
 	"hang": nil, "fail": nil, "big": nil, "slow": {"ms"}, "write": nil, "untrusted": nil, "approve_me": nil,
 	"quota": nil, "rated": nil, "needs_missing": nil, "ferr_req": nil, "ferr_resp": nil, "ftime_req": nil,
@@ -191,6 +192,7 @@ func reasonsPolicy(revision string, profileTemplates ...string) string {
       {"id": "m-all", "server": "r", "tools": ["echo", "read_file", "fetch", "count", "leak", "bidi", "bad_result", "garble", "ask", "crash", "hang", "fail", "big", "slow"]},
       {"id": "m-read", "server": "r", "tools": ["crash_read"], "side_effect": "read"},
       {"id": "m-pick", "server": "r", "tools": ["pick"], "when": [{"op": "eq", "arg": "choice", "value": "a"}]},
+      {"id": "m-pii", "server": "r", "tools": ["pii_tool"], "filters": ["pii-detect"]},
       {"id": "m-approve", "server": "r", "tools": ["approve_me"], "approval": true},
       {"id": "m-quota", "server": "r", "tools": ["quota"], "calls_per_session": 1},
       {"id": "m-rate", "server": "r", "tools": ["rated"], "calls_per_minute": 1},
@@ -315,6 +317,30 @@ func startReasons(t *testing.T, o reasonOpts) *reasonGateway {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A pii rule-set version with a blocking data-class rule
+	// (DATA_CLASS_IN_ARGUMENTS when pii-detect is named, SR-5.8-1).
+	rulesDir := filepath.Join(dir, "rules")
+	if err := os.MkdirAll(rulesDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := filters.ExportEmbedded(rulesDir); err != nil {
+		t.Fatal(err)
+	}
+	lib, err := filters.LoadDir(rulesDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base, err := lib.Get(filters.RuleSetPII, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pii := *base
+	pii.Version = "2099.1.0"
+	pii.Rules = append(append([]*filters.Rule{}, base.Rules...), &filters.Rule{ID: "e2e-project-code", Kind: "regex", Pattern: `\bPRJ-[0-9]{4}\b`,
+		CaseSensitive: true, RequestAction: "block", ResponseAction: "redact"})
+	if err := filters.AddVersion(rulesDir, &pii); err != nil {
+		t.Fatal(err)
+	}
 	lifetime := o.lifetime
 	if lifetime == "" {
 		lifetime = "5m"
@@ -347,6 +373,8 @@ password_hash = %q
 file = %q
 [filters]
 deadline = "1s"
+rules_dir = %q
+rule_versions = { %s = "2099.1.0" }
 [filters.size]
 argument_bytes = 65536
 argument_depth = 16
@@ -363,7 +391,7 @@ client_id = %q
 principal = "cc"
 redirect_uris = ["http://localhost:*/callback"]
 %s%s%s`, port, port, adminPort, stateDir, mustHash(t, "admin password 12"), mustHash(t, approverPassword), lifetime, mustHash(t, approverAccountPassword),
-		filepath.Join(dir, "policy.json"), roots, e2eLimits(o.limits), clientID,
+		filepath.Join(dir, "policy.json"), rulesDir, filters.RuleSetPII, roots, e2eLimits(o.limits), clientID,
 		server("r", ""), server("s2", ""), server("hr", "risk_classes = [\"general-sql\"]\n"))
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	if err := os.WriteFile(cfgPath, []byte(toml), 0o600); err != nil {
@@ -663,6 +691,7 @@ tool_concurrency_per_principal = 1`})
 	callR("URL_INVALID", "r_fetch", map[string]any{"url": "http://exa mple.com/"})
 	callR("URL_NOT_ALLOWED", "r_fetch", map[string]any{"url": "ftp://example.com/x"})
 	callR("URL_PRIVATE_ADDRESS", "r_fetch", map[string]any{"url": "http://127.0.0.1/x"})
+	callR("DATA_CLASS_IN_ARGUMENTS", "r_pii_tool", map[string]any{"text": "see PRJ-1234"})
 	callR("FILTER_UNAVAILABLE", "r_needs_missing", nil)
 	callR("FILTER_ERROR", "r_ferr_req", nil)
 	callR("FILTER_TIMEOUT", "r_ftime_req", nil)
