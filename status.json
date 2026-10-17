@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T03:02:06Z",
-  "commit": "9e29ef00dcc41fd9be4a0293e2f0547eda280ab1",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/9e29ef00dcc41fd9be4a0293e2f0547eda280ab1",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38996980704",
+  "generatedAt": "2026-10-17T03:13:30Z",
+  "commit": "067ccbc9f3ee086e986a154917e815b62960f23b",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/067ccbc9f3ee086e986a154917e815b62960f23b",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38997725467",
   "tests": {
     "total": 586,
-    "passed": 572,
-    "failed": 1,
+    "passed": 573,
+    "failed": 0,
     "skipped": 13,
-    "durationSec": 172.5,
+    "durationSec": 177.5,
     "packages": [
       {
         "name": "cmd/smcp-hostile",
@@ -25,8 +25,8 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 32,
-        "failed": 1,
+        "passed": 33,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -296,7 +296,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 74.4,
+    "totalPct": 74.7,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -320,7 +320,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 30.4
+        "pct": 32.5
       },
       {
         "name": "cmd/smcpd",
@@ -340,7 +340,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 65.5
+        "pct": 68.8
       },
       {
         "name": "internal/anomaly",
@@ -372,7 +372,7 @@
       },
       {
         "name": "internal/baseline",
-        "pct": 85
+        "pct": 85.1
       },
       {
         "name": "internal/channel",
@@ -500,7 +500,7 @@
       },
       {
         "name": "internal/research",
-        "pct": 79.4
+        "pct": 80.9
       },
       {
         "name": "internal/sandbox",
@@ -542,9 +542,9 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 149,
-    "partial": 182,
-    "failing": 4,
+    "verified": 150,
+    "partial": 185,
+    "failing": 0,
     "unverified": 223,
     "byElement": [
       {
@@ -783,9 +783,9 @@
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 8,
-        "partial": 0,
-        "failing": 3
+        "verified": 9,
+        "partial": 2,
+        "failing": 0
       },
       {
         "element": "E-31",
@@ -800,8 +800,8 @@
         "name": "Research Dataset Service",
         "total": 9,
         "verified": 6,
-        "partial": 2,
-        "failing": 1
+        "partial": 3,
+        "failing": 0
       },
       {
         "element": "E-33",
@@ -2859,7 +2859,7 @@
       {
         "id": "FR-10.18",
         "element": "E-30",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestSnapshotTriggersAndImmutability"
@@ -2876,7 +2876,7 @@
       {
         "id": "FR-10.20",
         "element": "E-30",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestPromotionManualAndAutomatic",
@@ -2886,7 +2886,7 @@
       {
         "id": "FR-10.21",
         "element": "E-30",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/anomaly.TestRollbackScoresRecordSnapshot",
@@ -3008,7 +3008,7 @@
       {
         "id": "FR-10.36",
         "element": "E-32",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/e2e.TestObservationThroughGateway"
@@ -5781,7 +5781,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5816,7 +5816,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44121: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35375: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5872,6 +5872,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
