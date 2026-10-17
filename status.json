@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T11:51:43Z",
-  "commit": "76fb76bf8c7012823b008ac84f6c7d5787953133",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/76fb76bf8c7012823b008ac84f6c7d5787953133",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39029817833",
+  "generatedAt": "2026-10-17T12:05:03Z",
+  "commit": "d364edfbb26d582675d33528b46063c93d07ad98",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d364edfbb26d582675d33528b46063c93d07ad98",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39030508298",
   "tests": {
-    "total": 955,
-    "passed": 941,
+    "total": 961,
+    "passed": 947,
     "failed": 0,
     "skipped": 14,
-    "durationSec": 406.6,
+    "durationSec": 543.9,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -145,13 +145,13 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 46,
+        "passed": 47,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 54,
+        "passed": 59,
         "failed": 0,
         "skipped": 0
       },
@@ -398,7 +398,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 67.3
+        "pct": 67.1
       },
       {
         "name": "internal/adminapi",
@@ -406,7 +406,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 76.5
+        "pct": 76.6
       },
       {
         "name": "internal/anomaly",
@@ -462,7 +462,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.2
+        "pct": 92.8
       },
       {
         "name": "internal/egress",
@@ -478,11 +478,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.5
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.5
+        "pct": 79.7
       },
       {
         "name": "internal/harness",
@@ -598,7 +598,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 61.3
+        "pct": 64.5
       },
       {
         "name": "internal/tunnel",
@@ -632,16 +632,16 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 275,
-    "partial": 201,
+    "verified": 283,
+    "partial": 198,
     "failing": 0,
-    "unverified": 54,
+    "unverified": 49,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 11,
+        "verified": 12,
         "partial": 5,
         "failing": 0
       },
@@ -649,8 +649,8 @@
         "element": "E-02",
         "name": "Protocol Mediator",
         "total": 43,
-        "verified": 29,
-        "partial": 9,
+        "verified": 34,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -697,8 +697,8 @@
         "element": "E-08",
         "name": "Access Enforcement Point",
         "total": 18,
-        "verified": 13,
-        "partial": 3,
+        "verified": 15,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -1014,17 +1014,19 @@
       {
         "id": "FR-1.14",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/e2e.TestTransportAndAuthenticationRules"
+          "internal/e2e.TestTransportAndAuthenticationRules",
+          "internal/edge.TestResultMetaOnEveryBaselineMethod"
         ]
       },
       {
         "id": "FR-1.15",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/e2e.TestTransportAndAuthenticationRules"
+          "internal/e2e.TestTransportAndAuthenticationRules",
+          "internal/edge.TestResultMetaOnEveryBaselineMethod"
         ]
       },
       {
@@ -1094,7 +1096,7 @@
       {
         "id": "FR-1.24",
         "element": "E-08",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/edge.TestCatalogPagination"
         ]
@@ -1151,8 +1153,10 @@
       {
         "id": "FR-1.31",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestToolResultRelayAfterTransform"
+        ]
       },
       {
         "id": "FR-1.32",
@@ -1232,8 +1236,10 @@
       {
         "id": "FR-1.41",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestStreamCloseCancelsWithinOneSecond"
+        ]
       },
       {
         "id": "FR-1.42",
@@ -1254,14 +1260,20 @@
       {
         "id": "FR-1.44",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestTraceContextObserved",
+          "internal/edge.TestTraceContextAndClientInfo"
+        ]
       },
       {
         "id": "FR-1.45",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestTraceContextObserved",
+          "internal/edge.TestTraceContextAndClientInfo"
+        ]
       },
       {
         "id": "FR-1.46",
@@ -5169,8 +5181,10 @@
       {
         "id": "SR-5.7-2",
         "element": "E-08",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestCatalogPagination"
+        ]
       },
       {
         "id": "SR-5.7-3",
@@ -6355,7 +6369,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:34479: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44071: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
