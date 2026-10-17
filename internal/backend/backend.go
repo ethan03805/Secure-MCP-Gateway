@@ -109,7 +109,18 @@ type Server struct {
 	cur      *instance
 	ready    chan struct{}
 	restarts atomic.Uint64
+	crashes  []time.Time // unexpected exits within CrashWindow (guarded by mu)
 }
+
+// FR-5.12: a server revision whose instance exits unexpectedly CrashLimit
+// times within CrashWindow is suspended instead of restarted again.
+const (
+	CrashLimit  = 3
+	CrashWindow = 5 * time.Minute
+)
+
+// reasonInstanceFailed is the restart reason of an unexpected exit.
+const reasonInstanceFailed = "instance failed"
 
 // instance is one running process of a server and its MCP client session.
 type instance struct {
@@ -632,6 +643,22 @@ func (r *Registry) restart(s *Server, old *instance, reason string) {
 			return // a restart is already under way
 		}
 	}
+	if reason == reasonInstanceFailed {
+		now := time.Now()
+		kept := s.crashes[:0]
+		for _, at := range s.crashes {
+			if now.Sub(at) < CrashWindow {
+				kept = append(kept, at)
+			}
+		}
+		s.crashes = append(kept, now)
+		if len(s.crashes) >= CrashLimit {
+			n := len(s.crashes)
+			s.mu.Unlock()
+			r.Suspend(s.Alias, fmt.Sprintf("%d unexpected exits within %s (FR-5.12)", n, CrashWindow))
+			return
+		}
+	}
 	ready := make(chan struct{})
 	s.ready = ready
 	s.mu.Unlock()
@@ -935,7 +962,7 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 		}
 		// The connection ended (exit, EOF, closed pipe) after the call was
 		// sent: replace the instance; the call is not retried (SR-7.2-1).
-		r.restart(s, inst, "instance failed")
+		r.restart(s, inst, reasonInstanceFailed)
 		return nil, fmt.Errorf("%w: %w", ErrInstanceFailed, err)
 	}
 	// FR-4.10: the response was bounded while read; check the decoded size
