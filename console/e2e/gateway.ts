@@ -76,8 +76,15 @@ export async function start(): Promise<GatewayInfo> {
   const config = join(inst, "smcp.toml");
   const harness = await freePort();
   const admin = await freePort();
+  const metrics = await freePort();
   let toml = readFileSync(config, "utf8");
-  toml = toml.replaceAll("127.0.0.1:8443", `127.0.0.1:${harness}`).replaceAll("127.0.0.1:8444", `127.0.0.1:${admin}`);
+  toml = toml
+    .replaceAll("127.0.0.1:8443", `127.0.0.1:${harness}`)
+    .replaceAll("127.0.0.1:8444", `127.0.0.1:${admin}`)
+    .replaceAll("127.0.0.1:8445", `127.0.0.1:${metrics}`);
+  // Bootstrap may write an [approvals] table; desktop notifications stay off.
+  const hasApprovals = /^\[approvals\]$/m.test(toml);
+  toml = toml.replace(/^notify = ".*"$/m, 'notify = "off"');
   writeFileSync(config, toml);
   const remotePort = await freePort();
   const hash = execFileSync(ctl, ["hash-password", "--password-file", apPw], { encoding: "utf8" }).trim();
@@ -89,9 +96,7 @@ export async function start(): Promise<GatewayInfo> {
   appendFileSync(
     config,
     [
-      "",
-      "[approvals]",
-      'notify = "off"',
+      ...(hasApprovals ? [] : ["", "[approvals]", 'notify = "off"']),
       "",
       "[egress]",
       "enabled = true",
