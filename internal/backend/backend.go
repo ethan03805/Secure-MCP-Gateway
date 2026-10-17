@@ -48,6 +48,7 @@ import (
 	"io"
 	"log/slog"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -206,6 +207,8 @@ type Registry struct {
 	tools    map[string]*ToolRef
 	public   []string
 	disabled map[string]string // alias -> reason the revision was not enabled
+	// onSuspend are called after a server is suspended (OnSuspend).
+	onSuspend []func(alias string)
 
 	mu       sync.Mutex // guards perPrinc and waiting
 	perPrinc map[string]*fifo
@@ -782,10 +785,23 @@ func (r *Registry) Suspend(alias, reason string) bool {
 		kept = append(kept, pub)
 	}
 	r.public = kept
+	hooks := slices.Clone(r.onSuspend)
 	r.smu.Unlock()
 	r.log.Error("server suspended and torn down", "alias", alias, "reason", reason)
 	s.peek().close()
+	for _, fn := range hooks {
+		fn(alias)
+	}
 	return true
+}
+
+// OnSuspend registers fn to run after each suspension, once the server's
+// tools are out of the index. The edge uses it to take the tools out of the
+// session catalogs, which notifies open listen streams (FR-1.35).
+func (r *Registry) OnSuspend(fn func(alias string)) {
+	r.smu.Lock()
+	defer r.smu.Unlock()
+	r.onSuspend = append(r.onSuspend, fn)
 }
 
 // listChanged re-checks a server's tool list against its manifest after a

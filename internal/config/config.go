@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -42,12 +43,15 @@ type Config struct {
 	Log           Log           `toml:"log" json:"log"`
 	Principals    []Principal   `toml:"principal" json:"principal"`
 	Clients       []Client      `toml:"client" json:"client"`
-	Servers       []Server      `toml:"server" json:"server"`
-	Runtime       Runtime       `toml:"runtime" json:"runtime"` // E-15, E-16, E-17 (runtime.go)
-	Egress        Egress        `toml:"egress" json:"egress"`
-	Filters       Filters       `toml:"filters" json:"filters"` // E-09, E-11 (filters.go)
-	Graph         Graph         `toml:"graph" json:"graph"`
-	Observation   Observation   `toml:"observation" json:"observation"`
+	// ClientMetadata is the CP-52 Client ID Metadata Document allowlist
+	// (FR-2.18).
+	ClientMetadata []ClientMetadata `toml:"client_metadata" json:"client_metadata"`
+	Servers        []Server         `toml:"server" json:"server"`
+	Runtime        Runtime          `toml:"runtime" json:"runtime"` // E-15, E-16, E-17 (runtime.go)
+	Egress         Egress           `toml:"egress" json:"egress"`
+	Filters        Filters          `toml:"filters" json:"filters"` // E-09, E-11 (filters.go)
+	Graph          Graph            `toml:"graph" json:"graph"`
+	Observation    Observation      `toml:"observation" json:"observation"`
 	// Secrets enables the Secret Vault and Broker (E-19, E-20) when present.
 	Secrets *Secrets `toml:"secrets" json:"secrets"`
 
@@ -221,6 +225,25 @@ type Client struct {
 	ClientSecretHash string   `toml:"client_secret_hash" json:"client_secret_hash"`
 	Principal        string   `toml:"principal" json:"principal"`
 	RedirectURIs     []string `toml:"redirect_uris" json:"redirect_uris"`
+}
+
+// ClientMetadata is one CP-52 allowlist entry: an HTTPS Client ID Metadata
+// Document URL that the Gateway may fetch when a client presents it as its
+// client_id, and the one principal that client binds to (FR-2.18). The
+// document supplies the redirect URIs; the URL must match exactly.
+type ClientMetadata struct {
+	URL       string `toml:"url" json:"url"`
+	Principal string `toml:"principal" json:"principal"`
+}
+
+// FindClientMetadata returns the allowlist entry for a client ID, or nil.
+func (c *Config) FindClientMetadata(id string) *ClientMetadata {
+	for i := range c.ClientMetadata {
+		if c.ClientMetadata[i].URL == id {
+			return &c.ClientMetadata[i]
+		}
+	}
+	return nil
 }
 
 // Server is a backend MCP server launched over stdio. Signed packages
@@ -533,6 +556,19 @@ func (c *Config) check() error {
 		clients[cl.ClientID] = true
 		if !principals[cl.Principal] {
 			return fmt.Errorf("client %q names unknown principal %q", cl.ClientID, cl.Principal)
+		}
+	}
+	for _, m := range c.ClientMetadata { // FR-2.18: one principal per client ID
+		u, err := url.Parse(m.URL)
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" || u.Path == "" || u.Path == "/" {
+			return fmt.Errorf("client_metadata %q: an HTTPS URL with a path, no user information and no fragment is required (CP-52)", m.URL)
+		}
+		if clients[m.URL] {
+			return fmt.Errorf("duplicate client_id %q (client and client_metadata)", m.URL)
+		}
+		clients[m.URL] = true
+		if !principals[m.Principal] {
+			return fmt.Errorf("client_metadata %q names unknown principal %q", m.URL, m.Principal)
 		}
 	}
 	if err := c.Runtime.check(c); err != nil {

@@ -61,11 +61,11 @@ func TestScopes(t *testing.T) {
 }
 
 func TestCreateSelectsTemplateAndLimits(t *testing.T) {
-	// FR-2.3 also names harness type; FR-2.4 the Observation Policy ID (null
-	// until E-29); FR-2.7 claims are recorded but do not narrow yet; FR-2.6 and
-	// FR-2.10 name Gateway error codes the OAuth endpoints do not use.
+	// The store-level part of FR-2.3, FR-2.6 and FR-2.10; the create paths
+	// and their Gateway errors are in create_test.go, FR-2.4 in
+	// TestSessionContextKey and FR-2.7 in internal/e2e.
 	reqtest.Verifies(t, "FR-2.8")
-	reqtest.Partial(t, "FR-2.3", "FR-2.4", "FR-2.6", "FR-2.7", "FR-2.10")
+	reqtest.Partial(t, "FR-2.3", "FR-2.6", "FR-2.10")
 	s := newStore(t)
 	sess, tok, err := s.Create(CreateParams{PrincipalID: "cc", ClientID: "cid", Listener: "tls", Claims: Claims{Purpose: "p", Project: "/x"}})
 	if err != nil {

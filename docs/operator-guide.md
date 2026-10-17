@@ -56,6 +56,18 @@ Sessions are listed and terminated in the console (Sessions view, `/sessions`) o
 
 Local harness clients are `[[client]]` entries bound to a `[[principal]]`; a principal's `profile` names a framework profile in the policy, which lists the templates its sessions may use. Configure a client's own files with `smcpctl clients setup <client>` and check them with `smcpctl doctor` ([harness.md](harness.md), [clients/](clients/README.md)).
 
+A client that identifies itself by a Client ID Metadata Document URL can be allowed without listing its redirect URIs: add the exact HTTPS URL to the CP-52 allowlist with the principal it binds to.
+
+```toml
+[[client_metadata]]
+url = "https://agent.example/oauth/client.json"
+principal = "cc"
+```
+
+The Gateway fetches the document when the client first authorizes and caches it for 24 hours. The fetch has a 5 s timeout and a 64 KiB limit, follows redirects only on the same host, and connects only to public addresses. The document's `client_id` must equal the URL, it must list `redirect_uris`, and its `token_endpoint_auth_method` must be `none` or absent. A metadata URL that is not on the allowlist is refused without a fetch. A client ID is bound to one principal; the same ID in `[[client]]` and `[[client_metadata]]` is a configuration error.
+
+The harness listener closes connections beyond 128 at accept and answers `429` with `-31005` `QUEUE_FULL` when 32 requests are already being read or authenticated (CP-09). Requests whose headers or body do not arrive within 5 s or 15 s are closed (CP-06, CP-07).
+
 ## Policy
 
 The active policy is a signed revision in the Policy Store, not the file. Edit `policy.json` (with a new `revision` ID), then:

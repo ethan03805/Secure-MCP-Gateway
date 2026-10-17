@@ -16,6 +16,8 @@ Updated on 2026-10-17 against the status data of `58a40c1`: entries that tests n
 
 Updated on 2026-10-17 by the acceptance work: FR-11.1 and FR-10.11 are verified, FR-10.2, FR-12.2, FR-19.3 and SR-7.11-1 have partial claims, the FR-11 measurements have partial claims from the CI job `perf`, and FR-12.5 is deferred (Appendix N).
 
+Updated on 2026-10-17 by the E-01 to E-04 partials sweep: SR-7.11-1 is verified (CP-09 connection and unauthenticated-work limits, slow headers and bodies, `internal/edge.TestPreParseBounds`).
+
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
 ## E-01 Harness Interface Endpoint
@@ -24,7 +26,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-12.1 external: no release SBOM license check; needs a release artifact.
 - FR-12.8 external: release provenance bundle (commit IDs, digests, recipes, lockfiles, SBOM, notices) not inspected; needs a release.
 - SR-4.14-1 missing: `smcpctl remote enable` installs no nftables rules in the Enforced profile.
-- SR-7.11-1 missing (partial claim exists): the acceptance tests (AT-01, AT-20) show the CP-06 header and CP-07 body bounds refuse requests before a call exists; there is no per-source connection limit or CP-09 unauthenticated-work limit on the MCP endpoint, and no test sends slow bodies or connection floods.
 
 ## E-02 Protocol Mediator
 

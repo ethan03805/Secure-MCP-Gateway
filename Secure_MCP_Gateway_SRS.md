@@ -1014,12 +1014,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-2.7 |
 | Parent ID | FR-2 — Identity and sessions |
-| Statement | The Session Manager (E-04) **SHALL** apply the project-root, purpose and end-user claims as narrowing parameters of the selected template. |
+| Statement | The Session Manager (E-04) **SHALL** apply the project-root claim as a narrowing parameter of the selected template, so that path arguments are confined to the project root within the granted roots, and **SHALL** record the purpose and end-user claims with the session and its creation evidence. |
 | Allocation | Elements: E-04 Session Manager; Functions: F-07; Internal interfaces: I-05 |
 | Verification Method | Test |
 | Verification Statement | Create a session with project root `/p/a` under a template allowing `/p`; confirm paths outside `/p/a` are denied. |
 | Source | ARCH §7.1 layer 4 |
-| Rationale | Session context tailors the Allow policy. |
+| Rationale | Session context tailors the Allow policy. The project root narrows what the template grants (the path roots of `path-canonicalize`); a project root outside every granted root leaves no path granted. Release 1.0 policy rules have no purpose or end-user predicates, so those claims do not narrow a template; they are recorded with the session, in its creation event and in the observation context key (FR-2.13), where policy authors and analytics can use them. |
 
 #### FR-2.8 — Session state model
 
@@ -1066,12 +1066,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-2.11 |
 | Parent ID | FR-2 — Identity and sessions |
-| Statement | When a session terminates, expires or is revoked, the Session Manager (E-04) **SHALL** close its listen streams, cancel its in-flight calls, release its session-scoped server instances and request withdrawal of its secret grants. |
+| Statement | When a session terminates, expires or is revoked, the Session Manager (E-04) **SHALL** close its listen streams and cancel its in-flight calls. |
 | Allocation | Elements: E-04 Session Manager; Functions: F-09; Internal interfaces: I-20 |
 | Verification Method | Test |
-| Verification Statement | Terminate a session with an open stream, an in-flight call, a session-scoped instance and a grant; confirm each is released. |
+| Verification Statement | Terminate, expire and revoke sessions that each have an open listen stream and an in-flight call; confirm each stream is closed and each call is cancelled. |
 | Source | ARCH §4 E-04; ARCH §18.7 |
-| Rationale | Prevents orphaned authority after session end. |
+| Rationale | Prevents orphaned authority after session end. In release 1.0 server instances are shared per server revision, not owned by a session, and secret deliveries are bound to server instances and withdrawn at instance teardown (FR-6.8), so a session holds no instance or secret grant of its own to release. |
 
 #### FR-2.12 — Revision change handling
 
@@ -7235,6 +7235,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 |---|---|---|---|
 | `NO_PERMIT` | `-31001` | No rule of the session's template permits the call | The Gateway's policy does not allow this tool in this session. Ask the Gateway operator to grant it. |
 | `NO_TEMPLATE` | `-31001` | The session's template is not in the active policy | This session's policy template no longer exists. Sign in again to start a new session. |
+| `TEMPLATE_NOT_PERMITTED` | `-31001` | A session create request named a template the principal's Framework Profile does not permit (FR-2.6) | The requested policy template is not permitted for this agent. Request a template its framework profile allows, or none for the default. |
 | `PRINCIPAL_DISABLED` | `-31001` | The principal is disabled or suspended (SR-1.5-1) | This agent's access to the Gateway is suspended. Ask the Gateway operator. |
 | `CREDENTIAL_INVALID` | `-31001` | The client credential is expired or revoked (SR-1.5-1) | This agent's Gateway credential is no longer valid. Ask the Gateway operator for a new one. |
 | `REVISION_NOT_ENABLED` | `-31001` | The tool's server revision is not enabled (SR-1.5-1) | The tool's server is not enabled on the Gateway. Ask the Gateway operator. |
@@ -7274,6 +7275,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `RATE_LIMITED` | `-31005` | A rate limit was reached | Too many tool calls in a short time. Wait a minute and try again. |
 | `QUOTA_EXHAUSTED` | `-31005` | The session used its per-session call quota | This session has used all the tool calls its policy allows. Start a new session. |
 | `QUEUE_FULL` | `-31005` | The dispatch queue is full | The Gateway is busy. Try again shortly. |
+| `SESSION_LIMIT` | `-31005` | A session create request would exceed the CP-18 concurrent-session limit of the principal (FR-2.10) | This agent already has the maximum number of open sessions. End one, then try again. |
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Your Gateway session is not valid. Sign in again. |
 | `SESSION_STATE` | `-31006` | The session is suspended or terminated | Your Gateway session has ended. Sign in again. |
 | `BACKEND_ERROR` | `-31007` | The backend returned a protocol error | The tool's server reported an error. |

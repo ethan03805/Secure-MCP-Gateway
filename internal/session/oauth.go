@@ -36,6 +36,7 @@ type OAuth struct {
 	audit audit.Recorder
 	guard *authguard.Guard
 	now   func() time.Time
+	cimd  *cimdFetcher // Client ID Metadata Documents (cimd.go)
 
 	mu    sync.Mutex
 	codes map[string]*authCode // keyed by SHA-256 of the code
@@ -82,8 +83,12 @@ func NewOAuth(cfg *config.Config, store *Store, rec audit.Recorder, guard *authg
 	if guard == nil {
 		guard = authguard.New(authguard.Config{})
 	}
-	return &OAuth{cfg: cfg, store: store, audit: rec, guard: guard, now: time.Now, codes: map[string]*authCode{}, redeemed: map[string]redeemedCode{}}
+	o := &OAuth{cfg: cfg, store: store, audit: rec, guard: guard, now: time.Now, codes: map[string]*authCode{}, redeemed: map[string]redeemedCode{}}
+	o.cimd = newCIMDFetcher(o.clock)
+	return o
 }
+
+func (o *OAuth) clock() time.Time { o.mu.Lock(); defer o.mu.Unlock(); return o.now() }
 
 // SetNow replaces the clock (tests).
 func (o *OAuth) SetNow(f func() time.Time) { o.mu.Lock(); o.now = f; o.mu.Unlock() }
@@ -170,16 +175,14 @@ func (o *OAuth) protectedResourceMetadata(w http.ResponseWriter, r *http.Request
 		"authorization_servers":    []string{o.cfg.Listener.PublicURL},
 		"bearer_methods_supported": []string{"header"},
 		"resource_name":            "Secure MCP Gateway",
+		"scopes_supported":         o.templateScopes(),
 	})
 }
 
-// FR-2.17: authorization-server metadata (RFC 8414). Client ID Metadata
-// Documents are not fetched or validated: a client ID that is a metadata URL
-// is accepted only when an operator registered it, so the metadata does not
-// advertise client_id_metadata_document_supported.
-func (o *OAuth) authorizationServerMetadata(w http.ResponseWriter, r *http.Request) {
-	base := o.cfg.Listener.PublicURL
-	var scopes []string
+// templateScopes lists smcp:template:<id> for every template a Framework
+// Profile of the active policy offers (CP-41).
+func (o *OAuth) templateScopes() []string {
+	scopes := []string{}
 	if snap := o.store.snapshot(); snap != nil {
 		for name := range snap.Profiles {
 			for _, t := range snap.Profiles[name].Templates {
@@ -190,7 +193,17 @@ func (o *OAuth) authorizationServerMetadata(w http.ResponseWriter, r *http.Reque
 		}
 	}
 	slices.Sort(scopes)
-	writeJSON(w, 200, map[string]any{
+	return scopes
+}
+
+// FR-2.17: authorization-server metadata (RFC 8414). Client ID Metadata
+// Documents are fetched only for the URLs of the CP-52 allowlist (cimd.go),
+// so client_id_metadata_document_supported is advertised only when the
+// allowlist has an entry.
+func (o *OAuth) authorizationServerMetadata(w http.ResponseWriter, r *http.Request) {
+	base := o.cfg.Listener.PublicURL
+	scopes := o.templateScopes()
+	md := map[string]any{
 		"issuer":                                         base,
 		"authorization_endpoint":                         base + pathAuthorize,
 		"token_endpoint":                                 base + pathToken,
@@ -202,7 +215,11 @@ func (o *OAuth) authorizationServerMetadata(w http.ResponseWriter, r *http.Reque
 		"scopes_supported":                               scopes,
 		"smcp_scope_patterns":                            []string{"smcp:template:<id>", "smcp:purpose:<tag>", "smcp:project:<path>", "smcp:user:<claim>"},
 		"authorization_response_iss_parameter_supported": true,
-	})
+	}
+	if len(o.cfg.ClientMetadata) > 0 {
+		md["client_id_metadata_document_supported"] = true
+	}
+	writeJSON(w, 200, md)
 }
 
 // redirectAllowed matches a redirect URI against the client's registered
@@ -236,14 +253,14 @@ type authorizeParams struct {
 	ClientID, RedirectURI, State, Scope, Challenge, Method, Resource, ResponseType string
 }
 
-func (o *OAuth) parseAuthorize(v url.Values) (authorizeParams, *config.Client, string) {
+func (o *OAuth) parseAuthorize(ctx context.Context, v url.Values) (authorizeParams, *config.Client, string) {
 	p := authorizeParams{
 		ClientID: v.Get("client_id"), RedirectURI: v.Get("redirect_uri"), State: v.Get("state"), Scope: v.Get("scope"),
 		Challenge: v.Get("code_challenge"), Method: v.Get("code_challenge_method"), Resource: v.Get("resource"), ResponseType: v.Get("response_type"),
 	}
-	c := o.cfg.FindClient(p.ClientID)
-	if c == nil {
-		return p, nil, "unknown client_id"
+	c, err := o.lookupClient(ctx, p.ClientID)
+	if err != nil {
+		return p, nil, err.Error()
 	}
 	if !redirectAllowed(c, p.RedirectURI) {
 		return p, nil, "redirect_uri not registered for this client"
@@ -318,7 +335,7 @@ func TemplateLabel(scope string) string {
 // FR-2.19: authorization endpoint, step 1 (validate and show sign-in).
 func (o *OAuth) authorizeGET(w http.ResponseWriter, r *http.Request) {
 	SecurityHeaders(w.Header())
-	p, c, bad := o.parseAuthorize(r.URL.Query())
+	p, c, bad := o.parseAuthorize(r.Context(), r.URL.Query())
 	if bad != "" {
 		http.Error(w, bad, http.StatusBadRequest)
 		return
@@ -367,7 +384,7 @@ func (o *OAuth) authorizePOST(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	p, c, bad := o.parseAuthorize(r.PostForm)
+	p, c, bad := o.parseAuthorize(r.Context(), r.PostForm)
 	if bad != "" {
 		http.Error(w, bad, http.StatusBadRequest)
 		return
@@ -434,7 +451,7 @@ func (o *OAuth) clientAuth(r *http.Request) (*config.Client, int, string) {
 	if _, err := o.guard.Check(src, "client:"+id); err != nil {
 		return nil, http.StatusTooManyRequests, err.Error()
 	}
-	c := o.cfg.FindClient(id)
+	c, _ := o.lookupClient(r.Context(), id)
 	if c == nil {
 		if secret != "" {
 			_, _ = o.guard.Verify(r.Context(), "", secret)
@@ -511,7 +528,10 @@ func (o *OAuth) token(w http.ResponseWriter, r *http.Request) {
 			oauthError(w, 400, "invalid_target", "resource mismatch")
 			return
 		}
-		sess, tok, err := o.store.Create(CreateParams{PrincipalID: ac.principalID, ClientID: c.ClientID, Claims: ac.claims, ApprovedBy: ac.approver, Listener: listenerTLS})
+		// FR-2.3: the harness may name its type and version on the token
+		// request (extension parameters; RFC 6749 section 3.2).
+		sess, tok, err := o.store.Create(CreateParams{PrincipalID: ac.principalID, ClientID: c.ClientID, Claims: ac.claims, ApprovedBy: ac.approver, Listener: listenerTLS,
+			HarnessType: r.PostForm.Get("harness_type"), HarnessVersion: r.PostForm.Get("harness_version")})
 		if err != nil {
 			o.sessionError(w, err)
 			return
@@ -562,7 +582,8 @@ func (o *OAuth) revokeReused(sessionID, clientID string) {
 func (o *OAuth) recordCreated(w http.ResponseWriter, sess *Session, reason, clientID string) bool {
 	err := o.audit.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision,
 		Outcome: "created", ReasonCode: reason, PolicyStatus: "evaluated", Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy, "client_id": clientID,
-			"observation_policy": sess.ObservationPolicy, "context_key": sess.ContextKey}})
+			"observation_policy": sess.ObservationPolicy, "context_key": sess.ContextKey,
+			"harness_type": sess.HarnessType, "harness_version": sess.HarnessVersion, "purpose": sess.Purpose, "project_root": sess.Project, "end_user": sess.EndUser}})
 	if err != nil {
 		o.store.Terminate(sess.ID)
 		oauthError(w, 503, "temporarily_unavailable", "evidence journal unavailable")
@@ -571,12 +592,31 @@ func (o *OAuth) recordCreated(w http.ResponseWriter, sess *Session, reason, clie
 	return true
 }
 
+// Gateway errors of a refused session create request (FR-2.6, FR-2.10).
+// The OAuth endpoints answer in the RFC 6749 error format; the Gateway error
+// rides along as the smcp_error extension member with the Appendix B code,
+// reason code and message.
+const (
+	ReasonTemplateNotPermitted = "TEMPLATE_NOT_PERMITTED"
+	ReasonSessionLimit         = "SESSION_LIMIT"
+)
+
+var sessionErrorMessages = map[string]string{
+	ReasonTemplateNotPermitted: "The requested policy template is not permitted for this agent. Request a template its framework profile allows, or none for the default.",
+	ReasonSessionLimit:         "This agent already has the maximum number of open sessions. End one, then try again.",
+}
+
+func gatewayOAuthError(w http.ResponseWriter, status int, code, desc string, gwCode int, reason string) {
+	writeJSON(w, status, map[string]any{"error": code, "error_description": desc,
+		"smcp_error": map[string]any{"code": gwCode, "reasonCode": reason, "message": sessionErrorMessages[reason]}})
+}
+
 func (o *OAuth) sessionError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrNoTemplate):
-		oauthError(w, 400, "invalid_scope", err.Error())
+		gatewayOAuthError(w, 400, "invalid_scope", err.Error(), -31001, ReasonTemplateNotPermitted)
 	case errors.Is(err, ErrTooManySessions):
-		oauthError(w, 429, "temporarily_unavailable", err.Error())
+		gatewayOAuthError(w, 429, "temporarily_unavailable", err.Error(), -31005, ReasonSessionLimit)
 	case errors.Is(err, ErrNoSnapshot):
 		oauthError(w, 503, "temporarily_unavailable", err.Error())
 	default:
@@ -614,6 +654,7 @@ func (o *OAuth) sessionCreate(w http.ResponseWriter, r *http.Request) {
 		ClientID       string `json:"client_id"`
 		ClientSecret   string `json:"client_secret"`
 		HarnessVersion string `json:"harness_version"`
+		HarnessType    string `json:"harness_type"`
 		Purpose        string `json:"purpose"`
 		ProjectRoot    string `json:"project_root"`
 		EndUser        string `json:"end_user"`
@@ -648,7 +689,7 @@ func (o *OAuth) sessionCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	o.guard.Success("client:" + body.ClientID)
-	sess, tok, err := o.store.Create(CreateParams{PrincipalID: c.Principal, ClientID: c.ClientID, HarnessVersion: body.HarnessVersion,
+	sess, tok, err := o.store.Create(CreateParams{PrincipalID: c.Principal, ClientID: c.ClientID, HarnessVersion: body.HarnessVersion, HarnessType: body.HarnessType,
 		Claims: Claims{Template: body.TemplateID, Purpose: body.Purpose, Project: body.ProjectRoot, EndUser: body.EndUser}, Listener: listenerTLS})
 	if err != nil {
 		o.sessionError(w, err)

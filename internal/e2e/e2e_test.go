@@ -398,10 +398,11 @@ func callErr(t *testing.T, cs *mcp.ClientSession, name string, args map[string]a
 
 func TestOAuthSessionAndToolCall(t *testing.T) {
 	reqtest.Verifies(t, "FR-2.19", "FR-2.20", "FR-1.2", "FR-1.25", "FR-1.26", "FR-1.50", "FR-1.29", "FR-1.30", "FR-4.12", "SR-5.4-1", "SR-5.13-1")
-	// FR-2.18: metadata-URL client IDs are accepted only when registered
-	// (the document is not fetched). FR-2.4: observation_policy_id is null.
-	// FR-2.5: no UDS listener. SR-2.11-1: tokens are opaque and validated by
-	// lookup; audience binding is checked at code redemption only.
+	// Partial here: FR-2.17 (TestAuthorizationMetadataDocuments), FR-2.18
+	// (internal/remote.TestClientRegistrationPaths), FR-2.4
+	// (internal/session.TestSessionContextKey), FR-2.5 and SR-2.11-1
+	// (internal/remote.TestTokenValidationFixtures) are proven elsewhere;
+	// this test exercises them on one registered client's sign-in.
 	reqtest.Partial(t, "FR-2.17", "FR-2.18", "FR-2.4", "FR-2.5", "SR-2.11-1")
 	f := start(t, "")
 	access, _, body := f.oauthLogin("")
