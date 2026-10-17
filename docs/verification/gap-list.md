@@ -119,7 +119,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-5.13 unverified: stdio framing is the SDK's newline-delimited transport behind `frameFilter`; no test asserts single-line UTF-8 messages.
 - FR-5.14 unverified: an invalid stdout line fails the call (Appendix L HF-18 passes in the hostile suite, which runs under a build tag and does not claim requirements in the report).
 - FR-5.19 unverified: the SDK client sends `initialize` and `notifications/initialized`; the requested version is the SDK's latest, not pinned to 2025-11-25, and capabilities are not empty (see SR-5.6-2).
-- FR-5.20 missing: legacy server-initiated requests are answered by the SDK client (for example `roots/list`) instead of `-32601` (Appendix L HF-26 fails).
 - FR-5.21 unverified: the complete paged `tools/list` is read at start (`internal/backend/backend.go`, `sess.Tools`); no test pages a backend catalog.
 - FR-5.23 missing: no explicit handling of absent or unrecognized `resultType` from backends.
 - FR-5.24 missing: an `InputRequiredResult` is not mapped to `-31010` (Appendix L HF-25 fails).

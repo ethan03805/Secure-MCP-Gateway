@@ -712,7 +712,7 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 			r.restart(s, inst, "upstream timeout")
 			return nil, ErrTimeout
 		}
-		if ctx.Err() == nil && errors.Is(err, mcp.ErrConnectionClosed) {
+		if ctx.Err() == nil && instanceGone(err) {
 			r.restart(s, inst, "instance failed")
 		}
 		return nil, err
@@ -727,6 +727,16 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 		return nil, ErrTooLarge
 	}
 	return res, nil
+}
+
+// instanceGone reports whether a call error means the instance's transport
+// is gone. The SDK wraps a read that finds the connection closed in
+// mcp.ErrConnectionClosed, but a write to a pipe the exited process closed
+// can surface as a bare io.ErrClosedPipe; both mean the next call needs a
+// new instance.
+func instanceGone(err error) bool {
+	return errors.Is(err, mcp.ErrConnectionClosed) || errors.Is(err, io.ErrClosedPipe) ||
+		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 
 // acquire takes a per-principal slot and a total slot, waiting in FIFO
@@ -958,13 +968,37 @@ func (f *frameFilter) next() ([]byte, error) {
 	}
 }
 
-// screen applies the server-initiated request and InputRequiredResult rules
-// to one complete line. Lines that cannot be decoded pass unchanged; the
-// SDK client rejects them.
+// screen applies the server-initiated request, progress and
+// InputRequiredResult rules to one complete line. A JSON-RPC batch line is
+// split and each member screened as its own message; the members that
+// survive are passed on one per line, so no request inside a batch reaches
+// the SDK client unscreened (FR-5.20). Lines that cannot be decoded pass
+// unchanged; the SDK client rejects them.
 func (f *frameFilter) screen(line []byte) []byte {
 	if !bytes.Contains(line, []byte(`"method"`)) && !bytes.Contains(line, []byte(`input_required`)) {
 		return line
 	}
+	if t := bytes.TrimLeft(line, " \t\r\n"); len(t) > 0 && t[0] == '[' {
+		var members []json.RawMessage
+		if json.Unmarshal(line, &members) != nil || len(members) == 0 {
+			return line
+		}
+		var out []byte
+		for _, m := range members {
+			var c bytes.Buffer
+			if json.Compact(&c, m) != nil {
+				return line
+			}
+			c.WriteByte('\n')
+			out = append(out, f.screenOne(c.Bytes())...)
+		}
+		return out
+	}
+	return f.screenOne(line)
+}
+
+// screenOne screens a line holding one JSON-RPC message.
+func (f *frameFilter) screenOne(line []byte) []byte {
 	var m struct {
 		ID     json.RawMessage `json:"id"`
 		Method *string         `json:"method"`

@@ -620,13 +620,18 @@ func serverRequests(t *testing.T) (string, bool) {
 		return &mcp.CreateMessageResult{Content: &mcp.TextContent{Text: "no"}, Model: "none", Role: "assistant"}, nil //nolint:staticcheck // HF-26
 	}})
 	o := g.call(cs, "h_legacy", map[string]any{}, nil)
+	// The same requests plus ping and elicitation/create inside one
+	// JSON-RPC batch line: each member is screened (FR-5.20).
+	b := g.call(cs, "h_legacy_batch", map[string]any{}, nil)
 	mu.Lock()
 	defer mu.Unlock()
-	answered := strings.Contains(o.text, "=answered")
+	answered := strings.Contains(o.text, "=answered") || strings.Contains(b.text, "=answered")
+	const batchWant = "ping=empty-result roots/list=error(-32601) sampling/createMessage=error(-32601) elicitation/create=error(-32601)"
 	var n note
 	n.add("fixture saw: %q (%s)", o.text, o)
+	n.add("batch line: %q (%s)", b.text, b)
 	n.add("sampling requests relayed to the client: %d", north)
-	return n.String(), o.code == 0 && !answered && strings.Contains(o.text, "roots/list=") && north == 0
+	return n.String(), o.code == 0 && b.code == 0 && b.text == batchWant && !answered && strings.Contains(o.text, "roots/list=") && north == 0
 }
 
 func unicodeControl(t *testing.T) (string, bool) {

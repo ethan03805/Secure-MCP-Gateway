@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
@@ -85,12 +87,14 @@ func startFixture(t *testing.T, timeout time.Duration, fixtures ...string) (*Reg
 	return r, caps, l
 }
 
-// TestServerInitiatedRequestsRefused: roots/list and sampling/createMessage
-// from a backend are answered with -32601 by the Gateway (FR-5.20); the SDK
-// client never answers them, and the Gateway declares no client
-// capabilities southbound (SR-5.6-2; see TestNoSouthboundCapabilities).
+// TestServerInitiatedRequestsRefused: roots/list, sampling/createMessage
+// and elicitation/create from a backend are answered with -32601 by the
+// Gateway and ping with an empty result (FR-5.20), whether sent one per
+// line or inside a JSON-RPC batch line; the SDK client never answers the
+// refused ones, and the Gateway declares no client capabilities southbound
+// (SR-5.6-2; see TestNoSouthboundCapabilities).
 func TestServerInitiatedRequestsRefused(t *testing.T) {
-	reqtest.Partial(t, "FR-5.20")
+	reqtest.Verifies(t, "FR-5.20")
 	r, caps, _ := startFixture(t, 10*time.Second, "HF-26")
 	res, err := r.Call(context.Background(), dispatch(caps, r.Resolve("a_legacy"), "c1", `{}`))
 	if err != nil {
@@ -102,6 +106,19 @@ func TestServerInitiatedRequestsRefused(t *testing.T) {
 	}
 	if n := r.Servers()["a"].RefusedRequests(); n != 2 {
 		t.Fatalf("refused %d", n)
+	}
+	const want = "ping=empty-result roots/list=error(-32601) sampling/createMessage=error(-32601) elicitation/create=error(-32601)"
+	for i, tool := range []string{"a_legacy_all", "a_legacy_batch"} {
+		res, err := r.Call(context.Background(), dispatch(caps, r.Resolve(tool), fmt.Sprintf("c%d", i+2), `{}`))
+		if err != nil {
+			t.Fatalf("%s: %v", tool, err)
+		}
+		if got := res.Content[0].(*mcp.TextContent).Text; got != want {
+			t.Fatalf("%s: fixture saw %q", tool, got)
+		}
+		if n := r.Servers()["a"].RefusedRequests(); n != uint64(2+3*(i+1)) {
+			t.Fatalf("%s: refused %d", tool, n)
+		}
 	}
 	// ping is still answered (FR-5.20).
 	f := newFrameFilter(strings.NewReader(`{"jsonrpc":"2.0","id":"p","method":"ping"}`+"\n"+`{"jsonrpc":"2.0","method":"notifications/progress","params":{}}`+"\n"), 1<<10)
@@ -320,5 +337,61 @@ func TestCollisionDisablesOnlyThatServer(t *testing.T) {
 	}
 	if r.Resolve("a_echo") != nil || r.Resolve("b_legacy") == nil {
 		t.Fatalf("catalog %v", r.PublicNames())
+	}
+}
+
+// TestInstanceGoneErrors: a write to the pipe of an exited process can fail
+// with a bare io.ErrClosedPipe instead of mcp.ErrConnectionClosed; both
+// replace the instance (HF-19), while a JSON-RPC error from a live server
+// or a timeout does not count as a gone instance.
+func TestInstanceGoneErrors(t *testing.T) {
+	for _, err := range []error{
+		fmt.Errorf("calling %q: %w", "tools/call", io.ErrClosedPipe),
+		fmt.Errorf("%w: calling %q: client is closing: %w", mcp.ErrConnectionClosed, "tools/call", io.EOF),
+		io.ErrUnexpectedEOF,
+	} {
+		if !instanceGone(err) {
+			t.Errorf("instanceGone(%v) = false", err)
+		}
+	}
+	if instanceGone(&jsonrpc.Error{Code: -32603, Message: "boom"}) || instanceGone(context.DeadlineExceeded) {
+		t.Error("a server error or a timeout counted as a gone instance")
+	}
+}
+
+// TestFrameFilterScreensBatch: each member of a JSON-RPC batch line is
+// screened like a single message: requests other than ping are refused,
+// progress goes to the router, an InputRequiredResult becomes an error, and
+// the rest pass one per line.
+func TestFrameFilterScreensBatch(t *testing.T) {
+	in := `[{"jsonrpc":"2.0","id":"r","method":"roots/list"},{"jsonrpc":"2.0","id":"p","method":"ping"},` +
+		`{"jsonrpc":"2.0","method":"notifications/progress","params":{"progressToken":"smcp-1","progress":1}},` +
+		`{"jsonrpc":"2.0","id":7,"result":{"resultType":"input_required"}},{"jsonrpc":"2.0","id":8,"result":{"content":[]}}]` + "\n"
+	f := newFrameFilter(strings.NewReader(in), 1<<12)
+	var replies []string
+	var refused []string
+	progress := 0
+	f.reply = func(b []byte) (int, error) { replies = append(replies, string(b)); return len(b), nil }
+	f.refused = func(m string) { refused = append(refused, m) }
+	f.progress = func(*mcp.ProgressNotificationParams) { progress++ }
+	out, err := io.ReadAll(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSuffix(string(out), "\n"), "\n")
+	if len(lines) != 3 || !strings.Contains(lines[0], `"method":"ping"`) ||
+		!strings.Contains(lines[1], `"id":7,"error"`) || !strings.Contains(lines[2], `"id":8,"result"`) {
+		t.Fatalf("passed on: %q", out)
+	}
+	if len(refused) != 1 || refused[0] != "roots/list" || len(replies) != 1 || !strings.Contains(replies[0], `"id":"r","error":{"code":-32601`) {
+		t.Fatalf("refused %v replies %v", refused, replies)
+	}
+	if progress != 1 {
+		t.Fatalf("progress routed %d", progress)
+	}
+	// A line that is not a valid batch passes unchanged.
+	f = newFrameFilter(strings.NewReader(`[{"method":`+"\n"), 1<<10)
+	if out, _ := io.ReadAll(f); string(out) != `[{"method":`+"\n" {
+		t.Fatalf("malformed batch changed: %q", out)
 	}
 }

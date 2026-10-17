@@ -54,6 +54,7 @@ keeps today's behavior, and test the default.
 | `tunnel` | E-33 | Tailscale Funnel and Cloudflare quick tunnel drivers and the public-name check (`smcpctl remote`). |
 | `channel` | FR-16.8 | Request origin (local or remote) carried in the context and applied to evidence events. |
 | `gwtest` | tests | Starts a full Gateway with an in-process backend and a fake tunnel for tests. |
+| `testport` | tests | Loopback ports below the ephemeral range for listener addresses written into test configurations. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
 | `hostile` | FR-19.1, FR-19.2 | Hostile backend fixture server for every SRS Appendix L row (also `cmd/smcp-hostile`) and the suite (build tag `hostile`) that runs the Gateway against each fixture and writes `build/hostile.json`. See `docs/hostile-fixtures.md`. |
 | `egress` | E-18 | Egress Broker: per-instance forward proxy and destination endpoints, grants, pinned DNS, reserved-address refusal, limits, evidence, nftables confinement of sandbox namespaces, `/api/v1/egress` routes. See `docs/egress.md`. |

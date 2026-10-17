@@ -2,16 +2,17 @@ package main
 
 import (
 	"bytes"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
 
 // bins builds smcpctl, smcpd and smcp-refserver once per test binary.
@@ -44,13 +45,7 @@ func TestMain(m *testing.M) {
 
 func freePort(t *testing.T) string {
 	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	_, port, _ := net.SplitHostPort(l.Addr().String())
-	return port
+	return strconv.Itoa(testport.Free(t))
 }
 
 // ctl runs smcpctl and returns its output and exit error.

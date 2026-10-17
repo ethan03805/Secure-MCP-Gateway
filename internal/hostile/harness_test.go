@@ -38,6 +38,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging/pkgtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
 
 // The suite runs the Gateway in one of two profiles, chosen with
@@ -133,12 +134,7 @@ type gw struct {
 
 func freePort(t *testing.T) int {
 	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
+	return testport.Free(t)
 }
 
 func hash(t *testing.T, pw string) string {
