@@ -58,7 +58,7 @@ func (c *Console) decisionExplanation(w http.ResponseWriter, r *http.Request) {
 		"time": dec.Time, "phase": dec.Phase, "reason_code": dec.ReasonCode, "event_id": dec.EventID,
 	}
 	for _, k := range []string{"outcome", "template", "route", "considered_rules", "applicable_rules", "decisive_rules", "obligations",
-		"side_effect", "source_trust", "tainted", "superseded_decision_id", "redecision_reason", "anomaly_obligation"} {
+		"side_effect", "source_trust", "tainted", "superseded_decision_id", "redecision_reason", "anomaly_obligation", "failed_predicate"} {
 		if v, ok := detail[k]; ok {
 			out[k] = v
 		}

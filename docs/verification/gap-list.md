@@ -54,18 +54,12 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 - FR-3.1 missing: only Framework Profiles and Session Allow Policy Templates exist; Secret Use, Response, Audit Profile, Observation, Anomaly Response and Research Campaign policy objects are not part of the policy document.
 - FR-18.5 partial: `internal/policy` `TestPolicyReferenceExamples` compiles every policy example in `docs/policy-reference.md` and checks that every schema field is described; object types, predicate operators and obligations that do not exist (FR-3.1, SR-1.7-1, FR-3.12) cannot be described.
-- SR-3.13-1 missing: no high-risk class flags on profiles and templates; high-risk grants are not refused at publication.
 - SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; rolling back the application version is not exercised, and there are no revocation epochs.
 
 ## E-06 Policy Decision Service
 
-- FR-3.12 missing: obligations cover filters, approval, rate and quota only; audit profile, observation policy, size limit, timeout, egress grants, secret grants and runtime profile obligations are absent.
 - FR-11.2 external: no p95 decision latency measurement under the reference workload.
-- SR-1.5-1 missing: no principal enabled state or credential expiry or revocation in the decision; server revision enablement is checked at dispatch, not in the decision.
-- SR-1.7-1 missing: no argument predicates (FR-3.6), so the predicate operator set does not exist.
-- SR-1.7-2 missing: no predicates, so missing-attribute handling does not exist.
-- SR-1.10-1 missing: one permit rule applies per tool; obligations of several applicable rules are not combined.
-- SR-1.11-1 missing: no route objects; the route is the server alias.
+- SR-1.10-1 partial: obligations combine restrict-only across the permit rule, template, profile, approval predicate, approval floor and taint (`TestObligationPrecedence`); overlapping permits are refused at publication (SR-1.9-1), so several applicable permits are never combined.
 
 ## E-08 Access Enforcement Point
 

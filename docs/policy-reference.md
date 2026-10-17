@@ -20,7 +20,7 @@ Two of the nine policy object types of FR-3.1 exist: Framework Profiles and Sess
       "taint_action": "approve",
       "rules": [
         { "id": "fs-read", "server": "fs", "tools": ["read_file", "list_directory"], "side_effect": "read", "source_trust": "trusted",
-          "filters": ["path-canonicalize"] },
+          "filters": ["path-canonicalize"], "when": [{ "arg": "path", "op": "path_within", "value": ["/home/me/projects"] }] },
         { "id": "web", "server": "fetch", "tools": ["fetch"], "side_effect": "read", "source_trust": "untrusted" },
         { "id": "fs-write", "server": "fs", "tools": ["write_file"], "side_effect": "write", "approval": true, "calls_per_session": 20 },
         { "id": "no-delete", "effect": "deny", "server": "fs", "tools": ["delete_file"] }
@@ -46,6 +46,7 @@ Two of the nine policy object types of FR-3.1 exist: Framework Profiles and Sess
 | `default_template` | yes | Template used when the harness asks for none. Must be in `templates`. |
 | `calls_per_minute` | no | Rate bound for calls under this profile (at least 1). |
 | `servers` | no | Authority ceiling: the server aliases sessions of this profile may reach through any of its templates. Absent means unrestricted. |
+| `high_risk` | no | High-risk tool classes (`general-sql`, `code-execution`, `cad-scripting`, `browser-automation`) the profile's sessions may be granted; see High-risk classes. |
 
 A session whose template is no longer listed by its principal's profile in the active revision is denied with `NO_TEMPLATE`, and a session whose profile sets `servers` is denied (`NO_PERMIT`) every server outside it even when its template names one (each layer can only remove authority, SR-1-2).
 
@@ -58,6 +59,7 @@ A session whose template is no longer listed by its principal's profile in the a
 | `calls_per_minute` | no | Rate bound for calls under this template. |
 | `calls_per_session` | no | Quota: permitted calls of one session under this template over its lifetime. |
 | `taint_action` | no | `approve` (default) or `deny`: what a tainted session gets for tools whose side-effect class is not `read` (see Session taint). |
+| `high_risk` | no | High-risk tool classes this template may grant; see High-risk classes. |
 
 ### Rule
 
@@ -73,6 +75,28 @@ A session whose template is no longer listed by its principal's profile in the a
 | `side_effect` | no | `read`, `write`, `external` or `execute` (CP-44). Combined with the verified manifest's class; the more restrictive one applies. |
 | `source_trust` | no | `trusted` or `untrusted` (CP-44). Combined with the manifest's value; `untrusted` wins. |
 | `filters` | no | Optional request and response filter IDs that must run on calls this rule permits. Mandatory filters always run. |
+| `when` | no | Argument predicates of a permit rule (at most 32): the rule applies only when every one holds; see Predicates. A deny rule takes none. |
+
+### Predicates
+
+Each `when` entry has an `op` and, for operators on an argument, an `arg`: a top-level argument name, or names separated by `.` for nested objects. The operator set is fixed (SR-1.7-1); a document with another `op` is refused at validation.
+
+| `op` | Other keys | Holds when |
+|---|---|---|
+| `eq` | `arg`, `value` (string, number or boolean) | The argument equals `value` |
+| `in` | `arg`, `value` (list) | The argument equals a member of `value` |
+| `range` | `arg`, `min` and/or `max` (numbers) | The argument is a number with `min` ≤ argument ≤ `max` |
+| `path_within` | `arg`, `value` (list of absolute paths) | The argument is an absolute path whose canonical form (`.` and `..` resolved) is one of the roots or below one |
+| `url_in` | `arg`, `value` (list of `scheme://host[:port]`) | The argument is a URL whose scheme, host and port (the scheme's default when absent) match an entry |
+| `data_class_in` | `arg`, `value` (list) | The argument, a data-class label, is in `value` |
+| `expiry` | `not_before` and/or `not_after` (RFC 3339) | The decision time is in [`not_before`, `not_after`) |
+| `approval` | `value`: `"required"` | Always; the permit carries the approval obligation (the approval state the call needs) |
+
+A predicate whose argument is missing, of the wrong type or malformed does not hold, so the rule does not permit the call: the decision is `NO_PERMIT` with the failed predicate in its record (SR-1.7-2). Because overlapping permits are refused, a call has one candidate permit rule per tool. Predicates are evaluated on the arguments as received and again on the arguments a request filter transformed (re-decision). Policy simulation replays recorded calls without their arguments, so a rule with argument predicates does not permit replayed calls. The effective permission report (`GET /api/v1/policy/revisions/{id}/permissions`) lists each grant's predicates as its argument constraints (FR-3.6).
+
+### High-risk classes
+
+A server declares its tool classes in `[[server]] risk_classes`. Granting a server whose classes include `general-sql`, `code-execution`, `cad-scripting` or `browser-automation` needs that class in `high_risk` on the template and on every framework profile that uses the template: publication refuses the revision otherwise, and a call under a template or profile without the flag is denied with `HIGH_RISK_UNFLAGGED` (SR-3.13-1).
 
 ### Publication checks
 
@@ -90,15 +114,18 @@ The Policy Decision Service evaluates every `tools/call` against the in-memory s
 | The session's template is not in the revision, or the principal's profile does not list it | deny | `NO_TEMPLATE` | `-31001` |
 | The principal's profile sets `servers` and the server is not in it | deny | `NO_PERMIT` | `-31001` |
 | More than CP-12 (256) rules of the template name the server | deny | `EVAL_BOUND` | `-31001` |
+| The principal is disabled, the credential revoked or expired, the session not active, or the server revision not enabled (SR-1.5-1) | deny | `PRINCIPAL_DISABLED`, `CREDENTIAL_INVALID`, `SESSION_STATE`, `REVISION_NOT_ENABLED` | `-31001`, `-31006` for `SESSION_STATE` |
+| No route, or more than one, is eligible for the server and tool revision (SR-1.11-1) | deny | `NO_ROUTE`, `AMBIGUOUS_ROUTE` | `-31001` |
 | A deny rule covers the tool | deny | `DENY_RULE` | `-31001` |
-| No permit rule names the tool | deny | `NO_PERMIT` | `-31001` |
+| No permit rule names the tool, or a predicate of the permit rule does not hold | deny | `NO_PERMIT` | `-31001` |
+| The server has a high-risk class the template or profile does not flag | deny | `HIGH_RISK_UNFLAGGED` | `-31001` |
 | Session tainted, tool not `read`, `taint_action` `deny` | deny | `TAINT_DENIED` | `-31001` |
 | Evaluation took longer than CP-12 (500 ms) | deny | `EVAL_BOUND` | `-31001` |
 | A `calls_per_session` quota of the template or rule is used up | deny | `QUOTA_EXHAUSTED` | `-31005`, `data.callsPerSession` |
 | A rate or burst window is full | deny | `RATE_LIMITED` | `-31005`, `data.callsPerMinute`, `data.burst` |
 | Otherwise | permit | `PERMIT` | — |
 
-A permit carries the obligations: approval (from the rule, from the approval floor, or from session taint with reason `TAINT_APPROVAL`), the rate bound, the burst and the session quota that applied, and the rule's filters. A refusal consumes no rate window and no quota.
+A permit carries the obligations (FR-3.12): approval (from the rule, an `approval` predicate, the approval floor, or session taint with reason `TAINT_APPROVAL`), the rate bound, the burst and the session quota that applied, the rule's request and response filters, and, from the objects outside the document, the effective Audit Profile revision, the Observation Policy, the Anomaly Response Policy revision, the size limit (`result_bytes`, CP-08), the timeout (`upstream_timeout`, CP-13), the server's egress grants and secret grants, and its runtime profile. A refusal consumes no rate window and no quota.
 
 ### Approval floor
 

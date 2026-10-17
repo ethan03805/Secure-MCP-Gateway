@@ -11,6 +11,12 @@ import (
 var reasonMessages = map[string]string{
 	"NO_PERMIT":                  "The Gateway's policy does not allow this tool in this session. Ask the Gateway operator to grant it.",
 	"NO_TEMPLATE":                "This session's policy template no longer exists. Sign in again to start a new session.",
+	"PRINCIPAL_DISABLED":         "This agent's access to the Gateway is suspended. Ask the Gateway operator.",
+	"CREDENTIAL_INVALID":         "This agent's Gateway credential is no longer valid. Ask the Gateway operator for a new one.",
+	"REVISION_NOT_ENABLED":       "The tool's server is not enabled on the Gateway. Ask the Gateway operator.",
+	"NO_ROUTE":                   "The tool's server is not available right now. Try again later or ask the Gateway operator.",
+	"AMBIGUOUS_ROUTE":            "The Gateway could not choose how to reach this tool and refused the call. Ask the Gateway operator.",
+	"HIGH_RISK_UNFLAGGED":        "This tool is in a high-risk class that this session's policy does not allow.",
 	"APPROVAL_DENIED":            "A person reviewing this call denied it.",
 	"TAINT_DENIED":               "This session has read untrusted content, so tools that write or send data are blocked. Start a new session to use them.",
 	"APPROVAL_REQUIRED":          "This call needs approval. Open {approvalUrl} to approve it, then run the same request again.",

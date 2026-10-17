@@ -62,6 +62,10 @@ type Options struct {
 	// HealthGate is the Health & Safety Monitor's fail-closed gate (E-23,
 	// internal/health); default none.
 	HealthGate func() []string
+	// ObservationContext returns the effective Audit Profile revision, the
+	// Observation Policy ID and the Anomaly Response Policy revision, which
+	// every permit carries as obligations (FR-3.12). Nil leaves them empty.
+	ObservationContext func() (auditProfile, observationPolicy, anomalyResponse string)
 	// Packages is the Library Trust Verifier and Local Server Registry
 	// (E-13, E-14; internal/library). Default none: [[server]] entries
 	// naming a package are refused.
@@ -277,8 +281,16 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 
 	a.Decider = policy.NewDecider(snap, cfg.Limits.PrincipalCallsPerMin)
 	a.Decider.SetBurst(cfg.Limits.PrincipalCallBurst)
+	a.Decider.SetContext(a.obligationContext(o)) // FR-3.12
 	a.Policy = policyadmin.New(policyadmin.Options{Store: pstore, Evidence: a.Evidence, Active: a.Decider.Snapshot,
-		JournalDir: a.Journal.Dir(), DefaultRate: cfg.Limits.PrincipalCallsPerMin, Burst: cfg.Limits.PrincipalCallBurst, Fault: policyFault, Log: o.Log})
+		JournalDir: a.Journal.Dir(), DefaultRate: cfg.Limits.PrincipalCallsPerMin, Burst: cfg.Limits.PrincipalCallBurst, Fault: policyFault, Log: o.Log,
+		ServerRiskClasses: func() map[string][]string { // SR-3.13-1
+			m := map[string][]string{}
+			for _, sv := range cfg.Servers {
+				m[sv.Alias] = sv.RiskClasses
+			}
+			return m
+		}})
 	a.Policy.Started(imported, policyErr)
 	a.Store = session.NewStore(cfg, a.Decider.Snapshot)
 	guard := authguard.New(o.GuardConfig)

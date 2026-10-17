@@ -119,6 +119,9 @@ type Options struct {
 	Active func() *policy.Snapshot
 	// JournalDir is read for simulation replay ("" disables journal replay).
 	JournalDir string
+	// ServerRiskClasses maps server aliases to their declared tool classes,
+	// for the high-risk check at publication (SR-3.13-1); nil skips it.
+	ServerRiskClasses func() map[string][]string
 	// DefaultRate and Burst are the CP-11 values used in simulation.
 	DefaultRate int
 	Burst       int
@@ -231,7 +234,11 @@ func (s *Service) Publish(raw []byte, o PublishOptions) (PublishResult, error) {
 	if o.Origin == "" {
 		o.Origin = "publish"
 	}
-	if _, err := policy.Compile(raw); err != nil {
+	snap, err := policy.Compile(raw)
+	if err == nil && s.o.ServerRiskClasses != nil {
+		err = snap.CheckHighRisk(s.o.ServerRiskClasses()) // SR-3.13-1
+	}
+	if err != nil {
 		err = fmt.Errorf("%w: %w", ErrInvalid, err)
 		s.reject(o.Actor, ReasonInvalid, err)
 		return PublishResult{}, err

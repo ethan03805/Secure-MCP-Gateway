@@ -145,6 +145,14 @@ func (s *Server) peek() *instance {
 	return s.cur
 }
 
+// Suspended reports whether the server's revision was suspended and its
+// instance torn down.
+func (s *Server) Suspended() bool { return s.suspended.Load() }
+
+// RiskClasses returns the server's declared tool classes ([[server]]
+// risk_classes).
+func (s *Server) RiskClasses() []string { return s.cfg.RiskClasses }
+
 // Restarts returns how many times the instance was replaced after an
 // upstream timeout or a failed instance (Appendix L HF-17, HF-19).
 func (s *Server) Restarts() uint64 { return s.restarts.Load() }

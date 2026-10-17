@@ -320,6 +320,18 @@ func (s *Store) Apply(c *config.Config) error {
 	return errors.Join(errs...)
 }
 
+// InForce names the revision of kind applied at start: "<kind>@<n>", or
+// "<kind>@file" when the configuration file's settings are in force (an
+// FR-3.12 obligation reference).
+func (s *Store) InForce(kind string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if n := s.inForce[kind]; n > 0 {
+		return fmt.Sprintf("%s@%d", kind, n)
+	}
+	return kind + "@file"
+}
+
 // Publish validates and stores a new revision of kind. The body must be the
 // kind's JSON object.
 func (s *Store) Publish(kind string, body []byte, actor, reason string) (Revision, error) {
