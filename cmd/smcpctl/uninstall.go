@@ -12,6 +12,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,12 +26,31 @@ const nftTable = "inet smcp"
 // serviceIdentities are the CP-46 Enforced-profile accounts.
 var serviceIdentities = []string{"smcp-core", "smcp-evidence", "smcp-keys", "smcp-vault", "smcp-data", "smcp-console", "smcp-srv"}
 
+// withInstalledConfig adds --config <file> naming the configuration that
+// `smcpctl install` wrote when no --config is given and the default
+// smcp.toml is absent from the working directory.
+func withInstalledConfig(args []string) []string {
+	for _, a := range args {
+		if a == "--config" || a == "-config" || strings.HasPrefix(a, "--config=") || strings.HasPrefix(a, "-config=") {
+			return args
+		}
+	}
+	if _, err := os.Stat("smcp.toml"); err == nil {
+		return args
+	}
+	if p := installedConfigPath(); p != "" {
+		return append([]string{"--config", p}, args...)
+	}
+	return args
+}
+
 // uninstallCmd is `smcpctl uninstall [--purge]` (FR-13.11, FR-13.12).
 func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 	fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
 	purge := fs.Bool("purge", false, "also delete configuration, state, keys, the journal and the service identities (asks for the installation ID)")
 	binDir := fs.String("bin-dir", "", "directory of the installed binaries (default: the directory of this smcpctl)")
 	stopCmd := fs.String("stop-cmd", "", "shell command that stops the Gateway (default: the installed launchd or systemd unit)")
+	args = withInstalledConfig(args)
 	cfg, cfgPath, err := loadCfg(fs, args)
 	if err != nil {
 		return err
@@ -79,6 +99,18 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 	for _, u := range unitFiles() {
 		if !u.exists {
 			continue
+		}
+		if hostRoot == "" {
+			// Unload or disable before the file goes (ignored when the
+			// manager does not know the unit).
+			switch u.kind {
+			case "launchd":
+				_ = runQuiet("launchctl", "bootout", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel)
+			case "systemd-user":
+				_ = runQuiet("systemctl", "--user", "disable", "--now", systemdUnit)
+			case "systemd-system", "systemd-aux":
+				_ = runQuiet(asRoot("systemctl", "disable", filepath.Base(u.path))...)
+			}
 		}
 		err := os.Remove(u.path)
 		if errors.Is(err, os.ErrPermission) && hostRoot == "" {
@@ -191,7 +223,11 @@ func removeLSMProfiles() []string {
 	if runtime.GOOS != "linux" {
 		return []string{"LSM profiles: not used on " + runtime.GOOS}
 	}
+	// /etc/apparmor.d/smcpd is the profile install-enforced.sh loads.
 	matches, _ := filepath.Glob("/etc/apparmor.d/smcp-*")
+	if _, err := os.Stat("/etc/apparmor.d/smcpd"); err == nil {
+		matches = append(matches, "/etc/apparmor.d/smcpd")
+	}
 	if len(matches) == 0 {
 		return []string{"LSM profiles: none installed"}
 	}

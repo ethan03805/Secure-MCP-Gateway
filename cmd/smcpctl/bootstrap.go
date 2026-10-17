@@ -36,7 +36,7 @@ public_url = %[2]q
 address = %[3]q
 
 [state]
-dir = "state"
+dir = %[12]q
 
 # Administrator of the control API (smcpctl stop/resume/policy reload use
 # the operator token in state/keys/admin.token instead).
@@ -51,7 +51,7 @@ username = "approver"
 password_hash = %[5]q
 
 [policy]
-file = "policy.json"
+file = %[13]q
 
 # Framework instances (FR-2.1). The profile names a framework profile in policy.json.
 [[principal]]
@@ -136,7 +136,7 @@ address = %[11]q
 #   password_file = "neo4j.password"
 #
 # Remote Access Profile (E-33): "smcpctl remote enable" with a tunnel.
-`
+%[14]s`
 
 const examplePolicy = `{
   "revision": "r1",
@@ -178,18 +178,42 @@ func findRefserver() (string, error) {
 	return filepath.Abs(p)
 }
 
+// bootstrapOpts are the inputs of runBootstrap. bootstrap fills them from
+// flags; install (install.go) fills them for a CP-46 layout.
+type bootstrapOpts struct {
+	dir                     string // absolute: smcp.toml and policy.json
+	stateDir                string // absolute; empty means <dir>/state, written as "state"
+	policyFile              string // value of [policy] file; empty means "policy.json"
+	extraConfig             string // TOML appended to a new smcp.toml
+	adminFile, approverFile string
+	useToken                bool
+	sandbox, refserver      string
+	port, adminPort         int
+	metricsPort             int
+	notify                  string
+	quiet                   bool // no "Next steps" text (install prints its own)
+}
+
+// bootstrapResult reports what runBootstrap created.
+type bootstrapResult struct {
+	cfgPath, polPath, stateDir string
+	cfgCreated, polCreated     bool
+	keysCreated                bool
+}
+
 func bootstrap(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("bootstrap", flag.ContinueOnError)
 	dir := fs.String("dir", ".", "directory for smcp.toml, policy.json and state/")
-	adminFile := fs.String("admin-password-file", "", "read the administrator password from this file (- for standard input) instead of a prompt")
-	approverFile := fs.String("approver-password-file", "", "read the Session Approver password from this file instead of a prompt")
-	useToken := fs.Bool("bootstrap-token", false, "set no administrator password now; print a one-use token to set it later with `smcpctl admin redeem`")
-	sandbox := fs.String("sandbox", "", "directory the reference server may read (default <dir>/sandbox)")
-	refserver := fs.String("refserver", "", "path of smcp-refserver (default: next to smcpctl, then PATH)")
-	port := fs.Int("port", 8443, "harness listener port on 127.0.0.1")
-	adminPort := fs.Int("admin-port", 8444, "control API listener port on 127.0.0.1")
-	metricsPort := fs.Int("metrics-port", -1, "metrics endpoint port on 127.0.0.1 (default admin port + 1; 0 turns metrics off)")
-	notify := fs.String("notify", "auto", "approval desktop notifications: auto, off, osascript, terminal-notifier or notify-send")
+	o := bootstrapOpts{}
+	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (- for standard input) instead of a prompt")
+	fs.StringVar(&o.approverFile, "approver-password-file", "", "read the Session Approver password from this file instead of a prompt")
+	fs.BoolVar(&o.useToken, "bootstrap-token", false, "set no administrator password now; print a one-use token to set it later with `smcpctl admin redeem`")
+	fs.StringVar(&o.sandbox, "sandbox", "", "directory the reference server may read (default <dir>/sandbox)")
+	fs.StringVar(&o.refserver, "refserver", "", "path of smcp-refserver (default: next to smcpctl, then PATH)")
+	fs.IntVar(&o.port, "port", 8443, "harness listener port on 127.0.0.1")
+	fs.IntVar(&o.adminPort, "admin-port", 8444, "control API listener port on 127.0.0.1")
+	fs.IntVar(&o.metricsPort, "metrics-port", -1, "metrics endpoint port on 127.0.0.1 (default admin port + 1; 0 turns metrics off)")
+	fs.StringVar(&o.notify, "notify", "auto", "approval desktop notifications: auto, off, osascript, terminal-notifier or notify-send")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -197,99 +221,139 @@ func bootstrap(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	o.dir = abs
+	_, err = runBootstrap(o, out)
+	return err
+}
+
+// keyFiles are the files keys.Ensure creates when they are missing.
+var keyFiles = []string{keys.CAKeyFile, keys.ServerKeyFile, keys.EvidenceKeyFile, keys.AdminTokenFile, keys.InstallationIDFile}
+
+func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
+	var r bootstrapResult
+	abs := o.dir
 	cfgPath := filepath.Join(abs, "smcp.toml")
+	r.cfgPath = cfgPath
 	_, statErr := os.Stat(cfgPath)
 	writeCfg := os.IsNotExist(statErr)
 
 	var adminLine, token string
 	var approverHash string
+	var err error
 	if writeCfg {
-		if *useToken {
+		if o.useToken {
 			token = ids.Secret()
 			sum := sha256.Sum256([]byte(token))
 			adminLine = fmt.Sprintf("bootstrap_token_sha256 = %q\nbootstrap_token_expires = %q", hex.EncodeToString(sum[:]),
 				time.Now().Add(bootstrapTokenLifetime).UTC().Format(time.RFC3339))
 		} else {
-			pw, err := readSecret(*adminFile, "Administrator password (12 or more characters)", true)
+			pw, err := readSecret(o.adminFile, "Administrator password (12 or more characters)", true)
 			if err != nil {
-				return fmt.Errorf("administrator password: %w (or use --bootstrap-token)", err)
+				return r, fmt.Errorf("administrator password: %w (or use --bootstrap-token)", err)
 			}
 			if len(pw) < 12 {
-				return errors.New("administrator password must be at least 12 characters")
+				return r, errors.New("administrator password must be at least 12 characters")
 			}
 			h, err := keys.HashPassword(pw)
 			if err != nil {
-				return err
+				return r, err
 			}
 			adminLine = fmt.Sprintf("password_hash = %q", h)
 		}
-		apw, err := readSecret(*approverFile, "Session Approver password (approves harness sign-ins; 12 or more characters)", true)
+		apw, err := readSecret(o.approverFile, "Session Approver password (approves harness sign-ins; 12 or more characters)", true)
 		if err != nil {
-			return fmt.Errorf("approver password: %w", err)
+			return r, fmt.Errorf("approver password: %w", err)
 		}
 		if len(apw) < 12 {
-			return errors.New("approver password must be at least 12 characters")
+			return r, errors.New("approver password must be at least 12 characters")
 		}
 		if approverHash, err = keys.HashPassword(apw); err != nil {
-			return err
+			return r, err
 		}
-		if *refserver == "" {
-			if *refserver, err = findRefserver(); err != nil {
-				return err
+		if o.refserver == "" {
+			if o.refserver, err = findRefserver(); err != nil {
+				return r, err
 			}
 		}
-		if *refserver, err = filepath.Abs(*refserver); err != nil {
-			return err
+		if o.refserver, err = filepath.Abs(o.refserver); err != nil {
+			return r, err
 		}
 	}
-	if *sandbox == "" {
-		*sandbox = filepath.Join(abs, "sandbox")
+	if o.sandbox == "" {
+		o.sandbox = filepath.Join(abs, "sandbox")
 	}
-	if err := os.MkdirAll(*sandbox, 0o755); err != nil {
-		return err
+	if err := os.MkdirAll(o.sandbox, 0o755); err != nil {
+		return r, err
 	}
-	stateDir := filepath.Join(abs, "state")
+	stateDir, stateValue := filepath.Join(abs, "state"), "state"
+	if o.stateDir != "" {
+		stateDir, stateValue = o.stateDir, o.stateDir
+	}
+	r.stateDir = stateDir
+	for _, f := range keyFiles {
+		if _, err := os.Stat(filepath.Join(stateDir, f)); err != nil {
+			r.keysCreated = true
+		}
+	}
 	if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
-		return err
+		return r, err
 	}
-	listen := fmt.Sprintf("127.0.0.1:%d", *port)
+	policyValue := o.policyFile
+	if policyValue == "" {
+		policyValue = "policy.json"
+	}
+	listen := fmt.Sprintf("127.0.0.1:%d", o.port)
 	if writeCfg {
-		refSHA, err := bootstrapRefPackage(stateDir, *refserver, out)
+		refSHA, err := bootstrapRefPackage(stateDir, o.refserver, out)
 		if err != nil {
-			return err
+			return r, err
 		}
-		mport := *metricsPort
+		mport := o.metricsPort
 		if mport < 0 {
-			mport = *adminPort + 1
+			mport = o.adminPort + 1
 		}
 		maddr := fmt.Sprintf("127.0.0.1:%d", mport)
 		if mport == 0 {
 			maddr = config.DefaultMetricsAddress
 		}
-		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", *adminPort), adminLine, approverHash, RefPackageID, refSHA, *sandbox,
-			*notify, mport != 0, maddr)
+		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", o.adminPort), adminLine, approverHash, RefPackageID, refSHA, o.sandbox,
+			o.notify, mport != 0, maddr, stateValue, policyValue, o.extraConfig)
 		if err := os.WriteFile(cfgPath, []byte(body), 0o600); err != nil {
-			return err
+			return r, err
 		}
-		fmt.Fprintln(out, "wrote", cfgPath)
+		r.cfgCreated = true
+		if !o.quiet {
+			fmt.Fprintln(out, "wrote", cfgPath)
+		}
 	} else {
-		fmt.Fprintln(out, "kept existing", cfgPath)
+		if !o.quiet {
+			fmt.Fprintln(out, "kept existing", cfgPath)
+		}
 	}
-	polPath := filepath.Join(abs, "policy.json")
+	polPath := policyValue
+	if !filepath.IsAbs(polPath) {
+		polPath = filepath.Join(abs, polPath)
+	}
+	r.polPath = polPath
 	if _, err := os.Stat(polPath); os.IsNotExist(err) {
 		if err := os.WriteFile(polPath, []byte(examplePolicy), 0o644); err != nil {
-			return err
+			return r, err
 		}
-		fmt.Fprintln(out, "wrote", polPath)
+		r.polCreated = true
+		if !o.quiet {
+			fmt.Fprintln(out, "wrote", polPath)
+		}
 	} else {
-		fmt.Fprintln(out, "kept existing", polPath)
+		if !o.quiet {
+			fmt.Fprintln(out, "kept existing", polPath)
+		}
 	}
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
-		return err
+		return r, err
 	}
 	if _, err := policy.Load(polPath); err != nil {
-		return err
+		return r, err
 	}
 	if token != "" {
 		fmt.Fprintf(out, `
@@ -301,6 +365,9 @@ After starting smcpd, set the administrator password with:
   smcpctl admin redeem --config %s
 `, token, cfgPath)
 	}
+	if o.quiet {
+		return r, nil
+	}
 	fmt.Fprintf(out, `
 State and keys are under %s.
 
@@ -311,5 +378,5 @@ Next steps:
      Claude Code opens a browser for OAuth; sign in as the Session Approver "approver".
   4. Check health:              smcpctl health --config %s
 `, stateDir, cfgPath, filepath.Join(stateDir, keys.CACertFile), cfg.ResourceURI(), cfgPath)
-	return nil
+	return r, nil
 }
