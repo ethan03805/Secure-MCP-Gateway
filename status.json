@@ -5789,7 +5789,7 @@
       "version": "2.1.302",
       "mode": "ai-gateway",
       "result": "pass",
-      "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: client refused the call locally (honors the FR-1.50 requiresUserInteraction hint; headless mode cannot ask); Gateway hold not exercised); journal verify ok"
+      "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
     },
     {
       "client": "Codex CLI",
@@ -5800,10 +5800,10 @@
     },
     {
       "client": "Hermes Agent",
-      "version": "",
+      "version": "0.17.0",
       "mode": "ai-gateway",
-      "result": "not-run",
-      "detail": "not installed (hermes not found)"
+      "result": "pass",
+      "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
     },
     {
       "client": "OpenCode",
