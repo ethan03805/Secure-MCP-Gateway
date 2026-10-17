@@ -2,6 +2,7 @@ package library
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -170,6 +171,24 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	rt.mu.Unlock()
 	return config.Server{Alias: sc.Alias, Command: spec.Command, Args: spec.Args, Env: spec.Env, SecretEnv: sc.SecretEnv, Dir: spec.Dir,
 		RiskClasses: sc.RiskClasses, Package: sc.Package, PackageSHA256: sc.PackageSHA256, Slots: sc.Slots}, nil
+}
+
+// Resolve returns the launch configuration of a packaged [[server]] entry
+// from its enabled revision without starting anything (smcpctl runtime
+// spec). confined says whether the configured launcher confines servers,
+// which decides whether a high-risk package may run (SR-4-1).
+func (rt *Runtime) Resolve(sc config.Server, confined bool) (config.Server, error) {
+	return rt.resolve(sc, inspectLauncher(confined))
+}
+
+// inspectLauncher stands in for the configured launcher during Resolve; it
+// never launches.
+type inspectLauncher bool
+
+func (i inspectLauncher) Name() string   { return "inspect" }
+func (i inspectLauncher) Confined() bool { return bool(i) }
+func (i inspectLauncher) Launch(context.Context, pipeline.ServerSpec) (pipeline.Process, error) {
+	return nil, errors.New("library: inspection launcher does not launch")
 }
 
 func (rt *Runtime) binding(alias string) *Binding {

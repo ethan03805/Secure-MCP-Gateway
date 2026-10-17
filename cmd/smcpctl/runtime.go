@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 )
@@ -132,7 +133,23 @@ func runtimeSpec(args []string, out io.Writer) error {
 		return err
 	}
 	var specs []map[string]any
+	var pkgs *library.Runtime
+	defer func() {
+		if pkgs != nil {
+			_ = pkgs.Close()
+		}
+	}()
 	for _, s := range cfg.Servers {
+		if s.Package != "" { // E-13, E-14: the enabled revision's launch specification
+			if pkgs == nil {
+				if pkgs, err = library.OpenRuntime(cfg, nil); err != nil {
+					return fmt.Errorf("server %q: package library: %w", s.Alias, err)
+				}
+			}
+			if s, err = pkgs.Resolve(s, cfg.Runtime.Sandbox == "podman"); err != nil {
+				return fmt.Errorf("server %q: %w", s.Alias, err)
+			}
+		}
 		env, err := pipeline.MergeEnv(pipeline.BaseEnv(), s.Env, nil)
 		if err != nil {
 			return err
