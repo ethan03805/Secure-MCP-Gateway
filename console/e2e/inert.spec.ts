@@ -78,6 +78,9 @@ async function inert(page: Page, where: string) {
 
 test("hostile strings in server metadata and evidence are shown as inert text in every view", async ({ page }) => {
   claims("SR-3.3-1", "SR-6.17-1");
+  // Acceptance scenario AT-07 (with the bound test below); the console
+  // suite's Gateway runs the Standalone profile.
+  test.info().annotations.push({ type: "scenario", description: "AT-07 profile=standalone" });
   test.setTimeout(300_000);
   const dialogs: string[] = [];
   page.on("dialog", (d) => {
@@ -111,6 +114,7 @@ test("G-10 bounds evidence text to 256 KiB per page", async ({ page }) => {
   // The whole of SR-3.3-1: G-10 evidence with HTML, script and very large
   // files is rendered inert and bounded.
   test.info().annotations.push({ type: "requirement", description: "SR-3.3-1" });
+  test.info().annotations.push({ type: "scenario", description: "AT-07 profile=standalone" });
   const big = (n: number) => (HOSTILE + "é漢").repeat(Math.ceil(n / (HOSTILE.length + 5))).slice(0, n);
   await signIn(page, "/library");
   await page.route("**/api/v1/packages/big-pkg/1.0.0", (r) =>

@@ -37,6 +37,45 @@ type callRun struct {
 	// call is the pipeline view of the call once the decision permitted
 	// it; an anomaly obligation added by a request probe is read from it.
 	call *pipeline.Call
+	// spans records the call's stage spans (nil when no collector takes
+	// them).
+	spans *pipeline.SpanTimer
+}
+
+// stage starts a span of the call; the returned function ends it.
+func (c *callRun) stage(name string) func() {
+	if c.spans == nil {
+		return func() {}
+	}
+	return c.spans.Start(name)
+}
+
+// decided records the policy objects of the call's decision for the spans
+// that follow it.
+func (c *callRun) decided() {
+	if c.spans == nil {
+		return
+	}
+	c.spans.PolicyRevision = c.dec.PolicyRevision
+	c.spans.Rule = ""
+	if len(c.dec.DecisiveRules) > 0 {
+		c.spans.Rule = policy.RuleRevisionID(c.dec.PolicyRevision, c.dec.Template, c.dec.DecisiveRules[0])
+	}
+}
+
+// filterSpans records the filter runs of the inspection stage that just
+// ended.
+func (c *callRun) filterSpans(stage string) {
+	if c.spans == nil || c.call == nil || c.call.Inspection == nil {
+		return
+	}
+	var runs []pipeline.FilterRun
+	for _, r := range c.call.Inspection.Runs() {
+		if r.Stage == stage {
+			runs = append(runs, r)
+		}
+	}
+	c.spans.AddFilterRuns(runs)
 }
 
 func (c *callRun) event(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) audit.Event {
@@ -141,6 +180,15 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		c := &callRun{g: g, corr: corr, base: audit.Event{CorrelationID: corr, SessionID: sess.ID, PrincipalID: sess.PrincipalID,
 			ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision}}
+		// FR-10.2: one span per stage, with thread CPU time, emitted to
+		// the Observation Collector when the call ends.
+		if g.spans != nil {
+			c.spans = pipeline.NewSpanTimer(corr)
+			if a, ok := ctx.Value(ctxAuthSpan).(pipeline.StageSpan); ok {
+				c.spans.Add(a)
+			}
+			defer func() { g.spans(c.spans.Finish()) }()
+		}
 		channel.From(ctx).Apply(&c.base) // FR-16.8
 		side, trust := toolClasses(ref)
 		// The requested event carries the canonical request (FR-4.1): the
@@ -158,17 +206,23 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		// Session check: the request was authenticated, but the session may
 		// have ended since.
-		if !g.store.IsActive(sess.ID) {
+		endCheck := c.stage(pipeline.SpanSessionCheck)
+		active, closed := g.store.IsActive(sess.ID), g.failClosed()
+		endCheck()
+		if !active {
 			return nil, c.refuse(gatewayError(CodeSessionInvalid, "session invalid", ReasonSessionState, corr, "", nil),
 				"call", audit.PhaseDenied, "E-04", "deny", ReasonSessionState, "not_evaluated")
 		}
-		if reason := g.failClosed(); reason != "" {
+		if reason := closed; reason != "" {
 			return nil, c.refuse(gatewayError(CodeGatewayFailClosed, "gateway fail-closed", reason, corr, "", nil),
 				"call", audit.PhaseDenied, "E-12", "deny", reason, "unavailable")
 		}
 
 		// Decision (SR-5.5-1: every call is evaluated).
+		endDecision := c.stage(pipeline.SpanDecision)
 		c.dec = g.decider.Decide(g.policyRequest(sess, ref, side, trust, req.Params.Arguments))
+		endDecision()
+		c.decided()
 		dec := c.dec
 		if dec.Outcome != policy.Permit {
 			var e *jsonrpc.Error
@@ -197,7 +251,10 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		defer c.prog.stop()
 
 		// Request inspection (E-09).
+		endInspect := c.stage(pipeline.SpanRequestInspection)
 		args, reqApplied, verdict := g.filters.RunRequest(ctx, call, req.Params.Arguments)
+		endInspect()
+		c.filterSpans(pipeline.StageRequest)
 		if verdict != nil && ctx.Err() != nil && !g.store.IsActive(sess.ID) {
 			// FR-2.11: the session ended while the filters ran; their
 			// cancellation verdict is not an inspection finding.
@@ -221,7 +278,10 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		// governs approval and launch; its record names the first one.
 		if argumentsChanged(req.Params.Arguments, args) {
 			first := c.dec
+			endRecheck := c.stage(pipeline.SpanDecision)
 			c.dec = g.decider.Recheck(g.policyRequest(sess, ref, side, trust, args))
+			endRecheck()
+			c.decided()
 			c.superseded = first.ID
 			dec = c.dec
 			if dec.Outcome != policy.Permit {
@@ -233,7 +293,10 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		// Approval (E-07).
 		if dec.Obligations.Approval || call.RequireApproval {
-			if err := g.approve(ctx, c, call, args, req); err != nil {
+			endApproval := c.stage(pipeline.SpanApproval)
+			err := g.approve(ctx, c, call, args, req)
+			endApproval()
+			if err != nil {
 				return nil, err
 			}
 		}
@@ -242,13 +305,17 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		// SR-6.2-1): the decision intent is committed before the capability
 		// exists.
 		binding := pipeline.Binding{CorrelationID: corr, DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, PublicName: ref.Public}
+		endLaunch := c.stage(pipeline.SpanLaunchAuthorization)
 		capID, err := g.authorizeLaunch(c, sess.ID, binding)
+		endLaunch()
 		if err != nil {
 			return nil, err
 		}
 
 		// Dispatch (FR-4.8, FR-4.9, FR-4.10) with the one-use capability.
+		endDispatch := c.stage(pipeline.SpanDispatch)
 		if err := c.record("call", audit.PhaseDispatched, "E-10", "", "", "evaluated"); err != nil {
+			endDispatch()
 			return nil, c.auditFailure(err)
 		}
 		cctx, ccancel := context.WithTimeout(ctx, g.cfg.Limits.ClientDeadline.Duration) // CP-13 client deadline (FR-1.43)
@@ -258,18 +325,24 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			dispatch.Progress = c.prog.relay
 		}
 		res, err := g.reg.Call(cctx, dispatch)
+		endDispatch()
 		c.prog.stop() // FR-1.40: no progress after the final response
 		if err != nil {
 			return nil, g.mapDispatchError(c, sess.ID, err)
 		}
 
 		// Response inspection (E-11).
+		endRespInspect := c.stage(pipeline.SpanResponseInspection)
 		res, respApplied, rv := g.filters.RunResponse(ctx, call, res)
+		endRespInspect()
+		c.filterSpans(pipeline.StageResponse)
 		if rv != nil {
 			return nil, c.refuse(gatewayError(CodeResponseWithheld, "response withheld", rv.ReasonCode, corr, dec.ID, map[string]any{"findings": rv.Finding}),
 				"filter", audit.PhaseWithheld, "E-11", "withhold", rv.ReasonCode, "evaluated")
 		}
-		// Provenance (FR-4.12, SR-5.13-1).
+		// Provenance (FR-4.12, SR-5.13-1) and release authorization.
+		endRelease := c.stage(pipeline.SpanReleaseAuthorization)
+		defer endRelease()
 		if res.Meta == nil {
 			res.Meta = mcp.Meta{}
 		}

@@ -54,3 +54,39 @@ func Partial(t testing.TB, ids ...string) {
 	check(t, "Partial", ids)
 	t.Log(PartialMarker + " " + strings.Join(ids, " "))
 }
+
+// ScenarioMarker is the prefix of the log line for acceptance scenario
+// claims (FR-19.4).
+const ScenarioMarker = "SCENARIO:"
+
+// Profiles a scenario can run in (SRS Section 2.5).
+const (
+	Standalone = "standalone"
+	Enforced   = "enforced"
+)
+
+var scenarioPattern = regexp.MustCompile(`^AT-(0[1-9]|1[0-9]|2[01])$`)
+
+// Scenario declares that the calling test executes the given acceptance
+// scenarios of SRS Appendix M (AT-01 to AT-21) in profile, which is
+// Standalone or Enforced and must name the profile the test actually ran
+// the Gateway in. tools/reqreport reports a scenario as passed in a profile
+// when every test that claims it in that profile passed, and the release
+// label (FR-19.3) counts only Enforced results. A scenario claim says
+// nothing about the scenario's requirements; the test claims those with
+// Verifies or Partial as usual.
+func Scenario(t testing.TB, profile string, ids ...string) {
+	t.Helper()
+	if profile != Standalone && profile != Enforced {
+		t.Fatalf("reqtest.Scenario: profile %q is not %q or %q", profile, Standalone, Enforced)
+	}
+	if len(ids) == 0 {
+		t.Fatalf("reqtest.Scenario: no scenario IDs given")
+	}
+	for _, id := range ids {
+		if !scenarioPattern.MatchString(id) {
+			t.Fatalf("reqtest.Scenario: %q is not a scenario ID AT-01 to AT-21", id)
+		}
+	}
+	t.Log(ScenarioMarker + " " + strings.Join(ids, " ") + " profile=" + profile)
+}

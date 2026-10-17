@@ -383,7 +383,10 @@ func (s *Service) cost(w http.ResponseWriter, r *http.Request) {
 			out[j], out[j-1] = out[j-1], out[j]
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"rows": out})
+	// FR-10.11: span time of the call path aggregated by policy revision,
+	// decisive rule revision, filter and Observation Policy since start,
+	// the most expensive first; "filters" ranks the filters alone.
+	writeJSON(w, http.StatusOK, map[string]any{"rows": out, "policy_objects": s.Collector.Cost(false), "filters": s.Collector.Cost(true)})
 }
 
 func (s *Service) baselines(w http.ResponseWriter, r *http.Request) {

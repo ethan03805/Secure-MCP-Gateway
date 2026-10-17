@@ -14,16 +14,17 @@ Requirements deferred from release 1.0 (SRS Section 2.7, Appendix N) are not par
 
 Updated on 2026-10-17 against the status data of `58a40c1`: entries that tests now verify or partly verify were removed (FR-1.39, FR-1.40, FR-1.49, FR-5.20, FR-5.24, SR-5.6-2, SR-7.2-1 and FR-19.1 after the hostile-suite fixes).
 
+Updated on 2026-10-17 by the acceptance work: FR-11.1 and FR-10.11 are verified, FR-10.2, FR-12.2, FR-19.3 and SR-7.11-1 have partial claims, the FR-11 measurements have partial claims from the CI job `perf`, and FR-12.5 is deferred (Appendix N).
+
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
 ## E-01 Harness Interface Endpoint
 
-- FR-11.5 external: no p95 overhead measurement for 64 KiB results at eight concurrent calls on reference hardware.
+- FR-11.5 external: the CI job `perf` measures p95 P-213 for 64 KiB results at eight concurrent calls with synchronous scoring (partial claim, `cmd/smcp-workload`); no measurement on recorded reference hardware.
 - FR-12.1 external: no release SBOM license check; needs a release artifact.
-- FR-12.2 unverified: no test runs the baseline functions with outbound Internet blocked.
 - FR-12.8 external: release provenance bundle (commit IDs, digests, recipes, lockfiles, SBOM, notices) not inspected; needs a release.
 - SR-4.14-1 missing: `smcpctl remote enable` installs no nftables rules in the Enforced profile.
-- SR-7.11-1 unverified: CP-06 header bounds and CP-07 body bound are applied by `net/http` and the SDK before parsing; there is no per-source connection limit or CP-09 unauthenticated-work limit on the MCP endpoint (missing), and no test sends slow bodies or connection floods.
+- SR-7.11-1 missing (partial claim exists): the acceptance tests (AT-01, AT-20) show the CP-06 header and CP-07 body bounds refuse requests before a call exists; there is no per-source connection limit or CP-09 unauthenticated-work limit on the MCP endpoint, and no test sends slow bodies or connection floods.
 
 ## E-02 Protocol Mediator
 
@@ -41,7 +42,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-06 Policy Decision Service
 
-- FR-11.2 external: no p95 decision latency measurement under the reference workload.
+- FR-11.2 external: the CI job `perf` measures p95 decision latency for 100,000 decisions with 256 candidate rules and eight callers (partial claim); no measurement on recorded reference hardware.
 - SR-1.10-1 partial: obligations combine restrict-only across the permit rule, template, profile, approval predicate, approval floor and taint (`TestObligationPrecedence`); overlapping permits are refused at publication (SR-1.9-1), so several applicable permits are never combined.
 
 ## E-08 Access Enforcement Point
@@ -64,6 +65,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-18 Egress Broker
 
+- SR-5.16-1 missing (partial claim exists): the broker removes the `Smcp-Egress-Auth` header before forwarding but neither requires it nor checks a one-use capability bound to the correlation ID, decision ID, policy revision and destination. Acceptance scenario AT-10 is not claimed until it does.
 
 ## E-20 Secret Broker
 
@@ -84,31 +86,26 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-8.30 external: no browser-support matrix run.
 - FR-8.31 unverified: G-01 shows a first-run checklist (`console/src/views/Control.tsx`); no record compares its items with the requirement's list.
 - FR-8.32, FR-8.33 unverified (partial claims): `console/e2e/a11y.spec.ts` runs axe on every view as it loads and tabs through every control of every view in Chromium and Firefox; `console/e2e/keyboard.spec.ts` completes a set of actions in seven views with keyboard events only in all three browsers (WebKit with Option+Tab) and runs axe on each of its 21 intermediate states; the manual check is in `FR-8.32.md`. Missing: keyboard-only completion and axe for the remaining actions of the acceptance tests (for example G-04, G-05, G-09, G-12 and G-13 actions).
-- FR-11.8 external: no 30-day reference dataset query latency measurement; the journal has no index (E-21 note).
+- FR-11.8 external: the CI job `perf` measures the console's audit queries over a 100,000-event, 30-day journal (partial claim); analytics queries over 30 days of observation data and reference hardware are missing. The journal has no index (E-21 note).
 - FR-13.1 external: no inspection is recorded. Each archive now carries `sbom.spdx.json` and the release workflow checks the archive contents; the pre-release `v1.0.0-rc.1` (published before that change) has the four archives, the checksum file and its minisign signature, but no SBOM inside the archives.
 - FR-13.3 external: GoReleaser writes `Formula/smcp.rb` to `ethan03805/homebrew-tap` for a final release (not for a pre-release unless `SMCP_TAP_PRERELEASE` is `true`), and the `tap` workflow installs from the tap on macOS and Ubuntu and compares the binaries' digests with the release archive; it has not yet passed for a published formula.
-- FR-19.3 missing: no release-labelling step that checks AT-01 to AT-21 results.
-- FR-19.4 missing: no AT scenario is claimed by an automated test or a `docs/verification/AT-nn.md` record.
+- FR-19.4 partial: 20 of the 21 scenarios are claimed by automated tests (`internal/acceptance`, the hostile, graph and edge suites, and `console/e2e/inert.spec.ts` for AT-07; `docs/acceptance.md`). AT-10 has none because the Egress Broker does not check the one-use capability of SR-5.16-1, so FR-19.3's label stays "not enforced".
 - SR-7.5-2 unverified (partial claim exists): bootstrap, hash-password and admin redeem refuse arguments, standard input and files looser than 0600; the interactive prompt is not exercised (no terminal in tests), and there is no separate install command (installation runs bootstrap).
 
 ## E-25 Graph Database Engine
 
-- FR-11.1 missing: no reference workload generator.
-- FR-12.5 missing: no declared start ordering of the per-element services (one `smcpd` process); systemd units exist for the Enforced profile only.
 
 ## E-26 Data Access Service
 
 
 ## E-28 Data Lifecycle & Memory Manager
 
-- FR-11.9 external: idle resident memory not measured.
+- FR-11.9 external: the CI job `perf` samples the idle `smcpd` resident memory 10 minutes after start (partial claim); not on recorded reference hardware.
 - FR-12.4 external: CP-46 directories, owners and modes have not been inspected on installed Enforced and Standalone hosts.
 
 ## E-29 Observation Collector
 
-- FR-10.2 missing: no per-stage timing spans with CPU time.
-- FR-10.11 missing: no span-time aggregation by policy revision, rule, filter and Observation Policy.
-- FR-11.4 external: collector overhead not measured.
+- FR-11.4 missing: the CI job `perf` compares p95 P-213 with observation enabled and disabled; the first runs measured a difference of about 8 ms on a CI runner and 15 ms on a developer laptop, above the 1 ms budget, so the measurement is a failing test until capture cost is reduced (and it is not on recorded reference hardware).
 
 ## E-31 Anomaly Scorer
 

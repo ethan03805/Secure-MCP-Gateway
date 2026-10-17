@@ -118,6 +118,9 @@ type Deps struct {
 	// Screen re-checks tool metadata before presentation (FR-1.52); nil
 	// presents every tool.
 	Screen pipeline.ToolScreen
+	// Spans receives the timing spans of each tool call when it ends
+	// (FR-10.2, the Observation Collector); nil records none.
+	Spans pipeline.SpanSink
 }
 
 // Gateway wires the slice together.
@@ -138,6 +141,7 @@ type Gateway struct {
 	caps        *pipeline.Capabilities
 	consoleURL  string
 	policyFault func() string
+	spans       pipeline.SpanSink
 
 	gate    sync.RWMutex // launch/release barrier (see package comment)
 	stopped atomic.Bool  // FR-4.14 emergency stop
@@ -192,6 +196,9 @@ const (
 	// SDK runs handlers on its session context, which does not end when the
 	// harness closes the response stream (SR-7.12-1).
 	ctxRequest
+	// ctxAuthSpan carries the authenticate stage's span (FR-10.2), measured
+	// before the call handler runs.
+	ctxAuthSpan
 )
 
 // New builds the Gateway over already-started components.
@@ -225,7 +232,7 @@ func New(d Deps) (*Gateway, error) {
 	}
 	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
 		evidenceErr: d.EvidenceErr, healthGate: d.HealthGate, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, screen: d.Screen, caps: d.Capabilities,
-		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker(), listenInterval: listenKeepAlive,
+		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, spans: d.Spans, servers: map[string]*sessionServer{}, track: newTracker(), listenInterval: listenKeepAlive,
 		cursorKey: make([]byte, 32)}
 	if _, err := rand.Read(g.cursorKey); err != nil {
 		return nil, fmt.Errorf("edge: cursor key: %w", err)
@@ -584,7 +591,13 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			return
 		}
 		org := channel.From(r.Context())
-		sess, err := g.store.Authenticate(session.Bearer(r), org.Listener()) // FR-2.5, SR-2.1-3; FR-16.1 binds remote sessions to the remote listener
+		var sess *session.Session
+		var err error
+		authStart := time.Now()
+		authCPU, authMeasured := pipeline.MeasureCPU(func() {
+			sess, err = g.store.Authenticate(session.Bearer(r), org.Listener()) // FR-2.5, SR-2.1-3; FR-16.1 binds remote sessions to the remote listener
+		})
+		authSpan := pipeline.StageSpan{Stage: pipeline.SpanAuthenticate, Start: authStart, End: time.Now(), CPU: authCPU, CPUMeasured: authMeasured}
 		if err != nil {
 			ev := audit.Event{Class: "auth_failure", Origin: "E-03", CorrelationID: corr, Outcome: "deny", ReasonCode: "SESSION_INVALID", PolicyStatus: "not_evaluated"}
 			org.Apply(&ev)
@@ -641,6 +654,7 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxRequest, r.Context())
 		ctx = context.WithValue(ctx, ctxCorrelation, corr)
 		ctx = context.WithValue(ctx, ctxMessage, msg)
+		ctx = context.WithValue(ctx, ctxAuthSpan, authSpan)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

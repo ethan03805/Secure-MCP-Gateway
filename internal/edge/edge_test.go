@@ -278,6 +278,7 @@ func TestIntentCommittedBeforeCapability(t *testing.T) {
 	// export outbox; the journal commit is the owner-decided authority, so
 	// the claim is partial until E-26 exists.
 	reqtest.Partial(t, "SR-6.2-1")
+	reqtest.Scenario(t, reqtest.Standalone, "AT-12") // journal flush fault before launch
 	h := newHarness(t, harnessOpts{})
 	_, tok := h.session("ro")
 	cs := h.client(tok)

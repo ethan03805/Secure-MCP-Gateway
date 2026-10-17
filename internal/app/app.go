@@ -73,6 +73,9 @@ type Options struct {
 	// Observation Policy ID and the Anomaly Response Policy revision, which
 	// every permit carries as obligations (FR-3.12). Nil leaves them empty.
 	ObservationContext func() (auditProfile, observationPolicy, anomalyResponse string)
+	// Spans receives each tool call's stage timing spans (FR-10.2); the
+	// Observation Collector (E-29) takes them. Nil records none.
+	Spans pipeline.SpanSink
 	// Packages is the Library Trust Verifier and Local Server Registry
 	// (E-13, E-14; internal/library). Default none: [[server]] entries
 	// naming a package are refused.
@@ -312,7 +315,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 	if a.Gateway, err = edge.New(edge.Deps{Config: cfg, Store: a.Store, OAuth: a.OAuth, Decider: a.Decider, Registry: a.Registry,
 		Evidence: a.Evidence, EvidenceErr: a.Journal.Err, HealthGate: o.HealthGate, Log: o.Log, Profile: a.Profile, Approver: o.Approver, Filters: o.Filters,
-		Capabilities: a.Capabilities, ConsoleURL: o.ConsoleURL, PolicyFault: a.Policy.Fault, Screen: a.Inspector}); err != nil {
+		Capabilities: a.Capabilities, ConsoleURL: o.ConsoleURL, PolicyFault: a.Policy.Fault, Screen: a.Inspector, Spans: o.Spans}); err != nil {
 		return a, err
 	}
 	a.Policy.Bind(a.Gateway)

@@ -108,6 +108,7 @@ func TestListenWriterKeepAliveOnlyWhenIdle(t *testing.T) {
 // -31003 and none of its content reaches the harness.
 func TestReleaseCommitFailureWithholds(t *testing.T) {
 	reqtest.Verifies(t, "SR-6.3-1")
+	reqtest.Scenario(t, reqtest.Standalone, "AT-12") // journal flush fault before release
 	h := newHarness(t, harnessOpts{})
 	_, tok := h.session("ro")
 	h.rec.set(func(ev audit.Event) error {

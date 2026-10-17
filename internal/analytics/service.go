@@ -124,6 +124,9 @@ func Tables(cat *observe.Catalog) []obsstore.Table {
 		{Name: "ts", Type: obsstore.Timestamp}, {Name: "correlation_id", Type: obsstore.Varchar}, {Name: "stage", Type: obsstore.Varchar},
 		{Name: "duration_ms", Type: obsstore.Double}, {Name: "monotonic", Type: obsstore.BigInt}, {Name: "policy_revision", Type: obsstore.Varchar},
 		{Name: "observation_policy", Type: obsstore.Varchar}, {Name: "principal_id", Type: obsstore.Varchar}, {Name: "tool_name", Type: obsstore.Varchar},
+		// Call-path spans (FR-10.2, monotonic = 1): thread CPU time and the
+		// decisive rule revision and filter that caused the work (FR-10.11).
+		{Name: "cpu_ms", Type: obsstore.Double}, {Name: "rule_id", Type: obsstore.Varchar}, {Name: "filter_id", Type: obsstore.Varchar},
 	}}
 	scores := obsstore.Table{Name: "scores", Columns: []obsstore.Column{
 		{Name: "ts", Type: obsstore.Timestamp}, {Name: "correlation_id", Type: obsstore.Varchar}, {Name: "snapshot_id", Type: obsstore.Varchar},
@@ -184,7 +187,8 @@ func New(o Options) (*Service, error) {
 	s.Collector = observe.New(observe.Options{Catalog: o.Catalog, PolicyID: st.PolicyID, Parameters: st.Parameters, Escalation: st.Escalation, Degradation: s.degrade.Stage,
 		EscalateFrom: st.EscalateCapture, EscalateUncharacterized: st.Uncharacterized != "record", EscalationByBand: st.EscalationByBand,
 		InScope: scopeFilter(st.Scope), FrameworkOf: o.FrameworkOf,
-		SamplingRate: st.SamplingRate, Queue: st.Queue, Analyzer: (*analyzer)(s), Campaigns: s.Campaigns.Active, Now: o.Now})
+		SamplingRate: st.SamplingRate, Queue: st.Queue, Analyzer: (*analyzer)(s), Campaigns: s.Campaigns.Active, Now: o.Now,
+		SpanSink: s.writeSpans, CurrentPolicy: func() string { return s.cur().PolicyID }})
 	return s, nil
 }
 
@@ -249,6 +253,27 @@ func (s *Service) Update(cfg *config.Config) (restart []string, err error) {
 	s.Collector.SetPolicy(st.Parameters, st.Escalation, st.SamplingRate)
 	s.log.Info("observation settings updated", "policy_id", st.PolicyID, "scoring", st.Scoring, "restart_required", restart)
 	return restart, nil
+}
+
+// SpanSink returns the sink for the edge's call-path spans (FR-10.2), or
+// nil when observation is disabled.
+func (s *Service) SpanSink() pipeline.SpanSink {
+	if s.Disabled() {
+		return nil
+	}
+	return s.Collector.OfferSpans
+}
+
+// writeSpans stores call-path spans in the spans table.
+func (s *Service) writeSpans(policyID string, spans []pipeline.StageSpan) {
+	if s.writer == nil {
+		return
+	}
+	for _, sp := range spans {
+		s.writer.offer("spans", obsstore.Row{"ts": sp.Start, "correlation_id": sp.CorrelationID, "stage": sp.Stage,
+			"duration_ms": float64(sp.Duration()) / float64(time.Millisecond), "monotonic": int64(1), "policy_revision": sp.PolicyRevision,
+			"observation_policy": policyID, "cpu_ms": float64(sp.CPU) / float64(time.Millisecond), "rule_id": sp.Rule, "filter_id": sp.Filter})
+	}
 }
 
 // Observer returns the evidence observer to register in app.Options

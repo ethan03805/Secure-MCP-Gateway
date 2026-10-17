@@ -120,7 +120,13 @@ type Status struct {
 	Elements     []ElementInfo `json:"elements"`
 	Agents       []any         `json:"agents"`
 	Hostile      []any         `json:"hostile"`
-	CI           CIInfo        `json:"ci"`
+	// Acceptance holds the AT-01 to AT-21 results and the release label
+	// (FR-19.3, FR-19.4).
+	Acceptance *Acceptance `json:"acceptance,omitempty"`
+	// Performance holds the FR-11 measurements of the perf job; the status
+	// job adds it (tools/perfrun).
+	Performance any    `json:"performance,omitempty"`
+	CI          CIInfo `json:"ci"`
 }
 
 type TestsSummary struct {

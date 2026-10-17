@@ -108,9 +108,15 @@ System meta-metrics rows (P-240 to P-250). Query: `from`, `to`, `limit` (1 to 10
 
 Time per stage, policy revision and Observation Policy, ranked by total time (FR-10.11). Query: `from`, `to`, `principal`, `tool`.
 
+`rows` aggregates the stored spans in the time range. `policy_objects` is the collector's aggregation of the call-path spans (FR-10.2) since start, by stage, policy revision, decisive rule revision, filter and Observation Policy, most expensive first, with span count, total, mean and maximum time and CPU time in milliseconds; `filters` is the same for filter spans only, so the most expensive filter comes first.
+
 ```json
 {"rows": [{"group": {"stage": "dispatch", "policy_revision": "r1", "observation_policy": "default"},
-           "count": 120, "mean": 10.1, "variance": 2.0, "min": 7, "max": 30, "quantiles": [9.8, 15, 28], "total_ms": 1212}]}
+           "count": 120, "mean": 10.1, "variance": 2.0, "min": 7, "max": 30, "quantiles": [9.8, 15, 28], "total_ms": 1212}],
+ "policy_objects": [{"stage": "filter", "policy_revision": "r1", "rule_id": "r1/ro/ro-t", "filter_id": "secret-fingerprint",
+                     "observation_policy": "default", "spans": 120, "total_ms": 30.2, "cpu_ms": 28.9, "mean_ms": 0.25, "max_ms": 1.1}],
+ "filters": [{"stage": "filter", "policy_revision": "r1", "rule_id": "r1/ro/ro-t", "filter_id": "secret-fingerprint",
+              "observation_policy": "default", "spans": 120, "total_ms": 30.2, "cpu_ms": 28.9, "mean_ms": 0.25, "max_ms": 1.1}]}
 ```
 
 ### POST /api/v1/observations/purge

@@ -3914,19 +3914,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | A2 §3; OWNER (per-user layout for the Standalone profile) |
 | Rationale | Separates protected state from agent-writable locations where the platform allows it, and keeps a per-user installation out of system directories. |
 
-#### FR-12.5 — Service management
-
-| Field | Value |
-|---|---|
-| ID | FR-12.5 |
-| Parent ID | FR-12 — Implementation constraints |
-| Statement | The Gateway **SHALL** install as systemd system services in the Enforced profile, and as a launchd user agent on macOS or a systemd user unit on Linux in the Standalone profile, with declared start ordering Key & Trust Anchor Manager, Gateway core, console, then the optional Data Server. |
-| Allocation | Elements: E-25 Graph Database Engine, E-22 Key & Trust Anchor Manager, E-24 Management Console & Control API; Functions: F-97; External interfaces: X-07 |
-| Verification Method | Test |
-| Verification Statement | Reboot an Enforced host and log in on a Standalone host; confirm the start order from the service manager log and that the Gateway serves harness requests while the Data Server is still starting. |
-| Source | ARCH §15; ARCH §2.2 A-9 |
-| Rationale | Startup gating depends on the keys and the core only; the graph mirror starts last because enforcement does not wait for it. |
-
 #### FR-12.6 — Configuration file
 
 | Field | Value |
@@ -7562,10 +7549,10 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12 | SR-2.13-1, SR-2.13-3, SR-4.1-1 |
 | E-20 | Secret Broker | FR-3.1, FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11 | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
 | E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8 | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1 |
-| E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-12.5, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1 |
+| E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1 |
 | E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3 | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
-| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.5, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4 | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
-| E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.5, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
+| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4 | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
+| E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
 | E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
 | E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11 | SR-4.2-2 |
 | E-28 | Data Lifecycle & Memory Manager | FR-9, FR-9.10, FR-9.11, FR-9.12, FR-9.14, FR-9.15, FR-9.16, FR-11, FR-11.9, FR-12, FR-12.4, FR-12.6, FR-12.7, FR-13, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8 | SR-6.14-1, SR-7.7-1, SR-7.8-1, SR-7.10-1 |
@@ -7677,7 +7664,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-94 | Obtain and refresh harness session | FR-12.12, FR-15, FR-15.8, FR-18.3, SR-2.3-2 |
 | F-95 | Bridge stdio to the harness interface | FR-12.13, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.9, FR-18.3 |
 | F-96 | Build, sign and verify server package | FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.10, FR-14.12, FR-18.6, SR-3.5-1 |
-| F-97 | Install, upgrade and remove the Gateway | FR-12.4, FR-12.5, FR-12.7, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.11, FR-13.12, FR-13.13, FR-16.11, FR-17.9, FR-18.1, SR-4.14-1, SR-7.5-2 |
+| F-97 | Install, upgrade and remove the Gateway | FR-12.4, FR-12.7, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.11, FR-13.12, FR-13.13, FR-16.11, FR-17.9, FR-18.1, SR-4.14-1, SR-7.5-2, FR-12.5 (deferred) |
 | F-98 | Diagnose and lock down harness configuration | FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.10, FR-16.10, FR-18, FR-18.2, FR-18.3, SR-4.9-1, SR-4.11-1, SR-4.13-1 |
 | F-99 | Track session taint | SR-5.13-2 |
 
@@ -7691,7 +7678,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | X-04 | FR-2.19, FR-2.23, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.22, FR-8.23, FR-8.24, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-16.5, SR-2.5-1, SR-2.8-1, SR-2.9-2 |
 | X-05 | FR-3.17, FR-3.18, FR-3.23, FR-3.24, FR-3.25, FR-8.21 |
 | X-06 | FR-5.36, FR-5.38, SR-4.5-2, SR-5.15-1 |
-| X-07 | FR-12.3, FR-12.4, FR-12.5, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1, FR-7.9 (deferred) |
+| X-07 | FR-12.3, FR-12.4, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1, FR-7.9 (deferred), FR-12.5 (deferred) |
 | X-08 | FR-6.2 |
 | X-09 | FR-7.14 |
 | X-10 | FR-10.2 |
@@ -8072,7 +8059,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-12.2 | FR-12 | Test | E-01, E-18, E-24, E-25 | No external service dependency |
 | FR-12.3 | FR-12 | Demonstration | E-15, E-16, E-23 | Host platform |
 | FR-12.4 | FR-12 | Inspection | E-28, E-32, E-24 | Filesystem layout |
-| FR-12.5 | FR-12 | Test | E-25, E-22, E-24 | Service management |
 | FR-12.6 | FR-12 | Test | E-01, E-28 | Configuration file |
 | FR-12.7 | FR-12 | Demonstration | E-24, E-28, E-21 | Administrative CLI |
 | FR-12.8 | FR-12 | Inspection | E-01, E-24, E-25 | Release provenance |
@@ -8327,9 +8313,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 
 | Check | Result |
 |---|---|
-| Requirements | 530 total: 368 FR (19 roots), 162 SR |
-| Deferred from release 1.0 (Appendix N) | 31: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1 |
-| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 406 |
+| Requirements | 529 total: 367 FR (19 roots), 162 SR |
+| Deferred from release 1.0 (Appendix N) | 32: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1 |
+| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 405 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
@@ -8772,6 +8758,20 @@ These records keep their IDs and text so that a later release can restore them u
 | Source | ARCH §4 E-28 |
 | Rationale | Bounded fast storage with retained history. |
 | Deferral | Release 1.0 writes observation partitions as compressed columnar files (Parquet through DuckDB) or JSON Lines from the start and deletes them at the end of their retention; there is one tier. A separate hot tier is deferred until measurements on reference hardware show that queries over 30 days need one. |
+
+#### FR-12.5 — Service management (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-12.5 |
+| Parent ID | FR-12 — Implementation constraints |
+| Statement | The Gateway **SHALL** install as systemd system services in the Enforced profile, and as a launchd user agent on macOS or a systemd user unit on Linux in the Standalone profile, with declared start ordering Key & Trust Anchor Manager, Gateway core, console, then the optional Data Server. |
+| Allocation | Elements: E-25 Graph Database Engine, E-22 Key & Trust Anchor Manager, E-24 Management Console & Control API; Functions: F-97; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Reboot an Enforced host and log in on a Standalone host; confirm the start order from the service manager log and that the Gateway serves harness requests while the Data Server is still starting. |
+| Source | ARCH §15; ARCH §2.2 A-9 |
+| Rationale | Startup gating depends on the keys and the core only; the graph mirror starts last because enforcement does not wait for it. |
+| Deferral | Release 1.0 runs the Key & Trust Anchor Manager, the Gateway core, the console and the graph mirror in one process, smcpd, which `smcpctl install` installs as one systemd system service in the Enforced profile and as one launchd user agent (macOS) or systemd user unit (Linux) in the Standalone profile. There are no separate element services whose start order could be declared: smcpd loads its keys and trust anchors before it opens a listener, serves the console from the same process, and starts the graph mirror without waiting for it, so harness requests are served while the mirror is still connecting (FR-9.17). Separate per-element services with declared start ordering are deferred with a multi-process split of the Gateway. |
 
 #### SR-1-1 — Capability ceiling (deferred)
 

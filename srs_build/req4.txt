@@ -443,6 +443,7 @@ A: E-25; E-22; E-24; F-97; X-07
 V: Test | Reboot an Enforced host and log in on a Standalone host; confirm the start order from the service manager log and that the Gateway serves harness requests while the Data Server is still starting.
 SRC: ARCH §15; ARCH §2.2 A-9
 R: Startup gating depends on the keys and the core only; the graph mirror starts last because enforcement does not wait for it.
+DEFER: Release 1.0 runs the Key & Trust Anchor Manager, the Gateway core, the console and the graph mirror in one process, smcpd, which `smcpctl install` installs as one systemd system service in the Enforced profile and as one launchd user agent (macOS) or systemd user unit (Linux) in the Standalone profile. There are no separate element services whose start order could be declared: smcpd loads its keys and trust anchors before it opens a listener, serves the console from the same process, and starts the graph mirror without waiting for it, so harness requests are served while the mirror is still connecting (FR-9.17). Separate per-element services with declared start ordering are deferred with a multi-process split of the Gateway.
 
 @FR-12.6 | Configuration file
 P: FR-12

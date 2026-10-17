@@ -1,6 +1,7 @@
 package backup
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -231,5 +232,74 @@ func TestRestoreVerifiesBeforeSwapping(t *testing.T) {
 	}
 	if after, _ := os.ReadFile(pol); string(after) != string(before) {
 		t.Fatal("refused restore changed files")
+	}
+}
+
+// TestRestoreReappliesDirectoryRevocations: a backup taken before a
+// principal suspension and a credential revocation does not bring them
+// back; the restore writes them into the restored principal directory
+// before service starts. A principal enabled again after its suspension
+// stays enabled. Partial for SR-7.8-1 (sessions and the graph mirror
+// rebuild are not covered here).
+func TestRestoreReappliesDirectoryRevocations(t *testing.T) {
+	reqtest.Partial(t, "SR-7.8-1")
+	dir, state, cfg, pol := install(t)
+	const directory = `{"version": 1, "principals": [], "credentials": [
+  {"client_id": "c1", "principal": "p1", "redirect_uris": ["http://127.0.0.1/cb"], "created_by": "admin", "created_at": "2026-10-01T00:00:00Z"},
+  {"client_id": "c2", "principal": "p1", "redirect_uris": ["http://127.0.0.1/cb"], "created_by": "admin", "created_at": "2026-10-01T00:00:00Z"}],
+ "suspended": {}, "future_field": "kept"}`
+	if err := os.WriteFile(filepath.Join(state, principalsFile), []byte(directory), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Create(filepath.Join(dir, "backups"), Spec{StateDir: state, ConfigPath: cfg, PolicyPath: pol, Encryption: fast(Encryption{Passphrase: "pw"})})
+	if err != nil {
+		t.Fatal(err)
+	}
+	priv, _ := keys.LoadEvidenceKey(state)
+	j, err := audit.Open(filepath.Join(state, "journal"), priv, audit.Options{MaxAge: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range []audit.Event{
+		{Class: "admin", Origin: "E-24", Outcome: "principal_suspended", ReasonCode: "PRINCIPAL_SUSPENDED", PrincipalID: "p1", Detail: map[string]any{"reason": "lost laptop"}},
+		{Class: "admin", Origin: "E-24", Outcome: "credential_revoke_requested", ReasonCode: "CREDENTIAL_REVOKED", PrincipalID: "p1", Detail: map[string]any{"client_id": "c1"}},
+		{Class: "admin", Origin: "E-24", Outcome: "principal_suspended", ReasonCode: "PRINCIPAL_SUSPENDED", PrincipalID: "p2", Detail: map[string]any{"reason": "x"}},
+		{Class: "admin", Origin: "E-24", Outcome: "principal_enabled", ReasonCode: "PRINCIPAL_ENABLED", PrincipalID: "p2", Detail: map[string]any{"reason": "y"}},
+	} {
+		time.Sleep(2 * time.Millisecond)
+		if err := j.Commit(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = j.Close()
+	rep, err := Restore(RestoreOptions{Archive: res.Path, Decryption: Decryption{Passphrase: "pw"}, StateDir: state, ConfigPath: cfg, PolicyPath: pol})
+	if err != nil || !rep.Applied || rep.DirectoryChanges != 2 {
+		t.Fatalf("restore %+v %v", rep, err)
+	}
+	b, err := os.ReadFile(filepath.Join(state, principalsFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st struct {
+		Credentials []struct {
+			ClientID  string  `json:"client_id"`
+			RevokedAt *string `json:"revoked_at"`
+		} `json:"credentials"`
+		Suspended map[string]any `json:"suspended"`
+		Future    string         `json:"future_field"`
+	}
+	if err := json.Unmarshal(b, &st); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := st.Suspended["p1"]; !ok || len(st.Suspended) != 1 || st.Future != "kept" {
+		t.Fatalf("restored directory: %s", b)
+	}
+	for _, c := range st.Credentials {
+		if (c.ClientID == "c1") != (c.RevokedAt != nil) {
+			t.Fatalf("credential %s revoked_at %v: %s", c.ClientID, c.RevokedAt, b)
+		}
+	}
+	if !after("2026-10-17T11:00:00.12Z", "2026-10-17T11:00:00.1Z") || after("", "2026-10-17T11:00:00Z") {
+		t.Fatal("after compares RFC 3339 times as strings")
 	}
 }

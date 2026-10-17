@@ -29,6 +29,7 @@ var (
 	isoDate      = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 	evidenceRef  = regexp.MustCompile("`([A-Za-z0-9_.][A-Za-z0-9_./-]*\\.[A-Za-z][A-Za-z0-9]*):(\\d+)(?:-(\\d+))?`")
 	recordIDList = regexp.MustCompile(`(FR-\d+(?:\.\d+)?|SR-\d+(?:\.\d+)?-\d+)`)
+	recordATList = regexp.MustCompile(`\bAT-\d\d\b`)
 )
 
 // evidenceRef matches `path/file.ext:line` (or `:line-line`); the file
@@ -48,12 +49,15 @@ const supportingMethod = "Test"
 
 // Record is one parsed verification record.
 type Record struct {
-	File     string            // path relative to the records directory
-	Line     int               // line of the first field row
-	Fields   map[string]string // field name -> content
-	IDs      []string          // requirement IDs named by the record
-	Evidence []string          // `path:line` references in the record
-	Problems []string          // why the record cannot count (empty when valid)
+	File   string            // path relative to the records directory
+	Line   int               // line of the first field row
+	Fields map[string]string // field name -> content
+	IDs    []string          // requirement IDs named by the record
+	// Scenarios are the acceptance scenario IDs (AT-nn) named by the
+	// record (FR-19.4); acceptance.go counts them.
+	Scenarios []string
+	Evidence  []string // `path:line` references in the record
+	Problems  []string // why the record cannot count (empty when valid)
 }
 
 // Label is how the record appears as a claim in the reports.
@@ -134,6 +138,11 @@ func parseRecords(fn string) ([]Record, error) {
 	}
 	for i := range out {
 		out[i].IDs = recordIDList.FindAllString(out[i].Fields["Requirement or scenario"], -1)
+		for _, id := range recordATList.FindAllString(out[i].Fields["Requirement or scenario"], -1) {
+			if scenarioPattern.MatchString(id) {
+				out[i].Scenarios = append(out[i].Scenarios, id)
+			}
+		}
 	}
 	return out, nil
 }
@@ -159,7 +168,7 @@ func (r *Record) validate(root string) {
 	if res := r.Fields["Result"]; res != "" && res != "pass" && res != "fail" {
 		r.Problems = append(r.Problems, "result is not pass or fail")
 	}
-	if len(r.IDs) == 0 {
+	if len(r.IDs) == 0 && len(r.Scenarios) == 0 {
 		r.Problems = append(r.Problems, "no requirement ID")
 	}
 	if r.Fields["Method"] == "Inspection" && len(r.Evidence) == 0 {

@@ -524,7 +524,152 @@ export default function StatusPage() {
           </>
         )}
       </Sec>
+
+      <AcceptanceSection no={`${CH.n}.10`} s={s} />
+      <PerformanceSection no={`${CH.n}.11`} s={s} />
     </article>
+  );
+}
+
+function AcceptanceSection({ no, s }: { no: string; s: ReturnType<typeof loadStatus>["status"] }) {
+  const a = s.acceptance;
+  return (
+    <Sec no={no} id="acceptance" title="Acceptance scenarios and release label">
+      <Note label="Release label">
+        <p>
+          {a ? (
+            <>
+              <strong>{a.label}</strong>. {a.enforcedPassed} of {a.total} scenarios passed in the Enforced profile,{" "}
+              {a.standalonePassed} in the Standalone profile.
+            </>
+          ) : (
+            "Not computed in this run."
+          )}
+        </p>
+      </Note>
+      <p>
+        The acceptance scenarios AT-01 to AT-21 of SRS Appendix M. A release is labelled &quot;enforced&quot; only when
+        every scenario has a passing automated or recorded result for the release commit in the Enforced profile
+        (FR-19.3); the release workflow applies the label from this data. A scenario passes in a profile when every test
+        that claims it in that profile passed; a skipped test is not a result. The scenarios and their tests are described
+        in <Link href="/docs/acceptance/">the acceptance guide</Link>.
+      </p>
+      {!a ? (
+        <p className="empty-state">No acceptance results in this status data.</p>
+      ) : (
+        <div className="table-wrap wide">
+          <table>
+            <caption>
+              {a.scenarios.filter((x) => x.enforced === "pass").length} enforced and{" "}
+              {a.scenarios.filter((x) => x.standalone === "pass").length} standalone passes of {a.total} scenarios.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Scenario</th>
+                <th scope="col">Evidence</th>
+                <th scope="col">Enforced</th>
+                <th scope="col">Standalone</th>
+                <th scope="col">Claimed by</th>
+              </tr>
+            </thead>
+            <tbody>
+              {a.scenarios.map((x) => (
+                <tr key={x.id}>
+                  <td>
+                    <span className="id">{x.id}</span> {x.title}
+                  </td>
+                  <td>{x.evidence}</td>
+                  <td>
+                    <ResultMark result={x.enforced} />
+                  </td>
+                  <td>
+                    <ResultMark result={x.standalone} />
+                  </td>
+                  <td>
+                    {x.tests.length + x.records.length === 0
+                      ? "none"
+                      : [...x.tests.map((t) => `${t.test} (${t.profile}, ${t.result})`), ...x.records.map((r) => `${r.record} (${r.result})`)].join(
+                          "; ",
+                        )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Sec>
+  );
+}
+
+function PerformanceSection({ no, s }: { no: string; s: ReturnType<typeof loadStatus>["status"] }) {
+  const p = s.performance;
+  return (
+    <Sec no={no} id="performance" title="Performance">
+      <Note label="Host">
+        <p>
+          {p
+            ? `${p.host.os}/${p.host.arch}, ${p.host.cpus} CPUs${p.host.cpu ? `, ${p.host.cpu}` : ""}; ${p.referenceHardware ? "the recorded reference hardware" : "not the recorded reference hardware"}.`
+            : "No measurements in this status data."}
+        </p>
+      </Note>
+      <p>
+        The FR-11 measurements of the CI job <code>perf</code>, which runs <code>smcp-workload</code> against real{" "}
+        <code>smcpd</code> instances with the reference dataset and eight concurrent callers. The budgets are the CP-32
+        targets. Results from a CI runner are measurements of that runner, not of the reference hardware the SRS names, so
+        they count as partial evidence only.
+      </p>
+      {!p ? (
+        <p className="empty-state">Not yet run. The perf job runs on pushes to main and on demand.</p>
+      ) : (
+        <div className="table-wrap wide">
+          <table>
+            <caption>
+              Measured {fmtDateTime(p.generatedAt)} for commit {shortSha(p.commit)}; dataset of {p.dataset.rules + p.dataset.registryNodes} rule
+              and registry nodes, {p.dataset.candidateRules} candidate rules per decision, {p.dataset.events} events over{" "}
+              {p.dataset.days} days, {p.dataset.callers} callers.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Requirement</th>
+                <th scope="col">Measurement</th>
+                <th scope="col" className="num">
+                  Value
+                </th>
+                <th scope="col" className="num">
+                  Budget
+                </th>
+                <th scope="col">Result</th>
+                <th scope="col">Method</th>
+              </tr>
+            </thead>
+            <tbody>
+              {p.measurements.map((m) => (
+                <tr key={m.requirement}>
+                  <td className="id">{m.requirement}</td>
+                  <td>
+                    {m.name} ({m.metric})
+                  </td>
+                  <td className="num">
+                    {m.value.toFixed(3)} {m.unit}
+                  </td>
+                  <td className="num">
+                    {m.budget} {m.unit}
+                  </td>
+                  <td>
+                    <ResultMark result={m.pass ? "pass" : "fail"} />
+                  </td>
+                  <td>
+                    {m.method}
+                    {m.note ? ` ${m.note}` : ""} ({m.samples} samples)
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Sec>
   );
 }
 

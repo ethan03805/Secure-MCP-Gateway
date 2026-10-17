@@ -108,25 +108,54 @@ func TestHostileFixtures(t *testing.T) {
 			}
 		})
 	}
+	// Acceptance scenarios realized by Appendix L rows (SRS Appendix M,
+	// FR-19.4): AT-08 by HF-20 to HF-24, asserted in the Enforced profile
+	// only, and AT-09's binary, injection, secret and oversize cases by
+	// HF-04 to HF-09 and HF-16 in either profile. Each scenario subtest
+	// fails when one of its rows did not behave as expected in this run.
+	passed := map[string]bool{}
+	for _, r := range results {
+		passed[r.Fixture] = r.Pass
+	}
+	for _, sc := range []struct {
+		id           string
+		rows         []string
+		enforcedOnly bool
+	}{
+		{"AT-08", []string{"HF-20", "HF-21", "HF-22", "HF-23", "HF-24"}, true},
+		{"AT-09", []string{"HF-04", "HF-05", "HF-06", "HF-07", "HF-08", "HF-09", "HF-16"}, false},
+	} {
+		t.Run(sc.id, func(t *testing.T) {
+			if sc.enforcedOnly && profile != reqtest.Enforced {
+				t.Skipf("%s is asserted in the Enforced profile only", sc.id)
+			}
+			reqtest.Scenario(t, profile, sc.id)
+			for _, id := range sc.rows {
+				if !passed[id] {
+					t.Errorf("%s: %s did not behave as expected in the %s profile", sc.id, id, profile)
+				}
+			}
+		})
+	}
 	merged, err := WriteResults(outDir(), profile, results)
 	if err != nil {
 		t.Fatal(err)
 	}
-	passed := 0
+	nPassed := 0
 	for _, r := range merged {
 		if r.Pass {
-			passed++
+			nPassed++
 		}
 	}
 	reqtest.Partial(t, "FR-19.2") // the CI job publishes what this writes
 	// FR-19.1 is verified only when every row passed in the profiles it
 	// names (merged over the profile runs present in the output directory).
-	if passed == len(Rows) {
+	if nPassed == len(Rows) {
 		reqtest.Verifies(t, "FR-19.1")
 	} else {
 		reqtest.Partial(t, "FR-19.1")
 	}
-	t.Logf("hostile fixtures (%s run; merged %s): %d of %d rows behaved as expected", profile, merged[0].Profile, passed, len(Rows))
+	t.Logf("hostile fixtures (%s run; merged %s): %d of %d rows behaved as expected", profile, merged[0].Profile, nPassed, len(Rows))
 }
 
 // outDir is where results are written: SMCP_HOSTILE_OUT or <repo>/build.

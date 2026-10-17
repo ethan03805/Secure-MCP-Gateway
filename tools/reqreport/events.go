@@ -14,6 +14,9 @@ import (
 const (
 	markerFull    = "VERIFIES:"
 	markerPartial = "PARTIAL:"
+	// markerScenario is an acceptance scenario claim (FR-19.4):
+	// "SCENARIO: AT-01 AT-02 profile=standalone".
+	markerScenario = "SCENARIO:"
 )
 
 type event struct {
@@ -37,6 +40,15 @@ type TestRun struct {
 	Name    string // full test name including subtest path, e.g. TestA/case_1
 	Result  string // pass, fail, skip, or "" when no terminal event arrived
 	Claims  []Claim
+	// Scenarios are the acceptance scenarios the test claims to execute.
+	Scenarios []ScenarioClaim
+}
+
+// ScenarioClaim is one acceptance scenario claimed by one test in one
+// profile.
+type ScenarioClaim struct {
+	ID      string
+	Profile string
 }
 
 // Key identifies the test uniquely across packages.
@@ -91,6 +103,9 @@ func parseTestLog(r io.Reader) (*TestLog, error) {
 		return p
 	}
 	scanLine := func(t *TestRun, line string) {
+		if i := strings.Index(line, markerScenario); i >= 0 {
+			t.Scenarios = append(t.Scenarios, parseScenarioLine(line[i+len(markerScenario):])...)
+		}
 		for _, m := range []struct {
 			marker  string
 			partial bool
@@ -190,4 +205,26 @@ func parseTestLog(r io.Reader) (*TestLog, error) {
 	}
 	sort.SliceStable(log.Packages, func(i, j int) bool { return log.Packages[i].Name < log.Packages[j].Name })
 	return log, nil
+}
+
+// parseScenarioLine reads "AT-01 AT-02 profile=enforced". A line without a
+// valid profile claims nothing.
+func parseScenarioLine(rest string) []ScenarioClaim {
+	var ids []string
+	profile := ""
+	for _, f := range strings.Fields(rest) {
+		if p, ok := strings.CutPrefix(f, "profile="); ok {
+			profile = p
+		} else if scenarioPattern.MatchString(f) {
+			ids = append(ids, f)
+		}
+	}
+	if profile != profileStandalone && profile != profileEnforced {
+		return nil
+	}
+	out := make([]ScenarioClaim, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, ScenarioClaim{ID: id, Profile: profile})
+	}
+	return out
 }

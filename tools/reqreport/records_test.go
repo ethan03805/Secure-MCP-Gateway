@@ -150,7 +150,7 @@ func TestRunCountsRecords(t *testing.T) {
 	out := filepath.Join(dir, "build", "reqreport")
 	args := []string{"-in", in, "-out", out, "-status", "", "-srs", filepath.Join(dir, "srs"), "-arch", arch,
 		"-elements", "", "-gomod", gomod, "-commit", "deadbeef", "-agents", "", "-hostile", "",
-		"-records", filepath.Join(dir, "records"), "-root", dir}
+		"-records", filepath.Join(dir, "records"), "-root", dir, "-appendix", ""}
 	var stdout bytes.Buffer
 	if code, err := run(args, nil, &stdout); err != nil || code != 0 {
 		t.Fatalf("%d %v %s", code, err, stdout.String())

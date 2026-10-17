@@ -39,6 +39,13 @@ type obsFixture struct {
 // an extra [observation] table body.
 func startObservation(t *testing.T, observation string) *obsFixture {
 	t.Helper()
+	return startObservationWith(t, observation, nil, nil)
+}
+
+// startObservationWith is startObservation with extra filters registered
+// before the observation probes and a tap on the call-path spans.
+func startObservationWith(t *testing.T, observation string, extra func(*pipeline.Filters) error, tap pipeline.SpanSink) *obsFixture {
+	t.Helper()
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
 	if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
@@ -103,12 +110,22 @@ SMCP_E2E_BACKEND = "1"
 		t.Fatal(err)
 	}
 	filters := pipeline.NewFilters()
+	if extra != nil {
+		if err := extra(filters); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if err := obs.RegisterFilters(filters); err != nil {
 		t.Fatal(err)
 	}
 	of := &obsFixture{obs: obs}
+	spans := obs.SpanSink() // as cmd/smcpd wires it (FR-10.2)
+	if tap != nil {
+		sink := spans
+		spans = func(sp []pipeline.StageSpan) { tap(sp); sink(sp) }
+	}
 	ctx, cancel := context.WithCancel(context.Background())
-	a, err := app.Start(ctx, cfg, app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond, Filters: filters,
+	a, err := app.Start(ctx, cfg, app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond, Filters: filters, Spans: spans,
 		Observers: map[string]audit.Observer{"observation": obs.Observer(),
 			"test": audit.ObserverFunc(func(e audit.Event) { of.mu.Lock(); of.events = append(of.events, e); of.mu.Unlock() })}})
 	if err != nil {

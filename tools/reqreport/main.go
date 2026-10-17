@@ -41,6 +41,14 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "label" {
+		code, err := runLabel(os.Args[2:], os.Stdout)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "reqreport label:", err)
+			os.Exit(2)
+		}
+		os.Exit(code)
+	}
 	if len(os.Args) > 1 && os.Args[1] == "history" {
 		flags := flag.NewFlagSet("history", flag.ExitOnError)
 		status := flags.String("status", "build/status.json", "status document to summarize")
@@ -62,7 +70,7 @@ func main() {
 
 type options struct {
 	in, out, status, srs, arch, elements, coverprofile, agents, hostile, gomod string
-	records, root                                                              string
+	records, root, appendix                                                    string
 	commit, conclusion                                                         string
 	failOnFailing                                                              bool
 }
@@ -82,6 +90,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 	flags.StringVar(&o.gomod, "gomod", "go.mod", "go.mod, for the module path")
 	flags.StringVar(&o.records, "records", "docs/verification", "verification records directory (empty to skip)")
 	flags.StringVar(&o.root, "root", ".", "repository root that record evidence paths are relative to")
+	flags.StringVar(&o.appendix, "appendix", "srs_build/appendix2.md", "SRS appendix with the Appendix M acceptance scenarios (empty to skip)")
 	flags.StringVar(&o.commit, "commit", os.Getenv("GITHUB_SHA"), "commit SHA (default $GITHUB_SHA or git HEAD)")
 	flags.StringVar(&o.conclusion, "conclusion", "", "CI conclusion (default success or failure from the results)")
 	flags.BoolVar(&o.failOnFailing, "fail-on-failing", true, "exit 1 when any requirement is failing")
@@ -164,6 +173,14 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 		meta.Workflow = "local"
 	}
 	st := buildStatus(meta, log, cov, results, els, agents, hostile)
+	if o.appendix != "" {
+		scenarios, err := loadScenarios(o.appendix)
+		if err != nil {
+			return 2, err
+		}
+		acc := buildAcceptance(scenarios, log, recs, o.records, commit, module)
+		st.Acceptance = &acc
+	}
 	st.CI.Conclusion = o.conclusion
 	if st.CI.Conclusion == "" {
 		st.CI.Conclusion = "success"
@@ -183,7 +200,11 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 	if err := writeJSON(o.out+".json", report); err != nil {
 		return 2, err
 	}
-	if err := os.WriteFile(o.out+".md", []byte(renderMarkdown(st, results)), 0o644); err != nil {
+	md := renderMarkdown(st, results)
+	if st.Acceptance != nil {
+		md += "\n## Acceptance scenarios (FR-19.3)\n\n" + renderAcceptance(*st.Acceptance)
+	}
+	if err := os.WriteFile(o.out+".md", []byte(md), 0o644); err != nil {
 		return 2, err
 	}
 	written := []string{o.out + ".json", o.out + ".md"}
