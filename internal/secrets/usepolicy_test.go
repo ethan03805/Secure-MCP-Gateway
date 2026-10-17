@@ -24,7 +24,9 @@ func compile(policies string) error {
 }
 
 func TestUsePolicyS4Waiver(t *testing.T) {
-	reqtest.Partial(t, "FR-6.9") // slots are declared in the policy file until signed manifests (E-13) declare them
+	// FR-6.9: S4 is accepted only with a waiver and only for a slot that
+	// declares no other mode (slots are declared in the policy document).
+	reqtest.Verifies(t, "FR-6.9")
 	waiver := `"s4_waiver": {"approved_by": "admin:alice", "reason": "legacy server reads only the environment"}`
 	cases := []struct {
 		name, policy, want string

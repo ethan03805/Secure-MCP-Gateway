@@ -1054,7 +1054,7 @@ R: No ambient credential state.
 
 @SR-5.18-1 | Binary content gate
 P: SEC-5.18
-S: The `content-type-gate` filter SHALL remove image, audio and binary embedded-resource content unless the Response Policy allowlists the MIME type, the magic bytes match and the size is within the policy bound.
+S: The `content-type-gate` filter SHALL remove image, audio and binary embedded-resource content unless the content-type allowlist of the configuration (`[filters.content_types]`) allows the MIME type, the magic bytes match and the size is within its bound.
 A: E-11; F-27
 V: Test | Return allowlisted, mismatched and oversize images; confirm the dispositions.
 SRC: SEC 5.18

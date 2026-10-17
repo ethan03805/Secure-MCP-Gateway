@@ -280,6 +280,12 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Secret-use denials name the secret (FR-6.11): a denial decided before the vault is opened (rate, window, purpose, approval, stop) now carries the secret reference and the version that would have been delivered, read from the vault's metadata; no value is read.
 - New tests verify FR-6.11 (every field on S2 deliveries and on denials, no value in evidence or the diagnostic log) and FR-14.6 (`smcpctl package sign` with a passphrase-protected key and the passphrase from a file or typed at a pseudo-terminal prompt, both signatures verified, keys and passphrases on the command line refused).
 
+### Partial claims sweep: approvals, content gate and secret bindings (E-05, E-07, E-11, E-20)
+
+- Secret bindings in the permission report (FR-6.5): the effective permission report (`GET /api/v1/policy/revisions/{id}/permissions`) lists, when `[secrets]` is configured, the Secret Use Policy bindings of the servers the template grants (`secret_bindings`; `policyadmin.PermissionReport`, `UseSet.BindingsFor`). `docs/api/policy.md`.
+- SRS: SR-5.18-1 names the configuration's content-type allowlist (`[filters.content_types]`) instead of a Response Policy object, which release 1.0 does not have (FR-3.1). FR-6.5 and FR-6.9 name a declared secret slot instead of the manifest's: release 1.0 declares slots in the Secret Use Policy document or as `secret_env` entries, and records the slots of signed manifests with the package without reading them.
+- New tests verify FR-3.14 (a pending approval bound to the call, in the pending list G-13 and `smcpctl approvals list` read, a desktop notification, the call held until decided), FR-3.23 (watch-stream notice and desktop notification within 2 s with no argument in the text; a missing notifier leaves the flow intact and logs a warning) and FR-6.5; existing tests now verify SR-5.18-1 and FR-6.9.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

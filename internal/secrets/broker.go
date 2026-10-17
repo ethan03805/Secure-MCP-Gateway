@@ -216,6 +216,10 @@ func (b *Broker) Vault() *Vault { return b.vault }
 // UsePolicy returns the active Secret Use Policy.
 func (b *Broker) UsePolicy() *UseSet { b.mu.Lock(); defer b.mu.Unlock(); return b.use }
 
+// BindingsFor returns the active Secret Use Policy bindings of the given
+// servers (FR-6.5).
+func (b *Broker) BindingsFor(servers []string) any { return b.UsePolicy().BindingsFor(servers) }
+
 // SetUsePolicy activates a new Secret Use Policy. Deliveries already made
 // stay until their instance or call ends; S2 deliveries follow the new
 // policy from the next call.

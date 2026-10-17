@@ -163,6 +163,26 @@ func Permissions(snap *policy.Snapshot, template string) []Permission {
 	return out
 }
 
+// PermissionReport is the effective permission report of a template: its
+// grants and, when secretBindings is set, the Secret Use Policy bindings of
+// the servers the template grants (FR-6.5).
+func PermissionReport(snap *policy.Snapshot, template string, secretBindings func(servers []string) any) map[string]any {
+	perms := Permissions(snap, template)
+	out := map[string]any{"permissions": perms}
+	if secretBindings != nil {
+		seen := map[string]bool{}
+		var servers []string
+		for _, p := range perms {
+			if !seen[p.Server] {
+				seen[p.Server] = true
+				servers = append(servers, p.Server)
+			}
+		}
+		out["secret_bindings"] = secretBindings(servers)
+	}
+	return out
+}
+
 // GET /api/v1/policy/revisions/{id}/permissions?template=T[&principal=P]
 func (s *Service) httpPermissions(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
@@ -181,8 +201,9 @@ func (s *Service) httpPermissions(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "no_template", "the revision has no template "+strconv.Quote(tmpl))
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"revision": rev.Record.Revision, "template": tmpl, "principal": r.URL.Query().Get("principal"),
-		"permissions": Permissions(rev.Snapshot, tmpl)})
+	out := PermissionReport(rev.Snapshot, tmpl, s.o.SecretBindings)
+	out["revision"], out["template"], out["principal"] = rev.Record.Revision, tmpl, r.URL.Query().Get("principal")
+	writeJSON(w, http.StatusOK, out)
 }
 
 type publishBody struct {

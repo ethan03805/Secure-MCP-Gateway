@@ -294,7 +294,11 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	a.Decider = policy.NewDecider(snap, cfg.Limits.PrincipalCallsPerMin)
 	a.Decider.SetBurst(cfg.Limits.PrincipalCallBurst)
 	a.Decider.SetContext(a.obligationContext(o)) // FR-3.12
-	a.Policy = policyadmin.New(policyadmin.Options{Store: pstore, Evidence: a.Evidence, Active: a.Decider.Snapshot,
+	var secretBindings func([]string) any
+	if sb, ok := o.Secrets.(interface{ BindingsFor([]string) any }); ok { // FR-6.5
+		secretBindings = sb.BindingsFor
+	}
+	a.Policy = policyadmin.New(policyadmin.Options{Store: pstore, Evidence: a.Evidence, Active: a.Decider.Snapshot, SecretBindings: secretBindings,
 		JournalDir: a.Journal.Dir(), DefaultRate: cfg.Limits.PrincipalCallsPerMin, Burst: cfg.Limits.PrincipalCallBurst, Fault: policyFault, Log: o.Log,
 		ServerRiskClasses: func() map[string][]string { // SR-3.13-1
 			m := map[string][]string{}

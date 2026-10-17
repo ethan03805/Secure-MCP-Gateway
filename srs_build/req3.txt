@@ -42,11 +42,11 @@ R: Retired material must not remain recoverable from the vault.
 
 @FR-6.5 | Secret slot binding
 P: FR-6
-S: The Policy Administration Service (E-05) SHALL bind a secret to a server only through a Secret Use Policy naming the manifest secret slot, permitted tools, destination, delivery mode, purpose, rate, time window and approval requirement.
+S: A secret SHALL be bound to a server only through a Secret Use Policy naming a declared secret slot, the permitted tools, destination, delivery mode, purpose, rate, time window and approval requirement, and the Policy Administration Service (E-05) SHALL show each binding in the effective permission report.
 A: E-05; F-10; D-01
 V: Test | Publish a Secret Use Policy for a declared slot; confirm the binding appears in the effective permission report.
 SRC: ARCH §7.2 Secret Use Policy
-R: Secret use is governed by policy.
+R: Secret use is governed by policy. Release 1.0 declares secret slots in the Secret Use Policy document (or as `secret_env` entries of the server configuration); the secret slots of a signed manifest (Appendix J) are recorded with the package but not read by the Secret Broker.
 
 @FR-6.6 | Delivery mode S1
 P: FR-6
@@ -74,11 +74,11 @@ R: Long-lived connections need instance-lifetime secrets.
 
 @FR-6.9 | Delivery mode S4
 P: FR-6
-S: The Secret Broker (E-20) SHALL deliver a secret through a launch environment variable only when the manifest declares no other mode and the Secret Use Policy carries an approved S4 waiver.
+S: The Secret Broker (E-20) SHALL deliver a secret through a launch environment variable only when the secret slot declares no other mode and the Secret Use Policy carries an approved S4 waiver.
 A: E-20; E-05; F-50; F-10
 V: Test | Attempt S4 with and without a waiver and with another supported mode; confirm only the waiver-without-alternative case is accepted.
 SRC: ARCH §8.2 S4
-R: Environment delivery is the most exposing mode.
+R: Environment delivery is the most exposing mode. Release 1.0 declares secret slots in the Secret Use Policy document (or as `secret_env` entries of the server configuration); the secret slots of a signed manifest (Appendix J) are recorded with the package but not read by the Secret Broker.
 
 @FR-6.10 | Leak fingerprints
 P: FR-6

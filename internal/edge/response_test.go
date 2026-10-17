@@ -94,15 +94,13 @@ func TestOutputSchemaWithholds(t *testing.T) {
 	}
 }
 
-// TestContentTypeGate is SR-5.18-1 in part: image content is kept only
-// when its MIME type is allowlisted, its magic bytes match and it is within
-// the size bound; otherwise it is replaced by a removal notice.
-//
-// Partial: the allowlist and bound come from [filters.content_types] in the
-// configuration; the Response Policy object type that SR-5.18-1 names does
-// not exist yet.
+// TestContentTypeGate is SR-5.18-1: through the Gateway, image content is
+// kept only when [filters.content_types] allows its MIME type, its magic
+// bytes match and it is within the size bound; otherwise it is replaced by
+// a removal notice. (Audio and binary embedded-resource content go through
+// the same check: internal/filters TestResponseFilters.)
 func TestContentTypeGate(t *testing.T) {
-	reqtest.Partial(t, "SR-5.18-1")
+	reqtest.Verifies(t, "SR-5.18-1")
 	h := responseHarness(t)
 	_, tok := h.session("ro")
 	cs := h.client(tok)
