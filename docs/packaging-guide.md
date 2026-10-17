@@ -224,7 +224,7 @@ writes `<library>/revocations/<id>@<revision>.json` and its signature. Any enrol
 
 ## Limitations
 
-- Only the directory library is implemented; an OCI registry library (FR-5.1) is not.
+- The library is a directory (FR-5.1); release 1.0 has no OCI registry library. An OCI image can still be the artifact inside a package.
 - The probe has the host network in the Standalone profile; it is removed only by a confining launcher, which this release does not have.
 - OCI packages need `podman`; they are fetched and verified on any host but were not probed or launched in the automated tests.
 - The revocation feed staleness alert (SR-3-4), the metadata rule set at import (SR-5.9-2), era consistency at start (FR-5.17), and operator classification overrides after import (SR-3.11-1) are not implemented. The console view G-10 enables, suspends and retires revisions.

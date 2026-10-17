@@ -37,6 +37,13 @@ func TestMain(m *testing.M) {
 		os.Exit(probe.Main(os.Args[1:]))
 	case os.Getenv("SMCP_FAKE_SERVER") == "ignore-eof":
 		signalIgnoreTerm()
+		if f := os.Getenv("SMCP_FAKE_EOF_FILE"); f != "" {
+			// Record when stdin reaches EOF, then keep running.
+			go func() {
+				_, _ = io.Copy(io.Discard, os.Stdin)
+				_ = os.WriteFile(f, []byte(strconv.FormatInt(time.Now().UnixNano(), 10)), 0o600)
+			}()
+		}
 		time.Sleep(time.Hour)
 		os.Exit(0)
 	}

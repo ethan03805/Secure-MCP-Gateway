@@ -13,8 +13,9 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 )
 
-// Containment actions (FR-5.35). suspend-revision and suspend-session need
-// seams in the registry and the session store that do not exist yet.
+// Containment actions (FR-5.35). The registry suspends a revision whose
+// instance keeps ending (FR-5.12); suspend-revision and suspend-session are
+// not containment actions in release 1.0.
 const (
 	ActionAlert = "alert"
 	ActionKill  = "kill-instance"

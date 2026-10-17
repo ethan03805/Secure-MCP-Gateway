@@ -140,7 +140,7 @@ var loopback = []netip.Addr{netip.MustParseAddr("127.0.0.1")}
 // capability header removed, and the operation is recorded with host,
 // port, address, bytes and decision.
 func TestProxyAllowsGrantedHTTP(t *testing.T) {
-	reqtest.Partial(t, "SR-4.5-2", "SR-5.17-1", "SR-5.16-1")
+	reqtest.Partial(t, "SR-4.5-2", "SR-5.17-1")
 	var gotCookie, gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotCookie, gotAuth = r.Header.Get("Cookie"), r.Header.Get(AuthHeader)

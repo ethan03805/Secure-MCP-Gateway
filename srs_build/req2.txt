@@ -385,11 +385,11 @@ R: Hosting curated, signed servers locally is the core vision.
 
 @FR-5.1 | Library sources
 P: FR-5
-S: The Library Trust Verifier (E-13) SHALL retrieve packages from a configured local directory library or a configured local OCI registry library.
+S: The Library Trust Verifier (E-13) SHALL retrieve packages from a configured local directory library.
 A: E-13; F-33; X-03
-V: Test | Import one package from each library type; confirm both succeed.
+V: Test | Import a package from the directory library; confirm it succeeds.
 SRC: ARCH §6.1 X-03; ARCH §19 OD-7
-R: The library location is a deployment choice.
+R: The library location is a deployment choice. Release 1.0 packages are signed directory trees, so a directory (local, or a mounted share) is the one library type; the local OCI registry library of ARCH §19 OD-7 is not part of release 1.0. OCI images remain a supported artifact type inside a package (FR-14.1).
 
 @FR-5.2 | Package contents
 P: FR-5
@@ -651,11 +651,11 @@ R: Tokens must be unique, and northbound tokens are not forwarded.
 
 @FR-5.33 | Runtime observables
 P: FR-5
-S: The Runtime Monitor (E-17) SHALL collect, per instance, process creations, file opens outside declared mounts, network connection attempts, memory peak, CPU time and OOM or limit events.
+S: The Runtime Monitor (E-17) SHALL collect, per instance, process creations, memory peak, CPU time and OOM or limit events.
 A: E-17; F-42; I-24
 V: Test | Run a fixture performing each behavior; confirm each event is collected.
 SRC: ARCH §4 E-17; ARCH §10.3 P-100–P-108
-R: Run-time controls and characterization need these observables.
+R: Run-time controls and characterization need these observables. Release 1.0 reads them from the instance's cgroup and the Podman event stream, which rootless Podman provides without privileges. File opens outside the declared mounts and network connection attempts are not observed: they need privileged tracing (fanotify or eBPF) that the rootless Enforced profile does not have. They are prevented instead: an instance sees only its granted mounts (SR-4.6-1) and reaches only its Egress Broker endpoints (SR-4.5-1), and the broker records every operation (FR-5.36).
 
 @FR-5.34 | Declared-behavior rules
 P: FR-5
@@ -667,11 +667,11 @@ R: Rule-based run-time detection.
 
 @FR-5.35 | Containment actions
 P: FR-5
-S: When a deviation event matches a containment rule, the Runtime Monitor (E-17) SHALL perform the rule's action (`alert`, `kill-instance`, `suspend-revision` or `suspend-session`) within 1 second.
+S: When a deviation event matches a containment rule, the Runtime Monitor (E-17) SHALL perform the rule's action (`alert` or `kill-instance`) within 1 second.
 A: E-17; F-44; I-19
 V: Test | Trigger each action; confirm effect and latency.
 SRC: ARCH §4 E-17
-R: Bounded response to run-time misbehavior.
+R: Bounded response to run-time misbehavior. The `suspend-revision` and `suspend-session` actions of ARCH §4 E-17 are not part of release 1.0: a killed instance is restarted on next use and a revision whose instance keeps ending is suspended by the Server Runtime Manager (FR-5.12), and an operator suspends a revision or ends a session from the console (G-10, G-08).
 
 @FR-5.36 | Egress endpoints
 P: FR-5
