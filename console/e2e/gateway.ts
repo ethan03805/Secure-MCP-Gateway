@@ -112,6 +112,11 @@ export async function start(): Promise<GatewayInfo> {
     config,
     [
       ...(hasApprovals ? [] : ["", "[approvals]", 'notify = "off"']),
+      // Every mcpCall signs in anew and leaves its session open, all as
+      // the bootstrap principal; with Playwright's retry the suite opens
+      // more than the CP-18 default of 8 concurrent sessions, and a refused
+      // sign-in then looks like a missing approval or call (G-13).
+      ...(/^\[limits\]$/m.test(toml) ? [] : ["", "[limits]", "sessions_per_principal = 64"]),
       "",
       "[egress]",
       "enabled = true",

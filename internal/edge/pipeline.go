@@ -487,7 +487,7 @@ func (g *Gateway) authorizeRelease(c *callRun, sessionID string) error {
 	defer g.gate.RUnlock()
 	reason := ""
 	switch {
-	case g.stopped.Load():
+	case g.stopped.Load() && !g.draining.Load(): // a drain (SR-7.7-1) lets calls in flight finish
 		reason = ReasonEmergencyStop
 	case !g.store.IsActive(sessionID):
 		reason = ReasonSessionState
