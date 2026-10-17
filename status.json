@@ -1,16 +1,22 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T02:22:17Z",
-  "commit": "415282f9dbd76f365d2f0557f650c72faa4da174",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/415282f9dbd76f365d2f0557f650c72faa4da174",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38994483582",
+  "generatedAt": "2026-10-17T02:35:34Z",
+  "commit": "ff7e2df21aebaae58cc4f24ea9d300f04256a663",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ff7e2df21aebaae58cc4f24ea9d300f04256a663",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38995304906",
   "tests": {
-    "total": 496,
-    "passed": 485,
-    "failed": 0,
+    "total": 564,
+    "passed": 552,
+    "failed": 1,
     "skipped": 11,
-    "durationSec": 125.9,
+    "durationSec": 147.1,
     "packages": [
+      {
+        "name": "cmd/smcp-hostile",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
       {
         "name": "cmd/smcp-refserver",
         "passed": 1,
@@ -19,8 +25,8 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 32,
-        "failed": 0,
+        "passed": 31,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -144,6 +150,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/hostile",
+        "passed": 67,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/keys",
         "passed": 8,
         "failed": 0,
@@ -260,11 +272,15 @@
     ]
   },
   "coverage": {
-    "totalPct": 74.8,
+    "totalPct": 74.4,
     "packages": [
       {
         "name": "cmd/smcp-connect",
         "pct": 0
+      },
+      {
+        "name": "cmd/smcp-hostile",
+        "pct": 100
       },
       {
         "name": "cmd/smcp-refserver",
@@ -280,7 +296,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 32.6
+        "pct": 30.5
       },
       {
         "name": "cmd/smcpd",
@@ -300,7 +316,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 68.5
+        "pct": 65.3
       },
       {
         "name": "internal/anomaly",
@@ -332,7 +348,7 @@
       },
       {
         "name": "internal/baseline",
-        "pct": 85.1
+        "pct": 85
       },
       {
         "name": "internal/channel",
@@ -364,7 +380,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.7
+        "pct": 82.6
       },
       {
         "name": "internal/gwtest",
@@ -377,6 +393,10 @@
       {
         "name": "internal/health",
         "pct": 94.4
+      },
+      {
+        "name": "internal/hostile",
+        "pct": 75.3
       },
       {
         "name": "internal/ids",
@@ -444,7 +464,7 @@
       },
       {
         "name": "internal/research",
-        "pct": 80.9
+        "pct": 79.4
       },
       {
         "name": "internal/sandbox",
@@ -486,10 +506,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 149,
-    "partial": 177,
-    "failing": 0,
-    "unverified": 232,
+    "verified": 148,
+    "partial": 182,
+    "failing": 4,
+    "unverified": 224,
     "byElement": [
       {
         "element": "E-01",
@@ -504,7 +524,7 @@
         "name": "Protocol Mediator",
         "total": 43,
         "verified": 8,
-        "partial": 7,
+        "partial": 8,
         "failing": 0
       },
       {
@@ -536,7 +556,7 @@
         "name": "Policy Decision Service",
         "total": 23,
         "verified": 6,
-        "partial": 4,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -560,7 +580,7 @@
         "name": "Request Inspection Pipeline",
         "total": 16,
         "verified": 8,
-        "partial": 6,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -568,7 +588,7 @@
         "name": "Tool Dispatcher",
         "total": 31,
         "verified": 2,
-        "partial": 2,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -576,7 +596,7 @@
         "name": "Response Inspection Pipeline",
         "total": 10,
         "verified": 5,
-        "partial": 1,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -600,7 +620,7 @@
         "name": "Local Server Registry",
         "total": 13,
         "verified": 8,
-        "partial": 3,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -680,7 +700,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 3,
-        "partial": 22,
+        "partial": 23,
         "failing": 0
       },
       {
@@ -727,9 +747,9 @@
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 9,
-        "partial": 2,
-        "failing": 0
+        "verified": 8,
+        "partial": 0,
+        "failing": 3
       },
       {
         "element": "E-31",
@@ -744,8 +764,8 @@
         "name": "Research Dataset Service",
         "total": 9,
         "verified": 6,
-        "partial": 3,
-        "failing": 0
+        "partial": 2,
+        "failing": 1
       },
       {
         "element": "E-33",
@@ -1091,8 +1111,10 @@
       {
         "id": "FR-1.49",
         "element": "E-14",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures/HF-14"
+        ]
       },
       {
         "id": "FR-1.50",
@@ -1118,7 +1140,8 @@
         "element": "E-08",
         "status": "verified",
         "tests": [
-          "internal/edge.TestPresentationRescan"
+          "internal/edge.TestPresentationRescan",
+          "internal/hostile.TestHostileFixtures/HF-01"
         ]
       },
       {
@@ -1617,7 +1640,8 @@
         "element": "E-10",
         "status": "partial",
         "tests": [
-          "internal/backend.TestResultBoundWhileReading"
+          "internal/backend.TestResultBoundWhileReading",
+          "internal/hostile.TestHostileFixtures/HF-16"
         ]
       },
       {
@@ -1681,7 +1705,9 @@
         "status": "verified",
         "tests": [
           "internal/edge.TestInjectionTagsEndToEnd",
-          "internal/filters.TestInjectionFiltersTagOnly"
+          "internal/filters.TestInjectionFiltersTagOnly",
+          "internal/hostile.TestHostileFixtures/HF-04",
+          "internal/hostile.TestHostileFixtures/HF-05"
         ]
       },
       {
@@ -1807,8 +1833,10 @@
       {
         "id": "FR-5.14",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures/HF-18"
+        ]
       },
       {
         "id": "FR-5.15",
@@ -1913,8 +1941,10 @@
       {
         "id": "FR-5.31",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures/HF-03"
+        ]
       },
       {
         "id": "FR-5.32",
@@ -1950,6 +1980,7 @@
         "element": "E-17",
         "status": "partial",
         "tests": [
+          "internal/hostile.TestHostileFixtures/HF-20",
           "internal/sandbox.TestIntegrationMonitorContainment",
           "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
           "internal/sandbox.TestMonitorKillsOnPidsBreach",
@@ -2088,6 +2119,7 @@
         "tests": [
           "internal/filters.TestRegisteredFingerprintsInResults",
           "internal/filters.TestSecretArgumentFilter",
+          "internal/hostile.TestHostileFixtures/HF-08",
           "internal/secrets.TestBrokerLeakDetectionNorthbound",
           "internal/secrets.TestFingerprintSetHoldsNoPlaintext",
           "internal/secrets.TestFingerprintsDetectEncodedForms",
@@ -2772,7 +2804,7 @@
       {
         "id": "FR-10.18",
         "element": "E-30",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestSnapshotTriggersAndImmutability"
@@ -2789,7 +2821,7 @@
       {
         "id": "FR-10.20",
         "element": "E-30",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestPromotionManualAndAutomatic",
@@ -2799,7 +2831,7 @@
       {
         "id": "FR-10.21",
         "element": "E-30",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/anomaly.TestRollbackScoresRecordSnapshot",
@@ -2921,7 +2953,7 @@
       {
         "id": "FR-10.36",
         "element": "E-32",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/e2e.TestObservationThroughGateway"
@@ -3703,14 +3735,18 @@
       {
         "id": "FR-19.1",
         "element": "E-11",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures"
+        ]
       },
       {
         "id": "FR-19.2",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures"
+        ]
       },
       {
         "id": "FR-19.3",
@@ -3828,15 +3864,18 @@
       {
         "id": "SR-1.8-1",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures/HF-13"
+        ]
       },
       {
         "id": "SR-1.8-2",
         "element": "E-09",
         "status": "partial",
         "tests": [
-          "internal/filters.TestImportMetadataScan"
+          "internal/filters.TestImportMetadataScan",
+          "internal/hostile.TestHostileFixtures/HF-10"
         ]
       },
       {
@@ -3844,7 +3883,10 @@
         "element": "E-09",
         "status": "partial",
         "tests": [
-          "internal/filters.TestImportMetadataScan"
+          "internal/filters.TestImportMetadataScan",
+          "internal/hostile.TestHostileFixtures/HF-10",
+          "internal/hostile.TestHostileFixtures/HF-11",
+          "internal/hostile.TestHostileFixtures/HF-12"
         ]
       },
       {
@@ -3852,7 +3894,8 @@
         "element": "E-09",
         "status": "verified",
         "tests": [
-          "internal/filters.TestPathCanonicalization"
+          "internal/filters.TestPathCanonicalization",
+          "internal/hostile.TestHostileFixtures/HF-22"
         ]
       },
       {
@@ -4307,6 +4350,7 @@
         "element": "E-14",
         "status": "verified",
         "tests": [
+          "internal/hostile.TestHostileFixtures/HF-13",
           "internal/library.TestEnablementDigestBinding"
         ]
       },
@@ -4315,6 +4359,8 @@
         "element": "E-14",
         "status": "verified",
         "tests": [
+          "internal/hostile.TestHostileFixtures/HF-03",
+          "internal/hostile.TestHostileFixtures/HF-13",
           "internal/library.TestDriftAtStartSuspends",
           "internal/library.TestDriftOnListChangedSuspendsAndTearsDown"
         ]
@@ -4331,8 +4377,10 @@
       {
         "id": "SR-3.10-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures/HF-03"
+        ]
       },
       {
         "id": "SR-3.11-1",
@@ -4412,6 +4460,7 @@
         "status": "partial",
         "tests": [
           "internal/egress.TestAttachNetwork",
+          "internal/hostile.TestHostileFixtures/HF-23",
           "internal/sandbox.TestEgressRequestFailsClosed",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
           "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
@@ -4432,6 +4481,7 @@
         "element": "E-16",
         "status": "partial",
         "tests": [
+          "internal/hostile.TestHostileFixtures/HF-22",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
           "internal/sandbox.TestLaunchRefusesUnsafeInput"
         ]
@@ -4452,6 +4502,8 @@
         "status": "partial",
         "tests": [
           "internal/config.TestRuntimeDefaults",
+          "internal/hostile.TestHostileFixtures/HF-20",
+          "internal/hostile.TestHostileFixtures/HF-21",
           "internal/sandbox.TestIntegrationMonitorContainment",
           "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
           "internal/sandbox.TestMonitorKillsOnPidsBreach",
@@ -4597,6 +4649,7 @@
         "status": "partial",
         "tests": [
           "internal/filters.TestSecretArgumentFilter",
+          "internal/hostile.TestHostileFixtures/HF-09",
           "internal/secrets.TestBrokerLeakDetectionNorthbound"
         ]
       },
@@ -4611,7 +4664,9 @@
         "element": "E-11",
         "status": "partial",
         "tests": [
-          "internal/filters.TestResponseSurfaces"
+          "internal/filters.TestResponseSurfaces",
+          "internal/hostile.TestHostileFixtures/HF-05",
+          "internal/hostile.TestHostileFixtures/HF-06"
         ]
       },
       {
@@ -4619,7 +4674,10 @@
         "element": "E-13",
         "status": "partial",
         "tests": [
-          "internal/filters.TestImportMetadataScan"
+          "internal/filters.TestImportMetadataScan",
+          "internal/hostile.TestHostileFixtures/HF-01",
+          "internal/hostile.TestHostileFixtures/HF-02",
+          "internal/hostile.TestHostileFixtures/HF-15"
         ]
       },
       {
@@ -4633,8 +4691,11 @@
       {
         "id": "SR-5.11-1",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileFixtures/HF-08",
+          "internal/hostile.TestHostileFixtures/HF-16"
+        ]
       },
       {
         "id": "SR-5.12-1",
@@ -4657,6 +4718,7 @@
         "status": "verified",
         "tests": [
           "internal/e2e.TestSessionTaintEndToEnd",
+          "internal/hostile.TestHostileFixtures/HF-04",
           "internal/policy.TestSessionTaintObligation",
           "internal/policy.TestTaintClassesRestrictOnly"
         ]
@@ -4666,7 +4728,8 @@
         "element": "E-09",
         "status": "verified",
         "tests": [
-          "internal/filters.TestUnicodeCorpus"
+          "internal/filters.TestUnicodeCorpus",
+          "internal/hostile.TestHostileFixtures/HF-27"
         ]
       },
       {
@@ -5433,9 +5496,323 @@
       "detail": "no publicly installable Grok Build CLI; connection mode is to be confirmed at pinning"
     }
   ],
-  "hostile": [],
+  "hostile": [
+    {
+      "attack": "Poisoned tool description",
+      "expected": "Blocking metadata rule matches; the tool is suspended at import, not presented, and `metadata_blocked` is recorded",
+      "fixture": "HF-01",
+      "observed": "standalone: h_lookup in catalog: false; suspended at import: true (tool-metadata/instruction-override, tool-metadata/concealment, tool-metadata/directive-tag, tool-metadata/sensitive-file-request); metadata_blocked event: true; call to h_lookup: error -32602 ; benign h_echo presented: true | enforced: h_lookup in catalog: false; suspended at import: true (tool-metadata/instruction-override, tool-metadata/concealment, tool-metadata/directive-tag, tool-metadata/sensitive-file-request); metadata_blocked event: true; call to h_lookup: error -32602 ; benign h_echo presented: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.9-2",
+        "FR-1.52"
+      ]
+    },
+    {
+      "attack": "Poisoned schema property description",
+      "expected": "As HF-01",
+      "fixture": "HF-02",
+      "observed": "standalone: h_lookup in catalog: false; suspended at import: true (tool-metadata/instruction-override, tool-metadata/concealment); metadata_blocked event: true; call to h_lookup: error -32602 ; benign h_echo presented: true | enforced: h_lookup in catalog: false; suspended at import: true (tool-metadata/instruction-override, tool-metadata/concealment); metadata_blocked event: true; call to h_lookup: error -32602 ; benign h_echo presented: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.9-2"
+      ]
+    },
+    {
+      "attack": "Rug pull through `list_changed`",
+      "expected": "The server revision is suspended for drift; the changed and added tools never appear in a catalog",
+      "fixture": "HF-03",
+      "observed": "standalone: first call: result released; server suspended after list_changed: true; MANIFEST_DRIFT evidence: true; changed or added tool in any catalog: false; catalog afterwards: [] | enforced: first call: result released; server suspended after list_changed: true; MANIFEST_DRIFT evidence: true; changed or added tool in any catalog: false; catalog afterwards: []",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-3.8-1",
+        "SR-3.10-1",
+        "FR-5.31"
+      ]
+    },
+    {
+      "attack": "Prompt injection in text content",
+      "expected": "Released with an injection-marker tag; P-143 recorded; the session is tainted if the tool's `source_trust` is `untrusted`",
+      "fixture": "HF-04",
+      "observed": "standalone: call: result released; provenance tags: [prompt-injection/instruction-override@2026.10.1 at /content/0/text prompt-injection/concealment@2026.10.1 at /content/0/text]; P-143: 0.9; session tainted: true | enforced: call: result released; provenance tags: [prompt-injection/instruction-override@2026.10.1 at /content/0/text prompt-injection/concealment@2026.10.1 at /content/0/text]; P-143: 0.9; session tainted: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-4.17",
+        "SR-5.13-2"
+      ]
+    },
+    {
+      "attack": "Prompt injection in structured content",
+      "expected": "As HF-04",
+      "fixture": "HF-05",
+      "observed": "standalone: call: result released; provenance tags: [prompt-injection/instruction-override@2026.10.1 at /structuredContent/summary prompt-injection/concealment@2026.10.1 at /structuredContent/summary]; P-143: 0.9; session tainted: true | enforced: call: result released; provenance tags: [prompt-injection/instruction-override@2026.10.1 at /structuredContent/summary prompt-injection/concealment@2026.10.1 at /structuredContent/summary]; P-143: 0.9; session tainted: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.9-1",
+        "FR-4.17"
+      ]
+    },
+    {
+      "attack": "Prompt injection in an error result",
+      "expected": "As HF-04; the error is filtered before release",
+      "fixture": "HF-06",
+      "observed": "standalone: call: tool error result; provenance tags: [prompt-injection/instruction-override@2026.10.1 at /content/0/text prompt-injection/concealment@2026.10.1 at /content/0/text]; P-143: 0.9; session tainted: true; isError released: true | enforced: call: tool error result; provenance tags: [prompt-injection/instruction-override@2026.10.1 at /content/0/text prompt-injection/concealment@2026.10.1 at /content/0/text]; P-143: 0.9; session tainted: true; isError released: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.9-1"
+      ]
+    },
+    {
+      "attack": "Prompt injection in progress messages",
+      "expected": "Progress messages are filtered and tagged before relay",
+      "fixture": "HF-07",
+      "observed": "standalone: call: result released; progress notifications relayed: 0; relayed with the canary text unchanged: 0; tagged: 0 | enforced: call: result released; progress notifications relayed: 0; relayed with the canary text unchanged: 0; tagged: 0",
+      "pass": false,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.9-1",
+        "FR-1.39"
+      ]
+    },
+    {
+      "attack": "Secret exfiltration in a result",
+      "expected": "Result withheld with `-31003` `SECRET_LEAK`; secret grant suspended",
+      "fixture": "HF-08",
+      "observed": "standalone: call: error -31003 SECRET_LEAK; secret value reached the client: false; secret grants suspended: 1 | enforced: call: result released; secret value reached the client: false; secret grants suspended: 0",
+      "pass": false,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-6.10",
+        "SR-5.11-1"
+      ]
+    },
+    {
+      "attack": "Secret exfiltration in arguments",
+      "expected": "Request blocked before dispatch by the outbound argument filter",
+      "fixture": "HF-09",
+      "observed": "standalone: registered secret: error -31001 SECRET_IN_ARGUMENTS, dispatched: false; AWS-format key: error -31001 SECRET_IN_ARGUMENTS, dispatched: false; ordinary note: result released | enforced: registered secret: error -31001 SECRET_IN_ARGUMENTS, dispatched: false; AWS-format key: error -31001 SECRET_IN_ARGUMENTS, dispatched: false; ordinary note: result released",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.8-1"
+      ]
+    },
+    {
+      "attack": "Schema smuggling: remote `$ref`",
+      "expected": "Tool definition refused at import; no network request",
+      "fixture": "HF-10",
+      "observed": "standalone: h_ref_tool in catalog: false; suspended at import: true (schema-bounds/remote-ref); metadata_blocked event: true; call to h_ref_tool: error -32602 ; benign h_echo presented: true; requests to the $ref canary: 0 | enforced: h_ref_tool in catalog: false; suspended at import: true (schema-bounds/remote-ref); metadata_blocked event: true; call to h_ref_tool: error -32602 ; benign h_echo presented: true; requests to the $ref canary: 0",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-1.8-2",
+        "SR-1.8-3"
+      ]
+    },
+    {
+      "attack": "Schema smuggling: deep nesting",
+      "expected": "Tool definition refused at import",
+      "fixture": "HF-11",
+      "observed": "standalone: h_deep_tool in catalog: false; suspended at import: true (schema-bounds/depth); metadata_blocked event: true; call to h_deep_tool: error -32602 ; benign h_echo presented: true | enforced: h_deep_tool in catalog: false; suspended at import: true (schema-bounds/depth); metadata_blocked event: true; call to h_deep_tool: error -32602 ; benign h_echo presented: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-1.8-3"
+      ]
+    },
+    {
+      "attack": "Schema smuggling: huge enum",
+      "expected": "Tool definition refused at import",
+      "fixture": "HF-12",
+      "observed": "standalone: h_enum_tool in catalog: false; suspended at import: true (schema-bounds/enum-size); metadata_blocked event: true; call to h_enum_tool: error -32602 ; benign h_echo presented: true | enforced: h_enum_tool in catalog: false; suspended at import: true (schema-bounds/enum-size); metadata_blocked event: true; call to h_enum_tool: error -32602 ; benign h_echo presented: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-1.8-3"
+      ]
+    },
+    {
+      "attack": "Schema smuggling: `additionalProperties` games",
+      "expected": "Drift suspension; arguments are validated against the packaged schema only",
+      "fixture": "HF-13",
+      "observed": "standalone: server enabled: false; MANIFEST_DRIFT evidence: true; catalog: []; call with an extra property: error -32602  | enforced: server enabled: false; MANIFEST_DRIFT evidence: true; catalog: []; call with an extra property: error -32602 ",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-3.7-1",
+        "SR-3.8-1",
+        "SR-1.8-1"
+      ]
+    },
+    {
+      "attack": "Public-name collision",
+      "expected": "The revision is not enabled; the reason names both backend tool names",
+      "fixture": "HF-14",
+      "observed": "standalone: alias containing \"_\" refused by configuration validation: true; in-server collision refused: true (the Gateway refuses to start; reason names both tools: true) | enforced: alias containing \"_\" refused by configuration validation: true; in-server collision refused: true (the Gateway refuses to start; reason names both tools: true)",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-1.49"
+      ]
+    },
+    {
+      "attack": "Cross-server shadowing",
+      "expected": "Blocking metadata rule matches; tool suspended",
+      "fixture": "HF-15",
+      "observed": "standalone: h_mailer in catalog: false; suspended at import: true (cross-server-shadowing/names-other-server-tool); metadata_blocked event: true; call to h_mailer: error -32602 ; benign h_echo presented: true | enforced: h_mailer in catalog: false; suspended at import: true (cross-server-shadowing/names-other-server-tool); metadata_blocked event: true; call to h_mailer: error -32602 ; benign h_echo presented: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.9-2"
+      ]
+    },
+    {
+      "attack": "Oversized result",
+      "expected": "Withheld with `-31003` `RESULT_TOO_LARGE`; nothing partial released",
+      "fixture": "HF-16",
+      "observed": "standalone: call (1 MiB result, result_bytes 64 KiB): error -31003 RESULT_TOO_LARGE; partial content released: false; next call: result released | enforced: call (1 MiB result, result_bytes 64 KiB): error -31003 RESULT_TOO_LARGE; partial content released: false; next call: result released",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.11-1",
+        "FR-4.10"
+      ]
+    },
+    {
+      "attack": "Slow-drip response",
+      "expected": "Call ends at the CP-13 deadline with `-31009` `UPSTREAM_TIMEOUT`; instance restarted",
+      "fixture": "HF-17",
+      "observed": "standalone: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo failed) | enforced: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo failed)",
+      "pass": false,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-4.9",
+        "SR-7.2-1"
+      ]
+    },
+    {
+      "attack": "Invalid stdout",
+      "expected": "Instance terminated; call fails with `-31007`; event recorded",
+      "fixture": "HF-18",
+      "observed": "standalone: call: error -31007 DISPATCH_FAILED after 0s; instance terminated: true; refusal event recorded: true | enforced: call: error -31007 DISPATCH_FAILED after 0s; instance terminated: true; refusal event recorded: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-5.14"
+      ]
+    },
+    {
+      "attack": "Never responding",
+      "expected": "As HF-17",
+      "fixture": "HF-19",
+      "observed": "standalone: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo answered) | enforced: call: error -31008 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: false (next echo answered)",
+      "pass": false,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-4.9"
+      ]
+    },
+    {
+      "attack": "Fork bomb",
+      "expected": "PID limit stops growth; instance killed; host unaffected",
+      "fixture": "HF-20",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-4.7-2",
+        "FR-5.35"
+      ]
+    },
+    {
+      "attack": "Memory blow-up",
+      "expected": "cgroup memory limit kills the instance; Gateway unaffected",
+      "fixture": "HF-21",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: alloc call: result released \"allocated 256 MiB\"; instance killed: false; Gateway still answers: true | enforced: alloc call: error -31007 DISPATCH_FAILED \"\"; instance killed: true; Gateway still answers: true",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-4.7-2"
+      ]
+    },
+    {
+      "attack": "Symlink and path escape",
+      "expected": "Path arguments outside the grant are denied before dispatch; reads through the symlink fail inside the sandbox",
+      "fixture": "HF-22",
+      "observed": "standalone: ../ traversal: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; symlink to a directory outside the root: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; path inside the root: result released; server-side read through the symlink: result released, outside file read: true; mount confinement is the Enforced part of this row | enforced: harness error (see the test log)",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-1.8-4",
+        "SR-4.6-1"
+      ]
+    },
+    {
+      "attack": "Direct network escape",
+      "expected": "Every connection fails; only broker endpoints are reachable",
+      "fixture": "HF-23",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45505: connect: connection refused\"; canary connections: 0",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-4.5-1"
+      ]
+    },
+    {
+      "attack": "DNS escape and rebinding",
+      "expected": "Direct resolution fails; the broker refuses the rebound private address",
+      "fixture": "HF-24",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: fixture report: result released \"direct=query-sent-no-answer broker=status(HTTP/1.1 403 Forbidden)\"; direct DNS queries reaching the loopback DNS canary: 2; broker deny event: true; connections reaching the TCP canary: 0 | enforced: fixture report: result released \"direct=failed broker=no-proxy\"; direct DNS queries reaching the loopback DNS canary: 0; broker deny event: false; connections reaching the TCP canary: 0",
+      "pass": false,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.15-1",
+        "SR-5.15-2"
+      ]
+    },
+    {
+      "attack": "Unsolicited client-input request",
+      "expected": "`-31010` without the MRTR profile",
+      "fixture": "HF-25",
+      "observed": "standalone: call: error -31007 BACKEND_ERROR; elicitation requests relayed to the client: 0 | enforced: call: error -31007 BACKEND_ERROR; elicitation requests relayed to the client: 0",
+      "pass": false,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-5.24"
+      ]
+    },
+    {
+      "attack": "Legacy server-initiated request",
+      "expected": "Rejected; nothing relayed northbound",
+      "fixture": "HF-26",
+      "observed": "standalone: fixture saw: \"roots/list=answered sampling/createMessage=error(-31001)\" (result released); sampling requests relayed to the client: 0 | enforced: fixture saw: \"roots/list=answered sampling/createMessage=error(-31001)\" (result released); sampling requests relayed to the client: 0",
+      "pass": false,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "FR-5.20",
+        "SR-5.6-2"
+      ]
+    },
+    {
+      "attack": "Unicode control and bidirectional text",
+      "expected": "`unicode-control` filter finding per the versioned corpus",
+      "fixture": "HF-27",
+      "observed": "standalone: call: result released; control characters removed: true; unicode-control findings: [unicode-control@2026.10.1] | enforced: call: result released; control characters removed: true; unicode-control findings: [unicode-control@2026.10.1]",
+      "pass": true,
+      "profile": "standalone+enforced",
+      "requirements": [
+        "SR-5.14-1"
+      ]
+    }
+  ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
