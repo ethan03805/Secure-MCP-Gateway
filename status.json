@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T04:01:31Z",
-  "commit": "a09e91c0f1835f835f0441f7c698b5e5ae2a43e6",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a09e91c0f1835f835f0441f7c698b5e5ae2a43e6",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39000593563",
+  "generatedAt": "2026-10-17T04:09:52Z",
+  "commit": "06e7d4b5af1df65d9bf3af2cfb41336587ea0e26",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/06e7d4b5af1df65d9bf3af2cfb41336587ea0e26",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39001227756",
   "tests": {
-    "total": 699,
-    "passed": 686,
+    "total": 721,
+    "passed": 708,
     "failed": 0,
     "skipped": 13,
-    "durationSec": 332.7,
+    "durationSec": 239.2,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -61,7 +61,7 @@
       },
       {
         "name": "internal/adminapi",
-        "passed": 11,
+        "passed": 12,
         "failed": 0,
         "skipped": 0
       },
@@ -85,7 +85,7 @@
       },
       {
         "name": "internal/approval",
-        "passed": 12,
+        "passed": 14,
         "failed": 0,
         "skipped": 0
       },
@@ -97,13 +97,13 @@
       },
       {
         "name": "internal/authguard",
-        "passed": 3,
+        "passed": 5,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/backend",
-        "passed": 8,
+        "passed": 9,
         "failed": 0,
         "skipped": 0
       },
@@ -127,7 +127,7 @@
       },
       {
         "name": "internal/consoleapi",
-        "passed": 8,
+        "passed": 10,
         "failed": 0,
         "skipped": 0
       },
@@ -199,7 +199,7 @@
       },
       {
         "name": "internal/keys",
-        "passed": 12,
+        "passed": 13,
         "failed": 0,
         "skipped": 2
       },
@@ -211,7 +211,7 @@
       },
       {
         "name": "internal/metrics",
-        "passed": 2,
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
@@ -241,7 +241,7 @@
       },
       {
         "name": "internal/pipeline",
-        "passed": 9,
+        "passed": 14,
         "failed": 0,
         "skipped": 0
       },
@@ -271,7 +271,7 @@
       },
       {
         "name": "internal/remote",
-        "passed": 10,
+        "passed": 15,
         "failed": 0,
         "skipped": 0
       },
@@ -283,7 +283,7 @@
       },
       {
         "name": "internal/research",
-        "passed": 7,
+        "passed": 8,
         "failed": 0,
         "skipped": 0
       },
@@ -301,7 +301,7 @@
       },
       {
         "name": "internal/session",
-        "passed": 10,
+        "passed": 11,
         "failed": 0,
         "skipped": 0
       },
@@ -320,7 +320,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 74.7,
+    "totalPct": 74.8,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -360,11 +360,11 @@
       },
       {
         "name": "internal/adminapi",
-        "pct": 81.4
+        "pct": 81.6
       },
       {
         "name": "internal/analytics",
-        "pct": 68.9
+        "pct": 68.8
       },
       {
         "name": "internal/anomaly",
@@ -372,11 +372,11 @@
       },
       {
         "name": "internal/app",
-        "pct": 71.9
+        "pct": 71.7
       },
       {
         "name": "internal/approval",
-        "pct": 84.2
+        "pct": 84.3
       },
       {
         "name": "internal/audit",
@@ -384,11 +384,11 @@
       },
       {
         "name": "internal/authguard",
-        "pct": 94.2
+        "pct": 95.3
       },
       {
         "name": "internal/backend",
-        "pct": 87.9
+        "pct": 88.1
       },
       {
         "name": "internal/backup",
@@ -408,7 +408,7 @@
       },
       {
         "name": "internal/consoleapi",
-        "pct": 89.9
+        "pct": 89.7
       },
       {
         "name": "internal/consoleauth",
@@ -424,7 +424,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 80.6
+        "pct": 80.5
       },
       {
         "name": "internal/filterapi",
@@ -468,7 +468,7 @@
       },
       {
         "name": "internal/metrics",
-        "pct": 95.6
+        "pct": 96.7
       },
       {
         "name": "internal/observe",
@@ -496,7 +496,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 89.6
+        "pct": 90.1
       },
       {
         "name": "internal/policy",
@@ -516,7 +516,7 @@
       },
       {
         "name": "internal/remote",
-        "pct": 66.2
+        "pct": 68.7
       },
       {
         "name": "internal/reqtest",
@@ -536,11 +536,11 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.2
+        "pct": 79.1
       },
       {
         "name": "internal/session",
-        "pct": 84.6
+        "pct": 85.1
       },
       {
         "name": "internal/tunnel",
@@ -6019,7 +6019,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6054,7 +6054,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37689: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37423: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
