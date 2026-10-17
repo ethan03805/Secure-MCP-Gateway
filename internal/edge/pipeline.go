@@ -90,6 +90,9 @@ func (c *callRun) record(class string, phase audit.Phase, origin, outcome, reaso
 }
 
 func (c *callRun) commit(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) error {
+	// FR-17.1, FR-17.3: a debug trace of the call's progress; identifiers
+	// and outcomes only, never arguments or results.
+	c.g.log.Debug("call event", "correlation", c.corr, "class", class, "phase", string(phase), "outcome", outcome, "reason", reason)
 	return c.g.evidence.Commit(c.event(class, phase, origin, outcome, reason, status, detail))
 }
 

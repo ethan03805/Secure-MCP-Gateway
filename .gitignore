@@ -18,6 +18,10 @@ work/
 
 # Go build output and requirement reports
 build/
+# binaries from `go build ./cmd/<name>` at the repository root
+/smcpd
+/smcpctl
+/smcp-*
 # Local Gateway instances created with smcpctl bootstrap
 smcp.toml
 /policy.json
