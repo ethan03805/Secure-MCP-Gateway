@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/posixacl"
 )
 
 // Origins of the evidence this package writes.
@@ -55,11 +57,20 @@ type Options struct {
 	// Nsenter and Nft are the host tools that install an egress instance's
 	// confinement rules; default: found in PATH or the system directories.
 	Nsenter, Nft string
+	// LookupUser resolves runtime.run_as (tests; default user.Lookup).
+	LookupUser func(string) (*user.User, error)
+	// ProcRoot is the proc file system (default /proc); the launcher
+	// reads a created container's UID map there.
+	ProcRoot string
+	// GrantReader gives uid the permission bits perm on path (tests;
+	// default posixacl.AddUser).
+	GrantReader func(path string, uid int, perm uint16) error
 }
 
 // Launcher is the confining pipeline.Launcher of the enforced profile.
 type Launcher struct {
 	o       Options
+	run     runner
 	podPath string
 	gateway string
 	rootfs  string
@@ -109,7 +120,28 @@ func New(o Options) (*Launcher, error) {
 			return nil, err
 		}
 	}
-	l := &Launcher{o: o, podPath: pod, gateway: ids.New(), rootfs: filepath.Join(o.StateDir, "runtime", "rootfs"),
+	if o.ProcRoot == "" {
+		o.ProcRoot = "/proc"
+	}
+	if o.GrantReader == nil {
+		o.GrantReader = posixacl.AddUser
+	}
+	rootfs := filepath.Join(o.StateDir, "runtime", "rootfs")
+	run := runner{podman: pod, extra: o.PodmanEnv}
+	if o.Runtime.RunAs != "" {
+		u, err := lookupRunAs(o.Runtime.RunAs, o.Runtime.Sudo, o.LookupUser)
+		if err != nil {
+			return nil, err
+		}
+		if o.Runtime.SharedDir == "" || !filepath.IsAbs(o.Runtime.SharedDir) {
+			return nil, errors.New("sandbox: runtime.run_as needs an absolute runtime.shared_dir")
+		}
+		run.runAs = u
+		// The state directory is closed to run_as; the root directory of
+		// image-less servers lives where it can read it.
+		rootfs = filepath.Join(o.Runtime.SharedDir, "rootfs")
+	}
+	l := &Launcher{o: o, run: run, podPath: pod, gateway: ids.New(), rootfs: rootfs,
 		log: o.Log, ev: newLazyRecorder(o.Log), instances: map[string]*Instance{}}
 	l.mon = newMonitor(l)
 	return l, nil
@@ -165,32 +197,21 @@ func (l *Launcher) Reap(ctx context.Context) {
 	}
 }
 
-// podman builds a Podman command with the minimal Podman environment.
+// podman builds a Podman command with the minimal Podman environment, run
+// as runtime.run_as when that is set (runner).
 func (l *Launcher) podman(ctx context.Context, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, l.podPath, args...) // #nosec G204 -- fixed binary, argument vector, no shell (SR-4.8-1)
-	cmd.Env = l.podmanEnv(nil)
-	return cmd
+	return l.run.command(ctx, nil, args...)
 }
 
-func (l *Launcher) podmanEnv(instance map[string]string) []string {
-	env := map[string]string{}
-	for _, k := range passEnv {
-		if v, ok := os.LookupEnv(k); ok {
-			env[k] = v
-		}
+func (l *Launcher) podmanEnv(instance map[string]string) []string { return l.run.env(instance) }
+
+// RunAs is the identity that owns the server containers: runtime.run_as,
+// or "" for the Gateway's own identity.
+func (l *Launcher) RunAs() string {
+	if l.run.runAs == nil {
+		return ""
 	}
-	for k, v := range l.o.PodmanEnv {
-		env[k] = v
-	}
-	for k, v := range instance {
-		env[k] = v
-	}
-	out := make([]string, 0, len(env))
-	for k, v := range env {
-		out = append(out, k+"="+v)
-	}
-	sort.Strings(out)
-	return out
+	return l.run.runAs.Name
 }
 
 // Launch implements pipeline.Launcher.
@@ -249,14 +270,23 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 	values := Env(spec, nil, ls.EnvNames)
 	var cmd *exec.Cmd
 	netns := ""
-	if att != nil {
-		// Egress: create, confine the namespace, then start (egress.go).
-		if netns, err = l.createEgress(ls, values, att.Allow); err != nil {
-			releaseEgress()
-			return nil, fmt.Errorf("runtime.server %q: egress confinement: %w", spec.Alias, err)
+	// Secret files are owner-only files of the Gateway identity. An
+	// instance under another UID (userns = "auto", or runtime.run_as)
+	// reads them through ACL entries that need the instance's host UID,
+	// which exists only once the container is created (secretacl.go).
+	secretReaders := spec.SecretDir != "" && (l.run.runAs != nil || srv.UserNS != "keep-id")
+	if att != nil || secretReaders {
+		// Create, confine the network namespace (egress.go) and grant the
+		// secret files, then start.
+		var allow []netip.AddrPort
+		if att != nil {
+			allow = att.Allow
 		}
-		cmd = exec.Command(l.podPath, "start", "--attach", "--interactive", ls.Name) // #nosec G204 -- argument vector, no shell (SR-4.8-1)
-		cmd.Env = l.podmanEnv(nil)
+		if netns, err = l.createPrepared(ls, values, att != nil, allow, spec.SecretDir); err != nil {
+			releaseEgress()
+			return nil, fmt.Errorf("runtime.server %q: %w", spec.Alias, err)
+		}
+		cmd = l.run.command(nil, nil, "start", "--attach", "--interactive", ls.Name)
 		release := releaseEgress
 		releaseEgress = func() {
 			// Until the start command runs, the created container is ours
@@ -269,8 +299,7 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 			release()
 		}
 	} else {
-		cmd = exec.Command(l.podPath, ls.PodmanArgs()...) // #nosec G204 -- argument vector, no shell (SR-4.8-1)
-		cmd.Env = l.podmanEnv(values)
+		cmd = l.run.command(nil, values, ls.PodmanArgs()...)
 	}
 	setParentDeath(cmd)
 	stdoutR, stdoutW, err := os.Pipe()

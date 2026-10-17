@@ -350,11 +350,9 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		if !filepath.IsAbs(d) || filepath.Clean(d) != d || strings.ContainsAny(d, ",=\n") {
 			return LaunchSpec{}, fmt.Errorf("%w: secret directory %q must be a clean absolute path without commas, equals signs or newlines", ErrMountRefused, d)
 		}
-		// The files are mode 0600 and owned by the Gateway user, which only
-		// a keep-id user namespace maps into the container.
-		if ls.Profile.UserNS != "keep-id" {
-			return LaunchSpec{}, fmt.Errorf("runtime.server %q receives secret files (S2, S3), which only the Gateway user can read: set userns = \"keep-id\" for it", in.Spec.Alias)
-		}
+		// The files are mode 0600 and owned by the Gateway user. Under
+		// any other UID the launcher grants the instance's host UID read
+		// access before the server starts (secretacl.go).
 		ls.Mounts = append(ls.Mounts, Mount{Source: d, Target: SecretDir})
 	}
 

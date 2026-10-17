@@ -63,9 +63,8 @@ func FromConfig(ctx context.Context, cfg *config.Config, o SetupOptions) (*Launc
 		}
 	}
 	if o.Doctor == nil {
-		pod := cfg.Runtime.Podman
-		cgm := cfg.Runtime.CgroupManager
-		o.Doctor = func(ctx context.Context) []Check { return Doctor(ctx, DoctorOptions{Podman: pod, CgroupManager: cgm}) }
+		do := DoctorOptionsFor(cfg.Runtime)
+		o.Doctor = func(ctx context.Context) []Check { return Doctor(ctx, do) }
 	}
 	var refuse []string
 	for _, c := range Failed(o.Doctor(ctx)) {

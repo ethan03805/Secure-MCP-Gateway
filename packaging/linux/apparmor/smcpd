@@ -76,6 +76,11 @@ profile smcpd /usr/local/bin/smcpd flags=(attach_disconnected) {
   # profile if the host has one, else unconfined.
   /usr/bin/podman PUx,
   /usr/local/bin/podman PUx,
+  # Podman as the server identity (runtime.run_as): sudo, whose sudoers
+  # rule allows only Podman as smcp-srv.
+  /usr/bin/sudo PUx,
+  # The apparmor-server doctor check.
+  /sys/kernel/security/apparmor/profiles r,
   /usr/bin/newuidmap r,
   /usr/bin/newgidmap r,
   /usr/sbin/nft r,

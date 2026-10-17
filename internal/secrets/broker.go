@@ -17,6 +17,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/posixacl"
 )
 
 // Reason codes of secret-use denials and withdrawals.
@@ -703,9 +704,38 @@ func writeSecretFile(path string, value []byte) error {
 		_ = os.Remove(tmp)
 		return err
 	}
+	if err := inheritReaders(tmp); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
 	if err := os.Rename(tmp, path); err != nil {
 		_ = os.Remove(tmp)
 		return err
+	}
+	return nil
+}
+
+// inheritReaders gives a new secret file read access for every named user
+// that the sandbox granted on its directory (posixacl entries with the
+// search bit; see sandbox.GrantSecretReaders). An instance running under
+// a subordinate UID or the separate server identity then reads S2 and S3
+// files written after its launch, such as per-call files and rotated
+// values. Without such entries the file stays owner-only.
+func inheritReaders(path string) error {
+	a, err := posixacl.Get(filepath.Dir(path))
+	if errors.Is(err, posixacl.ErrUnsupported) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for uid, perm := range a.Users() {
+		if perm&posixacl.Execute == 0 {
+			continue
+		}
+		if err := posixacl.AddUser(path, uid, posixacl.Read); err != nil {
+			return fmt.Errorf("secret file reader %d: %w", uid, err)
+		}
 	}
 	return nil
 }

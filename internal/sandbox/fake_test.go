@@ -26,6 +26,8 @@ import (
 // main PID is the podman client's PID.
 func TestMain(m *testing.M) {
 	switch {
+	case os.Getenv("SMCP_FAKE_SUDO") == "1":
+		os.Exit(fakeSudo(os.Args[1:]))
 	case os.Getenv("SMCP_FAKE_PODMAN") == "1":
 		os.Exit(fakePodman(os.Args[1:]))
 	case os.Getenv("SMCP_FAKE_SERVER") == "1":
@@ -57,6 +59,28 @@ type fakeRun struct {
 }
 
 func fakeDir() string { return os.Getenv("SMCP_FAKE_DIR") }
+
+// fakeSudo stands in for `sudo -n -E -u USER -- PROGRAM ARGS`: it records
+// its arguments and the identity variables it received, then executes
+// PROGRAM with the environment it was given (as -E keeps it).
+func fakeSudo(args []string) int {
+	dir := fakeDir()
+	i := slices.Index(args, "--")
+	if i < 0 || i+1 >= len(args) {
+		return 1
+	}
+	var ids []string
+	for _, k := range []string{"HOME", "USER", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS"} {
+		ids = append(ids, k+"="+os.Getenv(k))
+	}
+	appendLine(filepath.Join(dir, "sudo.log"), strings.Join(args[:i], " ")+" | "+strings.Join(ids, " ")+" | "+strings.Join(args[i+1:], " "))
+	_ = os.Unsetenv("SMCP_FAKE_SUDO")
+	if err := syscall.Exec(args[i+1], args[i+1:], os.Environ()); err != nil { // #nosec G204 -- test fake
+		fmt.Fprintln(os.Stderr, "fake sudo exec:", err)
+		return 127
+	}
+	return 0
+}
 
 func appendLine(path, line string) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
@@ -106,6 +130,14 @@ func fakePodman(args []string) int {
 		_ = syscall.Kill(pid, s)
 		return 0
 	case "inspect":
+		if slices.Contains(args, "{{.State.Pid}}") {
+			// The created (not started) container's first process.
+			if _, err := os.Stat(filepath.Join(dir, name+".init")); err != nil {
+				return 125
+			}
+			fmt.Println("4242")
+			return 0
+		}
 		if slices.Contains(args, "{{.NetworkSettings.SandboxKey}}") {
 			if _, err := os.Stat(filepath.Join(dir, name+".create.json")); err != nil {
 				return 125

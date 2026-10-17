@@ -102,10 +102,12 @@ func hostTool(name string) string {
 	return name
 }
 
-// createEgress creates and initializes the container of an egress
-// instance and confines its network namespace to allow. It returns the
-// namespace path. On failure the container is removed.
-func (l *Launcher) createEgress(ls LaunchSpec, values map[string]string, allow []netip.AddrPort) (netns string, err error) {
+// createPrepared creates and initializes the container of an instance
+// that must be prepared before its process starts: with egress, its
+// network namespace is confined to allow (the namespace path is returned);
+// with secretDir, the instance's host UID is granted its secret files
+// (secretacl.go). On failure the container is removed.
+func (l *Launcher) createPrepared(ls LaunchSpec, values map[string]string, egress bool, allow []netip.AddrPort, secretDir string) (netns string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	defer func() {
@@ -113,25 +115,49 @@ func (l *Launcher) createEgress(ls LaunchSpec, values map[string]string, allow [
 			rctx, rcancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer rcancel()
 			_ = l.podman(rctx, "rm", "--force", "--time", "0", ls.Name).Run()
+			if egress {
+				err = fmt.Errorf("egress confinement: %w", err)
+			}
 		}
 	}()
-	rules, err := EgressRules(allow)
-	if err != nil {
-		return "", err
+	rules := ""
+	if egress {
+		if rules, err = EgressRules(allow); err != nil {
+			return "", err
+		}
 	}
-	create := l.podman(ctx, ls.CreateArgs()...)
-	create.Env = l.podmanEnv(values)
+	if secretDir != "" && l.run.runAs != nil {
+		// Podman, running as run_as, resolves the bind-mount source.
+		if err := l.grantTraversal(secretDir, l.run.runAs.UID); err != nil {
+			return "", err
+		}
+	}
+	create := l.run.command(ctx, values, ls.CreateArgs()...)
 	if out, err := create.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("podman create: %w: %s", err, bounded(out))
 	}
 	if out, err := l.podman(ctx, "init", ls.Name).CombinedOutput(); err != nil {
 		return "", fmt.Errorf("podman init: %w: %s", err, bounded(out))
 	}
+	if secretDir != "" {
+		if err := l.grantSecretFiles(ctx, ls, secretDir); err != nil {
+			return "", err
+		}
+	}
+	if !egress {
+		return "", nil
+	}
+	return l.confineEgress(ctx, ls, rules, allow)
+}
+
+// confineEgress installs rules in the created container's network
+// namespace and reads them back.
+func (l *Launcher) confineEgress(ctx context.Context, ls LaunchSpec, rules string, allow []netip.AddrPort) (string, error) {
 	out, err := l.podman(ctx, "inspect", "--type", "container", "--format", "{{.NetworkSettings.SandboxKey}}", ls.Name).Output()
 	if err != nil {
 		return "", fmt.Errorf("podman inspect: %w", err)
 	}
-	netns = strings.TrimSpace(string(out))
+	netns := strings.TrimSpace(string(out))
 	if !filepath.IsAbs(netns) {
 		return "", fmt.Errorf("container %s has no network namespace path (got %q)", ls.Name, netns)
 	}
