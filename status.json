@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T21:30:08Z",
-  "commit": "0a0640020362b4c6781b1d9e23bca0ca3724c34b",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/0a0640020362b4c6781b1d9e23bca0ca3724c34b",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39069871357",
+  "generatedAt": "2026-10-17T21:51:17Z",
+  "commit": "ed5b4235a438f46ea1f593a74da5b9a42b641380",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ed5b4235a438f46ea1f593a74da5b9a42b641380",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39071237070",
   "tests": {
-    "total": 1292,
-    "passed": 1272,
-    "failed": 2,
-    "skipped": 18,
-    "durationSec": 1079.1,
+    "total": 1337,
+    "passed": 1323,
+    "failed": 1,
+    "skipped": 13,
+    "durationSec": 1007.1,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -20,6 +20,12 @@
       {
         "name": "console/e2e/chromium",
         "passed": 54,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "console/e2e/chromium/enforced",
+        "passed": 2,
         "failed": 0,
         "skipped": 0
       },
@@ -49,7 +55,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 51,
+        "passed": 53,
         "failed": 0,
         "skipped": 0
       },
@@ -67,19 +73,25 @@
       },
       {
         "name": "internal/acceptance",
-        "passed": 20,
+        "passed": 22,
         "failed": 0,
         "skipped": 1
       },
       {
         "name": "internal/acceptance/enforced",
-        "passed": 15,
-        "failed": 1,
+        "passed": 18,
+        "failed": 0,
         "skipped": 1
       },
       {
         "name": "internal/acceptance/offline",
         "passed": 21,
+        "failed": 0,
+        "skipped": 2
+      },
+      {
+        "name": "internal/acceptance/offline/enforced",
+        "passed": 1,
         "failed": 0,
         "skipped": 0
       },
@@ -193,9 +205,9 @@
       },
       {
         "name": "internal/egress",
-        "passed": 22,
+        "passed": 23,
         "failed": 0,
-        "skipped": 2
+        "skipped": 1
       },
       {
         "name": "internal/filterapi",
@@ -229,9 +241,15 @@
       },
       {
         "name": "internal/hostile",
-        "passed": 69,
+        "passed": 70,
         "failed": 0,
         "skipped": 1
+      },
+      {
+        "name": "internal/hostile/enforced",
+        "passed": 30,
+        "failed": 0,
+        "skipped": 0
       },
       {
         "name": "internal/keys",
@@ -355,9 +373,9 @@
       },
       {
         "name": "internal/sandbox",
-        "passed": 46,
+        "passed": 55,
         "failed": 0,
-        "skipped": 6
+        "skipped": 0
       },
       {
         "name": "internal/sandbox/probe",
@@ -422,7 +440,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.1,
+    "totalPct": 76,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -450,7 +468,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 38.6
+        "pct": 38.1
       },
       {
         "name": "cmd/smcpd",
@@ -494,7 +512,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 92.1
+        "pct": 92
       },
       {
         "name": "internal/backup",
@@ -510,7 +528,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.5
+        "pct": 90
       },
       {
         "name": "internal/consoleapi",
@@ -542,7 +560,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 84
+        "pct": 83.8
       },
       {
         "name": "internal/gwtest",
@@ -558,7 +576,7 @@
       },
       {
         "name": "internal/hostile",
-        "pct": 60.8
+        "pct": 60.1
       },
       {
         "name": "internal/ids",
@@ -570,7 +588,7 @@
       },
       {
         "name": "internal/library",
-        "pct": 84.6
+        "pct": 84.5
       },
       {
         "name": "internal/metrics",
@@ -598,7 +616,7 @@
       },
       {
         "name": "internal/packaging",
-        "pct": 75.1
+        "pct": 75.2
       },
       {
         "name": "internal/packaging/pkgtest",
@@ -650,11 +668,11 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 83.9
+        "pct": 84.2
       },
       {
         "name": "internal/sandbox/probe",
-        "pct": 11.3
+        "pct": 9.5
       },
       {
         "name": "internal/secrets",
@@ -666,11 +684,11 @@
       },
       {
         "name": "internal/testport",
-        "pct": 80
+        "pct": 77.5
       },
       {
         "name": "internal/tunnel",
-        "pct": 79.9
+        "pct": 81.1
       },
       {
         "name": "packaging/linux",
@@ -700,18 +718,18 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 397,
-    "partial": 104,
-    "failing": 5,
+    "verified": 408,
+    "partial": 97,
+    "failing": 1,
     "unverified": 23,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 18,
-        "partial": 5,
-        "failing": 3
+        "verified": 20,
+        "partial": 6,
+        "failing": 0
       },
       {
         "element": "E-02",
@@ -725,9 +743,9 @@
         "element": "E-03",
         "name": "Identity & Authentication Service",
         "total": 13,
-        "verified": 12,
+        "verified": 13,
         "partial": 0,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-04",
@@ -805,8 +823,8 @@
         "element": "E-13",
         "name": "Library Trust Verifier",
         "total": 25,
-        "verified": 18,
-        "partial": 5,
+        "verified": 19,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -821,16 +839,16 @@
         "element": "E-15",
         "name": "Server Runtime Manager",
         "total": 9,
-        "verified": 6,
-        "partial": 3,
+        "verified": 8,
+        "partial": 1,
         "failing": 0
       },
       {
         "element": "E-16",
         "name": "Execution Sandbox",
         "total": 5,
-        "verified": 0,
-        "partial": 5,
+        "verified": 5,
+        "partial": 0,
         "failing": 0
       },
       {
@@ -1296,7 +1314,8 @@
         "tests": [
           "internal/backend.TestProgressRoutedWithGatewayToken",
           "internal/edge.TestProgressRelayedThroughFilters",
-          "internal/hostile.TestHostileFixtures/HF-07"
+          "internal/hostile.TestHostileFixtures/HF-07",
+          "internal/hostile/enforced.TestHostileFixtures/HF-07"
         ]
       },
       {
@@ -1380,7 +1399,8 @@
         "status": "verified",
         "tests": [
           "internal/backend.TestCollisionDisablesOnlyThatServer",
-          "internal/hostile.TestHostileFixtures/HF-14"
+          "internal/hostile.TestHostileFixtures/HF-14",
+          "internal/hostile/enforced.TestHostileFixtures/HF-14"
         ]
       },
       {
@@ -1412,7 +1432,8 @@
         "status": "verified",
         "tests": [
           "internal/edge.TestPresentationRescan",
-          "internal/hostile.TestHostileFixtures/HF-01"
+          "internal/hostile.TestHostileFixtures/HF-01",
+          "internal/hostile/enforced.TestHostileFixtures/HF-01"
         ]
       },
       {
@@ -1952,7 +1973,9 @@
           "internal/backend.TestUpstreamTimeout",
           "internal/e2e.TestPolicyDecisionsAndErrorMapping",
           "internal/hostile.TestHostileFixtures/HF-17",
-          "internal/hostile.TestHostileFixtures/HF-19"
+          "internal/hostile.TestHostileFixtures/HF-19",
+          "internal/hostile/enforced.TestHostileFixtures/HF-17",
+          "internal/hostile/enforced.TestHostileFixtures/HF-19"
         ]
       },
       {
@@ -1962,7 +1985,8 @@
         "tests": [
           "internal/backend.TestResultBoundWhileReading",
           "internal/backend.TestResultBoundsAtTheLimit",
-          "internal/hostile.TestHostileFixtures/HF-16"
+          "internal/hostile.TestHostileFixtures/HF-16",
+          "internal/hostile/enforced.TestHostileFixtures/HF-16"
         ]
       },
       {
@@ -2033,7 +2057,9 @@
           "internal/edge.TestProgressRelayedThroughFilters",
           "internal/filters.TestInjectionFiltersTagOnly",
           "internal/hostile.TestHostileFixtures/HF-04",
-          "internal/hostile.TestHostileFixtures/HF-05"
+          "internal/hostile.TestHostileFixtures/HF-05",
+          "internal/hostile/enforced.TestHostileFixtures/HF-04",
+          "internal/hostile/enforced.TestHostileFixtures/HF-05"
         ]
       },
       {
@@ -2130,6 +2156,7 @@
         "tests": [
           "cmd/smcpctl.TestRuntimeCommands",
           "internal/sandbox.TestBackendRegistryUsesConfinedLauncher",
+          "internal/sandbox.TestBuildInterpretedPackage",
           "internal/sandbox.TestBuildWithImageAndEgress",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
           "internal/sandbox.TestLaunchRunsServerThroughPodmanWithoutShell",
@@ -2161,7 +2188,8 @@
         "tests": [
           "internal/backend.TestInvalidStdoutLine",
           "internal/edge.TestBackendProtocolFailures",
-          "internal/hostile.TestHostileFixtures/HF-18"
+          "internal/hostile.TestHostileFixtures/HF-18",
+          "internal/hostile/enforced.TestHostileFixtures/HF-18"
         ]
       },
       {
@@ -2189,7 +2217,8 @@
           "console/e2e/firefox.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "console/e2e/webkit.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "internal/backend.TestServerInitiatedRequestsRefused",
-          "internal/hostile.TestHostileFixtures/HF-26"
+          "internal/hostile.TestHostileFixtures/HF-26",
+          "internal/hostile/enforced.TestHostileFixtures/HF-26"
         ]
       },
       {
@@ -2225,7 +2254,9 @@
           "internal/backend.TestInputRequiredResult",
           "internal/edge.TestTimeoutCodesMatchAppendixB",
           "internal/hostile.TestHostileFixtures/HF-25",
-          "internal/hostile.TestHostileFixtures/HF-25"
+          "internal/hostile.TestHostileFixtures/HF-25",
+          "internal/hostile/enforced.TestHostileFixtures/HF-25",
+          "internal/hostile/enforced.TestHostileFixtures/HF-25"
         ]
       },
       {
@@ -2284,7 +2315,7 @@
         "element": "E-17",
         "status": "verified",
         "tests": [
-          "internal/hostile.TestHostileFixtures/HF-20",
+          "internal/hostile/enforced.TestHostileFixtures/HF-20",
           "internal/sandbox.TestContainmentActionsWithinOneSecond",
           "internal/sandbox.TestIntegrationMonitorContainment",
           "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
@@ -2305,14 +2336,16 @@
       {
         "id": "FR-5.37",
         "element": "E-15",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestRuntimeSpecEgressAndSlotMounts",
           "internal/egress.TestEndpoints",
           "internal/egress.TestWrapLauncher",
           "internal/sandbox.TestBuildEgressEnvNames",
           "internal/sandbox.TestBuildWithImageAndEgress",
           "internal/sandbox.TestEgressAttachesSandboxNetwork",
-          "internal/sandbox.TestIntegrationEgressBroker"
+          "internal/sandbox.TestIntegrationEgressBroker",
+          "internal/sandbox.TestIntegrationPackagedServerSlotsAndEnvironment"
         ]
       },
       {
@@ -2451,6 +2484,7 @@
           "internal/filters.TestRegisteredFingerprintsInResults",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-08",
+          "internal/hostile/enforced.TestHostileFixtures/HF-08",
           "internal/secrets.TestBrokerLeakDetectionNorthbound",
           "internal/secrets.TestFingerprintSetHoldsNoPlaintext",
           "internal/secrets.TestFingerprintsDetectEncodedForms",
@@ -3785,7 +3819,8 @@
         "element": "E-01",
         "status": "partial",
         "tests": [
-          "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow"
+          "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow",
+          "internal/acceptance/offline/enforced.TestAT17OfflineEngineeringWorkflow"
         ]
       },
       {
@@ -4054,6 +4089,7 @@
         "element": "E-13",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestIntegrationPackageBuildProbeSandbox",
           "internal/packaging.TestBuildNPMAndPyPI",
           "internal/packaging.TestBuildSignVerifyBinary"
         ]
@@ -4113,6 +4149,7 @@
         "status": "partial",
         "tests": [
           "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow",
+          "internal/acceptance/offline/enforced.TestAT17OfflineEngineeringWorkflow",
           "internal/packaging.TestReferenceRecipesArePinned"
         ]
       },
@@ -4255,7 +4292,7 @@
       {
         "id": "FR-16.1",
         "element": "E-01",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
@@ -4292,7 +4329,7 @@
       {
         "id": "FR-16.5",
         "element": "E-03",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestClientsApproveCLI",
           "console/e2e/chromium.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
@@ -4562,7 +4599,7 @@
         "status": "verified",
         "tests": [
           "internal/hostile.TestHostileFixtures",
-          "internal/hostile.TestHostileFixtures"
+          "internal/hostile/enforced.TestHostileFixtures"
         ]
       },
       {
@@ -4571,6 +4608,7 @@
         "status": "verified",
         "tests": [
           "internal/hostile.TestHostileFixtures",
+          "internal/hostile/enforced.TestHostileFixtures",
           "docs/verification/inspections.md:87"
         ]
       },
@@ -4730,7 +4768,8 @@
           "internal/acceptance/enforced.TestAT02ExactAuthorization",
           "internal/acceptance/offline.TestAT02ExactAuthorization",
           "internal/edge.TestArgumentSchemaValidation",
-          "internal/hostile.TestHostileFixtures/HF-13"
+          "internal/hostile.TestHostileFixtures/HF-13",
+          "internal/hostile/enforced.TestHostileFixtures/HF-13"
         ]
       },
       {
@@ -4740,6 +4779,7 @@
         "tests": [
           "internal/filters.TestImportMetadataScan",
           "internal/hostile.TestHostileFixtures/HF-10",
+          "internal/hostile/enforced.TestHostileFixtures/HF-10",
           "internal/pipeline.TestSchemaDialects"
         ]
       },
@@ -4752,6 +4792,9 @@
           "internal/hostile.TestHostileFixtures/HF-10",
           "internal/hostile.TestHostileFixtures/HF-11",
           "internal/hostile.TestHostileFixtures/HF-12",
+          "internal/hostile/enforced.TestHostileFixtures/HF-10",
+          "internal/hostile/enforced.TestHostileFixtures/HF-11",
+          "internal/hostile/enforced.TestHostileFixtures/HF-12",
           "internal/pipeline.TestSchemaResourceBounds"
         ]
       },
@@ -4761,7 +4804,8 @@
         "status": "verified",
         "tests": [
           "internal/filters.TestPathCanonicalization",
-          "internal/hostile.TestHostileFixtures/HF-22"
+          "internal/hostile.TestHostileFixtures/HF-22",
+          "internal/hostile/enforced.TestHostileFixtures/HF-22"
         ]
       },
       {
@@ -5114,7 +5158,7 @@
       {
         "id": "SR-2.9-3",
         "element": "E-01",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
@@ -5194,8 +5238,9 @@
       {
         "id": "SR-2.14-1",
         "element": "E-15",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/sandbox.TestIntegrationPackagedServerSlotsAndEnvironment",
           "internal/sandbox.TestLaunchRunsServerThroughPodmanWithoutShell",
           "internal/secrets.TestBrokerLaunchDeliveryModes"
         ]
@@ -5261,6 +5306,8 @@
         "tests": [
           "console/e2e/chromium.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
           "console/e2e/chromium.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+          "console/e2e/chromium/enforced.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+          "console/e2e/chromium/enforced.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
           "console/e2e/firefox.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
           "console/e2e/firefox.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
           "console/e2e/webkit.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
@@ -5294,8 +5341,9 @@
       {
         "id": "SR-3.5-1",
         "element": "E-13",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestIntegrationPackageBuildProbeSandbox",
           "internal/packaging.TestBuildSignVerifyBinary"
         ]
       },
@@ -5319,6 +5367,7 @@
         "status": "verified",
         "tests": [
           "internal/hostile.TestHostileFixtures/HF-13",
+          "internal/hostile/enforced.TestHostileFixtures/HF-13",
           "internal/library.TestEnablementDigestBinding"
         ]
       },
@@ -5329,6 +5378,8 @@
         "tests": [
           "internal/hostile.TestHostileFixtures/HF-03",
           "internal/hostile.TestHostileFixtures/HF-13",
+          "internal/hostile/enforced.TestHostileFixtures/HF-03",
+          "internal/hostile/enforced.TestHostileFixtures/HF-13",
           "internal/library.TestDriftAtStartSuspends",
           "internal/library.TestDriftOnListChangedSuspendsAndTearsDown"
         ]
@@ -5349,7 +5400,8 @@
         "status": "verified",
         "tests": [
           "internal/edge.TestNewToolsDenied",
-          "internal/hostile.TestHostileFixtures/HF-03"
+          "internal/hostile.TestHostileFixtures/HF-03",
+          "internal/hostile/enforced.TestHostileFixtures/HF-03"
         ]
       },
       {
@@ -5404,7 +5456,7 @@
       {
         "id": "SR-4.1-2",
         "element": "E-16",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/sandbox.TestDoctorChecksTheServerIdentity",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
@@ -5433,11 +5485,12 @@
       {
         "id": "SR-4.5-1",
         "element": "E-16",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/egress.TestAttachLauncherConfines",
           "internal/egress.TestAttachNetwork",
-          "internal/hostile.TestHostileFixtures/HF-23",
+          "internal/egress.TestNetnsEnforcement",
+          "internal/hostile/enforced.TestHostileFixtures/HF-23",
           "internal/sandbox.TestEgressAttachesSandboxNetwork",
           "internal/sandbox.TestEgressConfinementFailsClosed",
           "internal/sandbox.TestEgressRules",
@@ -5455,6 +5508,7 @@
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
           "internal/egress.TestConnectTunnel",
+          "internal/egress.TestNetnsEnforcement",
           "internal/egress.TestOnlyCurrentGrantsAreForwarded",
           "internal/egress.TestProxyAllowsGrantedHTTP",
           "internal/egress.TestProxyRefusesUngranted"
@@ -5463,17 +5517,22 @@
       {
         "id": "SR-4.6-1",
         "element": "E-16",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestRuntimeSpecEgressAndSlotMounts",
           "internal/hostile.TestHostileFixtures/HF-22",
+          "internal/hostile/enforced.TestHostileFixtures/HF-22",
+          "internal/sandbox.TestBuildInterpretedPackage",
+          "internal/sandbox.TestIntegrationPackagedServerSlotsAndEnvironment",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestIntersectRoots",
           "internal/sandbox.TestLaunchRefusesUnsafeInput"
         ]
       },
       {
         "id": "SR-4.7-1",
         "element": "E-16",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
           "internal/sandbox.TestIntegrationServerAppArmorProfile",
@@ -5485,11 +5544,11 @@
       {
         "id": "SR-4.7-2",
         "element": "E-16",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/config.TestRuntimeDefaults",
-          "internal/hostile.TestHostileFixtures/HF-20",
-          "internal/hostile.TestHostileFixtures/HF-21",
+          "internal/hostile/enforced.TestHostileFixtures/HF-20",
+          "internal/hostile/enforced.TestHostileFixtures/HF-21",
           "internal/sandbox.TestEnableDelegatedControllers",
           "internal/sandbox.TestIntegrationMonitorContainment",
           "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
@@ -5550,7 +5609,7 @@
       {
         "id": "SR-4.14-2",
         "element": "E-01",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
@@ -5630,7 +5689,8 @@
         "status": "verified",
         "tests": [
           "internal/backend.TestNoSouthboundCapabilities",
-          "internal/hostile.TestHostileFixtures/HF-26"
+          "internal/hostile.TestHostileFixtures/HF-26",
+          "internal/hostile/enforced.TestHostileFixtures/HF-26"
         ]
       },
       {
@@ -5669,6 +5729,7 @@
           "internal/filters.TestOutboundArgumentFiltering",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-09",
+          "internal/hostile/enforced.TestHostileFixtures/HF-09",
           "internal/secrets.TestBrokerLeakDetectionNorthbound"
         ]
       },
@@ -5693,7 +5754,10 @@
           "internal/filters.TestResponseSurfaces",
           "internal/hostile.TestHostileFixtures/HF-05",
           "internal/hostile.TestHostileFixtures/HF-06",
-          "internal/hostile.TestHostileFixtures/HF-07"
+          "internal/hostile.TestHostileFixtures/HF-07",
+          "internal/hostile/enforced.TestHostileFixtures/HF-05",
+          "internal/hostile/enforced.TestHostileFixtures/HF-06",
+          "internal/hostile/enforced.TestHostileFixtures/HF-07"
         ]
       },
       {
@@ -5704,7 +5768,10 @@
           "internal/filters.TestImportMetadataScan",
           "internal/hostile.TestHostileFixtures/HF-01",
           "internal/hostile.TestHostileFixtures/HF-02",
-          "internal/hostile.TestHostileFixtures/HF-15"
+          "internal/hostile.TestHostileFixtures/HF-15",
+          "internal/hostile/enforced.TestHostileFixtures/HF-01",
+          "internal/hostile/enforced.TestHostileFixtures/HF-02",
+          "internal/hostile/enforced.TestHostileFixtures/HF-15"
         ]
       },
       {
@@ -5722,7 +5789,9 @@
         "tests": [
           "internal/edge.TestNoResultBeforeRelease",
           "internal/hostile.TestHostileFixtures/HF-08",
-          "internal/hostile.TestHostileFixtures/HF-16"
+          "internal/hostile.TestHostileFixtures/HF-16",
+          "internal/hostile/enforced.TestHostileFixtures/HF-08",
+          "internal/hostile/enforced.TestHostileFixtures/HF-16"
         ]
       },
       {
@@ -5750,6 +5819,7 @@
         "tests": [
           "internal/e2e.TestSessionTaintEndToEnd",
           "internal/hostile.TestHostileFixtures/HF-04",
+          "internal/hostile/enforced.TestHostileFixtures/HF-04",
           "internal/library.TestManifestClassesReachTools",
           "internal/policy.TestSessionTaintObligation",
           "internal/policy.TestTaintClassesRestrictOnly"
@@ -5761,7 +5831,8 @@
         "status": "verified",
         "tests": [
           "internal/filters.TestUnicodeCorpus",
-          "internal/hostile.TestHostileFixtures/HF-27"
+          "internal/hostile.TestHostileFixtures/HF-27",
+          "internal/hostile/enforced.TestHostileFixtures/HF-27"
         ]
       },
       {
@@ -5773,7 +5844,7 @@
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
           "internal/egress.TestRebindingAndRedirects",
-          "internal/hostile.TestHostileFixtures/HF-24",
+          "internal/hostile/enforced.TestHostileFixtures/HF-24",
           "internal/sandbox.TestIntegrationEgressBroker"
         ]
       },
@@ -5786,7 +5857,7 @@
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
           "internal/egress.TestReservedAddressesRefused",
-          "internal/hostile.TestHostileFixtures/HF-24"
+          "internal/hostile/enforced.TestHostileFixtures/HF-24"
         ]
       },
       {
@@ -5888,6 +5959,8 @@
         "element": "E-12",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT12AuditConsistency",
+          "internal/acceptance/enforced.TestAT12AuditConsistency",
           "internal/edge.TestIntentCommittedBeforeCapability",
           "internal/edge.TestIntentCrashConsistency"
         ]
@@ -5905,6 +5978,8 @@
         "element": "E-12",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT12AuditConsistency",
+          "internal/acceptance/enforced.TestAT12AuditConsistency",
           "internal/edge.TestReleaseCommitFailureWithholds"
         ]
       },
@@ -5913,6 +5988,8 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT11AuditLinkage",
+          "internal/acceptance/enforced.TestAT11AuditLinkage",
           "internal/e2e.TestEvaluatedEventLinks",
           "internal/graph.TestAT11AuditLinkageSurvivesChanges"
         ]
@@ -5922,6 +5999,8 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT11AuditLinkage",
+          "internal/acceptance/enforced.TestAT11AuditLinkage",
           "internal/graph.TestAT11AuditLinkageSurvivesChanges",
           "internal/graph.TestOriginLabelsAndObservedBackend"
         ]
@@ -5942,6 +6021,8 @@
         "element": "E-21",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT12AuditConsistency",
+          "internal/acceptance/enforced.TestAT12AuditConsistency",
           "internal/audit.TestExporterCopiesOnce",
           "internal/graph.TestMirrorExactlyOncePerEventAcrossCrashAndRestart",
           "internal/graph.TestMirrorProjectsCallsSessionsDecisionsAndApprovals",
@@ -6010,6 +6091,7 @@
         "tests": [
           "console/e2e/chromium.console.spec.ts > the console page carries a strict content security policy",
           "console/e2e/chromium.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+          "console/e2e/chromium/enforced.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
           "console/e2e/firefox.console.spec.ts > the console page carries a strict content security policy",
           "console/e2e/firefox.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
           "console/e2e/webkit.console.spec.ts > the console page carries a strict content security policy",
@@ -6041,6 +6123,8 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT11AuditLinkage",
+          "internal/acceptance/enforced.TestAT11AuditLinkage",
           "internal/graph.TestAT11AuditLinkageSurvivesChanges",
           "internal/graph.TestDecisionLinkForEveryEvaluatedEvent"
         ]
@@ -6073,7 +6157,8 @@
           "internal/acceptance/offline.TestAT14RetryAndCrash",
           "internal/backend.TestInstanceFailureNotRetried",
           "internal/edge.TestInstanceFailureIndeterminate",
-          "internal/hostile.TestHostileFixtures/HF-17"
+          "internal/hostile.TestHostileFixtures/HF-17",
+          "internal/hostile/enforced.TestHostileFixtures/HF-17"
         ]
       },
       {
@@ -6912,7 +6997,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:38989: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44431: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7029,18 +7114,11 @@
     }
   ],
   "acceptance": {
-    "commit": "0a0640020362b4c6781b1d9e23bca0ca3724c34b",
-    "label": "not enforced",
-    "reasons": [
-      "AT-07 Safe evidence display: no automated or recorded result in the Enforced profile",
-      "AT-08 Worker containment: no automated or recorded result in the Enforced profile",
-      "AT-11 Audit linkage: no automated or recorded result in the Enforced profile",
-      "AT-12 Audit consistency: no automated or recorded result in the Enforced profile",
-      "AT-17 Offline engineering workflow: no automated or recorded result in the Enforced profile",
-      "AT-18 Remote access: failed in the Enforced profile"
-    ],
+    "commit": "ed5b4235a438f46ea1f593a74da5b9a42b641380",
+    "label": "enforced",
+    "reasons": [],
     "total": 21,
-    "enforcedPassed": 15,
+    "enforcedPassed": 21,
     "standalonePassed": 20,
     "scenarios": [
       {
@@ -7241,7 +7319,7 @@
           "SR-3.3-1",
           "SR-6.17-1"
         ],
-        "enforced": "not-run",
+        "enforced": "pass",
         "standalone": "pass",
         "tests": [
           {
@@ -7253,6 +7331,16 @@
             "test": "console/e2e/chromium.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "console/e2e/chromium/enforced.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "console/e2e/chromium/enforced.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+            "result": "pass",
+            "profile": "enforced"
           },
           {
             "test": "console/e2e/firefox.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
@@ -7287,12 +7375,12 @@
           "SR-4.7-1",
           "SR-4.7-2"
         ],
-        "enforced": "not-run",
+        "enforced": "pass",
         "standalone": "not-run",
         "tests": [
           {
-            "test": "internal/hostile.TestHostileFixtures/AT-08",
-            "result": "skip",
+            "test": "internal/hostile/enforced.TestHostileFixtures/AT-08",
+            "result": "pass",
             "profile": "enforced"
           }
         ],
@@ -7330,12 +7418,12 @@
           {
             "test": "internal/hostile.TestHostileFixtures/AT-09",
             "result": "pass",
-            "profile": "enforced"
+            "profile": "standalone"
           },
           {
-            "test": "internal/hostile.TestHostileFixtures/AT-09",
+            "test": "internal/hostile/enforced.TestHostileFixtures/AT-09",
             "result": "pass",
-            "profile": "standalone"
+            "profile": "enforced"
           }
         ],
         "records": []
@@ -7380,9 +7468,19 @@
           "SR-6.5-1",
           "SR-6.20-1"
         ],
-        "enforced": "not-run",
+        "enforced": "pass",
         "standalone": "pass",
         "tests": [
+          {
+            "test": "internal/acceptance.TestAT11AuditLinkage",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT11AuditLinkage",
+            "result": "pass",
+            "profile": "enforced"
+          },
           {
             "test": "internal/graph.TestAT11AuditLinkageSurvivesChanges",
             "result": "pass",
@@ -7401,9 +7499,19 @@
           "SR-6.10-1",
           "SR-6.11-1"
         ],
-        "enforced": "not-run",
+        "enforced": "pass",
         "standalone": "pass",
         "tests": [
+          {
+            "test": "internal/acceptance.TestAT12AuditConsistency",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT12AuditConsistency",
+            "result": "pass",
+            "profile": "enforced"
+          },
           {
             "test": "internal/edge.TestIntentCommittedBeforeCapability",
             "result": "pass",
@@ -7551,13 +7659,18 @@
           "FR-12.2",
           "FR-14.9"
         ],
-        "enforced": "not-run",
+        "enforced": "pass",
         "standalone": "pass",
         "tests": [
           {
             "test": "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/offline/enforced.TestAT17OfflineEngineeringWorkflow",
+            "result": "pass",
+            "profile": "enforced"
           }
         ],
         "records": []
@@ -7573,7 +7686,7 @@
           "SR-4.14-1",
           "SR-4.14-2"
         ],
-        "enforced": "fail",
+        "enforced": "pass",
         "standalone": "pass",
         "tests": [
           {
@@ -7583,7 +7696,7 @@
           },
           {
             "test": "internal/acceptance/enforced.TestAT18RemoteAccess",
-            "result": "fail",
+            "result": "pass",
             "profile": "enforced"
           },
           {
@@ -7693,15 +7806,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "0a0640020362b4c6781b1d9e23bca0ca3724c34b",
-    "generatedAt": "2026-10-17T21:12:00Z",
+    "commit": "ed5b4235a438f46ea1f593a74da5b9a42b641380",
+    "generatedAt": "2026-10-17T21:34:27Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000005668"
+      "runner": "GitHub Actions 1000005707"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7718,7 +7831,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.026209,
+        "value": 0.028543,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7730,7 +7843,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 17.686804,
+        "value": 19.460942,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7742,18 +7855,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 1.280781750000001,
+        "value": 1.7762685000000005,
         "budget": 1,
         "samples": 8000,
         "pass": false,
-        "method": "p95 P-213 with observation enabled (15.358 ms, mean of 15.241, 15.351, 15.951, 14.890) minus disabled (14.078 ms, mean of 14.072, 14.496, 14.118, 13.624), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
+        "method": "p95 P-213 with observation enabled (16.435 ms, mean of 16.936, 16.341, 16.206, 16.258) minus disabled (14.659 ms, mean of 14.750, 14.230, 14.642, 15.013), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 816.328923,
+        "value": 803.846849,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7765,7 +7878,7 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 105.96484375,
+        "value": 100.67578125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
