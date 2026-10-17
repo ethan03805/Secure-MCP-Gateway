@@ -4,7 +4,7 @@ Three small programs of the Harness Adapter Kit (E-33) connect clients that cann
 
 | Program | Requirement | Use |
 |---|---|---|
-| `smcp-session` | FR-12.12 | Header helper: prints `{"Authorization": "Bearer <token>"}` for Claude Code `headersHelper` and Codex `http_headers_helper` |
+| `smcp-session` | FR-12.12 | Header helper: prints `{"Authorization": "Bearer <token>"}` for Claude Code `headersHelper`, or `NAME=Bearer <token>` with `--env NAME` for Codex `env_http_headers` and Hermes |
 | `smcp-stdio` | FR-12.13 | Stdio MCP server that relays to the local Gateway; for clients that only launch commands, or to avoid configuring CA trust in the client |
 | `smcp-connect` | FR-16.9 | Stdio MCP server that relays to a Remote Access URL with OAuth device sign-in; release binary and npm package (`npx smcp-connect`) |
 
@@ -67,6 +67,15 @@ Claude Code (`~/.claude.json` or `.mcp.json`):
 ```
 
 Claude Code also needs `NODE_EXTRA_CA_CERTS` set to the Gateway CA for HTTP; `smcpctl clients setup claude-code --helper` writes both.
+
+Codex CLI 0.142.2 has no header-helper hook. It sends a header whose value it reads from an environment variable, so run the helper first and point `env_http_headers` at the variable:
+
+```
+export "$(smcp-session --env SMCP_AUTHORIZATION)"
+codex -c 'mcp_servers.smcp={url="https://127.0.0.1:8443/mcp",env_http_headers={Authorization="SMCP_AUTHORIZATION"}}' ...
+```
+
+Codex must also trust the Gateway CA (`CODEX_CA_CERTIFICATE`, a PEM bundle of the system roots plus the Gateway CA). The token is valid for the access-token lifetime (CP-43); run the helper again before starting a new Codex process. `docs/verification/FR-12.12.md` records both clients connecting this way.
 
 ## smcp-stdio
 

@@ -32,7 +32,7 @@
       "pinnedVersion": "0.142.2",
       "connectionMode": "streamable-http",
       "fallbackMode": "smcp-stdio",
-      "session": "oauth or http_headers_helper with smcp-session",
+      "session": "oauth or env_http_headers with smcp-session --env",
       "lockdown": {
         "mechanism": "requirements.toml MCP server allowlist matched by name and transport",
         "confirm": true

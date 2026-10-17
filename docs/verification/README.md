@@ -43,5 +43,6 @@ A record that does not meet these rules is reported as a warning and not counted
 - [inspections.md](inspections.md): Inspection and Analysis records.
 - [FR-8.32.md](FR-8.32.md): the manual focus-order, target-size and contrast check of the console (supporting record).
 - [FR-3.25.md](FR-3.25.md): the real-harness approval run with Claude Code, with its [transcript](FR-3.25-transcript.md).
+- [FR-12.12.md](FR-12.12.md): Claude Code and Codex CLI connecting through `smcp-session` (Demonstration).
 - [FR-13.3.md](FR-13.3.md): the Homebrew tap installation run of v1.0.0-rc.2 on macOS and Ubuntu (supporting record).
 - [gap-list.md](gap-list.md): requirements that are not verified, grouped by element, with what is missing.

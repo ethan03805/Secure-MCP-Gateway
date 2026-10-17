@@ -303,3 +303,14 @@ func TestRestoreReappliesDirectoryRevocations(t *testing.T) {
 		t.Fatal("after compares RFC 3339 times as strings")
 	}
 }
+
+// TestComponentsNameTheStores: the manifest's component list names the
+// signed Policy Store and the Local Server Registry where they live in the
+// state directory, each once.
+func TestComponentsNameTheStores(t *testing.T) {
+	got := components([]FileEntry{{Path: "state/policy/active.json"}, {Path: "policy/policy.json"}, {Path: "state/packages/registry.json"},
+		{Path: "state/journal/segment-1.jsonl"}}, nil)
+	if strings.Join(got, " ") != "evidence_journal policy_store server_registry" {
+		t.Fatalf("components %v", got)
+	}
+}

@@ -88,6 +88,12 @@ First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3
 - MCP tools only: resources, prompts, sampling, elicitation and roots are not relayed; backends are local signed packages, not remote MCP servers.
 - Until v1.0.0 is tagged, the Homebrew tap holds the formula of the pre-release `v1.0.0-rc.2` (pushed to rehearse the tap); the release workflow replaces it with v1.0.0.
 
+### Session helper demonstrated with Claude Code and Codex; backup under load (FR-12.12, SR-7.7-1)
+
+- SR-7.7-1 is verified by `internal/acceptance.TestBackupUnderLoadComponents`: the real `smcpd` with a vault and two sessions calling continuously; `smcpctl backup --optional observation_store=...` records stop, written (with checksum) and resume in order, no call is dispatched in between, and the decrypted manifest lists every component. The test found that the manifest never named the Server Registry (it looked for `state/registry/`; the registry is `state/packages/registry.json`) and named `policy_store` after the policy file only; both now follow the state directory (`docs/operations/backup.md`).
+
+- `docs/verification/FR-12.12.md`: Claude Code 2.1.302 with `smcp-session` as its `headersHelper`, and Codex CLI 0.142.2 with an `env_http_headers` entry fed by `smcp-session --env`, each connected to a fresh Gateway, listed the reference server's tools and called `ref_echo` (models through the Vercel AI Gateway). Codex 0.142.2 has no `http_headers_helper` hook, so FR-12.12's statement and verification now name `env_http_headers` for Codex; `docs/adapters.md`, `docs/clients/codex.md`, the X-12 ICD and the client matrix say the same.
+
 ### Release pipeline rehearsal (FR-13.1, FR-13.3, FR-13.5, FR-13.6, FR-13.7)
 
 - `v1.0.0-rc.1` was tagged on main `200719d` and the release workflow published it as a pre-release on the first run: four archives, the checksum file, its `.minisig`, the Sigstore bundle and one SBOM per archive. GoReleaser skipped the Homebrew formula because the release is a pre-release (`skip_upload: auto`). On macOS arm64, `install.sh --version v1.0.0-rc.1` verified the minisign signature, the Sigstore bundle and the checksum and installed the six binaries; `smcpctl upgrade` with the downloaded release directory upgraded a running instance to it.
