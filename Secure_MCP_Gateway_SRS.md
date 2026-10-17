@@ -33,6 +33,7 @@
 16. Appendix K — Client matrix
 17. Appendix L — Hostile backend fixture suite
 18. Appendix M — Acceptance scenarios and the enforced label
+19. Appendix N — Requirements deferred from release 1.0
 
 ## 1. Purpose, scope and intended use
 
@@ -98,8 +99,8 @@ A **platform profile** is always active; exactly one of the two applies to an in
 | Profile | Enables | Requirements |
 |---|---|---|
 | UDS Harness Profile | Unix-domain-socket harness transport | FR-1.47, FR-2.15, SR-2.8-3 |
-| MRTR Relay Profile | Relaying backend `InputRequiredResult` (elicitation, sampling, roots) | FR-5.25, SR-5.6-2 |
-| mTLS Harness Profile | Client-certificate authentication on the TLS harness listener, in addition to the bearer token | FR-2.14, SR-2.8-2 |
+| MRTR Relay Profile | Relaying backend `InputRequiredResult` (elicitation, sampling, roots). Deferred from release 1.0 (Appendix N); release 1.0 refuses such results with `-31010`. | FR-5.25 (deferred), SR-5.6-2 |
+| mTLS Harness Profile | Client-certificate authentication on the TLS harness listener, in addition to the bearer token. Deferred from release 1.0 (Appendix N). | FR-2.14, SR-2.8-2 (both deferred) |
 | Remote Access Profile | A second loopback listener reached only through an authenticated tunnel (Cloudflare Tunnel, Tailscale Funnel or a vendor MCP tunnel), operator-approved Dynamic Client Registration, remote rate limits and lockout, and the `smcp-connect` relay, for agents that run on a vendor's computer. It replaces the V1.1 Overlay Profile. | FR-16.1 to FR-16.12, SR-2.9-3, SR-2.11-2, SR-4.14-1, SR-4.14-2 |
 
 ### 1.6 Platform and distribution matrix
@@ -156,6 +157,10 @@ Each statement names its allocated element as the subject, for example *"The Ses
 ### 2.6 Verification claims
 
 A requirement is **verified** only when at least one passing automated test claims it in full and no claiming test fails, or when its Inspection, Analysis or Demonstration record is checked in under `docs/verification/` and passes. A test that exercises part of a requirement claims it as **partial**. The requirement report lists verified, partial, failing and unverified requirements separately (FR-12.10). Nothing in this document is a claim that a requirement is met.
+
+### 2.7 Deferred requirements
+
+A requirement record that carries a deferral rationale is **deferred from release 1.0**. It keeps its ID and text, and Appendix N lists it with the reason it is deferred and what release 1.0 does instead. A deferred requirement is not part of the requirement set of release 1.0: Appendices E to I, the requirement report (FR-12.10) and the release label (FR-19.3) leave it out. No requirement of release 1.0 has a deferred parent. Deferring a requirement, or restoring one, is a controlled change recorded in `CHANGELOG.md`.
 
 ## 3. Recommended technology stack (open source only)
 
@@ -1094,19 +1099,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | ARCH §9.3 |
 | Rationale | Scoring needs a stable context key per session. |
 
-#### FR-2.14 — Credential issuance
-
-| Field | Value |
-|---|---|
-| ID | FR-2.14 |
-| Parent ID | FR-2 — Identity and sessions |
-| Statement | When the mTLS Harness Profile is enabled, the Key & Trust Anchor Manager (E-22) **SHALL** issue framework-instance client certificates by signing a submitted certificate signing request with the Gateway's local client CA. |
-| Allocation | Elements: E-22 Key & Trust Anchor Manager; Functions: F-59; Internal interfaces: I-06 |
-| Verification Method | Test |
-| Verification Statement | Enable the profile; submit a CSR through G-11; confirm the issued certificate chains to the client CA and names the principal ID. |
-| Source | ARCH §4 E-22; ARCH §19 OD-2; Client-Compatibility-Brief §4.2 |
-| Rationale | Only Hermes can present a per-server client certificate. mTLS is a hardening option, not the baseline credential. |
-
 #### FR-2.15 — UDS peer mapping
 
 | Field | Value |
@@ -2023,45 +2015,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | MCP:basic/transports/stdio |
 | Rationale | stderr is diagnostic, untrusted and potentially large. |
 
-#### FR-5.16 — Era probe
-
-| Field | Value |
-|---|---|
-| ID | FR-5.16 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | When an instance starts, the Tool Dispatcher (E-10) **SHALL** send `server/discover` with protocol version 2026-07-28 and classify the server as modern on a `DiscoverResult` or recognized modern error, and as legacy on any other error or no response within 5 seconds. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Start modern and legacy fixture servers; confirm each classification. |
-| Source | MCP:basic/transports/stdio §Backward Compatibility |
-| Rationale | Curated servers may implement either era. |
-
-#### FR-5.17 — Era consistency with manifest
-
-| Field | Value |
-|---|---|
-| ID | FR-5.17 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | When the probed era differs from the protocol era declared in the manifest, the Tool Dispatcher (E-10) **SHALL** refuse to use the instance and the Local Server Registry (E-14) **SHALL** suspend the server revision. |
-| Allocation | Elements: E-10 Tool Dispatcher, E-14 Local Server Registry; Functions: F-23, F-37 |
-| Verification Method | Test |
-| Verification Statement | Launch a legacy fixture whose manifest declares modern; confirm refusal and suspension. |
-| Source | SEC 3.8; ARCH §6.3 |
-| Rationale | The runtime must match the curated declaration. |
-
-#### FR-5.18 — Modern southbound requests
-
-| Field | Value |
-|---|---|
-| ID | FR-5.18 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | The Tool Dispatcher (E-10) **SHALL** send each modern southbound request with `_meta.io.modelcontextprotocol/protocolVersion`, an empty `clientCapabilities` object in the baseline profile, Gateway `clientInfo`, and a request ID unique among its in-flight requests to that instance. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Capture southbound requests; confirm the metadata and ID uniqueness. |
-| Source | MCP:basic/index §Per-request protocol fields |
-| Rationale | Modern server requirement. |
-
 #### FR-5.19 — Legacy southbound handshake
 
 | Field | Value |
@@ -2140,31 +2093,18 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | SEC 5.6; MCP:basic/patterns/mrtr |
 | Rationale | Sampling, elicitation and roots are not qualified. |
 
-#### FR-5.25 — MRTR Relay Profile
-
-| Field | Value |
-|---|---|
-| ID | FR-5.25 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | When the MRTR Relay Profile is enabled, the Tool Dispatcher (E-10) **SHALL** relay a backend `InputRequiredResult` northbound with the backend `requestState` wrapped in a Gateway `requestState` that is integrity-protected and bound to session, correlation ID, backend tool revision and the CP-39 expiry. |
-| Allocation | Elements: E-10 Tool Dispatcher, E-02 Protocol Mediator; Functions: F-24, F-22; External interfaces: X-01; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Enable the profile; complete an elicitation round trip; confirm that tampered, expired and cross-session states are rejected. |
-| Source | MCP:basic/patterns/mrtr §Server Requirements; SEC 5.6 |
-| Rationale | Lets elicitation be qualified later without trusting harness-carried state. |
-
 #### FR-5.26 — Southbound cancellation
 
 | Field | Value |
 |---|---|
 | ID | FR-5.26 |
 | Parent ID | FR-5 — Server trust and execution |
-| Statement | The Tool Dispatcher (E-10) **SHALL** cancel a southbound call by sending `notifications/cancelled` with the request ID on stdio instances and by closing the response stream on Streamable HTTP instances. |
+| Statement | The Tool Dispatcher (E-10) **SHALL** cancel a southbound call to a stdio instance by sending `notifications/cancelled` with the request ID. |
 | Allocation | Elements: E-10 Tool Dispatcher; Functions: F-25; Internal interfaces: I-13 |
 | Verification Method | Test |
-| Verification Statement | Cancel calls on both transports; confirm the transport-specific signal. |
+| Verification Statement | Cancel a call to a stdio fixture; confirm the instance receives `notifications/cancelled` naming the request ID. |
 | Source | MCP:basic/patterns/cancellation |
-| Rationale | Transport-specific cancellation rules. |
+| Rationale | Transport-specific cancellation rules. Release 1.0 runs stdio instances only; cancellation on Streamable HTTP instances returns with the southbound HTTP client (Appendix N, FR-5.28). |
 
 #### FR-5.27 — Instance shutdown
 
@@ -2178,58 +2118,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Statement | Stop a fixture that ignores EOF and SIGTERM; confirm the escalation timing. |
 | Source | MCP:basic/transports/stdio §Shutdown |
 | Rationale | Graceful but bounded shutdown. |
-
-#### FR-5.28 — Southbound Streamable HTTP client
-
-| Field | Value |
-|---|---|
-| ID | FR-5.28 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | For an instance using Streamable HTTP, the Tool Dispatcher (E-10) **SHALL** send each request as a POST carrying `Accept: application/json, text/event-stream`, `MCP-Protocol-Version`, `Mcp-Method` and, where applicable, `Mcp-Name`, and **SHALL** accept both JSON and SSE responses. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23, F-24; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Run the southbound HTTP conformance fixtures; confirm the headers and both response types. |
-| Source | MCP:basic/transports/streamable-http §Sending Messages; §Standard Request Headers |
-| Rationale | Some curated servers use the HTTP binding inside their sandbox. |
-
-#### FR-5.29 — Southbound header encoding
-
-| Field | Value |
-|---|---|
-| ID | FR-5.29 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | The Tool Dispatcher (E-10) **SHALL** mirror `x-mcp-header` parameters into `Mcp-Param-{name}` headers and **SHALL** apply the `=?base64?…?=` encoding rules to `Mcp-Name` and `Mcp-Param-*` values. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Call fixture tools with non-ASCII, padded and sentinel-like values; confirm the encodings. |
-| Source | MCP:basic/transports/streamable-http §Value Encoding |
-| Rationale | Clients must support `x-mcp-header`. |
-
-#### FR-5.30 — Southbound SSE comments
-
-| Field | Value |
-|---|---|
-| ID | FR-5.30 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | The Tool Dispatcher (E-10) **SHALL** ignore SSE comment lines received from Streamable HTTP instances. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-24; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Inject comment lines into a fixture stream; confirm no error. |
-| Source | MCP:basic/transports/streamable-http §Receiving Messages |
-| Rationale | Keep-alive comments are valid. |
-
-#### FR-5.31 — Southbound list-change watch
-
-| Field | Value |
-|---|---|
-| ID | FR-5.31 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | For a shared or session-scoped modern instance whose server declares `tools.listChanged`, the Tool Dispatcher (E-10) **SHALL** hold a `subscriptions/listen` stream with `toolsListChanged: true` and **SHALL** trigger a tool-list comparison on each change notification. |
-| Allocation | Elements: E-10 Tool Dispatcher, E-14 Local Server Registry; Functions: F-24, F-37; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Make a fixture add a tool at runtime; confirm the comparison and the resulting suspension. |
-| Source | MCP:basic/patterns/subscriptions; SEC 3.8 |
-| Rationale | Detects runtime tool drift. |
 
 #### FR-5.32 — Southbound progress token
 
@@ -2334,6 +2222,19 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Statement | Import two revisions sharing an artifact, retire one, then the other; confirm single storage and removal only after both retire. |
 | Source | ARCH §13 D-03 |
 | Rationale | Launches use local verified artifacts without re-fetching. |
+
+#### FR-5.40 — Era agreement with the manifest
+
+| Field | Value |
+|---|---|
+| ID | FR-5.40 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | When the protocol version an instance negotiates in the FR-5.19 handshake differs from the era its verified manifest declares, the Tool Dispatcher (E-10) **SHALL** refuse to use the instance and the Local Server Registry (E-14) **SHALL** suspend the server revision. |
+| Allocation | Elements: E-10 Tool Dispatcher, E-14 Local Server Registry; Functions: F-23; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Launch a fixture whose manifest declares 2026-07-28 while the instance negotiates 2025-11-25; confirm the instance is not used and the revision is suspended. |
+| Source | SEC 5.1; MCP:basic/versioning |
+| Rationale | Release 1.0 speaks only the 2025-11-25 era southbound (Appendix N lists the deferred modern-era requirements); a revision packaged as modern must not be driven with legacy behavior. |
 
 ### FR-6 Secrets
 
@@ -2624,19 +2525,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Statement | Inspect the key inventory; confirm one key per purpose and no reuse. |
 | Source | ARCH §4 E-22 |
 | Rationale | Compromise of one purpose must not affect others. |
-
-#### FR-7.9 — Key protection at rest
-
-| Field | Value |
-|---|---|
-| ID | FR-7.9 |
-| Parent ID | FR-7 — Assurance services |
-| Statement | The Key & Trust Anchor Manager (E-22) **SHALL** seal private keys to the host TPM 2.0 when present, store them in the user's login Keychain on macOS, and otherwise store them in files owned by the key-holding service identity with mode 0600, encrypted under an operator passphrase when the configuration sets `keys.passphrase = true`. |
-| Allocation | Elements: E-22 Key & Trust Anchor Manager; Functions: F-60; External interfaces: X-07; Data stores: D-08 |
-| Verification Method | Test |
-| Verification Statement | Start on a TPM host, on macOS and on a non-TPM Linux host with and without the passphrase option; confirm the protection method in each case and that key files copied to another host are unusable where sealing or encryption applies. |
-| Source | ARCH §15 E-19/E-22; OWNER (platform profiles) |
-| Rationale | Keys must not sit in plaintext on disk where the platform offers protection. An unattended service cannot wait for a passphrase at every start, so the passphrase is an option rather than the default. |
 
 #### FR-7.10 — Trust anchor enrollment
 
@@ -3343,19 +3231,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Statement | Induce memory pressure; confirm the stages in order and the reported stage. |
 | Source | ARCH §4 E-28; ARCH §18.6 |
 | Rationale | Optional work yields first. |
-
-#### FR-9.13 — Storage tiering
-
-| Field | Value |
-|---|---|
-| ID | FR-9.13 |
-| Parent ID | FR-9 — Data Server |
-| Statement | The Data Lifecycle & Memory Manager (E-28) **SHALL** keep observation partitions younger than 30 days in the hot tier and **SHALL** move older partitions to compressed warm storage until their retention ends. |
-| Allocation | Elements: E-28 Data Lifecycle & Memory Manager; Functions: F-78; Data stores: D-09, D-13 |
-| Verification Method | Test |
-| Verification Statement | Age fixture partitions; confirm tier moves and query continuity. |
-| Source | ARCH §4 E-28 |
-| Rationale | Bounded fast storage with retained history. |
 
 #### FR-9.14 — Retention execution
 
@@ -5907,19 +5782,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 2.8 |
 | Rationale | Authenticated transport. |
 
-#### SR-2.8-2 — Mutual TLS
-
-| Field | Value |
-|---|---|
-| ID | SR-2.8-2 |
-| Parent ID | SEC-2.8 — Authenticated transport (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | When the mTLS Harness Profile is enabled, the Harness Interface Endpoint (E-01) **SHALL** require a client certificate chaining to the Gateway client CA on the TLS harness listener. |
-| Allocation | Elements: E-01 Harness Interface Endpoint; Functions: F-01; External interfaces: X-01 |
-| Verification Method | Test |
-| Verification Statement | Enable the profile; connect without a certificate and with a foreign certificate; confirm rejection during the handshake. |
-| Source | SEC 2.8; ARCH §19 OD-2 |
-| Rationale | Optional transport-level framework authentication for harnesses that can present a client certificate. |
-
 #### SR-2.8-3 — UDS permissions
 
 | Field | Value |
@@ -6062,19 +5924,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Statement | Fetch the metadata with metadata documents disabled, then enabled, and with the Remote Access Profile off and on; confirm the members appear only when enabled. |
 | Source | SEC 2.11; REVIEW (minor: refuse misadvertised client_id_metadata_document_supported) |
 | Rationale | Clients choose a registration path from the metadata; advertising a path that fails causes confusing sign-in errors. |
-
-#### SR-2.12-1 — Handle ownership
-
-| Field | Value |
-|---|---|
-| ID | SR-2.12-1 |
-| Parent ID | SEC-2.12 — State ownership (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | For a tool with a manifest handle contract, the Access Enforcement Point (E-08) **SHALL** record handles created by results with their owning session and principal, and **SHALL** deny calls presenting a handle owned by another session or principal or past its expiry. |
-| Allocation | Elements: E-08 Access Enforcement Point, E-11 Response Inspection Pipeline; Functions: F-20, F-27 |
-| Verification Method | Test |
-| Verification Statement | Create a handle in session A and use it from session B and after expiry; confirm denial. |
-| Source | SEC 2.12; MCP:server/tools §Stateful Tools |
-| Rationale | Handles are names, not capabilities. |
 
 #### SR-2.13-1 — Vault encryption
 
@@ -6444,19 +6293,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 4.2 |
 | Rationale | Store files are not readable by other identities. |
 
-#### SR-4.3-1 — Caller allowlist
-
-| Field | Value |
-|---|---|
-| ID | SR-4.3-1 |
-| Parent ID | SEC-4.3 — CE access boundary (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Data Access Service (E-26) **SHALL** authenticate each calling element by Unix-socket peer credentials and **SHALL** permit only the operations allowlisted for that element. |
-| Allocation | Elements: E-26 Data Access Service; Functions: F-72; Internal interfaces: I-07, I-30, I-33, I-34, I-35, I-06 |
-| Verification Method | Test |
-| Verification Statement | Invoke a policy-write operation from the Observation Collector identity; confirm denial. |
-| Source | SEC 4.3 |
-| Rationale | Application-level separation without Enterprise database roles. |
-
 #### SR-4.9-1 — Single MCP endpoint per locked-down client
 
 | Field | Value |
@@ -6615,19 +6451,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 5.1 |
 | Rationale | Profiles must not leak behavior. |
 
-#### SR-5.1-2 — Southbound era by manifest
-
-| Field | Value |
-|---|---|
-| ID | SR-5.1-2 |
-| Parent ID | SEC-5.1 — Explicit protocol profiles (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Tool Dispatcher (E-10) **SHALL** use legacy 2025-11-25 behavior toward an instance only when the manifest declares that era. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23 |
-| Verification Method | Test |
-| Verification Statement | Probe a modern server whose manifest declares legacy; confirm suspension rather than legacy use. |
-| Source | SEC 5.1; FR-5.17 |
-| Rationale | Curated protocol era. |
-
 #### SR-5.2-1 — Header/body agreement
 
 | Field | Value |
@@ -6666,19 +6489,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Statement | Trigger each error class; confirm no legacy processing. |
 | Source | SEC 5.3 |
 | Rationale | Errors cannot open weaker paths. |
-
-#### SR-5.3-2 — No southbound downgrade
-
-| Field | Value |
-|---|---|
-| ID | SR-5.3-2 |
-| Parent ID | SEC-5.3 — No unsafe downgrade (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Tool Dispatcher (E-10) **SHALL** treat a recognized modern error from an era probe as modern and **SHALL** never fall back to legacy because of it. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23 |
-| Verification Method | Test |
-| Verification Statement | Return `-32022` to a probe; confirm modern handling. |
-| Source | SEC 5.3; MCP:basic/transports/stdio §Backward Compatibility |
-| Rationale | Specification fallback rule. |
 
 #### SR-5.4-1 — Authorized discovery
 
@@ -7763,11 +7573,11 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 2.5 | Admin identity | MUST | Realized by SR | SR-2.5-1 |
 | 2.6 | Protected admin session | MUST | Realized by SR | SR-2.6-1 |
 | 2.7 | Password verification | MUST | Realized by SR | SR-2.7-1 |
-| 2.8 | Authenticated transport | MUST | Realized by SR | SR-2.8-1, SR-2.8-2, SR-2.8-3, SR-2.8-4 |
+| 2.8 | Authenticated transport | MUST | Realized by SR | SR-2.8-1, SR-2.8-3, SR-2.8-4 |
 | 2.9 | Origin and Host | MUST | Realized by SR | SR-2.9-1, SR-2.9-2, SR-2.9-3 |
 | 2.10 | Credential separation | MUST | Realized by SR | SR-2.10-1 |
 | 2.11 | OAuth boundary | MUST | Realized by SR | SR-2.11-1, SR-2.11-2, SR-2.11-3, SR-2.11-4, SR-2.11-5 |
-| 2.12 | State ownership | MUST | Realized by SR | SR-2.12-1 |
+| 2.12 | State ownership | MUST | Deferred | SR-2.12-1 (Appendix N) |
 | 2.13 | Encrypted secrets | MUST | Realized by SR | SR-2.13-1, SR-2.13-2, SR-2.13-3 |
 | 2.14 | Minimal backend environment | MUST | Realized by SR | SR-2.14-1 |
 | 3 | Source-inspectable server admission | MUST | Realized by SR | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5 |
@@ -7788,7 +7598,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 4 | Contained local execution | MUST | Realized by SR | SR-4-1 |
 | 4.1 | Separate OS identities | MUST | Realized by SR | SR-4.1-1, SR-4.1-2 |
 | 4.2 | Private graph access | MUST | Realized by SR | SR-4.2-1, SR-4.2-2 |
-| 4.3 | CE access boundary | MUST | Realized by SR | SR-4.3-1 |
+| 4.3 | CE access boundary | MUST | Deferred | SR-4.3-1 (Appendix N) |
 | 4.4 | Agent network allowlist | MUST | Disposition | Agent-sandbox network policy belongs to the harness deployment outside the SoI. The Security Limitations document (FR-18.2) states that an agent's native network and shell tools bypass the Gateway; the lockdown profiles (FR-15.1) cover MCP configuration only. |
 | 4.5 | Backend egress | MUST | Realized by SR | SR-4.5-1, SR-4.5-2 |
 | 4.6 | Filesystem authority | MUST | Realized by SR | SR-4.6-1 |
@@ -7801,9 +7611,9 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 4.13 | Additional clients | MUST | Realized by SR | SR-4.13-1 |
 | 4.14 | Overlay least privilege | MUST | Realized by SR | SR-4.14-1, SR-4.14-2 |
 | 5 | Protocol and content boundary | MUST | Decomposed in SEC | SEC 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11, 5.12, 5.13, 5.14, 5.15, 5.16, 5.17, 5.18, 5.19, 5.20 |
-| 5.1 | Explicit protocol profiles | MUST | Realized by SR | SR-5.1-1, SR-5.1-2 |
+| 5.1 | Explicit protocol profiles | MUST | Realized by SR | SR-5.1-1 |
 | 5.2 | Header/body agreement | MUST | Realized by SR | SR-5.2-1, SR-5.2-2 |
-| 5.3 | No unsafe downgrade | MUST | Realized by SR | SR-5.3-1, SR-5.3-2 |
+| 5.3 | No unsafe downgrade | MUST | Realized by SR | SR-5.3-1 |
 | 5.4 | Authorized discovery | MUST | Realized by SR | SR-5.4-1 |
 | 5.5 | Independent invocation check | MUST | Realized by SR | SR-5.5-1 |
 | 5.6 | Unqualified capabilities | MUST | Realized by SR | SR-5.6-1, SR-5.6-2 |
@@ -7891,20 +7701,20 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | Element | Name | Functional (FR) | Security (SR) |
 |---|---|---|---|
-| E-01 | Harness Interface Endpoint | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-1.48, FR-9.17, FR-11, FR-11.5, FR-12, FR-12.1, FR-12.2, FR-12.6, FR-12.8, FR-12.10, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, FR-16.8, FR-16.11 | SR-2.8-1, SR-2.8-2, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-1, SR-4.14-2, SR-7.11-1 |
-| E-02 | Protocol Mediator | FR-1, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.28, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.42, FR-1.43, FR-1.44, FR-1.45, FR-1.46, FR-1.47, FR-1.48, FR-1.51, FR-3.14, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.1, FR-4.2, FR-5.24, FR-5.25, FR-11.5, FR-12.9, FR-18.7, FR-18.9 | SR-2-1, SR-5.1-1, SR-5.2-1, SR-5.2-2, SR-5.3-1, SR-5.6-1, SR-5.11-1 |
+| E-01 | Harness Interface Endpoint | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-1.48, FR-9.17, FR-11, FR-11.5, FR-12, FR-12.1, FR-12.2, FR-12.6, FR-12.8, FR-12.10, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, FR-16.8, FR-16.11 | SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-1, SR-4.14-2, SR-7.11-1 |
+| E-02 | Protocol Mediator | FR-1, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.28, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.42, FR-1.43, FR-1.44, FR-1.45, FR-1.46, FR-1.47, FR-1.48, FR-1.51, FR-3.14, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.1, FR-4.2, FR-5.24, FR-11.5, FR-12.9, FR-18.7, FR-18.9 | SR-2-1, SR-5.1-1, SR-5.2-1, SR-5.2-2, SR-5.3-1, SR-5.6-1, SR-5.11-1 |
 | E-03 | Identity & Authentication Service | FR-2, FR-2.1, FR-2.5, FR-2.6, FR-2.15, FR-2.17, FR-2.18, FR-2.23, FR-16, FR-16.3, FR-16.5, FR-16.6 | SR-2.1-1, SR-2.1-2, SR-2.1-3, SR-2.11-1, SR-2.11-2, SR-2.11-3, SR-2.11-5, SR-4.14-2 |
 | E-04 | Session Manager | FR-1.48, FR-2, FR-2.2, FR-2.3, FR-2.4, FR-2.6, FR-2.7, FR-2.8, FR-2.9, FR-2.10, FR-2.11, FR-2.12, FR-2.13, FR-2.16, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-16.12 | SR-2.1-2, SR-2.3-1, SR-2.11-4, SR-5.13-2 |
 | E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.3, FR-3.4, FR-3.5, FR-3.6, FR-3.7, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-9.17, FR-10.37, FR-18.5 | SR-1-1, SR-1-3, SR-1.1-1, SR-1.1-2, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-6.9-1, SR-7.3-1, SR-7.9-1 |
 | E-06 | Policy Decision Service | FR-3, FR-3.10, FR-3.11, FR-3.12, FR-3.13, FR-11, FR-11.2 | SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.6-1, SR-1.7-1, SR-1.7-2, SR-1.10-1, SR-1.11-1, SR-1.12-1, SR-1.12-2, SR-1.12-3, SR-1.15-1, SR-1.18-1, SR-1.19-1, SR-1.20-1, SR-3.10-1, SR-5.12-1, SR-5.13-2 |
 | E-07 | Approval Service | FR-3, FR-3.14, FR-3.15, FR-3.16, FR-3.17, FR-3.18, FR-3.19, FR-3.20, FR-3.21, FR-3.22, FR-3.23, FR-3.24, FR-3.25 | SR-1.18-2, SR-1.18-3 |
-| E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-1.50, FR-1.52, FR-4, FR-4.1, FR-4.3, FR-11.5 | SR-1.2-1, SR-2.12-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
+| E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-1.50, FR-1.52, FR-4, FR-4.1, FR-4.3, FR-11.5 | SR-1.2-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
 | E-09 | Request Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
-| E-10 | Tool Dispatcher | FR-1.32, FR-1.39, FR-1.40, FR-1.41, FR-1.43, FR-4, FR-4.3, FR-4.8, FR-4.9, FR-4.10, FR-4.13, FR-5, FR-5.13, FR-5.14, FR-5.16, FR-5.17, FR-5.18, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.25, FR-5.26, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-5.32, FR-11.5, FR-12.9 | SR-2.10-1, SR-5.1-2, SR-5.3-2, SR-5.6-2, SR-5.7-3, SR-7.2-1, SR-7.6-2, SR-7.12-1 |
-| E-11 | Response Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.12, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-2-1, SR-2.12-1, SR-5.7-3, SR-5.9-1, SR-5.10-1, SR-5.13-1, SR-5.14-1, SR-5.18-1, SR-5.20-1, SR-5.20-2 |
+| E-10 | Tool Dispatcher | FR-1.32, FR-1.39, FR-1.40, FR-1.41, FR-1.43, FR-4, FR-4.3, FR-4.8, FR-4.9, FR-4.10, FR-4.13, FR-5, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.32, FR-5.40, FR-11.5, FR-12.9 | SR-2.10-1, SR-5.6-2, SR-5.7-3, SR-7.2-1, SR-7.6-2, SR-7.12-1 |
+| E-11 | Response Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.12, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-2-1, SR-5.7-3, SR-5.9-1, SR-5.10-1, SR-5.13-1, SR-5.14-1, SR-5.18-1, SR-5.20-1, SR-5.20-2 |
 | E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8 | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-5.16-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1 |
 | E-13 | Library Trust Verifier | FR-5, FR-5.1, FR-5.2, FR-5.3, FR-5.4, FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.4, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.11, FR-14.12, FR-18.6 | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3.1-1, SR-3.2-1, SR-3.5-1, SR-5.9-2 |
-| E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.17, FR-5.21, FR-5.22, FR-5.31, FR-5.39, FR-14, FR-14.9, FR-19.1, FR-19.5 | SR-1-1, SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
+| E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.21, FR-5.22, FR-5.39, FR-5.40, FR-14, FR-14.9, FR-19.1, FR-19.5 | SR-1-1, SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
 | E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.10, FR-5.11, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1 | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1 |
 | E-16 | Execution Sandbox | FR-5, FR-12.3, FR-13.5, FR-19.1 | SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2 |
 | E-17 | Runtime Monitor | FR-5, FR-5.33, FR-5.34, FR-5.35 | — |
@@ -7912,13 +7722,13 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12 | SR-2.13-1, SR-2.13-3, SR-4.1-1 |
 | E-20 | Secret Broker | FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11 | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
 | E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.6, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8 | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.6-1, SR-6.7-1, SR-6.8-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1 |
-| E-22 | Key & Trust Anchor Manager | FR-2.14, FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.9, FR-7.10, FR-12.5, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.8-1, SR-6.12-1 |
+| E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-12.5, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.8-1, SR-6.12-1 |
 | E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3 | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
 | E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.5, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4 | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
 | E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.5, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
-| E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.4, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-4.3-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
+| E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.4, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
 | E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11 | SR-4.2-2 |
-| E-28 | Data Lifecycle & Memory Manager | FR-9, FR-9.10, FR-9.11, FR-9.12, FR-9.13, FR-9.14, FR-9.15, FR-9.16, FR-11, FR-11.9, FR-12, FR-12.4, FR-12.6, FR-12.7, FR-13, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8 | SR-6.14-1, SR-7.7-1, SR-7.8-1, SR-7.10-1 |
+| E-28 | Data Lifecycle & Memory Manager | FR-9, FR-9.10, FR-9.11, FR-9.12, FR-9.14, FR-9.15, FR-9.16, FR-11, FR-11.9, FR-12, FR-12.4, FR-12.6, FR-12.7, FR-13, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8 | SR-6.14-1, SR-7.7-1, SR-7.8-1, SR-7.10-1 |
 | E-29 | Observation Collector | FR-1.44, FR-1.45, FR-10, FR-10.1, FR-10.2, FR-10.3, FR-10.4, FR-10.5, FR-10.6, FR-10.7, FR-10.8, FR-10.9, FR-10.10, FR-10.11, FR-10.37, FR-11, FR-11.4 | SR-6.6-1, SR-6.7-1 |
 | E-30 | Behavior Baseline Engine | FR-10, FR-10.12, FR-10.13, FR-10.14, FR-10.15, FR-10.16, FR-10.17, FR-10.18, FR-10.19, FR-10.20, FR-10.21, FR-11.7 | SR-7-1 |
 | E-31 | Anomaly Scorer | FR-4.15, FR-10, FR-10.22, FR-10.23, FR-10.24, FR-10.25, FR-10.26, FR-10.27, FR-10.28, FR-10.29, FR-11, FR-11.3 | SR-1.12-2, SR-7-1 |
@@ -7931,7 +7741,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Name | Requirements |
 |---|---|---|
-| F-01 | Terminate harness transport | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-9.17, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, SR-2.8-1, SR-2.8-2, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-2, SR-7.11-1 |
+| F-01 | Terminate harness transport | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-9.17, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-2, SR-7.11-1 |
 | F-02 | Validate and normalize MCP messages | FR-1, FR-1.4, FR-1.5, FR-1.8, FR-1.10, FR-1.11, FR-1.16, FR-1.21, FR-1.22, FR-1.28, FR-1.33, FR-1.38, FR-1.44, FR-1.45, FR-1.47, FR-4.1, FR-4.2, FR-18.9, SR-5.2-1, SR-5.2-2, SR-5.6-1 |
 | F-03 | Negotiate protocol profile | FR-1, FR-1.9, FR-1.12, FR-1.17, FR-1.46, SR-5.1-1, SR-5.3-1, SR-5.6-1 |
 | F-04 | Authenticate framework instance | FR-2, FR-2.1, FR-2.15, FR-2.17, FR-2.18, FR-16.3, FR-16.6, SR-2.1-1, SR-2.1-3, SR-2.11-1, SR-2.11-3, SR-2.11-5, SR-4.14-2 |
@@ -7950,14 +7760,14 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-17 | Request approval | FR-3, FR-3.14, FR-3.18, FR-3.19, FR-3.20, FR-3.22, FR-3.23, FR-3.25, SR-1.18-3 |
 | F-18 | Record and consume approval | FR-3, FR-3.15, FR-3.16, FR-3.17, FR-3.20, FR-3.21, FR-3.24, FR-3.25, FR-8.21, SR-1.18-2 |
 | F-19 | Present session-scoped catalog | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.35, FR-1.50, FR-1.52, SR-3.12-1, SR-5.4-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
-| F-20 | Enforce access decision | FR-1.29, FR-1.30, FR-4.3, SR-1.2-1, SR-2.12-1, SR-5.5-1 |
+| F-20 | Enforce access decision | FR-1.29, FR-1.30, FR-4.3, SR-1.2-1, SR-5.5-1 |
 | F-21 | Inspect and transform request | FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
-| F-22 | Serialize released response | FR-1, FR-1.6, FR-1.7, FR-1.13, FR-1.14, FR-1.15, FR-1.18, FR-1.19, FR-1.20, FR-1.31, FR-1.32, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.39, FR-1.42, FR-1.43, FR-1.51, FR-5.24, FR-5.25, FR-18.7, SR-5.11-1 |
-| F-23 | Dispatch tool call | FR-4.8, FR-4.13, FR-5.13, FR-5.16, FR-5.17, FR-5.18, FR-5.19, FR-5.28, FR-5.29, FR-5.32, SR-2.10-1, SR-5.1-2, SR-5.3-2, SR-5.6-2 |
-| F-24 | Correlate and collect response | FR-1.32, FR-1.39, FR-1.40, FR-4.10, FR-5.13, FR-5.14, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.25, FR-5.28, FR-5.30, FR-5.31, SR-7.2-1 |
+| F-22 | Serialize released response | FR-1, FR-1.6, FR-1.7, FR-1.13, FR-1.14, FR-1.15, FR-1.18, FR-1.19, FR-1.20, FR-1.31, FR-1.32, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.39, FR-1.42, FR-1.43, FR-1.51, FR-5.24, FR-18.7, SR-5.11-1 |
+| F-23 | Dispatch tool call | FR-4.8, FR-4.13, FR-5.13, FR-5.19, FR-5.32, FR-5.40, SR-2.10-1, SR-5.6-2 |
+| F-24 | Correlate and collect response | FR-1.32, FR-1.39, FR-1.40, FR-4.10, FR-5.13, FR-5.14, FR-5.20, FR-5.21, FR-5.23, FR-5.24, SR-7.2-1 |
 | F-25 | Cancel in-flight call | FR-1.41, FR-1.43, FR-4.9, FR-5.26, SR-7.2-1, SR-7.12-1 |
 | F-26 | Validate response conformance | SR-5.20-1, SR-5.20-2 |
-| F-27 | Inspect and transform response | FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-2.12-1, SR-5.9-1, SR-5.10-1, SR-5.14-1, SR-5.18-1 |
+| F-27 | Inspect and transform response | FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-5.9-1, SR-5.10-1, SR-5.14-1, SR-5.18-1 |
 | F-28 | Label provenance | FR-4.12, FR-4.17, FR-4.18, SR-5.13-1 |
 | F-29 | Authorize launch under barrier | FR-4.3, FR-4.13, SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-6.2-1, SR-6.11-1, SR-7.10-1 |
 | F-30 | Authorize release under barrier | FR-4.3, SR-1.16-1, SR-1.17-2, SR-5.11-1, SR-6.3-1 |
@@ -7967,7 +7777,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-34 | Validate server manifest | FR-1.52, FR-4.16, FR-5.2, FR-14.3, FR-14.4, FR-14.11, FR-19.5, SR-3.1-1, SR-3.2-1, SR-5.9-2 |
 | F-35 | Process revocation feed | FR-5.3, FR-14.12, SR-3-3, SR-3-4 |
 | F-36 | Maintain verified server inventory | FR-1.49, FR-5.5, FR-5.6, FR-5.7, FR-5.39, FR-14.9, SR-3.7-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
-| F-37 | Detect drift and expiry | FR-5.8, FR-5.17, FR-5.21, FR-5.22, FR-5.31, FR-19.1, SR-3.8-1 |
+| F-37 | Detect drift and expiry | FR-5.8, FR-5.21, FR-5.22, FR-19.1, SR-3.8-1 |
 | F-38 | Instantiate server instance | FR-5.9, FR-5.10, FR-5.37, FR-14.10, SR-2.14-1, SR-3-2, SR-3.6-1, SR-4.8-1 |
 | F-39 | Supervise lifecycle | FR-5.11, FR-5.12, FR-5.15 |
 | F-40 | Tear down and sanitize | FR-5.11, FR-5.14, FR-5.27, SR-3.8-1 |
@@ -7989,8 +7799,8 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-56 | Enforce retention and purge | SR-6.15-1 |
 | F-57 | Serve audit queries | FR-7.3, FR-8.22, FR-11.8, SR-6.16-1 |
 | F-58 | Manage trust anchors | FR-7.10, FR-14.8 |
-| F-59 | Issue and revoke framework credentials | FR-2.14, FR-2.18, FR-7.7, FR-16, FR-16.5, SR-2.2-1, SR-2.3-1, SR-2.11-2 |
-| F-60 | Protect Gateway keys | FR-7.7, FR-7.8, FR-7.9, FR-17, FR-17.7, SR-2.8-4, SR-2.13-1 |
+| F-59 | Issue and revoke framework credentials | FR-2.18, FR-7.7, FR-16, FR-16.5, SR-2.2-1, SR-2.3-1, SR-2.11-2 |
+| F-60 | Protect Gateway keys | FR-7.7, FR-7.8, FR-17, FR-17.7, SR-2.8-4, SR-2.13-1 |
 | F-61 | Monitor enforcement health | FR-7.11, FR-7.12, FR-13.9, FR-13.10, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, SR-4-1, SR-6.11-1 |
 | F-62 | Drive fail-closed state | FR-7.12, FR-7.13, FR-9.17, FR-13.9, FR-13.13, SR-7.3-1 |
 | F-63 | Authenticate administrative user | FR-2.19, FR-2.23, FR-8, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
@@ -8002,13 +7812,13 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-69 | Present performance and resource views | FR-8, FR-8.15, FR-8.16 |
 | F-70 | Persist and index graph data | FR-9.1, FR-9.18 |
 | F-71 | Execute bounded graph queries and transactions | FR-9.18 |
-| F-72 | Authorize and execute typed data operations | FR-9.2, FR-9.3, SR-1.13-1, SR-1.13-2, SR-4.3-1, SR-6-3, SR-7.1-1 |
+| F-72 | Authorize and execute typed data operations | FR-9.2, FR-9.3, SR-1.13-1, SR-1.13-2, SR-6-3, SR-7.1-1 |
 | F-73 | Batch and route writes | FR-9.4, FR-9.5, FR-11.6 |
 | F-74 | Apply backpressure | FR-9.6 |
 | F-75 | Store observation and meta-metric records | FR-9.7, FR-9.8, FR-11.6 |
 | F-76 | Serve aggregate queries | FR-9.9, FR-11.8 |
 | F-77 | Allocate and enforce memory budgets | FR-9.10, FR-9.11, FR-9.12, FR-11.9 |
-| F-78 | Manage storage tiers, retention and quotas | FR-9.13, FR-9.14, FR-9.15, SR-6.14-1, SR-7.10-1 |
+| F-78 | Manage storage tiers, retention and quotas | FR-9.14, FR-9.15, SR-6.14-1, SR-7.10-1 |
 | F-79 | Schedule and verify backups | FR-9.16, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8, SR-7.7-1, SR-7.8-1 |
 | F-80 | Collect raw observables | FR-1.44, FR-1.45, FR-10.1, FR-10.3, FR-11.4 |
 | F-81 | Extract features | FR-10.3, FR-10.5 |
@@ -8035,13 +7845,13 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Requirements |
 |---|---|
-| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-1.51, FR-1.52, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-2.23, FR-3.14, FR-3.16, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.12, FR-5.25, FR-12.9, FR-12.12, FR-12.13, FR-15, FR-15.8, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.8-2, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-2.11-3, SR-2.11-4, SR-2.11-5, SR-5.2-1, SR-5.2-2 |
+| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-1.51, FR-1.52, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-2.23, FR-3.14, FR-3.16, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.12, FR-12.9, FR-12.12, FR-12.13, FR-15, FR-15.8, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-2.11-3, SR-2.11-4, SR-2.11-5, SR-5.2-1, SR-5.2-2 |
 | X-02 | FR-14, FR-14.3, FR-14.5, FR-14.6, FR-14.9, FR-14.12 |
 | X-03 | FR-5.1, FR-5.2, FR-5.3, FR-14, FR-14.4, FR-14.11 |
 | X-04 | FR-2.19, FR-2.23, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.22, FR-8.23, FR-8.24, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-16.5, SR-2.5-1, SR-2.8-1, SR-2.9-2 |
 | X-05 | FR-3.17, FR-3.18, FR-3.23, FR-3.24, FR-3.25, FR-8.21 |
 | X-06 | FR-5.36, FR-5.38, SR-4.5-2, SR-5.15-1 |
-| X-07 | FR-7.9, FR-12.3, FR-12.4, FR-12.5, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1 |
+| X-07 | FR-12.3, FR-12.4, FR-12.5, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1 |
 | X-08 | FR-6.2 |
 | X-09 | FR-7.14 |
 | X-10 | FR-10.2 |
@@ -8062,14 +7872,14 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-03 | FR-1.11, FR-1.23, FR-4.1 |
 | I-04 | FR-2.6, SR-2.1-2 |
 | I-05 | FR-2.6, FR-2.7, FR-2.12, FR-2.13, SR-1-2, SR-1.5-1 |
-| I-06 | FR-2.14, FR-2.18, FR-3.1, FR-3.3, FR-3.5, FR-3.6, FR-3.7, FR-3.8, FR-3.9, FR-4.14, FR-5.6, FR-6.2, FR-6.12, FR-7.3, FR-7.6, FR-7.10, FR-7.12, FR-8.1, FR-9.3, FR-10.19, FR-14.8, SR-1.19-1, SR-4.3-1 |
-| I-07 | FR-1.27, FR-2.1, FR-3.1, FR-3.2, FR-3.10, FR-9.3, SR-1-1, SR-4.3-1 |
+| I-06 | FR-2.18, FR-3.1, FR-3.3, FR-3.5, FR-3.6, FR-3.7, FR-3.8, FR-3.9, FR-4.14, FR-5.6, FR-6.2, FR-6.12, FR-7.3, FR-7.6, FR-7.10, FR-7.12, FR-8.1, FR-9.3, FR-10.19, FR-14.8, SR-1.19-1 |
+| I-07 | FR-1.27, FR-2.1, FR-3.1, FR-3.2, FR-3.10, FR-9.3, SR-1-1 |
 | I-08 | FR-1.29, FR-1.50, FR-3.11, FR-3.12, FR-3.13, SR-1-2 |
 | I-09 | SR-5.12-1 |
 | I-10 | FR-3.14, FR-3.15, FR-3.20 |
 | I-11 | FR-3.20, FR-4.13 |
 | I-12 | FR-5.10 |
-| I-13 | FR-1.39, FR-4.9, FR-4.10, FR-5.13, FR-5.14, FR-5.16, FR-5.18, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.25, FR-5.26, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-5.32, FR-12.9, SR-2.10-1 |
+| I-13 | FR-1.39, FR-4.9, FR-4.10, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.32, FR-5.40, FR-12.9, SR-2.10-1 |
 | I-14 | FR-6.10 |
 | I-15 | FR-4.11 |
 | I-16 | FR-1.31 |
@@ -8086,12 +7896,12 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-27 | SR-2.13-3 |
 | I-28 | FR-6.7, FR-6.8 |
 | I-29 | FR-1.44, FR-1.45, FR-4.2, FR-4.7, FR-5.15, FR-10.1, FR-10.2, FR-10.29 |
-| I-30 | FR-7.3, FR-9.3, SR-4.3-1, SR-6.10-1 |
+| I-30 | FR-7.3, FR-9.3, SR-6.10-1 |
 | I-31 | FR-4.15, FR-10.7, FR-10.28, SR-1.12-2 |
 | I-32 | FR-7.11, FR-9.11, FR-9.12, FR-9.15 |
-| I-33 | FR-9.3, FR-9.4, FR-9.6, SR-4.3-1 |
-| I-34 | FR-9.3, FR-10.12, SR-4.3-1 |
-| I-35 | FR-9.3, FR-10.32, FR-10.33, SR-4.3-1 |
+| I-33 | FR-9.3, FR-9.4, FR-9.6 |
+| I-34 | FR-9.3, FR-10.12 |
+| I-35 | FR-9.3, FR-10.32, FR-10.33 |
 | I-36 | FR-9.2, SR-1.13-1, SR-4.2-1 |
 | I-37 | FR-9.5, FR-9.9, SR-1.13-1, SR-4.2-2 |
 | I-38 | FR-9.6, FR-9.10, FR-9.11, FR-9.12 |
@@ -8108,12 +7918,12 @@ Use this matrix to code element by element. A requirement allocated to several e
 | D-05 | FR-9.1, SR-6.10-1, SR-6.13-1 |
 | D-06 | FR-7.4, FR-7.5, FR-7.14, FR-9.16, FR-13.11, FR-13.12, FR-17.8, SR-1.2-2, SR-6.2-1, SR-6.3-1, SR-6.12-1, SR-6.13-1 |
 | D-07 | FR-2.8, FR-2.13, FR-2.16, FR-2.20, FR-9.1 |
-| D-08 | FR-7.7, FR-7.8, FR-7.9, FR-9.16, FR-17.7, SR-1.1-2, SR-2.8-4 |
-| D-09 | FR-9.7, FR-9.8, FR-9.13, FR-9.14 |
+| D-08 | FR-7.7, FR-7.8, FR-9.16, FR-17.7, SR-1.1-2, SR-2.8-4 |
+| D-09 | FR-9.7, FR-9.8, FR-9.14 |
 | D-10 | FR-9.1, FR-10.13, FR-10.15, FR-10.16, FR-10.18 |
 | D-11 | FR-8.6, FR-8.7, FR-8.8, FR-9.1, FR-10.5, FR-10.37 |
 | D-12 | FR-9.14, FR-10.35, FR-10.36 |
-| D-13 | FR-9.7, FR-9.13, FR-10.9, FR-10.11 |
+| D-13 | FR-9.7, FR-10.9, FR-10.11 |
 | D-14 | FR-17.1, FR-17.2, FR-17.3 |
 | D-15 | FR-9.16, FR-13.11, FR-17.6, SR-7.7-1 |
 
@@ -8207,7 +8017,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-2.11 | FR-2 | Test | E-04 | Session termination effects |
 | FR-2.12 | FR-2 | Test | E-04 | Revision change handling |
 | FR-2.13 | FR-2 | Test | E-04 | Baseline context key |
-| FR-2.14 | FR-2 | Test | E-22 | Credential issuance |
 | FR-2.15 | FR-2 | Test | E-03 | UDS peer mapping |
 | FR-2.16 | FR-2 | Test | E-04 | Restart invalidation |
 | FR-2.17 | FR-2 | Test | E-03 | Authorization metadata |
@@ -8278,22 +8087,14 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-5.13 | FR-5 | Test | E-10 | stdio framing |
 | FR-5.14 | FR-5 | Test | E-10, E-15 | Invalid stdout |
 | FR-5.15 | FR-5 | Test | E-15 | stderr capture |
-| FR-5.16 | FR-5 | Test | E-10 | Era probe |
-| FR-5.17 | FR-5 | Test | E-10, E-14 | Era consistency with manifest |
-| FR-5.18 | FR-5 | Test | E-10 | Modern southbound requests |
 | FR-5.19 | FR-5 | Test | E-10 | Legacy southbound handshake |
 | FR-5.20 | FR-5 | Test | E-10 | Legacy server-initiated requests |
 | FR-5.21 | FR-5 | Test | E-10, E-14 | Startup tool list |
 | FR-5.22 | FR-5 | Test | E-14 | Backend tool definition validity |
 | FR-5.23 | FR-5 | Test | E-10 | Result type handling |
 | FR-5.24 | FR-5 | Test | E-10, E-02 | InputRequiredResult without MRTR profile |
-| FR-5.25 | FR-5 | Test | E-10, E-02 | MRTR Relay Profile |
 | FR-5.26 | FR-5 | Test | E-10 | Southbound cancellation |
 | FR-5.27 | FR-5 | Test | E-15 | Instance shutdown |
-| FR-5.28 | FR-5 | Test | E-10 | Southbound Streamable HTTP client |
-| FR-5.29 | FR-5 | Test | E-10 | Southbound header encoding |
-| FR-5.30 | FR-5 | Test | E-10 | Southbound SSE comments |
-| FR-5.31 | FR-5 | Test | E-10, E-14 | Southbound list-change watch |
 | FR-5.32 | FR-5 | Test | E-10 | Southbound progress token |
 | FR-5.33 | FR-5 | Test | E-17 | Runtime observables |
 | FR-5.34 | FR-5 | Test | E-17 | Declared-behavior rules |
@@ -8302,6 +8103,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-5.37 | FR-5 | Inspection | E-15, E-18 | Egress configuration injection |
 | FR-5.38 | FR-5 | Test | E-18 | Egress limits |
 | FR-5.39 | FR-5 | Test | E-14 | Artifact cache |
+| FR-5.40 | FR-5 | Test | E-10, E-14 | Era agreement with the manifest |
 | FR-6 | — | Analysis | E-19, E-20 | Secret management |
 | FR-6.1 | FR-6 | Inspection | E-19 | Secret record |
 | FR-6.2 | FR-6 | Test | E-19 | Write-only values |
@@ -8324,7 +8126,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-7.6 | FR-7 | Test | E-21 | Alerts |
 | FR-7.7 | FR-7 | Inspection | E-22 | Local certificate authorities |
 | FR-7.8 | FR-7 | Inspection | E-22 | Key purposes |
-| FR-7.9 | FR-7 | Test | E-22 | Key protection at rest |
 | FR-7.10 | FR-7 | Demonstration | E-22 | Trust anchor enrollment |
 | FR-7.11 | FR-7 | Test | E-23 | Health checks |
 | FR-7.12 | FR-7 | Test | E-23 | Health states |
@@ -8379,7 +8180,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-9.10 | FR-9 | Test | E-28 | Memory budget application |
 | FR-9.11 | FR-9 | Test | E-28 | Memory accounting |
 | FR-9.12 | FR-9 | Test | E-28 | Degradation order |
-| FR-9.13 | FR-9 | Test | E-28 | Storage tiering |
 | FR-9.14 | FR-9 | Test | E-28 | Retention execution |
 | FR-9.15 | FR-9 | Test | E-28 | Quota thresholds |
 | FR-9.16 | FR-9 | Test | E-28 | Backup scheduling |
@@ -8574,7 +8374,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-2.6-1 | SEC-2.6 | Test | E-24 | Admin session profile |
 | SR-2.7-1 | SEC-2.7 | Inspection | E-24 | Password hashing |
 | SR-2.8-1 | SEC-2.8 | Test | E-01, E-24 | TLS profile |
-| SR-2.8-2 | SEC-2.8 | Test | E-01 | Mutual TLS |
 | SR-2.8-3 | SEC-2.8 | Inspection | E-01 | UDS permissions |
 | SR-2.9-1 | SEC-2.9 | Test | E-01 | Origin validation |
 | SR-2.9-2 | SEC-2.9 | Test | E-01, E-24 | Host validation |
@@ -8586,7 +8385,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-2.11-3 | SEC-2.11 | Test | E-03 | No open metadata fetch |
 | SR-2.11-4 | SEC-2.11 | Test | E-04 | Refresh token reuse |
 | SR-2.11-5 | SEC-2.11 | Test | E-03 | Truthful authorization metadata |
-| SR-2.12-1 | SEC-2.12 | Test | E-08, E-11 | Handle ownership |
 | SR-2.13-1 | SEC-2.13 | Inspection | E-19, E-22 | Vault encryption |
 | SR-2.13-2 | SEC-2.13 | Inspection | E-20 | Plaintext lifetime |
 | SR-2.13-3 | SEC-2.13 | Test | E-19, E-20 | Vault isolation |
@@ -8615,7 +8413,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-4.1-2 | SEC-4.1 | Inspection | E-16 | Instance identities |
 | SR-4.2-1 | SEC-4.2 | Test | E-25, E-26 | Private database listeners |
 | SR-4.2-2 | SEC-4.2 | Inspection | E-27 | Observation file protection |
-| SR-4.3-1 | SEC-4.3 | Test | E-26 | Caller allowlist |
 | SR-4.9-1 | SEC-4.9 | Test | E-33 | Single MCP endpoint per locked-down client |
 | SR-4.11-1 | SEC-4.11 | Test | E-33 | Protected client configuration |
 | SR-4.13-1 | SEC-4.13 | Inspection | E-33 | Exclusive-gateway label |
@@ -8628,11 +8425,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-4.14-1 | SEC-4.14 | Test | E-01, E-24 | Remote Access host rules |
 | SR-4.14-2 | SEC-4.14 | Test | E-01, E-03 | Remote authentication |
 | SR-5.1-1 | SEC-5.1 | Inspection | E-02 | Profile separation |
-| SR-5.1-2 | SEC-5.1 | Test | E-10 | Southbound era by manifest |
 | SR-5.2-1 | SEC-5.2 | Test | E-02 | Header/body agreement |
 | SR-5.2-2 | SEC-5.2 | Test | E-02 | Required headers |
 | SR-5.3-1 | SEC-5.3 | Test | E-02 | No northbound downgrade |
-| SR-5.3-2 | SEC-5.3 | Test | E-10 | No southbound downgrade |
 | SR-5.4-1 | SEC-5.4 | Test | E-08 | Authorized discovery |
 | SR-5.5-1 | SEC-5.5 | Test | E-08 | Independent call authorization |
 | SR-5.6-1 | SEC-5.6 | Test | E-02 | Unqualified features rejected |
@@ -8705,8 +8500,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 
 | Check | Result |
 |---|---|
-| Requirements | 558 total: 385 FR (19 roots), 173 SR |
-| Verification methods | Analysis 19, Demonstration 29, Inspection 78, Test 432 |
+| Requirements | 543 total: 375 FR (19 roots), 168 SR |
+| Deferred from release 1.0 (Appendix N) | 16: FR-2.14, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.9, FR-9.13, SR-2.8-2, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2 |
+| Verification methods | Analysis 19, Demonstration 29, Inspection 78, Test 417 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
@@ -8865,3 +8661,232 @@ The acceptance scenarios of `MCP_Gateway_Security_SRS.md` Appendix B are mapped 
 | AT-19 Backup, restore and rollback | Dispatch stopped during backup; restore verifies signatures and re-applies revocations; upgrade rollback | SR-7.7-1, SR-7.8-1, SR-7.9-1, FR-13.8 | Automated |
 | AT-20 Limits and load | Pre-routing bounds, latency targets, disk exhaustion, restart | SR-7.10-1, SR-7.11-1, FR-11.2, FR-11.5 | Automated (load job) |
 | AT-21 Version baseline | Requirement report complete; SRS regenerates without change; release tag resolves the matching documents | FR-12.10, FR-19.3 | Automated (CI) |
+
+## Appendix N — Requirements deferred from release 1.0
+
+These records keep their IDs and text so that a later release can restore them unchanged. They are not part of the requirement set of release 1.0 (Section 2.7): Appendices E to I and the requirement report leave them out, and no test or record needs to verify them. Each states why it is deferred and what release 1.0 does instead.
+
+#### FR-2.14 — Credential issuance (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-2.14 |
+| Parent ID | FR-2 — Identity and sessions |
+| Statement | When the mTLS Harness Profile is enabled, the Key & Trust Anchor Manager (E-22) **SHALL** issue framework-instance client certificates by signing a submitted certificate signing request with the Gateway's local client CA. |
+| Allocation | Elements: E-22 Key & Trust Anchor Manager; Functions: F-59; Internal interfaces: I-06 |
+| Verification Method | Test |
+| Verification Statement | Enable the profile; submit a CSR through G-11; confirm the issued certificate chains to the client CA and names the principal ID. |
+| Source | ARCH §4 E-22; ARCH §19 OD-2; Client-Compatibility-Brief §4.2 |
+| Rationale | Only Hermes can present a per-server client certificate. mTLS is a hardening option, not the baseline credential. |
+| Deferral | Release 1.0 ships without the mTLS Harness Profile. Harness requests are authenticated by bearer access tokens over TLS on a loopback listener, and per-instance credentials are OAuth clients managed in G-11. Client-certificate issuance and the client CA are deferred with the profile. |
+
+#### FR-5.16 — Era probe (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.16 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | When an instance starts, the Tool Dispatcher (E-10) **SHALL** send `server/discover` with protocol version 2026-07-28 and classify the server as modern on a `DiscoverResult` or recognized modern error, and as legacy on any other error or no response within 5 seconds. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Start modern and legacy fixture servers; confirm each classification. |
+| Source | MCP:basic/transports/stdio §Backward Compatibility |
+| Rationale | Curated servers may implement either era. |
+| Deferral | Release 1.0 speaks the 2025-11-25 era southbound only, through the `initialize` handshake of FR-5.19; the reference packages and the servers `smcpctl package build` probes are 2025-11-25 servers. The `server/discover` probe and modern southbound requests are deferred to the release that adds the modern southbound client. A revision whose manifest era differs from the era its instance negotiates is not used (FR-5.40). |
+
+#### FR-5.17 — Era consistency with manifest (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.17 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | When the probed era differs from the protocol era declared in the manifest, the Tool Dispatcher (E-10) **SHALL** refuse to use the instance and the Local Server Registry (E-14) **SHALL** suspend the server revision. |
+| Allocation | Elements: E-10 Tool Dispatcher, E-14 Local Server Registry; Functions: F-23, F-37 |
+| Verification Method | Test |
+| Verification Statement | Launch a legacy fixture whose manifest declares modern; confirm refusal and suspension. |
+| Source | SEC 3.8; ARCH §6.3 |
+| Rationale | The runtime must match the curated declaration. |
+| Deferral | Deferred with the era probe (FR-5.16). Release 1.0 compares the manifest era with the negotiated era instead (FR-5.40). |
+
+#### FR-5.18 — Modern southbound requests (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.18 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | The Tool Dispatcher (E-10) **SHALL** send each modern southbound request with `_meta.io.modelcontextprotocol/protocolVersion`, an empty `clientCapabilities` object in the baseline profile, Gateway `clientInfo`, and a request ID unique among its in-flight requests to that instance. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Capture southbound requests; confirm the metadata and ID uniqueness. |
+| Source | MCP:basic/index §Per-request protocol fields |
+| Rationale | Modern server requirement. |
+| Deferral | Deferred with the era probe (FR-5.16): release 1.0 sends no modern southbound requests. |
+
+#### FR-5.25 — MRTR Relay Profile (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.25 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | When the MRTR Relay Profile is enabled, the Tool Dispatcher (E-10) **SHALL** relay a backend `InputRequiredResult` northbound with the backend `requestState` wrapped in a Gateway `requestState` that is integrity-protected and bound to session, correlation ID, backend tool revision and the CP-39 expiry. |
+| Allocation | Elements: E-10 Tool Dispatcher, E-02 Protocol Mediator; Functions: F-24, F-22; External interfaces: X-01; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Enable the profile; complete an elicitation round trip; confirm that tampered, expired and cross-session states are rejected. |
+| Source | MCP:basic/patterns/mrtr §Server Requirements; SEC 5.6 |
+| Rationale | Lets elicitation be qualified later without trusting harness-carried state. |
+| Deferral | Release 1.0 ships without the MRTR Relay Profile. Relaying elicitation, sampling and roots needs a signed request-state protocol and a harness that answers it; none of the Appendix K clients needs it to use the reference packages. A backend InputRequiredResult ends the call with -31010 (FR-5.24) and server-initiated requests get -32601 (FR-5.20). |
+
+#### FR-5.28 — Southbound Streamable HTTP client (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.28 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | For an instance using Streamable HTTP, the Tool Dispatcher (E-10) **SHALL** send each request as a POST carrying `Accept: application/json, text/event-stream`, `MCP-Protocol-Version`, `Mcp-Method` and, where applicable, `Mcp-Name`, and **SHALL** accept both JSON and SSE responses. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23, F-24; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Run the southbound HTTP conformance fixtures; confirm the headers and both response types. |
+| Source | MCP:basic/transports/streamable-http §Sending Messages; §Standard Request Headers |
+| Rationale | Some curated servers use the HTTP binding inside their sandbox. |
+| Deferral | Release 1.0 runs every server instance over stdio, which is the only transport of the reference packages (FR-14.9) and of servers packaged with `smcpctl package build`. A southbound Streamable HTTP client needs its own conformance fixtures and egress handling; it is deferred to the release that admits HTTP instances. |
+
+#### FR-5.29 — Southbound header encoding (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.29 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | The Tool Dispatcher (E-10) **SHALL** mirror `x-mcp-header` parameters into `Mcp-Param-{name}` headers and **SHALL** apply the `=?base64?…?=` encoding rules to `Mcp-Name` and `Mcp-Param-*` values. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Call fixture tools with non-ASCII, padded and sentinel-like values; confirm the encodings. |
+| Source | MCP:basic/transports/streamable-http §Value Encoding |
+| Rationale | Clients must support `x-mcp-header`. |
+| Deferral | Deferred with the southbound Streamable HTTP client (FR-5.28): header mirroring exists only on that transport. |
+
+#### FR-5.30 — Southbound SSE comments (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.30 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | The Tool Dispatcher (E-10) **SHALL** ignore SSE comment lines received from Streamable HTTP instances. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-24; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Inject comment lines into a fixture stream; confirm no error. |
+| Source | MCP:basic/transports/streamable-http §Receiving Messages |
+| Rationale | Keep-alive comments are valid. |
+| Deferral | Deferred with the southbound Streamable HTTP client (FR-5.28): SSE exists only on that transport. |
+
+#### FR-5.31 — Southbound list-change watch (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.31 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | For a shared or session-scoped modern instance whose server declares `tools.listChanged`, the Tool Dispatcher (E-10) **SHALL** hold a `subscriptions/listen` stream with `toolsListChanged: true` and **SHALL** trigger a tool-list comparison on each change notification. |
+| Allocation | Elements: E-10 Tool Dispatcher, E-14 Local Server Registry; Functions: F-24, F-37; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Make a fixture add a tool at runtime; confirm the comparison and the resulting suspension. |
+| Source | MCP:basic/patterns/subscriptions; SEC 3.8 |
+| Rationale | Detects runtime tool drift. |
+| Deferral | Deferred with the southbound Streamable HTTP client and modern-era instances (FR-5.28, FR-5.16). Release 1.0 acts on `notifications/tools/list_changed` from stdio instances by re-reading the tool list and comparing it with the manifest (SR-3.8-1). |
+
+#### FR-7.9 — Key protection at rest (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-7.9 |
+| Parent ID | FR-7 — Assurance services |
+| Statement | The Key & Trust Anchor Manager (E-22) **SHALL** seal private keys to the host TPM 2.0 when present, store them in the user's login Keychain on macOS, and otherwise store them in files owned by the key-holding service identity with mode 0600, encrypted under an operator passphrase when the configuration sets `keys.passphrase = true`. |
+| Allocation | Elements: E-22 Key & Trust Anchor Manager; Functions: F-60; External interfaces: X-07; Data stores: D-08 |
+| Verification Method | Test |
+| Verification Statement | Start on a TPM host, on macOS and on a non-TPM Linux host with and without the passphrase option; confirm the protection method in each case and that key files copied to another host are unusable where sealing or encryption applies. |
+| Source | ARCH §15 E-19/E-22; OWNER (platform profiles) |
+| Rationale | Keys must not sit in plaintext on disk where the platform offers protection. An unattended service cannot wait for a passphrase at every start, so the passphrase is an option rather than the default. |
+| Deferral | Release 1.0 stores private keys in files with mode 0600 under the state directory, owned by the key-holding identity in the Enforced profile (SR-6.12-1); the vault master key can be held in the macOS Keychain. TPM sealing, Keychain storage of every private key and passphrase encryption are deferred: they need reference hardware and an unattended-start design that release 1.0 does not have. |
+
+#### FR-9.13 — Storage tiering (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-9.13 |
+| Parent ID | FR-9 — Data Server |
+| Statement | The Data Lifecycle & Memory Manager (E-28) **SHALL** keep observation partitions younger than 30 days in the hot tier and **SHALL** move older partitions to compressed warm storage until their retention ends. |
+| Allocation | Elements: E-28 Data Lifecycle & Memory Manager; Functions: F-78; Data stores: D-09, D-13 |
+| Verification Method | Test |
+| Verification Statement | Age fixture partitions; confirm tier moves and query continuity. |
+| Source | ARCH §4 E-28 |
+| Rationale | Bounded fast storage with retained history. |
+| Deferral | Release 1.0 writes observation partitions as compressed columnar files (Parquet through DuckDB) or JSON Lines from the start and deletes them at the end of their retention; there is one tier. A separate hot tier is deferred until measurements on reference hardware show that queries over 30 days need one. |
+
+#### SR-2.8-2 — Mutual TLS (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-2.8-2 |
+| Parent ID | SEC-2.8 — Authenticated transport (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | When the mTLS Harness Profile is enabled, the Harness Interface Endpoint (E-01) **SHALL** require a client certificate chaining to the Gateway client CA on the TLS harness listener. |
+| Allocation | Elements: E-01 Harness Interface Endpoint; Functions: F-01; External interfaces: X-01 |
+| Verification Method | Test |
+| Verification Statement | Enable the profile; connect without a certificate and with a foreign certificate; confirm rejection during the handshake. |
+| Source | SEC 2.8; ARCH §19 OD-2 |
+| Rationale | Optional transport-level framework authentication for harnesses that can present a client certificate. |
+| Deferral | Deferred with the mTLS Harness Profile (FR-2.14); release 1.0 authenticates harness requests with bearer access tokens. |
+
+#### SR-2.12-1 — Handle ownership (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-2.12-1 |
+| Parent ID | SEC-2.12 — State ownership (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | For a tool with a manifest handle contract, the Access Enforcement Point (E-08) **SHALL** record handles created by results with their owning session and principal, and **SHALL** deny calls presenting a handle owned by another session or principal or past its expiry. |
+| Allocation | Elements: E-08 Access Enforcement Point, E-11 Response Inspection Pipeline; Functions: F-20, F-27 |
+| Verification Method | Test |
+| Verification Statement | Create a handle in session A and use it from session B and after expiry; confirm denial. |
+| Source | SEC 2.12; MCP:server/tools §Stateful Tools |
+| Rationale | Handles are names, not capabilities. |
+| Deferral | The release 1.0 manifest schema (Appendix J) has no handle contract, and none of the reference packages returns handles that a later call presents. Handle tracking is deferred until the manifest schema defines handle contracts. |
+
+#### SR-4.3-1 — Caller allowlist (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-4.3-1 |
+| Parent ID | SEC-4.3 — CE access boundary (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Data Access Service (E-26) **SHALL** authenticate each calling element by Unix-socket peer credentials and **SHALL** permit only the operations allowlisted for that element. |
+| Allocation | Elements: E-26 Data Access Service; Functions: F-72; Internal interfaces: I-07, I-30, I-33, I-34, I-35, I-06 |
+| Verification Method | Test |
+| Verification Statement | Invoke a policy-write operation from the Observation Collector identity; confirm denial. |
+| Source | SEC 4.3 |
+| Rationale | Application-level separation without Enterprise database roles. |
+| Deferral | In release 1.0 the Data Access Service is a library inside the `smcpd` process, called only by the graph mirror and the console routes of that process; no element reaches it across a process or socket boundary, so there is no peer to authenticate by socket credentials. Its operations are fixed by the reviewed template catalog and the control API role matrix (Appendix C). Peer authentication is deferred to a release that splits elements into separate processes. |
+
+#### SR-5.1-2 — Southbound era by manifest (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-5.1-2 |
+| Parent ID | SEC-5.1 — Explicit protocol profiles (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Tool Dispatcher (E-10) **SHALL** use legacy 2025-11-25 behavior toward an instance only when the manifest declares that era. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23 |
+| Verification Method | Test |
+| Verification Statement | Probe a modern server whose manifest declares legacy; confirm suspension rather than legacy use. |
+| Source | SEC 5.1; FR-5.17 |
+| Rationale | Curated protocol era. |
+| Deferral | Deferred with the era probe (FR-5.16). Release 1.0 uses legacy behavior toward every instance and refuses a revision whose manifest declares another era (FR-5.40), so legacy behavior is never used toward a revision whose manifest declares the modern era. |
+
+#### SR-5.3-2 — No southbound downgrade (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-5.3-2 |
+| Parent ID | SEC-5.3 — No unsafe downgrade (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Tool Dispatcher (E-10) **SHALL** treat a recognized modern error from an era probe as modern and **SHALL** never fall back to legacy because of it. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23 |
+| Verification Method | Test |
+| Verification Statement | Return `-32022` to a probe; confirm modern handling. |
+| Source | SEC 5.3; MCP:basic/transports/stdio §Backward Compatibility |
+| Rationale | Specification fallback rule. |
+| Deferral | Deferred with the era probe (FR-5.16): release 1.0 sends no era probe, so there is no probe error to classify. |
+

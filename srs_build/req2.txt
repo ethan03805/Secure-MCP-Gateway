@@ -499,6 +499,7 @@ A: E-10; F-23; I-13
 V: Test | Start modern and legacy fixture servers; confirm each classification.
 SRC: MCP:basic/transports/stdio §Backward Compatibility
 R: Curated servers may implement either era.
+DEFER: Release 1.0 speaks the 2025-11-25 era southbound only, through the `initialize` handshake of FR-5.19; the reference packages and the servers `smcpctl package build` probes are 2025-11-25 servers. The `server/discover` probe and modern southbound requests are deferred to the release that adds the modern southbound client. A revision whose manifest era differs from the era its instance negotiates is not used (FR-5.40).
 
 @FR-5.17 | Era consistency with manifest
 P: FR-5
@@ -507,6 +508,7 @@ A: E-10; E-14; F-23; F-37
 V: Test | Launch a legacy fixture whose manifest declares modern; confirm refusal and suspension.
 SRC: SEC 3.8; ARCH §6.3
 R: The runtime must match the curated declaration.
+DEFER: Deferred with the era probe (FR-5.16). Release 1.0 compares the manifest era with the negotiated era instead (FR-5.40).
 
 @FR-5.18 | Modern southbound requests
 P: FR-5
@@ -515,6 +517,7 @@ A: E-10; F-23; I-13
 V: Test | Capture southbound requests; confirm the metadata and ID uniqueness.
 SRC: MCP:basic/index §Per-request protocol fields
 R: Modern server requirement.
+DEFER: Deferred with the era probe (FR-5.16): release 1.0 sends no modern southbound requests.
 
 @FR-5.19 | Legacy southbound handshake
 P: FR-5
@@ -571,14 +574,15 @@ A: E-10; E-02; F-24; F-22; I-13; X-01
 V: Test | Enable the profile; complete an elicitation round trip; confirm that tampered, expired and cross-session states are rejected.
 SRC: MCP:basic/patterns/mrtr §Server Requirements; SEC 5.6
 R: Lets elicitation be qualified later without trusting harness-carried state.
+DEFER: Release 1.0 ships without the MRTR Relay Profile. Relaying elicitation, sampling and roots needs a signed request-state protocol and a harness that answers it; none of the Appendix K clients needs it to use the reference packages. A backend InputRequiredResult ends the call with -31010 (FR-5.24) and server-initiated requests get -32601 (FR-5.20).
 
 @FR-5.26 | Southbound cancellation
 P: FR-5
-S: The Tool Dispatcher (E-10) SHALL cancel a southbound call by sending `notifications/cancelled` with the request ID on stdio instances and by closing the response stream on Streamable HTTP instances.
+S: The Tool Dispatcher (E-10) SHALL cancel a southbound call to a stdio instance by sending `notifications/cancelled` with the request ID.
 A: E-10; F-25; I-13
-V: Test | Cancel calls on both transports; confirm the transport-specific signal.
+V: Test | Cancel a call to a stdio fixture; confirm the instance receives `notifications/cancelled` naming the request ID.
 SRC: MCP:basic/patterns/cancellation
-R: Transport-specific cancellation rules.
+R: Transport-specific cancellation rules. Release 1.0 runs stdio instances only; cancellation on Streamable HTTP instances returns with the southbound HTTP client (Appendix N, FR-5.28).
 
 @FR-5.27 | Instance shutdown
 P: FR-5
@@ -595,6 +599,7 @@ A: E-10; F-23; F-24; I-13
 V: Test | Run the southbound HTTP conformance fixtures; confirm the headers and both response types.
 SRC: MCP:basic/transports/streamable-http §Sending Messages; §Standard Request Headers
 R: Some curated servers use the HTTP binding inside their sandbox.
+DEFER: Release 1.0 runs every server instance over stdio, which is the only transport of the reference packages (FR-14.9) and of servers packaged with `smcpctl package build`. A southbound Streamable HTTP client needs its own conformance fixtures and egress handling; it is deferred to the release that admits HTTP instances.
 
 @FR-5.29 | Southbound header encoding
 P: FR-5
@@ -603,6 +608,7 @@ A: E-10; F-23; I-13
 V: Test | Call fixture tools with non-ASCII, padded and sentinel-like values; confirm the encodings.
 SRC: MCP:basic/transports/streamable-http §Value Encoding
 R: Clients must support `x-mcp-header`.
+DEFER: Deferred with the southbound Streamable HTTP client (FR-5.28): header mirroring exists only on that transport.
 
 @FR-5.30 | Southbound SSE comments
 P: FR-5
@@ -611,6 +617,7 @@ A: E-10; F-24; I-13
 V: Test | Inject comment lines into a fixture stream; confirm no error.
 SRC: MCP:basic/transports/streamable-http §Receiving Messages
 R: Keep-alive comments are valid.
+DEFER: Deferred with the southbound Streamable HTTP client (FR-5.28): SSE exists only on that transport.
 
 @FR-5.31 | Southbound list-change watch
 P: FR-5
@@ -619,6 +626,7 @@ A: E-10; E-14; F-24; F-37; I-13
 V: Test | Make a fixture add a tool at runtime; confirm the comparison and the resulting suspension.
 SRC: MCP:basic/patterns/subscriptions; SEC 3.8
 R: Detects runtime tool drift.
+DEFER: Deferred with the southbound Streamable HTTP client and modern-era instances (FR-5.28, FR-5.16). Release 1.0 acts on `notifications/tools/list_changed` from stdio instances by re-reading the tool list and comparing it with the manifest (SR-3.8-1).
 
 @FR-5.32 | Southbound progress token
 P: FR-5
@@ -683,4 +691,12 @@ A: E-14; F-36; I-21; D-03
 V: Test | Import two revisions sharing an artifact, retire one, then the other; confirm single storage and removal only after both retire.
 SRC: ARCH §13 D-03
 R: Launches use local verified artifacts without re-fetching.
+
+@FR-5.40 | Era agreement with the manifest
+P: FR-5
+S: When the protocol version an instance negotiates in the FR-5.19 handshake differs from the era its verified manifest declares, the Tool Dispatcher (E-10) SHALL refuse to use the instance and the Local Server Registry (E-14) SHALL suspend the server revision.
+A: E-10; E-14; F-23; I-13
+V: Test | Launch a fixture whose manifest declares 2026-07-28 while the instance negotiates 2025-11-25; confirm the instance is not used and the revision is suspended.
+SRC: SEC 5.1; MCP:basic/versioning
+R: Release 1.0 speaks only the 2025-11-25 era southbound (Appendix N lists the deferred modern-era requirements); a revision packaged as modern must not be driven with legacy behavior.
 

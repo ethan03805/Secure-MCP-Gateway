@@ -11,7 +11,7 @@
 | `appendix2.md` | Appendices J–M (manifest schema summary, client matrix, hostile fixture suite, acceptance scenario mapping), emitted after the generated appendices |
 | `gen.py` | Validator and generator; also produces Appendices E–I |
 
-Record format: `@ID | Title`, then `P:` parent, `S:` statement, `A:` allocation (`;`-separated E/F/X/I/D IDs), `V:` `Method | statement`, `SRC:` sources, `R:` rationale, followed by a blank line. `TEXT:` lines and `#` headings between records are copied into the output.
+Record format: `@ID | Title`, then `P:` parent, `S:` statement, `A:` allocation (`;`-separated E/F/X/I/D IDs), `V:` `Method | statement`, `SRC:` sources, `R:` rationale, optionally `DEFER:` with the reason the requirement is deferred from release 1.0 (SRS Section 2.7: the record moves to Appendix N and leaves the requirement set and the requirement report), followed by a blank line. `TEXT:` lines and `#` headings between records are copied into the output.
 
 Build (from the project directory):
 
