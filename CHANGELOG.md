@@ -274,6 +274,10 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 
 - SRS: FR-15.3 now covers the Appendix K clients whose configuration location is recorded, and requires doctor to say for the others (Grok Build, to be confirmed at pinning) that their servers are not listed, which it does.
 - New tests verify FR-13.9 (smcpd configured for the Enforced profile on a host without Podman and nftables on the PATH exits naming both; on a non-Linux host the refusal names the platform and the claim stays partial) and FR-15.3 (every server of every recorded client listed and the non-Gateway ones flagged, in each scope the client has, and the Grok Build statement).
+### Partial claims sweep: observation, baselines, research and labelling (E-23 to E-32)
+
+- New tests verify FR-9.7 (records, spans and metrics in separate tables, one column per catalog parameter, partitioned by UTC day, both store backends), FR-10.7 (an abnormal call is captured in full with the escalation parameters during 10% sampling), FR-10.20, FR-10.21 and SR-7-1 (through the control API of a running Gateway: promotion refused without authentication and for the Operator and Researcher roles, accepted for the Policy Author, automatic promotion within the configured limits and none beyond them, rollback to an earlier snapshot recorded in the next score, a tampered stored snapshot refused with an integrity event), SR-6-2 (S3 raw-payload fields exported only for an approved campaign with the raw-export grant) and FR-13.10 (`not enforced` in `smcpctl health`, `smcpctl version`, the health document the console status strip shows and the startup log entry).
+- Existing tests now verify FR-10.36 (export written to the export directory and downloaded through the route G-09 uses) and SR-1.13-2 (the template manifest is the one embedded in the signed release binary).
 
 ### Partial claims sweep: secret-use evidence and package signing (E-13, E-20)
 
