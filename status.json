@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T03:42:47Z",
-  "commit": "acc64198e2667d71554f115aa93df95d999714fa",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/acc64198e2667d71554f115aa93df95d999714fa",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38999407471",
+  "generatedAt": "2026-10-17T03:54:27Z",
+  "commit": "217535b947629c7e2edf1ab8c57b4209d9e7d4dc",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/217535b947629c7e2edf1ab8c57b4209d9e7d4dc",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39000153158",
   "tests": {
     "total": 691,
     "passed": 678,
     "failed": 0,
     "skipped": 13,
-    "durationSec": 359.8,
+    "durationSec": 343.4,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -436,7 +436,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.9
+        "pct": 82.6
       },
       {
         "name": "internal/gwtest",
@@ -544,7 +544,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 77.2
+        "pct": 75.6
       },
       {
         "name": "scripts/agents",
@@ -5399,7 +5399,7 @@
         "internal/authguard",
         "internal/remote"
       ],
-      "note": "OAuth 2.1 authorization server (metadata, PKCE S256, resource, iss), pre-registered clients, sign-in by Session Approver accounts only (the Administrator is refused), Argon2id, rate limits, lockout with backoff and dummy verification. Remote Access adds RFC 7591 registration with operator approval and the RFC 8628 device grant. Missing: Client ID Metadata Document fetching with the CP-52 allowlist, mTLS and UDS peer credentials, the Auditor, Operator, Policy Author and Researcher roles."
+      "note": "OAuth 2.1 authorization server (metadata, PKCE S256, resource, iss), pre-registered clients, sign-in by Session Approver accounts only (the Administrator is refused), Argon2id, rate limits, lockout with backoff and dummy verification. Remote Access adds RFC 7591 registration with operator approval and the RFC 8628 device grant. Missing: Client ID Metadata Document fetching with the CP-52 allowlist, mTLS and UDS peer credentials."
     },
     {
       "id": "E-04",
@@ -5441,7 +5441,7 @@
       "packages": [
         "internal/approval"
       ],
-      "note": "Persisted one-use approvals bound per SR-1.18-2, CP-17 expiry, hold mode with keep-alives and the -31002 fallback carrying approvalId, expiresAt and approvalUrl, Approver accounts, /api/v1/approvals* with a watch stream, the harness status route, smcpctl approvals, desktop notification, G-13 console view, optional anomaly-band approval obligation. Missing: anomaly evidence shown to the Approver (FR-3.18), approval events for remote calls without the remote origin fields, the FR-3.25 recorded run with interactive Claude Code."
+      "note": "Persisted one-use approvals bound per SR-1.18-2, CP-17 expiry, hold mode with keep-alives and the -31002 fallback carrying approvalId, expiresAt and approvalUrl, Approver accounts, /api/v1/approvals* with a watch stream, the harness status route, smcpctl approvals, desktop notification, G-13 console view, optional anomaly-band approval obligation. Approval events of remote calls carry the remote origin fields. Missing: anomaly evidence shown to the Approver (FR-3.18), the FR-3.25 recorded run with interactive Claude Code."
     },
     {
       "id": "E-08",
@@ -5519,7 +5519,7 @@
         "internal/library",
         "internal/backend"
       ],
-      "note": "Content-addressed artifact store, immutable revisions and registry states, enablement checks (Standalone refuses high risk, alias uniqueness, FR-1.49 collisions, expiry), drift detection at start and on list_changed that suspends the revision, /api/v1/packages and smcpctl package. Missing: era consistency at start (FR-5.17), classification overrides (SR-3.11-1), G-10 enable and retire actions; a revision enabled while smcpd runs is launched at the next start."
+      "note": "Content-addressed artifact store, immutable revisions and registry states, enablement checks (Standalone refuses high risk, alias uniqueness, FR-1.49 collisions, expiry), drift detection at start and on list_changed that suspends the revision, /api/v1/packages and smcpctl package. Missing: era consistency at start (FR-5.17), classification overrides (SR-3.11-1); G-10 has enable, suspend and retire. A revision enabled while smcpd runs is launched at the next start."
     },
     {
       "id": "E-15",
@@ -5563,7 +5563,7 @@
       "packages": [
         "internal/egress"
       ],
-      "note": "Per-instance forward proxy (CONNECT with SNI check, plain HTTP), per-destination TLS-originating endpoints, grants by host, port, method and class, broker DNS with rebinding defense, reserved-address refusal, size, duration and rate limits, public-fetch profile, egress evidence, nftables confinement of a namespace, /api/v1/egress and smcpctl egress. Missing: grants from policy obligations, one-use egress capabilities (SR-5.16-1), S1 credential injection, attachment by the Podman launcher; advisory only in Standalone."
+      "note": "Per-instance forward proxy (CONNECT with SNI check, plain HTTP), per-destination TLS-originating endpoints, grants by host, port, method and class, broker DNS with rebinding defense, reserved-address refusal, size, duration and rate limits, public-fetch profile, egress evidence, nftables confinement of a namespace, /api/v1/egress and smcpctl egress. S1 header injection on endpoint requests for the Secret Broker. Missing: grants from policy obligations, one-use egress capabilities (SR-5.16-1), outbound secret-fingerprint scanning (SR-5.8-2), attachment by the Podman launcher; advisory only in Standalone."
     },
     {
       "id": "E-19",
@@ -5583,7 +5583,7 @@
       "packages": [
         "internal/secrets"
       ],
-      "note": "Secret Use Policy file, S2 per-call files, S3 per-instance files, S4 environment with waiver, secret_use evidence without values, HMAC leak fingerprints for the filters, leak suspension and resume, withdrawal on emergency stop. Missing: S1 delivery (needs E-18 injection), Secret Use Policies inside the signed policy document, withdrawal on session end, evidence redaction by E-21 and E-29."
+      "note": "Secret Use Policy file, S1 header injection through the Egress Broker, S2 per-call files, S3 per-instance files, S4 environment with waiver, secret_use evidence without values, HMAC leak fingerprints for the filters, leak suspension and resume, withdrawal on emergency stop. Missing: S1 for sandboxed servers (no egress in the sandbox yet), withdrawal of launch-time deliveries when the artifact check suspends a revision, Secret Use Policies inside the signed policy document, withdrawal on session end, evidence redaction by E-21 and E-29."
     },
     {
       "id": "E-21",
@@ -5604,7 +5604,7 @@
         "internal/keys",
         "internal/packaging"
       ],
-      "note": "CP-53 server CA (365 days, path length 0, DNS and IP name constraints) and listener certificate (90 days, renewed at 30), hot reload, CA rotation with overlap, evidence-key rotation with signed transition, policy-signing key, package trust anchors, operator token, installation ID. Missing: TPM, Keychain or passphrase protection of private keys (FR-7.9), a client CA, separate keys for every purpose listed by the SRS. Open: the CA's iPAddress constraints are rejected by BoringSSL clients (native Claude Code, OpenCode)."
+      "note": "CP-53 server CA (365 days, path length 0, DNS and IP name constraints) and listener certificate (90 days, renewed at 30), hot reload, CA rotation with overlap, evidence-key rotation with signed transition, policy-signing key, package trust anchors, operator token, installation ID. Missing: TPM, Keychain or passphrase protection of private keys (FR-7.9), a client CA, separate keys for every purpose listed by the SRS. CP-53 CAs carry dNSName constraints only, so BoringSSL clients (native Claude Code, OpenCode) connect; smcpd warns when an older CA still has iPAddress constraints."
     },
     {
       "id": "E-23",
@@ -5618,7 +5618,7 @@
         "internal/profile",
         "internal/diag"
       ],
-      "note": "Health and Safety Monitor with one-second checks, fail-closed latch with 10 s recovery and acknowledgment of integrity causes, edge gate, loopback Prometheus metrics, rotating redacted diagnostic log, profile decision with the not-enforced label. Missing: health checks for the vault, graph mirror, Observation Store and memory stage (FR-7.11); a down graph mirror is not reported as degraded."
+      "note": "Health and Safety Monitor with one-second checks, fail-closed latch with 10 s recovery and acknowledgment of integrity causes, edge gate, loopback Prometheus metrics, rotating redacted diagnostic log, profile decision with the not-enforced label. The graph mirror and the Observation Store register health checks that report degraded, never fail-closed. Missing: health checks for the vault and the memory stage (FR-7.11)."
     },
     {
       "id": "E-24",
@@ -5632,7 +5632,7 @@
         "internal/ops",
         "console"
       ],
-      "note": "smcpctl covers bootstrap, configuration, journal, policy, approvals, packages, trust, filters, secrets, egress, runtime, graph, observe, keys, backup, restore, upgrade, uninstall, remote, clients, lockdown and doctor. Control API with Administrator and Approver roles; embedded React console (G-01, G-10, G-11, G-13, G-14 and read-only views of the rest) under a strict CSP. Missing: Operator, Policy Author, Auditor and Researcher roles, editors for G-02 to G-09 and G-12, cookie sessions with CSRF token and If-Match (SR-2.6-1, SR-8.9-1), /api/v1/openapi.json (FR-8.1), the G-04 usability measure."
+      "note": "smcpctl covers bootstrap, configuration, journal, policy, approvals, packages, trust, filters, secrets, egress, runtime, graph, observe, keys, backup, restore, upgrade, uninstall, remote, clients, lockdown and doctor. Control API with every Appendix C role (Administrator, Operator, Policy Author, Auditor, Researcher, Approver, Session Approver) from one route matrix, GET /api/v1/openapi.json describing every route, the filter workbench routes. Embedded React console with views G-01 to G-14 and their actions under a strict CSP, cookie sessions with a CSRF token and If-Match preconditions, one Playwright test per view on Chromium, Firefox and WebKit with claims merged into the requirement report. Missing: publication of Audit Profiles, Observation Policies and Anomaly Response Policies from G-03, G-04 and G-06 (they produce [observation] configuration), principal management in G-11, per-object If-Match revisions, the two latest releases of each browser (FR-8.30), the G-04 usability measure."
     },
     {
       "id": "E-25",
@@ -5695,7 +5695,7 @@
       "packages": [
         "internal/baseline"
       ],
-      "note": "Welford statistics with optional decay, log1p and Box-Cox transforms, t-digest median and MAD, category and transition surprise, learning exclusions, sealed snapshots, drift reports, promotion and rollback, integrity events. Missing: baseline contexts and thresholds edited from published policies (G-04, G-05 editors)."
+      "note": "Welford statistics with optional decay, log1p and Box-Cox transforms, t-digest median and MAD, category and transition surprise, learning exclusions, sealed snapshots, drift reports, promotion and rollback, integrity events. Missing: baseline contexts and thresholds from published policies (G-04 and G-05 produce configuration, not policy objects)."
     },
     {
       "id": "E-31",
@@ -5715,7 +5715,7 @@
       "packages": [
         "internal/research"
       ],
-      "note": "Campaign life cycle with clocks and quota, exports in Parquet, CSV, JSON Lines and GraphML with per-dataset HMAC pseudonyms, dictionary, manifest and checksums, CSV formula neutralization. Missing: the Researcher role (routes are Administrator only), a pseudonymization key issued by E-22, Parquet in builds without cgo."
+      "note": "Campaign life cycle with clocks and quota, exports in Parquet, CSV, JSON Lines and GraphML with per-dataset HMAC pseudonyms, dictionary, manifest and checksums, CSV formula neutralization. Researcher accounts create, submit and stop campaigns and export their datasets. Missing: a pseudonymization key issued by E-22, Parquet in builds without cgo."
     },
     {
       "id": "E-33",
@@ -5731,7 +5731,7 @@
         "cmd/smcp-connect",
         "packaging/npm/smcp-connect"
       ],
-      "note": "smcp-session, smcp-stdio (both eras, UDS dialing) and smcp-connect (binary and npm) with the CP-43 credential file; smcpctl clients setup, lockdown and doctor for the seven local clients; Tailscale Funnel and Cloudflare tunnel drivers. The real-agent suite passes Codex, Hermes and Goose (Linux); native Claude Code and OpenCode fail on the CA's IP name constraints. Missing: setup and lockdown runs at pinned versions (FR-15.8 for the adapters), dated cloud-agent runs (FR-15.9), nftables rules on remote enable (SR-4.14-1)."
+      "note": "smcp-session, smcp-stdio (both eras, UDS dialing) and smcp-connect (binary and npm) with the CP-43 credential file; smcpctl clients setup, lockdown and doctor for the seven local clients; Tailscale Funnel and Cloudflare tunnel drivers. The real-agent suite passes Claude Code, OpenCode and Goose; Codex CLI fails the approval scenario; Hermes, Gemini CLI and Grok Build are not run (not installed, no model credentials, no public CLI). Missing: setup and lockdown runs at pinned versions (FR-15.8 for the adapters), dated cloud-agent runs (FR-15.9), nftables rules on remote enable (SR-4.14-1)."
     }
   ],
   "agents": [
@@ -6011,7 +6011,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6046,7 +6046,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40957: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44553: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
