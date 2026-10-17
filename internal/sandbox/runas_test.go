@@ -65,6 +65,21 @@ func TestRunAsRunsPodmanAsServerIdentity(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(shared, "rootfs", "etc", "passwd")); err != nil {
 		t.Fatalf("root directory not prepared in the shared directory: %v", err)
 	}
+	// The executable is staged by digest where run_as can read it.
+	digest, err := FileDigest(h.exe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	staged := filepath.Join(shared, "bin", strings.TrimPrefix(digest, "sha256:"), filepath.Base(h.exe))
+	if src := r.Mounts[ServerBinDir+"/"+filepath.Base(h.exe)]; src != staged {
+		t.Fatalf("executable mounted from %q, want the staged copy %q", src, staged)
+	}
+	if st, err := os.Stat(staged); err != nil || st.Mode().Perm() != 0o755 {
+		t.Fatalf("staged copy: %v %v", st, err)
+	}
+	if inst.LaunchSpec.Artifact.Command != h.exe || inst.LaunchSpec.Artifact.Digest != digest {
+		t.Fatalf("artifact %+v", inst.LaunchSpec.Artifact)
+	}
 	if r.Env["API_TOKEN"] != "s3cr3t" {
 		t.Fatalf("instance value did not pass through sudo -E: %v", r.Env)
 	}

@@ -173,7 +173,7 @@ What the launcher does differently:
 
 - The Podman environment is built for `smcp-srv`: `HOME`, `USER`, `LOGNAME`, `XDG_RUNTIME_DIR=/run/user/<uid>` and `DBUS_SESSION_BUS_ADDRESS` of its user manager. `-E` passes them and the instance values that Podman reads by name (`--env=NAME`); values never appear on a command line.
 - Containers get their cgroups from `smcp-srv`'s systemd user manager (lingering), so `cgroup_manager` must be unset or `"systemd"`; `"cgroupfs"` is refused because the cgroup subtree of `smcpd.service` belongs to `smcp-core`. The Runtime Monitor reads the cgroup files, which are world-readable, as before.
-- The root directory of image-less servers lives in `shared_dir/rootfs`, because the state directory is closed to `smcp-srv`.
+- The root directory of image-less servers lives in `shared_dir/rootfs`, because the state directory is closed to `smcp-srv`. Their executable (packaged servers are unpacked into the state directory) is copied to `shared_dir/bin/<sha256>/<name>` (mode 0755), checked against the digest of the launch specification, and mounted from there.
 - The egress confinement step (`podman unshare nsenter ... nft`) runs as `smcp-srv`, the owner of the container's user and network namespaces.
 - Secret files get ACL entries for the instance's UID (see "Environment").
 

@@ -259,6 +259,10 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 		releaseEgress()
 		return nil, err
 	}
+	if err := l.stageArtifact(&ls); err != nil {
+		releaseEgress()
+		return nil, err
+	}
 	if ls.Artifact.Image == "" {
 		if err := PrepareRootfs(l.rootfs, ls.Mounts); err != nil {
 			releaseEgress()
