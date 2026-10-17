@@ -551,7 +551,8 @@ func (o *OAuth) revokeReused(sessionID, clientID string) {
 // request fails closed.
 func (o *OAuth) recordCreated(w http.ResponseWriter, sess *Session, reason, clientID string) bool {
 	err := o.audit.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision,
-		Outcome: "created", ReasonCode: reason, PolicyStatus: "evaluated", Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy, "client_id": clientID}})
+		Outcome: "created", ReasonCode: reason, PolicyStatus: "evaluated", Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy, "client_id": clientID,
+			"observation_policy": sess.ObservationPolicy, "context_key": sess.ContextKey}})
 	if err != nil {
 		o.store.Terminate(sess.ID)
 		oauthError(w, 503, "temporarily_unavailable", "evidence journal unavailable")
@@ -586,6 +587,9 @@ func (o *OAuth) tokenResponse(sess *Session, tok Tokens) map[string]any {
 		"template_id":           sess.Template,
 		"policy_revision_id":    sess.PolicyRevision,
 		"observation_policy_id": nil,
+	}
+	if sess.ObservationPolicy != "" {
+		resp["observation_policy_id"] = sess.ObservationPolicy // FR-2.4
 	}
 	if tok.Refresh != "" {
 		resp["refresh_token"] = tok.Refresh

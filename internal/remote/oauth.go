@@ -706,7 +706,8 @@ func (s *Service) issue(w http.ResponseWriter, r *http.Request, c rclient, princ
 	}
 	if err := s.commit(r.Context(), audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision,
 		Outcome: "created", ReasonCode: reason, PolicyStatus: "evaluated", ClientID: c.id,
-		Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy}}); err != nil {
+		Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy,
+			"observation_policy": sess.ObservationPolicy, "context_key": sess.ContextKey}}); err != nil {
 		s.store.Terminate(sess.ID)
 		oauthError(w, http.StatusServiceUnavailable, "temporarily_unavailable", "evidence journal unavailable")
 		return nil
@@ -721,6 +722,9 @@ func (s *Service) tokenResponse(sess *session.Session, tok session.Tokens) map[s
 	resp := map[string]any{"access_token": tok.Access, "token_type": "Bearer", "expires_in": s.store.ExpiresInFor(sess), "scope": claims.Scopes(),
 		"session_id": sess.ID, "expires_at": sess.MaxDeadline.UTC().Format(time.RFC3339), "template_id": sess.Template,
 		"policy_revision_id": sess.PolicyRevision, "observation_policy_id": nil}
+	if sess.ObservationPolicy != "" {
+		resp["observation_policy_id"] = sess.ObservationPolicy // FR-2.4
+	}
 	if tok.Refresh != "" {
 		resp["refresh_token"] = tok.Refresh
 	}

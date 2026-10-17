@@ -96,7 +96,7 @@ Mirrored labels and their properties:
 | Label | ID | Properties |
 |---|---|---|
 | `AuditEvent` | event ID | `ts` (Unix ns), `time`, `class`, `phase`, `origin`, `outcome`, `reasonCode`, `policyStatus`, `correlationId`, `sessionId`, `principalId`, `decisionId`, `serverRevision`, `toolRevision`, `policyRevision` |
-| `Session` | session ID | `principalId`, `state`, `endReason`, `revisionId` |
+| `Session` | session ID | `principalId`, `state`, `endReason`, `revisionId`, `observationPolicyId` and `contextKey` (from the creation event, FR-2.13) |
 | `Principal` | principal ID | — |
 | `Invocation` | correlation ID | `sessionId`, `principalId`, `serverRevision`, `toolRevision`, `phase`, `outcome`, `reasonCode` (latest event) |
 | `Decision` | decision ID | `ts`, `outcome` (`permit` or `deny`), `reasonCode`, `revisionId`, `correlationId`, `sessionId` |

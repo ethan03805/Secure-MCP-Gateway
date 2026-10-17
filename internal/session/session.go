@@ -69,6 +69,10 @@ type Session struct {
 	// ClientAddress is the tunnel-supplied caller address at creation
 	// (Remote Access Profile); a server-asserted value, not verified.
 	ClientAddress string
+	// ObservationPolicy is the Observation Policy in force at creation and
+	// ContextKey the session's baseline context key under it (FR-2.13).
+	ObservationPolicy string
+	ContextKey        string
 
 	idle        time.Duration // idle timeout of this session; 0 = CP-18
 	accessHash  string
@@ -162,6 +166,35 @@ type Store struct {
 	byRefresh   map[string]*Session
 	usedRefresh map[string]string              // rotated-out refresh verifier -> session ID
 	active      map[string]map[string]*Session // principal -> active sessions
+	obsContext  func() (policyID string, dims []string)
+}
+
+// SessionDimensions are the baseline context dimensions fixed for a
+// session's lifetime; the others (server, server revision, tool, hour,
+// weekday) vary per call and complete the key when a call is scored.
+var SessionDimensions = []string{"principal", "framework_type", "session_template", "end_user"}
+
+// SetObservationContext sets the source of the Observation Policy in force
+// and its baseline context dimensions; sessions created afterwards record
+// the policy and their context key (FR-2.13).
+func (s *Store) SetObservationContext(f func() (policyID string, dims []string)) {
+	s.mu.Lock()
+	s.obsContext = f
+	s.mu.Unlock()
+}
+
+// ContextKey is the session-scoped part of a baseline context key: each of
+// dims that SessionDimensions lists, in the order of dims, as
+// "dimension=value", joined with "|" (FR-2.13).
+func ContextKey(sess *Session, dims []string) string {
+	vals := map[string]string{"principal": sess.PrincipalID, "framework_type": sess.Framework, "session_template": sess.Template, "end_user": sess.EndUser}
+	var parts []string
+	for _, d := range dims {
+		if slices.Contains(SessionDimensions, d) {
+			parts = append(parts, d+"="+vals[d])
+		}
+	}
+	return strings.Join(parts, "|")
 }
 
 // NewStore returns an empty session table.
@@ -263,6 +296,11 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 	}
 	if sess.IdleDeadline.After(sess.MaxDeadline) {
 		sess.IdleDeadline = sess.MaxDeadline
+	}
+	if s.obsContext != nil {
+		var dims []string
+		sess.ObservationPolicy, dims = s.obsContext()
+		sess.ContextKey = ContextKey(sess, dims)
 	}
 	tok := Tokens{Access: ids.Secret(), Refresh: ids.Secret()}
 	sess.accessHash, sess.refreshHash = hash(tok.Access), hash(tok.Refresh)

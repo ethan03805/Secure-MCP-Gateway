@@ -57,6 +57,10 @@ type Options struct {
 	GuardConfig authguard.Config
 	// JanitorInterval is how often expired state is pruned (default 30s).
 	JanitorInterval time.Duration
+	// SessionContext returns the Observation Policy in force and its
+	// baseline context dimensions; each new session records its context
+	// key under them (FR-2.13).
+	SessionContext func() (policyID string, dims []string)
 	// AssertInterval is how often server-asserted text is recorded
 	// (SR-6.18-1); zero means one second.
 	AssertInterval time.Duration
@@ -297,6 +301,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		}})
 	a.Policy.Started(imported, policyErr)
 	a.Store = session.NewStore(cfg, a.Decider.Snapshot)
+	if o.SessionContext != nil {
+		a.Store.SetObservationContext(o.SessionContext) // FR-2.13
+	}
 	guard := authguard.New(o.GuardConfig)
 	a.OAuth = session.NewOAuth(cfg, a.Store, a.Evidence, guard)
 	if o.ConsoleURL == "" {
