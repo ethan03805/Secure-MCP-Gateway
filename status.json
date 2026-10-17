@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T01:20:36Z",
-  "commit": "f375d71029a4dad0527df6af14e931aea87e3e9d",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/f375d71029a4dad0527df6af14e931aea87e3e9d",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38990170573",
+  "generatedAt": "2026-10-17T01:24:31Z",
+  "commit": "171f7587b810666dfb3dee03363ab0b91059bcc1",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/171f7587b810666dfb3dee03363ab0b91059bcc1",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38990470868",
   "tests": {
-    "total": 334,
-    "passed": 324,
+    "total": 359,
+    "passed": 348,
     "failed": 0,
-    "skipped": 10,
-    "durationSec": 116.2,
+    "skipped": 11,
+    "durationSec": 125.3,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 17,
+        "passed": 18,
         "failed": 0,
         "skipped": 0
       },
@@ -127,7 +127,7 @@
       },
       {
         "name": "internal/pipeline",
-        "passed": 8,
+        "passed": 9,
         "failed": 0,
         "skipped": 0
       },
@@ -168,6 +168,12 @@
         "skipped": 3
       },
       {
+        "name": "internal/secrets",
+        "passed": 22,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
         "name": "internal/session",
         "passed": 10,
         "failed": 0,
@@ -188,7 +194,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76,
+    "totalPct": 75.7,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -196,7 +202,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 30.4
+        "pct": 28.5
       },
       {
         "name": "cmd/smcpd",
@@ -212,7 +218,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 75.4
+        "pct": 74.1
       },
       {
         "name": "internal/approval",
@@ -284,7 +290,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 89.3
+        "pct": 89.6
       },
       {
         "name": "internal/policy",
@@ -315,6 +321,10 @@
         "pct": 0
       },
       {
+        "name": "internal/secrets",
+        "pct": 79.4
+      },
+      {
         "name": "internal/session",
         "pct": 83.6
       },
@@ -338,10 +348,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 83,
-    "partial": 118,
+    "verified": 88,
+    "partial": 130,
     "failing": 0,
-    "unverified": 357,
+    "unverified": 340,
     "byElement": [
       {
         "element": "E-01",
@@ -356,7 +366,7 @@
         "name": "Protocol Mediator",
         "total": 43,
         "verified": 8,
-        "partial": 6,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -380,7 +390,7 @@
         "name": "Policy Administration Service",
         "total": 22,
         "verified": 3,
-        "partial": 6,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -436,7 +446,7 @@
         "name": "Enforcement Coordinator",
         "total": 15,
         "verified": 3,
-        "partial": 4,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -491,8 +501,8 @@
         "element": "E-19",
         "name": "Secret Vault",
         "total": 8,
-        "verified": 0,
-        "partial": 0,
+        "verified": 5,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -500,7 +510,7 @@
         "name": "Secret Broker",
         "total": 7,
         "verified": 0,
-        "partial": 1,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -508,7 +518,7 @@
         "name": "Audit & Evidence Service",
         "total": 24,
         "verified": 5,
-        "partial": 3,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -1821,62 +1831,92 @@
       {
         "id": "FR-6",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestBrokerDenialsFailLaunch",
+          "internal/secrets.TestConfigureWiresSeams",
+          "internal/secrets.TestSettingsDefaultsAndSchema"
+        ]
       },
       {
         "id": "FR-6.1",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/secrets.TestControlAPIReadsNeverReturnValues",
+          "internal/secrets.TestVaultRecordIsEncryptedWithAge",
+          "internal/secrets.TestVaultValidationAndExpiry"
+        ]
       },
       {
         "id": "FR-6.2",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestSecretsCommands",
+          "internal/secrets.TestControlAPIReadsNeverReturnValues",
+          "internal/secrets.TestVaultReadsReturnMetadataOnly"
+        ]
       },
       {
         "id": "FR-6.3",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/secrets.TestBrokerRotationRedeliversAtOverlapLimit",
+          "internal/secrets.TestVaultRotationOverlapAndRetirement"
+        ]
       },
       {
         "id": "FR-6.4",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/secrets.TestVaultRotationOverlapAndRetirement"
+        ]
       },
       {
         "id": "FR-6.5",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestUsePolicyValidation"
+        ]
       },
       {
         "id": "FR-6.6",
         "element": "E-20",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestBrokerLaunchDeliveryModes"
+        ]
       },
       {
         "id": "FR-6.7",
         "element": "E-20",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestBrokerPerCallFileLifetime",
+          "internal/secrets.TestDefaultRuntimeDirIsTmpfs"
+        ]
       },
       {
         "id": "FR-6.8",
         "element": "E-20",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestBrokerLaunchDeliveryModes",
+          "internal/secrets.TestDefaultRuntimeDirIsTmpfs"
+        ]
       },
       {
         "id": "FR-6.9",
         "element": "E-20",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestBrokerLaunchDeliveryModes",
+          "internal/secrets.TestUsePolicyS4Waiver"
+        ]
       },
       {
         "id": "FR-6.10",
@@ -1884,20 +1924,32 @@
         "status": "partial",
         "tests": [
           "internal/filters.TestRegisteredFingerprintsInResults",
-          "internal/filters.TestSecretArgumentFilter"
+          "internal/filters.TestSecretArgumentFilter",
+          "internal/secrets.TestBrokerLeakDetectionNorthbound",
+          "internal/secrets.TestFingerprintSetHoldsNoPlaintext",
+          "internal/secrets.TestFingerprintsDetectEncodedForms",
+          "internal/secrets.TestFingerprintsShortValueAndRedaction"
         ]
       },
       {
         "id": "FR-6.11",
         "element": "E-20",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestSecretsCommands",
+          "internal/secrets.TestBrokerDenialsFailLaunch",
+          "internal/secrets.TestBrokerLaunchDeliveryModes",
+          "internal/secrets.TestBrokerPerCallFileLifetime"
+        ]
       },
       {
         "id": "FR-6.12",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/secrets.TestBrokerImpactReport",
+          "internal/secrets.TestControlAPIReadsNeverReturnValues"
+        ]
       },
       {
         "id": "FR-7",
@@ -3167,7 +3219,9 @@
         "element": "E-23",
         "status": "partial",
         "tests": [
-          "internal/diag.TestRedactSensitiveAttributes"
+          "cmd/smcpctl.TestSecretsCommands",
+          "internal/diag.TestRedactSensitiveAttributes",
+          "internal/secrets.TestBrokerLeakDetectionNorthbound"
         ]
       },
       {
@@ -3595,8 +3649,10 @@
       {
         "id": "SR-2-1",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestBrokerLeakDetectionNorthbound"
+        ]
       },
       {
         "id": "SR-2.1-1",
@@ -3772,8 +3828,12 @@
       {
         "id": "SR-2.13-1",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestSecretsCommands",
+          "internal/secrets.TestKeychainSource",
+          "internal/secrets.TestVaultRecordIsEncryptedWithAge"
+        ]
       },
       {
         "id": "SR-2.13-2",
@@ -3784,15 +3844,18 @@
       {
         "id": "SR-2.13-3",
         "element": "E-19",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestVaultUnlockFailures"
+        ]
       },
       {
         "id": "SR-2.14-1",
         "element": "E-15",
         "status": "partial",
         "tests": [
-          "internal/sandbox.TestLaunchRunsServerThroughPodmanWithoutShell"
+          "internal/sandbox.TestLaunchRunsServerThroughPodmanWithoutShell",
+          "internal/secrets.TestBrokerLaunchDeliveryModes"
         ]
       },
       {
@@ -4142,7 +4205,8 @@
         "element": "E-09",
         "status": "partial",
         "tests": [
-          "internal/filters.TestSecretArgumentFilter"
+          "internal/filters.TestSecretArgumentFilter",
+          "internal/secrets.TestBrokerLeakDetectionNorthbound"
         ]
       },
       {
@@ -4342,8 +4406,10 @@
       {
         "id": "SR-6.7-1",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestFingerprintsShortValueAndRedaction"
+        ]
       },
       {
         "id": "SR-6.8-1",
@@ -4493,8 +4559,10 @@
       {
         "id": "SR-7.6-2",
         "element": "E-12",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/secrets.TestBrokerEmergencyStopWithdraws"
+        ]
       },
       {
         "id": "SR-7.7-1",
