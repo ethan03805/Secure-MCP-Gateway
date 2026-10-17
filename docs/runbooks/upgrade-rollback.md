@@ -1,6 +1,6 @@
 # Runbook: upgrade and rollback
 
-Reference: [../operations/upgrade-uninstall.md](../operations/upgrade-uninstall.md). Execution records go in `docs/verification/` (FR-18.8); none is recorded for this runbook yet. `scripts/ci-integration.sh` runs a successful upgrade and a rolled-back upgrade on every pull request.
+Reference: [../operations/upgrade-uninstall.md](../operations/upgrade-uninstall.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-upgrade-rollback-2026-10-17.md](../verification/runbooks/runbook-upgrade-rollback-2026-10-17.md). `scripts/ci-integration.sh` runs a successful upgrade and a rolled-back upgrade on every pull request.
 
 ## Upgrade
 

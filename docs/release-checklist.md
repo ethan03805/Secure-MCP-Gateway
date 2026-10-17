@@ -41,6 +41,7 @@ RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
 - [ ] Every pull request intended for the release is merged; `main` is green on all required jobs (srs, go, lint, site, security, linux-integration, hostile).
 - [ ] `make check` passes on a clean checkout of `main`.
 - [ ] `make status` and `build/reqreport.md` reviewed: no requirement newly failing; `docs/verification/gap-list.md` matches the report.
+- [ ] Runbook records (FR-18.8): `docs/verification/runbooks/` holds an execution record of each runbook in `docs/runbooks/`. When code that a runbook uses (`smcpctl stop`/`resume`, `keys`, `backup`/`restore`, `upgrade`, `package revoke`, `policy rollback`) changed after the recorded commit, execute the runbook again on the release candidate's commit and add a new dated record.
 - [ ] `CHANGELOG.md` has a `## v<version>` section at the top that lists what the release contains and its known limitations, dated with the release day.
 - [ ] Release label: the release is labelled "not enforced" unless AT-01 to AT-21 evidence for the release commit is complete and passing in the Enforced profile (FR-19.3). Tag a commit whose CI run on main has finished, so that the status data is for that commit: the release workflow's "Release label" step reads it with `go run ./tools/reqreport label` and appends the label, the scenario table and the reasons to the release notes (see `docs/acceptance.md`).
 - [ ] Local snapshot with signing proves the configuration:

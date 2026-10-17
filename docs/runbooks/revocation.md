@@ -1,6 +1,6 @@
 # Runbook: withdraw a server package
 
-Use when a packaged server revision must never run again: a malicious or vulnerable release, a compromised upstream, or a key that signed it is no longer trusted. Reference: [../packaging-guide.md](../packaging-guide.md#revoking). Execution records go in `docs/verification/` (FR-18.8); none is recorded for this runbook yet.
+Use when a packaged server revision must never run again: a malicious or vulnerable release, a compromised upstream, or a key that signed it is no longer trusted. Reference: [../packaging-guide.md](../packaging-guide.md#revoking). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-revocation-2026-10-17.md](../verification/runbooks/runbook-revocation-2026-10-17.md).
 
 | Need | Command | Reversible |
 |---|---|---|
@@ -11,9 +11,9 @@ Use when a packaged server revision must never run again: a malicious or vulnera
 ## Revoke
 
 1. `smcpctl package list --config smcp.toml` — find the server ID and revision (`<id>@<rev>`) and its state.
-2. `smcpctl package revoke <id>@<rev> --key <signing key> --reason "<why>" --config smcp.toml` — any enrolled trust anchor's secret key may sign the entry. It is written to `<library>/revocations/`.
-3. With `smcpd` running, `smcpctl package scan --config smcp.toml` applies it now (otherwise the next scan, within `[packages] scan_interval`, default 300 s). The revision becomes `revoked` and its instance is torn down.
-4. `smcpctl package list --config smcp.toml` — state `revoked`. Calls to its tools are refused; a session catalog built earlier may still list them until the session is renewed.
+2. `smcpctl package revoke <id>@<rev> --key <signing key> --reason "<why>" --config smcp.toml` — any enrolled trust anchor's secret key may sign the entry. It is written to `<library>/revocations/`. With `smcpd` running, the command also asks the Gateway to scan the library: the printed scan result lists the revision under `revoked`, the revision becomes `revoked` and its instance is torn down.
+3. If the entry was written with `--offline` or copied into `<library>/revocations/` by hand, `smcpctl package scan --config smcp.toml` applies it now (otherwise the next scan, within `[packages] scan_interval`, default 300 s).
+4. `smcpctl package list --config smcp.toml` — state `revoked`, and the server entry using it `suspended`. New sessions no longer list its tools; calls to them are refused; a session catalog built earlier may still list them until the session is renewed. `smcpctl package enable` refuses the revision (`STATE_TRANSITION_REFUSED`).
 5. The journal records the revocation as a `package` event.
 6. Remove or change the `[[server]]` entry that named the package, or enable a fixed revision (`smcpctl package install <dir> --enable`), and restart `smcpd` so the replacement is launched.
 

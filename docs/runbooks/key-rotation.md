@@ -1,6 +1,6 @@
 # Runbook: key and certificate rotation
 
-Reference: [../operations/keys.md](../operations/keys.md). Execution records go in `docs/verification/` (FR-18.8); none is recorded for this runbook yet. `scripts/ci-integration.sh` rotates all three kinds on every pull request.
+Reference: [../operations/keys.md](../operations/keys.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-key-rotation-2026-10-17.md](../verification/runbooks/runbook-key-rotation-2026-10-17.md). `scripts/ci-integration.sh` rotates all three kinds on every pull request.
 
 ## Listener certificate
 

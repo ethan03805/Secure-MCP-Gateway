@@ -1,6 +1,6 @@
 # Runbook: roll back a policy
 
-Use when a published policy grants too much, refuses legitimate calls, or was published by mistake. Reference: [../policy-reference.md](../policy-reference.md#policy-store). Execution records go in `docs/verification/` (FR-18.8); none is recorded for this runbook yet.
+Use when a published policy grants too much, refuses legitimate calls, or was published by mistake. Reference: [../policy-reference.md](../policy-reference.md#policy-store). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-policy-rollback-2026-10-17.md](../verification/runbooks/runbook-policy-rollback-2026-10-17.md).
 
 A rollback never rewrites history: it publishes the content of an earlier revision as a new revision, signed and activated atomically like any other publication.
 

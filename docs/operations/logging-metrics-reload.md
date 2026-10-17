@@ -41,7 +41,7 @@ scrape_configs:
 
 `smcpctl reload`, `POST /api/v1/config/reload` and `SIGHUP` to `smcpd` all do the same:
 
-1. Read and validate the configuration file. If it is invalid, nothing changes; the command reports `CONFIG_INVALID` (HTTP 422) and the journal records `CONFIG_INVALID`.
+1. Read and validate the configuration file. If it is invalid, nothing changes; the API reports `CONFIG_INVALID` (HTTP 422) and the journal records `CONFIG_INVALID`. `smcpctl reload` validates the file itself first and refuses an invalid file with the schema error without contacting the Gateway, so no event is recorded; `SIGHUP` and `POST /api/v1/config/reload` (with a JSON body such as `{}`) reach the Gateway and record it.
 2. Compare it with the configuration in force and apply the changed keys that can change without ending sessions.
 3. Report every changed key in one of three lists and record a `CONFIG_RELOADED` event.
 

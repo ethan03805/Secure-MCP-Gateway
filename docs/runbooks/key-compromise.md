@@ -1,6 +1,6 @@
 # Runbook: key or credential compromise
 
-Use when a key, token or password of the Gateway may have been read by someone else: a copied state directory, a leaked backup together with its passphrase, a stolen laptop, a credential pasted into a chat or a log. Reference: [../operations/keys.md](../operations/keys.md), [key-rotation.md](key-rotation.md). Execution records go in `docs/verification/` (FR-18.8); none is recorded for this runbook yet.
+Use when a key, token or password of the Gateway may have been read by someone else: a copied state directory, a leaked backup together with its passphrase, a stolen laptop, a credential pasted into a chat or a log. Reference: [../operations/keys.md](../operations/keys.md), [key-rotation.md](key-rotation.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-key-compromise-2026-10-17.md](../verification/runbooks/runbook-key-compromise-2026-10-17.md).
 
 Holding the state directory is equivalent to holding the Gateway. If the whole state directory was exposed, do every section below.
 
@@ -27,6 +27,10 @@ Holding the state directory is equivalent to holding the Gateway. If the whole s
 | Package signing key (a trust anchor) | Can sign packages the Gateway will admit | Follow [revocation.md](revocation.md#when-the-signing-key-is-the-problem): revoke what it signed, `smcpctl trust remove <name>`, re-sign with a new key. |
 | Vault master key or its passphrase, or a backup archive with its passphrase | Decrypts every secret value | Rotate every secret at its issuer first, then `smcpctl secrets rotate <name>` for each. There is no command that re-keys the vault; to change the master key, create a new vault (`smcpctl secrets init` on an empty `vault_dir`) and set each secret again. |
 | A secret value | Use of that credential at its issuer | Revoke it at the issuer, then `smcpctl secrets rotate <name>`. `smcpctl secrets impact <name>` lists the servers that receive it. |
+
+## After a restore
+
+A restore brings back the configuration, key material, tokens and trust anchors that the archive holds. Rotations done after that backup are undone, so repeat the rows above that you have already carried out (operator token, passwords, CA, listener and evidence keys) once the restored Gateway is running.
 
 ## Afterwards
 
