@@ -186,12 +186,51 @@ func parseWhen(s string, now time.Time) (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, s)
 }
 
-func (s *Service) scan(w http.ResponseWriter, table string, f obsstore.Filter) {
+// visible reports whether a console user of role may see a field of
+// sensitivity sens (Appendix C, SR-6-3): S0 and S1 every role that reaches
+// the route; S2 the Administrator, Policy Author and Auditor (a Researcher
+// sees S2 values only pseudonymized, in campaign exports); S3 nobody,
+// because payload access needs a separate grant that release 1.0 does not
+// issue.
+func visible(role, sens string) bool {
+	switch sens {
+	case "S2":
+		return role == adminapi.RoleAdministrator || role == adminapi.RolePolicyAuthor || role == adminapi.RoleAuditor
+	case "S3":
+		return false
+	}
+	return true
+}
+
+// sensitivity is the catalog sensitivity of a stored column; columns that
+// are not catalog parameters (timestamps, IDs, bands) are "".
+func (s *Service) sensitivity(col string) string {
+	if s.Catalog == nil {
+		return ""
+	}
+	if p, ok := s.Catalog.Lookup(col); ok {
+		return p.Sensitivity
+	}
+	return ""
+}
+
+// redact removes the columns of row that role may not see.
+func (s *Service) redact(role string, row obsstore.Row) obsstore.Row {
+	for col := range row {
+		if !visible(role, s.sensitivity(col)) {
+			delete(row, col)
+		}
+	}
+	return row
+}
+
+func (s *Service) scan(w http.ResponseWriter, r *http.Request, table string, f obsstore.Filter) {
 	if table != "scores" {
 		delete(f.Equals, "band")
 	}
+	role := adminapi.RoleOf(r)
 	rows := []obsstore.Row{}
-	err := s.Store.Scan(table, f, func(r obsstore.Row) error { rows = append(rows, r); return nil })
+	err := s.Store.Scan(table, f, func(row obsstore.Row) error { rows = append(rows, s.redact(role, row)); return nil })
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "store_error", err.Error())
 		return
@@ -205,7 +244,7 @@ func (s *Service) listRecords(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	s.scan(w, "records", f)
+	s.scan(w, r, "records", f)
 }
 
 func (s *Service) metrics(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +254,7 @@ func (s *Service) metrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f.Equals = nil
-	s.scan(w, "metrics", f)
+	s.scan(w, r, "metrics", f)
 }
 
 func (s *Service) anomalies(w http.ResponseWriter, r *http.Request) {
@@ -228,7 +267,7 @@ func (s *Service) anomalies(w http.ResponseWriter, r *http.Request) {
 		f.Equals["band"] = []string{anomaly.Elevated, anomaly.Abnormal, anomaly.Critical}
 	}
 	delete(f.Equals, "server_id")
-	s.scan(w, "scores", f)
+	s.scan(w, r, "scores", f)
 }
 
 func floats(s string) ([]float64, error) {
@@ -288,6 +327,16 @@ func (s *Service) aggregate(w http.ResponseWriter, r *http.Request) {
 	if aq.Histogram, err = floats(q.Get("histogram")); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "histogram: "+err.Error())
 		return
+	}
+	// SR-6-3: no aggregate over, or grouped by, a field the role may not
+	// see; a Researcher's aggregates stay within S0 and S1.
+	role := adminapi.RoleOf(r)
+	for _, col := range append([]string{aq.Feature}, aq.GroupBy...) {
+		sens := s.sensitivity(col)
+		if !visible(role, sens) || (role == adminapi.RoleResearcher && sens == "S2") {
+			writeError(w, http.StatusForbidden, "sensitivity_refused", col+" is "+sens+" data, which this role may not query")
+			return
+		}
 	}
 	res, err := s.Store.Aggregate(aq)
 	if err != nil {

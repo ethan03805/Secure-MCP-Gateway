@@ -186,6 +186,9 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 ### No result before release (SR-5.11-1)
 
 - New test `TestNoResultBeforeRelease` (`internal/edge`) verifies SR-5.11-1: while a three-part backend result waits in the response inspection, a plain request receives nothing (not even headers) and a request with a progress token receives only the inspected progress notifications; the result's parts arrive only after the delivered event is committed.
+### Observation data by role and sensitivity (SR-6-3)
+
+- Observation records, metrics and scores returned by the control API omit the fields the caller's role may not see by catalog sensitivity: S2 for every role but the Administrator, Policy Author and Auditor, S3 for every role. Aggregates over or grouped by such a field are refused with 403 `sensitivity_refused`; a Researcher's aggregates stay within S0 and S1. `adminapi.WithRole` lets handler tests set the caller's role. A new test verifies SR-6-3.
 
 ### Owner decisions applied
 

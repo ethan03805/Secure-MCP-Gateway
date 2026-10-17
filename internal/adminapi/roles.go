@@ -106,6 +106,12 @@ func (s *Server) authenticatedRoles(pattern string, next http.HandlerFunc, roles
 	})
 }
 
+// WithRole returns ctx carrying actor and role as an authenticated request
+// does; for handlers called without the listener (tests).
+func WithRole(ctx context.Context, actor, role string) context.Context {
+	return withRole(ctx, actor, role)
+}
+
 func withRole(ctx context.Context, actor, role string) context.Context {
 	return context.WithValue(context.WithValue(ctx, actorKey{}, actor), roleKey{}, role)
 }

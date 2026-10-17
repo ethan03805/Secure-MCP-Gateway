@@ -118,7 +118,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-26 Data Access Service
 
-- SR-6-3 missing: observation data served to the console is filtered by route role only, not by each field's sensitivity class.
 
 ## E-28 Data Lifecycle & Memory Manager
 

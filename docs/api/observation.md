@@ -58,6 +58,8 @@ The Parameter Catalog with the current selection.
 
 Stored observation records, oldest first. Query: `from`, `to`, `principal`, `server` (alias), `tool`, `session` (each repeatable), `limit` (1 to 1000, default 100).
 
+Fields are returned according to the caller's role and each parameter's catalog sensitivity (SR-6-3, Appendix C): S0 and S1 fields to every role of the route, S2 fields only to the Administrator, Policy Author and Auditor (the Operator's rows omit them), and S3 fields to nobody, because payload access needs a separate grant that release 1.0 does not issue. The same applies to `GET /api/v1/observations/metrics` and `GET /api/v1/anomalies`.
+
 ```json
 {"count": 1, "rows": [
   {"ts": "2026-10-16T12:00:00.123456Z", "correlation_id": "0199...", "server_id": "fs", "capture": "sampled",
@@ -89,6 +91,8 @@ Aggregate over one numeric column. Query:
 ```
 
 `variance` is the sample variance (0 for one value).
+
+A `feature` or `group_by` column the role may not see is refused with 403 `sensitivity_refused` (SR-6-3): S2 columns for the Operator and the Researcher, S3 columns for every role.
 
 ### GET /api/v1/observations/metrics
 
