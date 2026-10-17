@@ -346,11 +346,11 @@ R: Containment of credential compromise.
 
 @SR-2.3-1 | Bearer key generation
 P: SEC-2.3
-S: The Key & Trust Anchor Manager (E-22) SHALL generate UDS bearer keys, session tokens, access tokens, refresh tokens, authorization codes and client secrets from at least 256 bits of CSPRNG output and SHALL store only their SHA-256 verifiers.
+S: The Key & Trust Anchor Manager (E-22) SHALL generate UDS bearer keys, session tokens, access tokens, refresh tokens, authorization codes and client secrets from at least 256 bits of CSPRNG output and SHALL store only their verifiers: SHA-256 for session, access and refresh tokens and authorization codes, and Argon2id (CP-28) for client secrets and UDS bearer keys.
 A: E-22; E-04; F-59; F-06
 V: Inspection | Inspect the generation code and stored records; confirm entropy and verifier-only storage.
 SRC: SEC 2.3
-R: Stored verifiers cannot be replayed.
+R: Stored verifiers cannot be replayed. Client secrets and UDS bearer keys are long-lived and checked rarely, so they get the slower Argon2id verifier used for passwords; short-lived tokens are checked on every request and use SHA-256.
 
 @SR-2.3-2 | Adapter credential storage
 P: SEC-2.3
@@ -509,11 +509,11 @@ DEFER: The release 1.0 manifest schema (Appendix J) has no handle contract, and 
 
 @SR-2.13-1 | Vault encryption
 P: SEC-2.13
-S: The Secret Vault (E-19) SHALL encrypt each secret value with age to the vault master key held by the Key & Trust Anchor Manager (E-22).
+S: The Secret Vault (E-19) SHALL encrypt each secret value with age to the vault master key, an age X25519 identity that is never stored in plaintext: it is kept in the macOS Keychain or age-encrypted under an scrypt passphrase.
 A: E-19; E-22; F-47; F-60
 V: Inspection | Inspect the vault store; confirm age ciphertext and no plaintext.
 SRC: SEC 2.13
-R: Encrypted at rest.
+R: Encrypted at rest. Release 1.0 keeps the vault master key with the vault's own key sources (Keychain or passphrase-wrapped file) rather than in the files of the Key & Trust Anchor Manager, so the key that decrypts the vault is never readable beside the TLS and evidence keys and needs its own unlock.
 
 @SR-2.13-2 | Plaintext lifetime
 P: SEC-2.13

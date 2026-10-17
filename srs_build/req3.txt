@@ -182,11 +182,11 @@ DEFER: Deferred with the mTLS Harness Profile (FR-2.14): release 1.0 authenticat
 
 @FR-7.8 | Key purposes
 P: FR-7
-S: The Key & Trust Anchor Manager (E-22) SHALL hold separate keys for the purposes client CA, server CA, server TLS, policy signing, vault master, payload encryption, backup encryption, evidence signing, MRTR state protection, cursor protection, research pseudonymization and Data Server credentials.
+S: The Gateway SHALL use a separate key for each of the purposes server CA, server TLS, policy signing, vault master, backup encryption, evidence signing, cursor protection, leak-fingerprint keying, research pseudonymization and Data Server credentials, and SHALL use no key for more than one purpose.
 A: E-22; F-60; D-08
 V: Inspection | Inspect the key inventory; confirm one key per purpose and no reuse.
 SRC: ARCH §4 E-22
-R: Compromise of one purpose must not affect others.
+R: Compromise of one purpose must not affect others. Release 1.0 has no client CA (the mTLS Harness Profile, FR-2.14, is deferred), no MRTR state protection key (the MRTR Relay Profile, FR-5.25, is deferred) and no payload encryption (no payload is stored encrypted outside the vault and backups, which have their own keys). Backup encryption uses the operator's passphrase or age recipients, never a Gateway key. Leak-fingerprint keying (FR-6.10) is listed because it is a key purpose of its own.
 
 @FR-7.9 | Key protection at rest
 P: FR-7

@@ -102,9 +102,11 @@ group = "smcp-harness"            # socket owner group; the socket has mode 0660
 [[uds.peer]]
 uid = 1000                        # local user ID of the harness process
 principal = "cc"                  # [[principal]] ID
-key_hash = "$argon2id$..."        # smcpctl hash-password of the bearer key
+key_hash = "$argon2id$..."        # printed by smcpctl uds key --out <file>
 template = "ro"                   # optional; the profile's default template otherwise
 ```
+
+`smcpctl uds key --out <file>` generates a bearer key from 256 bits of CSPRNG output, writes it to a new file with mode 0600 for the harness user, and prints the `key_hash` line; only that Argon2id verifier goes into the configuration.
 
 The Gateway process must be able to give the socket to the group (be a member of it, or run as root). Harness users join the group to connect.
 

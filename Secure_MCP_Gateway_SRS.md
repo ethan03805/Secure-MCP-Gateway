@@ -2441,12 +2441,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-7.8 |
 | Parent ID | FR-7 — Assurance services |
-| Statement | The Key & Trust Anchor Manager (E-22) **SHALL** hold separate keys for the purposes client CA, server CA, server TLS, policy signing, vault master, payload encryption, backup encryption, evidence signing, MRTR state protection, cursor protection, research pseudonymization and Data Server credentials. |
+| Statement | The Gateway **SHALL** use a separate key for each of the purposes server CA, server TLS, policy signing, vault master, backup encryption, evidence signing, cursor protection, leak-fingerprint keying, research pseudonymization and Data Server credentials, and **SHALL** use no key for more than one purpose. |
 | Allocation | Elements: E-22 Key & Trust Anchor Manager; Functions: F-60; Data stores: D-08 |
 | Verification Method | Inspection |
 | Verification Statement | Inspect the key inventory; confirm one key per purpose and no reuse. |
 | Source | ARCH §4 E-22 |
-| Rationale | Compromise of one purpose must not affect others. |
+| Rationale | Compromise of one purpose must not affect others. Release 1.0 has no client CA (the mTLS Harness Profile, FR-2.14, is deferred), no MRTR state protection key (the MRTR Relay Profile, FR-5.25, is deferred) and no payload encryption (no payload is stored encrypted outside the vault and backups, which have their own keys). Backup encryption uses the operator's passphrase or age recipients, never a Gateway key. Leak-fingerprint keying (FR-6.10) is listed because it is a key purpose of its own. |
 
 #### FR-7.10 — Trust anchor enrollment
 
@@ -5567,12 +5567,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-2.3-1 |
 | Parent ID | SEC-2.3 — Client-key protection (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Key & Trust Anchor Manager (E-22) **SHALL** generate UDS bearer keys, session tokens, access tokens, refresh tokens, authorization codes and client secrets from at least 256 bits of CSPRNG output and **SHALL** store only their SHA-256 verifiers. |
+| Statement | The Key & Trust Anchor Manager (E-22) **SHALL** generate UDS bearer keys, session tokens, access tokens, refresh tokens, authorization codes and client secrets from at least 256 bits of CSPRNG output and **SHALL** store only their verifiers: SHA-256 for session, access and refresh tokens and authorization codes, and Argon2id (CP-28) for client secrets and UDS bearer keys. |
 | Allocation | Elements: E-22 Key & Trust Anchor Manager, E-04 Session Manager; Functions: F-59, F-06 |
 | Verification Method | Inspection |
 | Verification Statement | Inspect the generation code and stored records; confirm entropy and verifier-only storage. |
 | Source | SEC 2.3 |
-| Rationale | Stored verifiers cannot be replayed. |
+| Rationale | Stored verifiers cannot be replayed. Client secrets and UDS bearer keys are long-lived and checked rarely, so they get the slower Argon2id verifier used for passwords; short-lived tokens are checked on every request and use SHA-256. |
 
 #### SR-2.3-2 — Adapter credential storage
 
@@ -5788,12 +5788,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-2.13-1 |
 | Parent ID | SEC-2.13 — Encrypted secrets (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Secret Vault (E-19) **SHALL** encrypt each secret value with age to the vault master key held by the Key & Trust Anchor Manager (E-22). |
+| Statement | The Secret Vault (E-19) **SHALL** encrypt each secret value with age to the vault master key, an age X25519 identity that is never stored in plaintext: it is kept in the macOS Keychain or age-encrypted under an scrypt passphrase. |
 | Allocation | Elements: E-19 Secret Vault, E-22 Key & Trust Anchor Manager; Functions: F-47, F-60 |
 | Verification Method | Inspection |
 | Verification Statement | Inspect the vault store; confirm age ciphertext and no plaintext. |
 | Source | SEC 2.13 |
-| Rationale | Encrypted at rest. |
+| Rationale | Encrypted at rest. Release 1.0 keeps the vault master key with the vault's own key sources (Keychain or passphrase-wrapped file) rather than in the files of the Key & Trust Anchor Manager, so the key that decrypts the vault is never readable beside the TLS and evidence keys and needs its own unlock. |
 
 #### SR-2.13-2 — Plaintext lifetime
 
