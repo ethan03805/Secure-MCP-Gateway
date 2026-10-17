@@ -6,7 +6,7 @@ The listener's rules apply to every route: loopback TLS, `Host` must name the ad
 
 Authentication is a bearer token in the `Authorization` header (smcpctl and scripts) or a browser session cookie (the console; see [Browser sessions](#browser-sessions)). Bearer tokens are the operator token (`<state>/keys/admin.token`) or a sign-in token from `POST /admin/v1/login`; the tokens of the other Appendix C roles come from `POST /api/v1/console/login` and `POST /api/v1/approvals/login` (below). A request with an `Authorization` header is authenticated by it alone. Which role may use which route is the role matrix under [Roles](#roles). A missing or unknown token or session gets 401 `unauthenticated` (recorded as `ADMIN_AUTH_FAILED`); a token of a role the route does not admit gets 403 `role_refused` (recorded as `ADMIN_ROLE_REFUSED`).
 
-Every control API response carries an `ETag`: the control-state revision, which changes with every state-changing request (POST, PUT, PATCH, DELETE) that passes authentication and the role check, from any client.
+Every control API response carries an `ETag` naming the control-state sequence at the time of the answer. The sequence advances with every state-changing request (POST, PUT, PATCH, DELETE) that passes authentication and the role check, from any client, and each object records the sequence of its last change: that is the object's revision. The object of a route is the path below `/api/v1/` or `/admin/v1/` up to its last path parameter (other than `{action}`), so `POST /api/v1/principals/{id}/suspend` for principal `p` changes `principals/{p}`; a route without a parameter is its own object, except `stop` and `resume` (one object, `gateway`), `policy/reload`, `policy/revisions` and `policy/rollback` (`policy`) and `remote/enable` and `remote/disable` (`remote`). The answer of a state-changing request names its object in `X-SMCP-Object`.
 
 ## Browser sessions
 
@@ -24,9 +24,9 @@ Every state-changing request of a browser session must carry (SR-8.9-1):
 |---|---|---|
 | `X-CSRF-Token: <csrf_token>` | missing or wrong | 403 `csrf_invalid` (recorded as `auth_failure`/`CSRF_TOKEN_INVALID`) |
 | `If-Match: <ETag>` | missing | 428 `precondition_required` |
-| | names an older revision, or `*` | 412 `revision_stale`, with the current `ETag` |
+| | names a tag older than the last change of the request's object, a tag of another `smcpd` start, or `*` | 412 `revision_stale`, with the current `ETag` |
 
-A matching `If-Match` advances the revision atomically, so of two concurrent requests with the same tag only one passes. The console sends the last `ETag` it received; after a 412 it shows that the Gateway state changed and the next attempt carries the new revision. Sign-out routes need the CSRF token but not `If-Match`. Bearer-token requests need neither, since a browser cannot attach a bearer token to a cross-site request.
+A change to another object does not make a tag stale. Check and change are atomic, so of two concurrent requests for one object with the same tag only one passes. The console keeps the last `ETag` it received for each resource collection (the first path segment below the version, such as `principals`) and sends the one of the collection it changes; after a 412 it shows that the object changed and the next attempt carries the new tag. Sign-out routes need the CSRF token but not `If-Match`. Bearer-token requests need neither, since a browser cannot attach a bearer token to a cross-site request.
 
 Errors have the form `{"error": {"code": "<code>", "message": "<text>"}}`.
 

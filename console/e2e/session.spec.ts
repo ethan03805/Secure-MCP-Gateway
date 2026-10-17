@@ -69,6 +69,27 @@ test("the console reports a stale revision and the retry succeeds", async ({ pag
   await expect(page.getByText(/changed since/)).toHaveCount(0);
 });
 
+test("revisions are per object: a change to another object does not force a re-read", async ({ page, request }) => {
+  claims("SR-8.9-1");
+  await signIn(page, "/audit");
+  await expect(page.getByRole("heading", { level: 1, name: "Audit investigation" })).toBeVisible();
+  await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
+  // Another client changes an unrelated object (a principal) after the view was read.
+  const login = await request.post(g.adminURL + "/admin/v1/login", { data: { username: "admin", password: g.adminPassword }, headers: { Origin: g.adminURL } });
+  const { token } = (await login.json()) as { token: string };
+  const auth = { Authorization: `Bearer ${token}`, Origin: g.adminURL };
+  const principals = (await (await request.get(g.adminURL + "/api/v1/principals", { headers: auth })).json()) as { principals: { id: string; status?: string }[] };
+  const p = principals.principals.find((x) => x.status !== "suspended") ?? principals.principals[0]!;
+  const r = await request.post(g.adminURL + `/api/v1/principals/${p.id}/enable`, { data: { reason: "per-object revision test" }, headers: auth });
+  expect(r.headers()["x-smcp-object"]).toBe(`principals/{${p.id}}`);
+  // The audit verification (another object) goes through without a re-read.
+  const answer = page.waitForResponse((x) => x.url().endsWith("/api/v1/audit/verify") && x.request().method() === "POST");
+  await page.getByRole("button", { name: /Verify the journal/ }).click();
+  expect((await answer).status()).toBe(200);
+  await expect(page.getByRole("definition").filter({ hasText: /^verified$/ })).toBeVisible();
+  await expect(page.getByText(/changed since/)).toHaveCount(0);
+});
+
 test("sign-out ends the session at once", async ({ page }) => {
   claims("SR-2.6-1");
   await signIn(page, "/");

@@ -149,9 +149,13 @@ func TestAT15ConsoleAuthority(t *testing.T) {
 		t.Fatalf("admin read: %d", code)
 	}
 	stale := adm.etag
-	// Another actor changes control state: the browser's revision is stale.
-	if code, out := g.api("POST", "/api/v1/principals/claude-code-local/enable", map[string]any{"reason": "bump revision"}); code >= 300 {
-		t.Fatalf("enable: %d %v", code, out)
+	// Another actor stops and resumes the Gateway: the browser's revision
+	// is stale for the run state (revisions are per object).
+	if code, out := g.api("POST", "/admin/v1/stop", map[string]any{"reason": "bump revision"}); code >= 300 {
+		t.Fatalf("stop: %d %v", code, out)
+	}
+	if code, out := g.api("POST", "/admin/v1/resume", map[string]any{}); code >= 300 {
+		t.Fatalf("resume: %d %v", code, out)
 	}
 	stop := map[string]any{"reason": "AT-15"}
 	if code, body := adm.do("POST", "/admin/v1/stop", "", stale, stop); code != http.StatusForbidden {

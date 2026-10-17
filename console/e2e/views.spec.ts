@@ -176,7 +176,7 @@ test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly dr
     ],
   });
   await page.reload();
-  await expect(page.getByRole("img", { name: /z-score timeline/ })).toBeVisible();
+  await expect(page.getByRole("group", { name: /z-score timeline/ })).toBeVisible();
   const table = page.getByRole("table", { name: "Abnormal events" });
   await expect(table).toContainText("critical");
   // Keyboard: focus the critical dot and open it with Enter.

@@ -99,7 +99,7 @@ func (s *Server) authenticatedRoles(pattern string, next http.HandlerFunc, roles
 			writeError(w, http.StatusForbidden, "role_refused", "this account's role does not permit this operation")
 			return
 		}
-		if !s.precondition(w, r) {
+		if !s.precondition(w, r, pattern) {
 			return
 		}
 		next(w, r)

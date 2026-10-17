@@ -501,7 +501,7 @@ button{margin:16px 8px 0 0;padding:10px 16px;font-size:16px}dl{font-size:14px;ba
 <body><h1>Secure MCP Gateway: remote access</h1>
 <p class="warn">This request arrived through the Remote Access tunnel from an agent running on another computer.</p>
 <p>{{.Lead}}</p>
-<dl><dt>Client</dt><dd>{{.ClientID}}</dd>{{if .ClientName}}<dt>Client name (self-declared)</dt><dd>{{.ClientName}}</dd>{{end}}<dt>Principal</dt><dd>{{.Principal}}</dd><dt>Requested scope</dt><dd>{{if .Scope}}{{.Scope}}{{else}}(default template){{end}}</dd><dt>Caller address (reported by the tunnel)</dt><dd>{{.Address}}</dd></dl>
+<dl><dt>Client</dt><dd>{{.ClientID}}</dd>{{if .ClientName}}<dt>Client name (self-declared)</dt><dd>{{.ClientName}}</dd>{{end}}<dt>Principal</dt><dd>{{.Principal}}</dd><dt>Requested template</dt><dd>{{.Template}}</dd><dt>Requested scope</dt><dd>{{if .Scope}}{{.Scope}}{{else}}(default template){{end}}</dd><dt>Caller address (reported by the tunnel)</dt><dd>{{.Address}}</dd></dl>
 {{if .Error}}<p class="err" role="alert">{{.Error}}</p>{{end}}
 <form method="post" action="{{.Action}}">
 {{range $k, $v := .Hidden}}<input type="hidden" name="{{$k}}" value="{{$v}}">{{end}}
@@ -524,7 +524,7 @@ func (s *Service) authorizeData(p authorizeParams, c rclient, errMsg string) map
 		name = g.ClientName
 	}
 	return map[string]any{"Lead": "Sign in as a Session Approver to give this agent a Gateway session.", "ClientID": c.id, "ClientName": name,
-		"Principal": c.principal, "Scope": p.Scope, "Error": errMsg, "Action": pathAuthorize,
+		"Principal": c.principal, "Template": session.TemplateLabel(p.Scope), "Scope": p.Scope, "Error": errMsg, "Action": pathAuthorize,
 		"Hidden": map[string]string{"client_id": p.ClientID, "redirect_uri": p.RedirectURI, "state": p.State, "scope": p.Scope,
 			"code_challenge": p.Challenge, "code_challenge_method": p.Method, "resource": p.Resource, "response_type": p.ResponseType}}
 }
@@ -824,11 +824,12 @@ func (s *Service) deviceData(code string, d *deviceGrant, errMsg string) map[str
 		"Action": pathDevice, "AskCode": true, "UserCode": normalizeUserCode(code), "Error": errMsg, "Hidden": map[string]string{}}
 	if d != nil {
 		data["ClientID"], data["Principal"], data["Scope"] = d.clientID, d.principal, d.scope
+		data["Template"] = session.TemplateLabel(d.scope)
 		if g, ok := s.reg.get(d.clientID); ok {
 			data["ClientName"] = g.ClientName
 		}
 	} else {
-		data["ClientID"], data["Principal"] = "(enter the code)", "-"
+		data["ClientID"], data["Principal"], data["Template"] = "(enter the code)", "-", "-"
 	}
 	return data
 }
