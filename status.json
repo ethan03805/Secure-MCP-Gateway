@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T07:40:27Z",
-  "commit": "8f03a81b8b222bf045237bdd5efee1740945443c",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/8f03a81b8b222bf045237bdd5efee1740945443c",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39013991072",
+  "generatedAt": "2026-10-17T07:55:35Z",
+  "commit": "450ae68e37390ce0ab1d134106ca7be9e40404ec",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/450ae68e37390ce0ab1d134106ca7be9e40404ec",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39014922183",
   "tests": {
-    "total": 865,
-    "passed": 846,
-    "failed": 0,
+    "total": 878,
+    "passed": 856,
+    "failed": 3,
     "skipped": 19,
-    "durationSec": 442.4,
+    "durationSec": 458.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
-        "passed": 2,
-        "failed": 0,
+        "passed": 1,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -31,8 +31,8 @@
       },
       {
         "name": "console/e2e/webkit",
-        "passed": 35,
-        "failed": 0,
+        "passed": 33,
+        "failed": 2,
         "skipped": 2
       },
       {
@@ -127,7 +127,7 @@
       },
       {
         "name": "internal/consoleapi",
-        "passed": 11,
+        "passed": 12,
         "failed": 0,
         "skipped": 0
       },
@@ -145,13 +145,13 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 39,
+        "passed": 42,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 43,
+        "passed": 46,
         "failed": 0,
         "skipped": 0
       },
@@ -205,7 +205,7 @@
       },
       {
         "name": "internal/library",
-        "passed": 27,
+        "passed": 28,
         "failed": 0,
         "skipped": 0
       },
@@ -259,7 +259,7 @@
       },
       {
         "name": "internal/policyadmin",
-        "passed": 5,
+        "passed": 10,
         "failed": 0,
         "skipped": 0
       },
@@ -450,7 +450,7 @@
       },
       {
         "name": "internal/consoleapi",
-        "pct": 87.6
+        "pct": 87.8
       },
       {
         "name": "internal/consoleauth",
@@ -462,11 +462,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.2
+        "pct": 92.5
       },
       {
         "name": "internal/egress",
-        "pct": 81.4
+        "pct": 80.8
       },
       {
         "name": "internal/filterapi",
@@ -482,7 +482,7 @@
       },
       {
         "name": "internal/gwtest",
-        "pct": 79.7
+        "pct": 80.5
       },
       {
         "name": "internal/harness",
@@ -490,7 +490,7 @@
       },
       {
         "name": "internal/health",
-        "pct": 94.4
+        "pct": 95.2
       },
       {
         "name": "internal/hostile",
@@ -534,7 +534,7 @@
       },
       {
         "name": "internal/packaging",
-        "pct": 74.8
+        "pct": 74.9
       },
       {
         "name": "internal/packaging/pkgtest",
@@ -542,7 +542,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 90.9
+        "pct": 91.1
       },
       {
         "name": "internal/policy",
@@ -550,11 +550,11 @@
       },
       {
         "name": "internal/policyadmin",
-        "pct": 81.5
+        "pct": 81.4
       },
       {
         "name": "internal/policystore",
-        "pct": 81.9
+        "pct": 82.4
       },
       {
         "name": "internal/posixacl",
@@ -594,7 +594,7 @@
       },
       {
         "name": "internal/session",
-        "pct": 85.7
+        "pct": 86
       },
       {
         "name": "internal/testport",
@@ -602,7 +602,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 77.2
+        "pct": 75.6
       },
       {
         "name": "packaging/linux",
@@ -632,10 +632,10 @@
   },
   "requirements": {
     "total": 543,
-    "verified": 227,
+    "verified": 235,
     "partial": 204,
-    "failing": 0,
-    "unverified": 112,
+    "failing": 2,
+    "unverified": 102,
     "byElement": [
       {
         "element": "E-01",
@@ -657,7 +657,7 @@
         "element": "E-03",
         "name": "Identity & Authentication Service",
         "total": 14,
-        "verified": 5,
+        "verified": 6,
         "partial": 4,
         "failing": 0
       },
@@ -665,7 +665,7 @@
         "element": "E-04",
         "name": "Session Manager",
         "total": 19,
-        "verified": 9,
+        "verified": 10,
         "partial": 7,
         "failing": 0
       },
@@ -673,8 +673,8 @@
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 22,
-        "verified": 5,
-        "partial": 8,
+        "verified": 6,
+        "partial": 9,
         "failing": 0
       },
       {
@@ -697,7 +697,7 @@
         "element": "E-08",
         "name": "Access Enforcement Point",
         "total": 18,
-        "verified": 11,
+        "verified": 13,
         "partial": 3,
         "failing": 0
       },
@@ -729,7 +729,7 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 5,
+        "verified": 7,
         "partial": 7,
         "failing": 0
       },
@@ -801,7 +801,7 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 24,
-        "verified": 7,
+        "verified": 8,
         "partial": 5,
         "failing": 0
       },
@@ -809,7 +809,7 @@
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
         "total": 8,
-        "verified": 2,
+        "verified": 3,
         "partial": 4,
         "failing": 0
       },
@@ -825,9 +825,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 20,
-        "partial": 40,
-        "failing": 0
+        "verified": 19,
+        "partial": 39,
+        "failing": 2
       },
       {
         "element": "E-25",
@@ -1329,8 +1329,10 @@
       {
         "id": "FR-2.1",
         "element": "E-03",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "docs/verification/inspections.md:252"
+        ]
       },
       {
         "id": "FR-2.2",
@@ -1424,8 +1426,10 @@
       {
         "id": "FR-2.12",
         "element": "E-04",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestSessionRebindsOnActivation"
+        ]
       },
       {
         "id": "FR-2.13",
@@ -2370,8 +2374,10 @@
       {
         "id": "FR-7.3",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/consoleapi.TestAuditQueryFilters"
+        ]
       },
       {
         "id": "FR-7.4",
@@ -2839,7 +2845,7 @@
       {
         "id": "FR-8.30",
         "element": "E-24",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "console/e2e/browsers.TestConsoleSuiteOnEveryBrowser"
         ]
@@ -2897,7 +2903,7 @@
       {
         "id": "FR-8.35",
         "element": "E-24",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
@@ -3430,8 +3436,10 @@
       {
         "id": "FR-11.10",
         "element": "E-12",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestStopUnderLoad"
+        ]
       },
       {
         "id": "FR-12",
@@ -4550,8 +4558,10 @@
       {
         "id": "SR-2.2-1",
         "element": "E-22",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestRevocationUnderLoad"
+        ]
       },
       {
         "id": "SR-2.3-1",
@@ -4572,8 +4582,10 @@
       {
         "id": "SR-2.4-1",
         "element": "E-12",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestRevocationUnderLoad"
+        ]
       },
       {
         "id": "SR-2.5-1",
@@ -4867,8 +4879,11 @@
       {
         "id": "SR-3.12-1",
         "element": "E-08",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestGatewayAdminToolsNeverPresented",
+          "internal/library.TestManifestClassesReachTools"
+        ]
       },
       {
         "id": "SR-3.13-1",
@@ -5207,6 +5222,7 @@
         "tests": [
           "internal/e2e.TestSessionTaintEndToEnd",
           "internal/hostile.TestHostileFixtures/HF-04",
+          "internal/library.TestManifestClassesReachTools",
           "internal/policy.TestSessionTaintObligation",
           "internal/policy.TestTaintClassesRestrictOnly"
         ]
@@ -5266,8 +5282,10 @@
       {
         "id": "SR-5.18-2",
         "element": "E-08",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestPresentedIcons"
+        ]
       },
       {
         "id": "SR-5.19-1",
@@ -5499,8 +5517,10 @@
       {
         "id": "SR-7.3-1",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/policyadmin.TestStartupIntegrityFailsClosed"
+        ]
       },
       {
         "id": "SR-7.4-1",
@@ -5561,8 +5581,10 @@
       {
         "id": "SR-7.9-1",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestPolicyRollbackKeepsRevocations"
+        ]
       },
       {
         "id": "SR-7.10-1",
@@ -6253,7 +6275,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6288,7 +6310,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33371: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41597: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6344,6 +6366,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
