@@ -88,10 +88,12 @@ file = "policy.json"
 
 func heldCall(svc *approval.Service, text string) <-chan pipeline.ApprovalResult {
 	ch := make(chan pipeline.ApprovalResult, 1)
+	// The hold outlasts the CLI steps that decide the approval, each of
+	// which signs in (password hashing, slow under the race detector).
 	go func() {
 		c := pipeline.Call{CorrelationID: "corr-" + text, SessionID: "s1", PrincipalID: "cc", Server: "fs", Tool: "write", PublicName: "fs_write",
 			ServerRevision: "sr1", ToolRevision: "tr1", PolicyRevision: "r1", DecisiveRules: []string{"rule-w"}}
-		r, _ := svc.Request(context.Background(), pipeline.ApprovalRequest{Call: c, Arguments: json.RawMessage(`{"text":"` + text + `"}`), Hold: 20 * time.Second})
+		r, _ := svc.Request(context.Background(), pipeline.ApprovalRequest{Call: c, Arguments: json.RawMessage(`{"text":"` + text + `"}`), Hold: 2 * time.Minute})
 		ch <- r
 	}()
 	return ch
