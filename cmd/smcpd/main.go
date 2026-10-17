@@ -75,7 +75,11 @@ func run(cfgPath, level string) error {
 	if err := a.Listen(); err != nil {
 		return err
 	}
-	log.Info("smcpd listening", "mcp", cfg.ResourceURI(), "admin", cfg.AdminURL(), "policy_revision", a.Decider.Snapshot().Revision,
+	revision := "none (fail-closed)"
+	if snap := a.Decider.Snapshot(); snap != nil {
+		revision = snap.Revision
+	}
+	log.Info("smcpd listening", "mcp", cfg.ResourceURI(), "admin", cfg.AdminURL(), "policy_revision", revision,
 		"profile", a.Profile.Profile, "release_label", a.Profile.Label)
 	err = a.Serve(ctx)
 	if errors.Is(err, http.ErrServerClosed) {

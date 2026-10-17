@@ -30,6 +30,8 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
+	"github.com/ethan03805/secure-mcp-gateway/internal/policyadmin"
+	"github.com/ethan03805/secure-mcp-gateway/internal/policystore"
 	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
@@ -69,7 +71,8 @@ type App struct {
 	Profile      profile.Report
 	Capabilities *pipeline.Capabilities
 	TLS          keys.TLSStatus
-	Egress       *egress.Broker // nil unless [egress] enabled = true
+	Egress       *egress.Broker       // nil unless [egress] enabled = true
+	Policy       *policyadmin.Service // E-05: signed Policy Store, /api/v1/policy*
 
 	log       *slog.Logger
 	janitor   time.Duration
@@ -117,9 +120,19 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if a.TLS.LeafRotated {
 		o.Log.Warn("listener certificate reissued", "not_after", a.TLS.LeafNotAfter)
 	}
-	snap, err := policy.Load(cfg.Policy.File)
+	// E-05: the active signed revision of the Policy Store, or the policy
+	// file imported as the first revision. A revision that does not verify
+	// starts the Gateway fail-closed (SR-1.1-2).
+	pstore, err := policystore.Open(cfg.State.Dir)
 	if err != nil {
-		return a, fmt.Errorf("policy: %w", err)
+		return a, fmt.Errorf("policy store: %w", err)
+	}
+	snap, imported, policyFault, policyErr := policyadmin.Load(pstore, cfg.Policy.File)
+	if policyErr != nil && policyFault == "" {
+		return a, fmt.Errorf("policy: %w", policyErr)
+	}
+	if policyFault != "" {
+		o.Log.Error("active policy revision does not verify; refusing every call until a valid revision is published", "err", policyErr)
 	}
 	if a.Journal, err = audit.Open(filepath.Join(cfg.State.Dir, "journal"), evKey, audit.Options{}); err != nil {
 		return a, fmt.Errorf("journal: %w", err)
@@ -163,6 +176,10 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 
 	a.Decider = policy.NewDecider(snap, cfg.Limits.PrincipalCallsPerMin)
+	a.Decider.SetBurst(cfg.Limits.PrincipalCallBurst)
+	a.Policy = policyadmin.New(policyadmin.Options{Store: pstore, Evidence: a.Evidence, Active: a.Decider.Snapshot,
+		JournalDir: a.Journal.Dir(), DefaultRate: cfg.Limits.PrincipalCallsPerMin, Burst: cfg.Limits.PrincipalCallBurst, Fault: policyFault, Log: o.Log})
+	a.Policy.Started(imported, policyErr)
 	a.Store = session.NewStore(cfg, a.Decider.Snapshot)
 	guard := authguard.New(o.GuardConfig)
 	a.OAuth = session.NewOAuth(cfg, a.Store, a.Evidence, guard)
@@ -171,14 +188,20 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 	if a.Gateway, err = edge.New(edge.Deps{Config: cfg, Store: a.Store, OAuth: a.OAuth, Decider: a.Decider, Registry: a.Registry,
 		Evidence: a.Evidence, EvidenceErr: a.Journal.Err, Log: o.Log, Profile: a.Profile, Approver: o.Approver, Filters: o.Filters,
-		Capabilities: a.Capabilities, ConsoleURL: o.ConsoleURL}); err != nil {
+		Capabilities: a.Capabilities, ConsoleURL: o.ConsoleURL, PolicyFault: a.Policy.Fault}); err != nil {
 		return a, err
 	}
-	if a.Admin, err = adminapi.New(adminapi.Options{Config: cfg, Controller: a.Gateway, Evidence: a.Evidence, Guard: guard, Approvals: o.Approvals, Log: o.Log}); err != nil {
+	a.Policy.Bind(a.Gateway)
+	if a.Admin, err = adminapi.New(adminapi.Options{Config: cfg, Controller: a.Policy, Evidence: a.Evidence, Guard: guard, Approvals: o.Approvals, Log: o.Log}); err != nil {
 		return a, err
 	}
 	a.Egress.Register(a.Admin)
-	if err = a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "started", PolicyRevision: snap.Revision, PolicyStatus: "not_evaluated",
+	a.Policy.Register(a.Admin)
+	revision := ""
+	if snap != nil {
+		revision = snap.Revision
+	}
+	if err = a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "started", PolicyRevision: revision, PolicyStatus: "not_evaluated",
 		Detail: map[string]any{"version": backend.Version, "listener": cfg.Listener.Address, "admin_listener": cfg.AdminListener.Address,
 			"profile": a.Profile.Profile, "release_label": a.Profile.Label}}); err != nil {
 		return a, fmt.Errorf("journal: %w", err)

@@ -99,6 +99,7 @@
         "tool_concurrency_total": { "type": "integer", "minimum": 1 },
         "tool_queue": { "type": "integer", "minimum": 0 },
         "principal_calls_per_minute": { "type": "integer", "minimum": 1 },
+        "principal_call_burst": { "type": "integer", "minimum": 0 },
         "upstream_timeout": { "$ref": "#/$defs/duration" },
         "client_deadline": { "$ref": "#/$defs/duration" },
         "session_max_lifetime": { "$ref": "#/$defs/duration" },

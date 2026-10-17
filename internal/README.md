@@ -21,7 +21,9 @@ keeps today's behavior, and test the default.
 | `backend` | E-10, E-14, E-15 (part) | Server registry, public names, FIFO concurrency queue, upstream timeout, bounded result reading, capability check before dispatch. |
 | `session` | E-03, E-04 | OAuth 2.1 authorization server (Session Approver sign-in), session API, session table with refresh-token rotation and reuse detection, janitor. |
 | `authguard` | E-03, E-24 | Per-source rate limit, lockout with backoff, bounded Argon2id, unknown-account dummy verification. |
-| `policy` | E-05 (part), E-06 | Schema-validated policy document, compiled snapshot, decisions, rate windows, filter obligations, `Replace` for hot swap. |
+| `policy` | E-05 (part), E-06 | Schema-validated policy document and canonical form, compiled snapshot, decisions with deny precedence, rate and burst windows, session quotas, evaluation bounds, restrict-only session taint, filter obligations, `Diff`, `Simulate`, `Replace` for hot swap. |
+| `policystore` | E-05 (D-01) | Signed Policy Store: Ed25519 policy-signing key, immutable revision files named by digest, signed policy-control record with atomic activation. |
+| `policyadmin` | E-05 | Load at start (import or verify, fail-closed on `policy_signature`), publish, rollback, simulate from the journal, the `/api/v1/policy*` control API routes, and the `adminapi.Controller` wrapper that sends `policy/reload` through the store. |
 | `audit` | E-21 | Signed hash-chained journal with group-committed fsync, crash recovery, external anchor, verifier; `Fanout` with non-blocking observers; `Memory` for tests. |
 | `keys` | E-22 (part) | Name-constrained local server CA, listener certificate and rotation, evidence key, operator token, Argon2id. |
 | `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload; role seam (`AddAuthenticator`, `HandleRoles`, `HandlePublic`, `ActorOf`, `RoleOf`). |
@@ -66,7 +68,7 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 | Manifests | `pipeline.ManifestSource` (`Tools(ctx, spec, live) (ToolSet, error)`) | `LiveManifest`: live `tools/list`, `Verified: false` | E-13/E-14 agent: signed package manifests (minisign), drift check against the live list, `smcpctl package build|sign|verify`. Health reports `unverified_manifests` until then. |
 | Secrets | `pipeline.SecretBroker` (`Resolve(ctx, SecretRequest)`) | `NoSecrets`: a server with `secret_env` does not start | E-19/E-20 agent: vault and broker; record each secret use as evidence. |
 | Evidence observers | `audit.Observer`, registered through `app.Options.Observers` | none | E-29 collector, E-26 graph mirror, E-27 store. Observers get events after the journal accepted them, on their own goroutine with a bounded queue; a full queue drops and counts (`Fanout.Dropped`). They can never block or fail a call. |
-| Control API routes | `adminapi.Server.Handle(pattern, handler)` | health, stop, resume, policy reload, approvals placeholder, login, bootstrap | E-24 agent: console backend routes; the same bearer authentication, origin and JSON content-type rules apply. |
+| Control API routes | `adminapi.Server.Handle(pattern, handler)` | health, stop, resume, policy reload, approvals placeholder, login, bootstrap | E-24 agent: console backend routes; the same bearer authentication, origin and JSON content-type rules apply. Handlers read the authenticated actor with `adminapi.ActorOf(r)`. E-05 registers `/api/v1/policy*` from `policyadmin`. |
 | Launch capability | `pipeline.Capabilities` (issue) and `pipeline.CapabilityChecker` (consume) | one-use ledger shared by edge and backend | Bound to correlation ID, decision ID, policy revision and public tool name (FR-4.13). |
 | Profile | `profile.Resolve(mode, launcher, confined, host)` | standalone on macOS or without a confining launcher | E-16 agent supplies the confining launcher; `[profile] mode = "enforced"` refuses to start without one. |
 | Egress | `pipeline.EgressAttacher` (`Attach(ctx, EgressRequest) (*EgressAttachment, error)`), `pipeline.EgressAware` (`SetEgress`) | `NoEgress`; with `[egress] enabled` the broker wraps unconfined launchers (advisory proxy variables) | E-16 agent: implement `EgressAware`, call `Attach` with the instance's `EgressNetwork` (network namespace path and a listen address reachable from it) before the server code runs, add `Env` to the instance, `Close` after exit. A failed `Attach` must fail the launch. |
@@ -94,9 +96,12 @@ evidence observers and must not gate enforcement.
   off the machine (FR-7.14).
 - Per-source rate limits see the tunnel endpoint as the source under the
   Remote Access profile; per-account lockout still applies.
-- The SDK client caches `tools/list` for `ttlMs`; after a policy change
-  clients see the new catalog when their cache expires. Policy activation
-  does not yet send `notifications/tools/list_changed` on open listen
-  streams.
+- The SDK client caches `tools/list` for `ttlMs`. Policy activation updates
+  every cached session catalog in place and sends
+  `notifications/tools/list_changed` on that session's open
+  `subscriptions/listen` streams; a client without a listen stream sees
+  the new catalog when its cache expires.
+- Session taint state, rate windows and quotas are in memory and end with
+  the session or a restart, like sessions themselves.
 - FR-1.10 asks for HTTP 404 on unknown methods; the SDK answers HTTP 200
   with `-32601`.

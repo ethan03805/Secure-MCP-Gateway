@@ -76,7 +76,12 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		c := &callRun{g: g, corr: corr, base: audit.Event{CorrelationID: corr, SessionID: sess.ID, PrincipalID: sess.PrincipalID,
 			ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision}}
-		if err := c.record("call", audit.PhaseRequested, "E-02", "", "", "not_evaluated"); err != nil {
+		side, trust := toolClasses(ref)
+		// The requested event carries the canonical request, so that policy
+		// simulation can replay recorded calls (FR-3.5).
+		if err := g.evidence.Record(c.event("call", audit.PhaseRequested, "E-02", "", "", "not_evaluated", map[string]any{
+			"server": ref.Server.Alias, "tool": ref.Tool.Name, "template": sess.Template, "profile": sess.Profile,
+			"side_effect": side, "source_trust": trust})); err != nil {
 			return nil, c.auditFailure(err)
 		}
 
@@ -92,13 +97,16 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		}
 
 		// Decision (SR-5.5-1: every call is evaluated).
-		c.dec = g.decider.Decide(policy.Request{PrincipalID: sess.PrincipalID, SessionID: sess.ID, Profile: sess.Profile, Template: sess.Template, Server: ref.Server.Alias, Tool: ref.Tool.Name})
+		c.dec = g.decider.Decide(policy.Request{PrincipalID: sess.PrincipalID, SessionID: sess.ID, Profile: sess.Profile, Template: sess.Template,
+			Server: ref.Server.Alias, Tool: ref.Tool.Name, SideEffect: side, SourceTrust: trust})
 		dec := c.dec
 		if dec.Outcome != policy.Permit {
 			var e *jsonrpc.Error
 			switch dec.ReasonCode {
 			case policy.ReasonRateLimited:
-				e = gatewayError(CodeRateLimited, "rate limited", dec.ReasonCode, corr, dec.ID, map[string]any{"callsPerMinute": dec.Obligations.CallsPerMinute})
+				e = gatewayError(CodeRateLimited, "rate limited", dec.ReasonCode, corr, dec.ID, map[string]any{"callsPerMinute": dec.Obligations.CallsPerMinute, "burst": dec.Obligations.Burst})
+			case policy.ReasonQuota:
+				e = gatewayError(CodeRateLimited, "session quota exhausted", dec.ReasonCode, corr, dec.ID, map[string]any{"callsPerSession": dec.Obligations.CallsPerSession})
 			case policy.ReasonNoSnapshot:
 				e = gatewayError(CodeGatewayFailClosed, "gateway fail-closed", dec.ReasonCode, corr, dec.ID, nil)
 			default:
@@ -183,6 +191,9 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		if err := g.authorizeRelease(c, sess.ID); err != nil {
 			return nil, err
 		}
+		if dec.TaintsSession { // SR-5.13-2: untrusted content reached the session
+			g.decider.Taint(sess.ID)
+		}
 		return res, nil
 	}
 }
@@ -218,8 +229,11 @@ func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, 
 			"approval", audit.PhaseDenied, "E-07", "deny", reason, "evaluated")
 	default:
 		reason := res.ReasonCode
-		if reason == "" {
+		if reason == "" || (reason == pipeline.ReasonApprovalRequired && call.Obligations.ApprovalReason != "") {
 			reason = pipeline.ReasonApprovalRequired
+			if call.Obligations.ApprovalReason != "" { // TAINT_APPROVAL
+				reason = call.Obligations.ApprovalReason
+			}
 		}
 		extra := map[string]any{"retry": res.RetryText}
 		link := res.ConsoleURL
@@ -327,4 +341,16 @@ func (g *Gateway) mapDispatchError(c *callRun, sessionID string, err error) erro
 	}
 	return c.refuse(gatewayError(CodeBackendError, "dispatch failed", "DISPATCH_FAILED", corr, dec.ID, nil),
 		"call", audit.PhaseFailed, "E-10", "failed", "DISPATCH_FAILED", "evaluated")
+}
+
+// toolClasses returns the side-effect class and source trust a verified
+// manifest declares for the tool. An unverified (live) tool list is the
+// server describing itself, so it classifies nothing.
+func toolClasses(ref *backend.ToolRef) (side, trust string) {
+	if !ref.Server.Verified || ref.Tool == nil {
+		return "", ""
+	}
+	side, _ = ref.Tool.Meta[policy.MetaSideEffect].(string)
+	trust, _ = ref.Tool.Meta[policy.MetaSourceTrust].(string)
+	return side, trust
 }

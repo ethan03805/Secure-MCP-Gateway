@@ -65,6 +65,10 @@ linters:
       # the full rule set.
       - path: _test\.go
         linters: [errcheck, errorlint, gosec, bodyclose]
+      # smcpctl sends requests only to the configured loopback control API;
+      # operator-supplied IDs (such as a policy revision) are path-escaped.
+      - path: cmd/smcpctl/control\.go
+        text: G704
 
 formatters:
   enable:
