@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -27,12 +26,13 @@ const (
 )
 
 // releaseBinaries are installed by upgrade when the release has them.
-var releaseBinaries = []string{"smcpd", "smcpctl", "smcp-refserver", "smcp-connect"}
+var releaseBinaries = []string{"smcpd", "smcpctl", "smcp-refserver", "smcp-connect", "smcp-stdio", "smcp-session"}
 
 type upgrader struct {
 	cfg        *config.Config
 	cfgPath    string
-	release    string
+	release    string // the downloaded release directory
+	pubkey     string // minisign release key
 	binDir     string
 	enc        backup.Encryption
 	dec        backup.Decryption
@@ -47,7 +47,8 @@ type upgrader struct {
 
 func upgradeCmd(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("upgrade", flag.ContinueOnError)
-	release := fs.String("release", "", "directory with the new release's binaries and its SHA256SUMS file")
+	release := fs.String("release", "", "directory with the downloaded release: smcp_<version>_checksums.txt, its .minisig and the archive for this platform")
+	pubkey := fs.String("pubkey", releasePublicKey, "minisign public key the checksum file must be signed with (default: the release key in SECURITY.md)")
 	binDir := fs.String("bin-dir", "", "directory of the installed binaries (default: the directory of this smcpctl)")
 	pass, rcpt := encryptionFlags(fs)
 	identity := fs.String("identity-file", "", "age identity matching --recipient, used to restore the pre-upgrade backup on rollback")
@@ -61,7 +62,7 @@ func upgradeCmd(args []string, out io.Writer) error {
 	if *release == "" {
 		return errors.New("--release is required")
 	}
-	u := &upgrader{cfg: cfg, release: *release, binDir: *binDir, healthWait: *wait, out: out,
+	u := &upgrader{cfg: cfg, release: *release, pubkey: *pubkey, binDir: *binDir, healthWait: *wait, out: out,
 		svc: service{startCmd: *startCmd, stopCmd: *stopCmd}}
 	if u.cfgPath, err = filepath.Abs(cfgPath); err != nil {
 		return err
@@ -91,14 +92,20 @@ func upgradeCmd(args []string, out io.Writer) error {
 func (u *upgrader) say(format string, a ...any) { fmt.Fprintf(u.out, "upgrade: "+format+"\n", a...) }
 
 func (u *upgrader) run() error {
-	// 1. Verify the release (FR-13.2 checksums; the signature check of
-	// the archive belongs to the installer).
-	if err := verifyRelease(u.release); err != nil {
+	// 1. Verify the release as install.sh does (FR-13.2): the minisign
+	// signature of the checksum file, then the archive's SHA-256; extract
+	// it only after both pass.
+	goos, goarch := hostPlatform()
+	rel, err := verifyReleaseDir(u.release, u.pubkey, goos, goarch, "")
+	if err != nil {
 		return fmt.Errorf("release verification failed, nothing changed: %w", err)
 	}
+	defer os.RemoveAll(rel.Dir)
+	u.say("release verified: signature of smcp_%s_checksums.txt and checksum of %s", rel.Version, rel.Archive)
+	u.release = rel.Dir
 	u.to = binaryVersion(filepath.Join(u.release, "smcpctl"))
 	u.from = u.runningVersion()
-	u.say("release verified (%s); upgrading from %s to %s", u.release, orUnknown(u.from), orUnknown(u.to))
+	u.say("upgrading from %s to %s", orUnknown(u.from), orUnknown(u.to))
 
 	// 2. Encrypted backup (FR-17.6), online when the Gateway runs.
 	res, err := takeBackup(u.cfg, u.cfgPath, u.enc, nil)
@@ -148,45 +155,6 @@ func orUnknown(s string) string {
 		return "unknown"
 	}
 	return s
-}
-
-// verifyRelease checks SHA256SUMS in the release directory against every
-// listed file and requires smcpd and smcpctl.
-func verifyRelease(dir string) error {
-	f, err := os.Open(filepath.Join(dir, "SHA256SUMS"))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	listed := map[string]bool{}
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		fields := strings.Fields(sc.Text())
-		if len(fields) != 2 {
-			continue
-		}
-		name := strings.TrimPrefix(fields[1], "*")
-		if filepath.Base(name) != name {
-			return fmt.Errorf("SHA256SUMS names %q outside the release directory", name)
-		}
-		got, err := backup.FileSHA256(filepath.Join(dir, name))
-		if err != nil {
-			return err
-		}
-		if got != fields[0] {
-			return fmt.Errorf("%s: checksum mismatch", name)
-		}
-		listed[name] = true
-	}
-	if err := sc.Err(); err != nil {
-		return err
-	}
-	for _, need := range []string{"smcpd", "smcpctl"} {
-		if !listed[need] {
-			return fmt.Errorf("SHA256SUMS does not list %s", need)
-		}
-	}
-	return nil
 }
 
 // binaryVersion runs `<smcpctl> version --short`.

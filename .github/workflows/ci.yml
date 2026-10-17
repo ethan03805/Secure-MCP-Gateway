@@ -208,6 +208,8 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
           cache-dependency-path: go.sum
+      - name: Install minisign (signs the upgrade test releases)
+        run: command -v minisign >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq minisign; }
       - name: Bootstrap, run smcpd, drive an MCP client, verify the journal
         env:
           SMCP_ITEST_DIR: ${{ runner.temp }}/itest
@@ -225,6 +227,34 @@ jobs:
           path: ${{ runner.temp }}/itest/smcpd.log
           if-no-files-found: ignore
           retention-days: 7
+
+  # smcpctl install in the Standalone profile with the runner's own service
+  # manager (FR-13.6, FR-13.4): a systemd user unit on Ubuntu, a launchd
+  # user agent on macOS; install twice, check the service and health, then
+  # uninstall. Not a required check.
+  install-standalone:
+    name: install-standalone (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Build smcpd, smcpctl and smcp-refserver
+        run: go build -o "$RUNNER_TEMP/install-bin/" ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver
+      - name: smcpctl install, second install, uninstall
+        env:
+          SMCP_REQUIRE_SERVICE: "1"
+        run: scripts/ci-install-standalone.sh "$RUNNER_TEMP/install-bin" "$RUNNER_TEMP/install-work"
 
   # Management console (E-24): typecheck and build console/, check that the
   # committed console/dist (embedded into smcpd) matches the sources, audit

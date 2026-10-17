@@ -19,6 +19,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
+	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleauth"
@@ -39,12 +40,21 @@ import (
 func main() {
 	cfgPath := flag.String("config", "smcp.toml", "configuration file (TOML)")
 	logLevel := flag.String("log-level", "", "diagnostic log level (debug, info, warn, error); overrides [log] level")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(versionLine())
+		return
+	}
 	if err := run(*cfgPath, *logLevel); err != nil {
 		fmt.Fprintln(os.Stderr, "smcpd:", err)
 		os.Exit(1)
 	}
 }
+
+// versionLine is what smcpd --version prints: the release version set by
+// the build (GoReleaser -X .../internal/backend.Version).
+func versionLine() string { return "smcpd " + backend.Version }
 
 // notifyMode names the approval notifier for the elements report.
 func notifyMode(m string) string {

@@ -2,7 +2,7 @@
 
 This guide installs the Secure MCP Gateway in the Enforced profile on a Linux host: smcpd runs as a systemd service under the `smcp-core` identity, every backend MCP server runs in a rootless Podman container, servers that need the network reach it only through the Egress Broker, and smcpd itself is confined by an AppArmor profile. [sandbox.md](sandbox.md) is the reference for the container profile and the `[runtime]` keys; [egress.md](egress.md) for grants.
 
-Every step below runs in CI on GitHub's `ubuntu-24.04` runner (Podman 4.9, crun, slirp4netns, nftables, systemd, sudo, AppArmor): job `linux-integration` (`scripts/ci-integration.sh`, enforced section, and `scripts/ci-systemd.sh`, which runs the servers as `smcp-srv`) and job `hostile` (the Appendix L suite with `SMCP_HOSTILE_PROFILE=enforced`).
+Every step below runs in CI on GitHub's `ubuntu-24.04` runner (Podman 4.9, crun, slirp4netns, nftables, systemd, sudo, AppArmor): job `linux-integration` (`scripts/ci-integration.sh`, enforced section, and `scripts/ci-systemd.sh`, which installs with `smcpctl install --profile enforced`, runs it a second time to check that nothing changes and runs the servers as `smcp-srv`) and job `hostile` (the Appendix L suite with `SMCP_HOSTILE_PROFILE=enforced`).
 
 ## 1. Host requirements
 
@@ -122,5 +122,5 @@ The instance runs on slirp4netns. Before its process starts, smcpd installs an n
 
 - `smcp-core` may run any Podman command as `smcp-srv` (the sudoers rule names the binary, not the arguments); the separation protects the Gateway from the servers.
 - The `smcp-server` AppArmor profile covers image-less servers only; no SELinux policy module for servers or smcpd.
-- FR-13.5 names an install command of smcpctl; the Enforced installation is `packaging/linux/install-enforced.sh`, which does not bootstrap or write `smcp.toml`.
+- `sudo smcpctl install --profile enforced --bin-dir <dir>` does sections 2 and 3 in one command (it runs the embedded `install-enforced.sh`, bootstraps as `smcp-core`, writes `/etc/smcp/smcp.toml` and starts the units); the probe server, secret vault and other additions of section 3 are still edits to that file. A host missing a prerequisite stops in `install-enforced.sh` before any change; CI does not yet run that refusal on a real host.
 - Writable mount grants outside `/var/lib/smcp` need `ReadWritePaths=` in a drop-in of smcpd.service (and, outside `/srv`, a read rule in the local AppArmor include).

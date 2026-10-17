@@ -25,8 +25,13 @@ func SessionMain(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	credPath := fs.String("credentials", DefaultPath(), "CP-43 credential file")
 	envName := fs.String("env", "", "print NAME=<Authorization value> for a static header instead of JSON (Hermes)")
+	showVersion := fs.Bool("version", false, "print the version and exit")
 	if err := fs.Parse(args); err != nil {
 		return 2
+	}
+	if *showVersion {
+		fmt.Fprintf(stdout, "smcp-session %s\n", Version)
+		return 0
 	}
 	creds, err := Load(*credPath)
 	if err != nil {
@@ -75,8 +80,13 @@ func StdioMain(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	credPath := fs.String("credentials", DefaultPath(), "CP-43 credential file")
 	verbose := fs.Bool("v", false, "log each relay failure and debug detail to standard error")
+	showVersion := fs.Bool("version", false, "print the version and exit")
 	if err := fs.Parse(args); err != nil {
 		return 2
+	}
+	if *showVersion {
+		fmt.Fprintf(stdout, "smcp-stdio %s\n", Version)
+		return 0
 	}
 	creds, err := Load(*credPath)
 	if err != nil {
@@ -127,8 +137,13 @@ func ConnectMain(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	clientID := fs.String("client-id", "", "pre-registered client ID (skips dynamic registration)")
 	scope := fs.String("scope", "", "OAuth scope, for example smcp:template:remote")
 	verbose := fs.Bool("v", false, "debug logging to standard error")
+	showVersion := fs.Bool("version", false, "print the version and exit")
 	if err := fs.Parse(args); err != nil {
 		return 2
+	}
+	if *showVersion {
+		fmt.Fprintf(stdout, "smcp-connect %s\n", Version)
+		return 0
 	}
 	secret := os.Getenv("SMCP_CLIENT_SECRET")
 	creds, err := LoadOrNew(*credPath)

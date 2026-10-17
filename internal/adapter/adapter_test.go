@@ -478,3 +478,26 @@ func TestRelayPlainHTTPError(t *testing.T) {
 		t.Fatalf("plain HTTP error: %s", out.String())
 	}
 }
+
+func TestVersionFlag(t *testing.T) {
+	// Release checks run each installed binary with --version (FR-13.1
+	// archive contents, docs/release-checklist.md).
+	reqtest.Partial(t, "FR-13.1")
+	old := adapter.Version
+	adapter.Version = "9.9.9-test"
+	t.Cleanup(func() { adapter.Version = old })
+	for name, run := range map[string]func(*bytes.Buffer, *bytes.Buffer) int{
+		"smcp-session": func(o, e *bytes.Buffer) int { return adapter.SessionMain([]string{"--version"}, o, e) },
+		"smcp-stdio": func(o, e *bytes.Buffer) int {
+			return adapter.StdioMain([]string{"--version"}, strings.NewReader(""), o, e)
+		},
+		"smcp-connect": func(o, e *bytes.Buffer) int {
+			return adapter.ConnectMain([]string{"--version"}, strings.NewReader(""), o, e)
+		},
+	} {
+		var out, errb bytes.Buffer
+		if code := run(&out, &errb); code != 0 || out.String() != name+" 9.9.9-test\n" {
+			t.Errorf("%s --version: exit %d, stdout %q, stderr %q", name, code, out.String(), errb.String())
+		}
+	}
+}

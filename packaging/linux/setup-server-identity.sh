@@ -64,7 +64,10 @@ ensure_dir() { # path owner group mode
     say created "directory $p"
   fi
 }
-ensure_dir "$home" "$srv" "$srv" 0700
+# 0711: rootless Podman sets the execute bit for others on the home and on
+# ~/.local so that subordinate UIDs can reach its storage; a 0700 home would
+# be reported "updated" by every later run and reset under Podman.
+ensure_dir "$home" "$srv" "$srv" 0711
 ensure_dir "$shared" smcp-core "$srv" 0751
 
 if [ -e "/var/lib/systemd/linger/$srv" ]; then

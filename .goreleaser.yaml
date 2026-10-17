@@ -22,6 +22,8 @@ dist: build/dist
 before:
   hooks:
     - go mod download
+    # build/sbom/sbom.spdx.json, placed in every archive (FR-13.1).
+    - bash scripts/release-sbom.sh {{ .Version }}
 
 builds:
   - id: smcpd
@@ -100,6 +102,12 @@ archives:
       - src: LICENSE*
         info:
           mode: 0644
+      # The SBOM (FR-13.1), from scripts/release-sbom.sh. Absent in a local
+      # snapshot without syft; the release workflow requires it.
+      - src: build/sbom/*.spdx.json
+        strip_parent: true
+        info:
+          mode: 0644
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
@@ -131,7 +139,9 @@ signs:
 
 # Formula/smcp.rb in the tap ethan03805/homebrew-tap (FR-13.3), for the
 # darwin and linux archives. Uploaded only when HOMEBREW_TAP_TOKEN is set
-# (the release workflow passes the repository secret of that name).
+# (the release workflow passes the repository secret of that name) and the
+# release is not a pre-release. .github/workflows/tap.yml installs it on
+# macOS and Linux and compares the binaries with the release archives.
 brews:
   - name: smcp
     ids: [smcp]
@@ -148,7 +158,11 @@ brews:
     homepage: https://github.com/ethan03805/Secure-MCP-Gateway
     description: Local reference monitor between AI agent harnesses and MCP servers
     license: Apache-2.0
-    skip_upload: '{{ if isEnvSet "HOMEBREW_TAP_TOKEN" }}auto{{ else }}true{{ end }}'
+    # auto: a pre-release (v1.0.0-rc.1) does not replace the formula.
+    # SMCP_TAP_PRERELEASE=true (repository variable of that name, passed by
+    # the release workflow) uploads a pre-release too, to rehearse the tap
+    # before a final release.
+    skip_upload: '{{ if not (isEnvSet "HOMEBREW_TAP_TOKEN") }}true{{ else if eq (envOrDefault "SMCP_TAP_PRERELEASE" "") "true" }}false{{ else }}auto{{ end }}'
     install: |
       bin.install "smcpd", "smcpctl"
       %w[smcp-refserver smcp-stdio smcp-session smcp-connect].each { |f| bin.install f if File.exist?(f) }
