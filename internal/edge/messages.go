@@ -66,6 +66,7 @@ var codeMessages = map[int64]string{
 	CodeBackendError:      "The tool's server reported an error.",
 	CodeTimeout:           "The tool did not finish in time.",
 	CodeIndeterminate:     "The call ended without a known outcome. It may have completed the action; check before trying again.",
+	CodeInputRequired:     "The tool asked for input that the Gateway does not relay.",
 }
 
 // Message returns the plain-language data.message for an error (FR-1.51),

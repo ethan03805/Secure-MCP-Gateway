@@ -62,7 +62,7 @@ A package signature shows who packaged a server and that it has not changed sinc
 ### 11. Scope limits
 
 - Remote (hosted) MCP servers cannot be used as backends in v1 (FR-14.4).
-- Only MCP tools are relayed. Resources and prompts are refused (SR-5.6-1); sampling, elicitation and roots are refused unless the MRTR Relay Profile is enabled.
+- Only MCP tools are relayed. Resources and prompts are refused (SR-5.6-1); sampling, elicitation and roots requests from servers are refused (`-32601`, or `-31010` for an `InputRequiredResult`); the MRTR Relay Profile that would relay them is not implemented.
 - Windows is not supported.
 
 ### 12. Trusted computing base

@@ -56,6 +56,7 @@ const (
 	CodeBackendError      = -31007
 	CodeTimeout           = -31008
 	CodeIndeterminate     = -31009
+	CodeInputRequired     = -31010
 )
 
 // Reason codes the edge produces itself.

@@ -63,7 +63,7 @@ The same ID may name a request and a response filter (`size-limit`, `secret-fing
 | 70 | `injection-marker` | mandatory | Applies the `prompt-injection` rule set; tag only | never withholds |
 | 90 | `delimit-untrusted` | by obligation | Encloses text items of untrusted tools in nonce delimiters (FR-4.18) | never withholds |
 
-Response filters inspect every surface that reaches the harness (SR-5.9-1): text content, structured content, embedded resource text and URIs, resource-link URIs, names, titles and descriptions, error results (`isError`) and the backend's `_meta`. Progress notifications are not relayed through the response pipeline yet.
+Response filters inspect every surface that reaches the harness (SR-5.9-1): text content, structured content, embedded resource text and URIs, resource-link URIs, names, titles and descriptions, error results (`isError`) and the backend's `_meta`. Backend progress messages (`notifications/progress`) pass the same chain before relay: a blocked message is dropped, a transformed one is relayed as transformed, and each relayed notification carries `_meta["local.smcpgw/provenance"]` with the filters applied and any tags.
 
 ### Path-typed and URL-typed arguments
 

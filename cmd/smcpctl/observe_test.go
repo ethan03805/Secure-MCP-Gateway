@@ -100,8 +100,7 @@ func feed(obs *analytics.Service, n int, bytes func(i int) int64) {
 			}
 		}
 	}
-	obs.Collector.Sync()
-	time.Sleep(50 * time.Millisecond)
+	obs.Sync() // assembled, scored, learned and written to the store
 }
 
 func runOut(t *testing.T, args ...string) string {

@@ -490,14 +490,46 @@ func TestPolicyDecisionsAndErrorMapping(t *testing.T) {
 	}
 }
 
+// TestUnknownMethodsAnswer404: FR-1.10's verification, with the baseline
+// profile in the 2026-07-28 era. A legacy-era session keeps HTTP 200 with
+// -32601, since a legacy client reads 404 as an expired session.
+func TestUnknownMethodsAnswer404(t *testing.T) {
+	reqtest.Verifies(t, "FR-1.10")
+	f := start(t, "")
+	access, _, _ := f.oauthLogin("")
+	for i, m := range []string{"prompts/list", "resources/read", "foo/bar"} {
+		params, hdr := modernMeta, modernHeaders(access, m)
+		if m == "resources/read" { // the request is well formed, so only the method is unknown
+			params += `,"uri":"file:///x"`
+			hdr["Mcp-Name"] = "file:///x"
+		}
+		status, _, body := f.post(fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":%q,"params":{%s}}`, i+1, m, params), hdr)
+		if status != 404 || !strings.Contains(body, `"code":-32601`) {
+			t.Fatalf("%s: %d %s", m, status, body)
+		}
+	}
+	// A qualified method on the same session is unaffected.
+	if status, _, body := f.post(fmt.Sprintf(`{"jsonrpc":"2.0","id":9,"method":"tools/list","params":{%s}}`, modernMeta), modernHeaders(access, "tools/list")); status != 200 {
+		t.Fatalf("tools/list: %d %s", status, body)
+	}
+	// Legacy era: -32601 with HTTP 200.
+	hdr := map[string]string{"Authorization": "Bearer " + access}
+	if status, _, body := f.post(`{"jsonrpc":"2.0","id":10,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"legacy","version":"0"}}}`, hdr); status != 200 {
+		t.Fatalf("initialize: %d %s", status, body)
+	}
+	hdr["MCP-Protocol-Version"] = "2025-11-25"
+	if status, _, body := f.post(`{"jsonrpc":"2.0","id":11,"method":"prompts/list"}`, hdr); status != 200 || !strings.Contains(body, `"code":-32601`) {
+		t.Fatalf("legacy prompts/list: %d %s", status, body)
+	}
+}
+
 func TestTransportAndAuthenticationRules(t *testing.T) {
 	reqtest.Verifies(t, "FR-1.3", "FR-1.9", "FR-1.12", "FR-1.13", "FR-1.46", "FR-1.17", "SR-2.1-3", "SR-2.9-1", "SR-2.9-2", "SR-5.1-1", "SR-5.5-1", "FR-2.2", "FR-2.22")
-	// FR-1.10 wants HTTP 404 (the SDK answers 200 with -32601); FR-1.14 and
-	// FR-1.15 are checked on server/discover only; FR-1.42 checks the
-	// capability, not notification withholding; SR-2.8-1 checks the harness
-	// listener only; SR-5.3-1 checks one authentication-error case;
-	// FR-9.17 has no Data Server gate yet.
-	reqtest.Partial(t, "FR-1.10", "FR-1.14", "FR-1.15", "FR-1.42", "SR-2.8-1", "SR-5.3-1", "FR-9.17")
+	// FR-1.14 and FR-1.15 are checked on server/discover only; FR-1.42
+	// checks the capability, not notification withholding; SR-2.8-1 checks
+	// the harness listener only; SR-5.3-1 checks one authentication-error
+	// case; FR-9.17 has no Data Server gate yet.
+	reqtest.Partial(t, "FR-1.14", "FR-1.15", "FR-1.42", "SR-2.8-1", "SR-5.3-1", "FR-9.17")
 	f := start(t, "")
 	access, refresh, _ := f.oauthLogin("")
 

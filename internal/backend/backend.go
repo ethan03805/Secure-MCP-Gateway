@@ -16,6 +16,12 @@
 // CP-08 bytes of the line, the response cannot be matched; it is dropped
 // and the call ends at the upstream timeout as indeterminate.
 //
+// Protocol screening (frameFilter): server-initiated requests other than
+// ping are answered with -32601 (FR-5.20), an InputRequiredResult becomes
+// ErrInputRequired (FR-5.24), and progress is routed to the owning call in
+// line order (FR-1.39). No client capability is declared southbound
+// (SR-5.6-2). An instance that times out or fails is replaced (restart).
+//
 // Not in this slice: signed packages (E-13 provides a verified
 // ManifestSource), sandboxing (E-16 provides a confined Launcher), runtime
 // monitoring (E-17) and egress brokering (E-18). Instances are shared (one
@@ -77,12 +83,61 @@ type Server struct {
 	ManifestSource string // "live" when unverified
 	cfg            config.Server
 	spec           pipeline.ServerSpec
-	live           pipeline.LiveLister
 	suspended      atomic.Bool
-	session        *mcp.ClientSession
-	proc           pipeline.Process
-	filter         *frameFilter
+
+	// mu guards cur and ready. ready is nil or closed while cur may be
+	// used; a restart replaces it with an open channel until the new
+	// instance is up, so calls wait instead of reaching the instance being
+	// replaced.
+	mu       sync.Mutex
+	cur      *instance
+	ready    chan struct{}
+	restarts atomic.Uint64
 }
+
+// instance is one running process of a server and its MCP client session.
+type instance struct {
+	session *mcp.ClientSession
+	proc    pipeline.Process
+	filter  *frameFilter
+	live    pipeline.LiveLister
+	started atomic.Bool // tool set established; list_changed is acted on
+}
+
+func (in *instance) close() {
+	if in != nil && in.session != nil {
+		_ = in.session.Close()
+	}
+}
+
+// current returns the instance in use, waiting while a restart is under
+// way. It returns nil when the server has no instance.
+func (s *Server) current(ctx context.Context) (*instance, error) {
+	s.mu.Lock()
+	ready := s.ready
+	s.mu.Unlock()
+	if ready != nil {
+		select {
+		case <-ready:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cur, nil
+}
+
+// peek returns the instance without waiting for a restart.
+func (s *Server) peek() *instance {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cur
+}
+
+// Restarts returns how many times the instance was replaced after an
+// upstream timeout or a failed instance (Appendix L HF-17, HF-19).
+func (s *Server) Restarts() uint64 { return s.restarts.Load() }
 
 // ToolRef resolves a public name to its backend (FR-1.29).
 type ToolRef struct {
@@ -99,11 +154,18 @@ type Registry struct {
 	caps     pipeline.CapabilityChecker
 	log      *slog.Logger
 	watcher  pipeline.ManifestWatcher // nil unless the ManifestSource watches list_changed
+	opts     Options
 
-	smu     sync.RWMutex // guards servers, tools and public (Suspend changes them)
-	servers map[string]*Server
-	tools   map[string]*ToolRef
-	public  []string
+	// progress routes backend notifications/progress to the call that
+	// owns the Gateway-issued token (FR-1.39).
+	progress sync.Map // token string -> func(*mcp.ProgressNotificationParams)
+	progSeq  atomic.Uint64
+
+	smu      sync.RWMutex // guards servers, tools, public and disabled
+	servers  map[string]*Server
+	tools    map[string]*ToolRef
+	public   []string
+	disabled map[string]string // alias -> reason the revision was not enabled
 
 	mu       sync.Mutex // guards perPrinc and waiting
 	perPrinc map[string]*fifo
@@ -149,10 +211,12 @@ func CheckToolDefinition(t *mcp.Tool) error {
 // launcher (standalone profile).
 var ErrHighRiskUnconfined = errors.New("high-risk server classes need the enforced profile")
 
-// Start launches every configured server and indexes its tools. Any server
-// whose tool set cannot be presented (collision, over-long name, invalid
-// definition) fails startup with the reason; the Gateway does not run with a
-// partially enabled catalog in this slice.
+// Start launches every configured server and indexes its tools. A server
+// whose tool set cannot be presented (two tools mapping to one public name,
+// FR-1.49; an over-long public name, CP-42; an invalid definition, FR-5.22)
+// is not enabled: its instance is shut down, the reason is kept for
+// Disabled, and the other servers run. A server that cannot be launched at
+// all still fails startup.
 func Start(ctx context.Context, servers []config.Server, opts Options) (*Registry, error) {
 	if opts.Capabilities == nil {
 		return nil, errors.New("backend: a capability checker is required (FR-4.13)")
@@ -172,11 +236,11 @@ func Start(ctx context.Context, servers []config.Server, opts Options) (*Registr
 	if opts.Limits.PerPrincipal <= 0 || opts.Limits.Total <= 0 {
 		return nil, errors.New("backend: concurrency limits must be positive")
 	}
-	r := &Registry{limits: opts.Limits, launcher: opts.Launcher, caps: opts.Capabilities, log: opts.Log,
-		servers: map[string]*Server{}, tools: map[string]*ToolRef{}, perPrinc: map[string]*fifo{}, total: newFIFO(opts.Limits.Total)}
+	r := &Registry{limits: opts.Limits, launcher: opts.Launcher, caps: opts.Capabilities, log: opts.Log, opts: opts,
+		servers: map[string]*Server{}, tools: map[string]*ToolRef{}, disabled: map[string]string{}, perPrinc: map[string]*fifo{}, total: newFIFO(opts.Limits.Total)}
 	r.watcher, _ = opts.Manifests.(pipeline.ManifestWatcher)
 	for _, sc := range servers {
-		s, err := r.launch(ctx, sc, opts)
+		s, err := r.launch(ctx, sc)
 		if errors.Is(err, pipeline.ErrServerSuspended) {
 			// A suspended revision (drift, changed artifact) keeps the rest
 			// of the catalog running; the source recorded the evidence.
@@ -188,19 +252,36 @@ func Start(ctx context.Context, servers []config.Server, opts Options) (*Registr
 			return nil, fmt.Errorf("server %q: %w", sc.Alias, err)
 		}
 		if err := r.index(s); err != nil {
-			r.Close()
-			return nil, err
+			// FR-1.49: the revision is not enabled; the rest of the
+			// catalog runs.
+			r.log.Error("server not enabled: tool set cannot be presented", "alias", sc.Alias, "revision", s.Revision, "err", err)
+			s.peek().close()
+			r.smu.Lock()
+			r.disabled[sc.Alias] = err.Error()
+			r.smu.Unlock()
 		}
 	}
 	return r, nil
 }
 
-// index adds a launched server and its tools to the public-name index.
+// Disabled returns, by alias, the servers that were launched but not
+// enabled because their tool set cannot be presented, with the reason
+// (FR-1.49: it names both backend tool names of a collision).
+func (r *Registry) Disabled() map[string]string {
+	r.smu.RLock()
+	defer r.smu.RUnlock()
+	out := make(map[string]string, len(r.disabled))
+	for k, v := range r.disabled {
+		out[k] = v
+	}
+	return out
+}
+
+// index adds a launched server and its tools to the public-name index. It
+// checks every tool first and changes the index only when all pass.
 func (r *Registry) index(s *Server) error {
-	r.smu.Lock()
-	defer r.smu.Unlock()
-	r.servers[s.Alias] = s
 	seen := map[string]string{} // public -> backend name
+	refs := make([]*ToolRef, 0, len(s.Tools))
 	for _, t := range s.Tools {
 		if err := CheckToolDefinition(t); err != nil {
 			return fmt.Errorf("server %q tool %q: drift: %w", s.Alias, t.Name, err)
@@ -213,8 +294,14 @@ func (r *Registry) index(s *Server) error {
 			return fmt.Errorf("server %q: tools %q and %q both map to public name %q (FR-1.49)", s.Alias, prev, t.Name, pub)
 		}
 		seen[pub] = t.Name
-		r.tools[pub] = &ToolRef{Public: pub, Server: s, Tool: t, Revision: s.Revision + "/" + t.Name}
-		r.public = append(r.public, pub)
+		refs = append(refs, &ToolRef{Public: pub, Server: s, Tool: t, Revision: s.Revision + "/" + t.Name})
+	}
+	r.smu.Lock()
+	defer r.smu.Unlock()
+	r.servers[s.Alias] = s
+	for _, ref := range refs {
+		r.tools[ref.Public] = ref
+		r.public = append(r.public, ref.Public)
 	}
 	sort.Strings(r.public)
 	return nil
@@ -224,38 +311,72 @@ func (r *Registry) index(s *Server) error {
 // framing around a result of CP-08 bytes.
 const envelopeBytes = 64 << 10
 
-func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (*Server, error) {
+func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error) {
 	spec := pipeline.ServerSpec{Alias: sc.Alias, Command: sc.Command, Args: sc.Args, Dir: sc.Dir, RiskClasses: sc.RiskClasses, HighRisk: sc.HighRisk()}
-	if spec.HighRisk && !opts.Launcher.Confined() {
-		return nil, fmt.Errorf("%w (risk classes %v, launcher %s)", ErrHighRiskUnconfined, sc.RiskClasses, opts.Launcher.Name())
+	if spec.HighRisk && !r.opts.Launcher.Confined() {
+		return nil, fmt.Errorf("%w (risk classes %v, launcher %s)", ErrHighRiskUnconfined, sc.RiskClasses, r.opts.Launcher.Name())
 	}
 	if err := pipeline.CheckLaunchSpec(spec); err != nil {
 		return nil, err
 	}
-	secrets, err := opts.Secrets.Resolve(ctx, pipeline.SecretRequest{Server: sc.Alias, Refs: sc.SecretEnv})
+	s := &Server{Alias: sc.Alias, cfg: sc, spec: spec}
+	inst, ts, era, err := r.start(ctx, s)
 	if err != nil {
-		return nil, fmt.Errorf("secrets: %w", err)
+		return nil, err
+	}
+	s.Tools, s.Revision, s.Verified, s.ManifestSource, s.Era = ts.Tools, ts.Revision, ts.Verified, ts.Source, era
+	s.cur = inst
+	inst.started.Store(true)
+	if !ts.Verified {
+		r.log.Warn("server tool definitions are unverified (live list; no signed manifest)", "alias", sc.Alias, "revision", ts.Revision)
+	}
+	return s, nil
+}
+
+// start launches one instance of s: secrets, launcher, MCP handshake and
+// the tool set from the ManifestSource.
+func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.ToolSet, string, error) {
+	sc, spec := s.cfg, s.spec
+	secrets, err := r.opts.Secrets.Resolve(ctx, pipeline.SecretRequest{Server: sc.Alias, Refs: sc.SecretEnv})
+	if err != nil {
+		return nil, pipeline.ToolSet{}, "", fmt.Errorf("secrets: %w", err)
 	}
 	// SR-2.14-1: the instance environment is built from an allowlist, never
 	// inherited wholesale.
 	if spec.Env, err = pipeline.MergeEnv(pipeline.BaseEnv(), sc.Env, secrets); err != nil {
-		return nil, err
+		return nil, pipeline.ToolSet{}, "", err
 	}
-	proc, err := opts.Launcher.Launch(ctx, spec)
+	if d, ok := r.opts.Secrets.(interface{ InstanceDir(alias string) string }); ok {
+		spec.SecretDir = d.InstanceDir(sc.Alias)
+	}
+	proc, err := r.opts.Launcher.Launch(ctx, spec)
 	if err != nil {
-		return nil, fmt.Errorf("launch: %w", err)
+		return nil, pipeline.ToolSet{}, "", fmt.Errorf("launch: %w", err)
 	}
-	limit := int(opts.Limits.ResultBytes) + envelopeBytes
+	limit := int(r.opts.Limits.ResultBytes) + envelopeBytes
+	w := &lineWriter{p: proc}
 	ff := newFrameFilter(proc, limit)
-	transport := &mcp.IOTransport{Reader: ff, Writer: procCloser{proc}, MaxLineLength: limit + 1024}
-	var started atomic.Pointer[Server]
-	var copts *mcp.ClientOptions
+	// FR-5.20: a server-initiated request other than ping is answered
+	// with -32601 here and never reaches the SDK client, which would
+	// otherwise answer roots/list itself.
+	ff.reply = w.Write
+	ff.refused = func(method string) {
+		r.log.Warn("server-initiated request refused (FR-5.20)", "alias", sc.Alias, "method", method)
+	}
+	ff.progress = r.routeProgress
+	transport := &mcp.IOTransport{Reader: ff, Writer: w, MaxLineLength: limit + 1024}
+	inst := &instance{proc: proc, filter: ff}
+	copts := &mcp.ClientOptions{
+		// SR-5.6-2: no sampling, elicitation or roots capability
+		// southbound (the SDK declares roots unless told otherwise).
+		Capabilities: &mcp.ClientCapabilities{},
+	}
 	if r.watcher != nil {
-		copts = &mcp.ClientOptions{ToolListChangedHandler: func(context.Context, *mcp.ToolListChangedRequest) {
-			if s := started.Load(); s != nil {
-				go r.listChanged(s) //nolint:gosec // the notification context ends with the handler; the re-check has its own timeout
+		copts.ToolListChangedHandler = func(context.Context, *mcp.ToolListChangedRequest) {
+			if inst.started.Load() {
+				go r.listChanged(s, inst) //nolint:gosec // the notification context ends with the handler; the re-check has its own timeout
 			}
-		}}
+		}
 	}
 	client := mcp.NewClient(&mcp.Implementation{Name: "secure-mcp-gateway", Version: Version}, copts)
 	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -263,14 +384,15 @@ func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (
 	sess, err := client.Connect(cctx, transport, nil)
 	if err != nil {
 		proc.Close()
-		return nil, fmt.Errorf("connect %s: %w (stderr: %s)", sc.Command, err, stderrForError(proc.Stderr(), secrets))
+		return nil, pipeline.ToolSet{}, "", fmt.Errorf("connect %s: %w (stderr: %s)", sc.Command, err, stderrForError(proc.Stderr(), secrets))
 	}
-	s := &Server{Alias: sc.Alias, cfg: sc, spec: spec, session: sess, proc: proc, filter: ff}
+	inst.session = sess
+	era := ""
 	if ir := sess.InitializeResult(); ir != nil && ir.ProtocolVersion != "" {
-		s.Era = ir.ProtocolVersion
+		era = ir.ProtocolVersion
 	}
 	// FR-5.21: the complete live tool list across all pages.
-	live := func(ctx context.Context) ([]*mcp.Tool, error) {
+	inst.live = func(ctx context.Context) ([]*mcp.Tool, error) {
 		var tools []*mcp.Tool
 		for t, err := range sess.Tools(ctx, nil) {
 			if err != nil {
@@ -280,18 +402,12 @@ func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (
 		}
 		return tools, nil
 	}
-	s.live = live
-	ts, err := opts.Manifests.Tools(cctx, spec, live)
+	ts, err := r.opts.Manifests.Tools(cctx, spec, inst.live)
 	if err != nil {
 		sess.Close()
-		return nil, err
+		return nil, pipeline.ToolSet{}, "", err
 	}
-	s.Tools, s.Revision, s.Verified, s.ManifestSource = ts.Tools, ts.Revision, ts.Verified, ts.Source
-	started.Store(s)
-	if !ts.Verified {
-		r.log.Warn("server tool definitions are unverified (live list; no signed manifest)", "alias", sc.Alias, "revision", ts.Revision)
-	}
-	return s, nil
+	return inst, ts, era, nil
 }
 
 // stderrTailBytes bounds the server output quoted in a start error.
@@ -314,12 +430,92 @@ func stderrForError(stderr string, secrets map[string]string) string {
 	return stderr
 }
 
-// procCloser makes the process the transport's writer; closing it runs the
-// shutdown sequence.
-type procCloser struct{ p pipeline.Process }
+// restart replaces a server's instance after an upstream timeout or a
+// failed instance (Appendix L HF-17, HF-19). It does nothing when the
+// instance was already replaced. Calls wait for the new instance; the old
+// one is shut down first, so that its teardown (secret deliveries, sandbox)
+// cannot affect the new one. A relaunch that fails, or whose revision
+// differs from the enabled one, suspends the server.
+func (r *Registry) restart(s *Server, old *instance, reason string) {
+	s.mu.Lock()
+	if s.cur != old || s.suspended.Load() {
+		s.mu.Unlock()
+		return
+	}
+	if s.ready != nil {
+		select {
+		case <-s.ready:
+		default:
+			s.mu.Unlock()
+			return // a restart is already under way
+		}
+	}
+	ready := make(chan struct{})
+	s.ready = ready
+	s.mu.Unlock()
+	r.inFlight.Add(1)
+	go func() {
+		defer r.inFlight.Done()
+		old.close()
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		inst, ts, _, err := r.start(ctx, s)
+		switch {
+		case err != nil:
+			err = fmt.Errorf("restart after %s failed: %w", reason, err)
+		case ts.Revision != s.Revision:
+			inst.close()
+			inst, err = nil, fmt.Errorf("restart after %s: revision %s differs from the enabled revision %s", reason, ts.Revision, s.Revision)
+		}
+		s.mu.Lock()
+		if inst != nil {
+			if s.suspended.Load() {
+				inst.close()
+			} else {
+				s.cur = inst
+				inst.started.Store(true)
+				s.restarts.Add(1)
+			}
+		}
+		close(ready)
+		s.mu.Unlock()
+		if err != nil {
+			r.log.Error("server instance not restarted", "alias", s.Alias, "err", err)
+			r.Suspend(s.Alias, err.Error())
+			return
+		}
+		r.log.Warn("server instance restarted", "alias", s.Alias, "reason", reason)
+	}()
+}
 
-func (w procCloser) Write(b []byte) (int, error) { return w.p.Write(b) }
-func (w procCloser) Close() error                { return w.p.Close() }
+// routeProgress hands a backend progress notification to the call that
+// owns its token; others are dropped. The frame filter calls it in line
+// order, so every notification the server wrote before its response is
+// handled before the response reaches the waiting call.
+func (r *Registry) routeProgress(p *mcp.ProgressNotificationParams) {
+	if p == nil {
+		return
+	}
+	if f, ok := r.progress.Load(fmt.Sprint(p.ProgressToken)); ok {
+		f.(func(*mcp.ProgressNotificationParams))(p)
+	}
+}
+
+// lineWriter serializes writes to the instance's stdin: the SDK writes each
+// message with one Write, and the frame filter writes its refusals.
+type lineWriter struct {
+	mu sync.Mutex
+	p  pipeline.Process
+}
+
+func (w *lineWriter) Write(b []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.p.Write(b)
+}
+
+// Close runs the process's shutdown sequence.
+func (w *lineWriter) Close() error { return w.p.Close() }
 
 // Version is the Gateway release version string presented as clientInfo
 // and serverInfo. Set by the build.
@@ -376,21 +572,19 @@ func (r *Registry) Suspend(alias, reason string) bool {
 	r.public = kept
 	r.smu.Unlock()
 	r.log.Error("server suspended and torn down", "alias", alias, "reason", reason)
-	if s.session != nil {
-		_ = s.session.Close()
-	}
+	s.peek().close()
 	return true
 }
 
 // listChanged re-checks a server's tool list against its manifest after a
 // notifications/tools/list_changed and suspends it on drift.
-func (r *Registry) listChanged(s *Server) {
+func (r *Registry) listChanged(s *Server, inst *instance) {
 	if s.suspended.Load() {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	err := r.watcher.ListChanged(ctx, s.spec, s.live)
+	err := r.watcher.ListChanged(ctx, s.spec, inst.live)
 	switch {
 	case errors.Is(err, pipeline.ErrServerSuspended):
 		r.Suspend(s.Alias, err.Error())
@@ -405,8 +599,11 @@ func (r *Registry) Launcher() pipeline.Launcher { return r.launcher }
 // Errors from Call.
 var (
 	ErrQueueFull = errors.New("dispatch queue full")  // -31005
-	ErrTimeout   = errors.New("upstream timeout")     // -31008 / indeterminate
+	ErrTimeout   = errors.New("upstream timeout")     // -31009 UPSTREAM_TIMEOUT; the instance is replaced
 	ErrTooLarge  = errors.New("result exceeds bound") // -31003 withhold
+	// ErrInputRequired: the backend returned an InputRequiredResult and the
+	// MRTR Relay Profile is not available (FR-5.24, -31010).
+	ErrInputRequired = errors.New("backend requested client input")
 )
 
 // CapabilityError wraps a refused launch capability.
@@ -423,12 +620,15 @@ func (e *BackendError) Error() string { return fmt.Sprintf("backend error %d", e
 
 // Dispatch is one call handed to the dispatcher.
 type Dispatch struct {
-	Principal     string
-	Ref           *ToolRef
-	Arguments     json.RawMessage
-	ProgressToken any
-	Capability    string
-	Binding       pipeline.Binding
+	Principal  string
+	Ref        *ToolRef
+	Arguments  json.RawMessage
+	Capability string
+	Binding    pipeline.Binding
+	// Progress, when set, receives the backend's progress notifications
+	// for this call (FR-1.39). The backend sees a Gateway-issued token,
+	// never the northbound one; Progress is not called after Call returns.
+	Progress func(*mcp.ProgressNotificationParams)
 }
 
 // Call dispatches one tool call. It first spends the launch capability
@@ -464,20 +664,56 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 		}
 	}
 	params := &mcp.CallToolParams{Name: d.Ref.Tool.Name, Arguments: a}
-	if d.ProgressToken != nil {
-		params.Meta = mcp.Meta{"progressToken": d.ProgressToken}
+	if d.Progress != nil {
+		tok := fmt.Sprintf("smcp-%d", r.progSeq.Add(1))
+		var pmu sync.Mutex
+		done := false
+		r.progress.Store(tok, func(p *mcp.ProgressNotificationParams) {
+			pmu.Lock()
+			defer pmu.Unlock()
+			if !done {
+				d.Progress(p)
+			}
+		})
+		defer func() {
+			r.progress.Delete(tok)
+			pmu.Lock()
+			done = true
+			pmu.Unlock()
+		}()
+		params.Meta = mcp.Meta{"progressToken": tok}
 	}
-	res, err := d.Ref.Server.session.CallTool(cctx, params)
+	s := d.Ref.Server
+	inst, err := s.current(cctx)
+	if err != nil {
+		if cctx.Err() != nil && ctx.Err() == nil {
+			return nil, ErrTimeout
+		}
+		return nil, err
+	}
+	if inst == nil || s.suspended.Load() {
+		return nil, ErrSuspended
+	}
+	res, err := inst.session.CallTool(cctx, params)
 	if err != nil {
 		var we *jsonrpc.Error
 		if errors.As(err, &we) {
-			if we.Code == tooLargeCode && we.Message == tooLargeMessage {
+			switch {
+			case we.Code == tooLargeCode && we.Message == tooLargeMessage:
 				return nil, ErrTooLarge
+			case we.Code == tooLargeCode && we.Message == inputRequiredMessage:
+				return nil, ErrInputRequired
 			}
 			return nil, &BackendError{Code: we.Code}
 		}
 		if cctx.Err() != nil && ctx.Err() == nil {
+			// The instance may still be working on the call, or be stuck
+			// mid-message: replace it (HF-17, HF-19).
+			r.restart(s, inst, "upstream timeout")
 			return nil, ErrTimeout
+		}
+		if ctx.Err() == nil && errors.Is(err, mcp.ErrConnectionClosed) {
+			r.restart(s, inst, "instance failed")
 		}
 		return nil, err
 	}
@@ -538,15 +774,29 @@ func (r *Registry) acquire(ctx context.Context, principal string) (func(), error
 func (r *Registry) Waiting() int { r.mu.Lock(); defer r.mu.Unlock(); return r.waiting }
 
 // Stderr returns the bounded diagnostic buffer of a server (FR-5.15).
-func (s *Server) Stderr() string { return s.proc.Stderr() }
+func (s *Server) Stderr() string {
+	if in := s.peek(); in != nil && in.proc != nil {
+		return in.proc.Stderr()
+	}
+	return ""
+}
 
 // OversizedFrames returns how many oversized messages the server sent (0
 // for a Server value that was not launched, such as a test fixture).
 func (s *Server) OversizedFrames() uint64 {
-	if s.filter == nil {
-		return 0
+	if in := s.peek(); in != nil && in.filter != nil {
+		return in.filter.oversized.Load()
 	}
-	return s.filter.oversized.Load()
+	return 0
+}
+
+// RefusedRequests returns how many server-initiated requests the current
+// instance sent that the Gateway refused with -32601 (FR-5.20).
+func (s *Server) RefusedRequests() uint64 {
+	if in := s.peek(); in != nil && in.filter != nil {
+		return in.filter.refusedN.Load()
+	}
+	return 0
 }
 
 // Close shuts every instance down after in-flight calls finish (FR-5.27
@@ -556,9 +806,7 @@ func (r *Registry) Close() {
 	r.smu.RLock()
 	defer r.smu.RUnlock()
 	for _, s := range r.servers {
-		if s.session != nil {
-			_ = s.session.Close()
-		}
+		s.peek().close()
 	}
 }
 
@@ -627,19 +875,32 @@ func (f *fifo) release() {
 // tooLargeCode and tooLargeMessage mark the error the frame filter
 // substitutes for an oversized response.
 const (
-	tooLargeCode    = jsonrpc.CodeInternalError
-	tooLargeMessage = "local.smcpgw/result-too-large"
+	tooLargeCode         = jsonrpc.CodeInternalError
+	tooLargeMessage      = "local.smcpgw/result-too-large"
+	inputRequiredMessage = "local.smcpgw/input-required"
 )
 
 // frameFilter reads newline-delimited JSON-RPC from the server and bounds
 // each line to limit bytes while reading. An oversized line is discarded;
 // when its request ID can be read from the retained prefix, an error
 // response for that ID takes its place.
+//
+// It also screens the server's messages before the SDK client sees them:
+// a request other than ping is answered with -32601 through reply and
+// dropped (FR-5.20, SR-5.6-2), a response carrying an InputRequiredResult
+// is replaced by an error the dispatcher maps to ErrInputRequired
+// (FR-5.24), and notifications/progress go to progress (FR-1.39) instead
+// of the SDK client, whose notification handlers can run after the
+// response that followed them.
 type frameFilter struct {
 	r         *bufio.Reader
 	limit     int
 	pending   []byte
 	oversized atomic.Uint64
+	refusedN  atomic.Uint64
+	reply     func([]byte) (int, error)
+	refused   func(method string)
+	progress  func(*mcp.ProgressNotificationParams)
 }
 
 func newFrameFilter(r io.Reader, limit int) *frameFilter {
@@ -683,7 +944,7 @@ func (f *frameFilter) next() ([]byte, error) {
 		switch {
 		case err == nil:
 			if !over {
-				return buf, nil
+				return f.screen(buf), nil
 			}
 			return f.substitute(buf), nil
 		case errors.Is(err, bufio.ErrBufferFull):
@@ -692,9 +953,54 @@ func (f *frameFilter) next() ([]byte, error) {
 			if over {
 				return f.substitute(buf), err
 			}
-			return buf, err
+			return f.screen(buf), err
 		}
 	}
+}
+
+// screen applies the server-initiated request and InputRequiredResult rules
+// to one complete line. Lines that cannot be decoded pass unchanged; the
+// SDK client rejects them.
+func (f *frameFilter) screen(line []byte) []byte {
+	if !bytes.Contains(line, []byte(`"method"`)) && !bytes.Contains(line, []byte(`input_required`)) {
+		return line
+	}
+	var m struct {
+		ID     json.RawMessage `json:"id"`
+		Method *string         `json:"method"`
+		Params json.RawMessage `json:"params"`
+		Result json.RawMessage `json:"result"`
+	}
+	if json.Unmarshal(line, &m) != nil {
+		return line
+	}
+	hasID := len(m.ID) > 0 && string(m.ID) != "null"
+	switch {
+	case m.Method != nil && hasID && *m.Method != "ping":
+		f.refusedN.Add(1)
+		if f.refused != nil {
+			f.refused(*m.Method)
+		}
+		if f.reply != nil {
+			msg := fmt.Sprintf(`{"jsonrpc":"2.0","id":%s,"error":{"code":%d,"message":"method not found"}}`+"\n", m.ID, jsonrpc.CodeMethodNotFound)
+			_, _ = f.reply([]byte(msg))
+		}
+		return nil
+	case m.Method != nil && !hasID && *m.Method == "notifications/progress" && f.progress != nil:
+		var p mcp.ProgressNotificationParams
+		if json.Unmarshal(m.Params, &p) == nil {
+			f.progress(&p)
+		}
+		return nil
+	case m.Method == nil && hasID && len(m.Result) > 0:
+		var res struct {
+			ResultType string `json:"resultType"`
+		}
+		if json.Unmarshal(m.Result, &res) == nil && res.ResultType == "input_required" {
+			return []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":%s,"error":{"code":%d,"message":%q}}`+"\n", m.ID, tooLargeCode, inputRequiredMessage))
+		}
+	}
+	return line
 }
 
 func (f *frameFilter) substitute(prefix []byte) []byte {

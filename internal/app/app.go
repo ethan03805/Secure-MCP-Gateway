@@ -260,6 +260,14 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	for alias, s := range a.Registry.Servers() {
 		o.Log.Info("server enabled", "alias", alias, "revision", s.Revision, "era", s.Era, "tools", len(s.Tools), "verified", s.Verified)
 	}
+	// FR-1.49: a revision whose tools cannot be presented is not enabled;
+	// the rest of the Gateway runs.
+	for alias, reason := range a.Registry.Disabled() {
+		if err = a.Evidence.Commit(audit.Event{Class: "server", Origin: "E-14", Outcome: "not_enabled", ReasonCode: "SERVER_NOT_ENABLED",
+			PolicyStatus: "not_evaluated", Detail: map[string]any{"alias": alias, "reason": reason}}); err != nil {
+			return a, fmt.Errorf("journal: %w", err)
+		}
+	}
 	if o.Packages != nil {
 		o.Packages.Started(a.Registry.Suspend)
 	}

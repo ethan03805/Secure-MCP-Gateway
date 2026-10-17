@@ -27,6 +27,7 @@ type callRun struct {
 	base audit.Event
 	corr string
 	dec  policy.Decision
+	prog *progressRelay
 }
 
 func (c *callRun) event(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) audit.Event {
@@ -123,6 +124,8 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, Obligations: dec.Obligations, DecisiveRules: dec.DecisiveRules,
 			InputSchema: ref.Tool.InputSchema, OutputSchema: ref.Tool.OutputSchema,
 			Channel: c.base.Channel, ClientID: c.base.ClientID, ClientAddress: c.base.ClientAddress}
+		c.prog = g.newProgress(ctx, req, call)
+		defer c.prog.stop()
 
 		// Request inspection (E-09).
 		args, reqApplied, verdict := g.filters.RunRequest(ctx, call, req.Params.Arguments)
@@ -166,8 +169,12 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		}
 		cctx, ccancel := context.WithTimeout(ctx, g.cfg.Limits.ClientDeadline.Duration) // CP-13 client deadline (FR-1.43)
 		defer ccancel()
-		res, err := g.reg.Call(cctx, backend.Dispatch{Principal: sess.PrincipalID, Ref: ref, Arguments: args,
-			Capability: capID, Binding: binding})
+		dispatch := backend.Dispatch{Principal: sess.PrincipalID, Ref: ref, Arguments: args, Capability: capID, Binding: binding}
+		if c.prog.enabled() { // FR-1.39
+			dispatch.Progress = c.prog.relay
+		}
+		res, err := g.reg.Call(cctx, dispatch)
+		c.prog.stop() // FR-1.40: no progress after the final response
 		if err != nil {
 			return nil, g.mapDispatchError(c, sess.ID, err)
 		}
@@ -217,7 +224,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 // calls commit the response to an event stream and send keep-alives
 // (stream.go).
 func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, args json.RawMessage, req *mcp.CallToolRequest) error {
-	res, err := g.approver.Request(ctx, pipeline.ApprovalRequest{Call: *call, Arguments: args, Hold: g.cfg.Limits.ApprovalHold.Duration, Progress: g.keepAlive(ctx, req)})
+	res, err := g.approver.Request(ctx, pipeline.ApprovalRequest{Call: *call, Arguments: args, Hold: g.cfg.Limits.ApprovalHold.Duration, Progress: g.keepAlive(ctx, c.prog)})
 	if err != nil {
 		g.log.Warn("approval service failed; refusing the call", "err", err, "correlation", c.corr)
 		res = pipeline.ApprovalResult{Outcome: pipeline.Pending, ReasonCode: ReasonApprovalNoSvc,
@@ -343,6 +350,9 @@ func (g *Gateway) mapDispatchError(c *callRun, sessionID string, err error) erro
 	case errors.Is(err, backend.ErrTooLarge):
 		return c.refuse(gatewayError(CodeResponseWithheld, "response withheld", "RESULT_TOO_LARGE", corr, dec.ID, nil),
 			"call", audit.PhaseWithheld, "E-11", "withhold", "RESULT_TOO_LARGE", "evaluated")
+	case errors.Is(err, backend.ErrInputRequired): // FR-5.24; the MRTR Relay Profile is not implemented
+		return c.refuse(gatewayError(CodeInputRequired, "input required", "INPUT_REQUIRED_UNSUPPORTED", corr, dec.ID, nil),
+			"call", audit.PhaseFailed, "E-10", "input_required", "INPUT_REQUIRED_UNSUPPORTED", "evaluated")
 	case errors.Is(err, context.DeadlineExceeded):
 		return c.refuse(gatewayError(CodeTimeout, "client deadline expired", "CLIENT_DEADLINE", corr, dec.ID, nil),
 			"call", audit.PhaseIndeterminate, "E-10", "timeout", "CLIENT_DEADLINE", "evaluated")

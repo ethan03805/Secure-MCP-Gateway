@@ -317,16 +317,27 @@ func TestApprovalHeldApprovedDeniedAndReplay(t *testing.T) {
 	if st, body := af.admin("POST", "/api/v1/approvals/"+replayID+"/approve", alice, map[string]any{}); st != 409 || body["state"] != "denied" {
 		t.Fatalf("second decision: %d %v", st, body)
 	}
-	// Evidence for request, approve, deny and consume.
+	// Evidence for request, approve, deny and consume. Observers receive
+	// committed events from a queue of their own, so the last ones may
+	// still be on their way.
 	outcomes := map[string]bool{}
-	for _, e := range af.observed() {
-		if e.Class == "approval" && e.Origin == "E-07" {
-			outcomes[e.Outcome] = true
+	missing := func() string {
+		clear(outcomes)
+		for _, e := range af.observed() {
+			if e.Class == "approval" && e.Origin == "E-07" {
+				outcomes[e.Outcome] = true
+			}
 		}
+		for _, want := range []string{"requested", "approved", "denied", "consumed"} {
+			if !outcomes[want] {
+				return want
+			}
+		}
+		return ""
 	}
-	for _, want := range []string{"requested", "approved", "denied", "consumed"} {
-		if !outcomes[want] {
-			t.Fatalf("no %s evidence: %v", want, outcomes)
+	for deadline := time.Now().Add(10 * time.Second); missing() != ""; time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("no %s evidence: %v", missing(), outcomes)
 		}
 	}
 
@@ -520,13 +531,18 @@ func TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry(t *testing.T) {
 	if newID == lateID || !strings.Contains(all.String(), `"approvalId":"`+newID+`"`) {
 		t.Fatalf("retry after expiry reused %s: %s", lateID, all.String())
 	}
-	expired := false
-	for _, e := range af.observed() {
-		if d, ok := e.Detail.(map[string]any); ok && e.Class == "approval" && e.Outcome == "expired" && d["approval_id"] == lateID {
-			expired = true
+	// The observer's queue may still hold the event.
+	expired := func() bool {
+		for _, e := range af.observed() {
+			if d, ok := e.Detail.(map[string]any); ok && e.Class == "approval" && e.Outcome == "expired" && d["approval_id"] == lateID {
+				return true
+			}
 		}
+		return false
 	}
-	if !expired {
-		t.Fatal("no expiry evidence")
+	for deadline := time.Now().Add(10 * time.Second); !expired(); time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("no expiry evidence")
+		}
 	}
 }

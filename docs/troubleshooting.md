@@ -59,7 +59,7 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `DISPATCH_FAILED` | `-31007` | The server could not be started or reached | Check the Servers view (G-10) and the diagnostic log |
 | `CLIENT_DEADLINE` | `-31008` | The call did not finish within the client deadline (CP-13) | Repeat with a smaller request, or raise the deadline |
 | `UPSTREAM_TIMEOUT` | `-31009` | The server stopped responding; it may have acted | Check whether the action happened before repeating it |
-| `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The server asked for client input that is not relayed | Enable the MRTR Relay Profile only if you need it |
+| `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The server returned an `InputRequiredResult` (elicitation, sampling or roots); the Gateway does not relay such requests | The MRTR Relay Profile is not implemented; use a tool that does not ask the client for input |
 | `SCHEMA_INVALID` | `-32602` | Arguments do not match the tool's input schema | `data.findings` lists the violations |
 
 ## Reason codes seen by operators only
