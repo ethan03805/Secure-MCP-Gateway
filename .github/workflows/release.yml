@@ -85,7 +85,7 @@ jobs:
             a=build/dist/smcp_${version}_${platform}.tar.gz
             [ -f "$a" ] || { echo "::error::$a missing"; exit 1; }
             list=$(tar -tzf "$a")
-            for f in smcpd smcpctl smcp-refserver smcp-session smcp-stdio smcp-connect README.md CHANGELOG.md LICENSE sbom.spdx.json; do
+            for f in smcpd smcpctl smcp-refserver smcp-session smcp-stdio smcp-connect smcp-workload README.md CHANGELOG.md LICENSE sbom.spdx.json; do
               printf '%s\n' "$list" | grep -qx "$f" || { echo "::error::$a lacks $f"; exit 1; }
             done
             echo "$a: $(printf '%s\n' "$list" | tr '\n' ' ')"
