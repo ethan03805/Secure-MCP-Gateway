@@ -72,7 +72,7 @@ as_srv() {
 [ "$(id -gn smcp-srv)" = smcp-srv ] || fail "smcp-srv's primary group is $(id -gn smcp-srv), not smcp-srv"
 if id -nG smcp-srv | tr ' ' '\n' | grep -qx smcp; then fail "smcp-srv is a member of group smcp (it could read /etc/smcp)"; fi
 [ -e /var/lib/systemd/linger/smcp-srv ] || fail "lingering is not enabled for smcp-srv"
-[ -S "/run/user/$srv_uid/bus" ] || fail "smcp-srv has no user manager bus"
+sudo -n test -S "/run/user/$srv_uid/bus" || fail "smcp-srv has no user manager bus"
 sudo -n test -f /etc/sudoers.d/smcp-srv || fail "no sudoers rule for smcp-srv"
 sudo -n test -f /etc/systemd/system/smcpd.service.d/smcp-srv.conf || fail "no smcpd.service drop-in for smcp-srv"
 podman_path=$(command -v podman)
