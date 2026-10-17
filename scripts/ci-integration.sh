@@ -241,21 +241,42 @@ if [ "$ops" = 1 ]; then
   installed="$work/installed" release="$work/release" badrel="$work/bad-release"
   mkdir -p "$installed" "$release" "$badrel"
   cp "$bin/smcpd" "$bin/smcpctl" "$installed/"
-  cp "$bin/smcpd" "$bin/smcpctl" "$release/"
-  (cd "$release" && sha256_of smcpd smcpctl > SHA256SUMS)
-  printf '#!/bin/sh\nexit 1\n' > "$badrel/smcpd" && chmod 755 "$badrel/smcpd"
-  cp "$bin/smcpctl" "$badrel/"
-  (cd "$badrel" && sha256_of smcpd smcpctl > SHA256SUMS)
+  # Release directories as GitHub serves them, signed with a throwaway
+  # minisign key: smcpctl upgrade verifies them as install.sh does (FR-13.7,
+  # FR-13.2).
+  command -v minisign >/dev/null 2>&1 || fail "minisign signs the test releases: apt install minisign (macOS: brew install minisign)"
+  minisign -G -W -f -p "$work/release.pub" -s "$work/release.key" >/dev/null
+  relkey=$(tail -n 1 "$work/release.pub")
+  case "$(uname -s)" in Darwin) ros=darwin ;; *) ros=linux ;; esac
+  case "$(uname -m)" in x86_64 | amd64) rarch=amd64 ;; *) rarch=arm64 ;; esac
+  make_release() { # DIR VERSION FILES_DIR
+    local sums="smcp_$2_checksums.txt" arc="smcp_$2_${ros}_${rarch}.tar.gz"
+    tar -czf "$1/$arc" -C "$3" smcpd smcpctl
+    (cd "$1" && sha256_of "$arc" > "$sums")
+    minisign -S -s "$work/release.key" -m "$1/$sums" -t "smcp $2 file:$sums" >/dev/null
+  }
+  mkdir -p "$work/release-files" "$work/bad-release-files"
+  cp "$bin/smcpd" "$bin/smcpctl" "$work/release-files/"
+  make_release "$release" 9.9.9 "$work/release-files"
+  printf '#!/bin/sh\nexit 1\n' > "$work/bad-release-files/smcpd" && chmod 755 "$work/bad-release-files/smcpd"
+  cp "$bin/smcpctl" "$work/bad-release-files/"
+  make_release "$badrel" 9.9.10 "$work/bad-release-files"
   start_cmd="nohup \"$installed/smcpd\" --config \"\$SMCP_CONFIG\" >>\"$log\" 2>&1 & echo \$! > \"$pidfile\""
   stop_cmd="p=\$(cat \"$pidfile\" 2>/dev/null); [ -n \"\$p\" ] && kill \"\$p\" 2>/dev/null; while [ -n \"\$p\" ] && kill -0 \"\$p\" 2>/dev/null; do sleep 0.1; done; true"
   SMCP_CONFIG="$cfg" sh -c "$start_cmd"
   for _ in $(seq 1 100); do "$bin/smcpctl" health --config "$cfg" >/dev/null 2>&1 && break; sleep 0.2; done
-  "$installed/smcpctl" upgrade --config "$cfg" --release "$release" --bin-dir "$installed" \
+  if out=$("$installed/smcpctl" upgrade --config "$cfg" --release "$release" --bin-dir "$installed" \
+      --passphrase-file "$work/backup.pw" --start-cmd "$start_cmd" --stop-cmd "$stop_cmd" 2>&1); then
+    printf '%s\n' "$out"
+    fail "an upgrade to a release not signed with the release key was not refused"
+  fi
+  printf '%s\n' "$out" | grep -q "release verification failed, nothing changed" || { printf '%s\n' "$out"; fail "unsigned release: wrong refusal"; }
+  "$installed/smcpctl" upgrade --config "$cfg" --release "$release" --pubkey "$relkey" --bin-dir "$installed" \
     --passphrase-file "$work/backup.pw" --start-cmd "$start_cmd" --stop-cmd "$stop_cmd" \
     || { cat "$log" >&2; fail "upgrade"; }
   [ -f "$installed/smcpd.prev" ] || fail "upgrade kept no previous binary"
   call_read "after the upgrade"
-  if out=$("$installed/smcpctl" upgrade --config "$cfg" --release "$badrel" --bin-dir "$installed" \
+  if out=$("$installed/smcpctl" upgrade --config "$cfg" --release "$badrel" --pubkey "$relkey" --bin-dir "$installed" \
       --passphrase-file "$work/backup.pw" --start-cmd "$start_cmd" --stop-cmd "$stop_cmd" --health-timeout 10s 2>&1); then
     printf '%s\n' "$out"
     fail "the fault-injected upgrade did not fail"

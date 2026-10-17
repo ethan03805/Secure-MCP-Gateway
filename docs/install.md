@@ -165,16 +165,16 @@ alias = "ref"
 source = "/srv/smcp-share" # readable by other users: instances run under subordinate UIDs
 ```
 
-Then `sudo packaging/linux/install-enforced.sh --start`. The enforced profile is exercised in CI (`scripts/ci-integration.sh`, linux-integration job) with smcpd started directly; the path through `smcpd.service` under a real systemd has not been exercised yet. Every `[runtime]` key, the mount rules and the startup refusal are in [sandbox.md](sandbox.md#installing-on-a-linux-host).
+Then `sudo packaging/linux/install-enforced.sh --start`. The enforced profile is exercised in CI (linux-integration job): `scripts/ci-integration.sh` with smcpd started directly, and `scripts/ci-systemd.sh`, which installs with `smcpctl install --profile enforced` and runs `smcpd.service` under systemd. Every `[runtime]` key, the mount rules and the startup refusal are in [sandbox.md](sandbox.md#installing-on-a-linux-host).
 
 ## Upgrade and rollback
 
 ```sh
-smcpctl upgrade --config ~/smcp/smcp.toml --release <dir with new binaries and SHA256SUMS> \
+smcpctl upgrade --config ~/smcp/smcp.toml --release <dir with the downloaded release files> \
   --passphrase-file <backup passphrase file>
 ```
 
-The upgrade checks the new binaries against `SHA256SUMS`, takes an encrypted pre-upgrade backup, stops dispatch, swaps the binaries (keeping `<name>.prev`), migrates the configuration's `schema_version`, starts the Gateway and waits up to 60 s (CP-47) for it to leave fail-closed. If any step fails it restores the backup and the previous binaries and records `upgrade_rolled_back`. Pass `--start-cmd` and `--stop-cmd` when the Gateway is not run by launchd or systemd. The release-signature check is not part of `smcpctl upgrade`; verify the release first as above. See [operations/upgrade-uninstall.md](operations/upgrade-uninstall.md) and the [upgrade rollback runbook](runbooks/upgrade-rollback.md).
+Download the release's checksum file, its `.minisig` and the archive for the host into one directory (`gh release download v1.0.0 -R ethan03805/Secure-MCP-Gateway -D <dir> -p 'smcp_1.0.0_checksums.txt*' -p 'smcp_1.0.0_<os>_<arch>.tar.gz'`). The upgrade verifies the minisign signature of the checksum file with the release key and the archive's SHA-256 against it, as `install.sh` does (FR-13.2), and changes nothing when either fails. It then takes an encrypted pre-upgrade backup, stops dispatch, swaps the binaries (keeping `<name>.prev`), migrates the configuration's `schema_version`, starts the Gateway and waits up to 60 s (CP-47) for it to leave fail-closed. If any step after the backup fails it restores the backup and the previous binaries and records `upgrade_rolled_back`. Pass `--start-cmd` and `--stop-cmd` when the Gateway is not run by launchd or systemd. See [operations/upgrade-uninstall.md](operations/upgrade-uninstall.md) and the [upgrade rollback runbook](runbooks/upgrade-rollback.md).
 
 Homebrew users run `brew upgrade smcp` and then restart the Gateway; that path has no automatic backup, so run `smcpctl backup` first.
 
