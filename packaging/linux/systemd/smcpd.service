@@ -54,6 +54,11 @@ RestrictRealtime=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 SystemCallArchitectures=native
 
+# Mandatory access control: the AppArmor profile packaging/linux/apparmor/
+# smcpd, loaded by install-enforced.sh. The leading "-" skips it on hosts
+# without AppArmor (SELinux hosts use the unit's default domain).
+AppArmorProfile=-smcpd
+
 # Not set, and why:
 #   NoNewPrivileges=yes     newuidmap/newgidmap are setuid helpers
 #   CapabilityBoundingSet=  crun needs capabilities inside the user namespace

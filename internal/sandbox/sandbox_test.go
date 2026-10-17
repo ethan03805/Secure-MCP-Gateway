@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -216,7 +217,7 @@ func TestBuildWithImageAndEgress(t *testing.T) {
 		t.Fatal(err)
 	}
 	args := ls.PodmanArgs()
-	if !hasArg(args, "--network=smcp-egress-web") || !hasArg(args, "--env=FETCH_BASE_URL") || !hasArg(args, "--userns=keep-id") {
+	if !hasArg(args, "--network=smcp-egress-web") || !hasArg(args, "--env=FETCH_BASE_URL=http://10.89.0.1:8080") || !hasArg(args, "--userns=keep-id") || slices.Contains(ls.EnvNames, "FETCH_BASE_URL") {
 		t.Fatalf("args %v", args)
 	}
 	if args[len(args)-2] != img || args[len(args)-1] != "/usr/local/bin/server" || ls.Artifact.Digest != "sha256:"+strings.Repeat("a", 64) {
@@ -605,38 +606,180 @@ func TestReapRemovesOtherGatewaysContainers(t *testing.T) {
 	}
 }
 
-type recordingEgress struct{ calls int }
-
-func (r *recordingEgress) Attach(context.Context, pipeline.EgressRequest) (*pipeline.EgressAttachment, error) {
-	r.calls++
-	return &pipeline.EgressAttachment{Env: map[string]string{"HTTPS_PROXY": "http://127.0.0.1:1"}, Close: func() error { return nil }}, nil
+type recordingEgress struct {
+	calls  int
+	reqs   []pipeline.EgressRequest
+	closed int
 }
 
-func TestEgressRequestFailsClosed(t *testing.T) {
-	// The broker hands the launcher its attacher (EgressAware) rather than
-	// wrapping it. Attaching a sandbox namespace is not built, so a server
-	// that asks for egress is refused; servers without it keep network none.
-	reqtest.Partial(t, "SR-4.5-1")
+func (r *recordingEgress) Attach(_ context.Context, req pipeline.EgressRequest) (*pipeline.EgressAttachment, error) {
+	r.calls++
+	r.reqs = append(r.reqs, req)
+	return &pipeline.EgressAttachment{ID: "att-1", Enforced: true,
+		Env:   map[string]string{"HTTPS_PROXY": "http://10.0.2.2:41000", "HTTP_PROXY": "http://10.0.2.2:41000", "NO_PROXY": "", "API_BASE_URL": "http://10.0.2.2:41001"},
+		Allow: []netip.AddrPort{netip.MustParseAddrPort("10.0.2.2:41000"), netip.MustParseAddrPort("10.0.2.2:41001")},
+		Close: func() error { r.closed++; return nil }}, nil
+}
+
+// TestEgressAttachesSandboxNetwork: a server with network = "egress" is
+// attached to the broker as a launcher-confined network, created on a
+// slirp4netns network, confined with the nftables script in its own
+// network namespace (through podman unshare) and only then started. The
+// broker variables reach the container; servers without egress keep
+// network none and are never attached.
+func TestEgressAttachesSandboxNetwork(t *testing.T) {
+	reqtest.Partial(t, "SR-4.5-1", "FR-5.37")
 	var _ pipeline.EgressAware = (*Launcher)(nil)
 	rt := testRuntime()
 	rt.Servers = []config.RuntimeServer{{Alias: "web", Network: "egress"}}
 	h := newHarness(t, rt)
+	h.l.o.Nsenter, h.l.o.Nft = "/usr/bin/nsenter", "/usr/sbin/nft"
 	if _, err := h.l.Launch(context.Background(), h.spec("web")); err == nil || !strings.Contains(err.Error(), "no Egress Broker is enabled") {
 		t.Fatalf("egress without a broker: %v", err)
 	}
 	eg := &recordingEgress{}
 	h.l.SetEgress(eg)
-	if _, err := h.l.Launch(context.Background(), h.spec("web")); !errors.Is(err, ErrEgressUnsupported) {
-		t.Fatalf("egress with a broker: %v", err)
-	}
-	p, err := h.l.Launch(context.Background(), h.spec("plain"))
+	p, err := h.l.Launch(context.Background(), h.spec("web"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Close()
 	connect(t, p)
-	if r := h.run(h.l.Instances()[0].Container); !hasArg(r.Argv, "--network=none") || eg.calls != 0 || len(h.l.Instances()) != 1 {
+	inst := h.l.Instances()[0]
+	if eg.calls != 1 || eg.reqs[0].Alias != "web" || eg.reqs[0].Network == nil || !eg.reqs[0].Network.LauncherConfines ||
+		eg.reqs[0].Network.GuestAddr != netip.MustParseAddr("10.0.2.2") || eg.reqs[0].Network.ListenAddr != netip.MustParseAddr("127.0.0.1") {
+		t.Fatalf("attach requests %+v", eg.reqs)
+	}
+	r := h.run(inst.Container)
+	for _, want := range []string{"--network=" + EgressNetworkMode, "--http-proxy=false", "--env=HTTPS_PROXY=http://10.0.2.2:41000",
+		"--env=API_BASE_URL=http://10.0.2.2:41001", "--cap-drop=all"} {
+		if !hasArg(r.Argv, want) {
+			t.Fatalf("create arguments lack %s: %v", want, r.Argv)
+		}
+	}
+	if !r.EnvSet["HTTPS_PROXY"] || !r.EnvSet["SMCP_FAKE_SERVER"] {
+		t.Fatalf("instance environment %v", r.EnvSet)
+	}
+	calls, _ := os.ReadFile(filepath.Join(h.dir, "calls.log"))
+	order := []string{"create ", "init " + inst.Container, "unshare /usr/bin/nsenter --net=/run/user/1000/netns/netns-" + inst.Container + " /usr/sbin/nft -f -",
+		"unshare /usr/bin/nsenter --net=/run/user/1000/netns/netns-" + inst.Container + " /usr/sbin/nft list table inet smcp_egress",
+		"start --attach --interactive " + inst.Container}
+	pos := 0
+	for _, want := range order {
+		i := strings.Index(string(calls)[pos:], want)
+		if i < 0 {
+			t.Fatalf("podman calls out of order or missing %q:\n%s", want, calls)
+		}
+		pos += i + len(want)
+	}
+	rules, _ := os.ReadFile(filepath.Join(h.dir, "rules.nft"))
+	for _, want := range []string{"policy drop;", "ip daddr 10.0.2.2 tcp dport 41000 accept", "ip daddr 10.0.2.2 tcp dport 41001 accept", "reject with icmpx admin-prohibited"} {
+		if !strings.Contains(string(rules), want) {
+			t.Fatalf("rules lack %q:\n%s", want, rules)
+		}
+	}
+	ev := findEvent(h.mem.Events(), "instance_launched", "")
+	if ev == nil {
+		t.Fatal("no instance_launched evidence")
+	}
+	if eg, _ := ev.Detail.(map[string]any)["egress"].(map[string]any); eg == nil || eg["attachment"] != "att-1" || eg["confined"] != true {
+		t.Fatalf("launch evidence %+v", ev.Detail)
+	}
+	if err := p.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if eg.closed != 1 {
+		t.Fatalf("attachment closed %d times after the instance closed", eg.closed)
+	}
+
+	plain, err := h.l.Launch(context.Background(), h.spec("plain"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer plain.Close()
+	connect(t, plain)
+	views := h.l.Instances()
+	if r := h.run(views[len(views)-1].Container); !hasArg(r.Argv, "--network=none") || eg.calls != 1 {
 		t.Fatalf("server without egress: %v (attach calls %d)", r.Argv, eg.calls)
+	}
+}
+
+// TestEgressConfinementFailsClosed: when the rules cannot be installed the
+// container is removed before it starts and the attachment is closed.
+func TestEgressConfinementFailsClosed(t *testing.T) {
+	reqtest.Partial(t, "SR-4.5-1")
+	rt := testRuntime()
+	rt.Servers = []config.RuntimeServer{{Alias: "web", Network: "egress"}}
+	h := newHarness(t, rt)
+	eg := &recordingEgress{}
+	h.l.SetEgress(eg)
+	for _, f := range []string{"unshare.fail", "create.fail"} {
+		if err := os.WriteFile(filepath.Join(h.dir, f), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := h.l.Launch(context.Background(), h.spec("web"))
+		if err == nil || !strings.Contains(err.Error(), "egress confinement") {
+			t.Fatalf("%s: launch error %v", f, err)
+		}
+		_ = os.Remove(filepath.Join(h.dir, f))
+	}
+	if eg.closed != 2 || len(h.l.Instances()) != 0 {
+		t.Fatalf("attachments closed %d, instances %d", eg.closed, len(h.l.Instances()))
+	}
+	calls, _ := os.ReadFile(filepath.Join(h.dir, "calls.log"))
+	if strings.Contains(string(calls), "start ") {
+		t.Fatalf("a container started without confinement:\n%s", calls)
+	}
+	if n := strings.Count(string(calls), "rm --force --time 0 smcp-web-"); n != 2 {
+		t.Fatalf("containers removed %d times:\n%s", n, calls)
+	}
+}
+
+func TestEgressRules(t *testing.T) {
+	reqtest.Partial(t, "SR-4.5-1")
+	got, err := EgressRules([]netip.AddrPort{netip.MustParseAddrPort("10.0.2.2:8080"), netip.MustParseAddrPort("[fd00::2]:9090")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `table inet smcp_egress {
+	chain output {
+		type filter hook output priority filter; policy drop;
+		oifname "lo" accept
+		ct state established,related accept
+		ip daddr 10.0.2.2 tcp dport 8080 accept
+		ip6 daddr fd00::2 tcp dport 9090 accept
+		reject with icmpx admin-prohibited
+	}
+	chain input {
+		type filter hook input priority filter; policy drop;
+		iifname "lo" accept
+		ct state established,related accept
+	}
+}
+`
+	if got != want {
+		t.Fatalf("rules:\n%s\nwant:\n%s", got, want)
+	}
+	if _, err := EgressRules([]netip.AddrPort{netip.AddrPortFrom(netip.MustParseAddr("10.0.2.2"), 0)}); err == nil {
+		t.Fatal("port 0 accepted")
+	}
+}
+
+func TestBuildEgressEnvNames(t *testing.T) {
+	reqtest.Partial(t, "FR-5.37")
+	rt := testRuntime()
+	srv := config.RuntimeServer{Alias: "web", Image: "registry.local/fs@sha256:" + strings.Repeat("a", 64), Network: "egress"}
+	build := func(env map[string]string) error {
+		_, err := Build(BuildInput{Runtime: rt, Server: srv, Spec: pipeline.ServerSpec{Alias: "web", Command: "/srv"}, Network: EgressNetworkMode,
+			EgressEnv: env, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()})
+		return err
+	}
+	if err := build(map[string]string{"HTTPS_PROXY": "http://10.0.2.2:1", "NO_PROXY": ""}); err != nil {
+		t.Fatalf("proxy variables refused: %v", err)
+	}
+	for _, bad := range []map[string]string{{"LD_PRELOAD": "x"}, {"CONTAINERS_CONF": "x"}, {"API_URL": "a\nb"}} {
+		if err := build(bad); err == nil {
+			t.Fatalf("accepted %v", bad)
+		}
 	}
 }
 

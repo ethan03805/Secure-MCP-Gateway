@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -20,6 +22,8 @@ type SetupOptions struct {
 	Log *slog.Logger
 	// Doctor replaces the prerequisite check (tests).
 	Doctor func(ctx context.Context) []Check
+	// CgroupRoot is the cgroup v2 mount (default /sys/fs/cgroup).
+	CgroupRoot string
 }
 
 // SandboxEssential names the checks without which the Podman sandbox cannot
@@ -43,9 +47,25 @@ func FromConfig(ctx context.Context, cfg *config.Config, o SetupOptions) (*Launc
 	if o.Log == nil {
 		o.Log = slog.Default()
 	}
+	if cfg.Runtime.CgroupManager == "cgroupfs" && runtime.GOOS == "linux" {
+		// Under smcpd.service (Delegate=yes, DelegateSubgroup=supervisor)
+		// the container cgroups need the controllers enabled first.
+		if self, err := os.ReadFile("/proc/self/cgroup"); err == nil {
+			cgroupRoot := o.CgroupRoot
+			if cgroupRoot == "" {
+				cgroupRoot = "/sys/fs/cgroup"
+			}
+			if on, err := EnableDelegatedControllers(cgroupRoot, string(self)); err != nil {
+				o.Log.Warn("could not enable cgroup controllers in the delegated subtree", "err", err)
+			} else if len(on) > 0 {
+				o.Log.Info("enabled cgroup controllers for server containers in the delegated subtree", "controllers", on)
+			}
+		}
+	}
 	if o.Doctor == nil {
 		pod := cfg.Runtime.Podman
-		o.Doctor = func(ctx context.Context) []Check { return Doctor(ctx, DoctorOptions{Podman: pod}) }
+		cgm := cfg.Runtime.CgroupManager
+		o.Doctor = func(ctx context.Context) []Check { return Doctor(ctx, DoctorOptions{Podman: pod, CgroupManager: cgm}) }
 	}
 	var refuse []string
 	for _, c := range Failed(o.Doctor(ctx)) {

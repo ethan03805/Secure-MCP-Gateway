@@ -4,6 +4,14 @@
 
 Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 558 requirements (385 FR in 19 roots, 173 SR) with no errors or warnings. No snapshot or tag is made; the release process will make one.
 
+### Linux Enforced profile hardening (E-15 to E-18, FR-13.5)
+
+- Sandboxed servers with `network = "egress"` now start instead of being refused. The launcher attaches the instance to the Egress Broker, creates the container on slirp4netns with host loopback, installs table `inet smcp_egress` in the container's network namespace through `podman unshare nsenter ... nft` before the server process starts (TCP to the instance's own broker listeners only), reads it back, then starts the container; any failure removes the container. `pipeline.EgressNetwork` gained `GuestAddr` and `LauncherConfines`, `pipeline.EgressAttachment` gained `Allow`. `TestIntegrationEgressBroker` (real Podman) and the enforced section of `scripts/ci-integration.sh` show direct egress blocked and brokered egress to a granted local HTTP server working. `docs/sandbox.md`, "Egress".
+- Hostile suite, enforced profile: HF-22 mounts its fixture directory outside `/tmp` (which the sandbox reserves) and HF-24 declares `network = "egress"`; both pass, and HF-08 passes with the secret-directory mount of #36. The CI `hostile` job sets `SMCP_HOSTILE_REQUIRE_ENFORCED=1` and fails when an Enforced row (HF-20, HF-21, HF-23, HF-24) fails or the enforced profile is unavailable.
+- smcpd.service under real systemd: `scripts/ci-systemd.sh`, called from the enforced section of `scripts/ci-integration.sh`, installs `packaging/linux`, bootstraps as `smcp-core`, starts the unit, checks health, makes a tool call that runs in a rootless Podman container, stops the unit and verifies the journal. With `cgroup_manager = "cgroupfs"` smcpd now enables the cpu, memory and pids controllers in its delegated service cgroup (systemd leaves them off below `DelegateSubgroup=`), and `runtime doctor` runs `podman info` with the configured cgroup manager.
+- AppArmor profile `packaging/linux/apparmor/smcpd`, installed and loaded in enforce mode by `install-enforced.sh` and applied by `smcpd.service` (`AppArmorProfile=-smcpd`); CI checks that smcpd runs as `smcpd (enforce)`. No profile is shipped for the server containers, and servers still run under `smcp-core` rather than CP-46's `smcp-srv`.
+- New guide: `docs/enforced-profile.md`.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

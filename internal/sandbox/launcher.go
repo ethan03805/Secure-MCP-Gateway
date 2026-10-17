@@ -52,6 +52,9 @@ type Options struct {
 	CgroupRoot string
 	// Now is the clock (tests).
 	Now func() time.Time
+	// Nsenter and Nft are the host tools that install an egress instance's
+	// confinement rules; default: found in PATH or the system directories.
+	Nsenter, Nft string
 }
 
 // Launcher is the confining pipeline.Launcher of the enforced profile.
@@ -126,12 +129,6 @@ func (l *Launcher) SetEgress(a pipeline.EgressAttacher) {
 	l.egress = a
 	l.mu.Unlock()
 }
-
-// ErrEgressUnsupported refuses a sandboxed server that asks for egress.
-// Attaching a rootless Podman network namespace to the Egress Broker is not
-// built yet; the instance would otherwise have no network or an unconfined
-// one, so the launch fails closed.
-var ErrEgressUnsupported = errors.New("egress for sandboxed servers is not available yet: remove network = \"egress\" or run the server without the sandbox")
 
 // GatewayID is the value of the smcp.gateway label on this Launcher's
 // containers.
@@ -212,6 +209,10 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 		srv.OnDeviation = "alert"
 	}
 	id := ids.New()
+	network := NetworkNone
+	var att *pipeline.EgressAttachment
+	var egressEnv map[string]string
+	releaseEgress := func() {}
 	if srv.Network == "egress" {
 		l.mu.Lock()
 		broker := l.egress
@@ -219,12 +220,22 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 		if broker == nil {
 			return nil, fmt.Errorf("runtime.server %q requests egress but no Egress Broker is enabled ([egress] enabled = true)", spec.Alias)
 		}
-		return nil, fmt.Errorf("runtime.server %q: %w", spec.Alias, ErrEgressUnsupported)
+		var err error
+		att, err = broker.Attach(ctx, pipeline.EgressRequest{Alias: spec.Alias, Network: &pipeline.EgressNetwork{
+			ListenAddr: egressListenAddr, GuestAddr: egressGuestAddr, LauncherConfines: true}})
+		if err != nil {
+			return nil, fmt.Errorf("runtime.server %q: egress: %w", spec.Alias, err)
+		}
+		network, egressEnv = EgressNetworkMode, att.Env
+		releaseEgress = func() {
+			if err := att.Close(); err != nil {
+				l.log.Warn("egress detach failed", "alias", spec.Alias, "err", err)
+			}
+		}
 	}
-	releaseEgress := func() {}
 	spec = SecretPaths(spec)
-	ls, err := Build(BuildInput{Runtime: l.o.Runtime, Server: srv, Spec: spec, Network: NetworkNone, InstanceID: id,
-		Gateway: l.gateway, Rootfs: l.rootfs, StateDir: l.o.StateDir})
+	ls, err := Build(BuildInput{Runtime: l.o.Runtime, Server: srv, Spec: spec, Network: network, EgressEnv: egressEnv,
+		InstanceID: id, Gateway: l.gateway, Rootfs: l.rootfs, StateDir: l.o.StateDir})
 	if err != nil {
 		releaseEgress()
 		return nil, err
@@ -236,8 +247,31 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 		}
 	}
 	values := Env(spec, nil, ls.EnvNames)
-	cmd := exec.Command(l.podPath, ls.PodmanArgs()...) // #nosec G204 -- argument vector, no shell (SR-4.8-1)
-	cmd.Env = l.podmanEnv(values)
+	var cmd *exec.Cmd
+	netns := ""
+	if att != nil {
+		// Egress: create, confine the namespace, then start (egress.go).
+		if netns, err = l.createEgress(ls, values, att.Allow); err != nil {
+			releaseEgress()
+			return nil, fmt.Errorf("runtime.server %q: egress confinement: %w", spec.Alias, err)
+		}
+		cmd = exec.Command(l.podPath, "start", "--attach", "--interactive", ls.Name) // #nosec G204 -- argument vector, no shell (SR-4.8-1)
+		cmd.Env = l.podmanEnv(nil)
+		release := releaseEgress
+		releaseEgress = func() {
+			// Until the start command runs, the created container is ours
+			// to remove; afterwards finish removes it.
+			if cmd.Process == nil {
+				rctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+				_ = l.podman(rctx, "rm", "--force", "--time", "0", ls.Name).Run()
+				cancel()
+			}
+			release()
+		}
+	} else {
+		cmd = exec.Command(l.podPath, ls.PodmanArgs()...) // #nosec G204 -- argument vector, no shell (SR-4.8-1)
+		cmd.Env = l.podmanEnv(values)
+	}
 	setParentDeath(cmd)
 	stdoutR, stdoutW, err := os.Pipe()
 	if err != nil {
@@ -279,7 +313,7 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 	l.order = append(l.order, id)
 	l.mu.Unlock()
 	l.record(audit.Event{Class: EvidenceClass, Origin: OriginRuntime, Outcome: "instance_launched", PolicyStatus: "not_evaluated",
-		Detail: map[string]any{"alias": spec.Alias, "instance_id": id, "container": ls.Name, "launch_spec": ls}}, true)
+		Detail: launchDetail(spec.Alias, id, ls, att, netns)}, true)
 	go l.mon.watch(inst)
 	return c, nil
 }
@@ -364,4 +398,19 @@ func (l *Launcher) Close() {
 		}
 	}
 	l.mon.stop()
+}
+
+// launchDetail is the detail of an instance_launched event. An egress
+// instance names its broker attachment and the endpoints its namespace
+// may reach.
+func launchDetail(alias, id string, ls LaunchSpec, att *pipeline.EgressAttachment, netns string) map[string]any {
+	d := map[string]any{"alias": alias, "instance_id": id, "container": ls.Name, "launch_spec": ls}
+	if att != nil {
+		allow := make([]string, 0, len(att.Allow))
+		for _, ap := range att.Allow {
+			allow = append(allow, ap.String())
+		}
+		d["egress"] = map[string]any{"attachment": att.ID, "confined": true, "netns": netns, "allow": allow, "table": "inet " + EgressTable}
+	}
+	return d
 }

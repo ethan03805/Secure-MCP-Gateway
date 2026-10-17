@@ -28,6 +28,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Tool-call approvals](approvals.md) | FR-3.14 to FR-3.24 | Hold mode, who can decide, `smcpctl approvals`, notifications |
 | [Request and response filters](filters.md) | FR-4.4 to FR-4.18, FR-1.52 | Every filter, rule sets and measured rates, `smcpctl filters` |
 | [Secrets: vault and broker](secrets.md) | FR-6 | Vault, Secret Use Policy, delivery modes S1 to S4, leak detection |
+| [Enforced profile on Linux](enforced-profile.md) | FR-13.5, SR-4.5-1, CP-46 | Installing packaging/linux, smcpd.service under systemd, AppArmor profile, egress for sandboxed servers |
 | [Server sandbox](sandbox.md) | FR-12.3, FR-13.5, SR-4.5-1 to SR-4.7-2 | Enforced-profile prerequisites, Linux installer, `[runtime]`, sandbox profile, Runtime Monitor, `smcpctl runtime` |
 | [Egress Broker](egress.md) | E-18 | Grants, DNS and address checks, limits, evidence, `smcpctl egress` |
 | [Management console](console.md), [console visual rules](console-style.md) | FR-8 | Views, sign-in, roles |
