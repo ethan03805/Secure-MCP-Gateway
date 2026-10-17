@@ -269,6 +269,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Emergency stop cancels calls in flight (SR-7.6-2): the server is sent `notifications/cancelled`, the harness gets `-31003` with `EMERGENCY_STOP`, a held approval ends with `-31004` `EMERGENCY_STOP`, and the Secret Broker withdraws its grants as before. The online backup keeps draining calls instead (`Gateway.StopDraining`). `docs/console.md`. The Secret Broker now reads and clears S1 grant IDs under its lock, so a stop and an instance teardown at the same time no longer race.
 - New tests verify FR-4.7, FR-4.10, FR-5.22, SR-1.8-2, SR-1.8-3, SR-2.10-1 (what a server receives holds no harness credential), SR-3.9-1 (enablement refused for every non-Administrator role), SR-5.9-1 (every response surface and progress messages through the Gateway) and SR-7.6-2. HF-25 now also checks the audit event and verifies FR-5.24; the revocation runtime test checks that the instance stops and verifies FR-14.12.
 
+### Partial claims sweep: profile refusal and client inventory (E-23, E-33)
+
+- SRS: FR-15.3 now covers the Appendix K clients whose configuration location is recorded, and requires doctor to say for the others (Grok Build, to be confirmed at pinning) that their servers are not listed, which it does.
+- New tests verify FR-13.9 (smcpd configured for the Enforced profile on a host without Podman and nftables on the PATH exits naming both; on a non-Linux host the refusal names the platform and the claim stays partial) and FR-15.3 (every server of every recorded client listed and the non-Gateway ones flagged, in each scope the client has, and the Grok Build statement).
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

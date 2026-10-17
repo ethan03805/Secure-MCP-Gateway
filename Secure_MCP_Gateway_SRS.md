@@ -4420,12 +4420,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-15.3 |
 | Parent ID | FR-15 — Harness integration |
-| Statement | The `smcpctl doctor` command **SHALL** list, for each client of Appendix K installed for the current user, every MCP server configured in the client's user, project and managed scopes, and **SHALL** flag each server that is not the Gateway. |
+| Statement | The `smcpctl doctor` command **SHALL** list, for each client of Appendix K installed for the current user whose configuration location Appendix K records, every MCP server configured in the client's user, project and managed scopes, **SHALL** flag each server that is not the Gateway, and **SHALL** state for each other installed client that its servers are not listed. |
 | Allocation | Elements: E-33 Harness Adapter Kit; Functions: F-98; External interfaces: X-12 |
 | Verification Method | Test |
-| Verification Statement | Create fixture configurations for each client with one Gateway entry and one other server in each scope; confirm every other server is listed and flagged. |
+| Verification Statement | Create fixture configurations for each client with one Gateway entry and one other server in each scope; confirm every other server is listed and flagged, and that a client without a recorded location is reported as not listed. |
 | Source | OWNER (smcpctl doctor reporting non-Gateway MCP servers); REVIEW (C4) |
-| Rationale | The operator cannot remove a bypass they do not know about. |
+| Rationale | The operator cannot remove a bypass they do not know about. A client whose configuration location is still to be confirmed at pinning (Grok Build in Appendix K) cannot be read, so doctor says so instead of reporting it clean. |
 
 #### FR-15.4 — Doctor: readable paths
 
