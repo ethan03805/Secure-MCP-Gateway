@@ -14,10 +14,10 @@ import (
 func TestSchemaVersion(t *testing.T) {
 	// FR-13.13: newer refused naming both versions, older refused with a
 	// migrate instruction, current accepted, and `config migrate` rewrites
-	// an older file. Version 1 is the only real version so far; the older
-	// case runs against a test-registered version 2 with a migration, so
-	// the claim is partial until a release adds version 2.
-	reqtest.Partial(t, "FR-13.13")
+	// an older file. Version 1 is the only real version in release 1.0;
+	// as the requirement's verification states, the older case runs
+	// against a test-registered version 2 with a migration step.
+	reqtest.Verifies(t, "FR-13.13")
 	if cfg, err := Parse([]byte(good)); err != nil || cfg.SchemaVersion != 1 {
 		t.Fatalf("file without schema_version: %v", err)
 	}

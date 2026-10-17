@@ -121,7 +121,7 @@ func TestReleaseCommitFailureWithholds(t *testing.T) {
 	hdr["Mcp-Name"] = "t_echo"
 	status, _, body := h.post(fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"t_echo","arguments":{"text":"secret-result-text"},"_meta":{%s}}}`, wireMeta), hdr)
 	r := decodeReply(t, body)
-	if status != 200 || r.Error == nil || r.Error.Code.String() != fmt.Sprint(CodeResponseWithheld) || !strings.Contains(body, ReasonJournalUnavailable) {
+	if status != 200 || r.Error == nil || r.Error.Code.String() != fmt.Sprint(CodeResponseWithheld) || !strings.Contains(body, ReasonOutcomeUnrecorded) {
 		t.Fatalf("%d %s", status, body)
 	}
 	if h.rec.find(func(e audit.Event) bool { return e.Phase == audit.PhaseCompleted }) == nil {

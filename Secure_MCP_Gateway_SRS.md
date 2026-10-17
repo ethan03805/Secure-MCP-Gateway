@@ -898,7 +898,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Statement | The Protocol Mediator (E-02) **SHALL** include in every Gateway-specific error a `data.message` string taken from the Appendix B reason-code table that states in one or two plain sentences what happened and what the person can do next, and, for `-31002`, the console URL of the pending approval in `data.approvalUrl`. |
 | Allocation | Elements: E-02 Protocol Mediator; Functions: F-22; External interfaces: X-01 |
 | Verification Method | Test |
-| Verification Statement | Trigger every Appendix B code and every listed reason code; confirm each error carries the table's message text, and that `-31002` carries an `approvalUrl` that opens the approval in G-13. |
+| Verification Statement | Trigger every Appendix B code and every listed reason code that a request can produce (Table B.3 lists the codes no request reaches); confirm each error carries the table's message text, and that `-31002` carries an `approvalUrl` that opens the approval in G-13. For the Table B.3 codes, confirm the error builder produces the table's message text. |
 | Source | REVIEW (C5); OWNER (approvals: plain-language retry text and a console deep link) |
 | Rationale | The harness shows error text to a person who may not know the Gateway exists. A code alone does not tell them to approve and retry. |
 
@@ -4198,7 +4198,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Statement | The Gateway **SHALL** read an integer `schema_version` from the configuration file, **SHALL** refuse to start when that value is greater than the highest version it supports, naming both versions, and **SHALL** accept an older version only after `smcpctl config migrate` or `smcpctl upgrade` has rewritten it. |
 | Allocation | Elements: E-23 Health & Safety Monitor, E-24 Management Console & Control API; Functions: F-97, F-62 |
 | Verification Method | Test |
-| Verification Statement | Start with a configuration one version newer, one version older and current; confirm refusal naming both versions, refusal with a migrate instruction, and normal start. |
+| Verification Statement | Start with a configuration one version newer and current; confirm refusal naming both versions and normal start. Release 1.0 has one schema version (a file without the key is version 1), so no real file is older: register a next version with a migration step in the test, start with a version-1 file and confirm refusal with a migrate instruction, then confirm that `smcpctl config migrate` (which `smcpctl upgrade` runs with the new binary) rewrites the file, keeps the original and the rewritten file loads. |
 | Source | OWNER (config schema version field and refusal of unknown newer versions) |
 | Rationale | A downgrade must not misread a configuration written by a newer release. |
 
@@ -7216,7 +7216,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-49 | Remote limits | Calls 30/min per client ID, burst 5; OAuth endpoints 10 req/s per source address, burst 20; lockout after 5 consecutive failed sign-ins or token requests, for 15 min; body 256 KiB; headers 8 KiB; concurrency 4 per client, 16 total; remote session maximum lifetime 2 h, idle timeout 15 min; pending dynamic registrations at most 32 in total and 4 per source address (IPv6: per /64), each kept 24 h | New |
 | CP-50 | Diagnostic log and reload | Rotate at 10 MiB, keep 5 files. Reloadable keys: `log.level`, `limits.principal_calls_per_minute`, `limits.principal_call_burst`. Restart required: every other key, among them listener addresses, `state.dir`, `profile` and the other `limits.*` (read at startup by the components that hold them); servers are enabled and disabled at run time through G-10, and clients are managed in G-11 | New |
 | CP-51 | Metrics endpoint | `127.0.0.1:9464`, path `/metrics`; disabled by default | New |
-| CP-52 | Client ID Metadata Document allowlist | Empty by default; entries added by configuration or `smcpctl client setup`. Fetch only allowlisted HTTPS URLs; 5 s timeout; 64 KiB limit; cache 24 h; no redirects to other hosts | New |
+| CP-52 | Client ID Metadata Document allowlist | Empty by default; entries are added only by `[[client_metadata]]` configuration entries (`smcpctl clients setup` does not add them). Fetch only allowlisted HTTPS URLs; 5 s timeout; 64 KiB limit; cache 24 h; no redirects to other hosts | New |
 | CP-53 | Local server CA | Validity 365 days; listener certificate validity 90 days, renewed when 30 days remain; CA name constraints are dNSName subtrees only, permitting `localhost` and the configured listener host names (no iPAddress subtrees, which BoringSSL-based TLS clients reject); listener certificate IP addresses are limited to loopback addresses and the configured listener IP literals; path length 0 | New |
 
 ## Appendix B — Gateway error codes and reason codes
@@ -7275,11 +7275,16 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `FILTER_TIMEOUT` | `-31001`, `-31003` | A filter chain exceeded the CP-14 deadline (SR-5.10-1) | A Gateway safety check took too long, so the call was stopped. Try a smaller request. |
 | `APPROVAL_REQUIRED` | `-31002` | The call is waiting for a person to approve it | This call needs approval. Open {approvalUrl} to approve it, then run the same request again. |
 | `TAINT_APPROVAL` | `-31002` | Approval required because the session is tainted | This session has read untrusted content, so this tool needs approval. Open {approvalUrl} to approve it, then run the same request again. |
+| `APPROVAL_EXPIRED` | `-31002` | The approval expired (CP-17) while the call was held | The approval for this call expired before it was used. Run the same request again to ask for a new approval. |
+| `APPROVAL_CONSUMED` | `-31002` | An identical held call consumed the one-use approval first | The approval for this call was already used by an identical call. Run the same request again to ask for a new approval. |
+| `APPROVAL_UNAVAILABLE` | `-31002` | The call needs approval and the Approval Service could not take the request | This call needs approval, but the Gateway's approval service is not available. Ask the Gateway operator to approve the call or check `smcpctl health`, then run the same request again. |
 | `FILTER_BLOCKED` | `-31003` | A required response filter blocked the result | The tool's result was withheld by a Gateway content filter. The operator can see why in the audit record {correlationId}. |
 | `SECRET_LEAK` | `-31003` | A registered secret fingerprint matched the result | The tool's result was withheld because it appeared to contain a protected secret. |
 | `RESULT_TOO_LARGE` | `-31003` | The result exceeded the CP-08 bound | The tool's result was too large to inspect and was withheld. Narrow the request. |
 | `RESULT_INVALID` | `-31003` | The backend response failed envelope, request-ID or `CallToolResult` validation, or carried an unrecognized `resultType` (SR-5.20-1, FR-5.23) | The tool's server returned a result the Gateway could not validate, so it was withheld. |
 | `RELEASE_REFUSED` | `-31003` | The release recheck failed (session ended, policy changed or stop) | The result was withheld because the session or policy changed while the tool ran. Run the request again. |
+| `OUTCOME_UNRECORDED` | `-31003` | The tool ran but its outcome could not be written to the Evidence Journal, so the result is withheld (SR-6.3-1) | The tool ran, but the Gateway could not record its outcome, so the result was withheld. It may have completed the action; check before trying again. The operator can see the cause with `smcpctl health`. |
+| `ANOMALY_WITHHELD` | `-31003` | Synchronous scoring placed the call in the Anomaly Response Policy's withhold band (FR-4.15) | The tool's result was withheld because the call looked unusual for this agent. The operator can see why in the audit record {correlationId}. |
 | `FAIL_CLOSED` | `-31004` | A critical dependency is unavailable | The Gateway is not accepting tool calls right now because a safety check failed. The operator can see the cause with `smcpctl health`. |
 | `EMERGENCY_STOP` | `-31004` | An emergency stop is in effect | The Gateway operator has stopped all tool calls. |
 | `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | The Gateway has no valid policy loaded and is refusing all tool calls. |
@@ -7290,6 +7295,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `QUOTA_EXHAUSTED` | `-31005` | The session used its per-session call quota | This session has used all the tool calls its policy allows. Start a new session. |
 | `QUEUE_FULL` | `-31005` | The dispatch queue is full | The Gateway is busy. Try again shortly. |
 | `SESSION_LIMIT` | `-31005` | A session create request would exceed the CP-18 concurrent-session limit of the principal (FR-2.10) | This agent already has the maximum number of open sessions. End one, then try again. |
+| `LISTEN_LIMIT` | `-31005` | The session already holds the CP-20 number of open listen streams | This session already has the maximum number of open listen streams. Close one, then try again. |
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Your Gateway session is not valid. Sign in again. |
 | `SESSION_STATE` | `-31006` | The session is suspended or terminated | Your Gateway session has ended. Sign in again. |
 | `BACKEND_ERROR` | `-31007` | The backend returned a protocol error | The tool's server reported an error. |
@@ -7298,8 +7304,24 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `CLIENT_DEADLINE` | `-31008` | The CP-13 client deadline expired | The tool did not finish in time. |
 | `UPSTREAM_TIMEOUT` | `-31009` | The backend did not answer within CP-13; it may have acted | The tool's server stopped responding. It may have completed the action; check before trying again. |
 | `INSTANCE_FAILED` | `-31009` | The instance ended after a call to a tool of side-effect class `write`, `external` or `execute`, or an unclassified tool, was dispatched; it may have acted and is not retried (SR-7.2-1) | The tool's server stopped while running this call. It may have completed the action; check before trying again. |
+| `CANCELLED` | `-31009` | The harness cancelled the call after dispatch; the backend may have acted | The call was cancelled before it finished. It may have completed the action; check before trying again. |
 | `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The backend asked for client input without the MRTR profile | The tool asked for input that the Gateway does not relay. |
 | `SCHEMA_INVALID` | `-32602` | Arguments do not match the tool's input schema | The arguments do not match what this tool accepts. |
+
+### B.3 Reason codes no request reaches
+
+The Gateway keeps these Table B.2 codes as defense in depth: an earlier check of the same call always answers first, so no request produces them. FR-1.51's verification confirms their message text through the error builder instead of the wire.
+
+| Reason code | Why no request reaches it |
+|---|---|
+| `AMBIGUOUS_ROUTE` | Routes are server aliases, which are unique, and a public name resolves to one server, so the decision never sees two eligible routes |
+| `NO_ROUTE` | The catalog presents a tool only while the registry resolves it to its server; when the route goes, the name leaves the catalog (an unknown tool, `-32602`) or the server is suspended (`REVISION_NOT_ENABLED`) |
+| `DENY_RULE` | The catalog presents only granted tools that no deny rule covers (FR-1.26), so a call to a denied tool is an unknown tool (`-32602`) |
+| `CREDENTIAL_INVALID` | Revoking a credential terminates its sessions under the Enforcement Coordinator's barrier (SR-1.16-1), so the session check answers first (`SESSION_INVALID`) |
+| `PRINCIPAL_DISABLED` | Suspending a principal terminates its sessions under the same barrier, with the same effect |
+| `CAPABILITY` | The launch capability is issued and consumed within one call; only a Gateway defect produces this code |
+| `ARGUMENTS_INVALID` | `tools/call` arguments are decoded as a JSON object before the inspection chain runs; any other value is refused with `-32602` by the protocol layer |
+| `CANCELLED` | MCP cancellation: the harness that cancelled the call gets no response to it; the code is recorded in the journal only |
 
 ## Appendix C — Application role matrix
 

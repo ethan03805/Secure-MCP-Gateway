@@ -250,6 +250,8 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 				e = gatewayError(CodeRateLimited, "session quota exhausted", dec.ReasonCode, corr, dec.ID, map[string]any{"callsPerSession": dec.Obligations.CallsPerSession})
 			case policy.ReasonNoSnapshot:
 				e = gatewayError(CodeGatewayFailClosed, "gateway fail-closed", dec.ReasonCode, corr, dec.ID, nil)
+			case policy.ReasonSessionState: // Appendix B: -31006
+				e = gatewayError(CodeSessionInvalid, "session not active", dec.ReasonCode, corr, dec.ID, nil)
 			default:
 				e = gatewayError(CodePolicyDenied, "policy denied", dec.ReasonCode, corr, dec.ID, map[string]any{"decisiveRules": dec.DecisiveRules})
 			}
@@ -499,7 +501,7 @@ func (g *Gateway) authorizeLaunch(c *callRun, sess session.Session, ref *backend
 	case g.decider.Snapshot() == nil || g.decider.Snapshot().Revision != b.PolicyRevision:
 		reason = ReasonRevisionChanged
 	case !g.store.IsActive(sess.ID):
-		reason = ReasonSessionState
+		reason, code = ReasonSessionState, CodeSessionInvalid
 	case g.principalDisabled(sess.PrincipalID):
 		reason, code = policy.ReasonPrincipalDisabled, CodePolicyDenied
 	case g.cfg.CredentialRevoked(sess.ClientID):
@@ -534,14 +536,17 @@ func (g *Gateway) authorizeRelease(c *callRun, sessionID string) error {
 		reason = ReasonSessionState
 	}
 	if reason != "" {
-		return c.refuse(gatewayError(CodeResponseWithheld, "response withheld", reason, c.corr, c.dec.ID, nil),
-			"call", audit.PhaseWithheld, "E-12", "withhold", reason, "evaluated")
+		// Table B.2: every failed release recheck is RELEASE_REFUSED; the
+		// cause is in the event detail.
+		if aerr := c.commit("call", audit.PhaseWithheld, "E-12", "withhold", ReasonReleaseRefused, "evaluated", map[string]any{"cause": reason}); aerr != nil {
+			c.g.log.Error("evidence write failed", "err", aerr, "correlation", c.corr)
+		}
+		return gatewayError(CodeResponseWithheld, "response withheld", ReasonReleaseRefused, c.corr, c.dec.ID, nil)
 	}
 	if err := c.commit("call", audit.PhaseDelivered, "E-12", "release", "", "evaluated", nil); err != nil {
 		// SR-6.3-1: without a durable outcome record the result is withheld.
 		c.g.log.Error("evidence write failed; withholding result", "err", err, "correlation", c.corr)
-		return gatewayError(CodeResponseWithheld, "response withheld: evidence unavailable", ReasonJournalUnavailable, c.corr, c.dec.ID,
-			map[string]any{"message": "The tool ran, but the Gateway could not record its outcome, so the result was withheld. It may have completed the action; check before trying again. The operator can see the cause with `smcpctl health`."})
+		return gatewayError(CodeResponseWithheld, "response withheld: evidence unavailable", ReasonOutcomeUnrecorded, c.corr, c.dec.ID, nil)
 	}
 	return nil
 }

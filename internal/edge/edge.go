@@ -65,13 +65,15 @@ const (
 	ReasonJournalUnavailable = "JOURNAL_UNAVAILABLE" // SR-1.2-2, Appendix B
 	ReasonFailClosed         = "FAIL_CLOSED"
 	ReasonEmergencyStop      = "EMERGENCY_STOP"
-	ReasonCapability         = "CAPABILITY_INVALID"
+	ReasonCapability         = "CAPABILITY"
 	ReasonSessionState       = "SESSION_STATE"
-	ReasonSessionEnded       = "SESSION_ENDED"
+	ReasonSessionEnded       = "SESSION_STATE" // Table B.2 covers a session that ended during the call
 	ReasonApprovalDenied     = "APPROVAL_DENIED"
 	ReasonApprovalNoSvc      = "APPROVAL_UNAVAILABLE"
 	ReasonRevisionChanged    = "POLICY_REVISION_CHANGED"
 	ReasonListenLimit        = "LISTEN_LIMIT"
+	ReasonReleaseRefused     = "RELEASE_REFUSED"    // the release recheck failed (SR-1.17-2)
+	ReasonOutcomeUnrecorded  = "OUTCOME_UNRECORDED" // the delivered event could not be committed (SR-6.3-1)
 )
 
 // Supported northbound protocol versions (CP-04).

@@ -78,6 +78,11 @@ jobs:
             echo "::error file=go.mod::go.mod or go.sum is not tidy. Run: go mod tidy"
             exit 1
           fi
+      - name: Pinned pyarrow, pandas and NetworkX for the export check (FR-10.34)
+        run: |
+          python3 -m venv "$RUNNER_TEMP/pyload"
+          "$RUNNER_TEMP/pyload/bin/pip" install --no-cache-dir -r internal/research/testdata/pyload/requirements.txt
+          echo "SMCP_RESEARCH_PYTHON=$RUNNER_TEMP/pyload/bin/python" >> "$GITHUB_ENV"
       - name: Test (race, coverage) and map results to requirement IDs (FR-12.10)
         id: test
         run: |

@@ -620,7 +620,7 @@ R: Deleting evidence is deliberate and leaves the operator a digest to compare a
 P: FR-13
 S: The Gateway SHALL read an integer `schema_version` from the configuration file, SHALL refuse to start when that value is greater than the highest version it supports, naming both versions, and SHALL accept an older version only after `smcpctl config migrate` or `smcpctl upgrade` has rewritten it.
 A: E-23; E-24; F-97; F-62
-V: Test | Start with a configuration one version newer, one version older and current; confirm refusal naming both versions, refusal with a migrate instruction, and normal start.
+V: Test | Start with a configuration one version newer and current; confirm refusal naming both versions and normal start. Release 1.0 has one schema version (a file without the key is version 1), so no real file is older: register a next version with a migration step in the test, start with a version-1 file and confirm refusal with a migrate instruction, then confirm that `smcpctl config migrate` (which `smcpctl upgrade` runs with the new binary) rewrites the file, keeps the original and the rewritten file loads.
 SRC: OWNER (config schema version field and refusal of unknown newer versions)
 R: A downgrade must not misread a configuration written by a newer release.
 

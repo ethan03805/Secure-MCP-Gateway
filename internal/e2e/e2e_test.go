@@ -290,6 +290,21 @@ func (f *fixture) oauthLoginClient(scope, clientID string) (access, refresh stri
 func (f *fixture) oauthLoginAs(scope, clientID, user, password string, page func(string)) (access, refresh string, tokenBody map[string]any) {
 	t := f.t
 	t.Helper()
+	r, b := f.oauthTokenResponse(scope, clientID, user, password, page)
+	if r.StatusCode != 200 {
+		t.Fatalf("token: %d %s", r.StatusCode, b)
+	}
+	if err := json.Unmarshal(b, &tokenBody); err != nil {
+		t.Fatal(err)
+	}
+	return tokenBody["access_token"].(string), tokenBody["refresh_token"].(string), tokenBody
+}
+
+// oauthTokenResponse runs the authorization-code flow and returns the
+// token endpoint's response, whatever its status.
+func (f *fixture) oauthTokenResponse(scope, clientID, user, password string, page func(string)) (*http.Response, []byte) {
+	t := f.t
+	t.Helper()
 	// Discovery (FR-2.17).
 	var prm map[string]any
 	f.getJSON(f.base+"/.well-known/oauth-protected-resource/mcp", &prm)
@@ -327,14 +342,7 @@ func (f *fixture) oauthLoginAs(scope, clientID, user, password string, page func
 	}
 	tf := url.Values{"grant_type": {"authorization_code"}, "code": {loc.Query().Get("code")}, "redirect_uri": {redirect},
 		"client_id": {clientID}, "code_verifier": {verifier}, "resource": {f.cfg.ResourceURI()}}
-	r, b := f.postForm(asm["token_endpoint"].(string), tf)
-	if r.StatusCode != 200 {
-		t.Fatalf("token: %d %s", r.StatusCode, b)
-	}
-	if err := json.Unmarshal(b, &tokenBody); err != nil {
-		t.Fatal(err)
-	}
-	return tokenBody["access_token"].(string), tokenBody["refresh_token"].(string), tokenBody
+	return f.postForm(asm["token_endpoint"].(string), tf)
 }
 
 type bearerRT struct {
