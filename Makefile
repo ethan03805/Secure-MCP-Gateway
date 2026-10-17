@@ -77,13 +77,16 @@ site/node_modules: site/package-lock.json
 	@touch site/node_modules
 
 .PHONY: site-typecheck
-site-typecheck: site/node_modules ## Typecheck the site (tsc --noEmit)
+site-typecheck: site/node_modules ## Typecheck the site (tsc --noEmit) and run its unit tests
 	cd site && npx --no-install tsc --noEmit
+	cd site && $(NPM) test
 
 .PHONY: site
-site: site/node_modules ## Typecheck and build the static site into site/out
+site: site/node_modules ## Typecheck, test and build the static site into site/out, then check its pages and links
 	cd site && npx --no-install tsc --noEmit
+	cd site && $(NPM) test
 	cd site && $(NPM) run build
+	cd site && $(NPM) run check-out
 
 console/node_modules: console/package-lock.json
 	cd console && $(NPM) ci --no-audit --no-fund

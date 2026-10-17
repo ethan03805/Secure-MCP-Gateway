@@ -42,4 +42,4 @@ The CP-16 propagation bound and FR-11.10 stop latency apply.
 - In-flight calls are not cancelled; a call that passed release authorization before the stop completes.
 - Server instances are not torn down; use `smcpctl runtime kill` or disable the package (see the [runbook](../runbooks/emergency-stop.md)).
 - Sessions are not ended.
-- There is no Operator role; only the Administrator can stop.
+- Operator accounts (`[[console.account]]` with `role = "operator"`) and the Administrator can stop; only the Administrator can resume.

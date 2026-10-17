@@ -990,15 +990,107 @@ details.control .body {
   grid-template-columns: 15rem minmax(0, 1fr);
   gap: var(--gutter);
 }
-.toc {
+.rail {
   position: sticky;
   top: 1rem;
   align-self: start;
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
   padding-top: 2.4rem;
+}
+.toc {
   font-size: 0.74rem;
   line-height: 1.4;
+}
+.toc + .toc {
+  margin-top: 1.4rem;
+}
+.rail-label {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-mono-stack);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.toc li a[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gutter);
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule-strong);
+}
+.pager a {
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+}
+.pager a:hover {
+  text-decoration: underline;
+}
+.pager-next {
+  text-align: right;
+}
+.pager-dir {
+  display: block;
+  font-family: var(--font-mono-stack);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.group-nav ol {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.4rem;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.9rem;
+}
+table.notes th[scope="row"] {
+  min-width: 12rem;
+  font-weight: 400;
+  text-align: left;
+  vertical-align: top;
+}
+table.notes td {
+  vertical-align: top;
+}
+table.notes .pkgs {
+  display: block;
+  margin-top: 0.3rem;
+  line-height: 1.5;
+}
+table.notes .pkgs code {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+table.notes .note-text {
+  min-width: 22rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.flow-list {
+  padding-left: 1.1rem;
+}
+.flow-list .id {
+  margin-left: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+.doc-groups .group-about {
+  color: var(--ink-2);
 }
 .toc ol {
   list-style: none;
@@ -1171,7 +1263,7 @@ details.control .body {
   .doc-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-  .toc {
+  .rail {
     position: static;
     max-height: none;
     padding-top: 1.5rem;

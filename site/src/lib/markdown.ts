@@ -6,8 +6,9 @@ import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
 import GithubSlugger from "github-slugger";
+import fs from "node:fs";
 import path from "node:path";
-import { DOCS } from "./content";
+import { FLOWS_DIR, REPO_ROOT, docByFile, docExists, docHref, flowSlug } from "./content";
 import { parseDiagram, withAutonumber, type ParsedDiagram } from "./diagram";
 import { REPO_URL } from "./site";
 
@@ -110,11 +111,17 @@ export function resolveRepoLink(href: string, fromFile: string): string {
   const hashAt = href.indexOf("#");
   const target = hashAt >= 0 ? href.slice(0, hashAt) : href;
   const hash = hashAt >= 0 ? href.slice(hashAt) : "";
-  const repoPath = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), target));
+  const repoPath = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), target)).replace(/\/$/, "");
   if (repoPath.startsWith("..")) return href;
-  const doc = DOCS.find((d) => d.file === repoPath);
-  if (doc) return `/docs/${doc.slug}/${hash}`;
-  return `${REPO_URL}/blob/main/${repoPath.replace(/\/$/, "")}${hash}`;
+  if (path.posix.dirname(repoPath) === FLOWS_DIR && repoPath.endsWith(".md") && docExists(repoPath)) {
+    return `/flows/${flowSlug(repoPath)}/${hash}`;
+  }
+  if (repoPath === FLOWS_DIR) return `/flows/${hash}`;
+  // A directory link goes to its README when the site renders that.
+  const doc = docByFile(repoPath) ?? docByFile(`${repoPath}/README.md`);
+  if (doc) return `${docHref(doc)}${hash}`;
+  const isDir = !path.posix.extname(repoPath) && docExists(repoPath) && !fs.statSync(path.join(REPO_ROOT, repoPath)).isFile();
+  return `${REPO_URL}/${isDir ? "tree" : "blob"}/main/${repoPath}${hash}`;
 }
 
 /** rehype plugin: rewrite relative links with resolveRepoLink. */

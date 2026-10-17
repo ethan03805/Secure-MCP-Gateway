@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DocHead, Note, SampleNotice } from "@/components/Sheet";
-import { DOCS, docExists, readDoc } from "@/lib/content";
+import { allDocs, readDoc } from "@/lib/content";
 import { Inline } from "@/lib/inline";
 import { loadArch } from "@/lib/parse-arch";
 import { loadRequirements } from "@/lib/parse-reqs";
@@ -39,7 +39,7 @@ export default function Home() {
     "/requirements/": `${reqs.length} requirements`,
     "/security/": `${controls.length} controls`,
     "/clients/": `${clientSections} sections`,
-    "/docs/": `${DOCS.filter((d) => docExists(d.file)).length} documents`,
+    "/docs/": `${allDocs().length} documents`,
   };
 
   return (

@@ -48,7 +48,7 @@ The `-31002` message tells the person in plain words to open the approval URL, a
 
 Implemented by `internal/approval` (E-07) with the edge changes in `internal/edge/stream.go`; see [../approvals.md](../approvals.md) and [../api/approvals.md](../api/approvals.md). Differences from the diagram:
 
-- The console's Approvals view (G-13) is another element; the service provides `/api/v1/approvals` and the watch stream it reads.
+- The console's Approvals view (G-13) belongs to E-24; it reads `/api/v1/approvals` and the watch stream this service provides.
 - The keep-alive is sent once when the call is held and then every interval. A `tools/call` is answered as an event stream only once it is held; other calls stay JSON.
 - Anomaly-band and session-taint obligations do not reach the service yet (E-31 scoring and taint tracking are not built), so only policy-rule approvals occur.
 - The real-harness run of FR-3.25 has not been recorded.

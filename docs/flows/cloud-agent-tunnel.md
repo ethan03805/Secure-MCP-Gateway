@@ -43,6 +43,7 @@ Implemented in `internal/remote` (listener, OAuth, registration, limits), `inter
 - Templates allowed for remote sessions come from `remote.templates` in the configuration, not a `remote_allowed` mark in the Framework Profile.
 - `smcp-connect` signs in with the device authorization grant (`/oauth/device_authorization`, `/oauth/device`) instead of the authorization-code redirect, because it usually runs on a computer without the person's browser.
 - In the Enforced profile, `smcpctl remote enable` does not yet install the nftables rules of SR-4.14-1.
-- Events written by the Approval Service for held remote calls do not yet carry the remote origin fields.
+
+Approval events of held remote calls carry the remote origin fields (channel, client ID, client address) like the call events.
 
 See `docs/remote-access.md`.
