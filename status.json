@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T14:30:03Z",
-  "commit": "82ae5b555186688fbcc334bd9a79bcfeac1fcb05",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/82ae5b555186688fbcc334bd9a79bcfeac1fcb05",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39040023809",
+  "generatedAt": "2026-10-17T14:40:33Z",
+  "commit": "b81d02b54a57ea1671fbd1e76e510e2b02ae2711",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/b81d02b54a57ea1671fbd1e76e510e2b02ae2711",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39040825607",
   "tests": {
-    "total": 1085,
-    "passed": 1066,
-    "failed": 2,
+    "total": 1089,
+    "passed": 1071,
+    "failed": 1,
     "skipped": 17,
-    "durationSec": 620.9,
+    "durationSec": 565.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -133,7 +133,7 @@
       },
       {
         "name": "internal/backend",
-        "passed": 31,
+        "passed": 32,
         "failed": 0,
         "skipped": 0
       },
@@ -181,7 +181,7 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 54,
+        "passed": 55,
         "failed": 0,
         "skipped": 0
       },
@@ -193,7 +193,7 @@
       },
       {
         "name": "internal/egress",
-        "passed": 16,
+        "passed": 18,
         "failed": 0,
         "skipped": 2
       },
@@ -288,12 +288,6 @@
         "skipped": 0
       },
       {
-        "name": "internal/perf/run",
-        "passed": 3,
-        "failed": 2,
-        "skipped": 0
-      },
-      {
         "name": "internal/pipeline",
         "passed": 18,
         "failed": 0,
@@ -355,14 +349,14 @@
       },
       {
         "name": "internal/sandbox",
-        "passed": 39,
+        "passed": 44,
         "failed": 0,
         "skipped": 6
       },
       {
         "name": "internal/secrets",
-        "passed": 27,
-        "failed": 0,
+        "passed": 26,
+        "failed": 1,
         "skipped": 1
       },
       {
@@ -482,7 +476,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 91.6
+        "pct": 92
       },
       {
         "name": "internal/backup",
@@ -514,7 +508,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.4
+        "pct": 90.5
       },
       {
         "name": "internal/egress",
@@ -530,7 +524,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.5
+        "pct": 83.8
       },
       {
         "name": "internal/gwtest",
@@ -566,7 +560,7 @@
       },
       {
         "name": "internal/observe",
-        "pct": 91.9
+        "pct": 92.1
       },
       {
         "name": "internal/obspolicy",
@@ -646,7 +640,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.1
+        "pct": 78.7
       },
       {
         "name": "internal/session",
@@ -654,11 +648,11 @@
       },
       {
         "name": "internal/testport",
-        "pct": 64.5
+        "pct": 61.3
       },
       {
         "name": "internal/tunnel",
-        "pct": 77.2
+        "pct": 75.6
       },
       {
         "name": "packaging/linux",
@@ -687,19 +681,19 @@
     ]
   },
   "requirements": {
-    "total": 529,
-    "verified": 337,
-    "partial": 162,
-    "failing": 2,
-    "unverified": 28,
+    "total": 528,
+    "verified": 344,
+    "partial": 152,
+    "failing": 1,
+    "unverified": 31,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
         "verified": 16,
-        "partial": 7,
-        "failing": 1
+        "partial": 8,
+        "failing": 0
       },
       {
         "element": "E-02",
@@ -785,16 +779,16 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 8,
+        "verified": 7,
         "partial": 6,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-13",
         "name": "Library Trust Verifier",
         "total": 25,
-        "verified": 16,
-        "partial": 7,
+        "verified": 17,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -809,8 +803,8 @@
         "element": "E-15",
         "name": "Server Runtime Manager",
         "total": 9,
-        "verified": 2,
-        "partial": 7,
+        "verified": 4,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -825,16 +819,16 @@
         "element": "E-17",
         "name": "Runtime Monitor",
         "total": 3,
-        "verified": 0,
-        "partial": 3,
+        "verified": 2,
+        "partial": 1,
         "failing": 0
       },
       {
         "element": "E-18",
         "name": "Egress Broker",
-        "total": 9,
-        "verified": 5,
-        "partial": 4,
+        "total": 8,
+        "verified": 7,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -857,8 +851,8 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 21,
-        "verified": 14,
-        "partial": 5,
+        "verified": 15,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -882,7 +876,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 26,
-        "partial": 42,
+        "partial": 41,
         "failing": 0
       },
       {
@@ -914,7 +908,7 @@
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
         "verified": 4,
-        "partial": 7,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -923,7 +917,7 @@
         "total": 14,
         "verified": 7,
         "partial": 6,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-30",
@@ -2019,7 +2013,7 @@
       {
         "id": "FR-5.1",
         "element": "E-13",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/library.TestLibraryScanAndRevocation"
         ]
@@ -2105,8 +2099,9 @@
       {
         "id": "FR-5.12",
         "element": "E-15",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/backend.TestCrashRestartAndSuspension",
           "internal/sandbox.TestUnexpectedExitIsRecorded"
         ]
       },
@@ -2203,8 +2198,9 @@
       {
         "id": "FR-5.27",
         "element": "E-15",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/sandbox.TestShutdownSequenceAtDefaultTimings",
           "internal/sandbox.TestShutdownSequenceEscalates"
         ]
       },
@@ -2219,10 +2215,11 @@
       {
         "id": "FR-5.33",
         "element": "E-17",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/sandbox.TestIntegrationMonitorContainment",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
+          "internal/sandbox.TestMonitorCollectsObservables",
           "internal/sandbox.TestMonitorExecEventIsDeviation",
           "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
           "internal/sandbox.TestMonitorUndeclaredProcessAlertsOrKills",
@@ -2242,9 +2239,10 @@
       {
         "id": "FR-5.35",
         "element": "E-17",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/hostile.TestHostileFixtures/HF-20",
+          "internal/sandbox.TestContainmentActionsWithinOneSecond",
           "internal/sandbox.TestIntegrationMonitorContainment",
           "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
           "internal/sandbox.TestMonitorKillsOnPidsBreach",
@@ -2451,8 +2449,9 @@
       {
         "id": "FR-7.2",
         "element": "E-21",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/e2e.TestCallPhasesForEachOutcome",
           "internal/e2e.TestJournalAfterShutdown"
         ]
       },
@@ -3522,8 +3521,7 @@
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
-          "internal/acceptance/offline.TestAT20LimitsAndLoad",
-          "internal/perf/run.TestPerfFR_11_2"
+          "internal/acceptance/offline.TestAT20LimitsAndLoad"
         ]
       },
       {
@@ -3537,20 +3535,17 @@
       {
         "id": "FR-11.4",
         "element": "E-29",
-        "status": "failing",
-        "tests": [
-          "internal/perf/run.TestPerfFR_11_4"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-11.5",
         "element": "E-01",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
-          "internal/acceptance/offline.TestAT20LimitsAndLoad",
-          "internal/perf/run.TestPerfFR_11_5"
+          "internal/acceptance/offline.TestAT20LimitsAndLoad"
         ]
       },
       {
@@ -3572,18 +3567,14 @@
       {
         "id": "FR-11.8",
         "element": "E-24",
-        "status": "partial",
-        "tests": [
-          "internal/perf/run.TestPerfFR_11_8"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-11.9",
         "element": "E-28",
-        "status": "partial",
-        "tests": [
-          "internal/perf/run.TestPerfFR_11_9"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-11.10",
@@ -5250,9 +5241,10 @@
       {
         "id": "SR-4.5-2",
         "element": "E-18",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/egress.TestConnectTunnel",
+          "internal/egress.TestOnlyCurrentGrantsAreForwarded",
           "internal/egress.TestProxyAllowsGrantedHTTP",
           "internal/egress.TestProxyRefusesUngranted"
         ]
@@ -5573,18 +5565,11 @@
         ]
       },
       {
-        "id": "SR-5.16-1",
-        "element": "E-18",
-        "status": "partial",
-        "tests": [
-          "internal/egress.TestProxyAllowsGrantedHTTP"
-        ]
-      },
-      {
         "id": "SR-5.17-1",
         "element": "E-18",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/egress.TestNoCookieState",
           "internal/egress.TestProxyAllowsGrantedHTTP"
         ]
       },
@@ -5892,7 +5877,7 @@
       {
         "id": "SR-7.6-2",
         "element": "E-12",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/secrets.TestBrokerEmergencyStopWithdraws",
           "internal/secrets.TestEmergencyStopCancelsCallsAndWithdrawsGrants"
@@ -6635,7 +6620,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6670,7 +6655,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41501: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39195: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6725,7 +6710,7 @@
     }
   ],
   "acceptance": {
-    "commit": "82ae5b555186688fbcc334bd9a79bcfeac1fcb05",
+    "commit": "b81d02b54a57ea1671fbd1e76e510e2b02ae2711",
     "label": "not enforced",
     "reasons": [
       "AT-07 Safe evidence display: no automated or recorded result in the Enforced profile",
@@ -7041,9 +7026,9 @@
         "title": "Web broker",
         "evidence": "Automated (Enforced)",
         "requirements": [
+          "SR-4.5-2",
           "SR-5.15-1",
           "SR-5.15-2",
-          "SR-5.16-1",
           "SR-5.19-1"
         ],
         "enforced": "not-run",
@@ -7369,88 +7354,6 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
-  },
-  "performance": {
-    "schema": 1,
-    "commit": "82ae5b555186688fbcc334bd9a79bcfeac1fcb05",
-    "generatedAt": "2026-10-17T14:19:26Z",
-    "host": {
-      "os": "linux",
-      "arch": "amd64",
-      "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
-      "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000004589"
-    },
-    "referenceHardware": false,
-    "dataset": {
-      "rules": 9995,
-      "registryNodes": 5,
-      "candidateRules": 256,
-      "events": 100000,
-      "days": 30,
-      "callers": 8
-    },
-    "measurements": [
-      {
-        "requirement": "FR-11.2",
-        "name": "Decision latency",
-        "metric": "p95",
-        "unit": "ms",
-        "value": 0.017696,
-        "budget": 10,
-        "ceiling": 100,
-        "samples": 100000,
-        "pass": true,
-        "method": "policy.Decider.Decide on the compiled reference policy (9995 rules, 256 candidates per decision), 8 concurrent callers, latency as the caller sees it"
-      },
-      {
-        "requirement": "FR-11.5",
-        "name": "Gateway-added overhead (P-213)",
-        "metric": "p95",
-        "unit": "ms",
-        "value": 60.93509,
-        "budget": 50,
-        "ceiling": 250,
-        "samples": 2000,
-        "pass": false,
-        "method": "real smcpd with synchronous scoring, 8 concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (requested to dispatched plus completed to delivered)"
-      },
-      {
-        "requirement": "FR-11.4",
-        "name": "Observation capture overhead",
-        "metric": "p95 difference",
-        "unit": "ms",
-        "value": 24.141365,
-        "budget": 1,
-        "samples": 4000,
-        "pass": false,
-        "method": "p95 P-213 with observation enabled (44.608 ms, mean of 43.322 and 45.893) minus disabled (20.466 ms, mean of 18.796 and 22.137), four fresh instances run in the order enabled, disabled, disabled, enabled"
-      },
-      {
-        "requirement": "FR-11.8",
-        "name": "Console query latency",
-        "metric": "p95",
-        "unit": "ms",
-        "value": 581.966079,
-        "budget": 2000,
-        "samples": 600,
-        "pass": true,
-        "method": "the console's audit queries (latest page, by class, by reason, by correlation, by time window, text search) over a journal of 100000 events spanning 30 days, 100 repetitions",
-        "note": "audit queries only; analytics queries over 30 days of observation data are not in the reference dataset yet"
-      },
-      {
-        "requirement": "FR-11.9",
-        "name": "Idle resident memory",
-        "metric": "RSS",
-        "unit": "MiB",
-        "value": 128.75390625,
-        "budget": 4096,
-        "samples": 1,
-        "pass": true,
-        "method": "resident set size of smcpd 10m0s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
-      }
-    ]
+    "conclusion": "failure"
   }
 }
