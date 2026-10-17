@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T07:55:35Z",
-  "commit": "450ae68e37390ce0ab1d134106ca7be9e40404ec",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/450ae68e37390ce0ab1d134106ca7be9e40404ec",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39014922183",
+  "generatedAt": "2026-10-17T08:15:20Z",
+  "commit": "7d6bbed331d44521a143117d1f404af09029d194",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/7d6bbed331d44521a143117d1f404af09029d194",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39016197681",
   "tests": {
-    "total": 878,
-    "passed": 856,
-    "failed": 3,
-    "skipped": 19,
-    "durationSec": 458.7,
+    "total": 880,
+    "passed": 866,
+    "failed": 0,
+    "skipped": 14,
+    "durationSec": 403.9,
     "packages": [
       {
         "name": "console/e2e/browsers",
-        "passed": 1,
-        "failed": 1,
+        "passed": 2,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -31,8 +31,8 @@
       },
       {
         "name": "console/e2e/webkit",
-        "passed": 33,
-        "failed": 2,
+        "passed": 35,
+        "failed": 0,
         "skipped": 2
       },
       {
@@ -175,9 +175,9 @@
       },
       {
         "name": "internal/graph",
-        "passed": 16,
+        "passed": 23,
         "failed": 0,
-        "skipped": 5
+        "skipped": 0
       },
       {
         "name": "internal/harness",
@@ -362,7 +362,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.4,
+    "totalPct": 75.5,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -462,7 +462,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.5
+        "pct": 92.8
       },
       {
         "name": "internal/egress",
@@ -478,11 +478,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.8
+        "pct": 83
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.5
+        "pct": 79.7
       },
       {
         "name": "internal/harness",
@@ -598,11 +598,11 @@
       },
       {
         "name": "internal/testport",
-        "pct": 61.3
+        "pct": 64.5
       },
       {
         "name": "internal/tunnel",
-        "pct": 75.6
+        "pct": 77.2
       },
       {
         "name": "packaging/linux",
@@ -632,10 +632,10 @@
   },
   "requirements": {
     "total": 543,
-    "verified": 235,
-    "partial": 204,
-    "failing": 2,
-    "unverified": 102,
+    "verified": 241,
+    "partial": 203,
+    "failing": 0,
+    "unverified": 99,
     "byElement": [
       {
         "element": "E-01",
@@ -801,7 +801,7 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 24,
-        "verified": 8,
+        "verified": 10,
         "partial": 5,
         "failing": 0
       },
@@ -825,15 +825,15 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 19,
-        "partial": 39,
-        "failing": 2
+        "verified": 20,
+        "partial": 40,
+        "failing": 0
       },
       {
         "element": "E-25",
         "name": "Graph Database Engine",
         "total": 8,
-        "verified": 1,
+        "verified": 2,
         "partial": 4,
         "failing": 0
       },
@@ -841,8 +841,8 @@
         "element": "E-26",
         "name": "Data Access Service",
         "total": 9,
-        "verified": 2,
-        "partial": 3,
+        "verified": 4,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -2845,7 +2845,7 @@
       {
         "id": "FR-8.30",
         "element": "E-24",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "console/e2e/browsers.TestConsoleSuiteOnEveryBrowser"
         ]
@@ -2903,7 +2903,7 @@
       {
         "id": "FR-8.35",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
@@ -2936,7 +2936,7 @@
       {
         "id": "FR-9.2",
         "element": "E-26",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/graph.TestMigrationsApplyInOrderAndRefuseNewer",
           "internal/graph.TestNeo4jSchemaMigrationAndIndexes"
@@ -3055,7 +3055,7 @@
       {
         "id": "FR-9.18",
         "element": "E-25",
-        "status": "unverified",
+        "status": "verified",
         "tests": [
           "internal/graph.TestNeo4jSchemaMigrationAndIndexes"
         ]
@@ -4414,7 +4414,7 @@
       {
         "id": "SR-1.13-1",
         "element": "E-26",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/graph.TestNeo4jInjectedTextIsNeverExecuted",
           "internal/graph.TestParametersAreValidatedAndNeverQueryText"
@@ -5429,8 +5429,10 @@
       {
         "id": "SR-6.13-1",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/graph.TestOutageBackfillKeepsPolicyStatus"
+        ]
       },
       {
         "id": "SR-6.14-1",
@@ -5484,8 +5486,10 @@
       {
         "id": "SR-6.20-1",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/graph.TestDecisionLinkForEveryEvaluatedEvent"
+        ]
       },
       {
         "id": "SR-7-1",
@@ -6275,7 +6279,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6310,7 +6314,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41597: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33609: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6366,6 +6370,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
