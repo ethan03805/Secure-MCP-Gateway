@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T10:02:49Z",
-  "commit": "549bdf359571161d03389ae28776992a0f9c12ea",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/549bdf359571161d03389ae28776992a0f9c12ea",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39022896404",
+  "generatedAt": "2026-10-17T10:20:04Z",
+  "commit": "a29644b4cb7f1ced17bacac520bdaa82a7c27ee6",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a29644b4cb7f1ced17bacac520bdaa82a7c27ee6",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39024122027",
   "tests": {
-    "total": 910,
-    "passed": 896,
+    "total": 911,
+    "passed": 897,
     "failed": 0,
     "skipped": 14,
-    "durationSec": 434.3,
+    "durationSec": 311.5,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -151,7 +151,7 @@
       },
       {
         "name": "internal/edge",
-        "passed": 50,
+        "passed": 51,
         "failed": 0,
         "skipped": 0
       },
@@ -398,7 +398,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 67.3
+        "pct": 67.1
       },
       {
         "name": "internal/adminapi",
@@ -462,7 +462,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.4
+        "pct": 92.6
       },
       {
         "name": "internal/egress",
@@ -478,7 +478,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.4
+        "pct": 83.3
       },
       {
         "name": "internal/gwtest",
@@ -598,11 +598,11 @@
       },
       {
         "name": "internal/testport",
-        "pct": 64.5
+        "pct": 61.3
       },
       {
         "name": "internal/tunnel",
-        "pct": 75.6
+        "pct": 77.2
       },
       {
         "name": "packaging/linux",
@@ -632,8 +632,8 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 267,
-    "partial": 202,
+    "verified": 268,
+    "partial": 201,
     "failing": 0,
     "unverified": 61,
     "byElement": [
@@ -649,8 +649,8 @@
         "element": "E-02",
         "name": "Protocol Mediator",
         "total": 43,
-        "verified": 28,
-        "partial": 10,
+        "verified": 29,
+        "partial": 9,
         "failing": 0
       },
       {
@@ -5177,8 +5177,9 @@
       {
         "id": "SR-5.11-1",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/edge.TestNoResultBeforeRelease",
           "internal/hostile.TestHostileFixtures/HF-08",
           "internal/hostile.TestHostileFixtures/HF-16"
         ]
@@ -6258,7 +6259,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6293,7 +6294,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:43165: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36823: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
