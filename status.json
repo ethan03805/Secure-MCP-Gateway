@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T12:45:47Z",
-  "commit": "82f074827a0d1d1d5276a1b0f91fb0f9976a601a",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/82f074827a0d1d1d5276a1b0f91fb0f9976a601a",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39033206397",
+  "generatedAt": "2026-10-17T13:11:11Z",
+  "commit": "0a896c33895af70d53a28604af36300866300f0b",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/0a896c33895af70d53a28604af36300866300f0b",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39034574366",
   "tests": {
-    "total": 992,
-    "passed": 978,
-    "failed": 0,
-    "skipped": 14,
-    "durationSec": 400.3,
+    "total": 1063,
+    "passed": 1045,
+    "failed": 1,
+    "skipped": 17,
+    "durationSec": 779.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -62,6 +62,24 @@
       {
         "name": "docs",
         "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/acceptance",
+        "passed": 16,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "name": "internal/acceptance/enforced",
+        "passed": 15,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
+        "name": "internal/acceptance/offline",
+        "passed": 17,
         "failed": 0,
         "skipped": 0
       },
@@ -121,7 +139,7 @@
       },
       {
         "name": "internal/backup",
-        "passed": 2,
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
@@ -163,7 +181,7 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 49,
+        "passed": 50,
         "failed": 0,
         "skipped": 0
       },
@@ -193,7 +211,7 @@
       },
       {
         "name": "internal/graph",
-        "passed": 24,
+        "passed": 25,
         "failed": 0,
         "skipped": 0
       },
@@ -211,9 +229,9 @@
       },
       {
         "name": "internal/hostile",
-        "passed": 67,
+        "passed": 68,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "internal/keys",
@@ -235,7 +253,7 @@
       },
       {
         "name": "internal/observe",
-        "passed": 13,
+        "passed": 14,
         "failed": 0,
         "skipped": 0
       },
@@ -264,8 +282,20 @@
         "skipped": 0
       },
       {
+        "name": "internal/perf",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/perf/run",
+        "passed": 4,
+        "failed": 1,
+        "skipped": 0
+      },
+      {
         "name": "internal/pipeline",
-        "passed": 15,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       },
@@ -313,7 +343,7 @@
       },
       {
         "name": "internal/reqtest",
-        "passed": 1,
+        "passed": 2,
         "failed": 0,
         "skipped": 0
       },
@@ -373,14 +403,14 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 13,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       }
     ]
   },
   "coverage": {
-    "totalPct": 76.1,
+    "totalPct": 75.4,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -400,6 +430,10 @@
       },
       {
         "name": "cmd/smcp-stdio",
+        "pct": 0
+      },
+      {
+        "name": "cmd/smcp-workload",
         "pct": 0
       },
       {
@@ -424,7 +458,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 76.7
+        "pct": 78.2
       },
       {
         "name": "internal/anomaly",
@@ -452,7 +486,7 @@
       },
       {
         "name": "internal/backup",
-        "pct": 75.9
+        "pct": 77.5
       },
       {
         "name": "internal/baseline",
@@ -484,7 +518,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 80.4
+        "pct": 80.5
       },
       {
         "name": "internal/filterapi",
@@ -496,7 +530,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.5
       },
       {
         "name": "internal/gwtest",
@@ -532,7 +566,7 @@
       },
       {
         "name": "internal/observe",
-        "pct": 92.5
+        "pct": 92.8
       },
       {
         "name": "internal/obspolicy",
@@ -559,8 +593,12 @@
         "pct": 90.5
       },
       {
+        "name": "internal/perf",
+        "pct": 29.1
+      },
+      {
         "name": "internal/pipeline",
-        "pct": 91.1
+        "pct": 91.4
       },
       {
         "name": "internal/policy",
@@ -592,7 +630,7 @@
       },
       {
         "name": "internal/reqtest",
-        "pct": 91.7
+        "pct": 90.5
       },
       {
         "name": "internal/research",
@@ -620,7 +658,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 75.6
+        "pct": 77.2
       },
       {
         "name": "packaging/linux",
@@ -644,23 +682,23 @@
       },
       {
         "name": "tools/reqreport",
-        "pct": 83.1
+        "pct": 83.9
       }
     ]
   },
   "requirements": {
-    "total": 530,
-    "verified": 308,
-    "partial": 181,
-    "failing": 0,
-    "unverified": 41,
+    "total": 529,
+    "verified": 310,
+    "partial": 190,
+    "failing": 1,
+    "unverified": 28,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
         "verified": 16,
-        "partial": 5,
+        "partial": 8,
         "failing": 0
       },
       {
@@ -700,7 +738,7 @@
         "name": "Policy Decision Service",
         "total": 22,
         "verified": 19,
-        "partial": 2,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -844,14 +882,14 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 25,
-        "partial": 40,
+        "partial": 43,
         "failing": 0
       },
       {
         "element": "E-25",
         "name": "Graph Database Engine",
-        "total": 8,
-        "verified": 2,
+        "total": 7,
+        "verified": 3,
         "partial": 4,
         "failing": 0
       },
@@ -876,16 +914,16 @@
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
         "verified": 3,
-        "partial": 7,
+        "partial": 8,
         "failing": 0
       },
       {
         "element": "E-29",
         "name": "Observation Collector",
         "total": 14,
-        "verified": 5,
-        "partial": 6,
-        "failing": 0
+        "verified": 6,
+        "partial": 7,
+        "failing": 1
       },
       {
         "element": "E-30",
@@ -2439,6 +2477,9 @@
         "status": "verified",
         "tests": [
           "cmd/smcpctl.TestBootstrapAndControlCommands",
+          "internal/acceptance.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/enforced.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
           "internal/audit.TestAnchorDetectsTrailingDeletion",
           "internal/audit.TestCrashRecoveryTruncatedTail",
           "internal/audit.TestJournalChainAndVerify",
@@ -3116,6 +3157,9 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestSmcpdServesWithGraphConfigured",
+          "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
           "internal/e2e.TestGraphMirrorDownDoesNotAffectCalls",
           "internal/e2e.TestTransportAndAuthenticationRules",
           "internal/edge.TestNoSnapshotFailsClosed",
@@ -3150,8 +3194,10 @@
       {
         "id": "FR-10.2",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestStageSpansAndPolicyCost"
+        ]
       },
       {
         "id": "FR-10.3",
@@ -3223,8 +3269,10 @@
       {
         "id": "FR-10.11",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestStageSpansAndPolicyCost"
+        ]
       },
       {
         "id": "FR-10.12",
@@ -3451,14 +3499,21 @@
       {
         "id": "FR-11.1",
         "element": "E-25",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/perf.TestReferenceDataset"
+        ]
       },
       {
         "id": "FR-11.2",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/acceptance.TestAT20LimitsAndLoad",
+          "internal/acceptance/enforced.TestAT20LimitsAndLoad",
+          "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/perf/run.TestPerfFR_11_2"
+        ]
       },
       {
         "id": "FR-11.3",
@@ -3471,14 +3526,21 @@
       {
         "id": "FR-11.4",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "failing",
+        "tests": [
+          "internal/perf/run.TestPerfFR_11_4"
+        ]
       },
       {
         "id": "FR-11.5",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/acceptance.TestAT20LimitsAndLoad",
+          "internal/acceptance/enforced.TestAT20LimitsAndLoad",
+          "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/perf/run.TestPerfFR_11_5"
+        ]
       },
       {
         "id": "FR-11.6",
@@ -3499,14 +3561,18 @@
       {
         "id": "FR-11.8",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/perf/run.TestPerfFR_11_8"
+        ]
       },
       {
         "id": "FR-11.9",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/perf/run.TestPerfFR_11_9"
+        ]
       },
       {
         "id": "FR-11.10",
@@ -3531,8 +3597,10 @@
       {
         "id": "FR-12.2",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow"
+        ]
       },
       {
         "id": "FR-12.3",
@@ -3546,12 +3614,6 @@
       {
         "id": "FR-12.4",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-12.5",
-        "element": "E-25",
         "status": "unverified",
         "tests": []
       },
@@ -3596,6 +3658,9 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT21VersionBaseline",
+          "internal/acceptance/enforced.TestAT21VersionBaseline",
+          "internal/acceptance/offline.TestAT21VersionBaseline",
           "tools/reqreport.TestChildAnalysis",
           "tools/reqreport.TestComputeStatus",
           "tools/reqreport.TestCoverage",
@@ -3716,6 +3781,9 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestUpgradeAndRollback",
+          "internal/acceptance.TestAT19BackupRestoreRollback",
+          "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
+          "internal/acceptance/offline.TestAT19BackupRestoreRollback",
           "internal/e2e.TestOpsUpgradeMarkerRecorded"
         ]
       },
@@ -3813,6 +3881,9 @@
         "element": "E-13",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
           "internal/packaging.TestBuildSignVerifyBinary"
         ]
       },
@@ -3850,6 +3921,7 @@
         "element": "E-13",
         "status": "partial",
         "tests": [
+          "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow",
           "internal/packaging.TestReferenceRecipesArePinned"
         ]
       },
@@ -3891,6 +3963,9 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT16HarnessLockdown",
+          "internal/acceptance/enforced.TestAT16HarnessLockdown",
+          "internal/acceptance/offline.TestAT16HarnessLockdown",
           "internal/harness.TestClaudeCodeLockdownProfile"
         ]
       },
@@ -3907,6 +3982,9 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT16HarnessLockdown",
+          "internal/acceptance/enforced.TestAT16HarnessLockdown",
+          "internal/acceptance/offline.TestAT16HarnessLockdown",
           "internal/harness.TestDoctorInventory"
         ]
       },
@@ -3987,6 +4065,9 @@
         "element": "E-01",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT18RemoteAccess",
+          "internal/acceptance/enforced.TestAT18RemoteAccess",
+          "internal/acceptance/offline.TestAT18RemoteAccess",
           "internal/remote.TestRemoteSessionAndOriginEvidence"
         ]
       },
@@ -4025,6 +4106,9 @@
           "console/e2e/chromium.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/firefox.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/webkit.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
+          "internal/acceptance.TestAT18RemoteAccess",
+          "internal/acceptance/enforced.TestAT18RemoteAccess",
+          "internal/acceptance/offline.TestAT18RemoteAccess",
           "internal/remote.TestDynamicRegistrationNeedsApproval"
         ]
       },
@@ -4291,14 +4375,25 @@
       {
         "id": "FR-19.3",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/acceptance.TestAT21VersionBaseline",
+          "internal/acceptance/enforced.TestAT21VersionBaseline",
+          "internal/acceptance/offline.TestAT21VersionBaseline",
+          "tools/reqreport.TestAcceptanceResults",
+          "tools/reqreport.TestReleaseLabel"
+        ]
       },
       {
         "id": "FR-19.4",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/acceptance.TestEveryScenarioHasEvidence",
+          "internal/acceptance/offline.TestEveryScenarioHasEvidence",
+          "tools/reqreport.TestAcceptanceResults",
+          "tools/reqreport.TestLoadScenariosFromSRS"
+        ]
       },
       {
         "id": "FR-19.5",
@@ -4313,6 +4408,9 @@
         "element": "E-06",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
           "internal/policyadmin.TestLoadImportsOnceThenUsesTheStore"
         ]
       },
@@ -4322,6 +4420,9 @@
         "status": "verified",
         "tests": [
           "cmd/smcpctl.TestTamperedPolicyStartsFailClosed",
+          "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
           "internal/policystore.TestRevisionRecordAndSignature",
           "internal/policystore.TestTamperingIsDetected"
         ]
@@ -4341,6 +4442,9 @@
         "element": "E-06",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
           "internal/edge.TestNoSnapshotFailsClosed",
           "internal/policy.TestNoSnapshotDenies"
         ]
@@ -4350,6 +4454,9 @@
         "element": "E-12",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
           "internal/edge.TestIntentCommitFailureJournalUnavailable"
         ]
       },
@@ -4366,6 +4473,9 @@
         "element": "E-06",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT02ExactAuthorization",
+          "internal/acceptance/enforced.TestAT02ExactAuthorization",
+          "internal/acceptance/offline.TestAT02ExactAuthorization",
           "internal/policy.TestCompileAndDecide"
         ]
       },
@@ -4374,6 +4484,9 @@
         "element": "E-06",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT02ExactAuthorization",
+          "internal/acceptance/enforced.TestAT02ExactAuthorization",
+          "internal/acceptance/offline.TestAT02ExactAuthorization",
           "internal/policy.TestDenyPrecedence"
         ]
       },
@@ -4408,6 +4521,9 @@
         "element": "E-09",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT02ExactAuthorization",
+          "internal/acceptance/enforced.TestAT02ExactAuthorization",
+          "internal/acceptance/offline.TestAT02ExactAuthorization",
           "internal/edge.TestArgumentSchemaValidation",
           "internal/hostile.TestHostileFixtures/HF-13"
         ]
@@ -4454,6 +4570,9 @@
         "element": "E-05",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT04RoutingAndOverlap",
+          "internal/acceptance/enforced.TestAT04RoutingAndOverlap",
+          "internal/acceptance/offline.TestAT04RoutingAndOverlap",
           "internal/policy.TestOverlappingPermitsRejected"
         ]
       },
@@ -4470,6 +4589,9 @@
         "element": "E-06",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT04RoutingAndOverlap",
+          "internal/acceptance/enforced.TestAT04RoutingAndOverlap",
+          "internal/acceptance/offline.TestAT04RoutingAndOverlap",
           "internal/policy.TestSingleRoute"
         ]
       },
@@ -4530,6 +4652,9 @@
         "element": "E-05",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/enforced.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
           "internal/policyadmin.TestActivationCrashAtEachStep",
           "internal/policyadmin.TestPublishOrderAndFailures",
           "internal/policystore.TestActivationAndRestore"
@@ -4540,6 +4665,9 @@
         "element": "E-12",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/enforced.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
           "internal/edge.TestEmergencyStopSerializedWithLaunch"
         ]
       },
@@ -4572,6 +4700,9 @@
         "element": "E-07",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT15ConsoleAuthority",
+          "internal/acceptance/enforced.TestAT15ConsoleAuthority",
+          "internal/acceptance/offline.TestAT15ConsoleAuthority",
           "internal/approval.TestBindingRefusesEveryMismatch",
           "internal/approval.TestCanonicalDigest",
           "internal/approval.TestExpiry",
@@ -4616,6 +4747,9 @@
         "element": "E-03",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
           "internal/edge.TestPrincipalFromTokenOnly"
         ]
       },
@@ -4632,6 +4766,9 @@
         "element": "E-03",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -4672,6 +4809,9 @@
         "element": "E-12",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/enforced.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
           "internal/e2e.TestRevocationUnderLoad"
         ]
       },
@@ -4680,6 +4820,9 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT15ConsoleAuthority",
+          "internal/acceptance/enforced.TestAT15ConsoleAuthority",
+          "internal/acceptance/offline.TestAT15ConsoleAuthority",
           "internal/adminapi.TestControlAPIAuthenticationAndCSRF"
         ]
       },
@@ -4711,6 +4854,9 @@
         "element": "E-01",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTransportAndAuthenticationRules",
           "internal/keys.TestCANameConstraintsAndLifetimes"
         ]
@@ -4737,6 +4883,9 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -4745,6 +4894,9 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -4753,6 +4905,9 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT18RemoteAccess",
+          "internal/acceptance/enforced.TestAT18RemoteAccess",
+          "internal/acceptance/offline.TestAT18RemoteAccess",
           "docs/verification/inspections.md:132"
         ]
       },
@@ -4834,6 +4989,9 @@
         "element": "E-13",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
           "internal/library.TestSignatureTrust"
         ]
       },
@@ -4842,6 +5000,9 @@
         "element": "E-13",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
           "internal/library.TestSourceEvidenceAndProvenanceBinding"
         ]
       },
@@ -4850,6 +5011,9 @@
         "element": "E-13",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
           "internal/library.TestArtifactReverifiedAtLaunch",
           "internal/library.TestMissingTreeRecreatedFromArtifact",
           "internal/secrets.TestRefusedLaunchWithdrawsDeliveries"
@@ -4860,6 +5024,9 @@
         "element": "E-13",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
           "internal/library.TestSourceEvidenceAndProvenanceBinding"
         ]
       },
@@ -5120,6 +5287,9 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT16HarnessLockdown",
+          "internal/acceptance/enforced.TestAT16HarnessLockdown",
+          "internal/acceptance/offline.TestAT16HarnessLockdown",
           "internal/harness.TestDoctorInventory"
         ]
       },
@@ -5128,6 +5298,9 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT16HarnessLockdown",
+          "internal/acceptance/enforced.TestAT16HarnessLockdown",
+          "internal/acceptance/offline.TestAT16HarnessLockdown",
           "internal/harness.TestClaudeCodeLockdownProfile"
         ]
       },
@@ -5150,6 +5323,9 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT18RemoteAccess",
+          "internal/acceptance/enforced.TestAT18RemoteAccess",
+          "internal/acceptance/offline.TestAT18RemoteAccess",
           "internal/remote.TestRemoteRequiresApprovedClientToken"
         ]
       },
@@ -5166,6 +5342,9 @@
         "element": "E-02",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
           "internal/edge.TestHeaderBodyAgreement"
         ]
       },
@@ -5200,6 +5379,9 @@
         "element": "E-08",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT02ExactAuthorization",
+          "internal/acceptance/enforced.TestAT02ExactAuthorization",
+          "internal/acceptance/offline.TestAT02ExactAuthorization",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -5251,6 +5433,9 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestDaemonWiresEveryElement",
+          "internal/acceptance.TestAT09RequestAndResponseFilters",
+          "internal/acceptance/enforced.TestAT09RequestAndResponseFilters",
+          "internal/acceptance/offline.TestAT09RequestAndResponseFilters",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-09",
           "internal/secrets.TestBrokerLeakDetectionNorthbound"
@@ -5269,6 +5454,9 @@
         "element": "E-11",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT09RequestAndResponseFilters",
+          "internal/acceptance/enforced.TestAT09RequestAndResponseFilters",
+          "internal/acceptance/offline.TestAT09RequestAndResponseFilters",
           "internal/edge.TestProgressRelayedThroughFilters",
           "internal/filters.TestResponseSurfaces",
           "internal/hostile.TestHostileFixtures/HF-05",
@@ -5476,7 +5664,8 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
-          "internal/e2e.TestEvaluatedEventLinks"
+          "internal/e2e.TestEvaluatedEventLinks",
+          "internal/graph.TestAT11AuditLinkageSurvivesChanges"
         ]
       },
       {
@@ -5484,6 +5673,7 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/graph.TestAT11AuditLinkageSurvivesChanges",
           "internal/graph.TestOriginLabelsAndObservedBackend"
         ]
       },
@@ -5492,6 +5682,9 @@
         "element": "E-21",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/enforced.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
           "internal/secrets.TestFingerprintsShortValueAndRedaction"
         ]
       },
@@ -5527,6 +5720,9 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
           "internal/graph.TestOutageBackfillKeepsPolicyStatus"
         ]
       },
@@ -5543,6 +5739,9 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/enforced.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
           "internal/analytics.TestPurgeReceipt"
         ]
       },
@@ -5592,6 +5791,7 @@
         "element": "E-21",
         "status": "verified",
         "tests": [
+          "internal/graph.TestAT11AuditLinkageSurvivesChanges",
           "internal/graph.TestDecisionLinkForEveryEvaluatedEvent"
         ]
       },
@@ -5617,6 +5817,9 @@
         "element": "E-10",
         "status": "verified",
         "tests": [
+          "internal/acceptance.TestAT14RetryAndCrash",
+          "internal/acceptance/enforced.TestAT14RetryAndCrash",
+          "internal/acceptance/offline.TestAT14RetryAndCrash",
           "internal/backend.TestInstanceFailureNotRetried",
           "internal/edge.TestInstanceFailureIndeterminate",
           "internal/hostile.TestHostileFixtures/HF-17"
@@ -5676,6 +5879,9 @@
         "element": "E-28",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT19BackupRestoreRollback",
+          "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
+          "internal/acceptance/offline.TestAT19BackupRestoreRollback",
           "internal/audit.TestSealUnsignedAndFlush",
           "internal/e2e.TestOpsOnlineBackup"
         ]
@@ -5685,6 +5891,10 @@
         "element": "E-28",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT19BackupRestoreRollback",
+          "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
+          "internal/acceptance/offline.TestAT19BackupRestoreRollback",
+          "internal/backup.TestRestoreReappliesDirectoryRevocations",
           "internal/backup.TestRestoreVerifiesBeforeSwapping"
         ]
       },
@@ -5693,6 +5903,9 @@
         "element": "E-05",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT19BackupRestoreRollback",
+          "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
+          "internal/acceptance/offline.TestAT19BackupRestoreRollback",
           "internal/e2e.TestPolicyRollbackKeepsRevocations"
         ]
       },
@@ -5701,6 +5914,9 @@
         "element": "E-12",
         "status": "partial",
         "tests": [
+          "internal/acceptance.TestAT20LimitsAndLoad",
+          "internal/acceptance/enforced.TestAT20LimitsAndLoad",
+          "internal/acceptance/offline.TestAT20LimitsAndLoad",
           "internal/e2e.TestOpsMetricsAndHealthGate",
           "internal/health.TestChecks"
         ]
@@ -5708,8 +5924,15 @@
       {
         "id": "SR-7.11-1",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance.TestAT20LimitsAndLoad",
+          "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/enforced.TestAT20LimitsAndLoad",
+          "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/offline.TestAT20LimitsAndLoad"
+        ]
       },
       {
         "id": "SR-7.12-1",
@@ -5730,6 +5953,9 @@
           "console/e2e/firefox.session.spec.ts > the console reports a stale revision and the retry succeeds",
           "console/e2e/webkit.session.spec.ts > mutations without the CSRF token or with a stale revision are refused",
           "console/e2e/webkit.session.spec.ts > the console reports a stale revision and the retry succeeds",
+          "internal/acceptance.TestAT15ConsoleAuthority",
+          "internal/acceptance/enforced.TestAT15ConsoleAuthority",
+          "internal/acceptance/offline.TestAT15ConsoleAuthority",
           "internal/adminapi.TestBrowserMutationsNeedCSRFAndIfMatch"
         ]
       }
@@ -6420,7 +6646,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45551: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:34513: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6474,8 +6700,733 @@
       ]
     }
   ],
+  "acceptance": {
+    "commit": "0a896c33895af70d53a28604af36300866300f0b",
+    "label": "not enforced",
+    "reasons": [
+      "AT-07 Safe evidence display: no automated or recorded result in the Enforced profile",
+      "AT-08 Worker containment: no automated or recorded result in the Enforced profile",
+      "AT-10 Web broker: no automated or recorded result in the Enforced profile",
+      "AT-11 Audit linkage: no automated or recorded result in the Enforced profile",
+      "AT-12 Audit consistency: no automated or recorded result in the Enforced profile",
+      "AT-17 Offline engineering workflow: no automated or recorded result in the Enforced profile"
+    ],
+    "total": 21,
+    "enforcedPassed": 15,
+    "standalonePassed": 19,
+    "scenarios": [
+      {
+        "id": "AT-01",
+        "title": "Identity and local HTTP",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-2.1-1",
+          "SR-2.1-3",
+          "SR-2.8-1",
+          "SR-2.9-1",
+          "SR-2.9-2",
+          "SR-5.2-1",
+          "SR-7.11-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT01IdentityAndLocalHTTP",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-02",
+        "title": "Exact authorization",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-1.3-1",
+          "SR-1.4-1",
+          "SR-1.8-1",
+          "SR-5.5-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT02ExactAuthorization",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT02ExactAuthorization",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT02ExactAuthorization",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-03",
+        "title": "Policy authority and outage",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-1.1-1",
+          "SR-1.1-2",
+          "SR-1.2-1",
+          "SR-1.2-2",
+          "SR-6.13-1",
+          "FR-9.17"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-04",
+        "title": "Routing and overlap",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-1.9-1",
+          "SR-1.11-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT04RoutingAndOverlap",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT04RoutingAndOverlap",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT04RoutingAndOverlap",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-05",
+        "title": "Publication and revocation race",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-1.15-1",
+          "SR-1.16-1",
+          "SR-2.4-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT05PublicationAndRevocationRace",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT05PublicationAndRevocationRace",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-06",
+        "title": "Source and build evidence",
+        "evidence": "Automated",
+        "requirements": [
+          "FR-14.5",
+          "SR-3-1",
+          "SR-3-2",
+          "SR-3.1-1",
+          "SR-3.2-1",
+          "SR-3.8-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT06SourceAndBuildEvidence",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-07",
+        "title": "Safe evidence display",
+        "evidence": "Automated (Playwright)",
+        "requirements": [
+          "SR-3.3-1",
+          "SR-6.17-1"
+        ],
+        "enforced": "not-run",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "console/e2e/chromium.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "console/e2e/chromium.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "console/e2e/firefox.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "console/e2e/firefox.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "console/e2e/webkit.inert.spec.ts > G-10 bounds evidence text to 256 KiB per page",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "console/e2e/webkit.inert.spec.ts > hostile strings in server metadata and evidence are shown as inert text in every view",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-08",
+        "title": "Worker containment",
+        "evidence": "Automated (Enforced)",
+        "requirements": [
+          "SR-4.5-1",
+          "SR-4.6-1",
+          "SR-4.7-1",
+          "SR-4.7-2"
+        ],
+        "enforced": "not-run",
+        "standalone": "not-run",
+        "tests": [
+          {
+            "test": "internal/hostile.TestHostileFixtures/AT-08",
+            "result": "skip",
+            "profile": "enforced"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-09",
+        "title": "Request and response filters",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-5.8-1",
+          "SR-5.9-1",
+          "SR-5.10-1",
+          "SR-5.11-1",
+          "SR-5.18-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT09RequestAndResponseFilters",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT09RequestAndResponseFilters",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT09RequestAndResponseFilters",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/hostile.TestHostileFixtures/AT-09",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/hostile.TestHostileFixtures/AT-09",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-10",
+        "title": "Web broker",
+        "evidence": "Automated (Enforced)",
+        "requirements": [
+          "SR-5.15-1",
+          "SR-5.15-2",
+          "SR-5.16-1",
+          "SR-5.19-1"
+        ],
+        "enforced": "not-run",
+        "standalone": "not-run",
+        "tests": [],
+        "records": []
+      },
+      {
+        "id": "AT-11",
+        "title": "Audit linkage",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-6.4-1",
+          "SR-6.5-1",
+          "SR-6.20-1"
+        ],
+        "enforced": "not-run",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/graph.TestAT11AuditLinkageSurvivesChanges",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-12",
+        "title": "Audit consistency",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-6.2-1",
+          "SR-6.3-1",
+          "SR-6.10-1",
+          "SR-6.11-1"
+        ],
+        "enforced": "not-run",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/edge.TestIntentCommittedBeforeCapability",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/edge.TestReleaseCommitFailureWithholds",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/graph.TestMirrorExactlyOncePerEventAcrossCrashAndRestart",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-13",
+        "title": "Integrity, privacy, retention",
+        "evidence": "Automated",
+        "requirements": [
+          "FR-7.5",
+          "SR-6.7-1",
+          "SR-6.9-1",
+          "SR-6.15-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT13IntegrityPrivacyRetention",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT13IntegrityPrivacyRetention",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-14",
+        "title": "Retry and crash",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-7.1-1",
+          "SR-7.2-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT14RetryAndCrash",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT14RetryAndCrash",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT14RetryAndCrash",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-15",
+        "title": "Console authority",
+        "evidence": "Automated (Playwright)",
+        "requirements": [
+          "SR-2.5-1",
+          "SR-8.9-1",
+          "SR-1.18-2"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT15ConsoleAuthority",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT15ConsoleAuthority",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT15ConsoleAuthority",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-16",
+        "title": "Harness lockdown",
+        "evidence": "Automated (client matrix)",
+        "requirements": [
+          "FR-15.1",
+          "FR-15.3",
+          "SR-4.9-1",
+          "SR-4.11-1"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT16HarnessLockdown",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT16HarnessLockdown",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT16HarnessLockdown",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-17",
+        "title": "Offline engineering workflow",
+        "evidence": "Automated",
+        "requirements": [
+          "FR-12.2",
+          "FR-14.9"
+        ],
+        "enforced": "not-run",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-18",
+        "title": "Remote access",
+        "evidence": "Recorded (tunnel provider) and automated (local tunnel stand-in)",
+        "requirements": [
+          "FR-16.1",
+          "FR-16.5",
+          "SR-2.9-3",
+          "SR-4.14-1",
+          "SR-4.14-2"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT18RemoteAccess",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT18RemoteAccess",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT18RemoteAccess",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-19",
+        "title": "Backup, restore and rollback",
+        "evidence": "Automated",
+        "requirements": [
+          "SR-7.7-1",
+          "SR-7.8-1",
+          "SR-7.9-1",
+          "FR-13.8"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT19BackupRestoreRollback",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT19BackupRestoreRollback",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-20",
+        "title": "Limits and load",
+        "evidence": "Automated (load job)",
+        "requirements": [
+          "SR-7.10-1",
+          "SR-7.11-1",
+          "FR-11.2",
+          "FR-11.5"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT20LimitsAndLoad",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT20LimitsAndLoad",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT20LimitsAndLoad",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      },
+      {
+        "id": "AT-21",
+        "title": "Version baseline",
+        "evidence": "Automated (CI)",
+        "requirements": [
+          "FR-12.10",
+          "FR-19.3"
+        ],
+        "enforced": "pass",
+        "standalone": "pass",
+        "tests": [
+          {
+            "test": "internal/acceptance.TestAT21VersionBaseline",
+            "result": "pass",
+            "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/enforced.TestAT21VersionBaseline",
+            "result": "pass",
+            "profile": "enforced"
+          },
+          {
+            "test": "internal/acceptance/offline.TestAT21VersionBaseline",
+            "result": "pass",
+            "profile": "standalone"
+          }
+        ],
+        "records": []
+      }
+    ]
+  },
   "ci": {
     "workflow": "CI",
     "conclusion": "success"
+  },
+  "performance": {
+    "schema": 1,
+    "commit": "0a896c33895af70d53a28604af36300866300f0b",
+    "generatedAt": "2026-10-17T12:57:58Z",
+    "host": {
+      "os": "linux",
+      "arch": "amd64",
+      "cpus": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "goVersion": "go1.26.9",
+      "runner": "GitHub Actions 1000004116"
+    },
+    "referenceHardware": false,
+    "dataset": {
+      "rules": 9995,
+      "registryNodes": 5,
+      "candidateRules": 256,
+      "events": 100000,
+      "days": 30,
+      "callers": 8
+    },
+    "measurements": [
+      {
+        "requirement": "FR-11.2",
+        "name": "Decision latency",
+        "metric": "p95",
+        "unit": "ms",
+        "value": 0.029946,
+        "budget": 10,
+        "ceiling": 100,
+        "samples": 100000,
+        "pass": true,
+        "method": "policy.Decider.Decide on the compiled reference policy (9995 rules, 256 candidates per decision), 8 concurrent callers, latency as the caller sees it"
+      },
+      {
+        "requirement": "FR-11.5",
+        "name": "Gateway-added overhead (P-213)",
+        "metric": "p95",
+        "unit": "ms",
+        "value": 23.950528,
+        "budget": 50,
+        "ceiling": 250,
+        "samples": 2000,
+        "pass": true,
+        "method": "real smcpd with synchronous scoring, 8 concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (requested to dispatched plus completed to delivered)"
+      },
+      {
+        "requirement": "FR-11.4",
+        "name": "Observation capture overhead",
+        "metric": "p95 difference",
+        "unit": "ms",
+        "value": 9.0954515,
+        "budget": 1,
+        "samples": 4000,
+        "pass": false,
+        "method": "p95 P-213 with observation enabled (22.661 ms, mean of 22.732 and 22.589) minus disabled (13.565 ms, mean of 14.119 and 13.011), four fresh instances run in the order enabled, disabled, disabled, enabled"
+      },
+      {
+        "requirement": "FR-11.8",
+        "name": "Console query latency",
+        "metric": "p95",
+        "unit": "ms",
+        "value": 808.203926,
+        "budget": 2000,
+        "samples": 600,
+        "pass": true,
+        "method": "the console's audit queries (latest page, by class, by reason, by correlation, by time window, text search) over a journal of 100000 events spanning 30 days, 100 repetitions",
+        "note": "audit queries only; analytics queries over 30 days of observation data are not in the reference dataset yet"
+      },
+      {
+        "requirement": "FR-11.9",
+        "name": "Idle resident memory",
+        "metric": "RSS",
+        "unit": "MiB",
+        "value": 114.703125,
+        "budget": 4096,
+        "samples": 1,
+        "pass": true,
+        "method": "resident set size of smcpd 12m39s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+      }
+    ]
   }
 }
