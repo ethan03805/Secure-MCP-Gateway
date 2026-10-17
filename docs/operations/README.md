@@ -46,5 +46,7 @@ Every command takes `--config <file>` (default `smcp.toml`).
 | `[evidence] export_interval` | `10s` | How often the export runs; 1 s to 50 s so a closed segment is copied within 60 s |
 | `[evidence] quota_bytes` | `10737418240` | Journal storage quota (CP-26); health warns with `storage_quota_journal` at 80% (FR-9.15) |
 | `[backup] dir` | `backups` next to the configuration file | Where backup archives and `index.json` are written |
+| `[backup] interval` | off | Scheduled backups (FR-9.16); needs `recipients` or `passphrase_file` |
+| `[backup] recipients`, `passphrase_file` | none | Encryption of scheduled backups |
 
 Relative paths are resolved against the directory of the configuration file.

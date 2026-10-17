@@ -18,6 +18,16 @@ When the Gateway runs, the backup is taken by the Gateway:
 
 When the Gateway is stopped, `smcpctl backup` writes the archive directly from the state directory.
 
+### Scheduled backups (FR-9.16)
+
+With `[backup] interval` set (at least `1s`; `24h` is typical), the running Gateway takes a backup every interval by the same procedure, with the actor `scheduler` on its events. Scheduled backups are encrypted to `[backup] recipients` (age public keys) or with the passphrase in `[backup] passphrase_file` (mode 0600); the configuration is refused when an interval is set without either. A failed scheduled backup is recorded (`BACKUP_FAILED` or in `index.json`) and the next one runs at the next interval.
+
+```toml
+[backup]
+interval = "24h"
+recipients = ["age1..."]
+```
+
 ### Contents
 
 | Archive path | Component |
