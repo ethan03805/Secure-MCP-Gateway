@@ -552,6 +552,10 @@
         "requests_per_minute": { "type": "integer", "minimum": 1 },
         "bytes_per_minute": { "type": "integer", "minimum": 65536 },
         "recent_records": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "require_capability": { "type": "boolean" },
+        "capability_tokens": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "resolvers": { "type": "array", "maxItems": 8, "items": { "type": "string", "minLength": 3 } },
+        "ca_file": { "type": "string", "minLength": 1 },
         "grant": {
           "type": "array",
           "items": {

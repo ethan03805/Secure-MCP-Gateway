@@ -25,5 +25,14 @@ func OpenRuntime(cfg *config.Config, log *slog.Logger) (*Runtime, error) {
 		return nil, err
 	}
 	return NewRuntime(lib, RuntimeOptions{Interp: Interpreters(cfg), RequireSigned: cfg.Packages.RequireSigned,
-		ScanInterval: cfg.Packages.ScanInterval.Duration, Log: log}), nil
+		ScanInterval: cfg.Packages.ScanInterval.Duration, Log: log, EgressGrants: egressGrants(cfg)}), nil
+}
+
+// egressGrants returns the configured egress grants when the Egress Broker
+// is enabled; without it no grant takes effect.
+func egressGrants(cfg *config.Config) []config.EgressGrant {
+	if !cfg.Egress.Enabled {
+		return nil
+	}
+	return cfg.Egress.Grants
 }

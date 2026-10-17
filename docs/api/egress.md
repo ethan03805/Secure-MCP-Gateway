@@ -20,6 +20,7 @@ Broker limits and attached instances.
   "enabled": true,
   "enforced_instances": 0,
   "advisory_instances": 1,
+  "require_capability": true,
   "instances": [
     {
       "id": "01a1471f-b8ee-7530-ac2d-96e06687f437",
@@ -41,7 +42,7 @@ Broker limits and attached instances.
 }
 ```
 
-`enforced` is true when nftables rules confine the instance's network namespace to its listeners; false means the proxy variables are advisory (standalone profile).
+`enforced` is true when nftables rules confine the instance's network namespace to its listeners; false means the proxy variables are advisory (standalone profile). `require_capability` is true when every operation needs a one-use capability of the current call (`[egress] require_capability`, SR-5.16-1).
 
 ## GET /api/v1/egress/grants
 
@@ -98,6 +99,10 @@ Query parameters, all optional:
       "resolved": ["93.184.216.34"],
       "address": "93.184.216.34",
       "address_class": "public",
+      "capability": "consumed",
+      "correlation_id": "01a1471f-b8ef-7d10-9a2b-5c6d7e8f9a01",
+      "decision_id": "01a1471f-b8ef-7d11-8b3c-6d7e8f9a0b12",
+      "policy_revision": "r-2026-10-16",
       "decision": "allowed",
       "bytes_up": 1834,
       "bytes_down": 6120,

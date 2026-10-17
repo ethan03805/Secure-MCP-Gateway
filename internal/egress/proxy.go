@@ -72,9 +72,9 @@ func (b *Broker) endpointHandler(in *instance, env, host string, port int) http.
 	})
 }
 
-// authorize finds the current grant for one operation and applies the
-// request-rate limit.
-func (b *Broker) authorize(rec *Record, host string, port int, method string) (Grant, error) {
+// authorize finds the current grant for one operation, spends the
+// operation's egress capability and applies the request-rate limit.
+func (b *Broker) authorize(rec *Record, host string, port int, method string, h http.Header) (Grant, error) {
 	rec.Host, rec.Port = host, port
 	g, ok, known := match(b.o.Grants.Grants(rec.Server), host, port, method)
 	if !ok {
@@ -84,6 +84,11 @@ func (b *Broker) authorize(rec *Record, host string, port int, method string) (G
 		return Grant{}, refused(ReasonNoGrant, "%s is not an egress destination of server %s", joinHostPort(host, port), rec.Server)
 	}
 	rec.Grant = g.Host
+	// SR-5.16-1: a one-use capability of the current call, bound to this
+	// instance and grant, is spent before anything else happens.
+	if err := b.consume(rec, g, h); err != nil {
+		return Grant{}, err
+	}
 	if !b.limiter(rec.Server).requests.AllowN(b.o.Now(), 1) {
 		return Grant{}, refused(ReasonRateLimited, "request rate limit of server %s reached", rec.Server)
 	}
@@ -124,7 +129,7 @@ func (b *Broker) forward(w http.ResponseWriter, r *http.Request, rec *Record, ta
 	}
 	host, _ := canonicalHost(target.Hostname(), false)
 	port, _ := portOf(target.Port(), defaultPort(target.Scheme))
-	g, err := b.authorize(rec, host, port, r.Method)
+	g, err := b.authorize(rec, host, port, r.Method, r.Header)
 	if err != nil {
 		rf := asRefusal(err)
 		b.refuse(w, rec, rf.reason, rf.detail)
@@ -277,7 +282,7 @@ func (b *Broker) serveConnect(in *instance, w http.ResponseWriter, r *http.Reque
 		b.refuse(w, rec, ReasonBadRequest, err.Error())
 		return
 	}
-	g, err := b.authorize(rec, host, port, MethodConnect)
+	g, err := b.authorize(rec, host, port, MethodConnect, r.Header)
 	if err == nil && g.Class == ClassPublicFetch {
 		err = refused(ReasonPublicFetchProfile, "public-fetch grants do not permit CONNECT")
 	}

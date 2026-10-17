@@ -17,9 +17,11 @@ sequenceDiagram
   E18->>E21: egress attached
   E18-->>L: HTTP_PROXY, HTTPS_PROXY, empty NO_PROXY, endpoint URLs
   L->>S: start with those variables (they replace configured ones)
+  Note over S,E18: Each tools/call: E-10 asks E-18 for one-use capabilities bound to the call and sends them in _meta local.smcpgw/egress_auth
   Note over S,X: Endpoint request, for example GET $API_URL/v1/items
-  S->>E18: plain HTTP to the endpoint listener
-  E18->>E18: current grant for host, port and method, request rate per alias, public-fetch profile
+  S->>E18: plain HTTP to the endpoint listener with Smcp-Egress-Auth
+  E18->>E18: current grant for host, port and method, then spend the capability (this instance, this grant, unused)
+  E18->>E18: request rate per alias, public-fetch profile
   E18->>E18: strip Cookie, Proxy-Authorization, Smcp-Egress-Auth and hop-by-hop headers
   E18->>E21: egress authorized, committed before any byte is forwarded
   E18->>E18: insert the S1 header bound for this destination
@@ -32,8 +34,8 @@ sequenceDiagram
   E18-->>S: response without Set-Cookie, bounded by response_bytes and the byte rate
   E18->>E21: egress completed (or failed with the reason)
   Note over S,X: HTTPS tunnel through the forward proxy
-  S->>E18: CONNECT host:443
-  E18->>E18: grant with CONNECT-TLS, request rate
+  S->>E18: CONNECT host:443 with Smcp-Egress-Auth
+  E18->>E18: grant with CONNECT-TLS, capability, request rate
   E18->>DNS: resolve, then validate addresses
   E18->>X: TCP to the validated IP
   E18-->>S: 200 Connection Established
@@ -51,5 +53,5 @@ sequenceDiagram
 - In the enforced profile the rootless Podman launcher attaches a server with `network = "egress"` and installs the nftables table `inet smcp_egress` in the container's network namespace (slirp4netns with host loopback) before the server starts; the instance reaches the broker at `10.0.2.2`. `TestIntegrationEgressBroker` and the linux-integration job check on real Podman that direct connections are refused and a proxied request succeeds. The standalone wrapper attaches unconfined subprocesses.
 - In the standalone profile the proxy variables are advisory: a server that ignores them reaches the network directly.
 - Grants come from `[[egress.grant]]` in the configuration, not from policy decision obligations; endpoint variable names come from `endpoint_env`, not from signed manifests.
-- The one-use egress capability in `Smcp-Egress-Auth` (SR-5.16-1, deferred from release 1.0) is removed but neither required nor checked.
+- One-use capabilities (SR-5.16-1) are minted by the broker when the Tool Dispatcher sends a call (`pipeline.EgressIssuer`) and revoked when the call returns; with `[egress] require_capability = false` they are neither minted nor required.
 - Outbound requests are not scanned for secret fingerprints (SR-5.8-2).

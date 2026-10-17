@@ -330,6 +330,9 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 	stdinR.Close()
 	c := &container{l: l, inst: inst, cmd: cmd, stdout: stdoutR, stdin: stdinW, stderr: rb, after: l.o.TerminateAfter,
 		done: make(chan struct{}), release: releaseEgress}
+	if att != nil {
+		c.issue = att.Issue
+	}
 	inst.proc = c
 	go func() {
 		c.waitErr = cmd.Wait()

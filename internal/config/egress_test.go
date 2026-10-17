@@ -15,7 +15,8 @@ func TestEgressDefaults(t *testing.T) {
 	}
 	e := cfg.Egress
 	if e.Enabled || !*e.ProxyEnv || e.RequestBytes != 1<<20 || e.ResponseBytes != 8<<20 || e.OperationTimeout.Duration != 30*time.Second ||
-		e.DialTimeout.Duration != 10*time.Second || e.RequestsPerMinute != 60 || e.BytesPerMinute != 64<<20 || e.RecentRecords != 256 {
+		e.DialTimeout.Duration != 10*time.Second || e.RequestsPerMinute != 60 || e.BytesPerMinute != 64<<20 || e.RecentRecords != 256 ||
+		!*e.RequireCapability || e.CapabilityTokens != 8 || len(e.Resolvers) != 0 || e.CAFile != "" {
 		t.Fatalf("%+v", e)
 	}
 	cfg, err = Parse([]byte(good + `
@@ -47,7 +48,9 @@ func TestEgressSchemaMatchesDefaults(t *testing.T) {
 	}
 	var keys []string
 	for k := range s.Properties["egress"].Properties {
-		if k != "enabled" && k != "proxy_env" && k != "grant" {
+		// Keys without a numeric default: booleans defaulted in
+		// applyDefaults, the grant list and the optional resolver and CA.
+		if !slices.Contains([]string{"enabled", "proxy_env", "require_capability", "grant", "resolvers", "ca_file"}, k) {
 			keys = append(keys, k)
 		}
 	}
@@ -85,5 +88,15 @@ func TestEgressGrantValidation(t *testing.T) {
 	}
 	if _, err := Parse([]byte(good + "\n[egress]\noperation_timeout = \"0s\"\n")); err == nil {
 		t.Error("zero operation_timeout accepted")
+	}
+	if _, err := Parse([]byte(good + "\n[egress]\nresolvers = [\"dns.example:53\"]\n")); err == nil || !strings.Contains(err.Error(), "IP address and port") {
+		t.Errorf("resolver by name: %v", err)
+	}
+	if _, err := Parse([]byte(good + "\n[egress]\ncapability_tokens = 0\n")); err == nil {
+		t.Error("capability_tokens = 0 accepted")
+	}
+	cfg, err := Parse([]byte(good + "\n[egress]\nrequire_capability = false\ncapability_tokens = 2\nresolvers = [\"127.0.0.1:5353\", \"[::1]:53\"]\nca_file = \"ca.pem\"\n"))
+	if err != nil || *cfg.Egress.RequireCapability || cfg.Egress.CapabilityTokens != 2 || len(cfg.Egress.Resolvers) != 2 || cfg.Egress.CAFile != "ca.pem" {
+		t.Errorf("%v %+v", err, cfg)
 	}
 }

@@ -56,6 +56,10 @@ type process struct {
 	done func()
 }
 
+// Unwrap implements pipeline.ProcessUnwrapper, so that the Tool
+// Dispatcher reaches the egress capabilities of the wrapped process.
+func (p *process) Unwrap() pipeline.Process { return p.Process }
+
 func (p *process) Close() error {
 	err := p.Process.Close()
 	p.once.Do(p.done)
