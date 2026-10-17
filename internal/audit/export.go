@@ -23,7 +23,15 @@ import (
 // exported exactly once across restarts (SR-6.10-1 for the export side). A
 // present copy whose content differs is reported as an error and never
 // overwritten, because the export is the off-journal reference for
-// tamper detection.
+// tamper detection. For the same reason the exported anchor only moves
+// forward (a journal anchor that names an earlier segment than the exported
+// one, or the same segment with another hash or count, is refused: the
+// local anchor was rolled back), and an exported evidence-genesis.pub (the
+// trust root) is never replaced.
+// GenesisKeyName is the file name of the evidence trust root (the key of
+// segment 1) among the exported public keys.
+const GenesisKeyName = "evidence-genesis.pub"
+
 type Exporter struct {
 	JournalDir string
 	AnchorPath string // default DefaultAnchorPath(JournalDir)
@@ -65,7 +73,13 @@ func (e *Exporter) Sync() (ExportResult, error) {
 		} else if err != nil {
 			return res, err
 		}
-		if err := writeIfChanged(filepath.Join(e.ExportDir, "keys", filepath.Base(name)), b, 0o644); err != nil {
+		dst := filepath.Join(e.ExportDir, "keys", filepath.Base(name))
+		if filepath.Base(name) == GenesisKeyName {
+			if cur, err := os.ReadFile(dst); err == nil && !bytes.Equal(bytes.TrimSpace(cur), bytes.TrimSpace(b)) {
+				return res, fmt.Errorf("export: %s differs from the exported trust root; the evidence trust root never changes, investigate before exporting again", src)
+			}
+		}
+		if err := writeIfChanged(dst, b, 0o644); err != nil {
 			return res, err
 		}
 	}
@@ -105,6 +119,15 @@ func (e *Exporter) Sync() (ExportResult, error) {
 	}
 	res.AnchorSegment = a.Segment
 	dstAnchor := DefaultAnchorPath(dstJournal)
+	if old, err := parseAnchor(dstAnchor); err == nil {
+		switch {
+		case a.Segment < old.Segment || a.EventsTotal < old.EventsTotal:
+			return res, fmt.Errorf("export: the journal anchor names segment %d (%d events), older than the exported anchor (segment %d, %d events): the journal anchor was rolled back; investigate before exporting again",
+				a.Segment, a.EventsTotal, old.Segment, old.EventsTotal)
+		case a.Segment == old.Segment && (a.SegmentSHA256 != old.SegmentSHA256 || a.EventsTotal != old.EventsTotal):
+			return res, fmt.Errorf("export: the journal anchor for segment %d differs from the exported one; investigate before exporting again", a.Segment)
+		}
+	}
 	if cur, err := os.ReadFile(dstAnchor); err != nil || !bytes.Equal(cur, anchorBytes) {
 		if err := writeFileAtomic(dstAnchor, anchorBytes, 0o600); err != nil {
 			return res, err

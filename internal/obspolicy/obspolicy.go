@@ -10,11 +10,14 @@
 // observation settings it would produce (analytics.Resolve against the
 // shipped Parameter Catalog), so a published object always starts.
 //
-// The observation components read their settings when the Gateway starts.
 // Apply overlays the active objects onto a copy of the configuration that
-// smcpd gives to the analytics service; a revision published while the
-// Gateway runs therefore takes effect at the next start, and the status
-// route reports which revision is in force and which is pending.
+// smcpd gives to the analytics service at start. With an applier set
+// (SetApplier, the analytics service's Update), a revision published while
+// the Gateway runs is applied at once: the observation settings the active
+// objects produce are handed to the applier, which changes what the running
+// components allow and names the settings that wait for the next start
+// (the baseline contexts and the memory budget). The status route reports
+// which revision is in force, which is pending and why.
 //
 // What each object sets in [observation]:
 //
@@ -137,9 +140,67 @@ type Store struct {
 	cat  *observe.Catalog
 	now  func() time.Time
 
-	mu      sync.Mutex
-	st      state
-	inForce map[string]int // revision numbers applied at start
+	mu       sync.Mutex
+	st       state
+	inForce  map[string]int      // revision numbers in force
+	restart  map[string][]string // settings of a kind's active revision that wait for the next start
+	applier  func(*config.Config) ([]string, error)
+	applyErr error
+}
+
+// restartKind maps a setting the applier reports as needing a restart to
+// the object kind that sets it.
+var restartKind = map[string]string{"baseline.contexts": KindObservationPolicy, "memory_limit_bytes": KindMemoryBudget}
+
+// SetApplier sets the function that applies published objects to the
+// running observation components. It receives a copy of the configuration
+// with every active object overlaid and returns the settings it could not
+// change without a restart.
+func (s *Store) SetApplier(f func(*config.Config) ([]string, error)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.applier = f
+}
+
+// applyLocked hands the active objects to the applier and updates which
+// revisions are in force.
+func (s *Store) applyLocked() {
+	if s.applier == nil {
+		return
+	}
+	c := *s.cfg
+	c.Observation.Baseline.Contexts = slices.Clone(c.Observation.Baseline.Contexts)
+	act := s.activeLocked()
+	for _, k := range Kinds {
+		r, ok := act[k]
+		if !ok {
+			continue
+		}
+		trial := c
+		v, err := decode(k, r.Body)
+		if err == nil {
+			err = overlay(&trial.Observation, v)
+		}
+		if err == nil {
+			c.Observation = trial.Observation
+		}
+	}
+	restart, err := s.applier(&c)
+	s.applyErr = err
+	if err != nil {
+		return
+	}
+	s.restart = map[string][]string{}
+	for _, f := range restart {
+		if k, ok := restartKind[f]; ok {
+			s.restart[k] = append(s.restart[k], f)
+		}
+	}
+	for k, r := range act {
+		if len(s.restart[k]) == 0 {
+			s.inForce[k] = r.Number
+		}
+	}
 }
 
 // Open reads the store of cfg's state directory (an absent file is empty).
@@ -358,6 +419,7 @@ func (s *Store) Publish(kind string, body []byte, actor, reason string) (Revisio
 		s.st.Revisions[kind] = s.st.Revisions[kind][:len(s.st.Revisions[kind])-1]
 		return Revision{}, err
 	}
+	s.applyLocked()
 	return r, nil
 }
 
@@ -386,11 +448,22 @@ func (s *Store) saveLocked() error {
 
 // ObjectStatus is the state of one kind.
 type ObjectStatus struct {
-	Kind      string    `json:"kind"`
-	Active    *Revision `json:"active,omitempty"`
-	InForce   int       `json:"in_force"` // revision number applied at start; 0 for the file's settings
-	Pending   bool      `json:"pending"`  // the active revision takes effect at the next start
-	Revisions int       `json:"revisions"`
+	Kind    string    `json:"kind"`
+	Active  *Revision `json:"active,omitempty"`
+	InForce int       `json:"in_force"` // revision number in force; 0 for the file's settings
+	Pending bool      `json:"pending"`  // the active revision is not (wholly) in force yet
+	// RestartRequired names the active revision's settings that take
+	// effect at the next start; its other settings are in force.
+	RestartRequired []string `json:"restart_required,omitempty"`
+	Revisions       int      `json:"revisions"`
+}
+
+// Live reports whether published objects apply while the Gateway runs,
+// and the last error from applying them.
+func (s *Store) Live() (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.applier != nil, s.applyErr
 }
 
 // Status returns the state of every kind and the observation settings the
@@ -406,6 +479,7 @@ func (s *Store) Status() ([]ObjectStatus, config.Observation, error) {
 			r := r
 			st.Active = &r
 			st.Pending = r.Number != s.inForce[k]
+			st.RestartRequired = slices.Clone(s.restart[k])
 		}
 		out = append(out, st)
 	}

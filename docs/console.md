@@ -138,7 +138,7 @@ After changing anything under `console/src`, run `make console` and commit `cons
 ## Not built yet
 
 - Server aliases can be set only when a revision is enabled.
-- Published Audit Profiles, Observation Policies, Anomaly Response Policies and memory budgets take effect at the next start of smcpd, not at once, because the observation components read their settings at start. The G-04 scope builder (FR-8.9) and per-feature statistics options are not part of the Observation Policy; the Anomaly Response Policy cannot choose alert-only over escalated capture. The graph memory budget is edited in `[graph]`.
+- Published Audit Profiles, Observation Policies and Anomaly Response Policies take effect at once. A change of baseline contexts and the memory budget take effect at the next start of smcpd, because the baseline engine and the Observation Store are built with them; the object is shown as pending until then. The G-04 scope builder (FR-8.9) and per-feature statistics options are not part of the Observation Policy; the Anomaly Response Policy cannot choose alert-only over escalated capture. The graph memory budget is edited in `[graph]`.
 - The investigation graph needs the graph mirror (`[graph] enabled`, Neo4j); without it the event view shows the journal's phases only. The z-score timeline needs a promoted baseline with characterized contexts.
 - The Researcher's pseudonymized view of S2 fields is not implemented; the raw record route is closed to the Researcher instead. S3 payload grants are not implemented.
 - The `If-Match` revision is one revision of the whole control state, not one per object, so an unrelated change by another client also makes the console re-read before its next action.

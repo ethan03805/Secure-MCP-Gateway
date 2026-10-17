@@ -285,7 +285,7 @@ export function DataServer() {
       <Help>
         <p>
           The Data Server (graph mirror and Observation Store) is optional: enforcement never waits for it, and when it is full or down, observations are
-          dropped and counted rather than slowing calls. The Observation Store memory budget is published here and takes effect at the next start; the graph memory budget is set in the [graph] table. Backups are encrypted with
+          dropped and counted rather than slowing calls. The Observation Store memory budget is published here and takes effect at the next start of smcpd; the graph memory budget is set in the [graph] table. Backups are encrypted with
           age; keep the passphrase or identity elsewhere.
         </p>
       </Help>

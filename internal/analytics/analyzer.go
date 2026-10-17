@@ -94,7 +94,7 @@ func (s Settings) bandActions(band string) []string {
 // the request inspection stage (refused earlier). Actions are alert and
 // capture escalation only.
 func (a *analyzer) Score(r *observe.Record) *anomaly.Result {
-	if a.S.Scoring == "off" {
+	if a.svc().cur().Scoring == "off" {
 		return nil
 	}
 	prev, _ := r.Values["previous_tool"].(string)
@@ -130,7 +130,7 @@ func (s *Service) scoreMode(r *observe.Record) string {
 	if r.Score != nil && r.Score.Actions != nil && len(r.Score.Actions) > 0 && r.Score.Actions[0] == "sync" {
 		return "sync"
 	}
-	return s.S.Scoring
+	return s.cur().Scoring
 }
 
 // writeScoreLater records the scoring record of an elevated or worse score
@@ -155,12 +155,12 @@ func (p *requestProbe) FilterRequest(_ context.Context, call *pipeline.Call, arg
 	vals, digest := observe.ArgumentFeatures(args)
 	pr := &observe.Probe{CorrelationID: call.CorrelationID, Time: s.now(), ServerID: call.Server, Template: call.Template, EndUser: call.EndUser,
 		DecisiveRules: call.DecisiveRules, Obligations: append([]string{}, call.Obligations.Filters...), ArgsDigest: digest, Values: vals}
-	if s.S.Scoring == "sync" {
+	if s.cur().Scoring == "sync" {
 		st := time.Now()
 		res := p.score(call, vals)
 		res.Actions = append([]string{"sync"}, s.S.bandActions(res.Band)...)
 		switch {
-		case s.S.RequireApproval != "off" && anomaly.Rank(res.Band) >= anomaly.Rank(s.S.RequireApproval):
+		case s.cur().RequireApproval != "off" && anomaly.Rank(res.Band) >= anomaly.Rank(s.cur().RequireApproval):
 			call.RequireApproval = true
 			call.ApprovalReason = "anomaly band " + res.Band
 			call.AnomalySnapshot = res.SnapshotID // SR-1.12-3
@@ -242,7 +242,7 @@ func (p *responseProbe) FilterResponse(_ context.Context, call *pipeline.Call, r
 	}, hasSchema)
 	pr := &observe.Probe{Response: true, CorrelationID: call.CorrelationID, Time: s.now(), ServerID: call.Server, Values: vals}
 	verdict := pipeline.ResponseVerdict{Action: pipeline.Pass}
-	if s.S.Scoring == "sync" {
+	if s.cur().Scoring == "sync" {
 		st := time.Now()
 		now := s.now()
 		get := func(k string) string {
@@ -272,7 +272,7 @@ func (p *responseProbe) FilterResponse(_ context.Context, call *pipeline.Call, r
 		smp := baseline.Sample{Dims: dimensions(get, call.Server, now)}
 		r := s.Scorer.Score(anomaly.Input{Context: s.Baselines.ContextKey(smp), Numeric: num})
 		r.Actions = []string{"sync"}
-		if s.S.Withhold != "off" && anomaly.Rank(r.Band) >= anomaly.Rank(s.S.Withhold) {
+		if s.cur().Withhold != "off" && anomaly.Rank(r.Band) >= anomaly.Rank(s.cur().Withhold) {
 			r.Actions = append(r.Actions, "withhold")
 			verdict = pipeline.ResponseVerdict{Action: pipeline.Block, ReasonCode: ReasonAnomalyWithheld,
 				Finding: fmt.Sprintf("response anomaly band %s (%s)", r.Band, r.Contributor)}

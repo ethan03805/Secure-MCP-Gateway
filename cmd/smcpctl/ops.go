@@ -462,7 +462,7 @@ func verifyJournal(args []string, out io.Writer) error {
 		fmt.Fprintf(out, ", anchored at segment %d", rep.AnchorSegment)
 	}
 	if rep.Open != "" {
-		fmt.Fprintf(out, " (%s is still open)", rep.Open)
+		fmt.Fprintf(out, " (%s is still open; its %d events are not signed yet)", rep.Open, rep.OpenEvents)
 	}
 	if n := len(rep.Transitions); n > 0 {
 		fmt.Fprintf(out, ", %d evidence-key transitions (segments %v)", n, rep.Transitions)

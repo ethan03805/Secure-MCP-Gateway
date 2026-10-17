@@ -24,6 +24,7 @@ export interface ObjectStatus {
   active?: ObjectRevision;
   in_force: number;
   pending: boolean;
+  restart_required?: string[];
   revisions: number;
 }
 
@@ -32,6 +33,7 @@ export interface Objects {
   applies: string;
   effective?: Record<string, unknown>;
   effective_error?: string;
+  apply_error?: string;
 }
 
 export const objectsRoute = "/api/v1/observations/objects";
@@ -58,7 +60,9 @@ export function ObjectState({ objects, kind, label }: { objects: Objects; kind: 
       />
       {o.pending && (
         <p className="notice notice-warn" role="status">
-          Revision {a.number} takes effect at the next start of smcpd.
+          {o.restart_required?.length
+            ? `Revision ${a.number} is in force except ${o.restart_required.join(" and ")}, which take effect at the next start of smcpd.`
+            : `Revision ${a.number} is not in force; ${objects.apply_error ? `the running service refused it: ${objects.apply_error}` : "it takes effect at the next start of smcpd"}.`}
         </p>
       )}
     </>
@@ -81,7 +85,7 @@ export function Publish({
 }) {
   const perm = usePerm();
   const [reason, setReason] = useState("");
-  const act = useAction<{ revision: ObjectRevision }>();
+  const act = useAction<{ revision: ObjectRevision; applies?: string }>();
   if (!perm.has(`POST ${route}`)) return null;
   if (!perm.can(`POST ${route}`)) return <p className="small muted">Publishing the {label} needs another role.</p>;
   return (
@@ -109,7 +113,7 @@ export function Publish({
       {act.error && <ErrorBlock error={act.error} doing={`publishing the ${label}`} />}
       {act.result && (
         <Done>
-          Published {label} revision {act.result.revision.number}. It takes effect at the next start of smcpd.
+          Published {label} revision {act.result.revision.number}. It applies {act.result.applies ?? "at the next start of smcpd"}.
         </Done>
       )}
     </form>
