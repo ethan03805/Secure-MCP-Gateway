@@ -1042,8 +1042,7 @@ S: The Egress Broker (E-18) SHALL require on each operation a one-use capability
 A: E-18; E-12; F-45; I-25
 V: Test | Replay a used capability and present one for another destination; confirm refusal and header removal.
 SRC: SEC 5.16
-R: Each outbound operation is individually authorized.
-DEFER: A per-operation capability would have to be attached by the server's own HTTP client, and the third-party MCP servers release 1.0 runs do not send one. Release 1.0 authorizes each operation instead by the instance it comes from and the destination: an instance reaches only its own broker listeners (SR-4.5-1), each operation is checked against that instance's current grants before any connection (SR-4.5-2), and the broker removes any `Smcp-Egress-Auth` header it receives. Per-call capabilities are deferred until servers can be given an egress client that carries them.
+R: Each outbound operation is individually authorized. The capabilities of a call are minted when the call is dispatched to the instance and delivered in its `_meta` (CP-23); unused ones are revoked when the call returns. An operator may turn the check off (`[egress] require_capability = false`) for a server whose HTTP client cannot attach the header; the broker then authorizes each operation by instance and grant (SR-4.5-2) and reports the setting in its status.
 
 @SR-5.17-1 | No ambient cookies
 P: SEC-5.17

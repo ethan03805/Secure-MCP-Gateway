@@ -29,6 +29,10 @@ type RuntimeOptions struct {
 	// ScanInterval is the library polling interval (FR-5.3, default 300s).
 	ScanInterval time.Duration
 	Log          *slog.Logger
+	// EgressGrants are the configured [[egress.grant]] entries; a packaged
+	// server whose grants exceed its manifest's egress capabilities is
+	// not started (CheckEgressCeiling).
+	EgressGrants []config.EgressGrant
 }
 
 // Runtime connects a Library to a running Gateway: it resolves packaged
@@ -146,6 +150,9 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	}
 	m, _, err := rt.lib.Manifest(rev.ServerID, rev.Revision)
 	if err != nil {
+		return sc, err
+	}
+	if err := CheckEgressCeiling(sc.Alias, rt.o.EgressGrants, m.Capabilities.Egress); err != nil {
 		return sc, err
 	}
 	if m.HighestRisk() == "high" && !l.Confined() {
