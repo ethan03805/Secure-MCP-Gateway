@@ -38,6 +38,7 @@ An earlier run on the same day, before commit `6fbb0f7`, failed case 4: Claude C
 
 ## Deviations
 
+- The commit above is on branch `test/verification-records` before it was rebased and squash-merged (pull request #40), so it is not an ancestor of `main`; the merged tree contains the same code.
 - The Gateway was built from the branch commit above, not from a release commit; no release of this project exists yet.
 - The hold bound was set to 60 s instead of the CP-45 default of 120 s to keep the run short; CP-45 allows 0 s to 600 s and the behavior at the bound does not depend on its value.
 - The model was Claude Haiku 5.5 through the Vercel AI Gateway rather than a default Anthropic login. The model only chooses to call the tool; every outcome above is taken from the journal and from the tool result, not from the model's reply.

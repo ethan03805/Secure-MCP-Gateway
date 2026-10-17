@@ -29,5 +29,6 @@ The SRS verifies FR-8.32 by Test: `axe-core` with the WCAG 2.2 AA rules on every
 
 ## Deviations
 
+- The commit above is on branch `test/verification-records` before it was rebased and squash-merged (pull request #40), so it is not an ancestor of `main`; the merged tree contains the same code.
 - WebKit is not covered by the keyboard test: WebKit's Tab moves only between form controls unless the macOS keyboard setting is changed. The axe run covers WebKit.
 - The axe run checks each view as it loads, not every intermediate state of every acceptance test.
