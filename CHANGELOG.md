@@ -142,6 +142,13 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - `GET /api/v1/audit/events` and `/api/v1/audit/export` filter by `server`, `tool`, `rule` (decisive rule or rule-revision ID) and `policy_revision`; pages hold at most 500 events (FR-7.3, was 1000).
 - Startup integrity: a signed revision whose document fails the schema or cross-reference checks is reported as health cause `policy_invalid` instead of `policy_signature` (SR-7.3-1).
 - New tests verify FR-2.12, FR-7.3, FR-11.10, SR-2.2-1, SR-2.4-1, SR-3.12-1, SR-5.18-2 and SR-7.3-1 and claim SR-7.9-1 in part; `docs/verification/inspections.md` gains the FR-2.1 record. The e2e fixture's limits and OAuth client can now be overridden per test.
+### Evidence: canonical requests, origin labels, purge receipts, meta-metrics (E-02, E-21, E-29, E-31)
+
+- Canonical request (FR-4.1): the `requested` event now carries the public tool name, `arguments_sha256` (SHA-256 of the arguments with keys sorted and whitespace removed) and `received_at`; arguments themselves are not journaled.
+- Origin labels (SR-6.5-1): `audit.OriginLabel` labels each event gateway, backend, broker or admin, and the graph mirror stores it as `originLabel`; `OBSERVED_FROM` now links an event to its server revision only when the Gateway exchanged messages with the backend for that call (dispatched, completed, delivered, or a failure, withholding or indeterminate outcome reported by E-10, E-11 or E-12, and server-asserted evidence). Requested, decided and denied events of a call that was never dispatched no longer link the backend as observed.
+- Purge with receipt (SR-6.15-1): `POST /api/v1/observations/purge` deletes observation data before a date after committing a deletion receipt (`DATA_PURGED`) that names every partition; without a recorded receipt nothing is deleted.
+- Meta-metrics (FR-10.9): P-244 `graph_memory` and P-247 `journal_signing_lag` are now sampled (`analytics.SetMetricSources`), so every sample carries P-240 to P-250.
+- New tests verify FR-4.1, FR-4.2 (one UUIDv7 correlation ID on the call's events, observation record and spans), FR-10.9, FR-10.29, SR-6.5-1 and SR-6.15-1.
 
 ### Owner decisions applied
 

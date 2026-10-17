@@ -120,6 +120,7 @@ var ops = []op{
 	{Pattern: "GET /api/v1/observations/aggregate", Tag: "observation", Summary: "Aggregate of one numeric feature", Doc: "observation.md",
 		Query: []string{"feature", "table", "group_by", "bucket", "quantiles", "histogram", "from", "to", "principal", "server", "tool", "session"}},
 	{Pattern: "GET /api/v1/observations/metrics", Tag: "observation", Summary: "System meta-metrics rows", Doc: "observation.md", Query: []string{"from", "to", "limit"}},
+	{Pattern: "POST /api/v1/observations/purge", Tag: "observation", Summary: "Delete observation data of every day before a date; the deletion receipt is journaled first (SR-6.15-1)", Doc: "observation.md"},
 	{Pattern: "GET /api/v1/observations/cost", Tag: "observation", Summary: "Time per stage, policy revision and Observation Policy", Doc: "observation.md", Query: []string{"from", "to", "principal", "tool"}},
 	{Pattern: "GET /api/v1/observations/objects", Tag: "observation", Summary: "Audit Profile, Observation Policy, Anomaly Response Policy and memory budget: active revision, revision in force, pending, effective settings", Doc: "observation.md"},
 	{Pattern: "GET /api/v1/observations/objects/{kind}", Tag: "observation", Summary: "Revisions of one observation object kind, newest first", Doc: "observation.md"},

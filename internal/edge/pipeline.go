@@ -3,6 +3,8 @@ package edge
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -112,6 +114,7 @@ func (c *callRun) auditFailure(err error) error {
 // authorization. Request and response scoring (E-31) are not yet stages.
 func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		received := time.Now()
 		corr, _ := ctx.Value(ctxCorrelation).(string)
 		if corr == "" {
 			corr = ids.New()
@@ -131,11 +134,16 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision}}
 		channel.From(ctx).Apply(&c.base) // FR-16.8
 		side, trust := toolClasses(ref)
-		// The requested event carries the canonical request, so that policy
-		// simulation can replay recorded calls (FR-3.5).
+		// The requested event carries the canonical request (FR-4.1): the
+		// correlation, session and principal IDs and the server and tool
+		// revisions are the event's own fields; the public name, the digest
+		// of the canonicalized arguments and the receipt time are in its
+		// detail. The arguments themselves are not journaled. Policy
+		// simulation replays recorded calls from it (FR-3.5).
 		if err := g.evidence.Record(c.event("call", audit.PhaseRequested, "E-02", "", "", "not_evaluated", map[string]any{
 			"server": ref.Server.Alias, "tool": ref.Tool.Name, "template": sess.Template, "profile": sess.Profile,
-			"side_effect": side, "source_trust": trust})); err != nil {
+			"side_effect": side, "source_trust": trust, "public_name": ref.Public,
+			"arguments_sha256": argumentsDigest(req.Params.Arguments), "received_at": received.UTC().Format(time.RFC3339Nano)})); err != nil {
 			return nil, c.auditFailure(err)
 		}
 
@@ -426,6 +434,22 @@ func argumentsChanged(before, after json.RawMessage) bool {
 		return string(c)
 	}
 	return norm(before) != norm(after)
+}
+
+// argumentsDigest is the SHA-256 of a call's canonicalized arguments
+// (FR-4.1): object keys sorted, insignificant whitespace removed. Absent or
+// null arguments are the empty object; arguments that are not JSON are
+// hashed as sent (the request filters refuse them).
+func argumentsDigest(args json.RawMessage) string {
+	b := bytes.TrimSpace(args)
+	if len(b) == 0 || string(b) == "null" {
+		b = []byte("{}")
+	}
+	if c, err := policy.Canonical(b); err == nil {
+		b = c
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
 }
 
 // mapDispatchError maps a dispatcher error to an Appendix B error and

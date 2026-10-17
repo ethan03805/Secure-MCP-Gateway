@@ -3,13 +3,33 @@ package analytics
 import (
 	"encoding/json"
 	"runtime"
+	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/obsstore"
 )
 
+// MetricSources supply the meta-metrics measured outside the service:
+// the journal's unsigned events (P-247) and the graph engine's memory
+// (P-244). Either may be nil; its parameter is then null.
+type MetricSources struct {
+	SigningLag  func() (unsigned int, oldest time.Time)
+	GraphMemory func() any
+}
+
+// SetMetricSources sets the outside sources of the meta-metrics; cmd/smcpd
+// calls it once the journal and the graph mirror exist.
+func (s *Service) SetMetricSources(m MetricSources) {
+	if s.Disabled() {
+		return
+	}
+	s.mu.Lock()
+	s.sources = m
+	s.mu.Unlock()
+}
+
 // MetricsRow builds one system meta-metrics sample (P-240 to P-250,
-// FR-10.9). Values that this release cannot measure (P-244 graph memory,
-// P-247 journal signing lag) are left null.
+// FR-10.9). P-244 and P-247 come from SetMetricSources and are null
+// without them.
 func (s *Service) MetricsRow() obsstore.Row {
 	now := s.now()
 	st := s.Collector.Stats()
@@ -27,6 +47,7 @@ func (s *Service) MetricsRow() obsstore.Row {
 	dRows := rows - s.lastRows
 	dCPU := cpu - s.lastCPU
 	s.lastTick, s.lastAssem, s.lastRows, s.lastCPU = now, st.Assembled, rows, cpu
+	src := s.sources
 	s.mu.Unlock()
 
 	var ms runtime.MemStats
@@ -52,6 +73,19 @@ func (s *Service) MetricsRow() obsstore.Row {
 		"capture_drops":           s.Drops(),
 		"baseline_cache_size":     int64(snapBytes),
 		"cpu_per_element":         map[string]any{"smcpd": 100 * dCPU.Seconds() / iv},
+	}
+	if src.SigningLag != nil {
+		n, oldest := src.SigningLag()
+		lag := map[string]any{"unsigned_events": int64(n), "oldest_unsigned_age_seconds": 0.0}
+		if n > 0 && !oldest.IsZero() {
+			lag["oldest_unsigned_age_seconds"] = now.Sub(oldest).Seconds()
+		}
+		row["journal_signing_lag"] = lag
+	}
+	if src.GraphMemory != nil {
+		if gm := src.GraphMemory(); gm != nil {
+			row["graph_memory"] = gm
+		}
 	}
 	if s.Store != nil {
 		if ss, err := s.Store.Stats(); err == nil {

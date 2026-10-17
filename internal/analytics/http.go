@@ -27,6 +27,7 @@ func (s *Service) Register(a *adminapi.Server) {
 	a.Handle("GET /api/v1/observations/aggregate", s.needStore(s.aggregate))
 	a.Handle("GET /api/v1/observations/metrics", s.needStore(s.metrics))
 	a.Handle("GET /api/v1/observations/cost", s.needStore(s.cost))
+	a.Handle("POST /api/v1/observations/purge", s.needStore(s.purge))
 	a.Handle("GET /api/v1/baselines", s.enabled(s.baselines))
 	a.Handle("POST /api/v1/baselines/snapshots", s.enabled(s.buildSnapshot))
 	a.Handle("POST /api/v1/baselines/flags", s.enabled(s.flag))

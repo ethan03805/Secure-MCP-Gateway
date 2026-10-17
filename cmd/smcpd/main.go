@@ -142,6 +142,13 @@ func run(cfgPath, level string) error {
 	defer a.Close()
 	approvals.Start(ctx, a.Evidence, a.Admin, a.Gateway)
 	obs.Start(ctx, a.Evidence, a.Admin, func() uint64 { return a.Evidence.Dropped()["observation"] })
+	obs.SetMetricSources(analytics.MetricSources{SigningLag: a.Journal.Unsigned, // P-247, P-244 (FR-10.9)
+		GraphMemory: func() any {
+			if st := mirror.Status(context.Background(), false); st.Enabled {
+				return st.Memory
+			}
+			return nil
+		}})
 	defer obs.Close()
 	if rt != nil {
 		rt.SetEvidence(a.Evidence)

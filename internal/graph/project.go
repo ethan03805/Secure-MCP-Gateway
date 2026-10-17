@@ -18,7 +18,7 @@ var mirrorLabels = []string{"AuditEvent", "Session", "Principal", "Invocation", 
 // property existence constraints, so the Data Access Service enforces
 // these; id, firstSeen and lastSeen are maintained by the templates.
 var labelProps = map[string]map[string]bool{
-	"AuditEvent": set("ts", "time", "class", "phase", "origin", "outcome", "reasonCode", "policyStatus", "correlationId",
+	"AuditEvent": set("ts", "time", "class", "phase", "origin", "originLabel", "outcome", "reasonCode", "policyStatus", "correlationId",
 		"sessionId", "principalId", "decisionId", "serverRevision", "toolRevision", "policyRevision"),
 	"Session":        set("principalId", "state", "revisionId", "endReason"),
 	"Principal":      set(),
@@ -133,7 +133,7 @@ func (p *projection) add(ev audit.Event) {
 		}
 	}
 	node("AuditEvent", ev.EventID, props("ts", ts, "time", ev.Time, "class", ev.Class, "phase", string(ev.Phase), "origin", ev.Origin,
-		"outcome", ev.Outcome, "reasonCode", ev.ReasonCode, "policyStatus", ev.PolicyStatus, "correlationId", ev.CorrelationID,
+		"originLabel", audit.OriginLabel(ev), "outcome", ev.Outcome, "reasonCode", ev.ReasonCode, "policyStatus", ev.PolicyStatus, "correlationId", ev.CorrelationID,
 		"sessionId", ev.SessionID, "principalId", ev.PrincipalID, "decisionId", ev.DecisionID, "serverRevision", ev.ServerRevision,
 		"toolRevision", ev.ToolRevision, "policyRevision", ev.PolicyRevision))
 
@@ -162,7 +162,11 @@ func (p *projection) add(ev audit.Event) {
 	}
 	if ev.ServerRevision != "" {
 		node("ServerRevision", ev.ServerRevision, props())
-		link("link.AuditEvent.OBSERVED_FROM.ServerRevision", ev.EventID, ev.ServerRevision)
+		// SR-6.5-1: a backend is linked as observed only by events of a
+		// call the Gateway exchanged messages with it for.
+		if audit.BackendObserved(ev) {
+			link("link.AuditEvent.OBSERVED_FROM.ServerRevision", ev.EventID, ev.ServerRevision)
+		}
 	}
 	if ev.ToolRevision != "" {
 		name := ev.ToolRevision
