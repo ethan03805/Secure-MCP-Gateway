@@ -163,6 +163,7 @@ func (p *requestProbe) FilterRequest(_ context.Context, call *pipeline.Call, arg
 		case s.S.RequireApproval != "off" && anomaly.Rank(res.Band) >= anomaly.Rank(s.S.RequireApproval):
 			call.RequireApproval = true
 			call.ApprovalReason = "anomaly band " + res.Band
+			call.AnomalySnapshot = res.SnapshotID // SR-1.12-3
 			res.Actions = append(res.Actions, "require_approval")
 		case res.Band == anomaly.Uncharacterized && s.S.Uncharacterized == "approve":
 			call.RequireApproval = true

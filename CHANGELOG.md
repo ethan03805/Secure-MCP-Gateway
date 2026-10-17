@@ -117,6 +117,15 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - `pipeline.InProcessLauncher.Raw` runs scripted stdio servers in process for protocol tests.
 - New tests verify FR-1.43, FR-5.13, FR-5.14, FR-5.15, FR-5.19, FR-5.21, FR-5.23, FR-5.26, FR-5.32, FR-5.40, SR-5.20-1, SR-7.2-1 and SR-7.12-1.
 
+### Policy decisions: approval floor, profile ceiling, re-decision, explanations (E-05, E-06, E-07, E-09)
+
+- Approval floor (SR-1.18-1): a tool whose verified manifest declares the side-effect class `write`, `external` or `execute` always carries the approval obligation; a policy can add approvals but not remove the floor. Unverified live tool lists have no manifest class and are not affected. The evaluator version is now 3.
+- Framework Profile `servers` (optional): the server aliases a profile's sessions may reach. Publication rejects a template granting a server that no profile using it permits, naming the rule, server and profiles (SR-1-3); a session of a profile with `servers` is denied (`NO_PERMIT`) other servers even when its template names them (SR-1-2).
+- Re-decision (SR-5.12-1, SR-1.18-3): when a request filter transforms the arguments, the call is decided again before approval and launch with `Decider.Recheck`, which counts nothing; the approval is requested for the transformed arguments and bound to the second decision, whose record names the first (`superseded_decision_id`).
+- Decision records (FR-3.11, SR-1.19-1, SR-1.12-3): `decision` events and approval refusals carry the considered, applicable and decisive rule-revision IDs (`<revision>/<template>/<rule>`), route, effective obligations and classes; an approval added by the synchronous Anomaly Scorer records `anomaly_obligation` with the baseline snapshot ID. New route `GET /api/v1/decisions/{id}/explanation` (Operator, Policy Author, Auditor) returns the record and the call's anomaly events.
+- `docs/policy-reference.md`: the example now validates, and `TestPolicyReferenceExamples` compiles every policy example and checks that every schema field is described (FR-18.5, partial).
+- New tests verify SR-1-3, SR-1.9-1, SR-1.12-3, SR-1.18-1, SR-1.18-3, SR-1.19-1, SR-3.10-1 and SR-5.12-1.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

@@ -158,6 +158,7 @@ func Register(d Deps) (*Console, error) {
 	a.Handle("GET /api/v1/audit/verify", c.lastVerification)
 	a.Handle("POST /api/v1/audit/verify", c.verifyNow)
 	a.Handle("GET /api/v1/audit/stream", c.streamEvents)
+	a.Handle("GET /api/v1/decisions/{id}/explanation", c.decisionExplanation)
 	c.registerStatic(a)
 	return c, nil
 }

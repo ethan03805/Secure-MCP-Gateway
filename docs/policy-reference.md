@@ -10,7 +10,7 @@ Two of the nine policy object types of FR-3.1 exist: Framework Profiles and Sess
 {
   "revision": "r2",
   "framework_profiles": {
-    "dev": { "templates": ["ro", "rw"], "default_template": "ro", "calls_per_minute": 30 }
+    "dev": { "templates": ["ro"], "default_template": "ro", "calls_per_minute": 30, "servers": ["fs", "fetch"] }
   },
   "templates": {
     "ro": {
@@ -45,8 +45,9 @@ Two of the nine policy object types of FR-3.1 exist: Framework Profiles and Sess
 | `templates` | yes | Templates sessions of this profile may use. Each must exist. |
 | `default_template` | yes | Template used when the harness asks for none. Must be in `templates`. |
 | `calls_per_minute` | no | Rate bound for calls under this profile (at least 1). |
+| `servers` | no | Authority ceiling: the server aliases sessions of this profile may reach through any of its templates. Absent means unrestricted. |
 
-A session whose template is no longer listed by its principal's profile in the active revision is denied with `NO_TEMPLATE` (each layer can only remove authority, SR-1-2).
+A session whose template is no longer listed by its principal's profile in the active revision is denied with `NO_TEMPLATE`, and a session whose profile sets `servers` is denied (`NO_PERMIT`) every server outside it even when its template names one (each layer can only remove authority, SR-1-2).
 
 ### Template
 
@@ -75,9 +76,9 @@ A session whose template is no longer listed by its principal's profile in the a
 
 ### Publication checks
 
-A document is refused (`policy_invalid`) when it does not match the schema, has unknown keys, names an unknown template in a profile, has a `default_template` outside the profile's `templates`, repeats a rule ID in a template, has two permit rules of one template naming the same server and tool (SR-1.9-1), puts obligations or classes on a deny rule, or uses `"*"` in a permit rule.
+A document is refused (`policy_invalid`) when it does not match the schema, has unknown keys, names an unknown template in a profile, has a `default_template` outside the profile's `templates`, repeats a rule ID in a template, has two permit rules of one template naming the same server and tool (SR-1.9-1; the error names both rules), puts obligations or classes on a deny rule, uses `"*"` in a permit rule, or has a template granting a server that no framework profile using the template permits through `servers` (SR-1-3; the error names the rule, the server and the profiles).
 
-Not checked yet: the capability ceiling of server manifests (SR-1-1), templates wider than their profile (SR-1-3), high-risk flags (SR-3.13), and any of the other seven object types.
+Not checked yet: the capability ceiling of server manifests (SR-1-1), high-risk flags (SR-3.13), and any of the other seven object types.
 
 ## Evaluation
 
@@ -87,6 +88,7 @@ The Policy Decision Service evaluates every `tools/call` against the in-memory s
 |---|---|---|---|
 | No verified revision is loaded | deny | `NO_SNAPSHOT` | `-31004` |
 | The session's template is not in the revision, or the principal's profile does not list it | deny | `NO_TEMPLATE` | `-31001` |
+| The principal's profile sets `servers` and the server is not in it | deny | `NO_PERMIT` | `-31001` |
 | More than CP-12 (256) rules of the template name the server | deny | `EVAL_BOUND` | `-31001` |
 | A deny rule covers the tool | deny | `DENY_RULE` | `-31001` |
 | No permit rule names the tool | deny | `NO_PERMIT` | `-31001` |
@@ -96,7 +98,19 @@ The Policy Decision Service evaluates every `tools/call` against the in-memory s
 | A rate or burst window is full | deny | `RATE_LIMITED` | `-31005`, `data.callsPerMinute`, `data.burst` |
 | Otherwise | permit | `PERMIT` | — |
 
-A permit carries the obligations: approval (from the rule, or from session taint with reason `TAINT_APPROVAL`), the rate bound, the burst and the session quota that applied, and the rule's filters. A refusal consumes no rate window and no quota.
+A permit carries the obligations: approval (from the rule, from the approval floor, or from session taint with reason `TAINT_APPROVAL`), the rate bound, the burst and the session quota that applied, and the rule's filters. A refusal consumes no rate window and no quota.
+
+### Approval floor
+
+A tool whose verified manifest declares the side-effect class `write`, `external` or `execute` always carries the approval obligation, whatever the rule says (SR-1.18-1): these classes cover the approval triggers of the security SRS (file and repository mutation, external transmission, code execution). A policy can add approvals with `approval: true` but cannot remove the floor. Tools of an unverified live tool list have no manifest class, so the floor does not apply to them; a rule's own `side_effect` affects taint, not the floor.
+
+### Re-decision after a transforming filter
+
+When a request filter transforms the arguments, the call is decided again before approval and launch (SR-5.12-1). The second decision does not count against rate windows or quotas. It governs the approval, which is therefore requested for the transformed arguments (SR-1.18-3), and the launch capability; its decision record carries `superseded_decision_id` and `redecision_reason: "arguments_transformed"`.
+
+### Decision records
+
+Every `decision` event (the deny, or the permit committed at launch authorization) and every approval refusal carries the decision record in its `detail`: outcome, reason code, template, route, the considered, applicable and decisive rule-revision IDs (`<policy revision>/<template>/<rule id>`), the effective obligations, the side-effect class and source trust, and, for an approval added by the Anomaly Scorer, `anomaly_obligation` with the baseline snapshot ID (SR-1.12-3). `GET /api/v1/decisions/{id}/explanation` returns it with the anomaly events of the call (SR-1.19-1, `docs/api/policy.md`).
 
 ### Rates, bursts and quotas
 
@@ -187,4 +201,4 @@ All are `admin` events with origin `E-05`, except `POLICY_ACTIVATED`, which also
 
 ## Not implemented
 
-Draft workspaces (FR-3.3), the other seven object types (FR-3.1), argument predicates (SR-1.7-1), routes other than the server alias (SR-1.11-1), the approval floor by manifest side-effect class (SR-1.18-1), the decision explanation route (SR-1.19-1), baseline and anomaly obligations, and manifest ceiling checks at publication.
+Draft workspaces (FR-3.3), the other seven object types (FR-3.1), argument predicates (SR-1.7-1), routes other than the server alias (SR-1.11-1), baseline obligations other than the anomaly approval, and manifest ceiling checks at publication.

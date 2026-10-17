@@ -1,6 +1,7 @@
 package edge
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,6 +29,12 @@ type callRun struct {
 	corr string
 	dec  policy.Decision
 	prog *progressRelay
+	// superseded is the ID of the call's first decision when a request
+	// filter transformed the arguments and the call was decided again.
+	superseded string
+	// call is the pipeline view of the call once the decision permitted
+	// it; an anomaly obligation added by a request probe is read from it.
+	call *pipeline.Call
 }
 
 func (c *callRun) event(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) audit.Event {
@@ -50,10 +57,48 @@ func (c *callRun) commit(class string, phase audit.Phase, origin, outcome, reaso
 // the failure is logged and the journal's sticky error fails the Gateway
 // closed for later calls.
 func (c *callRun) refuse(err *jsonrpc.Error, class string, phase audit.Phase, origin, outcome, reason, status string) error {
-	if aerr := c.commit(class, phase, origin, outcome, reason, status, nil); aerr != nil {
+	var detail any
+	if class == "decision" || class == "approval" {
+		detail = c.decisionDetail()
+	}
+	if aerr := c.commit(class, phase, origin, outcome, reason, status, detail); aerr != nil {
 		c.g.log.Error("evidence write failed", "err", aerr, "correlation", c.corr)
 	}
 	return err
+}
+
+// decisionDetail is the FR-3.11 decision record carried by decision
+// events: considered, applicable and decisive rule-revision IDs, the route
+// and the effective obligations (SR-1.19-1, SR-6.4-1). superseded names an
+// earlier decision of the call that a re-decision replaced (SR-5.12-1).
+func (c *callRun) decisionDetail() map[string]any {
+	d := c.dec
+	rr := func(rules []string) []string {
+		out := make([]string, 0, len(rules))
+		for _, r := range rules {
+			out = append(out, policy.RuleRevisionID(d.PolicyRevision, d.Template, r))
+		}
+		return out
+	}
+	ob := d.Obligations
+	m := map[string]any{
+		"outcome": d.Outcome, "reason_code": d.ReasonCode, "template": d.Template, "route": d.Route,
+		"considered_rules": rr(d.ConsideredRules), "applicable_rules": rr(d.ApplicableRules), "decisive_rules": rr(d.DecisiveRules),
+		"obligations": map[string]any{"approval": ob.Approval, "approval_reason": ob.ApprovalReason, "calls_per_minute": ob.CallsPerMinute,
+			"burst": ob.Burst, "calls_per_session": ob.CallsPerSession, "filters": append([]string{}, ob.Filters...)},
+		"side_effect": d.SideEffect, "source_trust": d.SourceTrust, "tainted": d.Tainted, "duration_us": d.Duration.Microseconds(),
+	}
+	if c.superseded != "" {
+		m["superseded_decision_id"] = c.superseded
+		m["redecision_reason"] = "arguments_transformed"
+	}
+	if c.call != nil && c.call.RequireApproval {
+		// SR-1.12-3: an anomaly obligation records the baseline snapshot
+		// that produced it.
+		m["obligations"].(map[string]any)["approval"] = true
+		m["anomaly_obligation"] = map[string]any{"obligation": "approval", "reason": c.call.ApprovalReason, "snapshot_id": c.call.AnomalySnapshot}
+	}
+	return m
 }
 
 func (c *callRun) auditFailure(err error) error {
@@ -130,6 +175,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, Obligations: dec.Obligations, DecisiveRules: dec.DecisiveRules,
 			InputSchema: ref.Tool.InputSchema, OutputSchema: ref.Tool.OutputSchema,
 			Channel: c.base.Channel, ClientID: c.base.ClientID, ClientAddress: c.base.ClientAddress}
+		c.call = call
 		c.prog = g.newProgress(ctx, req, call)
 		defer c.prog.stop()
 
@@ -151,6 +197,22 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 				e = gatewayError(CodePolicyDenied, "request blocked by inspection", verdict.ReasonCode, corr, dec.ID, map[string]any{"findings": verdict.Finding, "filters": reqApplied})
 			}
 			return nil, c.refuse(e, "filter", audit.PhaseFiltered, "E-09", "block", verdict.ReasonCode, "evaluated")
+		}
+
+		// SR-5.12-1: arguments a filter transformed are decided again
+		// before launch (the call is not counted twice). The new decision
+		// governs approval and launch; its record names the first one.
+		if argumentsChanged(req.Params.Arguments, args) {
+			first := c.dec
+			c.dec = g.decider.Recheck(policy.Request{PrincipalID: sess.PrincipalID, SessionID: sess.ID, Profile: sess.Profile, Template: sess.Template,
+				Server: ref.Server.Alias, Tool: ref.Tool.Name, SideEffect: side, SourceTrust: trust})
+			c.superseded = first.ID
+			dec = c.dec
+			if dec.Outcome != policy.Permit {
+				return nil, c.refuse(gatewayError(CodePolicyDenied, "policy denied", dec.ReasonCode, corr, dec.ID, map[string]any{"decisiveRules": dec.DecisiveRules}),
+					"decision", audit.PhaseDenied, "E-06", "deny", dec.ReasonCode, "evaluated")
+			}
+			call.DecisionID, call.Obligations, call.DecisiveRules = dec.ID, dec.Obligations, dec.DecisiveRules
 		}
 
 		// Approval (E-07).
@@ -319,7 +381,7 @@ func (g *Gateway) authorizeLaunch(c *callRun, sessionID string, b pipeline.Bindi
 		return "", c.refuse(gatewayError(CodeGatewayFailClosed, "launch refused", reason, c.corr, c.dec.ID, nil),
 			"call", audit.PhaseDenied, "E-12", "deny", reason, "evaluated")
 	}
-	if err := c.commit("decision", audit.PhaseAuthorized, "E-12", "permit", c.dec.ReasonCode, "evaluated", nil); err != nil {
+	if err := c.commit("decision", audit.PhaseAuthorized, "E-12", "permit", c.dec.ReasonCode, "evaluated", c.decisionDetail()); err != nil {
 		return "", c.auditFailure(err)
 	}
 	return g.caps.Issue(b), nil
@@ -348,6 +410,22 @@ func (g *Gateway) authorizeRelease(c *callRun, sessionID string) error {
 			map[string]any{"message": "The tool ran, but the Gateway could not record its outcome, so the result was withheld. It may have completed the action; check before trying again. The operator can see the cause with `smcpctl health`."})
 	}
 	return nil
+}
+
+// argumentsChanged reports whether request inspection changed the
+// arguments, comparing canonical forms so that formatting is ignored.
+func argumentsChanged(before, after json.RawMessage) bool {
+	norm := func(b json.RawMessage) string {
+		if len(bytes.TrimSpace(b)) == 0 || string(bytes.TrimSpace(b)) == "null" {
+			return "{}"
+		}
+		c, err := policy.Canonical(b)
+		if err != nil {
+			return string(b)
+		}
+		return string(c)
+	}
+	return norm(before) != norm(after)
 }
 
 // mapDispatchError maps a dispatcher error to an Appendix B error and

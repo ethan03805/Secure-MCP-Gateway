@@ -21,8 +21,8 @@ import (
 )
 
 // Call is what every stage knows about one tools/call after the decision.
-// Stages must treat it as read-only, except RequireApproval and
-// ApprovalReason.
+// Stages must treat it as read-only, except RequireApproval,
+// ApprovalReason and AnomalySnapshot.
 type Call struct {
 	CorrelationID  string
 	SessionID      string
@@ -53,6 +53,9 @@ type Call struct {
 	// obligation (E-31, FR-4.15) uses it. ApprovalReason names the cause.
 	RequireApproval bool
 	ApprovalReason  string
+	// AnomalySnapshot is the baseline snapshot ID of the score that set
+	// RequireApproval; the decision record carries it (SR-1.12-3).
+	AnomalySnapshot string
 	// Remote origin (FR-16.8): set for calls received on the Remote Access
 	// listener; stages that write evidence copy them onto their events.
 	Channel       string
