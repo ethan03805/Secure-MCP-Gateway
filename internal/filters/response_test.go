@@ -177,8 +177,8 @@ func hexOf(s string) string {
 
 // TestResponseSurfaces is SR-5.9-1 for text content, structured content,
 // embedded resources, resource-link URIs and error results: a trigger in
-// each surface is detected. Progress messages are not relayed through the
-// response pipeline yet, so the claim is partial.
+// each surface is detected at the filter level. Progress messages and the
+// wire are internal/edge TestResponseSurfacesOnTheWire.
 func TestResponseSurfaces(t *testing.T) {
 	reqtest.Partial(t, "SR-5.9-1")
 	_, f, _ := chain(t, Options{})

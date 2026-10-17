@@ -338,8 +338,10 @@ func runBounded[V any](ctx context.Context, fn func() (V, error)) (V, time.Durat
 }
 
 // SchemaValidate is the schema-validate request filter of FR-4.5: it
-// validates the arguments against the tool's input schema. Validation is
-// bounded by the schema itself; the CP-36 limits are not yet enforced.
+// validates the arguments against the tool's input schema within the
+// CP-36 bounds (SR-1.8-3) and only for the JSON Schema 2020-12 and
+// draft-07 dialects, never loading a reference outside the schema
+// document (SR-1.8-2).
 type SchemaValidate struct{}
 
 // ID implements RequestFilter.
@@ -410,12 +412,74 @@ func compileSchema(raw []byte) (*jsonschema.Schema, error) {
 	return c, nil
 }
 
+// CP-36 schema validation bounds (SR-1.8-3).
+const (
+	SchemaMaxDepth      = 32
+	SchemaMaxSubschemas = 1000
+	SchemaValidateTime  = 50 * time.Millisecond
+)
+
+// SchemaDialects are the $schema values validation accepts (SR-1.8-2);
+// a schema without $schema is read as 2020-12.
+var SchemaDialects = []string{
+	"https://json-schema.org/draft/2020-12/schema",
+	"http://json-schema.org/draft-07/schema#",
+	"http://json-schema.org/draft-07/schema",
+}
+
+// schemaShape checks the dialect and the CP-36 depth and subschema count
+// of a schema before it is compiled. References outside the document are
+// refused by the compiler's loader (noExternalRefs).
+func schemaShape(raw []byte) string {
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return "schema not parseable"
+	}
+	count, deepest := 0, 0
+	problem := ""
+	var walk func(v any, d int)
+	walk = func(v any, d int) {
+		deepest = max(deepest, d)
+		switch x := v.(type) {
+		case map[string]any:
+			count++
+			if dl, ok := x["$schema"]; ok && problem == "" {
+				if str, _ := dl.(string); !slices.Contains(SchemaDialects, str) {
+					problem = fmt.Sprintf("schema dialect %v is not supported", dl)
+				}
+			}
+			for _, e := range x {
+				walk(e, d+1)
+			}
+		case []any:
+			for _, e := range x {
+				walk(e, d+1)
+			}
+		}
+	}
+	walk(v, 0)
+	switch {
+	case problem != "":
+		return problem
+	case deepest > SchemaMaxDepth:
+		return fmt.Sprintf("schema deeper than %d (CP-36)", SchemaMaxDepth)
+	case count > SchemaMaxSubschemas:
+		return fmt.Sprintf("schema has more than %d subschemas (CP-36)", SchemaMaxSubschemas)
+	}
+	return ""
+}
+
 // ValidateArguments returns an empty string when args conform to schema,
-// otherwise a one-line finding.
+// otherwise a one-line finding. A schema outside the accepted dialects or
+// the CP-36 bounds, and a validation that runs longer than the CP-36 time
+// bound, are findings: the call is blocked.
 func ValidateArguments(schema any, args json.RawMessage) string {
 	raw, err := json.Marshal(schema)
 	if err != nil {
 		return "schema not serializable"
+	}
+	if p := schemaShape(raw); p != "" {
+		return p
 	}
 	compiled, err := compileSchema(raw)
 	if err != nil {
@@ -427,14 +491,32 @@ func ValidateArguments(schema any, args json.RawMessage) string {
 			return "arguments are not valid JSON"
 		}
 	}
-	if err := compiled.Validate(inst); err != nil {
-		msg := err.Error()
-		if i := strings.Index(msg, "\n"); i > 0 {
-			msg = msg[:i]
+	// The validator cannot be interrupted: past the bound the call is
+	// blocked and the validation finishes on its own goroutine.
+	done := make(chan error, 1)
+	go func() { done <- compiled.Validate(inst) }()
+	timer := time.NewTimer(SchemaValidateTime)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		if err != nil {
+			msg := err.Error()
+			if i := strings.Index(msg, "\n"); i > 0 {
+				msg = msg[:i]
+			}
+			return msg
 		}
-		return msg
+		return ""
+	case <-timer.C:
+		select {
+		case err := <-done: // finished as the timer fired
+			if err == nil {
+				return ""
+			}
+		default:
+		}
+		return fmt.Sprintf("schema validation exceeded %s (CP-36)", SchemaValidateTime)
 	}
-	return ""
 }
 
 type callContextKey struct{}

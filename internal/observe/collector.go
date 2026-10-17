@@ -11,6 +11,7 @@ package observe
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"math"
 	"slices"
 	"sort"
@@ -509,6 +510,8 @@ func (c *Collector) onEvent(ev *audit.Event) {
 		if d != nil && d["approval_id"] != nil && d["approval_id"] != "" {
 			p.approval["approval_id"] = d["approval_id"]
 		}
+	case ev.Class == "filter":
+		filterValues(p.rec.Values, ev)
 	case ev.Class == "decision" && ev.Phase == audit.PhaseDenied:
 		p.decisionDenied = true
 	case ev.Class == "decision" && ev.Phase == audit.PhaseAuthorized:
@@ -939,4 +942,63 @@ func mergeScore(a, b *anomaly.Result) *anomaly.Result {
 		}
 	}
 	return &out
+}
+
+// filterParams maps the parameter IDs of a filter evidence event (written
+// by internal/filters) to their catalog names.
+var filterParams = map[string]string{"P-043": "injection_detect_score", "P-044": "unicode_control_count", "P-140": "filter_hits",
+	"P-141": "redaction_count", "P-142": "secret_fingerprint_matches", "P-143": "injection_marker_score", "P-144": "pii_hits"}
+
+// filterValues copies one filter chain run into the record (FR-4.7): the
+// finding parameters of the run (P-043, P-044, P-140 to P-144) and the
+// time of each filter, by filter ID, and of the stage (P-205
+// t_request_filters, P-209 t_response_filters, in ms).
+func filterValues(v map[string]any, ev *audit.Event) {
+	d, _ := ev.Detail.(map[string]any)
+	if d == nil {
+		return
+	}
+	if params, ok := d["parameters"].(map[string]any); ok {
+		for id, x := range params {
+			if name := filterParams[id]; name != "" {
+				v[name] = x
+			}
+		}
+	}
+	var runs []map[string]any
+	switch x := d["filters"].(type) {
+	case []map[string]any:
+		runs = x
+	case []any:
+		for _, e := range x {
+			if m, ok := e.(map[string]any); ok {
+				runs = append(runs, m)
+			}
+		}
+	}
+	timing := map[string]any{}
+	var total float64
+	for _, r := range runs {
+		id, _ := r["id"].(string)
+		if id == "" {
+			continue
+		}
+		var us float64
+		switch n := r["duration_us"].(type) {
+		case int64:
+			us = float64(n)
+		case float64:
+			us = n
+		case json.Number:
+			us, _ = n.Float64()
+		}
+		timing[id] = us / 1000
+		total += us / 1000
+	}
+	timing["total"] = total
+	if stage, _ := d["stage"].(string); stage == "response" {
+		v["t_response_filters"] = timing
+	} else {
+		v["t_request_filters"] = timing
+	}
 }
