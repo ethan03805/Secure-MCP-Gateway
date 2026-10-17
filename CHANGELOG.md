@@ -4,6 +4,13 @@
 
 Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 543 requirements (375 FR in 19 roots, 168 SR) and 16 deferred requirements (Appendix N) with no errors or warnings. No snapshot or tag is made; the release process will make one.
 
+### Verification records (FR-3.25, FR-8.32, FR-8.33)
+
+- FR-3.25 is verified by a recorded run: `go run ./scripts/agents -approval-acceptance <file>` drives Claude Code 2.1.302 through a held call approved from G-13 in a real browser (`console/e2e/approve-held.mjs`), one approved with `smcpctl`, one denied from G-13 and one that reaches the hold bound, decides each from the journal and writes the transcript. `docs/verification/FR-3.25.md` and `FR-3.25-transcript.md`.
+- The first run showed that Claude Code shows a failed tool call as the JSON-RPC `error.message` only, so the person saw "approval required" without the approval link. Approval errors now carry `data.message` in `error.message` too (`approval required: This call needs approval. Open <url> ...`); `data` is unchanged. `docs/approvals.md`.
+- `console/e2e/a11y.spec.ts` tabs through every control of every view in both color schemes (Chromium, Firefox) and checks reachability, the absence of positive `tabindex` and 3:1 focus-indicator contrast. It found the light-scheme focus outline at 2.5:1 on the status strip; strip controls now use the strip ink for focus. The manual focus-order, target-size and contrast check is `docs/verification/FR-8.32.md`.
+- `tools/reqreport` accepts a record with method `Test` as a supporting record for a Test-method requirement: validated, not counted, no warning.
+
 ### Linux Enforced profile hardening (E-15 to E-18, FR-13.5)
 
 - Sandboxed servers with `network = "egress"` now start instead of being refused. The launcher attaches the instance to the Egress Broker, creates the container on slirp4netns with host loopback, installs table `inet smcp_egress` in the container's network namespace through `podman unshare nsenter ... nft` before the server process starts (TCP to the instance's own broker listeners only), reads it back, then starts the container; any failure removes the container. `pipeline.EgressNetwork` gained `GuestAddr` and `LauncherConfines`, `pipeline.EgressAttachment` gained `Allow`. `TestIntegrationEgressBroker` (real Podman) and the enforced section of `scripts/ci-integration.sh` show direct egress blocked and brokered egress to a granted local HTTP server working. `docs/sandbox.md`, "Egress".
