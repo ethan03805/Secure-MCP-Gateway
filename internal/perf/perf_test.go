@@ -145,3 +145,43 @@ func TestWriteTestJSON(t *testing.T) {
 		t.Fatalf("results %v claims %v", results, claims)
 	}
 }
+
+// TestCaptureMeasurement: FR-11.4 is the mean p95 of the enabled runs minus
+// that of the disabled runs, in a balanced order.
+func TestCaptureMeasurement(t *testing.T) {
+	on, off := 0, 0
+	for i, e := range CaptureOrder {
+		if e {
+			on++
+		} else {
+			off++
+		}
+		// Balanced: each half has two runs of each condition.
+		if i == len(CaptureOrder)/2-1 && (on != 2 || off != 2) {
+			t.Fatalf("first half %d enabled, %d disabled", on, off)
+		}
+	}
+	if on != 4 || off != 4 {
+		t.Fatalf("%d enabled and %d disabled runs", on, off)
+	}
+	var runs []captureRun
+	p95 := []float64{12, 10, 11, 13, 10, 12.5, 11.5, 11}
+	for i, e := range CaptureOrder {
+		runs = append(runs, captureRun{enabled: e, p95: p95[i], n: 2000})
+	}
+	m := captureMeasurement(runs)
+	// Enabled 12, 13, 12.5, 11.5 (mean 12.25); disabled 10, 11, 10, 11 (10.5).
+	if m.Requirement != "FR-11.4" || m.Value != 1.75 || m.Pass || m.Samples != 8000 || m.Budget != BudgetCaptureMs {
+		t.Fatalf("measurement %+v", m)
+	}
+	if !strings.Contains(m.Method, "12.250 ms, mean of 12.000, 13.000, 12.500, 11.500") || !strings.Contains(m.Method, "8 fresh instances") {
+		t.Fatalf("method %q", m.Method)
+	}
+	runs[0].p95, runs[3].p95, runs[5].p95, runs[6].p95 = 11, 11, 10.5, 10.5
+	if m := captureMeasurement(runs); !m.Pass || m.Value != 0.25 {
+		t.Fatalf("measurement %+v", m)
+	}
+	if m := captureMeasurement(runs[:1]); m.Pass || m.Note == "" {
+		t.Fatalf("one condition only: %+v", m)
+	}
+}

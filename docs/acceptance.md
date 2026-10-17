@@ -52,7 +52,7 @@ Run the suite locally with `go test ./internal/acceptance/` (about 100 seconds; 
 | Requirement | Measurement | Budget (CP-32) |
 |---|---|---|
 | FR-11.2 | p95 latency of 100,000 decisions against the compiled reference policy, as the caller sees it | 10 ms |
-| FR-11.4 | p95 P-213 with observation enabled minus disabled, same workload on four fresh instances (enabled, disabled, disabled, enabled; mean p95 per condition) | 1 ms |
+| FR-11.4 | p95 P-213 with observation enabled minus disabled, same workload on eight fresh instances (enabled, disabled, disabled, enabled, then the mirror; mean p95 per condition) | 1 ms |
 | FR-11.5 | p95 P-213 for 64 KiB results with synchronous scoring (journal timestamps: requested to dispatched plus completed to delivered) | 50 ms |
 | FR-11.8 | p95 of the console's audit queries over the 30-day, 100,000-event journal, 100 repetitions | 2 s |
 | FR-11.9 | resident memory of an idle `smcpd` 10 minutes after start | 4 GiB |

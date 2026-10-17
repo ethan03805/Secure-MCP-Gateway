@@ -112,32 +112,24 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.5", Name: "Gateway-added overhead (P-213)", Metric: "p95", Unit: "ms",
 		Value: p95, Budget: BudgetOverheadMs, Ceiling: CeilingOverheadMs, Samples: len(syncScoring), Pass: p95 <= BudgetOverheadMs,
 		Method: fmt.Sprintf("real smcpd with synchronous scoring, %d concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (requested to dispatched plus completed to delivered)", o.Callers)})
-	// Two instances of each, in the order on, off, off, on, so that warm-up
-	// and drift on the runner affect both conditions alike; the p95 of each
-	// condition is the mean of its two runs.
-	var on, off []float64
-	var onN, offN int
-	for i, cond := range []bool{true, false, false, true} {
+	// Four instances of each condition in the order of CaptureOrder, so
+	// that warm-up and drift on the runner affect both conditions alike;
+	// the p95 of each condition is the mean of its runs' p95. With two runs
+	// of each, the spread between runs of one condition on a CI runner
+	// (about 5 ms) was larger than the 1 ms being measured.
+	var runs []captureRun
+	for i, enabled := range CaptureOrder {
 		extra := ""
-		if !cond {
+		if !enabled {
 			extra = "\n[observation]\nenabled = false\n"
 		}
 		lat, err := load(fmt.Sprintf("capture-%d", i), extra)
 		if err != nil {
 			return nil, err
 		}
-		if cond {
-			on, onN = append(on, Quantile(lat, 0.95)), onN+len(lat)
-		} else {
-			off, offN = append(off, Quantile(lat, 0.95)), offN+len(lat)
-		}
+		runs = append(runs, captureRun{enabled: enabled, p95: Quantile(lat, 0.95), n: len(lat)})
 	}
-	pOn, pOff := (on[0]+on[1])/2, (off[0]+off[1])/2
-	diff := pOn - pOff
-	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.4", Name: "Observation capture overhead", Metric: "p95 difference", Unit: "ms",
-		Value: diff, Budget: BudgetCaptureMs, Samples: min(onN, offN), Pass: diff <= BudgetCaptureMs,
-		Method: fmt.Sprintf("p95 P-213 with observation enabled (%.3f ms, mean of %.3f and %.3f) minus disabled (%.3f ms, mean of %.3f and %.3f), four fresh instances run in the order enabled, disabled, disabled, enabled",
-			pOn, on[0], on[1], pOff, off[0], off[1])})
+	res.Measurements = append(res.Measurements, captureMeasurement(runs))
 
 	// FR-11.8: the console's audit queries over 30 days of reference data.
 	qi, err := newInstance(o.BinDir, filepath.Join(o.Work, "queries"), "", doc)
@@ -254,4 +246,53 @@ func queries(in *instance, reps int) ([]float64, error) {
 		}
 	}
 	return out, nil
+}
+
+// CaptureOrder is the order of the FR-11.4 runs, true for observation
+// enabled: two enabled-disabled-disabled-enabled blocks, the second
+// mirrored, so that a linear or quadratic drift over the runs affects both
+// conditions alike.
+var CaptureOrder = []bool{true, false, false, true, false, true, true, false}
+
+type captureRun struct {
+	enabled bool
+	p95     float64
+	n       int
+}
+
+// captureMeasurement is FR-11.4: the mean p95 P-213 of the enabled runs
+// minus that of the disabled runs.
+func captureMeasurement(runs []captureRun) Measurement {
+	var on, off []string
+	var sumOn, sumOff float64
+	var nOn, nOff, samplesOn, samplesOff int
+	for _, r := range runs {
+		v := fmt.Sprintf("%.3f", r.p95)
+		if r.enabled {
+			on, sumOn, nOn, samplesOn = append(on, v), sumOn+r.p95, nOn+1, samplesOn+r.n
+		} else {
+			off, sumOff, nOff, samplesOff = append(off, v), sumOff+r.p95, nOff+1, samplesOff+r.n
+		}
+	}
+	m := Measurement{Requirement: "FR-11.4", Name: "Observation capture overhead", Metric: "p95 difference", Unit: "ms", Budget: BudgetCaptureMs}
+	if nOn == 0 || nOff == 0 {
+		m.Note = "no runs of one condition"
+		return m
+	}
+	pOn, pOff := sumOn/float64(nOn), sumOff/float64(nOff)
+	m.Value, m.Samples, m.Pass = pOn-pOff, min(samplesOn, samplesOff), pOn-pOff <= BudgetCaptureMs
+	m.Method = fmt.Sprintf("p95 P-213 with observation enabled (%.3f ms, mean of %s) minus disabled (%.3f ms, mean of %s), %d fresh instances run in the order %s",
+		pOn, strings.Join(on, ", "), pOff, strings.Join(off, ", "), len(runs), orderText(runs))
+	return m
+}
+
+func orderText(runs []captureRun) string {
+	parts := make([]string, len(runs))
+	for i, r := range runs {
+		parts[i] = "disabled"
+		if r.enabled {
+			parts[i] = "enabled"
+		}
+	}
+	return strings.Join(parts, ", ")
 }
