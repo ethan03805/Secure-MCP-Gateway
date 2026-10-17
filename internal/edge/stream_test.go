@@ -30,7 +30,7 @@ func TestReasonMessages(t *testing.T) {
 	if m := Message(CodeResponseWithheld, "FILTER_BLOCKED", map[string]any{"correlationId": "c-9"}); !strings.Contains(m, "c-9") {
 		t.Fatal(m)
 	}
-	if m := Message(CodeGatewayFailClosed, ReasonAuditUnavailable, nil); m != reasonMessages["JOURNAL_UNAVAILABLE"] {
+	if m := Message(CodeGatewayFailClosed, ReasonJournalUnavailable, nil); m != reasonMessages["JOURNAL_UNAVAILABLE"] {
 		t.Fatal(m)
 	}
 	if m := Message(CodePolicyDenied, "SOME_FILTER_REASON", nil); m != codeMessages[CodePolicyDenied] {

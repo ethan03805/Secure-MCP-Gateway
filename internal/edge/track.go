@@ -1,7 +1,7 @@
 package edge
 
 import (
-	"context"
+	"errors"
 	"sync"
 	"time"
 )
@@ -13,30 +13,62 @@ const (
 	kindCall           // a tool call inside a request
 )
 
+// Causes with which the Gateway ends a listen stream itself; a listen
+// stream ended with one of them is closed with an empty complete response
+// (FR-1.37).
+var (
+	errSessionEnded = errors.New("session ended")
+	errShutdown     = errors.New("gateway shutting down")
+)
+
 type activity struct {
 	kind   int
-	cancel context.CancelFunc
+	cancel func(error)
 	done   chan struct{}
 }
 
 // tracker records what each session has in progress, so that ending a
 // session can cancel its calls, end its listen streams and wait for its
-// requests to finish writing their responses (FR-2.11).
+// requests to finish writing their responses (FR-2.11). It also holds the
+// IDs of each session's in-flight requests (FR-1.21).
 type tracker struct {
 	mu        sync.Mutex
 	seq       uint64
 	bySession map[string]map[uint64]*activity
+	ids       map[string]map[string]bool
 }
 
-func newTracker() *tracker { return &tracker{bySession: map[string]map[uint64]*activity{}} }
+func newTracker() *tracker {
+	return &tracker{bySession: map[string]map[uint64]*activity{}, ids: map[string]map[string]bool{}}
+}
 
 // add registers an activity and returns the function that marks it done.
-func (t *tracker) add(sessionID string, kind int, cancel context.CancelFunc) func() {
+func (t *tracker) add(sessionID string, kind int, cancel func(error)) func() {
+	done, _ := t.addLimited(sessionID, kind, 0, cancel)
+	return done
+}
+
+// addLimited registers an activity unless the session already has max
+// activities of that kind (max 0 means no limit). It reports false, and
+// registers nothing, when the limit is reached.
+func (t *tracker) addLimited(sessionID string, kind, max int, cancel func(error)) (func(), bool) {
 	a := &activity{kind: kind, cancel: cancel, done: make(chan struct{})}
 	t.mu.Lock()
+	m := t.bySession[sessionID]
+	if max > 0 {
+		n := 0
+		for _, b := range m {
+			if b.kind == kind {
+				n++
+			}
+		}
+		if n >= max {
+			t.mu.Unlock()
+			return nil, false
+		}
+	}
 	t.seq++
 	id := t.seq
-	m := t.bySession[sessionID]
 	if m == nil {
 		m = map[uint64]*activity{}
 		t.bySession[sessionID] = m
@@ -56,7 +88,36 @@ func (t *tracker) add(sessionID string, kind int, cancel context.CancelFunc) fun
 			}
 			t.mu.Unlock()
 		})
+	}, true
+}
+
+// claimID records a request ID as in flight for the session. It reports
+// false when the same ID is already in flight (FR-1.21).
+func (t *tracker) claimID(sessionID, id string) (func(), bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	m := t.ids[sessionID]
+	if m[id] {
+		return nil, false
 	}
+	if m == nil {
+		m = map[string]bool{}
+		t.ids[sessionID] = m
+	}
+	m[id] = true
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			t.mu.Lock()
+			defer t.mu.Unlock()
+			if m := t.ids[sessionID]; m != nil {
+				delete(m, id)
+				if len(m) == 0 {
+					delete(t.ids, sessionID)
+				}
+			}
+		})
+	}, true
 }
 
 // take removes and returns every activity of a session.
@@ -86,6 +147,24 @@ func (t *tracker) count(kind int) int {
 	return n
 }
 
+// cancelKind cancels every activity of one kind with cause, without
+// removing it; each one unregisters when its request returns.
+func (t *tracker) cancelKind(kind int, cause error) {
+	t.mu.Lock()
+	var acts []*activity
+	for _, m := range t.bySession {
+		for _, a := range m {
+			if a.kind == kind {
+				acts = append(acts, a)
+			}
+		}
+	}
+	t.mu.Unlock()
+	for _, a := range acts {
+		a.cancel(cause)
+	}
+}
+
 // endSession cancels calls and listen streams, then waits up to grace for
 // the session's requests to finish writing. It returns the number of calls
 // cancelled.
@@ -94,7 +173,7 @@ func (t *tracker) endSession(sessionID string, grace time.Duration) int {
 	calls := 0
 	for _, a := range acts {
 		if a.kind == kindCall || a.kind == kindListen {
-			a.cancel()
+			a.cancel(errSessionEnded)
 		}
 		if a.kind == kindCall {
 			calls++
@@ -107,7 +186,7 @@ func (t *tracker) endSession(sessionID string, grace time.Duration) int {
 		case <-a.done:
 		case <-deadline.C:
 			for _, b := range acts {
-				b.cancel()
+				b.cancel(errSessionEnded)
 			}
 			return calls
 		}

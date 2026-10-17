@@ -3,7 +3,7 @@ package edge
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"errors"
 	"io"
 	"mime"
 	"net/http"
@@ -24,35 +24,30 @@ import (
 
 const ctxHeld ctxKey = 100
 
-// serveMCP routes one authenticated MCP POST to the JSON handler, or, for
-// a single tools/call, to the event-stream handler behind a heldWriter.
+// serveMCP routes one authenticated, mediated MCP POST: a listen request
+// to the JSON handler (which streams it) behind a listenWriter; a
+// tools/call, or any request that carries a progress token, to the
+// event-stream handler behind a heldWriter; anything else to the JSON
+// handler. A request with a progress token is answered as an event stream
+// from its first message (FR-1.6). Plain-text SDK errors become JSON-RPC
+// errors (rpcWriter).
 func (g *Gateway) serveMCP(w http.ResponseWriter, r *http.Request) {
-	if !g.isToolCall(r) {
-		g.handler.ServeHTTP(w, r)
-		return
+	msg := messageFrom(r.Context())
+	rw := &rpcWriter{w: w, id: msg.ID}
+	defer rw.finish()
+	switch {
+	case msg.Method == "subscriptions/listen":
+		lw := newListenWriter(rw, g.listenInterval)
+		g.handler.ServeHTTP(lw, r)
+		cause := context.Cause(r.Context())
+		lw.finish(msg.ID, errors.Is(cause, errSessionEnded) || errors.Is(cause, errShutdown))
+	case msg.Method == "tools/call" || msg.Progress:
+		hw := &heldWriter{w: rw, hdr: http.Header{}, eager: msg.Progress}
+		g.streamHandler.ServeHTTP(hw, r.WithContext(context.WithValue(r.Context(), ctxHeld, hw)))
+		hw.finish()
+	default:
+		g.handler.ServeHTTP(rw, r)
 	}
-	hw := &heldWriter{w: w, hdr: http.Header{}}
-	g.streamHandler.ServeHTTP(hw, r.WithContext(context.WithValue(r.Context(), ctxHeld, hw)))
-	hw.finish()
-}
-
-// isToolCall peeks at the body (within the CP-07 bound, which the SDK
-// enforces again) and reports whether it is one tools/call request. The
-// body is restored for the SDK.
-func (g *Gateway) isToolCall(r *http.Request) bool {
-	limit := g.cfg.Limits.RequestBodyBytes
-	buf, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
-	r.Body = struct {
-		io.Reader
-		io.Closer
-	}{io.MultiReader(bytes.NewReader(buf), r.Body), r.Body}
-	if err != nil || int64(len(buf)) > limit {
-		return false
-	}
-	var m struct {
-		Method string `json:"method"`
-	}
-	return json.Unmarshal(buf, &m) == nil && m.Method == "tools/call"
 }
 
 // heldWriter buffers an event-stream response until the call is held
@@ -67,6 +62,9 @@ type heldWriter struct {
 	buf       bytes.Buffer
 	streaming bool
 	done      bool
+	// eager commits the response to an event stream at its first write
+	// (a request with a progress token, FR-1.6).
+	eager bool
 }
 
 func (h *heldWriter) Header() http.Header { return h.hdr }
@@ -88,7 +86,11 @@ func (h *heldWriter) Write(b []byte) (int, error) {
 	if h.streaming {
 		return h.w.Write(b)
 	}
-	return h.buf.Write(b)
+	n, err := h.buf.Write(b)
+	if h.eager {
+		h.startStreamLocked()
+	}
+	return n, err
 }
 
 // Flush implements http.Flusher; it is a no-op until the stream starts.
@@ -109,6 +111,9 @@ func (h *heldWriter) copyHeaders() {
 	for k, v := range h.hdr {
 		h.w.Header()[k] = v
 	}
+	if isEventStream(h.w.Header()) { // FR-1.7
+		h.w.Header().Set("X-Accel-Buffering", "no")
+	}
 }
 
 // startStream commits the response to text/event-stream and writes what
@@ -117,6 +122,10 @@ func (h *heldWriter) copyHeaders() {
 func (h *heldWriter) startStream() bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	return h.startStreamLocked()
+}
+
+func (h *heldWriter) startStreamLocked() bool {
 	if h.streaming {
 		return true
 	}
@@ -163,6 +172,7 @@ func (h *heldWriter) finish() {
 			hdr := h.w.Header()
 			hdr.Set("Content-Type", "application/json")
 			hdr.Del("Connection")
+			hdr.Del("X-Accel-Buffering")
 			h.w.WriteHeader(status)
 			_, _ = h.w.Write(data)
 			return

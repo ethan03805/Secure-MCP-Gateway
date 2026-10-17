@@ -80,8 +80,21 @@ Evidence ordering: `requested`, `dispatched` and `completed` are appended;
 `authorized` (the decision intent) is committed with fsync before the
 launch capability is issued; `delivered` is committed before the result is
 released; every refusal commits its terminal event. If an append or commit
-fails the call is refused with `-31004` and reason `AUDIT_UNAVAILABLE`, and the
-journal's sticky error fails the whole endpoint closed.
+fails the call is refused with `-31004` and reason `JOURNAL_UNAVAILABLE`
+(a failed `delivered` commit withholds the result with `-31003` and the
+same reason), and the journal's sticky error fails the whole endpoint
+closed.
+
+Message mediation (`edge/mediate.go`): `mcpChain` reads each POST body
+before the SDK sees it. Invalid UTF-8 JSON gets 400 and `-32700`; a batch,
+response object or scalar gets 400 and `-32600`; a notification gets 202
+and is discarded; `Last-Event-ID` is dropped from 2026-07-28 requests; a
+duplicate in-flight request ID gets `-32600`; a listen request beyond
+`listen_streams_per_session` gets `-31005` (`LISTEN_LIMIT`). Plain-text SDK
+errors are rewritten as JSON-RPC errors that echo the request ID. A
+request with a progress token is answered as an event stream; listen
+streams get comment keep-alives every 15 s when idle and end with an empty
+`resultType: "complete"` response when the Gateway ends them.
 
 Barrier: launch and release authorization hold `Gateway.gate` for reading;
 `Stop`, `Resume` and `ActivatePolicy` hold it for writing.

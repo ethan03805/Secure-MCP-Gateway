@@ -316,12 +316,12 @@ func TestStdioBridgeRawEquivalence(t *testing.T) {
 			}
 		}
 	}
-	// A request the Gateway answers with plain HTTP 400 (no JSON-RPC body)
-	// still gets a JSON-RPC error on standard output, so the framework is
-	// not left waiting.
+	// A request the Gateway refuses with HTTP 400 still gets a JSON-RPC
+	// error on standard output, so the framework is not left waiting. The
+	// Gateway answers an unknown method with -32601 itself (FR-1.18).
 	var out bytes.Buffer
 	adapter.StdioMain([]string{"--credentials", path}, strings.NewReader(legacy[0]+"\n"+`{"jsonrpc":"2.0","id":5,"method":"no/such/method","params":{}}`+"\n"), &out, io.Discard)
-	if !strings.Contains(out.String(), `"id":5`) || !strings.Contains(out.String(), `"code":-32000`) {
+	if !strings.Contains(out.String(), `"id":5`) || !strings.Contains(out.String(), `"code":-32601`) {
 		t.Fatalf("unhandled method: %s", out.String())
 	}
 }
@@ -440,5 +440,24 @@ func sleep(ctx context.Context, d time.Duration) error {
 		return ctx.Err()
 	case <-time.After(d):
 		return nil
+	}
+}
+
+// TestRelayPlainHTTPError: a response that is not JSON-RPC (a plain-text
+// HTTP error from a proxy, for example) still becomes a JSON-RPC error on
+// standard output, so the framework is not left waiting.
+func TestRelayPlainHTTPError(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "bad gateway", http.StatusBadGateway)
+	}))
+	defer srv.Close()
+	var out bytes.Buffer
+	r := &adapter.Relay{URL: srv.URL + "/mcp", HTTP: srv.Client(), Tokens: staticToken("tok"),
+		In: strings.NewReader(`{"jsonrpc":"2.0","id":5,"method":"tools/list"}` + "\n"), Out: &out}
+	if err := r.Run(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), `"id":5`) || !strings.Contains(out.String(), `"code":-32000`) {
+		t.Fatalf("plain HTTP error: %s", out.String())
 	}
 }

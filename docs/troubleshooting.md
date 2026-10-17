@@ -47,12 +47,13 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `FAIL_CLOSED` | `-31004` | A critical health check failed | Run `smcpctl health`; fix the listed cause (policy snapshot, journal, vault, clock, trust anchors, audit capacity) |
 | `EMERGENCY_STOP` | `-31004` | An emergency stop is in effect | An Administrator resumes with `smcpctl resume` or from G-01 |
 | `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | If health lists `policy_signature`, a file under `state/policy/` was altered: restore it from a backup and restart, or publish a valid revision with `smcpctl policy publish` |
-| `JOURNAL_UNAVAILABLE` | `-31004` | The decision could not be recorded in the evidence journal | Check disk space and permissions of the journal directory |
+| `JOURNAL_UNAVAILABLE` | `-31004`, `-31003` | The decision (`-31004`, the call did not run) or the outcome (`-31003`, the call ran and its result was withheld) could not be recorded in the evidence journal | Check disk space and permissions of the journal directory |
 | `POLICY_REVISION_CHANGED` | `-31004` | The policy changed between decision and launch | Repeat the request |
 | `CAPABILITY` | `-31004` | The one-use launch capability was missing or already used | Repeat the request; if it repeats, report the correlation ID |
 | `RATE_LIMITED` | `-31005` | A rate or burst limit was reached (principal, session or session-tool window) | Wait; `data.callsPerMinute` and `data.burst` show the limits |
 | `QUOTA_EXHAUSTED` | `-31005` | The session used its `calls_per_session` quota | Start a new session, or raise the quota in the template or rule |
 | `QUEUE_FULL` | `-31005` | The dispatch queue is full | Wait, or raise the concurrency limits (CP-10) |
+| `LISTEN_LIMIT` | `-31005` | The session already holds `listen_streams_per_session` (CP-20) open `subscriptions/listen` streams | Close a listen stream, or raise the limit |
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Sign in again; the harness normally does this itself after a 401 |
 | `SESSION_STATE` | `-31006` | The session is suspended or terminated | Sign in again |
 | `BACKEND_ERROR` | `-31007` | The server returned a protocol error | `data.backendCode` is the server's code; check the server's stderr in the diagnostic log |

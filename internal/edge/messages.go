@@ -40,14 +40,14 @@ var reasonMessages = map[string]string{
 // reasonAliases maps reason codes the Gateway emits under another name to
 // the Table B.2 entry whose message applies.
 var reasonAliases = map[string]string{
-	ReasonAuditUnavailable: "JOURNAL_UNAVAILABLE",
-	ReasonCapability:       "CAPABILITY",
-	ReasonSessionEnded:     "SESSION_STATE",
-	"FILTER_WITHHELD":      "FILTER_BLOCKED",
+	ReasonCapability:   "CAPABILITY",
+	ReasonSessionEnded: "SESSION_STATE",
+	"FILTER_WITHHELD":  "FILTER_BLOCKED",
 }
 
 // extraMessages covers reason codes that Table B.2 does not list.
 var extraMessages = map[string]string{
+	ReasonListenLimit:   "This session already has the maximum number of open listen streams. Close one, then try again.",
 	ReasonApprovalNoSvc: "This call needs approval, but the Gateway's approval service is not available. Ask the Gateway operator to approve the call or check `smcpctl health`, then run the same request again.",
 	"APPROVAL_EXPIRED":  "The approval for this call expired before it was used. Run the same request again to ask for a new approval.",
 	"APPROVAL_CONSUMED": "The approval for this call was already used by an identical call. Run the same request again to ask for a new approval.",

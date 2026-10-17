@@ -205,8 +205,8 @@ func bootstrap(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("bootstrap", flag.ContinueOnError)
 	dir := fs.String("dir", ".", "directory for smcp.toml, policy.json and state/")
 	o := bootstrapOpts{}
-	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (- for standard input) instead of a prompt")
-	fs.StringVar(&o.approverFile, "approver-password-file", "", "read the Session Approver password from this file instead of a prompt")
+	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (mode 0600 or stricter) instead of a prompt")
+	fs.StringVar(&o.approverFile, "approver-password-file", "", "read the Session Approver password from this file (mode 0600 or stricter) instead of a prompt")
 	fs.BoolVar(&o.useToken, "bootstrap-token", false, "set no administrator password now; print a one-use token to set it later with `smcpctl admin redeem`")
 	fs.StringVar(&o.sandbox, "sandbox", "", "directory the reference server may read (default <dir>/sandbox)")
 	fs.StringVar(&o.refserver, "refserver", "", "path of smcp-refserver (default: next to smcpctl, then PATH)")
@@ -216,6 +216,9 @@ func bootstrap(args []string, out io.Writer) error {
 	fs.StringVar(&o.notify, "notify", "auto", "approval desktop notifications: auto, off, osascript, terminal-notifier or notify-send")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if fs.NArg() > 0 {
+		return errPasswordArg
 	}
 	abs, err := filepath.Abs(*dir)
 	if err != nil {
@@ -247,7 +250,7 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 			adminLine = fmt.Sprintf("bootstrap_token_sha256 = %q\nbootstrap_token_expires = %q", hex.EncodeToString(sum[:]),
 				time.Now().Add(bootstrapTokenLifetime).UTC().Format(time.RFC3339))
 		} else {
-			pw, err := readSecret(o.adminFile, "Administrator password (12 or more characters)", true)
+			pw, err := readPassword(o.adminFile, "Administrator password (12 or more characters)", true)
 			if err != nil {
 				return r, fmt.Errorf("administrator password: %w (or use --bootstrap-token)", err)
 			}
@@ -260,7 +263,7 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 			}
 			adminLine = fmt.Sprintf("password_hash = %q", h)
 		}
-		apw, err := readSecret(o.approverFile, "Session Approver password (approves harness sign-ins; 12 or more characters)", true)
+		apw, err := readPassword(o.approverFile, "Session Approver password (approves harness sign-ins; 12 or more characters)", true)
 		if err != nil {
 			return r, fmt.Errorf("approver password: %w", err)
 		}

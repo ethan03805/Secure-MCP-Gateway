@@ -176,7 +176,8 @@ func validate(args []string, out io.Writer) error {
 
 // readSecret reads a secret from file ("-" is standard input) or, when file
 // is empty, from an interactive prompt with confirmation. Secrets are never
-// taken from the command line or the environment.
+// taken from the command line or the environment, and a file readable or
+// writable by group or others is refused (SR-7.5-2).
 func readSecret(file, prompt string, confirm bool) (string, error) {
 	if file != "" {
 		var b []byte
@@ -184,7 +185,7 @@ func readSecret(file, prompt string, confirm bool) (string, error) {
 		if file == "-" {
 			b, err = io.ReadAll(io.LimitReader(os.Stdin, 4096))
 		} else {
-			b, err = os.ReadFile(file)
+			b, err = readPrivateFile(file)
 		}
 		if err != nil {
 			return "", err
@@ -215,13 +216,49 @@ func readSecret(file, prompt string, confirm bool) (string, error) {
 	return string(a), nil
 }
 
+// readPrivateFile reads a secret file whose mode is 0600 or stricter.
+func readPrivateFile(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !st.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
+	}
+	if perm := st.Mode().Perm(); perm&0o077 != 0 {
+		return nil, fmt.Errorf("%s has mode %04o; a secret file must be mode 0600 or stricter (chmod 600 %s)", path, perm, path)
+	}
+	return io.ReadAll(io.LimitReader(f, 64<<10))
+}
+
+// errPasswordArg refuses a password given as a command-line argument.
+var errPasswordArg = errors.New("passwords are never accepted as command-line arguments; use the prompt or a password file with mode 0600")
+
+// readPassword reads a password or bootstrap secret for bootstrap,
+// hash-password and admin redeem: only from the interactive prompt or a
+// file with mode 0600 or stricter (SR-7.5-2), never from standard input.
+func readPassword(file, prompt string, confirm bool) (string, error) {
+	if file == "-" {
+		return "", errors.New("standard input is not accepted for this password; use the prompt or a password file with mode 0600")
+	}
+	return readSecret(file, prompt, confirm)
+}
+
 func hashPassword(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("hash-password", flag.ContinueOnError)
-	file := fs.String("password-file", "", "read the password from this file (- for standard input) instead of a prompt")
+	file := fs.String("password-file", "", "read the password from this file (mode 0600 or stricter) instead of a prompt")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	pw, err := readSecret(*file, "Password", true)
+	if fs.NArg() > 0 {
+		return errPasswordArg
+	}
+	pw, err := readPassword(*file, "Password", true)
 	if err != nil {
 		return err
 	}
