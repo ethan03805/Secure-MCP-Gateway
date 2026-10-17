@@ -19,7 +19,7 @@ import (
 // Bounds of the journal browser.
 const (
 	DefaultPageSize = 100
-	MaxPageSize     = 1000
+	MaxPageSize     = 500 // FR-7.3
 	MaxExportEvents = 100000
 	streamKeepAlive = 15 * time.Second
 	streamBuffer    = 64
@@ -31,6 +31,7 @@ const (
 // eventFilter selects journal events. Every set field must match.
 type eventFilter struct {
 	class, phase, origin, outcome, reason, session, correlation, principal, decision string
+	server, tool, rule, revision                                                     string
 	text                                                                             string
 	since, until                                                                     time.Time
 }
@@ -39,6 +40,7 @@ func parseFilter(r *http.Request) (eventFilter, error) {
 	q := r.URL.Query()
 	f := eventFilter{class: q.Get("class"), phase: q.Get("phase"), origin: q.Get("origin"), outcome: q.Get("outcome"), reason: q.Get("reason_code"),
 		session: q.Get("session_id"), correlation: q.Get("correlation_id"), principal: q.Get("principal_id"), decision: q.Get("decision_id"),
+		server: q.Get("server"), tool: q.Get("tool"), rule: q.Get("rule"), revision: q.Get("policy_revision"),
 		text: strings.ToLower(q.Get("q"))}
 	for name, dst := range map[string]*time.Time{"since": &f.since, "until": &f.until} {
 		if v := q.Get(name); v != "" {
@@ -59,6 +61,19 @@ func (f eventFilter) match(e audit.Event) bool {
 		!eq(f.session, e.SessionID) || !eq(f.correlation, e.CorrelationID) || !eq(f.principal, e.PrincipalID) || !eq(f.decision, e.DecisionID) {
 		return false
 	}
+	if !eq(f.revision, e.PolicyRevision) {
+		return false
+	}
+	detail, _ := e.Detail.(map[string]any)
+	if f.server != "" && e.ServerRevision != f.server && fmt.Sprint(detail["server"]) != f.server {
+		return false
+	}
+	if f.tool != "" && e.ToolRevision != f.tool && fmt.Sprint(detail["tool"]) != f.tool && !strings.HasSuffix(e.ToolRevision, "/"+f.tool) {
+		return false
+	}
+	if f.rule != "" && !matchRule(detail, f.rule) {
+		return false
+	}
 	if !f.since.IsZero() || !f.until.IsZero() {
 		t, err := time.Parse(time.RFC3339Nano, e.Time)
 		if err != nil || (!f.since.IsZero() && t.Before(f.since)) || (!f.until.IsZero() && !t.Before(f.until)) {
@@ -72,6 +87,26 @@ func (f eventFilter) match(e audit.Event) bool {
 		}
 	}
 	return true
+}
+
+// matchRule reports whether a decision record names the rule as decisive,
+// by rule-revision ID ("r2/dev/fs-read") or by rule ID ("fs-read").
+func matchRule(detail map[string]any, rule string) bool {
+	var rules []string
+	switch v := detail["decisive_rules"].(type) {
+	case []any:
+		for _, x := range v {
+			rules = append(rules, fmt.Sprint(x))
+		}
+	case []string:
+		rules = v
+	}
+	for _, r := range rules {
+		if r == rule || strings.HasSuffix(r, "/"+rule) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Console) readEvents() ([]audit.Event, error) {

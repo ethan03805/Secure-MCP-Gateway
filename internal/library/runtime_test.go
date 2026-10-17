@@ -134,6 +134,36 @@ func TestRuntimePresentsVerifiedManifest(t *testing.T) {
 	}
 }
 
+// TestManifestClassesReachTools: the side-effect class, source trust and
+// tool class of the signed manifest are carried on the presented tool's
+// metadata, where the decision and the catalog read them (SR-5.13-2,
+// SR-1.18-1, SR-3.12-1).
+func TestManifestClassesReachTools(t *testing.T) {
+	reqtest.Partial(t, "SR-5.13-2", "SR-3.12-1")
+	e := newEnv(t)
+	dir := e.pkg(pkgtest.Spec{ID: "fx-id", Revision: "1", Tools: []*mcp.Tool{pkgtest.EchoTool(fixtureDesc)},
+		Edit: func(m *packaging.Manifest, _ *packaging.Provenance) {
+			m.Tools[0].SideEffect, m.Tools[0].SourceTrust, m.Tools[0].Class = "write", "untrusted", "gateway-admin"
+		}})
+	rc, err := e.lib.Import(dir, ImportOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.lib.Enable("fx-id", "1", EnableOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	r := &rtEnv{env: e, rt: NewRuntime(e.lib, RuntimeOptions{ScanInterval: time.Hour}), fx: &fixtureServer{desc: fixtureDesc}, sha: rc.ArtifactSHA256}
+	reg := r.start(t, []config.Server{{Alias: "fx", Package: "fx-id"}})
+	ref := reg.Resolve("fx_echo")
+	if ref == nil || !ref.Server.Verified {
+		t.Fatal("packaged tool not presented by the registry")
+	}
+	m := ref.Tool.Meta
+	if m["local.smcpgw/sideEffect"] != "write" || m["local.smcpgw/sourceTrust"] != "untrusted" || m["local.smcpgw/toolClass"] != "gateway-admin" {
+		t.Fatalf("tool metadata %v", m)
+	}
+}
+
 func TestRuntimeRefusals(t *testing.T) {
 	reqtest.Partial(t, "SR-3.6-1") // non-package servers are still allowed unless require_signed is set
 	r := newRuntime(t, fixtureDesc)

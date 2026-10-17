@@ -38,9 +38,15 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/policystore"
 )
 
-// FaultSignature is the health cause when the active revision does not
-// verify (SR-1.1-2).
-const FaultSignature = "policy_signature"
+// Startup faults, reported as critical health causes (SR-1.1-2, SR-7.3-1):
+// FaultSignature when the active revision or the control record does not
+// verify, is missing or is not a revision file; FaultInvalid when it
+// verifies but fails the schema, field, enumeration or cross-reference
+// checks.
+const (
+	FaultSignature = "policy_signature"
+	FaultInvalid   = "policy_invalid"
+)
 
 // Reason codes of policy administration evidence events.
 const (
@@ -80,6 +86,8 @@ func Load(store *policystore.Store, policyFile string) (snap *policy.Snapshot, i
 	switch {
 	case err == nil:
 		return rev.Snapshot, nil, "", nil
+	case errors.Is(err, policystore.ErrInvalidDocument):
+		return nil, nil, FaultInvalid, err
 	case errors.Is(err, policystore.ErrIntegrity):
 		return nil, nil, FaultSignature, err
 	case !errors.Is(err, policystore.ErrNoActive):
@@ -170,7 +178,11 @@ func (s *Service) Started(imported *policystore.Record, loadErr error) {
 	case imported != nil:
 		ev = event("imported", ReasonImported, imported.Actor, imported.Revision, map[string]any{"record": imported})
 	case loadErr != nil:
-		ev = event("refused", ReasonIntegrity, "gateway", "", map[string]any{"error": loadErr.Error(), "cause": FaultSignature})
+		cause := s.Fault()
+		if cause == "" {
+			cause = FaultSignature
+		}
+		ev = event("refused", ReasonIntegrity, "gateway", "", map[string]any{"error": loadErr.Error(), "cause": cause})
 	default:
 		return
 	}

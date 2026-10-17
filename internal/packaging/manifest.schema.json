@@ -92,7 +92,8 @@
           "annotations": { "type": "object" },
           "side_effect": { "enum": ["read", "write", "external", "execute"], "description": "CP-44 side-effect class; drives session taint (SR-5.13-2)." },
           "source_trust": { "enum": ["trusted", "untrusted"], "description": "Whether results carry content from outside the operator's control (CP-44)." },
-          "risk_class": { "enum": ["low", "moderate", "high"], "description": "Per-tool override; may only raise the server risk class." }
+          "risk_class": { "enum": ["low", "moderate", "high"], "description": "Per-tool override; may only raise the server risk class." },
+          "class": { "enum": ["standard", "gateway-admin"], "description": "gateway-admin: the tool administers the Gateway; it is never presented in a catalog, whatever the policy grants (SR-3.12-1). Absent means standard." }
         }
       }
     },

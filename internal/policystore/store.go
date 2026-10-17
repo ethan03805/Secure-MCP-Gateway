@@ -65,6 +65,10 @@ var (
 	ErrNoActive = errors.New("policy store has no active revision")
 	// ErrIntegrity: a stored file does not verify.
 	ErrIntegrity = errors.New("policy store integrity check failed")
+	// ErrInvalidDocument wraps an integrity failure whose signature
+	// verified but whose document no longer passes the schema and
+	// cross-reference checks (SR-7.3-1).
+	ErrInvalidDocument = errors.New("signed revision document is invalid")
 	// ErrRevisionExists: the revision ID is already published with other content.
 	ErrRevisionExists = errors.New("revision ID already published with different content")
 	// ErrNotFound: no published revision has this ID.
@@ -285,7 +289,7 @@ func (s *Store) readFile(digest string) (*Revision, error) {
 	}
 	snap, err := policy.Compile(env.Document)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s.json: %w", ErrIntegrity, digest, err)
+		return nil, fmt.Errorf("%w: %w: %s.json: %w", ErrIntegrity, ErrInvalidDocument, digest, err)
 	}
 	if snap.Digest != env.Record.Digest || snap.Digest != digest || snap.Revision != env.Record.Revision {
 		return nil, fmt.Errorf("%w: %s.json content does not match its record", ErrIntegrity, digest)

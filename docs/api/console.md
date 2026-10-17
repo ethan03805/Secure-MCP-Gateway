@@ -200,10 +200,13 @@ Journal events, newest first, one page at a time. Events are read from the journ
 
 | Query | Meaning |
 |---|---|
-| `class`, `phase`, `origin`, `outcome`, `reason_code`, `session_id`, `correlation_id`, `principal_id`, `decision_id` | Exact match |
+| `class`, `phase`, `origin`, `outcome`, `reason_code`, `session_id`, `correlation_id`, `principal_id`, `decision_id`, `policy_revision` | Exact match |
+| `server` | Server revision ID, or the server alias the requested event records |
+| `tool` | Tool revision ID, the tool name the requested event records, or the tool name at the end of the tool revision |
+| `rule` | A decisive rule of the decision record, by rule-revision ID (`r2/dev/fs-read`) or rule ID (`fs-read`) |
 | `q` | Case-insensitive substring of the event's JSON |
 | `since`, `until` | RFC 3339 times; `since` inclusive, `until` exclusive |
-| `limit` | Page size, 1 to 1000, default 100 |
+| `limit` | Page size, 1 to 500, default 100 (FR-7.3) |
 | `before` | `event_id` of the last event of the previous page (`next_before` of that response) |
 
 Response 200:

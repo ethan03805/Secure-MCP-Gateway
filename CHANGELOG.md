@@ -125,6 +125,14 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Decision records (FR-3.11, SR-1.19-1, SR-1.12-3): `decision` events and approval refusals carry the considered, applicable and decisive rule-revision IDs (`<revision>/<template>/<rule>`), route, effective obligations and classes; an approval added by the synchronous Anomaly Scorer records `anomaly_obligation` with the baseline snapshot ID. New route `GET /api/v1/decisions/{id}/explanation` (Operator, Policy Author, Auditor) returns the record and the call's anomaly events.
 - `docs/policy-reference.md`: the example now validates, and `TestPolicyReferenceExamples` compiles every policy example and checks that every schema field is described (FR-18.5, partial).
 - New tests verify SR-1-3, SR-1.9-1, SR-1.12-3, SR-1.18-1, SR-1.18-3, SR-1.19-1, SR-3.10-1 and SR-5.12-1.
+### Verification of existing controls, audit query filters, icons and gateway-admin tools
+
+- Manifest classes now reach the decision: `packaging.Manifest.MCPTools` puts each tool's `side_effect`, `source_trust` and new `class` on the presented tool's metadata, which the edge reads for verified servers. Before, the edge looked for these keys but nothing set them, so session taint and the approval floor saw no manifest class.
+- New manifest tool member `class` (`standard` or `gateway-admin`, Appendix J); a gateway-admin tool of a verified manifest is never presented, whatever the policy grants (SR-3.12-1).
+- Presented tools keep `icons` that are `data:` URIs of PNG or JPEG images of at most 64 KiB whose magic bytes match; every other icon is removed (SR-5.18-2). Icons used to be dropped entirely.
+- `GET /api/v1/audit/events` and `/api/v1/audit/export` filter by `server`, `tool`, `rule` (decisive rule or rule-revision ID) and `policy_revision`; pages hold at most 500 events (FR-7.3, was 1000).
+- Startup integrity: a signed revision whose document fails the schema or cross-reference checks is reported as health cause `policy_invalid` instead of `policy_signature` (SR-7.3-1).
+- New tests verify FR-2.12, FR-7.3, FR-11.10, SR-2.2-1, SR-2.4-1, SR-3.12-1, SR-5.18-2 and SR-7.3-1 and claim SR-7.9-1 in part; `docs/verification/inspections.md` gains the FR-2.1 record. The e2e fixture's limits and OAuth client can now be overridden per test.
 
 ### Owner decisions applied
 

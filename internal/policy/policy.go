@@ -154,6 +154,10 @@ const (
 const (
 	MetaSideEffect  = "local.smcpgw/sideEffect"
 	MetaSourceTrust = "local.smcpgw/sourceTrust"
+	// MetaToolClass carries the manifest's tool class; ClassGatewayAdmin
+	// tools are never presented (SR-3.12-1).
+	MetaToolClass     = "local.smcpgw/toolClass"
+	ClassGatewayAdmin = "gateway-admin"
 )
 
 // Evaluation bounds (CP-12).
