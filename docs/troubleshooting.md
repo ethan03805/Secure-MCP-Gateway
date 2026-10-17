@@ -63,3 +63,10 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `metadata_blocked` | Journal event | A tool description matched a blocking metadata rule and the tool is suspended (SR-5.9-2) |
 | `refresh_token_reuse` | Journal event | A rotated refresh token was presented again; the session was ended (SR-2.11-4) |
 | `upgrade_rolled_back` | Journal event | An upgrade failed its health check and the previous version was restored (FR-13.8) |
+| `MEMORY_LIMIT` | Journal `runtime` event | A sandboxed instance reached its memory limit and was killed ([sandbox](sandbox.md)) |
+| `PIDS_LIMIT` | Journal `runtime` event | A sandboxed instance reached its PID limit and was killed |
+| `UNDECLARED_PROCESS` | Journal `runtime` event | A sandboxed server without `allow_spawn` started a process |
+| `EXEC_INTO_INSTANCE` | Journal `runtime` event | Someone ran `podman exec` in a server's container |
+| `OPERATOR_KILL` | Journal `runtime` event | An administrator killed an instance with `smcpctl runtime kill` |
+| `INSTANCE_EXITED_UNEXPECTEDLY` | Journal `runtime` event | A server instance ended without being asked to; its tools fail until the Gateway restarts |
+| `MONITOR_UNAVAILABLE` | Journal `runtime` event | The Runtime Monitor could not find an instance's cgroup |

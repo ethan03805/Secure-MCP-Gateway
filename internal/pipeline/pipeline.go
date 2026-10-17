@@ -5,7 +5,7 @@
 //	Approver        E-07 Approval Service       default RefuseApprover (-31002)
 //	RequestFilter   E-09 Request Inspection     default chain: schema-validate
 //	ResponseFilter  E-11 Response Inspection    default chain: empty
-//	Launcher        E-15/E-16 Runtime, Sandbox  default SubprocessLauncher (unconfined)
+//	Launcher        E-15/E-16 Runtime, Sandbox  default SubprocessLauncher (unconfined); internal/sandbox is the confining one
 //	ManifestSource  E-13/E-14 Trust, Registry   default LiveManifest (unverified)
 //	SecretBroker    E-20 Secret Broker          default NoSecrets
 //	Capabilities    E-12 -> E-10 launch caps    concrete one-use ledger

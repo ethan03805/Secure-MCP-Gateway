@@ -13,10 +13,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
+	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 )
 
 func main() {
@@ -44,17 +46,32 @@ func run(cfgPath, level string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// E-15/E-16/E-17: the confining launcher when [runtime] sandbox = "podman".
+	rt, err := sandbox.FromConfig(ctx, cfg, sandbox.SetupOptions{Log: log})
+	if err != nil {
+		return err
+	}
 	approvals, err := approval.New(approval.Options{Config: cfg, Log: log}) // E-07
 	if err != nil {
 		return fmt.Errorf("approvals: %w", err)
 	}
 	defer approvals.Close()
-	a, err := app.Start(ctx, cfg, app.Options{Log: log, Approver: approvals, Approvals: approvals})
+	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals}
+	if rt != nil {
+		opts.Launcher = rt
+		rt.Start(ctx)
+		defer rt.Close()
+	}
+	a, err := app.Start(ctx, cfg, opts)
 	if err != nil {
 		return err
 	}
 	defer a.Close()
 	approvals.Start(ctx, a.Evidence, a.Admin, a.Gateway)
+	if rt != nil {
+		rt.SetEvidence(a.Evidence)
+	}
+	(&sandbox.API{Launcher: rt, Actor: adminapi.Actor}).Register(a.Admin)
 	if err := a.Listen(); err != nil {
 		return err
 	}

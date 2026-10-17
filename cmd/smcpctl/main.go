@@ -37,6 +37,7 @@ Control API (running Gateway):
   approvals        list, show, approve, deny or watch tool-call approvals
   admin redeem     set the administrator password with the one-use bootstrap token
   egress           Egress Broker status, grants and recent connections (smcpctl egress -h)
+  runtime          sandboxed server instances and enforced-profile checks (smcpctl runtime help)
 
 Every command takes --config <file> (default smcp.toml).
 `
@@ -75,6 +76,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = redeem(args[2:], stdout)
 	case args[0] == "egress":
 		err = egressCmd(args[1:], stdout)
+	case args[0] == "runtime":
+		err = runtimeCmd(args[1:], stdout)
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":
 		fmt.Fprint(stdout, usage)
 		return 0
