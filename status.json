@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T05:21:28Z",
-  "commit": "a84aef79d8670572f206db22563941abb3b0bf47",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a84aef79d8670572f206db22563941abb3b0bf47",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39005625297",
+  "generatedAt": "2026-10-17T05:54:02Z",
+  "commit": "abcd07bf7c41aedf5a1580c70cee623be7c2c113",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/abcd07bf7c41aedf5a1580c70cee623be7c2c113",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39007564386",
   "tests": {
-    "total": 768,
-    "passed": 754,
+    "total": 782,
+    "passed": 767,
     "failed": 0,
-    "skipped": 14,
-    "durationSec": 269.3,
+    "skipped": 15,
+    "durationSec": 328.1,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -49,7 +49,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 33,
+        "passed": 40,
         "failed": 0,
         "skipped": 0
       },
@@ -324,6 +324,12 @@
         "skipped": 0
       },
       {
+        "name": "tools/installsh",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 1
+      },
+      {
         "name": "tools/reqreport",
         "passed": 13,
         "failed": 0,
@@ -332,7 +338,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.2,
+    "totalPct": 75.3,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -356,7 +362,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 32.5
+        "pct": 38.4
       },
       {
         "name": "cmd/smcpd",
@@ -416,7 +422,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90
+        "pct": 90.2
       },
       {
         "name": "internal/consoleapi",
@@ -448,7 +454,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.9
+        "pct": 82.8
       },
       {
         "name": "internal/gwtest",
@@ -567,6 +573,10 @@
         "pct": 77.2
       },
       {
+        "name": "packaging/linux",
+        "pct": 78.6
+      },
+      {
         "name": "scripts/agents",
         "pct": 73.9
       },
@@ -586,10 +596,10 @@
   },
   "requirements": {
     "total": 543,
-    "verified": 182,
-    "partial": 213,
+    "verified": 183,
+    "partial": 215,
     "failing": 0,
-    "unverified": 148,
+    "unverified": 145,
     "byElement": [
       {
         "element": "E-01",
@@ -779,8 +789,8 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 11,
-        "partial": 43,
+        "verified": 12,
+        "partial": 45,
         "failing": 0
       },
       {
@@ -3445,8 +3455,13 @@
       {
         "id": "FR-13.2",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "tools/installsh.TestInstallScriptCosign",
+          "tools/installsh.TestInstallScriptNoVerifier",
+          "tools/installsh.TestInstallScriptOpenSSLAcceptsMinisignCLISignature",
+          "tools/installsh.TestInstallScriptVerifiesSignatureAndChecksum"
+        ]
       },
       {
         "id": "FR-13.3",
@@ -3457,14 +3472,19 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestInstallEnforcedFake",
+          "cmd/smcpctl.TestInstallStandalone"
+        ]
       },
       {
         "id": "FR-13.5",
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestInstallEnforcedFake",
+          "cmd/smcpctl.TestInstallRefusals",
           "internal/sandbox.TestDoctorAllPrerequisitesPresent",
           "internal/sandbox.TestEnableDelegatedControllers",
           "internal/sandbox.TestPrepareRootfsIgnoresUmask"
@@ -3473,8 +3493,10 @@
       {
         "id": "FR-13.6",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestInstallStandalone"
+        ]
       },
       {
         "id": "FR-13.7",
@@ -6072,7 +6094,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6107,7 +6129,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40409: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36503: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
