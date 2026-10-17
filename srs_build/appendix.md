@@ -53,7 +53,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-47 | Upgrade bounds | Health wait after start 60 s; migration time limit 120 s | New |
 | CP-48 | Remote listener | `127.0.0.1:8444` (TLS, Remote Access Profile only); public name set by the operator | New |
 | CP-49 | Remote limits | Calls 30/min per client ID, burst 5; OAuth endpoints 10 req/s per source address, burst 20; lockout after 5 consecutive failed sign-ins or token requests, for 15 min; body 256 KiB; headers 8 KiB; concurrency 4 per client, 16 total; remote session maximum lifetime 2 h, idle timeout 15 min | New |
-| CP-50 | Diagnostic log and reload | Rotate at 10 MiB, keep 5 files. Reloadable keys: `limits.*`, `server[].enabled`, `client[]`, `logging.level`, `remote.limits.*`, `notify.*`. Restart required: listener addresses, `state.dir`, `profile` | New |
+| CP-50 | Diagnostic log and reload | Rotate at 10 MiB, keep 5 files. Reloadable keys: `limits.*`, `server[].enabled`, `client[]`, `log.level`, `remote.limits.*`, `notify.*`. Restart required: listener addresses, `state.dir`, `profile` | New |
 | CP-51 | Metrics endpoint | `127.0.0.1:9464`, path `/metrics`; disabled by default | New |
 | CP-52 | Client ID Metadata Document allowlist | Empty by default; entries added by configuration or `smcpctl client setup`. Fetch only allowlisted HTTPS URLs; 5 s timeout; 64 KiB limit; cache 24 h; no redirects to other hosts | New |
 | CP-53 | Local server CA | Validity 365 days; listener certificate validity 90 days, renewed when 30 days remain; CA name constraints permit DNS `localhost` and the configured listener names, IP `127.0.0.0/8` and `::1/128`; path length 0 | New |

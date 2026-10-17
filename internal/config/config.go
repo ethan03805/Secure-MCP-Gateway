@@ -44,6 +44,12 @@ type Config struct {
 	Egress        Egress        `toml:"egress" json:"egress"`
 	Filters       Filters       `toml:"filters" json:"filters"` // E-09, E-11 (filters.go)
 
+	// Operations (E-21 export, E-22, E-23); see ops.go.
+	SchemaVersion int      `toml:"schema_version" json:"schema_version"`
+	Metrics       Metrics  `toml:"metrics" json:"metrics"`
+	Evidence      Evidence `toml:"evidence" json:"evidence"`
+	Backup        Backup   `toml:"backup" json:"backup"`
+
 	// Dir is the directory of the configuration file; set by Load.
 	Dir string `toml:"-" json:"-"`
 }
@@ -77,7 +83,12 @@ type Profile struct {
 // the evidence journal and are never evidence.
 type Log struct {
 	Level  string `toml:"level" json:"level"`
-	Format string `toml:"format" json:"format"`
+	Format string `toml:"format" json:"format"` // standard error format; the file is always JSON Lines
+	// File is the diagnostic log file (D-14), rotated at MaxBytes keeping
+	// MaxFiles rotated files (CP-50). Default <state.dir>/log/smcpd.log.
+	File     string `toml:"file" json:"file"`
+	MaxBytes int64  `toml:"max_bytes" json:"max_bytes"`
+	MaxFiles int    `toml:"max_files" json:"max_files"`
 }
 
 // State names the directory that holds keys and the evidence journal.
@@ -251,6 +262,11 @@ func Parse(raw []byte) (*Config, error) {
 	if err := toml.Unmarshal(raw, &generic); err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
+	// The version is checked before the schema: a newer file may use keys
+	// this release does not know (FR-13.13).
+	if err := checkSchemaVersion(generic); err != nil {
+		return nil, err
+	}
 	if err := validate(generic); err != nil {
 		return nil, err
 	}
@@ -262,6 +278,9 @@ func Parse(raw []byte) (*Config, error) {
 	}
 	cfg.applyDefaults(presentKeys(generic, "limits"))
 	cfg.Egress.applyDefaults(presentKeys(generic, "egress"))
+	if err := cfg.applyOpsDefaults(); err != nil {
+		return nil, err
+	}
 	if err := cfg.check(); err != nil {
 		return nil, err
 	}
@@ -466,6 +485,7 @@ func (c *Config) resolvePaths() {
 		res(&c.Servers[i].Dir)
 	}
 	c.Runtime.resolvePaths(c.Dir)
+	c.resolveOpsPaths(res)
 }
 
 // ResourceURI is the CP-41 resource indicator: the public URL of the MCP

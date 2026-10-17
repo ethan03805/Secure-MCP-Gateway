@@ -17,6 +17,8 @@
 #   SMCP_ENFORCED_CGROUP_MANAGER  runtime.cgroup_manager for that instance
 #   SMCP_RUN_INSTALLER    1 to run packaging/linux/install-enforced.sh twice
 #                         with sudo (default: SMCP_REQUIRE_PREREQS)
+#   SMCP_ITEST_PORT       harness listener port (admin listener: port + 1);
+#                         default the bootstrap defaults 8443 and 8444
 #
 # Features that the current build does not provide are reported under
 # "Skipped" and do not fail the run.
@@ -35,10 +37,15 @@ say() { printf '==> %s\n' "$*"; }
 skip() { skipped+=("$1"); printf 'SKIP: %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 
+pidfile="$work/smcpd.pid"
 cleanup() {
   if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
     kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
+  fi
+  # smcpd started by the upgrade section's start command.
+  if [ -f "$pidfile" ]; then
+    kill "$(cat "$pidfile")" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT
@@ -61,7 +68,11 @@ mkdir -p "$inst"
 # Passwords come from protected files, never from argv or the environment
 # (SR-7.5-2). Harnesses sign in as the Session Approver (FR-2.23).
 (umask 077 && new_password > "$work/admin.pw" && new_password > "$work/approver.pw")
-"$bin/smcpctl" bootstrap --dir "$inst" \
+port_args=()
+if [ -n "${SMCP_ITEST_PORT:-}" ]; then
+  port_args=(--port "$SMCP_ITEST_PORT" --admin-port "$((SMCP_ITEST_PORT + 1))")
+fi
+"$bin/smcpctl" bootstrap --dir "$inst" ${port_args[@]+"${port_args[@]}"} \
   --admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw"
 cfg="$inst/smcp.toml"
 [ -f "$cfg" ] || fail "bootstrap did not write $cfg"
@@ -122,14 +133,41 @@ echo "refused during emergency stop: $(tail -n1 "$work/stopped-call.log")"
 "$bin/smcpctl" resume --config "$cfg"
 read_marker || { cat "$log" >&2; fail "tool call after resume"; }
 
-# Features the gateway does not provide yet: probe the CLI and report.
-for sub in backup restore; do
-  out=$("$bin/smcpctl" "$sub" --help 2>&1 || true)
-  case "$out" in
-    "usage: smcpctl <command>"*) skip "smcpctl $sub: not implemented in this build" ;;
-    *) say "smcpctl $sub is available (not exercised by this script yet)" ;;
-  esac
-done
+call_read() {
+  read_marker || { cat "$log" >&2; fail "MCP client flow (ref_read_file) $1"; }
+}
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi
+}
+
+if "$bin/smcpctl" help 2>&1 | grep -q "keys rotate"; then
+  say "Key rotation under traffic (listener certificate, server CA with overlap, evidence key)"
+  "$bin/smcpctl" keys status --config "$cfg" >/dev/null
+  "$bin/smcpctl" keys rotate tls --config "$cfg" >/dev/null
+  sleep 1.2 # the listener re-reads its certificate at most once per second
+  call_read "after TLS rotation"
+  "$bin/smcpctl" keys rotate ca --overlap 1h --config "$cfg" >/dev/null
+  call_read "during the CA overlap"
+  "$bin/smcpctl" keys rotate ca --finish --config "$cfg" >/dev/null
+  sleep 1.2
+  call_read "after the CA switch"
+  "$bin/smcpctl" keys rotate evidence --config "$cfg" >/dev/null
+  call_read "after evidence-key rotation"
+
+  say "Online encrypted backup"
+  (umask 077 && new_password > "$work/backup.pw")
+  if "$bin/smcpctl" backup --config "$cfg" </dev/null >/dev/null 2>&1; then
+    fail "a backup without passphrase or recipient was written"
+  fi
+  "$bin/smcpctl" backup --config "$cfg" --passphrase-file "$work/backup.pw"
+  archive=$(ls -t "$inst"/backups/*.age | head -n1)
+  [ -f "$archive.sha256" ] || fail "no checksum file for $archive"
+  "$bin/smcpctl" health --config "$cfg" | head -n1
+  ops=1
+else
+  skip "operations commands (keys, backup, restore, upgrade): not in this build"
+  ops=0
+fi
 
 say "Stopping smcpd"
 kill -TERM "$pid"
@@ -138,6 +176,49 @@ pid=""
 
 say "Verifying the evidence journal"
 "$bin/smcpctl" journal verify --config "$cfg"
+
+if [ "$ops" = 1 ]; then
+  say "Restoring the backup (verify only, then for real)"
+  "$bin/smcpctl" restore --config "$cfg" --archive "$archive" --passphrase-file "$work/backup.pw" --verify-only | tail -n1
+  "$bin/smcpctl" restore --config "$cfg" --archive "$archive" --passphrase-file "$work/backup.pw" | tail -n1
+  "$bin/smcpctl" journal verify --config "$cfg"
+
+  say "Upgrade to a release, then a fault-injected upgrade that must roll back"
+  installed="$work/installed" release="$work/release" badrel="$work/bad-release"
+  mkdir -p "$installed" "$release" "$badrel"
+  cp "$bin/smcpd" "$bin/smcpctl" "$installed/"
+  cp "$bin/smcpd" "$bin/smcpctl" "$release/"
+  (cd "$release" && sha256_of smcpd smcpctl > SHA256SUMS)
+  printf '#!/bin/sh\nexit 1\n' > "$badrel/smcpd" && chmod 755 "$badrel/smcpd"
+  cp "$bin/smcpctl" "$badrel/"
+  (cd "$badrel" && sha256_of smcpd smcpctl > SHA256SUMS)
+  start_cmd="nohup \"$installed/smcpd\" --config \"\$SMCP_CONFIG\" >>\"$log\" 2>&1 & echo \$! > \"$pidfile\""
+  stop_cmd="p=\$(cat \"$pidfile\" 2>/dev/null); [ -n \"\$p\" ] && kill \"\$p\" 2>/dev/null; while [ -n \"\$p\" ] && kill -0 \"\$p\" 2>/dev/null; do sleep 0.1; done; true"
+  SMCP_CONFIG="$cfg" sh -c "$start_cmd"
+  for _ in $(seq 1 100); do "$bin/smcpctl" health --config "$cfg" >/dev/null 2>&1 && break; sleep 0.2; done
+  "$installed/smcpctl" upgrade --config "$cfg" --release "$release" --bin-dir "$installed" \
+    --passphrase-file "$work/backup.pw" --start-cmd "$start_cmd" --stop-cmd "$stop_cmd" \
+    || { cat "$log" >&2; fail "upgrade"; }
+  [ -f "$installed/smcpd.prev" ] || fail "upgrade kept no previous binary"
+  call_read "after the upgrade"
+  if out=$("$installed/smcpctl" upgrade --config "$cfg" --release "$badrel" --bin-dir "$installed" \
+      --passphrase-file "$work/backup.pw" --start-cmd "$start_cmd" --stop-cmd "$stop_cmd" --health-timeout 10s 2>&1); then
+    printf '%s\n' "$out"
+    fail "the fault-injected upgrade did not fail"
+  fi
+  printf '%s\n' "$out" | tail -n3
+  printf '%s\n' "$out" | grep -q "previous version is running" || fail "upgrade did not roll back"
+  call_read "after the rollback"
+  sh -c "$stop_cmd"
+  rm -f "$pidfile"
+  "$bin/smcpctl" journal verify --config "$cfg" --strict
+  grep -q '"upgrade_rolled_back"' "$inst"/state/journal/segment-*.jsonl || fail "upgrade_rolled_back is not in the journal"
+
+  say "Uninstall keeps the evidence"
+  "$installed/smcpctl" uninstall --config "$cfg" --bin-dir "$installed" --stop-cmd "$stop_cmd" | tail -n2
+  [ ! -e "$installed/smcpd" ] || fail "uninstall left smcpd"
+  "$bin/smcpctl" journal verify --dir "$inst/state/journal" --key "$inst/state/keys/evidence-genesis.pub" --strict
+fi
 
 say "Enforced-profile prerequisites"
 if [ "$(uname -s)" = "Linux" ]; then

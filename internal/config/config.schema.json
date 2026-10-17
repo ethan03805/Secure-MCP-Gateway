@@ -10,6 +10,30 @@
     "argon2id": { "type": "string", "pattern": "^\\$argon2id\\$" }
   },
   "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "address": { "$ref": "#/$defs/loopback" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "export_dir": { "type": "string", "minLength": 1 },
+        "export_interval": { "$ref": "#/$defs/duration" }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string", "minLength": 1 }
+      }
+    },
     "listener": {
       "type": "object",
       "additionalProperties": false,
@@ -123,7 +147,10 @@
       "additionalProperties": false,
       "properties": {
         "level": { "type": "string", "enum": ["debug", "info", "warn", "error"] },
-        "format": { "type": "string", "enum": ["text", "json"] }
+        "format": { "type": "string", "enum": ["text", "json"] },
+        "file": { "type": "string", "minLength": 1 },
+        "max_bytes": { "type": "integer", "minimum": 65536 },
+        "max_files": { "type": "integer", "minimum": 1, "maximum": 100 }
       }
     },
     "principal": {

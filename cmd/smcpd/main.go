@@ -19,6 +19,8 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
+	"github.com/ethan03805/secure-mcp-gateway/internal/health"
+	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 )
 
@@ -40,13 +42,23 @@ func run(cfgPath, level string) error {
 	if level == "" {
 		level = cfg.Log.Level
 	}
-	log, _, err := diag.New(os.Stderr, level, cfg.Log.Format)
+	log, lv, logFile, err := diag.NewDaemon(diag.Options{Level: level, Format: cfg.Log.Format, Stderr: os.Stderr,
+		File: cfg.Log.File, MaxBytes: cfg.Log.MaxBytes, MaxFiles: cfg.Log.MaxFiles})
 	if err != nil {
 		return err
 	}
+	defer logFile.Close()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	prep, err := ops.Prepare(cfg) // E-22: finish interrupted rotations
+	if err != nil {
+		return err
+	}
+	if prep.EvidenceRotation != "" {
+		log.Warn("interrupted evidence-key rotation resolved", "action", prep.EvidenceRotation)
+	}
+	mon := health.New(health.Options{Log: log}) // E-23
 	// E-15/E-16/E-17: the confining launcher when [runtime] sandbox = "podman".
 	rt, err := sandbox.FromConfig(ctx, cfg, sandbox.SetupOptions{Log: log})
 	if err != nil {
@@ -57,7 +69,7 @@ func run(cfgPath, level string) error {
 		return fmt.Errorf("approvals: %w", err)
 	}
 	defer approvals.Close()
-	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals}
+	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate}
 	if rt != nil {
 		opts.Launcher = rt
 		rt.Start(ctx)
@@ -76,6 +88,22 @@ func run(cfgPath, level string) error {
 	if _, err := consoleapi.Attach(a, log); err != nil { // E-24 console and its routes
 		return fmt.Errorf("console: %w", err)
 	}
+	// E-21/E-22/E-23: health monitor, metrics, export, keys, backup, reload.
+	opsrt, err := ops.Attach(ctx, a, ops.Options{ConfigPath: cfgPath, Log: log, LogLevel: lv, Monitor: mon})
+	if err != nil {
+		return err
+	}
+	defer opsrt.Close()
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	defer signal.Stop(hup)
+	go func() {
+		for range hup {
+			if _, err := opsrt.Reload("signal:SIGHUP"); err != nil {
+				log.Error("SIGHUP reload failed; running configuration kept", "err", err)
+			}
+		}
+	}()
 	if err := a.Listen(); err != nil {
 		return err
 	}
@@ -84,7 +112,7 @@ func run(cfgPath, level string) error {
 		revision = snap.Revision
 	}
 	log.Info("smcpd listening", "mcp", cfg.ResourceURI(), "admin", cfg.AdminURL(), "policy_revision", revision,
-		"profile", a.Profile.Profile, "release_label", a.Profile.Label)
+		"profile", a.Profile.Profile, "release_label", a.Profile.Label, "diagnostic_log", cfg.Log.File)
 	err = a.Serve(ctx)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil

@@ -275,6 +275,8 @@ func (g *Gateway) authorizeLaunch(c *callRun, sessionID string, b pipeline.Bindi
 		reason = ReasonSessionState
 	case g.evidenceErr() != nil:
 		reason = ReasonAuditUnavailable
+	case len(g.healthGate()) > 0: // E-23 critical cause (SR-6.11-1, SR-7.10-1)
+		reason = ReasonFailClosed
 	}
 	if reason != "" {
 		return "", c.refuse(gatewayError(CodeGatewayFailClosed, "launch refused", reason, c.corr, c.dec.ID, nil),

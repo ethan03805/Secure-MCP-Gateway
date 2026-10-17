@@ -25,14 +25,18 @@ keeps today's behavior, and test the default.
 | `policy` | E-05 (part), E-06 | Schema-validated policy document and canonical form, compiled snapshot, decisions with deny precedence, rate and burst windows, session quotas, evaluation bounds, restrict-only session taint, filter obligations, `Diff`, `Simulate`, `Replace` for hot swap. |
 | `policystore` | E-05 (D-01) | Signed Policy Store: Ed25519 policy-signing key, immutable revision files named by digest, signed policy-control record with atomic activation. |
 | `policyadmin` | E-05 | Load at start (import or verify, fail-closed on `policy_signature`), publish, rollback, simulate from the journal, the `/api/v1/policy*` control API routes, and the `adminapi.Controller` wrapper that sends `policy/reload` through the store. |
-| `audit` | E-21 | Signed hash-chained journal with group-committed fsync, crash recovery, external anchor, verifier; `Fanout` with non-blocking observers; `Memory` for tests. |
-| `keys` | E-22 (part) | Name-constrained local server CA, listener certificate and rotation, evidence key, operator token, Argon2id. |
+| `audit` | E-21 | Signed hash-chained journal with group-committed fsync, crash recovery, external anchor, verifier; evidence-key transition records (`RotateKey`), `Seal`, unsigned-event measurement, evidence export (`Exporter`); `Fanout` with non-blocking observers; `Memory` for tests. |
+| `keys` | E-22 (part) | CP-53 name-constrained local server CA, listener certificate and renewal, CA rotation with overlap, evidence key and pending-key rotation, `CertReloader` for listeners, key inventory, operator token, installation ID, Argon2id. |
+| `health` | E-23 | Health & Safety Monitor: checks, states, fail-closed latch with 10 s recovery and acknowledgment, `Gate` for the edge. |
+| `metrics` | E-23 | Loopback Prometheus exposition fed by an evidence observer and the journal's fsync timing. |
+| `backup` | E-28 (part) | age-encrypted backup archive with manifest; restore into an isolated directory with verification. |
+| `ops` | E-21, E-22, E-23 | Daemon operations runtime: attaches monitor, metrics, export, key maintenance, online backup and reload to a started `app.App`; `/api/v1/health/*`, `/api/v1/keys*`, `/api/v1/backup*`, `/api/v1/config/reload`. |
 | `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload; role seam (`AddAuthenticator`, `HandleRoles`, `HandlePublic`, `ActorOf`, `RoleOf`). |
 | `approval` | E-07 | Approval Service: persisted one-use approvals bound per SR-1.18-2, hold mode, CP-17 expiry, `/api/v1/approvals*`, Approver accounts, watch stream, desktop notifier, harness status route. Wired in `cmd/smcpd`. |
 | `consoleapi` | E-24 | Console backend: serves the embedded console (`console/`, `go:embed`) under a strict CSP, `/api/v1/sessions*`, `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/audit/*` (journal browser, export, verification, evidence stream). Attached in `cmd/smcpd` with `consoleapi.Attach`. |
 | `profile` | E-23 (part), E-16 | Standalone versus enforced profile decision. |
 | `config` | all | TOML configuration validated against `config.schema.json`; Appendix A defaults by key presence. |
-| `diag` | all | Diagnostic logger (slog). Not evidence; never logs secrets, tokens or arguments. |
+| `diag` | all | Diagnostic logger (slog); daemon logger with rotating JSON Lines file and redaction of sensitive attribute names. Not evidence; never logs secrets, tokens or arguments. |
 | `ids` | all | UUIDv7 identifiers and 256-bit secrets. |
 | `reqtest` | FR-12.10 | `Verifies` and `Partial` requirement claims in tests. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
@@ -73,6 +77,8 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 | Evidence observers | `audit.Observer`, registered through `app.Options.Observers` | none | E-29 collector, E-26 graph mirror, E-27 store. Observers get events after the journal accepted them, on their own goroutine with a bounded queue; a full queue drops and counts (`Fanout.Dropped`). They can never block or fail a call. |
 | Control API routes | `adminapi.Server.Handle(pattern, handler)` | health, stop, resume, policy reload, approvals placeholder, login, bootstrap | E-24 agent: console backend routes; the same bearer authentication, origin and JSON content-type rules apply. Handlers read the authenticated actor with `adminapi.ActorOf(r)`. E-05 registers `/api/v1/policy*` from `policyadmin`. |
 | Launch capability | `pipeline.Capabilities` (issue) and `pipeline.CapabilityChecker` (consume) | one-use ledger shared by edge and backend | Bound to correlation ID, decision ID, policy revision and public tool name (FR-4.13). |
+| Health gate | `app.Options.HealthGate func() []string` (edge `Deps.HealthGate`) | none | Filled by `internal/health.Monitor.Gate` in `cmd/smcpd`; non-empty refuses MCP requests and launch authorizations with `FAIL_CLOSED`. |
+| Health checks | `health.Monitor.Register(name, health.Check)` | the checks `internal/ops` registers | E-19 (vault), E-25 to E-28 (graph mirror, Observation Store, memory stage) register their own; a critical cause gates the edge. |
 | Profile | `profile.Resolve(mode, launcher, confined, host)` | standalone on macOS or without a confining launcher | E-16 agent supplies the confining launcher; `[profile] mode = "enforced"` refuses to start without one. |
 | Egress | `pipeline.EgressAttacher` (`Attach(ctx, EgressRequest) (*EgressAttachment, error)`), `pipeline.EgressAware` (`SetEgress`) | `NoEgress`; with `[egress] enabled` the broker wraps unconfined launchers (advisory proxy variables) | E-16 agent: implement `EgressAware`, call `Attach` with the instance's `EgressNetwork` (network namespace path and a listen address reachable from it) before the server code runs, add `Env` to the instance, `Close` after exit. A failed `Attach` must fail the launch. |
 
@@ -95,8 +101,13 @@ evidence observers and must not gate enforcement.
   without being held (for example backend notifications) is sent as an
   event stream.
 - Anchor rollback: replacing the anchor with an older signed copy together
-  with deleting later segments is not detectable locally; export the anchor
-  off the machine (FR-7.14).
+  with deleting later segments is not detectable locally; set
+  `[evidence] export_dir` to storage off the machine (FR-7.14).
+- Configuration reload applies `log.level` and
+  `limits.principal_calls_per_minute` live; the other CP-50 reloadable keys
+  are reported as applied at restart.
+- Server CA rotation: during the overlap the listener presents the outgoing
+  CA's certificate, so clients must import the bundle, not the new CA alone.
 - Per-source rate limits see the tunnel endpoint as the source under the
   Remote Access profile; per-account lockout still applies.
 - The SDK client caches `tools/list` for `ttlMs`. Policy activation updates

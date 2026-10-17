@@ -25,6 +25,9 @@ const bootstrapTokenLifetime = 24 * time.Hour
 const exampleConfig = `# Secure MCP Gateway configuration.
 # Validated against internal/config/config.schema.json at startup.
 
+# Configuration format version (FR-13.13); smcpctl config migrate updates it.
+schema_version = 1
+
 [listener]
 address = %[1]q
 public_url = %[2]q

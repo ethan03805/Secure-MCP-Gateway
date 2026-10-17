@@ -37,6 +37,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
@@ -94,7 +95,12 @@ type Deps struct {
 	// EvidenceErr reports a sticky evidence failure (the journal's Err);
 	// when it returns non-nil the Gateway is fail-closed.
 	EvidenceErr func() error
-	Log         *slog.Logger
+	// HealthGate returns the critical causes the Health & Safety Monitor
+	// (E-23) holds the Gateway fail-closed for; while it returns any, MCP
+	// requests and launch authorizations are refused with FAIL_CLOSED.
+	// Nil means no monitor.
+	HealthGate func() []string
+	Log        *slog.Logger
 
 	Profile      profile.Report
 	Approver     pipeline.Approver
@@ -119,6 +125,7 @@ type Gateway struct {
 	reg         *backend.Registry
 	evidence    audit.Recorder
 	evidenceErr func() error
+	healthGate  func() []string
 	log         *slog.Logger
 	prof        profile.Report
 	approver    pipeline.Approver
@@ -166,6 +173,9 @@ func New(d Deps) (*Gateway, error) {
 	if d.EvidenceErr == nil {
 		d.EvidenceErr = func() error { return nil }
 	}
+	if d.HealthGate == nil {
+		d.HealthGate = func() []string { return nil }
+	}
 	if d.Approver == nil {
 		d.Approver = pipeline.RefuseApprover{}
 	}
@@ -182,7 +192,7 @@ func New(d Deps) (*Gateway, error) {
 		d.Profile = profile.Report{Profile: profile.Standalone, Label: "not enforced", Reasons: []string{"profile not resolved"}}
 	}
 	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
-		evidenceErr: d.EvidenceErr, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, screen: d.Screen, caps: d.Capabilities,
+		evidenceErr: d.EvidenceErr, healthGate: d.HealthGate, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, screen: d.Screen, caps: d.Capabilities,
 		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker()}
 	g.handler = mcp.NewStreamableHTTPHandler(g.serverFor, &mcp.StreamableHTTPOptions{
 		Stateless:           true,
@@ -236,13 +246,15 @@ func (g *Gateway) originAllowed(origin string) bool {
 	return false
 }
 
-// TLSConfig is the SR-2.8-1 profile: TLS 1.3 only.
+// TLSConfig is the SR-2.8-1 profile: TLS 1.3 only. The certificate is
+// re-read when its file changes (keys.CertReloader), so a rotated listener
+// certificate applies to new connections without a restart (FR-17.7).
 func TLSConfig(certFile, keyFile string) (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	r, err := keys.NewCertReloader(certFile, keyFile)
 	if err != nil {
 		return nil, err
 	}
-	return &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}, nil
+	return &tls.Config{GetCertificate: r.GetCertificate, MinVersion: tls.VersionTLS13}, nil
 }
 
 // CheckLoopback refuses a listener address that is not loopback (SR-2.9-3).
@@ -399,6 +411,8 @@ func (g *Gateway) failClosed() string {
 		return policy.ReasonNoSnapshot
 	case g.evidenceErr() != nil:
 		return ReasonAuditUnavailable
+	case len(g.healthGate()) > 0:
+		return ReasonFailClosed
 	}
 	return ""
 }
@@ -447,6 +461,16 @@ func (g *Gateway) Health() Health {
 	}
 	if g.evidenceErr() != nil {
 		h.State, h.Causes = "fail-closed", append(h.Causes, "evidence_unavailable")
+	}
+	for _, c := range g.healthGate() {
+		h.State = "fail-closed"
+		dup := false
+		for _, have := range h.Causes {
+			dup = dup || have == c
+		}
+		if !dup {
+			h.Causes = append(h.Causes, c)
+		}
 	}
 	return h
 }

@@ -104,7 +104,7 @@ func TestCANameConstraintsAndLifetimes(t *testing.T) {
 		t.Fatal("CA may issue intermediates")
 	}
 	if life := leaf.NotAfter.Sub(leaf.NotBefore); life > LeafLifetime+2*time.Hour {
-		t.Fatalf("leaf lifetime %v exceeds 397 days", life)
+		t.Fatalf("leaf lifetime %v exceeds 90 days", life)
 	}
 	if life := caCert.NotAfter.Sub(caCert.NotBefore); life > CALifetime+2*time.Hour {
 		t.Fatalf("CA lifetime %v", life)
@@ -149,9 +149,13 @@ func TestRotateIfDue(t *testing.T) {
 	if err != nil || !st.LeafRotated {
 		t.Fatalf("leaf not rotated: %+v %v", st, err)
 	}
-	// Near CA expiry the CA is reported and nothing is reissued.
+	// Near CA expiry the CA is reported and the leaf is capped at the CA's
+	// expiry; after it, reissue is refused.
 	st, err = RotateIfDue(dir, st.CANotAfter.Add(-time.Hour))
-	if err == nil || !st.CADue {
+	if err != nil || !st.CADue || st.LeafNotAfter.After(st.CANotAfter) {
 		t.Fatalf("CA expiry not reported: %+v %v", st, err)
+	}
+	if _, err = RotateIfDue(dir, st.CANotAfter.Add(time.Hour)); err == nil {
+		t.Fatal("leaf reissued from an expired CA")
 	}
 }

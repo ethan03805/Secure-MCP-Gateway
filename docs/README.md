@@ -24,11 +24,12 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Server sandbox](sandbox.md) | FR-12.3, FR-13.5, SR-4.5-1 to SR-4.7-2 | Written: enforced-profile prerequisites, Linux installer, `[runtime]` configuration, sandbox profile, Runtime Monitor evidence, `smcpctl runtime` |
 | [Control API: runtime](api/runtime.md) | — | Written: `/api/v1/runtime*` routes |
 | Install guide (`install.md`) | FR-18.1 | To be written with the installer (FR-13) |
-| Operator guide (`operator-guide.md`) | FR-18.4 | To be written with the control API and console |
+| Operator guide (`operator-guide.md`) | FR-18.4 | To be written with the control API and console; the operations part (health, logs, metrics, keys, backups, reload, upgrade) is in [operations/](operations/README.md) |
 | [Policy reference](policy-reference.md) | FR-18.5 | Written for Framework Profiles and Session Allow Policy Templates, the Policy Store and `smcpctl policy` |
 | [Control API: policy routes](api/policy.md) | FR-18.5 | Written |
+| [Control API: operations routes](api/ops.md) | FR-18.4 | Written |
 | Packaging guide (`packaging-guide.md`) | FR-18.6 | To be written with `smcpctl package` (FR-14) |
-| Runbooks (`runbooks/`) | FR-18.8 | To be written with each procedure |
+| Runbooks (`runbooks/`) | FR-18.8 | [Backup and restore](runbooks/backup-restore.md), [key rotation](runbooks/key-rotation.md) and [upgrade rollback](runbooks/upgrade-rollback.md) written, without execution records yet; emergency stop and revocation to be written |
 
 ## Flows
 

@@ -10,12 +10,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"golang.org/x/term"
 
-	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
@@ -26,12 +24,21 @@ const usage = `usage: smcpctl <command> [flags]
 Offline:
   bootstrap        create state, keys, TLS certificates, example config and policy
   config validate  validate the configuration and policy files
-  journal verify   verify the evidence journal (hash chain, signatures, anchor)
+  journal verify   verify the evidence journal (hash chain, signatures, key transitions, anchor)
+  journal export   copy closed journal segments and the anchor to an export directory
+  config migrate   rewrite the configuration to this release's schema_version
   hash-password    print an Argon2id hash of a password (prompt or --password-file)
   filters          list, export and test the inspection rule sets (rules, export, scan)
+  restore          restore an encrypted backup (the Gateway must be stopped)
+  upgrade          install a new release with backup, health check and rollback
+  uninstall        remove services and binaries, keep evidence (--purge removes all)
+  version          print the version (and the running Gateway's label)
 
-Control API (running Gateway):
-  health           show the Gateway's health
+Control API (running Gateway; backup and keys also work offline):
+  health           show the health monitor's report; health ack <cause>
+  reload           reload the configuration file (also SIGHUP)
+  keys             keys status | keys rotate tls|ca|evidence
+  backup           write an encrypted backup (passphrase or age recipient)
   stop             emergency stop: refuse every tool call until resumed
   resume           leave emergency stop
   policy reload    publish the configured policy file through the Policy Store
@@ -62,13 +69,31 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case args[0] == "config" && sub("validate"):
 		err = validate(args[2:], stdout)
 	case args[0] == "journal" && sub("verify"):
-		err = verify(args[2:], stdout)
+		err = verifyJournal(args[2:], stdout)
 	case args[0] == "hash-password":
 		err = hashPassword(args[1:], stdout)
 	case args[0] == "filters":
 		err = filtersCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "health":
-		err = control(args[1:], stdout, "GET", "/admin/v1/health", nil)
+		err = healthCmd(args[1:], stdout)
+	case args[0] == "reload":
+		err = reloadCmd(args[1:], stdout)
+	case args[0] == "keys":
+		err = keysCmd(args[1:], stdout)
+	case args[0] == "backup":
+		err = backupCmd(args[1:], stdout)
+	case args[0] == "restore":
+		err = restoreCmd(args[1:], stdout)
+	case args[0] == "journal" && sub("export"):
+		err = journalExport(args[2:], stdout)
+	case args[0] == "config" && sub("migrate"):
+		err = configMigrate(args[2:], stdout)
+	case args[0] == "version":
+		err = versionCmd(args[1:], stdout)
+	case args[0] == "upgrade":
+		err = upgradeCmd(args[1:], stdout)
+	case args[0] == "uninstall":
+		err = uninstallCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "stop":
 		err = stopCmd(args[1:], stdout)
 	case args[0] == "resume":
@@ -115,48 +140,6 @@ func validate(args []string, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "configuration OK: %d principals, %d clients, %d servers, %d approvers; policy revision %s\n",
 		len(cfg.Principals), len(cfg.Clients), len(cfg.Servers), len(cfg.Approvers), snap.Revision)
-	return nil
-}
-
-func verify(args []string, out io.Writer) error {
-	fs := flag.NewFlagSet("journal verify", flag.ContinueOnError)
-	cfgPath := fs.String("config", "smcp.toml", "configuration file")
-	dir := fs.String("dir", "", "journal directory (default <state>/journal)")
-	anchor := fs.String("anchor", "", "anchor file (default <journal dir>.anchor)")
-	strict := fs.Bool("strict", false, "treat findings (recovered segments, truncated tail) as failures")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-	cfg, err := config.Load(*cfgPath)
-	if err != nil {
-		return err
-	}
-	pub, err := keys.LoadEvidencePublicKey(cfg.State.Dir)
-	if err != nil {
-		return err
-	}
-	if *dir == "" {
-		*dir = filepath.Join(cfg.State.Dir, "journal")
-	}
-	rep, err := audit.VerifyWith(*dir, pub, audit.VerifyOptions{AnchorPath: *anchor})
-	if err != nil {
-		return fmt.Errorf("journal verification FAILED: %w", err)
-	}
-	fmt.Fprintf(out, "journal OK: %d segments, %d events", rep.Segments, rep.Events)
-	if rep.AnchorSegment > 0 {
-		fmt.Fprintf(out, ", anchored at segment %d", rep.AnchorSegment)
-	}
-	if rep.Open != "" {
-		fmt.Fprintf(out, " (%s is still open)", rep.Open)
-	}
-	fmt.Fprintln(out)
-	findings := rep.Findings()
-	for _, f := range findings {
-		fmt.Fprintln(out, "FINDING:", f)
-	}
-	if *strict && len(findings) > 0 {
-		return fmt.Errorf("%d findings", len(findings))
-	}
 	return nil
 }
 
