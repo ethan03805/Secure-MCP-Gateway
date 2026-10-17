@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T01:24:31Z",
-  "commit": "171f7587b810666dfb3dee03363ab0b91059bcc1",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/171f7587b810666dfb3dee03363ab0b91059bcc1",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38990470868",
+  "generatedAt": "2026-10-17T01:35:37Z",
+  "commit": "4db5c638d547bba499d2d23b1970b4fc3e4f8d5b",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/4db5c638d547bba499d2d23b1970b4fc3e4f8d5b",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38991293276",
   "tests": {
-    "total": 359,
-    "passed": 348,
+    "total": 422,
+    "passed": 411,
     "failed": 0,
     "skipped": 11,
-    "durationSec": 125.3,
+    "durationSec": 130.9,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,13 +19,25 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 18,
+        "passed": 19,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/adminapi",
         "passed": 6,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/analytics",
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/anomaly",
+        "passed": 8,
         "failed": 0,
         "skipped": 0
       },
@@ -60,6 +72,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/baseline",
+        "passed": 12,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/config",
         "passed": 14,
         "failed": 0,
@@ -79,7 +97,7 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 26,
+        "passed": 28,
         "failed": 0,
         "skipped": 0
       },
@@ -126,6 +144,18 @@
         "skipped": 0
       },
       {
+        "name": "internal/observe",
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/obsstore",
+        "passed": 19,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/pipeline",
         "passed": 9,
         "failed": 0,
@@ -162,6 +192,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/research",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/sandbox",
         "passed": 23,
         "failed": 0,
@@ -194,7 +230,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.7,
+    "totalPct": 76.4,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -202,7 +238,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 28.5
+        "pct": 33.7
       },
       {
         "name": "cmd/smcpd",
@@ -217,8 +253,16 @@
         "pct": 81.2
       },
       {
+        "name": "internal/analytics",
+        "pct": 68.5
+      },
+      {
+        "name": "internal/anomaly",
+        "pct": 77.8
+      },
+      {
         "name": "internal/app",
-        "pct": 74.1
+        "pct": 74
       },
       {
         "name": "internal/approval",
@@ -239,6 +283,10 @@
       {
         "name": "internal/backup",
         "pct": 75.9
+      },
+      {
+        "name": "internal/baseline",
+        "pct": 85.1
       },
       {
         "name": "internal/config",
@@ -266,7 +314,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.5
+        "pct": 82.7
       },
       {
         "name": "internal/health",
@@ -283,6 +331,14 @@
       {
         "name": "internal/metrics",
         "pct": 95.6
+      },
+      {
+        "name": "internal/observe",
+        "pct": 88.3
+      },
+      {
+        "name": "internal/obsstore",
+        "pct": 80.9
       },
       {
         "name": "internal/ops",
@@ -311,6 +367,10 @@
       {
         "name": "internal/reqtest",
         "pct": 91.7
+      },
+      {
+        "name": "internal/research",
+        "pct": 80.9
       },
       {
         "name": "internal/sandbox",
@@ -348,10 +408,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 88,
-    "partial": 130,
+    "verified": 115,
+    "partial": 148,
     "failing": 0,
-    "unverified": 340,
+    "unverified": 295,
     "byElement": [
       {
         "element": "E-01",
@@ -398,7 +458,7 @@
         "name": "Policy Decision Service",
         "total": 23,
         "verified": 6,
-        "partial": 3,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -422,7 +482,7 @@
         "name": "Request Inspection Pipeline",
         "total": 16,
         "verified": 8,
-        "partial": 5,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -565,8 +625,8 @@
         "element": "E-27",
         "name": "Observation Store",
         "total": 5,
-        "verified": 0,
-        "partial": 0,
+        "verified": 2,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -581,32 +641,32 @@
         "element": "E-29",
         "name": "Observation Collector",
         "total": 14,
-        "verified": 0,
-        "partial": 0,
+        "verified": 3,
+        "partial": 6,
         "failing": 0
       },
       {
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 0,
-        "partial": 0,
+        "verified": 9,
+        "partial": 2,
         "failing": 0
       },
       {
         "element": "E-31",
         "name": "Anomaly Scorer",
         "total": 10,
-        "verified": 0,
-        "partial": 0,
+        "verified": 7,
+        "partial": 2,
         "failing": 0
       },
       {
         "element": "E-32",
         "name": "Research Dataset Service",
         "total": 9,
-        "verified": 0,
-        "partial": 0,
+        "verified": 6,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -1521,8 +1581,10 @@
       {
         "id": "FR-4.15",
         "element": "E-09",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestSynchronousAnomalyObligation"
+        ]
       },
       {
         "id": "FR-4.16",
@@ -2371,20 +2433,27 @@
       {
         "id": "FR-9.7",
         "element": "E-27",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestObservationThroughGateway",
+          "internal/obsstore.TestStoreLayoutAndModes"
+        ]
       },
       {
         "id": "FR-9.8",
         "element": "E-27",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/obsstore.TestStoreSchemaEvolutionAddsNullableColumn"
+        ]
       },
       {
         "id": "FR-9.9",
         "element": "E-27",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/obsstore.TestStoreAggregateMatchesIndependentComputation"
+        ]
       },
       {
         "id": "FR-9.10",
@@ -2420,7 +2489,8 @@
         "element": "E-28",
         "status": "partial",
         "tests": [
-          "internal/graph.TestRetentionDeletesExpiredMirrorRecordsOnly"
+          "internal/graph.TestRetentionDeletesExpiredMirrorRecordsOnly",
+          "internal/obsstore.TestStoreRetention"
         ]
       },
       {
@@ -2461,14 +2531,19 @@
       {
         "id": "FR-10",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/anomaly.TestConvergenceAndInjectedOutliers",
+          "internal/e2e.TestObservationThroughGateway"
+        ]
       },
       {
         "id": "FR-10.1",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/observe.TestNonBlockingAndDropAccounting"
+        ]
       },
       {
         "id": "FR-10.2",
@@ -2479,38 +2554,51 @@
       {
         "id": "FR-10.3",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestObservationThroughGateway",
+          "internal/observe.TestRecordAssemblyJoinsByCorrelation"
+        ]
       },
       {
         "id": "FR-10.4",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/observe.TestParameterSelection"
+        ]
       },
       {
         "id": "FR-10.5",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/observe.TestFeatureExtractionFixture"
+        ]
       },
       {
         "id": "FR-10.6",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/observe.TestDeterministicSampling"
+        ]
       },
       {
         "id": "FR-10.7",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/observe.TestCaptureEscalation"
+        ]
       },
       {
         "id": "FR-10.8",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/observe.TestNonBlockingAndDropAccounting"
+        ]
       },
       {
         "id": "FR-10.9",
@@ -2521,8 +2609,10 @@
       {
         "id": "FR-10.10",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/observe.TestGatewayOverheadAndApprovalWait"
+        ]
       },
       {
         "id": "FR-10.11",
@@ -2533,104 +2623,144 @@
       {
         "id": "FR-10.12",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestContextPerObservedPair"
+        ]
       },
       {
         "id": "FR-10.13",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestWelfordMatchesTwoPass"
+        ]
       },
       {
         "id": "FR-10.14",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestTransforms"
+        ]
       },
       {
         "id": "FR-10.15",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestTDigestMedianMAD"
+        ]
       },
       {
         "id": "FR-10.16",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestCategoricalAndTransitionFrequencies"
+        ]
       },
       {
         "id": "FR-10.17",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestLearningExclusions"
+        ]
       },
       {
         "id": "FR-10.18",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestObserveCommands",
+          "internal/baseline.TestSnapshotTriggersAndImmutability"
+        ]
       },
       {
         "id": "FR-10.19",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestDriftReport"
+        ]
       },
       {
         "id": "FR-10.20",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestObserveCommands",
+          "internal/baseline.TestPromotionManualAndAutomatic",
+          "internal/e2e.TestObservationThroughGateway"
+        ]
       },
       {
         "id": "FR-10.21",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestObserveCommands",
+          "internal/anomaly.TestRollbackScoresRecordSnapshot",
+          "internal/baseline.TestRollbackAndIntegrity"
+        ]
       },
       {
         "id": "FR-10.22",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/anomaly.TestSnapshotLoadAtomicAndVerified"
+        ]
       },
       {
         "id": "FR-10.23",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/anomaly.TestZScoreAgainstReference"
+        ]
       },
       {
         "id": "FR-10.24",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/anomaly.TestRobustZ"
+        ]
       },
       {
         "id": "FR-10.25",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/anomaly.TestCombinationAndBands"
+        ]
       },
       {
         "id": "FR-10.26",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/anomaly.TestCombinationAndBands"
+        ]
       },
       {
         "id": "FR-10.27",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/anomaly.TestUncharacterizedContext"
+        ]
       },
       {
         "id": "FR-10.28",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/anomaly.TestConvergenceAndInjectedOutliers",
+          "internal/e2e.TestSynchronousAnomalyObligation"
+        ]
       },
       {
         "id": "FR-10.29",
@@ -2641,44 +2771,60 @@
       {
         "id": "FR-10.30",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/research.TestCampaignLifecycle"
+        ]
       },
       {
         "id": "FR-10.31",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/research.TestCampaignQuota"
+        ]
       },
       {
         "id": "FR-10.32",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/research.TestExtractionScopeAndPseudonyms"
+        ]
       },
       {
         "id": "FR-10.33",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/research.TestExtractionScopeAndPseudonyms"
+        ]
       },
       {
         "id": "FR-10.34",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/research.TestExportFormatsAndManifest",
+          "internal/research.TestRawGrantAndGraphML"
+        ]
       },
       {
         "id": "FR-10.35",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/research.TestExportFormatsAndManifest"
+        ]
       },
       {
         "id": "FR-10.36",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestObserveCommands",
+          "internal/e2e.TestObservationThroughGateway"
+        ]
       },
       {
         "id": "FR-10.37",
@@ -2707,8 +2853,10 @@
       {
         "id": "FR-11.3",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/anomaly.TestScoringLatency"
+        ]
       },
       {
         "id": "FR-11.4",
@@ -2725,14 +2873,18 @@
       {
         "id": "FR-11.6",
         "element": "E-27",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/obsstore.TestIngestRate"
+        ]
       },
       {
         "id": "FR-11.7",
         "element": "E-30",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/baseline.TestSnapshotBuildTime"
+        ]
       },
       {
         "id": "FR-11.8",
@@ -3541,8 +3693,10 @@
       {
         "id": "SR-1.12-2",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestSynchronousAnomalyObligation"
+        ]
       },
       {
         "id": "SR-1.12-3",
@@ -4012,8 +4166,10 @@
       {
         "id": "SR-4.2-2",
         "element": "E-27",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/obsstore.TestStoreLayoutAndModes"
+        ]
       },
       {
         "id": "SR-4.3-1",
@@ -4345,8 +4501,10 @@
       {
         "id": "SR-6-1",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/research.TestExtractionScopeAndPseudonyms"
+        ]
       },
       {
         "id": "SR-6.1-1",
@@ -4362,8 +4520,10 @@
       {
         "id": "SR-6-2",
         "element": "E-32",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/research.TestRawGrantAndGraphML"
+        ]
       },
       {
         "id": "SR-6.2-1",
@@ -4482,7 +4642,8 @@
         "status": "partial",
         "tests": [
           "internal/consoleapi.TestAuditExportNeutralisesFormulas",
-          "internal/consoleapi.TestStaticConsoleCSPAndDeepLinks"
+          "internal/consoleapi.TestStaticConsoleCSPAndDeepLinks",
+          "internal/research.TestExportFormatsAndManifest"
         ]
       },
       {
@@ -4506,8 +4667,10 @@
       {
         "id": "SR-7-1",
         "element": "E-31",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/baseline.TestRollbackAndIntegrity"
+        ]
       },
       {
         "id": "SR-7.1-1",
