@@ -84,10 +84,27 @@ site: site/node_modules ## Typecheck and build the static site into site/out
 	cd site && npx --no-install tsc --noEmit
 	cd site && $(NPM) run build
 
+console/node_modules: console/package-lock.json
+	cd console && $(NPM) ci --no-audit --no-fund
+	@touch console/node_modules
+
+.PHONY: console
+console: console/node_modules ## Typecheck and build the console into console/dist (commit the result)
+	cd console && $(NPM) run build
+
+.PHONY: console-check
+console-check: console ## Fail when the committed console/dist differs from a fresh build
+	@out=$$(git status --porcelain -- console/dist); if [ -n "$$out" ]; then echo "console/dist is stale; commit the rebuilt files:"; echo "$$out"; exit 1; fi
+
+.PHONY: console-e2e
+console-e2e: console/node_modules ## Playwright acceptance tests of the console against a real smcpd
+	cd console && npx --no-install playwright install chromium && npx --no-install playwright test
+
 .PHONY: vuln
 vuln: ## govulncheck and npm audit gate
 	$(GO) run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 	scripts/npm-audit-gate.sh site
+	scripts/npm-audit-gate.sh console
 
 .PHONY: status
 status: ## Full tests with coverage, then build/reqreport.{json,md} and build/status.json
@@ -104,7 +121,7 @@ integration: ## Bootstrap, run smcpd, drive an MCP client, verify the journal
 check: srs-check build vet fmt-check tidy-check race lint site-typecheck ## Everything the required CI jobs check (fast form)
 
 .PHONY: check-full
-check-full: check site vuln integration ## check plus site build, vulnerability scans and the integration run
+check-full: check site vuln integration console-check console-e2e ## check plus site build, vulnerability scans, the integration run and the console job
 
 .PHONY: release-snapshot
 release-snapshot: ## Build release archives locally into build/dist (no publishing)

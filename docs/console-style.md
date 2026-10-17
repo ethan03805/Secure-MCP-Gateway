@@ -13,3 +13,14 @@ Checklist for the management console (E-24). Each view is inspected against it b
 | Hand-built components | Components are written in the project; no component kit (no Mantine or similar). |
 | Accessibility | WCAG 2.2 AA (FR-8.32): contrast at least 4.5:1 for text, visible focus, target size at least 24 by 24 CSS px, every action reachable by keyboard (FR-8.33). |
 | Local assets | All scripts, styles and fonts are served by the Gateway (FR-8.26). |
+
+## Implementation
+
+The console (`console/src/styles.css`) applies these rules with:
+
+- Typeface: IBM Plex Sans (400, 600) for text and IBM Plex Mono (400, 500) for IDs, revisions, digests and reason codes, bundled from `@fontsource` (OFL-1.1) and served by `smcpd`.
+- Type scale: 12, 13, 14, 16 and 20 px. Tables and monospace text are 13 px; body text 14 px.
+- Table rows are 30 px high plus a 1 px rule.
+- Palette: the reference site tokens (paper, surface, ink, rule, moss) plus four state colors, each redefined for the dark scheme. State is also carried by a word and a shape: square (good), diamond (degraded or warning), triangle (failure or refusal), ring (pending).
+- Components are in `console/src/ui.tsx`; there is no component library.
+- Automated checks: `console/e2e/a11y.spec.ts` runs axe-core with the WCAG 2.2 A and AA rule sets on every view in light and dark schemes.

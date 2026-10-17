@@ -29,6 +29,7 @@ keeps today's behavior, and test the default.
 | `keys` | E-22 (part) | Name-constrained local server CA, listener certificate and rotation, evidence key, operator token, Argon2id. |
 | `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload; role seam (`AddAuthenticator`, `HandleRoles`, `HandlePublic`, `ActorOf`, `RoleOf`). |
 | `approval` | E-07 | Approval Service: persisted one-use approvals bound per SR-1.18-2, hold mode, CP-17 expiry, `/api/v1/approvals*`, Approver accounts, watch stream, desktop notifier, harness status route. Wired in `cmd/smcpd`. |
+| `consoleapi` | E-24 | Console backend: serves the embedded console (`console/`, `go:embed`) under a strict CSP, `/api/v1/sessions*`, `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/audit/*` (journal browser, export, verification, evidence stream). Attached in `cmd/smcpd` with `consoleapi.Attach`. |
 | `profile` | E-23 (part), E-16 | Standalone versus enforced profile decision. |
 | `config` | all | TOML configuration validated against `config.schema.json`; Appendix A defaults by key presence. |
 | `diag` | all | Diagnostic logger (slog). Not evidence; never logs secrets, tokens or arguments. |
