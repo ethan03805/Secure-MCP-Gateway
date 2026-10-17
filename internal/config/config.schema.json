@@ -61,6 +61,29 @@
         }
       }
     },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lifetime": { "$ref": "#/$defs/duration" },
+        "keepalive": { "$ref": "#/$defs/duration" },
+        "notify": { "enum": ["auto", "off", "osascript", "terminal-notifier", "notify-send", "command"] },
+        "notify_command": { "type": "string", "minLength": 1 },
+        "console_url": { "type": "string", "pattern": "^https://" },
+        "account": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["username", "password_hash"],
+            "properties": {
+              "username": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+              "password_hash": { "$ref": "#/$defs/argon2id" }
+            }
+          }
+        }
+      }
+    },
     "policy": {
       "type": "object",
       "additionalProperties": false,

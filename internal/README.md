@@ -24,7 +24,8 @@ keeps today's behavior, and test the default.
 | `policy` | E-05 (part), E-06 | Schema-validated policy document, compiled snapshot, decisions, rate windows, filter obligations, `Replace` for hot swap. |
 | `audit` | E-21 | Signed hash-chained journal with group-committed fsync, crash recovery, external anchor, verifier; `Fanout` with non-blocking observers; `Memory` for tests. |
 | `keys` | E-22 (part) | Name-constrained local server CA, listener certificate and rotation, evidence key, operator token, Argon2id. |
-| `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload, approvals placeholder. |
+| `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload; role seam (`AddAuthenticator`, `HandleRoles`, `HandlePublic`, `ActorOf`, `RoleOf`). |
+| `approval` | E-07 | Approval Service: persisted one-use approvals bound per SR-1.18-2, hold mode, CP-17 expiry, `/api/v1/approvals*`, Approver accounts, watch stream, desktop notifier, harness status route. Wired in `cmd/smcpd`. |
 | `profile` | E-23 (part), E-16 | Standalone versus enforced profile decision. |
 | `config` | all | TOML configuration validated against `config.schema.json`; Appendix A defaults by key presence. |
 | `diag` | all | Diagnostic logger (slog). Not evidence; never logs secrets, tokens or arguments. |
@@ -55,7 +56,9 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 
 | Seam | Interface | Default | Element and future work |
 |---|---|---|---|
-| Approval | `pipeline.Approver` (`Request(ctx, ApprovalRequest) (ApprovalResult, error)`), `adminapi.Approvals` | `RefuseApprover`: immediate `-31002` with retry text and console link | E-07 agent: hold mode up to `limits.approval_hold` with progress keep-alives, `smcpctl approvals`, console (G-13), desktop notification. |
+| Approval | `pipeline.Approver` (`Request(ctx, ApprovalRequest) (ApprovalResult, error)`), `adminapi.Approvals` | `RefuseApprover`: immediate `-31002` with retry text and console link | Filled by `internal/approval` in `cmd/smcpd`. Anomaly (E-31) and taint obligations still need to reach it; the console (G-13) reads `/api/v1/approvals`. |
+| Harness routes | `edge.Gateway.HandleSession(pattern, SessionHandler)` | none | Routes on the harness listener for an authenticated session (E-07 uses `/smcp/v1/approvals/{id}`). |
+| Control API roles | `adminapi.Authenticator`, `Server.HandleRoles(pattern, h, roles...)` | `Handle` routes are Administrator-only | An element that owns accounts of another Appendix C role registers an Authenticator; its tokens reach only `HandleRoles` routes naming the role. |
 | Request filters | `pipeline.RequestFilter`, registered with `Filters.RegisterRequest(f, Registration{Order, Mandatory})` | `schema-validate` (mandatory, order 100) | E-09 agent: `path-canonicalize`, `url-canonicalize`, `size-limit`, `secret-fingerprint`, `injection-detect`, `unicode-control`. Non-mandatory filters run when a policy rule names them in `filters`. |
 | Response filters | `pipeline.ResponseFilter`, `Filters.RegisterResponse` | none | E-11 agent. A filter error or an unknown obligation ID refuses the call. |
 | Launch | `pipeline.Launcher` (`Launch(ctx, ServerSpec) (Process, error)`, `Confined()`) | `SubprocessLauncher` (unconfined); `InProcessLauncher` for tests | E-15/E-16 agent: rootless Podman launcher with nftables egress (E-18) and cgroup limits; returning `Confined() == true` moves the Gateway to the enforced profile on a capable Linux host. |
@@ -79,9 +82,11 @@ evidence observers and must not gate enforcement.
   of envelope). When the request ID of an oversized response is not within
   the retained prefix, the response is dropped and the call ends at the
   upstream timeout as indeterminate. Nesting depth is not bounded.
-- Approval keep-alives: the MCP endpoint answers in JSON mode, so progress
-  notifications sent while a call is held may not reach the harness. The
-  E-07 agent needs to answer held calls as an event stream.
+- Held calls: a `tools/call` is served by an event-stream SDK handler
+  behind a buffering writer (`edge/stream.go`) and re-encoded as JSON when
+  it is never held. A tools/call response that carries more than one event
+  without being held (for example backend notifications) is sent as an
+  event stream.
 - Anchor rollback: replacing the anchor with an older signed copy together
   with deleting later segments is not detectable locally; export the anchor
   off the machine (FR-7.14).

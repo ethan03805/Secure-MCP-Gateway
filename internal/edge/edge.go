@@ -124,6 +124,9 @@ type Gateway struct {
 	stopped atomic.Bool  // FR-4.14 emergency stop
 	mux     *http.ServeMux
 	handler *mcp.StreamableHTTPHandler
+	// streamHandler answers tools/call requests as an event stream behind a
+	// heldWriter (stream.go) so held calls can carry keep-alives (FR-3.19).
+	streamHandler *mcp.StreamableHTTPHandler
 
 	mu      sync.Mutex
 	servers map[string]*sessionServer
@@ -174,9 +177,14 @@ func New(d Deps) (*Gateway, error) {
 		MaxRequestBodyBytes: d.Config.Limits.RequestBodyBytes, // CP-07, before parsing (SR-7.11-1)
 		Logger:              d.Log,
 	})
+	g.streamHandler = mcp.NewStreamableHTTPHandler(g.serverFor, &mcp.StreamableHTTPOptions{
+		Stateless:           true,
+		MaxRequestBodyBytes: d.Config.Limits.RequestBodyBytes,
+		Logger:              d.Log,
+	})
 	g.mux = http.NewServeMux()
 	d.OAuth.Register(g.mux)
-	g.mux.Handle(d.Config.Listener.MCPPath, g.mcpChain(g.handler))
+	g.mux.Handle(d.Config.Listener.MCPPath, g.mcpChain(http.HandlerFunc(g.serveMCP)))
 	g.mux.HandleFunc("GET /healthz", g.healthz)
 	d.Store.OnEnd(g.sessionEnded)
 	return g, nil
@@ -440,6 +448,9 @@ func gatewayError(code int64, msg, reason, correlation, decision string, extra m
 	}
 	for k, v := range extra {
 		data[k] = v
+	}
+	if _, ok := data["message"]; !ok { // FR-1.51
+		data["message"] = Message(code, reason, data)
 	}
 	raw, _ := json.Marshal(data)
 	return &jsonrpc.Error{Code: code, Message: msg, Data: raw}

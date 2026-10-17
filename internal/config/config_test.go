@@ -50,7 +50,7 @@ func TestDefaultsAndSchema(t *testing.T) {
 	if l.RequestBodyBytes != 1<<20 || l.ResultBytes != 8<<20 || l.ToolConcurrencyPerUser != 4 || l.ToolConcurrencyTotal != 16 || l.ToolQueue != 32 ||
 		l.PrincipalCallsPerMin != 60 || l.UpstreamTimeout.Duration != 45*time.Second || l.ClientDeadline.Duration != 60*time.Second ||
 		l.SessionMaxLifetime.Duration != 8*time.Hour || l.SessionIdleTimeout.Duration != 30*time.Minute || l.SessionsPerPrincipal != 8 ||
-		l.CatalogTTLMs != 60000 || l.CatalogPageSize != 100 || l.ListenStreamsPerSess != 2 || l.ApprovalHold.Duration != 60*time.Second {
+		l.CatalogTTLMs != 60000 || l.CatalogPageSize != 100 || l.ListenStreamsPerSess != 2 || l.ApprovalHold.Duration != 120*time.Second {
 		t.Fatalf("defaults differ from Appendix A: %+v", l)
 	}
 	bad := map[string]string{

@@ -39,7 +39,8 @@ type ApprovalRequest struct {
 // ApprovalResult is the Approver's answer. ApprovalID and Approver identify
 // the approval record for evidence; RetryText is plain-language guidance
 // shown to the agent when the outcome is Pending; ConsoleURL deep-links to
-// the pending approval.
+// the pending approval and ExpiresAt is when it lapses (CP-17), both
+// reported in the -31002 data (FR-3.22).
 type ApprovalResult struct {
 	Outcome    ApprovalOutcome
 	ApprovalID string
@@ -47,6 +48,7 @@ type ApprovalResult struct {
 	ReasonCode string
 	RetryText  string
 	ConsoleURL string
+	ExpiresAt  time.Time
 }
 
 // Approver is the Approval Service seam (E-07). An error is treated as

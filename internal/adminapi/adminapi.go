@@ -21,11 +21,14 @@
 //	POST stop             {reason}: emergency stop (FR-4.14), audited
 //	POST resume           leave emergency stop, audited
 //	POST policy/reload    validate and activate the policy file (FR-3.10)
-//	GET  approvals        pending approvals (placeholder until E-07)
+//	GET  approvals        pending approvals (the Approval Service, E-07, when registered)
 //	POST approvals/{id}   {decision: approve|deny, reason}
 //
 // Later E-24 work adds routes with Server.Handle, which applies the same
-// authentication and CSRF rules.
+// authentication and CSRF rules. Handle routes are Administrator-only;
+// HandleRoles admits other roles whose tokens an element's Authenticator
+// resolves (roles.go). The Approval Service's /api/v1/approvals routes are
+// registered that way (internal/approval).
 package adminapi
 
 import (
@@ -103,6 +106,7 @@ type Server struct {
 
 	mu       sync.Mutex
 	sessions map[[32]byte]adminSession
+	authn    []Authenticator // roles.go
 }
 
 type adminSession struct {
@@ -145,9 +149,10 @@ func New(o Options) (*Server, error) {
 	return s, nil
 }
 
-// Handle registers an authenticated route.
+// Handle registers an authenticated route for the Administrator role
+// (HandleRoles admits other roles).
 func (s *Server) Handle(pattern string, h http.HandlerFunc) {
-	s.mux.Handle(pattern, s.authenticated(h))
+	s.mux.Handle(pattern, s.authenticatedRoles(h, nil))
 }
 
 // Handler returns the listener's handler with the host, origin and
@@ -234,6 +239,10 @@ func (s *Server) authenticated(next http.HandlerFunc) http.Handler {
 			}
 			s.mu.Unlock()
 		}
+		role := RoleAdministrator
+		if actor == "" {
+			actor, role, _ = s.extraActor(tok)
+		}
 		if actor == "" {
 			if err := s.rec.Commit(audit.Event{Class: "auth_failure", Origin: "E-24", Outcome: "deny", ReasonCode: "ADMIN_AUTH_FAILED", PolicyStatus: "not_evaluated",
 				Detail: map[string]any{"path": r.URL.Path}}); err != nil {
@@ -243,7 +252,7 @@ func (s *Server) authenticated(next http.HandlerFunc) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthenticated", "administrator authentication required")
 			return
 		}
-		next(w, r.WithContext(context.WithValue(r.Context(), actorKey{}, actor)))
+		next(w, r.WithContext(withRole(r.Context(), actor, role)))
 	})
 }
 

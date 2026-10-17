@@ -1,0 +1,95 @@
+package adminapi
+
+import (
+	"context"
+	"net/http"
+	"slices"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
+)
+
+// Application roles of SRS Appendix C that the control API distinguishes
+// today. The operator token and administrator session tokens carry
+// RoleAdministrator; other roles come from an Authenticator registered by
+// the element that owns the accounts (E-07 registers Approver accounts).
+const (
+	RoleAdministrator = "administrator"
+	RoleApprover      = "approver"
+)
+
+// Authenticator resolves a bearer token that is neither the operator token
+// nor an administrator session token. It returns the actor recorded in
+// evidence (for example "approver:alice") and the actor's role.
+type Authenticator interface {
+	Authenticate(token string) (actor, role string, ok bool)
+}
+
+// AddAuthenticator registers an additional token authenticator. Tokens it
+// accepts reach only the routes registered with HandleRoles that name the
+// token's role; Handle routes stay Administrator-only.
+func (s *Server) AddAuthenticator(a Authenticator) {
+	s.mu.Lock()
+	s.authn = append(s.authn, a)
+	s.mu.Unlock()
+}
+
+// HandleRoles registers an authenticated route that accepts the
+// Administrator and the listed roles.
+func (s *Server) HandleRoles(pattern string, h http.HandlerFunc, roles ...string) {
+	s.mux.Handle(pattern, s.authenticatedRoles(h, roles))
+}
+
+// HandlePublic registers a route without bearer authentication, for an
+// element's own sign-in endpoint. The listener's host, origin and
+// content-type checks still apply.
+func (s *Server) HandlePublic(pattern string, h http.HandlerFunc) {
+	s.mux.HandleFunc(pattern, h)
+}
+
+// ActorOf returns the authenticated actor of a request ("operator-token",
+// "admin:<user>" or an Authenticator's actor).
+func ActorOf(r *http.Request) string { return actorOf(r) }
+
+// RoleOf returns the authenticated role of a request.
+func RoleOf(r *http.Request) string { v, _ := r.Context().Value(roleKey{}).(string); return v }
+
+type roleKey struct{}
+
+// extraActor runs the registered authenticators. It returns ok=false when
+// none accepts the token.
+func (s *Server) extraActor(tok string) (actor, role string, ok bool) {
+	if tok == "" {
+		return "", "", false
+	}
+	s.mu.Lock()
+	authn := slices.Clone(s.authn)
+	s.mu.Unlock()
+	for _, a := range authn {
+		if actor, role, ok := a.Authenticate(tok); ok {
+			return actor, role, true
+		}
+	}
+	return "", "", false
+}
+
+// authenticatedRoles authenticates like Handle routes and additionally
+// accepts actors of the listed roles from registered authenticators. An
+// authenticated actor without one of the roles is refused with 403.
+func (s *Server) authenticatedRoles(next http.HandlerFunc, roles []string) http.Handler {
+	return s.authenticated(func(w http.ResponseWriter, r *http.Request) {
+		role := RoleOf(r)
+		if role != RoleAdministrator && !slices.Contains(roles, role) {
+			if err := s.rec.Commit(audit.Event{Class: "auth_failure", Origin: "E-24", Outcome: "deny", ReasonCode: "ADMIN_ROLE_REFUSED", PolicyStatus: "not_evaluated",
+				Detail: map[string]any{"path": r.URL.Path, "actor": actorOf(r), "role": role}}); err != nil {
+				s.log.Error("evidence write failed", "err", err)
+			}
+			writeError(w, http.StatusForbidden, "role_refused", "this account's role does not permit this operation")
+			return
+		}
+		next(w, r)
+	})
+}
+
+func withRole(ctx context.Context, actor, role string) context.Context {
+	return context.WithValue(context.WithValue(ctx, actorKey{}, actor), roleKey{}, role)
+}
