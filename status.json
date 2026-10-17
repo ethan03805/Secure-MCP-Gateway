@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T06:26:34Z",
-  "commit": "98c8a6ca06aa97cd3c302bb3876e19fe9bee4b3d",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/98c8a6ca06aa97cd3c302bb3876e19fe9bee4b3d",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39009400813",
+  "generatedAt": "2026-10-17T06:37:04Z",
+  "commit": "ba54fd5ed2fe79ec08511a2fe0868b6de551cc1f",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ba54fd5ed2fe79ec08511a2fe0868b6de551cc1f",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39010073500",
   "tests": {
-    "total": 804,
-    "passed": 786,
-    "failed": 1,
+    "total": 807,
+    "passed": 790,
+    "failed": 0,
     "skipped": 17,
-    "durationSec": 459.9,
+    "durationSec": 438.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -103,8 +103,8 @@
       },
       {
         "name": "internal/backend",
-        "passed": 16,
-        "failed": 1,
+        "passed": 19,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -318,6 +318,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/testport",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "scripts/agents",
         "passed": 24,
         "failed": 0,
@@ -412,7 +418,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 89.8
+        "pct": 89.9
       },
       {
         "name": "internal/backup",
@@ -460,11 +466,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.6
+        "pct": 82.8
       },
       {
         "name": "internal/gwtest",
-        "pct": 79.5
+        "pct": 79.7
       },
       {
         "name": "internal/harness",
@@ -476,7 +482,7 @@
       },
       {
         "name": "internal/hostile",
-        "pct": 75.6
+        "pct": 76.3
       },
       {
         "name": "internal/ids",
@@ -575,6 +581,10 @@
         "pct": 85.7
       },
       {
+        "name": "internal/testport",
+        "pct": 64.5
+      },
+      {
         "name": "internal/tunnel",
         "pct": 77.2
       },
@@ -606,8 +616,8 @@
   },
   "requirements": {
     "total": 543,
-    "verified": 188,
-    "partial": 211,
+    "verified": 189,
+    "partial": 210,
     "failing": 0,
     "unverified": 144,
     "byElement": [
@@ -687,8 +697,8 @@
         "element": "E-10",
         "name": "Tool Dispatcher",
         "total": 22,
-        "verified": 6,
-        "partial": 6,
+        "verified": 7,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -2006,7 +2016,7 @@
       {
         "id": "FR-5.20",
         "element": "E-10",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "console/e2e/firefox.views.spec.ts > Runtime: launcher, prerequisites and instances",
@@ -6141,7 +6151,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6176,7 +6186,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:34351: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41893: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6210,7 +6220,7 @@
       "attack": "Legacy server-initiated request",
       "expected": "Rejected; nothing relayed northbound",
       "fixture": "HF-26",
-      "observed": "standalone: fixture saw: \"roots/list=error(-32601) sampling/createMessage=error(-32601)\" (result released); sampling requests relayed to the client: 0 | enforced: fixture saw: \"roots/list=error(-32601) sampling/createMessage=error(-32601)\" (result released); sampling requests relayed to the client: 0",
+      "observed": "standalone: fixture saw: \"roots/list=error(-32601) sampling/createMessage=error(-32601)\" (result released); batch line: \"ping=empty-result roots/list=error(-32601) sampling/createMessage=error(-32601) elicitation/create=error(-32601)\" (result released); sampling requests relayed to the client: 0 | enforced: fixture saw: \"roots/list=error(-32601) sampling/createMessage=error(-32601)\" (result released); batch line: \"ping=empty-result roots/list=error(-32601) sampling/createMessage=error(-32601) elicitation/create=error(-32601)\" (result released); sampling requests relayed to the client: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6232,6 +6242,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
