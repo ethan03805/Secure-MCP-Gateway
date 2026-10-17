@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T00:53:41Z",
-  "commit": "8afd212c0eee6ba82537f7be6990cbc61387cfc0",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/8afd212c0eee6ba82537f7be6990cbc61387cfc0",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38988327012",
+  "generatedAt": "2026-10-17T01:02:51Z",
+  "commit": "713580e56c7cbbcaad3003caeb8d1324b1db9b7b",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/713580e56c7cbbcaad3003caeb8d1324b1db9b7b",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38988910895",
   "tests": {
-    "total": 260,
-    "passed": 255,
+    "total": 295,
+    "passed": 290,
     "failed": 0,
     "skipped": 5,
-    "durationSec": 72.4,
+    "durationSec": 101.6,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 10,
+        "passed": 15,
         "failed": 0,
         "skipped": 0
       },
@@ -37,7 +37,7 @@
       },
       {
         "name": "internal/audit",
-        "passed": 9,
+        "passed": 14,
         "failed": 0,
         "skipped": 0
       },
@@ -54,8 +54,14 @@
         "skipped": 0
       },
       {
+        "name": "internal/backup",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/config",
-        "passed": 11,
+        "passed": 14,
         "failed": 0,
         "skipped": 0
       },
@@ -67,13 +73,13 @@
       },
       {
         "name": "internal/diag",
-        "passed": 1,
+        "passed": 4,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/e2e",
-        "passed": 19,
+        "passed": 25,
         "failed": 0,
         "skipped": 0
       },
@@ -96,8 +102,20 @@
         "skipped": 0
       },
       {
+        "name": "internal/health",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/keys",
-        "passed": 4,
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/metrics",
+        "passed": 2,
         "failed": 0,
         "skipped": 0
       },
@@ -158,7 +176,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 77.9,
+    "totalPct": 75.1,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -166,7 +184,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 29.7
+        "pct": 23.9
       },
       {
         "name": "cmd/smcpd",
@@ -178,7 +196,7 @@
       },
       {
         "name": "internal/adminapi",
-        "pct": 80.8
+        "pct": 81.2
       },
       {
         "name": "internal/app",
@@ -190,7 +208,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 82.4
+        "pct": 80.9
       },
       {
         "name": "internal/authguard",
@@ -198,11 +216,15 @@
       },
       {
         "name": "internal/backend",
-        "pct": 85.6
+        "pct": 85.7
+      },
+      {
+        "name": "internal/backup",
+        "pct": 75.9
       },
       {
         "name": "internal/config",
-        "pct": 91.7
+        "pct": 90.9
       },
       {
         "name": "internal/consoleapi",
@@ -210,7 +232,7 @@
       },
       {
         "name": "internal/diag",
-        "pct": 93.8
+        "pct": 81.7
       },
       {
         "name": "internal/edge",
@@ -225,12 +247,24 @@
         "pct": 88.9
       },
       {
+        "name": "internal/health",
+        "pct": 94.4
+      },
+      {
         "name": "internal/ids",
         "pct": 75
       },
       {
         "name": "internal/keys",
-        "pct": 74.1
+        "pct": 76.6
+      },
+      {
+        "name": "internal/metrics",
+        "pct": 95.6
+      },
+      {
+        "name": "internal/ops",
+        "pct": 72.6
       },
       {
         "name": "internal/pipeline",
@@ -238,7 +272,7 @@
       },
       {
         "name": "internal/policy",
-        "pct": 93
+        "pct": 92.9
       },
       {
         "name": "internal/policyadmin",
@@ -284,10 +318,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 73,
-    "partial": 86,
+    "verified": 82,
+    "partial": 104,
     "failing": 0,
-    "unverified": 399,
+    "unverified": 372,
     "byElement": [
       {
         "element": "E-01",
@@ -382,7 +416,7 @@
         "name": "Enforcement Coordinator",
         "total": 15,
         "verified": 3,
-        "partial": 2,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -453,24 +487,24 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 24,
-        "verified": 3,
-        "partial": 2,
+        "verified": 5,
+        "partial": 3,
         "failing": 0
       },
       {
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
         "total": 10,
-        "verified": 0,
-        "partial": 3,
+        "verified": 1,
+        "partial": 4,
         "failing": 0
       },
       {
         "element": "E-23",
         "name": "Health & Safety Monitor",
         "total": 13,
-        "verified": 0,
-        "partial": 1,
+        "verified": 5,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -478,7 +512,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 0,
-        "partial": 13,
+        "partial": 18,
         "failing": 0
       },
       {
@@ -509,8 +543,8 @@
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
         "total": 13,
-        "verified": 0,
-        "partial": 0,
+        "verified": 1,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -1936,26 +1970,40 @@
       {
         "id": "FR-7.11",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/health.TestChecks",
+          "internal/health.TestEveryCachesAndPanicIsCritical",
+          "internal/health.TestRunEvaluatesWithinTwoSeconds"
+        ]
       },
       {
         "id": "FR-7.12",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/health.TestStatesAndCauses"
+        ]
       },
       {
         "id": "FR-7.13",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/health.TestRecoveryNeedsTenClearSecondsAndAck"
+        ]
       },
       {
         "id": "FR-7.14",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestOfflineOpsCommands",
+          "internal/audit.TestExporterCopiesOnce",
+          "internal/e2e.TestOpsEvidenceExport"
+        ]
       },
       {
         "id": "FR-8",
@@ -2291,8 +2339,11 @@
       {
         "id": "FR-9.16",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/backup.TestEncryptedArchives",
+          "internal/e2e.TestOpsOnlineBackup"
+        ]
       },
       {
         "id": "FR-9.17",
@@ -2656,8 +2707,11 @@
       {
         "id": "FR-12.7",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestOfflineOpsCommands",
+          "cmd/smcpctl.TestOnlineOpsCommands"
+        ]
       },
       {
         "id": "FR-12.8",
@@ -2751,14 +2805,20 @@
       {
         "id": "FR-13.7",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestUpgradeAndRollback",
+          "cmd/smcpctl.TestVerifyRelease"
+        ]
       },
       {
         "id": "FR-13.8",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestUpgradeAndRollback",
+          "internal/e2e.TestOpsUpgradeMarkerRecorded"
+        ]
       },
       {
         "id": "FR-13.9",
@@ -2772,26 +2832,37 @@
       {
         "id": "FR-13.10",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestOnlineOpsCommands",
+          "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/health.TestChecks"
+        ]
       },
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge"
+        ]
       },
       {
         "id": "FR-13.12",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge"
+        ]
       },
       {
         "id": "FR-13.13",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestOfflineOpsCommands",
+          "internal/config.TestSchemaVersion"
+        ]
       },
       {
         "id": "FR-14",
@@ -3024,56 +3095,88 @@
       {
         "id": "FR-17.1",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/diag.TestDaemonLoggerJSONLinesAndLevels"
+        ]
       },
       {
         "id": "FR-17.2",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/config.TestOpsDefaults",
+          "internal/diag.TestRotatingFileBounds"
+        ]
       },
       {
         "id": "FR-17.3",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/diag.TestRedactSensitiveAttributes"
+        ]
       },
       {
         "id": "FR-17.4",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/config.TestOpsDefaults",
+          "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/metrics.TestListenRefusesNonLoopback"
+        ]
       },
       {
         "id": "FR-17.5",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/metrics.TestExpositionFromEvidence"
+        ]
       },
       {
         "id": "FR-17.6",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestOfflineOpsCommands",
+          "internal/backup.TestEncryptedArchives",
+          "internal/e2e.TestOpsOnlineBackup"
+        ]
       },
       {
         "id": "FR-17.7",
         "element": "E-22",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/audit.TestCrashAfterKeyTransition",
+          "internal/audit.TestKeyTransitionsVerify",
+          "internal/e2e.TestOpsKeyRotationUnderTraffic",
+          "internal/keys.TestCARotationOverlap",
+          "internal/keys.TestCertReloaderServesRotatedLeaf",
+          "internal/keys.TestPendingEvidenceKey"
+        ]
       },
       {
         "id": "FR-17.8",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/audit.TestKeyTransitionsVerify",
+          "internal/e2e.TestOpsKeyRotationUnderTraffic"
+        ]
       },
       {
         "id": "FR-17.9",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestOnlineOpsCommands",
+          "internal/config.TestDiffAndReloadableKeys",
+          "internal/e2e.TestOpsConfigReload"
+        ]
       },
       {
         "id": "FR-18",
@@ -3535,8 +3638,10 @@
       {
         "id": "SR-2.8-4",
         "element": "E-22",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/keys.TestCP53ServerCA"
+        ]
       },
       {
         "id": "SR-2.9-1",
@@ -4195,14 +4300,20 @@
       {
         "id": "SR-6.10-1",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/audit.TestExporterCopiesOnce"
+        ]
       },
       {
         "id": "SR-6.11-1",
         "element": "E-12",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/audit.TestAgeCloseKeepsSigningLagBelowMaxAge",
+          "internal/audit.TestSealUnsignedAndFlush",
+          "internal/health.TestChecks"
+        ]
       },
       {
         "id": "SR-6.12-1",
@@ -4318,14 +4429,19 @@
       {
         "id": "SR-7.7-1",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/audit.TestSealUnsignedAndFlush",
+          "internal/e2e.TestOpsOnlineBackup"
+        ]
       },
       {
         "id": "SR-7.8-1",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/backup.TestRestoreVerifiesBeforeSwapping"
+        ]
       },
       {
         "id": "SR-7.9-1",
@@ -4336,8 +4452,11 @@
       {
         "id": "SR-7.10-1",
         "element": "E-12",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/health.TestChecks"
+        ]
       },
       {
         "id": "SR-7.11-1",
@@ -4664,6 +4783,6 @@
   "hostile": [],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
