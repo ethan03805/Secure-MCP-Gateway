@@ -89,6 +89,12 @@ withhold_band = "abnormal"
 		t.Fatalf("abnormal response: %v %v", jerr, data)
 	}
 	respCorr, _ := data["correlationId"].(string)
+	// FR-1.51: the Table B.2 message (TestEveryReasonCodeEndToEnd lists
+	// ANOMALY_WITHHELD as triggered here).
+	_, messages, _ := appendixB(t)
+	if want := strings.ReplaceAll(messages["ANOMALY_WITHHELD"], "{correlationId}", respCorr); jerr.Code != edge.CodeResponseWithheld || data["message"] != want {
+		t.Fatalf("ANOMALY_WITHHELD: code %d message %q, want %q", jerr.Code, data["message"], want)
+	}
 	evs := of.journal()
 	if p := strings.Join(phasesOf(evs, reqCorr), ","); strings.Contains(p, "dispatched") || p == "" {
 		t.Fatalf("abnormal request phases %s", p)

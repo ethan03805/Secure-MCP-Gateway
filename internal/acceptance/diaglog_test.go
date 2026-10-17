@@ -23,9 +23,8 @@ import (
 //
 // FR-17.3 in part: at every level, including debug, the log holds none of
 // the access token, the approver and administrator passwords, the tool
-// argument marker or the tool result. Registered secret values are checked
-// against the debug log of the Secret Broker in
-// internal/secrets.TestBrokerLeakDetectionNorthbound.
+// argument marker or the tool result. Registered secret values and refresh
+// tokens are checked at debug level in TestDiagnosticLogExcludesSecrets.
 func TestDiagnosticLogLevelsAndContent(t *testing.T) {
 	reqtest.Verifies(t, "FR-17.1")
 	reqtest.Partial(t, "FR-17.3")

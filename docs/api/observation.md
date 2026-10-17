@@ -267,9 +267,10 @@ The campaign. 404 `not_found`.
 {"format": "jsonl", "from": "2026-10-16T00:00:00Z", "to": "2026-10-17T00:00:00Z",
  "scope": {"principals": ["cc"], "servers": ["fs"], "tools": []}, "parameters": ["P-024", "P-162"]}
 {"format": "graphml", "snapshot_id": "0199..."}
+{"format": "graphml", "subgraph": "audit", "from": "2026-10-16T00:00:00Z"}
 ```
 
-`format` is `parquet`, `csv`, `jsonl` or `graphml`. With `campaign_id` the campaign's scope, window and (by default) parameters are used, and the campaign must be `active`, `completed` or `exported`; a `completed` campaign becomes `exported`. Without parameters the default selection is used. Response 200, the manifest:
+`format` is `parquet`, `csv`, `jsonl` or `graphml`. For `graphml`, `subgraph` is `behavior-model` (default: the baseline snapshot) or `audit` (the calls in scope with their sessions, principals, tools and policy revisions; one `Call` node per record, so its count equals the rows of a tabular export of the same scope). With `campaign_id` the campaign's scope, window and (by default) parameters are used, and the campaign must be `active`, `completed` or `exported`; a `completed` campaign becomes `exported`. Without parameters the default selection is used. Response 200, the manifest:
 
 ```json
 {"dataset_id": "0199...", "created_at": "...", "created_by": "operator-token", "format": "csv", "campaign": null,

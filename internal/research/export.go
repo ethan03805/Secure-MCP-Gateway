@@ -48,7 +48,17 @@ type Request struct {
 	Scope      Scope     `json:"scope,omitempty"`
 	Parameters []string  `json:"parameters,omitempty"`
 	SnapshotID string    `json:"snapshot_id,omitempty"` // graphml: snapshot to export (default promoted)
+	// Subgraph selects the GraphML export: "behavior-model" (default, the
+	// baseline snapshot) or "audit" (the calls in scope with their
+	// sessions, principals, tools and policy revisions).
+	Subgraph string `json:"subgraph,omitempty"`
 }
+
+// GraphML subgraphs (FR-10.34).
+const (
+	SubgraphBehavior = "behavior-model"
+	SubgraphAudit    = "audit"
+)
 
 // File is one exported file.
 type File struct {
@@ -179,7 +189,11 @@ func (x *Exporter) Export(req Request, actor string) (Manifest, error) {
 		if _, ok := x.Store.(obsstore.ParquetWriter); !ok {
 			return m, ErrNoParquet
 		}
-	case CSV, JSONL, GraphML:
+	case CSV, JSONL:
+	case GraphML:
+		if req.Subgraph != "" && req.Subgraph != SubgraphBehavior && req.Subgraph != SubgraphAudit {
+			return m, fmt.Errorf("%w: GraphML subgraph %q (behavior-model, audit)", ErrFormat, req.Subgraph)
+		}
 	default:
 		return m, fmt.Errorf("%w: %q (parquet, csv, jsonl, graphml)", ErrFormat, req.Format)
 	}
@@ -230,7 +244,12 @@ func (x *Exporter) Export(req Request, actor string) (Manifest, error) {
 	if err != nil {
 		return m, err
 	}
-	if req.Format == GraphML {
+	if req.Format == GraphML && req.Subgraph == SubgraphAudit {
+		if err := x.exportAuditGraphML(&m, dir, key, scope, from, to); err != nil {
+			os.RemoveAll(dir)
+			return m, err
+		}
+	} else if req.Format == GraphML {
 		if err := x.exportGraphML(&m, dir, key, req.SnapshotID); err != nil {
 			os.RemoveAll(dir)
 			return m, err
@@ -245,6 +264,21 @@ func (x *Exporter) Export(req Request, actor string) (Manifest, error) {
 		}
 	}
 	return m, nil
+}
+
+// scopeFilter is the store filter of an extraction scope and time range.
+func scopeFilter(scope Scope, from, to time.Time) obsstore.Filter {
+	f := obsstore.Filter{From: from, To: to, Equals: map[string][]string{}}
+	if len(scope.Principals) > 0 {
+		f.Equals["principal_id"] = scope.Principals
+	}
+	if len(scope.Servers) > 0 {
+		f.Equals["server_id"] = scope.Servers
+	}
+	if len(scope.Tools) > 0 {
+		f.Equals["tool_name"] = scope.Tools
+	}
+	return f
 }
 
 func (x *Exporter) exportRecords(m *Manifest, dir string, key []byte, names []string, scope Scope, from, to time.Time, format string) error {
@@ -273,16 +307,7 @@ func (x *Exporter) exportRecords(m *Manifest, dir string, key []byte, names []st
 	for _, c := range cols {
 		m.Columns = append(m.Columns, c.Name)
 	}
-	f := obsstore.Filter{From: from, To: to, Equals: map[string][]string{}}
-	if len(scope.Principals) > 0 {
-		f.Equals["principal_id"] = scope.Principals
-	}
-	if len(scope.Servers) > 0 {
-		f.Equals["server_id"] = scope.Servers
-	}
-	if len(scope.Tools) > 0 {
-		f.Equals["tool_name"] = scope.Tools
-	}
+	f := scopeFilter(scope, from, to)
 	jsonlPath := filepath.Join(dir, "dataset.jsonl")
 	jf, err := os.OpenFile(jsonlPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
@@ -639,6 +664,93 @@ func (x *Exporter) exportGraphML(m *Manifest, dir string, key []byte, id string)
 		{Column: "edge NEXT_TOOL", Description: "Tool transition with its count in the sequence context"},
 	}
 	return finish(m, dir, "behavior-model.graphml", dict)
+}
+
+// exportAuditGraphML writes the audit subgraph of the records in scope:
+// one Call node per record (pseudonymized correlation ID, time, decision
+// outcome), Session and Principal nodes (pseudonymized), Tool nodes
+// (server and tool) and PolicyRevision nodes, with OPENED (principal to
+// session), MADE (session to call), INVOKED (call to tool) and
+// DECIDED_UNDER (call to policy revision) edges, after the Appendix D
+// audit relationships. The number of Call nodes equals the rows of a
+// tabular export of the same scope.
+func (x *Exporter) exportAuditGraphML(m *Manifest, dir string, key []byte, scope Scope, from, to time.Time) error {
+	doc := gmlDoc{XMLNS: "http://graphml.graphdrawing.org/xmlns", Keys: []gmlKey{
+		{"label", "node", "label", "string"}, {"kind", "node", "kind", "string"}, {"ts", "node", "ts", "string"},
+		{"outcome", "node", "decision_outcome", "string"}, {"rel", "edge", "type", "string"},
+	}, Graph: gmlGraph{ID: "audit-" + m.DatasetID, EdgeDefault: "directed"}}
+	nodes := map[string]bool{}
+	node := func(id, kind, label string, extra ...gmlData) string {
+		if !nodes[id] {
+			nodes[id] = true
+			doc.Graph.Nodes = append(doc.Graph.Nodes, gmlNode{ID: id, Data: append([]gmlData{{"label", label}, {"kind", kind}}, extra...)})
+		}
+		return id
+	}
+	edges := map[string]bool{}
+	edge := func(src, dst, rel string) {
+		if k := src + "\x00" + dst + "\x00" + rel; !edges[k] {
+			edges[k] = true
+			doc.Graph.Edges = append(doc.Graph.Edges, gmlEdge{Source: src, Target: dst, Data: []gmlData{{"rel", rel}}})
+		}
+	}
+	str := func(r obsstore.Row, k string) string { s, _ := r[k].(string); return s }
+	revs := map[string]bool{}
+	var first, last time.Time
+	err := x.Store.Scan("records", scopeFilter(scope, from, to), func(r obsstore.Row) error {
+		ts, _ := r["ts"].(time.Time)
+		if first.IsZero() || ts.Before(first) {
+			first = ts
+		}
+		if ts.After(last) {
+			last = ts
+		}
+		call := Pseudonym(key, str(r, "correlation_id"))
+		cid := node("call:"+call, "Call", call, gmlData{"ts", ts.UTC().Format(time.RFC3339Nano)}, gmlData{"outcome", str(r, "decision_outcome")})
+		m.Rows++
+		if s := str(r, "session_id"); s != "" {
+			ps := Pseudonym(key, s)
+			sid := node("session:"+ps, "Session", ps)
+			edge(sid, cid, "MADE")
+			if p := str(r, "principal_id"); p != "" {
+				pp := Pseudonym(key, p)
+				edge(node("principal:"+pp, "Principal", pp), sid, "OPENED")
+			}
+		}
+		if t := str(r, "tool_name"); t != "" {
+			label := str(r, "server_id") + "/" + t
+			edge(cid, node("tool:"+label, "Tool", label), "INVOKED")
+		}
+		if rev := str(r, "policy_revision"); rev != "" {
+			revs[rev] = true
+			edge(cid, node("policy:"+rev, "PolicyRevision", rev), "DECIDED_UNDER")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	m.PolicyRevisions = sortedKeys(revs)
+	if !first.IsZero() {
+		m.TimeRange = map[string]any{"first": first, "last": last}
+	}
+	m.Columns = []string{"nodes:Call,Session,Principal,Tool,PolicyRevision", "edges:OPENED,MADE,INVOKED,DECIDED_UNDER"}
+	out, err := xml.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(dir, "audit.graphml"), append([]byte(xml.Header), out...), 0o600); err != nil {
+		return err
+	}
+	dict := []DictEntry{
+		{Column: "node kind Call", Description: "One observed tool call: label is the pseudonymized correlation ID, ts its time, decision_outcome the policy outcome", Pseudonymized: true},
+		{Column: "node kind Session", Description: "Gateway session (pseudonymized session ID)", Pseudonymized: true},
+		{Column: "node kind Principal", Description: "Framework instance (pseudonymized principal ID)", Pseudonymized: true},
+		{Column: "node kind Tool", Description: "Server alias and tool name"},
+		{Column: "node kind PolicyRevision", Description: "Policy revision the call was decided under"},
+		{Column: "edges", Description: "OPENED principal to session, MADE session to call, INVOKED call to tool, DECIDED_UNDER call to policy revision"},
+	}
+	return finish(m, dir, "audit.graphml", dict)
 }
 
 func boolKeys[V any](m map[string]V) map[string]bool {

@@ -48,23 +48,24 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `APPROVAL_EXPIRED` | `-31002` | The approval expired (CP-17) while the call was held | Repeat the request to ask for a new approval; decide within `approvals.lifetime` |
 | `APPROVAL_CONSUMED` | `-31002` | An identical concurrent call used the one-use approval first | Repeat the request |
 | `APPROVAL_UNAVAILABLE` | `-31002` | The approval service could not take the request (for example, the journal could not record it) | `smcpctl health`; check the journal directory and the diagnostic log |
-| `FILTER_BLOCKED` | `-31003` | A required response filter blocked the result | Look up the correlation ID; the filter finding names the rule and rule-set version |
+| `FILTER_BLOCKED` | `-31003` | A required response filter blocked the result (including a filter that names no reason of its own) | Look up the correlation ID; the `filter` event names the filter, the rule and the rule-set version |
 | `SECRET_LEAK` | `-31003` | The result appeared to contain a registered secret | Review the server; the secret grant is suspended until you re-enable it |
 | `RESULT_TOO_LARGE` | `-31003` | The result exceeded the size bound (CP-08) | Narrow the request, or raise the bound if the result is legitimate |
-| `RELEASE_REFUSED` | `-31003` | The session, policy or stop state changed while the tool ran | Repeat the request |
+| `RELEASE_REFUSED` | `-31003` | The release recheck failed: the session was suspended or ended, or an emergency stop is in effect (the journal's `withheld` event names the cause) | Repeat the request |
+| `OUTCOME_UNRECORDED` | `-31003` | The tool ran, but its outcome could not be recorded in the evidence journal, so the result was withheld (SR-6.3-1) | Check disk space and permissions of the journal directory; check whether the action happened before repeating it |
 | `FAIL_CLOSED` | `-31004` | A critical health check failed | Run `smcpctl health`; fix the listed cause (policy snapshot, journal, vault, clock, trust anchors, audit capacity) |
 | `EMERGENCY_STOP` | `-31004` | An emergency stop is in effect | An Administrator resumes with `smcpctl resume` or from G-01 |
 | `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | If health lists `policy_signature`, a file under `state/policy/` was altered: restore it from a backup and restart, or publish a valid revision with `smcpctl policy publish`. If it lists `policy_invalid`, the signed document fails the current schema or cross-reference checks: publish a corrected revision |
-| `JOURNAL_UNAVAILABLE` | `-31004`, `-31003` | The decision (`-31004`, the call did not run) or the outcome (`-31003`, the call ran and its result was withheld) could not be recorded in the evidence journal | Check disk space and permissions of the journal directory |
+| `JOURNAL_UNAVAILABLE` | `-31004` | The decision could not be recorded in the evidence journal; the call did not run | Check disk space and permissions of the journal directory |
 | `POLICY_REVISION_CHANGED` | `-31004` | The policy changed between decision and launch | Repeat the request |
-| `CAPABILITY` | `-31004` | The one-use launch capability was missing or already used | Repeat the request; if it repeats, report the correlation ID |
+| `CAPABILITY` | `-31004` | The one-use launch capability was missing, expired or already used (FR-4.13) | Repeat the request; if it repeats, report the correlation ID; a correct Gateway never produces it |
 | `RATE_LIMITED` | `-31005` | A rate or burst limit was reached (principal, session or session-tool window) | Wait; `data.callsPerMinute` and `data.burst` show the limits |
 | `QUOTA_EXHAUSTED` | `-31005` | The session used its `calls_per_session` quota | Start a new session, or raise the quota in the template or rule |
 | `QUEUE_FULL` | `-31005` | The dispatch queue is full, or (before authentication) the CP-09 unauthenticated-work limit of the harness listener is in use | Wait, or raise the concurrency limits (CP-10) |
 | `SESSION_LIMIT` | `-31005` | A session create request would exceed `sessions_per_principal` (CP-18); carried in `smcp_error` of the OAuth error | End an open session of the principal, or raise `sessions_per_principal` |
 | `LISTEN_LIMIT` | `-31005` | The session already holds `listen_streams_per_session` (CP-20) open `subscriptions/listen` streams | Close a listen stream, or raise the limit |
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Sign in again; the harness normally does this itself after a 401 |
-| `SESSION_STATE` | `-31006` | The session is suspended or terminated | Sign in again |
+| `SESSION_STATE` | `-31006` | The session is suspended or terminated, also while a call was running (that call's outcome is `indeterminate`) | Sign in again; check the effect of a call that was running before retrying it |
 | `BACKEND_ERROR` | `-31007` | The server returned a protocol error | `data.backendCode` is the server's code; check the server's stderr in the diagnostic log |
 | `BACKEND_OUTPUT_INVALID` | `-31007` | The server wrote a stdout line that is not one UTF-8 JSON-RPC message; the instance was replaced | Check the server's stderr in the diagnostic log; the server is misbehaving or prints logs to stdout |
 | `DISPATCH_FAILED` | `-31007` | The server could not be started or reached | Check the Servers view (G-10) and the diagnostic log |
@@ -74,11 +75,10 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `INSTANCE_FAILED` | `-31009` | The server process ended while a write, external, execute or unclassified tool was running; it may have acted | Check whether the action happened before repeating it; the server was restarted |
 | `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The server returned an `InputRequiredResult` (elicitation, sampling or roots); the Gateway does not relay such requests | The MRTR Relay Profile is not implemented; use a tool that does not ask the client for input |
 | `CANCELLED` | `-31009` | The harness cancelled the call after it was sent to the server; the action may have happened | Check the tool's effect before retrying; the journal records the call as `indeterminate` |
-| `CAPABILITY_INVALID` | `-31004` | The dispatcher refused the call because its dispatch capability was missing, expired or already used (FR-4.13) | Report it with the correlation ID; a correct Gateway never produces it |
-| `SESSION_ENDED` | `-31006` | The session was terminated or revoked while the call was running | Sign in again; the call's outcome is `indeterminate`, so check its effect before retrying |
-| `FILTER_WITHHELD` | `-31003` | A response filter withheld the result without naming its own reason | Look up the correlation ID; the `filter` event names the filter and its finding |
 | `ANOMALY_WITHHELD` | `-31003` | The Anomaly Response Policy withholds results in this call's sigma band | Review the score in G-06; if the call is normal, promote a new baseline or raise `withhold_band` |
 | `SCHEMA_INVALID` | `-32602` | Arguments do not match the tool's input schema | `data.findings` lists the violations |
+
+The Gateway never returns `AMBIGUOUS_ROUTE`, `NO_ROUTE`, `DENY_RULE`, `CREDENTIAL_INVALID`, `PRINCIPAL_DISABLED`, `CAPABILITY` or `ARGUMENTS_INVALID` for a request in release 1.0, and a harness never sees `CANCELLED`: an earlier check answers first (SRS Appendix B, Table B.3 gives the reason for each). A call to a denied or ungranted tool is an unknown tool (`-32602`), and a call after a credential revocation or principal suspension gets `SESSION_INVALID`.
 
 ## Reason codes seen by operators only
 

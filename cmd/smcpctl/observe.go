@@ -35,7 +35,7 @@ const observeUsage = `usage: smcpctl observe <subcommand> [flags]
   campaign submit|approve|reject|stop|expire <id> [--reason text]
   export --format csv|jsonl|parquet|graphml [--campaign id] [--from t] [--to t]
          [--principal p] [--server s] [--tool t] [--parameters a,b] [--snapshot id]
-         [--download dir]
+         [--subgraph behavior-model|audit] [--download dir]
   exports [--json]
 
 Times are RFC 3339 or a duration back from now (for example 24h).
@@ -79,6 +79,7 @@ func observeCmd(args []string, out io.Writer) error {
 	to := fs.String("to", "", "export: end time")
 	params := fs.String("parameters", "", "export: comma-separated parameter IDs or names")
 	snapshot := fs.String("snapshot", "", "export graphml: snapshot ID (default promoted)")
+	subgraph := fs.String("subgraph", "", "export graphml: behavior-model (default) or audit")
 	download := fs.String("download", "", "export: download the files into this directory")
 	var principals, servers, tools multi
 	fs.Var(&principals, "principal", "export: principal in scope (repeatable)")
@@ -242,6 +243,9 @@ func observeCmd(args []string, out io.Writer) error {
 		}
 		if *snapshot != "" {
 			body["snapshot_id"] = *snapshot
+		}
+		if *subgraph != "" {
+			body["subgraph"] = *subgraph
 		}
 		if *params != "" {
 			body["parameters"] = strings.Split(*params, ",")

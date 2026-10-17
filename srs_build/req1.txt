@@ -416,7 +416,7 @@ R: Claude Code prompts the person before each call of a tool carrying this hint,
 P: FR-1
 S: The Protocol Mediator (E-02) SHALL include in every Gateway-specific error a `data.message` string taken from the Appendix B reason-code table that states in one or two plain sentences what happened and what the person can do next, and, for `-31002`, the console URL of the pending approval in `data.approvalUrl`.
 A: E-02; F-22; X-01
-V: Test | Trigger every Appendix B code and every listed reason code; confirm each error carries the table's message text, and that `-31002` carries an `approvalUrl` that opens the approval in G-13.
+V: Test | Trigger every Appendix B code and every listed reason code that a request can produce (Table B.3 lists the codes no request reaches); confirm each error carries the table's message text, and that `-31002` carries an `approvalUrl` that opens the approval in G-13. For the Table B.3 codes, confirm the error builder produces the table's message text.
 SRC: REVIEW (C5); OWNER (approvals: plain-language retry text and a console deep link)
 R: The harness shows error text to a person who may not know the Gateway exists. A code alone does not tell them to approve and retry.
 

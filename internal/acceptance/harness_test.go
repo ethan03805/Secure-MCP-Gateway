@@ -113,6 +113,9 @@ type gateway struct {
 
 	mu     sync.Mutex
 	tokens map[string]string
+	// refresh maps each access token signInAt obtained to its refresh
+	// token and the token endpoint.
+	refresh map[string][2]string
 }
 
 type lockedBuffer struct {
@@ -547,11 +550,18 @@ func (g *gateway) signInAt(base, clientID, redirect, scope, password string) (st
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	resp.Body.Close()
 	var tok struct {
-		AccessToken string `json:"access_token"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 	if resp.StatusCode != http.StatusOK || json.Unmarshal(body, &tok) != nil || tok.AccessToken == "" {
 		return "", fmt.Errorf("token: %d %s", resp.StatusCode, body)
 	}
+	g.mu.Lock()
+	if g.refresh == nil {
+		g.refresh = map[string][2]string{}
+	}
+	g.refresh[tok.AccessToken] = [2]string{tok.RefreshToken, asm.TokenEndpoint}
+	g.mu.Unlock()
 	return tok.AccessToken, nil
 }
 
