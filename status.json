@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T12:24:45Z",
-  "commit": "98b8532dd7eae01ac477586e19ccdef50d9034c0",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/98b8532dd7eae01ac477586e19ccdef50d9034c0",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39031847175",
+  "generatedAt": "2026-10-17T12:35:22Z",
+  "commit": "4ba218973fd4279d3e385cd4751285417a68103f",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/4ba218973fd4279d3e385cd4751285417a68103f",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39032374442",
   "tests": {
-    "total": 989,
-    "passed": 972,
-    "failed": 3,
+    "total": 992,
+    "passed": 978,
+    "failed": 0,
     "skipped": 14,
-    "durationSec": 476,
+    "durationSec": 452.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
-        "passed": 1,
-        "failed": 1,
+        "passed": 2,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -25,8 +25,8 @@
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 40,
-        "failed": 2,
+        "passed": 42,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -49,7 +49,13 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 44,
+        "passed": 45,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "cmd/smcpd",
+        "passed": 1,
         "failed": 0,
         "skipped": 0
       },
@@ -61,7 +67,7 @@
       },
       {
         "name": "internal/adapter",
-        "passed": 9,
+        "passed": 10,
         "failed": 0,
         "skipped": 0
       },
@@ -398,7 +404,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 37.7
+        "pct": 38.4
       },
       {
         "name": "cmd/smcpd",
@@ -410,7 +416,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 68.2
+        "pct": 68.7
       },
       {
         "name": "internal/adminapi",
@@ -474,7 +480,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.1
+        "pct": 90
       },
       {
         "name": "internal/egress",
@@ -490,7 +496,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 84.1
+        "pct": 83.8
       },
       {
         "name": "internal/gwtest",
@@ -644,10 +650,10 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 304,
-    "partial": 182,
-    "failing": 2,
-    "unverified": 42,
+    "verified": 305,
+    "partial": 184,
+    "failing": 0,
+    "unverified": 41,
     "byElement": [
       {
         "element": "E-01",
@@ -837,9 +843,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 22,
-        "partial": 40,
-        "failing": 2
+        "verified": 23,
+        "partial": 42,
+        "failing": 0
       },
       {
         "element": "E-25",
@@ -2897,7 +2903,7 @@
       {
         "id": "FR-8.30",
         "element": "E-24",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "console/e2e/browsers.TestConsoleSuiteOnEveryBrowser"
         ]
@@ -2961,7 +2967,7 @@
       {
         "id": "FR-8.35",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
@@ -3636,8 +3642,11 @@
       {
         "id": "FR-13.1",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpd.TestVersionFlag",
+          "internal/adapter.TestVersionFlag"
+        ]
       },
       {
         "id": "FR-13.2",
@@ -3693,8 +3702,9 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestReleasePublicKeyMatchesInstallSh",
           "cmd/smcpctl.TestUpgradeAndRollback",
-          "cmd/smcpctl.TestVerifyRelease"
+          "cmd/smcpctl.TestVerifyReleaseDir"
         ]
       },
       {
@@ -6407,7 +6417,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33819: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35645: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6463,6 +6473,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
