@@ -478,12 +478,27 @@ func (r *Registry) index(s *Server) error {
 	return nil
 }
 
+// SpecRoots converts the manifest-declared filesystem slots of a resolved
+// packaged server to launch-specification roots; nil for a configured
+// command, which has no manifest.
+func SpecRoots(sc config.Server) []pipeline.Root {
+	if sc.Roots == nil {
+		return nil
+	}
+	out := make([]pipeline.Root, 0, len(sc.Roots))
+	for _, r := range sc.Roots {
+		out = append(out, pipeline.Root{Slot: r.Slot, Path: r.Path, Write: r.Write})
+	}
+	return out
+}
+
 // envelopeBytes is the allowance for the JSON-RPC envelope and content
 // framing around a result of CP-08 bytes.
 const envelopeBytes = 64 << 10
 
 func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error) {
-	spec := pipeline.ServerSpec{Alias: sc.Alias, Command: sc.Command, Args: sc.Args, Dir: sc.Dir, RiskClasses: sc.RiskClasses, HighRisk: sc.HighRisk()}
+	spec := pipeline.ServerSpec{Alias: sc.Alias, Command: sc.Command, Args: sc.Args, Dir: sc.Dir, RiskClasses: sc.RiskClasses, HighRisk: sc.HighRisk(),
+		Runtime: sc.Runtime, ArtifactRoot: sc.ArtifactRoot, Roots: SpecRoots(sc)}
 	if spec.HighRisk && !r.opts.Launcher.Confined() {
 		return nil, fmt.Errorf("%w (risk classes %v, launcher %s)", ErrHighRiskUnconfined, sc.RiskClasses, r.opts.Launcher.Name())
 	}

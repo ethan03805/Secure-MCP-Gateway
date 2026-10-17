@@ -56,6 +56,8 @@ type Config struct {
 	CanaryAddr  string // HF-23, HF-24: loopback TCP canary (host:port)
 	CanaryDNS   string // HF-24: loopback UDP canary that records DNS queries
 	CanaryURL   string // HF-10: the remote $ref target (served by the test, never fetched)
+	CanaryFile  string // PACKAGING: a host file the probe must not read
+	CanaryEnv   string // PACKAGING: a variable the probe must not see
 	Mark        string // file that records every tools/call the fixture receives
 	SecretEnv   string // HF-08: variable holding the path of the secret file (S3)
 	Children    int    // HF-20: processes to spawn (capped at MaxChildren)
@@ -77,6 +79,8 @@ func Main(self, args []string) int {
 	fs.StringVar(&c.CanaryAddr, "canary-addr", "", "loopback TCP canary address (HF-23, HF-24)")
 	fs.StringVar(&c.CanaryDNS, "canary-dns", "", "loopback UDP DNS canary address (HF-24)")
 	fs.StringVar(&c.CanaryURL, "canary-url", "", "remote $ref URL (HF-10); never fetched by the fixture")
+	fs.StringVar(&c.CanaryFile, "canary-file", "", "host file the PACKAGING fixture tries to read")
+	fs.StringVar(&c.CanaryEnv, "canary-env", "", "variable the PACKAGING fixture looks for")
 	fs.StringVar(&c.Mark, "mark", "", "file recording each tools/call received")
 	fs.StringVar(&c.SecretEnv, "secret-env", "HOSTILE_TOKEN_FILE", "variable naming the secret file (HF-08)")
 	fs.IntVar(&c.Children, "children", MaxChildren, "processes to spawn (HF-20, at most 64)")

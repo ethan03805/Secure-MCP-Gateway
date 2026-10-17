@@ -41,6 +41,28 @@ type ServerSpec struct {
 	// server has no manifest. The Runtime Monitor treats a process created
 	// by an instance that does not declare it as a deviation (FR-5.34).
 	SpawnsProcesses *bool
+	// Runtime is the launch runtime of a packaged server's manifest
+	// ("native", "node", "python" or "oci"), or "" for a configured
+	// command. A sandbox runs node and python servers with the interpreter
+	// of the server's image.
+	Runtime string
+	// ArtifactRoot is the unpacked, digest-verified artifact tree of a
+	// packaged server, or "". A sandbox mounts it read-only for node and
+	// python servers, whose arguments name files in it.
+	ArtifactRoot string
+	// Roots are the filesystem slots the verified manifest declares, bound
+	// to host paths: nil when the server has no manifest, empty when the
+	// manifest declares none. A sandbox mounts only the parts of its
+	// mount grants that lie within these roots (SR-4.6-1).
+	Roots []Root
+}
+
+// Root is one manifest-declared filesystem slot bound to a host path.
+// Write is true when the manifest declares the slot read-write.
+type Root struct {
+	Slot  string
+	Path  string
+	Write bool
 }
 
 // Process is a running server instance speaking newline-delimited JSON-RPC:

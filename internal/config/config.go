@@ -274,6 +274,24 @@ type Server struct {
 	Package       string            `toml:"package" json:"package"`
 	PackageSHA256 string            `toml:"package_sha256" json:"package_sha256"`
 	Slots         map[string]string `toml:"slots" json:"slots"`
+
+	// Set by the package library when it resolves a packaged entry, never
+	// read from the file: the manifest's launch runtime ("native", "node",
+	// "python", "oci"), the unpacked artifact tree, and the filesystem
+	// slots the verified manifest declares, bound to host paths (nil for a
+	// configured command). The Execution Sandbox mounts only grants that
+	// intersect Roots (SR-4.6-1).
+	Runtime      string     `toml:"-" json:"-"`
+	ArtifactRoot string     `toml:"-" json:"-"`
+	Roots        []SlotRoot `toml:"-" json:"-"`
+}
+
+// SlotRoot is one manifest-declared filesystem slot bound to a host path;
+// Write is true when the manifest declares the slot read-write.
+type SlotRoot struct {
+	Slot  string
+	Path  string
+	Write bool
 }
 
 // Packages configures the Library Trust Verifier and Local Server

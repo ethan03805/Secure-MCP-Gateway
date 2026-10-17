@@ -110,7 +110,7 @@ func callText(t *testing.T, cs *mcp.ClientSession, name string, args map[string]
 // TestEveryFixtureServes checks that each fixture completes the MCP
 // handshake and lists the tools the suite's policies name.
 func TestEveryFixtureServes(t *testing.T) {
-	for _, id := range append([]string{"BENIGN", "EGRESS"}, func() []string {
+	for _, id := range append([]string{"BENIGN", "EGRESS", "PACKAGING"}, func() []string {
 		var ids []string
 		for _, r := range Rows {
 			ids = append(ids, r.ID)
