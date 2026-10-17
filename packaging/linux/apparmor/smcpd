@@ -58,6 +58,9 @@ profile smcpd /usr/local/bin/smcpd flags=(attach_disconnected) {
   @{PROC}/[0-9]*/stat r,
   /sys/fs/cgroup/ r,
   /sys/fs/cgroup/** r,
+  # Enabling cpu, memory and pids for the containers in the delegated
+  # service cgroup (owned by smcp-core).
+  owner /sys/fs/cgroup/**/cgroup.subtree_control w,
   /sys/kernel/security/ r,
   /sys/kernel/security/apparmor/ r,
   /sys/fs/selinux/ r,
