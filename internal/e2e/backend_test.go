@@ -68,9 +68,9 @@ func runBackend() {
 	})
 	// noisy writes 10 MiB of diagnostic output before answering (FR-5.15).
 	mcp.AddTool(s, &mcp.Tool{Name: "noisy", Description: "writes to stderr"}, func(ctx context.Context, req *mcp.CallToolRequest, a struct{}) (*mcp.CallToolResult, any, error) {
-		line := strings.Repeat(stderrMarker, 1024/len(stderrMarker)) + "\n"
-		for i := 0; i < 10*1024; i++ {
-			_, _ = os.Stderr.WriteString(line)
+		block := strings.Repeat(strings.Repeat(stderrMarker, 1024/len(stderrMarker))+"\n", 64) // 64 lines of about 1 KiB
+		for i := 0; i < 10*1024/64; i++ {
+			_, _ = os.Stderr.WriteString(block)
 		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "quiet"}}}, nil, nil
 	})

@@ -226,16 +226,29 @@ type Ring struct {
 func (b *Ring) Write(p []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if len(p) >= b.Max {
+		b.buf = append(b.buf[:0], p[len(p)-b.Max:]...)
+		return len(p), nil
+	}
 	b.buf = append(b.buf, p...)
-	if len(b.buf) > b.Max {
-		b.buf = append([]byte(nil), b.buf[len(b.buf)-b.Max:]...)
+	// Compact only when the buffer exceeds the bound by a quarter, so a
+	// stream of small writes costs a copy of the bound per quarter-bound
+	// written instead of per write (FR-5.15: 10 MiB of stderr must not
+	// stall the instance).
+	if len(b.buf) > b.Max+b.Max/4 {
+		b.buf = append(b.buf[:0], b.buf[len(b.buf)-b.Max:]...)
 	}
 	return len(p), nil
 }
 
-// Tail returns the retained output, trimmed.
+// Tail returns the retained output (at most Max bytes, the most recent),
+// trimmed.
 func (b *Ring) Tail() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return strings.TrimSpace(string(b.buf))
+	t := b.buf
+	if len(t) > b.Max {
+		t = t[len(t)-b.Max:]
+	}
+	return strings.TrimSpace(string(t))
 }
