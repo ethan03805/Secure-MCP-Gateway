@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T04:42:50Z",
-  "commit": "58a40c115e0a9c30ab9164d07028b24b269e0899",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/58a40c115e0a9c30ab9164d07028b24b269e0899",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39003294193",
+  "generatedAt": "2026-10-17T04:57:34Z",
+  "commit": "68383a115b7be333eaecd909f38078e4ceb9c159",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/68383a115b7be333eaecd909f38078e4ceb9c159",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39004164425",
   "tests": {
-    "total": 759,
-    "passed": 745,
-    "failed": 1,
-    "skipped": 13,
-    "durationSec": 241.9,
+    "total": 767,
+    "passed": 753,
+    "failed": 0,
+    "skipped": 14,
+    "durationSec": 282,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -103,8 +103,8 @@
       },
       {
         "name": "internal/backend",
-        "passed": 16,
-        "failed": 1,
+        "passed": 17,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -157,7 +157,7 @@
       },
       {
         "name": "internal/egress",
-        "passed": 14,
+        "passed": 15,
         "failed": 0,
         "skipped": 2
       },
@@ -301,9 +301,9 @@
       },
       {
         "name": "internal/sandbox",
-        "passed": 24,
+        "passed": 30,
         "failed": 0,
-        "skipped": 3
+        "skipped": 4
       },
       {
         "name": "internal/secrets",
@@ -376,7 +376,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 69.3
+        "pct": 69.2
       },
       {
         "name": "internal/anomaly",
@@ -436,7 +436,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 80.6
+        "pct": 80.8
       },
       {
         "name": "internal/filterapi",
@@ -448,7 +448,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.6
+        "pct": 82.9
       },
       {
         "name": "internal/gwtest",
@@ -548,7 +548,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 86.5
+        "pct": 85.5
       },
       {
         "name": "internal/sandbox/probe",
@@ -586,8 +586,8 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 181,
-    "partial": 215,
+    "verified": 182,
+    "partial": 214,
     "failing": 0,
     "unverified": 162,
     "byElement": [
@@ -675,8 +675,8 @@
         "element": "E-11",
         "name": "Response Inspection Pipeline",
         "total": 10,
-        "verified": 6,
-        "partial": 3,
+        "verified": 7,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -2151,7 +2151,10 @@
         "tests": [
           "internal/egress.TestEndpoints",
           "internal/egress.TestWrapLauncher",
-          "internal/sandbox.TestBuildWithImageAndEgress"
+          "internal/sandbox.TestBuildEgressEnvNames",
+          "internal/sandbox.TestBuildWithImageAndEgress",
+          "internal/sandbox.TestEgressAttachesSandboxNetwork",
+          "internal/sandbox.TestIntegrationEgressBroker"
         ]
       },
       {
@@ -3394,7 +3397,8 @@
         "element": "E-15",
         "status": "partial",
         "tests": [
-          "internal/sandbox.TestDoctorAllPrerequisitesPresent"
+          "internal/sandbox.TestDoctorAllPrerequisitesPresent",
+          "internal/sandbox.TestDoctorUsesConfiguredCgroupManager"
         ]
       },
       {
@@ -3522,7 +3526,9 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "internal/sandbox.TestDoctorAllPrerequisitesPresent"
+          "internal/sandbox.TestDoctorAllPrerequisitesPresent",
+          "internal/sandbox.TestEnableDelegatedControllers",
+          "internal/sandbox.TestPrepareRootfsIgnoresUmask"
         ]
       },
       {
@@ -4098,8 +4104,9 @@
       {
         "id": "FR-19.1",
         "element": "E-11",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/hostile.TestHostileFixtures",
           "internal/hostile.TestHostileFixtures"
         ]
       },
@@ -4845,9 +4852,13 @@
         "element": "E-16",
         "status": "partial",
         "tests": [
+          "internal/egress.TestAttachLauncherConfines",
           "internal/egress.TestAttachNetwork",
           "internal/hostile.TestHostileFixtures/HF-23",
-          "internal/sandbox.TestEgressRequestFailsClosed",
+          "internal/sandbox.TestEgressAttachesSandboxNetwork",
+          "internal/sandbox.TestEgressConfinementFailsClosed",
+          "internal/sandbox.TestEgressRules",
+          "internal/sandbox.TestIntegrationEgressBroker",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
           "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
         ]
@@ -4879,7 +4890,8 @@
         "tests": [
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
           "internal/sandbox.TestLaunchRefusesUnsafeInput",
-          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile"
+          "internal/sandbox.TestPodmanArgsCarryTheSandboxProfile",
+          "internal/sandbox.TestPrepareRootfsIgnoresUmask"
         ]
       },
       {
@@ -4890,6 +4902,7 @@
           "internal/config.TestRuntimeDefaults",
           "internal/hostile.TestHostileFixtures/HF-20",
           "internal/hostile.TestHostileFixtures/HF-21",
+          "internal/sandbox.TestEnableDelegatedControllers",
           "internal/sandbox.TestIntegrationMonitorContainment",
           "internal/sandbox.TestMonitorKillsOnMemoryBreachWithinOneSecond",
           "internal/sandbox.TestMonitorKillsOnPidsBreach",
@@ -5139,7 +5152,9 @@
         "element": "E-18",
         "status": "verified",
         "tests": [
-          "internal/egress.TestRebindingAndRedirects"
+          "internal/egress.TestRebindingAndRedirects",
+          "internal/hostile.TestHostileFixtures/HF-24",
+          "internal/sandbox.TestIntegrationEgressBroker"
         ]
       },
       {
@@ -5147,7 +5162,8 @@
         "element": "E-18",
         "status": "verified",
         "tests": [
-          "internal/egress.TestReservedAddressesRefused"
+          "internal/egress.TestReservedAddressesRefused",
+          "internal/hostile.TestHostileFixtures/HF-24"
         ]
       },
       {
@@ -6170,7 +6186,7 @@
       "attack": "Symlink and path escape",
       "expected": "Path arguments outside the grant are denied before dispatch; reads through the symlink fail inside the sandbox",
       "fixture": "HF-22",
-      "observed": "standalone: ../ traversal: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; symlink to a directory outside the root: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; path inside the root: result released; server-side read through the symlink: result released, outside file read: true; mount confinement is the Enforced part of this row | enforced: harness error (see the test log)",
+      "observed": "standalone: ../ traversal: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; symlink to a directory outside the root: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; path inside the root: result released; server-side read through the symlink: result released, outside file read: true; mount confinement is the Enforced part of this row | enforced: ../ traversal: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; symlink to a directory outside the root: error -31001 PATH_OUTSIDE_ROOTS, dispatched: false; path inside the root: result released; server-side read through the symlink: result released, outside file read: false",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6182,7 +6198,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39125: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35471: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6193,8 +6209,8 @@
       "attack": "DNS escape and rebinding",
       "expected": "Direct resolution fails; the broker refuses the rebound private address",
       "fixture": "HF-24",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: fixture report: result released \"direct=query-sent-no-answer broker=status(HTTP/1.1 403 Forbidden)\"; direct DNS queries reaching the loopback DNS canary: 2; broker deny event: true; connections reaching the TCP canary: 0 | enforced: fixture report: result released \"direct=failed broker=no-proxy\"; direct DNS queries reaching the loopback DNS canary: 0; broker deny event: false; connections reaching the TCP canary: 0",
-      "pass": false,
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: fixture report: result released \"direct=query-sent-no-answer broker=status(HTTP/1.1 403 Forbidden)\"; direct DNS queries reaching the loopback DNS canary: 2; broker deny event: true; connections reaching the TCP canary: 0 | enforced: fixture report: result released \"direct=failed broker=status(HTTP/1.1 403 Forbidden)\"; direct DNS queries reaching the loopback DNS canary: 0; broker deny event: true; connections reaching the TCP canary: 0",
+      "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
         "SR-5.15-1",
@@ -6238,6 +6254,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
