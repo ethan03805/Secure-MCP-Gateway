@@ -478,6 +478,7 @@ A: E-03; F-04; X-01
 V: Test | Present an allowlisted metadata URL, a non-allowlisted URL pointing at a capture server and an allowlisted URL that redirects to another host; confirm success, refusal with no request reaching the capture server, and refusal of the redirect.
 SRC: SEC 2.11; REVIEW (I4: CIMD URL allowlist or pre-registration, no open outbound fetch)
 R: An open fetch lets an unauthenticated caller make the Gateway send requests to arbitrary hosts.
+DEFER: Release 1.0 never fetches Client ID Metadata Documents: a metadata-URL client ID is accepted only when it is pre-registered in the configuration or approved through the Remote Access registration flow, and every other URL is refused without a network request. Fetching documents from an allowlist (CP-52) is deferred; no open fetch exists in the meantime.
 
 @SR-2.11-4 | Refresh token reuse
 P: SEC-2.11
@@ -491,7 +492,7 @@ R: Reuse of a rotated token means two parties hold it; ending the session limits
 P: SEC-2.11
 S: The Identity & Authentication Service (E-03) SHALL advertise `client_id_metadata_document_supported` and `registration_endpoint` in its authorization-server metadata only when the corresponding mechanism is enabled.
 A: E-03; F-04; X-01
-V: Test | Fetch the metadata with metadata documents disabled, then enabled, and with the Remote Access Profile off and on; confirm the members appear only when enabled.
+V: Test | Fetch the metadata with the Remote Access Profile off and on; confirm `registration_endpoint` appears only when it is on, and that `client_id_metadata_document_supported` never appears while metadata documents are not fetched (SR-2.11-3, Appendix N).
 SRC: SEC 2.11; REVIEW (minor: refuse misadvertised client_id_metadata_document_supported)
 R: Clients choose a registration path from the metadata; advertising a path that fails causes confusing sign-in errors.
 
@@ -1162,6 +1163,7 @@ A: E-21; E-29; F-53; F-82
 V: Test | Toggle capture in the profile; confirm payload presence follows it.
 SRC: SEC 6.6
 R: Policy-directed capture.
+DEFER: Release 1.0 captures no payloads: observation records hold derived parameters only, and the S3 parameters (raw arguments and raw responses) are never stored. With no optional payload capture there is nothing for an Audit Profile, Observation Policy or Research Campaign to direct; directed payload capture is deferred with its encrypted storage (SR-6.8-1).
 
 @SR-6.7-1 | Secret scrubbing
 P: SEC-6.7
@@ -1178,6 +1180,7 @@ A: E-21; E-22; F-53
 V: Inspection | Inspect a payload blob and its graph reference.
 SRC: SEC 6.8
 R: Encrypted payloads.
+DEFER: Deferred with payload capture (SR-6.6-1): release 1.0 stores no payloads, so there are no payload blobs to encrypt or reference from the graph.
 
 @SR-6.9-1 | Retention validation
 P: SEC-6.9

@@ -1112,19 +1112,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | ARCH §19 OD-2 |
 | Rationale | Same-host harnesses use kernel peer credentials plus a key. |
 
-#### FR-2.16 — Restart invalidation
-
-| Field | Value |
-|---|---|
-| ID | FR-2.16 |
-| Parent ID | FR-2 — Identity and sessions |
-| Statement | When the Gateway restarts, the Session Manager (E-04) **SHALL** reject every access token issued before the restart and **SHALL** keep each unexpired session resumable only through its current refresh token (FR-2.22), until the session's CP-18 maximum lifetime. |
-| Allocation | Elements: E-04 Session Manager; Functions: F-08, F-09; Data stores: D-07 |
-| Verification Method | Test |
-| Verification Statement | Restart the Gateway with active sessions; confirm the old access tokens receive -31006, a refresh with the current refresh token resumes the same session ID, and a refresh after the maximum lifetime fails. |
-| Source | ARCH §13 D-07; OWNER (sessions may survive restart via refresh tokens) |
-| Rationale | Requiring a new browser sign-in after every restart or upgrade makes the product unusable; a rotated refresh token keeps the resume bound to the one client that holds it. |
-
 #### FR-2.17 — Authorization metadata
 
 | Field | Value |
@@ -1257,19 +1244,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | ARCH §4 E-05; SEC 7.3 |
 | Rationale | Typed records make evaluation deterministic. |
 
-#### FR-3.3 — Draft workspace
-
-| Field | Value |
-|---|---|
-| ID | FR-3.3 |
-| Parent ID | FR-3 — Policy capability |
-| Statement | The Policy Administration Service (E-05) **SHALL** hold edits in a named draft derived from a stated parent revision until the draft is published or discarded. |
-| Allocation | Elements: E-05 Policy Administration Service; Functions: F-10; Internal interfaces: I-06 |
-| Verification Method | Demonstration |
-| Verification Statement | Create a draft, edit it in two sessions of G-02, discard one and publish the other; confirm the active revision changes only on publish. |
-| Source | ARCH §4 E-05 |
-| Rationale | Authors iterate on policy without affecting enforcement. |
-
 #### FR-3.4 — Revision record
 
 | Field | Value |
@@ -1308,19 +1282,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Statement | Generate the report for a fixture principal; compare against hand-computed expected permissions. |
 | Source | A2 §7.2 (Effective tools by principal) |
 | Rationale | Makes the tailored Allow policy reviewable. |
-
-#### FR-3.7 — Observation cost estimate
-
-| Field | Value |
-|---|---|
-| ID | FR-3.7 |
-| Parent ID | FR-3 — Policy capability |
-| Statement | The Policy Administration Service (E-05) **SHALL** estimate records per day, storage per day and added p95 latency for a draft Observation Policy or Research Campaign from the trailing 7 days of call rates. |
-| Allocation | Elements: E-05 Policy Administration Service; Functions: F-66; Internal interfaces: I-06 |
-| Verification Method | Test |
-| Verification Statement | Estimate a policy over a replayed 7-day fixture traffic set; confirm estimates are within ±25% of the measured values after one replayed day. |
-| Source | ARCH §11 item 6; ARCH §5 F-66 |
-| Rationale | Researchers must know the cost of a capture choice before publishing it. |
 
 #### FR-3.8 — Policy export and import
 
@@ -1937,32 +1898,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | ARCH §4 E-15 |
 | Rationale | Instances are reproducible from declared inputs. |
 
-#### FR-5.10 — Instance scope
-
-| Field | Value |
-|---|---|
-| ID | FR-5.10 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | The Server Runtime Manager (E-15) **SHALL** create instances per call, per session or shared, as selected by the Runtime Profile from the scopes the manifest allows, defaulting to per session. |
-| Allocation | Elements: E-15 Server Runtime Manager; Functions: F-38; Internal interfaces: I-12 |
-| Verification Method | Test |
-| Verification Statement | Configure each scope; confirm instance counts after calls from two sessions. |
-| Source | ARCH §4 E-15; ARCH §19 OD-3 |
-| Rationale | Isolation versus cold-start cost is a policy choice. |
-
-#### FR-5.11 — Instance reuse and idle teardown
-
-| Field | Value |
-|---|---|
-| ID | FR-5.11 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | The Server Runtime Manager (E-15) **SHALL** reuse a live instance of the matching scope and **SHALL** tear down an instance idle for the CP-38 interval. |
-| Allocation | Elements: E-15 Server Runtime Manager; Functions: F-39, F-40 |
-| Verification Method | Test |
-| Verification Statement | Make two calls in one session and then wait past CP-38; confirm one instance is reused and then torn down. |
-| Source | ARCH §4 E-15 |
-| Rationale | Bounds resource use on a single PC. |
-
 #### FR-5.12 — Crash handling
 
 | Field | Value |
@@ -2486,19 +2421,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Statement | Verify an intact journal and one with a modified byte; confirm a pass and a precise failure. |
 | Source | ARCH §4 E-21 |
 | Rationale | Evidence must be checkable offline. |
-
-#### FR-7.6 — Alerts
-
-| Field | Value |
-|---|---|
-| ID | FR-7.6 |
-| Parent ID | FR-7 — Assurance services |
-| Statement | The Audit & Evidence Service (E-21) **SHALL** raise an alert in the management console for each event matching an alert rule of the effective Audit Profile. |
-| Allocation | Elements: E-21 Audit & Evidence Service; Functions: F-53; Internal interfaces: I-06 |
-| Verification Method | Test |
-| Verification Statement | Configure an alert on `withheld`; trigger it; confirm the console alert. |
-| Source | ARCH §7.2 Audit Profile |
-| Rationale | Operators need notification of significant events. |
 
 #### FR-7.7 — Local certificate authorities
 
@@ -5886,19 +5808,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 2.11; RFC 7591; OWNER (DCR only for Remote Access with operator approval of each registration) |
 | Rationale | Open registration on an Internet-reachable endpoint would let anyone obtain a client ID. |
 
-#### SR-2.11-3 — No open metadata fetch
-
-| Field | Value |
-|---|---|
-| ID | SR-2.11-3 |
-| Parent ID | SEC-2.11 — OAuth boundary (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Identity & Authentication Service (E-03) **SHALL** fetch a Client ID Metadata Document only from a URL that is pre-registered or matches the CP-52 allowlist, within the CP-52 limits, and **SHALL** refuse every other metadata URL without a network request. |
-| Allocation | Elements: E-03 Identity & Authentication Service; Functions: F-04; External interfaces: X-01 |
-| Verification Method | Test |
-| Verification Statement | Present an allowlisted metadata URL, a non-allowlisted URL pointing at a capture server and an allowlisted URL that redirects to another host; confirm success, refusal with no request reaching the capture server, and refusal of the redirect. |
-| Source | SEC 2.11; REVIEW (I4: CIMD URL allowlist or pre-registration, no open outbound fetch) |
-| Rationale | An open fetch lets an unauthenticated caller make the Gateway send requests to arbitrary hosts. |
-
 #### SR-2.11-4 — Refresh token reuse
 
 | Field | Value |
@@ -5921,7 +5830,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Statement | The Identity & Authentication Service (E-03) **SHALL** advertise `client_id_metadata_document_supported` and `registration_endpoint` in its authorization-server metadata only when the corresponding mechanism is enabled. |
 | Allocation | Elements: E-03 Identity & Authentication Service; Functions: F-04; External interfaces: X-01 |
 | Verification Method | Test |
-| Verification Statement | Fetch the metadata with metadata documents disabled, then enabled, and with the Remote Access Profile off and on; confirm the members appear only when enabled. |
+| Verification Statement | Fetch the metadata with the Remote Access Profile off and on; confirm `registration_endpoint` appears only when it is on, and that `client_id_metadata_document_supported` never appears while metadata documents are not fetched (SR-2.11-3, Appendix N). |
 | Source | SEC 2.11; REVIEW (minor: refuse misadvertised client_id_metadata_document_supported) |
 | Rationale | Clients choose a registration path from the metadata; advertising a path that fails causes confusing sign-in errors. |
 
@@ -6934,19 +6843,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 6.5 |
 | Rationale | No attribution of execution to uncalled servers. |
 
-#### SR-6.6-1 — Policy-directed payload capture
-
-| Field | Value |
-|---|---|
-| ID | SR-6.6-1 |
-| Parent ID | SEC-6.6 — Policy-directed payload storage (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Audit & Evidence Service (E-21) **SHALL** capture optional payloads only as directed by the evaluated Audit Profile, Observation Policy or Research Campaign, into the storage class it names. |
-| Allocation | Elements: E-21 Audit & Evidence Service, E-29 Observation Collector; Functions: F-53, F-82 |
-| Verification Method | Test |
-| Verification Statement | Toggle capture in the profile; confirm payload presence follows it. |
-| Source | SEC 6.6 |
-| Rationale | Policy-directed capture. |
-
 #### SR-6.7-1 — Secret scrubbing
 
 | Field | Value |
@@ -6959,19 +6855,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Statement | Echo a delivered secret through every captured surface; confirm only redaction markers are persisted. |
 | Source | SEC 6.7 |
 | Rationale | No secrets at rest in evidence. |
-
-#### SR-6.8-1 — Payload encryption
-
-| Field | Value |
-|---|---|
-| ID | SR-6.8-1 |
-| Parent ID | SEC-6.8 — Payload encryption (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Audit & Evidence Service (E-21) **SHALL** store captured payloads as age-encrypted blobs referenced in the graph by ciphertext digest and key reference. |
-| Allocation | Elements: E-21 Audit & Evidence Service, E-22 Key & Trust Anchor Manager; Functions: F-53 |
-| Verification Method | Inspection |
-| Verification Statement | Inspect a payload blob and its graph reference. |
-| Source | SEC 6.8 |
-| Rationale | Encrypted payloads. |
 
 #### SR-6.9-1 — Retention validation
 
@@ -7579,7 +7462,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 2.8 | Authenticated transport | MUST | Realized by SR | SR-2.8-1, SR-2.8-3, SR-2.8-4 |
 | 2.9 | Origin and Host | MUST | Realized by SR | SR-2.9-1, SR-2.9-2, SR-2.9-3 |
 | 2.10 | Credential separation | MUST | Realized by SR | SR-2.10-1 |
-| 2.11 | OAuth boundary | MUST | Realized by SR | SR-2.11-1, SR-2.11-2, SR-2.11-3, SR-2.11-4, SR-2.11-5 |
+| 2.11 | OAuth boundary | MUST | Realized by SR | SR-2.11-1, SR-2.11-2, SR-2.11-4, SR-2.11-5 |
 | 2.12 | State ownership | MUST | Deferred | SR-2.12-1 (Appendix N) |
 | 2.13 | Encrypted secrets | MUST | Realized by SR | SR-2.13-1, SR-2.13-2, SR-2.13-3 |
 | 2.14 | Minimal backend environment | MUST | Realized by SR | SR-2.14-1 |
@@ -7640,9 +7523,9 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 6.3 | Outcome before release | MUST | Realized by SR | SR-6.3-1 |
 | 6.4 | Exact historical links | MUST | Realized by SR | SR-6.4-1 |
 | 6.5 | Event origin versus target | MUST | Realized by SR | SR-6.5-1 |
-| 6.6 | Policy-directed payload storage | MUST | Realized by SR | SR-6.6-1 |
+| 6.6 | Policy-directed payload storage | MUST | Deferred | SR-6.6-1 (Appendix N) |
 | 6.7 | Secret removal | MUST | Realized by SR | SR-6.7-1 |
-| 6.8 | Payload encryption | MUST | Realized by SR | SR-6.8-1 |
+| 6.8 | Payload encryption | MUST | Deferred | SR-6.8-1 (Appendix N) |
 | 6.9 | Retention conflict | MUST | Realized by SR | SR-6.9-1 |
 | 6.10 | Idempotent evidence export | MUST | Realized by SR | SR-6.10-1 |
 | 6.11 | Export lag boundary | MUST | Realized by SR | SR-6.11-1 |
@@ -7706,9 +7589,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 |---|---|---|---|
 | E-01 | Harness Interface Endpoint | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-1.48, FR-9.17, FR-11, FR-11.5, FR-12, FR-12.1, FR-12.2, FR-12.6, FR-12.8, FR-12.10, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, FR-16.8, FR-16.11 | SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-1, SR-4.14-2, SR-7.11-1 |
 | E-02 | Protocol Mediator | FR-1, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.28, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.42, FR-1.43, FR-1.44, FR-1.45, FR-1.46, FR-1.47, FR-1.48, FR-1.51, FR-3.14, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.1, FR-4.2, FR-5.24, FR-11.5, FR-12.9, FR-18.7, FR-18.9 | SR-2-1, SR-5.1-1, SR-5.2-1, SR-5.2-2, SR-5.3-1, SR-5.6-1, SR-5.11-1 |
-| E-03 | Identity & Authentication Service | FR-2, FR-2.1, FR-2.5, FR-2.6, FR-2.15, FR-2.17, FR-2.18, FR-2.23, FR-16, FR-16.3, FR-16.5, FR-16.6 | SR-2.1-1, SR-2.1-2, SR-2.1-3, SR-2.11-1, SR-2.11-2, SR-2.11-3, SR-2.11-5, SR-4.14-2 |
-| E-04 | Session Manager | FR-1.48, FR-2, FR-2.2, FR-2.3, FR-2.4, FR-2.6, FR-2.7, FR-2.8, FR-2.9, FR-2.10, FR-2.11, FR-2.12, FR-2.13, FR-2.16, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-16.12 | SR-2.1-2, SR-2.3-1, SR-2.11-4, SR-5.13-2 |
-| E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.3, FR-3.4, FR-3.5, FR-3.6, FR-3.7, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-9.17, FR-10.37, FR-18.5 | SR-1-1, SR-1-3, SR-1.1-1, SR-1.1-2, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-6.9-1, SR-7.3-1, SR-7.9-1 |
+| E-03 | Identity & Authentication Service | FR-2, FR-2.1, FR-2.5, FR-2.6, FR-2.15, FR-2.17, FR-2.18, FR-2.23, FR-16, FR-16.3, FR-16.5, FR-16.6 | SR-2.1-1, SR-2.1-2, SR-2.1-3, SR-2.11-1, SR-2.11-2, SR-2.11-5, SR-4.14-2 |
+| E-04 | Session Manager | FR-1.48, FR-2, FR-2.2, FR-2.3, FR-2.4, FR-2.6, FR-2.7, FR-2.8, FR-2.9, FR-2.10, FR-2.11, FR-2.12, FR-2.13, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-16.12 | SR-2.1-2, SR-2.3-1, SR-2.11-4, SR-5.13-2 |
+| E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.4, FR-3.5, FR-3.6, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-9.17, FR-10.37, FR-18.5 | SR-1-1, SR-1-3, SR-1.1-1, SR-1.1-2, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-6.9-1, SR-7.3-1, SR-7.9-1 |
 | E-06 | Policy Decision Service | FR-3, FR-3.10, FR-3.11, FR-3.12, FR-3.13, FR-11, FR-11.2 | SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.6-1, SR-1.7-1, SR-1.7-2, SR-1.10-1, SR-1.11-1, SR-1.12-1, SR-1.12-2, SR-1.12-3, SR-1.15-1, SR-1.18-1, SR-1.19-1, SR-1.20-1, SR-3.10-1, SR-5.12-1, SR-5.13-2 |
 | E-07 | Approval Service | FR-3, FR-3.14, FR-3.15, FR-3.16, FR-3.17, FR-3.18, FR-3.19, FR-3.20, FR-3.21, FR-3.22, FR-3.23, FR-3.24, FR-3.25 | SR-1.18-2, SR-1.18-3 |
 | E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-1.50, FR-1.52, FR-4, FR-4.1, FR-4.3, FR-11.5 | SR-1.2-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
@@ -7718,21 +7601,21 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8 | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-5.16-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1 |
 | E-13 | Library Trust Verifier | FR-5, FR-5.1, FR-5.2, FR-5.3, FR-5.4, FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.4, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.11, FR-14.12, FR-18.6 | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3.1-1, SR-3.2-1, SR-3.5-1, SR-5.9-2 |
 | E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.21, FR-5.22, FR-5.39, FR-5.40, FR-14, FR-14.9, FR-19.1, FR-19.5 | SR-1-1, SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
-| E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.10, FR-5.11, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1 | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1 |
+| E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1 | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1 |
 | E-16 | Execution Sandbox | FR-5, FR-12.3, FR-13.5, FR-19.1 | SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2 |
 | E-17 | Runtime Monitor | FR-5, FR-5.33, FR-5.34, FR-5.35 | — |
 | E-18 | Egress Broker | FR-5, FR-5.36, FR-5.37, FR-5.38, FR-6.6, FR-12.2, FR-19.1 | SR-4.5-1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1 |
 | E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12 | SR-2.13-1, SR-2.13-3, SR-4.1-1 |
 | E-20 | Secret Broker | FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11 | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
-| E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.6, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8 | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.6-1, SR-6.7-1, SR-6.8-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1 |
-| E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-12.5, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.8-1, SR-6.12-1 |
+| E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8 | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1 |
+| E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-12.5, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1 |
 | E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3 | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
 | E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.5, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4 | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
 | E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.5, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
 | E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.4, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
 | E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11 | SR-4.2-2 |
 | E-28 | Data Lifecycle & Memory Manager | FR-9, FR-9.10, FR-9.11, FR-9.12, FR-9.14, FR-9.15, FR-9.16, FR-11, FR-11.9, FR-12, FR-12.4, FR-12.6, FR-12.7, FR-13, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8 | SR-6.14-1, SR-7.7-1, SR-7.8-1, SR-7.10-1 |
-| E-29 | Observation Collector | FR-1.44, FR-1.45, FR-10, FR-10.1, FR-10.2, FR-10.3, FR-10.4, FR-10.5, FR-10.6, FR-10.7, FR-10.8, FR-10.9, FR-10.10, FR-10.11, FR-10.37, FR-11, FR-11.4 | SR-6.6-1, SR-6.7-1 |
+| E-29 | Observation Collector | FR-1.44, FR-1.45, FR-10, FR-10.1, FR-10.2, FR-10.3, FR-10.4, FR-10.5, FR-10.6, FR-10.7, FR-10.8, FR-10.9, FR-10.10, FR-10.11, FR-10.37, FR-11, FR-11.4 | SR-6.7-1 |
 | E-30 | Behavior Baseline Engine | FR-10, FR-10.12, FR-10.13, FR-10.14, FR-10.15, FR-10.16, FR-10.17, FR-10.18, FR-10.19, FR-10.20, FR-10.21, FR-11.7 | SR-7-1 |
 | E-31 | Anomaly Scorer | FR-4.15, FR-10, FR-10.22, FR-10.23, FR-10.24, FR-10.25, FR-10.26, FR-10.27, FR-10.28, FR-10.29, FR-11, FR-11.3 | SR-1.12-2, SR-7-1 |
 | E-32 | Research Dataset Service | FR-10, FR-10.30, FR-10.31, FR-10.32, FR-10.33, FR-10.34, FR-10.35, FR-10.36, FR-12.4 | SR-6-1, SR-6-2, SR-6.17-1 |
@@ -7744,16 +7627,16 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Name | Requirements |
 |---|---|---|
-| F-01 | Terminate harness transport | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-9.17, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-2, SR-7.11-1 |
+| F-01 | Terminate harness transport | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-9.17, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-2, SR-7.11-1, SR-2.8-2 (deferred) |
 | F-02 | Validate and normalize MCP messages | FR-1, FR-1.4, FR-1.5, FR-1.8, FR-1.10, FR-1.11, FR-1.16, FR-1.21, FR-1.22, FR-1.28, FR-1.33, FR-1.38, FR-1.44, FR-1.45, FR-1.47, FR-4.1, FR-4.2, FR-18.9, SR-5.2-1, SR-5.2-2, SR-5.6-1 |
 | F-03 | Negotiate protocol profile | FR-1, FR-1.9, FR-1.12, FR-1.17, FR-1.46, SR-5.1-1, SR-5.3-1, SR-5.6-1 |
-| F-04 | Authenticate framework instance | FR-2, FR-2.1, FR-2.15, FR-2.17, FR-2.18, FR-16.3, FR-16.6, SR-2.1-1, SR-2.1-3, SR-2.11-1, SR-2.11-3, SR-2.11-5, SR-4.14-2 |
+| F-04 | Authenticate framework instance | FR-2, FR-2.1, FR-2.15, FR-2.17, FR-2.18, FR-16.3, FR-16.6, SR-2.1-1, SR-2.1-3, SR-2.11-1, SR-2.11-5, SR-4.14-2, SR-2.11-3 (deferred) |
 | F-05 | Verify session proof | FR-2, FR-2.5, SR-2.1-2, SR-2.1-3 |
 | F-06 | Establish session | FR-2, FR-2.2, FR-2.3, FR-2.4, FR-2.10, FR-2.19, FR-2.20, FR-16.12, SR-2.3-1 |
 | F-07 | Bind Allow policy to session | FR-2, FR-2.4, FR-2.6, FR-2.7, FR-2.12, FR-2.13, FR-2.20, FR-2.21, FR-16.12 |
-| F-08 | Maintain session state and expiry | FR-2, FR-2.2, FR-2.8, FR-2.9, FR-2.16, FR-2.22 |
-| F-09 | Terminate or revoke session | FR-2, FR-2.2, FR-2.11, FR-2.16, SR-2.11-4 |
-| F-10 | Validate policy revision | FR-3, FR-3.1, FR-3.2, FR-3.3, FR-3.8, FR-6.5, FR-6.9, FR-8.4, FR-18.5, SR-1-1, SR-1-3, SR-1.9-1, SR-3.13-1, SR-6.9-1, SR-7.3-1 |
+| F-08 | Maintain session state and expiry | FR-2, FR-2.2, FR-2.8, FR-2.9, FR-2.22, FR-2.16 (deferred) |
+| F-09 | Terminate or revoke session | FR-2, FR-2.2, FR-2.11, SR-2.11-4, FR-2.16 (deferred) |
+| F-10 | Validate policy revision | FR-3, FR-3.1, FR-3.2, FR-3.8, FR-6.5, FR-6.9, FR-8.4, FR-18.5, SR-1-1, SR-1-3, SR-1.9-1, SR-3.13-1, SR-6.9-1, SR-7.3-1, FR-3.3 (deferred) |
 | F-11 | Simulate policy | FR-3, FR-3.5, FR-3.6, FR-8.4 |
 | F-12 | Publish/activate policy revision | FR-3, FR-3.4, FR-3.9, FR-8.4, SR-1.1-2, SR-1.14-1, SR-1.15-1, SR-7.9-1 |
 | F-13 | Evaluate access decision | FR-3, FR-3.10, FR-3.11, FR-11.2, SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.6-1, SR-1.7-1, SR-1.7-2, SR-1.11-1, SR-1.12-1, SR-1.12-3, SR-1.15-1, SR-1.20-1, SR-3.10-1 |
@@ -7763,14 +7646,14 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-17 | Request approval | FR-3, FR-3.14, FR-3.18, FR-3.19, FR-3.20, FR-3.22, FR-3.23, FR-3.25, SR-1.18-3 |
 | F-18 | Record and consume approval | FR-3, FR-3.15, FR-3.16, FR-3.17, FR-3.20, FR-3.21, FR-3.24, FR-3.25, FR-8.21, SR-1.18-2 |
 | F-19 | Present session-scoped catalog | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.35, FR-1.50, FR-1.52, SR-3.12-1, SR-5.4-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
-| F-20 | Enforce access decision | FR-1.29, FR-1.30, FR-4.3, SR-1.2-1, SR-5.5-1 |
+| F-20 | Enforce access decision | FR-1.29, FR-1.30, FR-4.3, SR-1.2-1, SR-5.5-1, SR-2.12-1 (deferred) |
 | F-21 | Inspect and transform request | FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
-| F-22 | Serialize released response | FR-1, FR-1.6, FR-1.7, FR-1.13, FR-1.14, FR-1.15, FR-1.18, FR-1.19, FR-1.20, FR-1.31, FR-1.32, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.39, FR-1.42, FR-1.43, FR-1.51, FR-5.24, FR-18.7, SR-5.11-1 |
-| F-23 | Dispatch tool call | FR-4.8, FR-4.13, FR-5.13, FR-5.19, FR-5.32, FR-5.40, SR-2.10-1, SR-5.6-2 |
-| F-24 | Correlate and collect response | FR-1.32, FR-1.39, FR-1.40, FR-4.10, FR-5.13, FR-5.14, FR-5.20, FR-5.21, FR-5.23, FR-5.24, SR-7.2-1 |
+| F-22 | Serialize released response | FR-1, FR-1.6, FR-1.7, FR-1.13, FR-1.14, FR-1.15, FR-1.18, FR-1.19, FR-1.20, FR-1.31, FR-1.32, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.39, FR-1.42, FR-1.43, FR-1.51, FR-5.24, FR-18.7, SR-5.11-1, FR-5.25 (deferred) |
+| F-23 | Dispatch tool call | FR-4.8, FR-4.13, FR-5.13, FR-5.19, FR-5.32, FR-5.40, SR-2.10-1, SR-5.6-2, FR-5.16 (deferred), FR-5.17 (deferred), FR-5.18 (deferred), FR-5.28 (deferred), FR-5.29 (deferred), SR-5.1-2 (deferred), SR-5.3-2 (deferred) |
+| F-24 | Correlate and collect response | FR-1.32, FR-1.39, FR-1.40, FR-4.10, FR-5.13, FR-5.14, FR-5.20, FR-5.21, FR-5.23, FR-5.24, SR-7.2-1, FR-5.25 (deferred), FR-5.28 (deferred), FR-5.30 (deferred), FR-5.31 (deferred) |
 | F-25 | Cancel in-flight call | FR-1.41, FR-1.43, FR-4.9, FR-5.26, SR-7.2-1, SR-7.12-1 |
 | F-26 | Validate response conformance | SR-5.20-1, SR-5.20-2 |
-| F-27 | Inspect and transform response | FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-5.9-1, SR-5.10-1, SR-5.14-1, SR-5.18-1 |
+| F-27 | Inspect and transform response | FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-5.9-1, SR-5.10-1, SR-5.14-1, SR-5.18-1, SR-2.12-1 (deferred) |
 | F-28 | Label provenance | FR-4.12, FR-4.17, FR-4.18, SR-5.13-1 |
 | F-29 | Authorize launch under barrier | FR-4.3, FR-4.13, SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-6.2-1, SR-6.11-1, SR-7.10-1 |
 | F-30 | Authorize release under barrier | FR-4.3, SR-1.16-1, SR-1.17-2, SR-5.11-1, SR-6.3-1 |
@@ -7780,10 +7663,10 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-34 | Validate server manifest | FR-1.52, FR-4.16, FR-5.2, FR-14.3, FR-14.4, FR-14.11, FR-19.5, SR-3.1-1, SR-3.2-1, SR-5.9-2 |
 | F-35 | Process revocation feed | FR-5.3, FR-14.12, SR-3-3, SR-3-4 |
 | F-36 | Maintain verified server inventory | FR-1.49, FR-5.5, FR-5.6, FR-5.7, FR-5.39, FR-14.9, SR-3.7-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
-| F-37 | Detect drift and expiry | FR-5.8, FR-5.21, FR-5.22, FR-19.1, SR-3.8-1 |
-| F-38 | Instantiate server instance | FR-5.9, FR-5.10, FR-5.37, FR-14.10, SR-2.14-1, SR-3-2, SR-3.6-1, SR-4.8-1 |
-| F-39 | Supervise lifecycle | FR-5.11, FR-5.12, FR-5.15 |
-| F-40 | Tear down and sanitize | FR-5.11, FR-5.14, FR-5.27, SR-3.8-1 |
+| F-37 | Detect drift and expiry | FR-5.8, FR-5.21, FR-5.22, FR-19.1, SR-3.8-1, FR-5.17 (deferred), FR-5.31 (deferred) |
+| F-38 | Instantiate server instance | FR-5.9, FR-5.37, FR-14.10, SR-2.14-1, SR-3-2, SR-3.6-1, SR-4.8-1, FR-5.10 (deferred) |
+| F-39 | Supervise lifecycle | FR-5.12, FR-5.15, FR-5.11 (deferred) |
+| F-40 | Tear down and sanitize | FR-5.14, FR-5.27, SR-3.8-1, FR-5.11 (deferred) |
 | F-41 | Contain server execution | FR-19.1, SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2 |
 | F-42 | Observe runtime behavior | FR-5.33 |
 | F-43 | Detect declared-behavior deviation | FR-5.34 |
@@ -7796,36 +7679,36 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-50 | Deliver secret | FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.11, SR-2.13-2 |
 | F-51 | Register leak fingerprints | FR-6, FR-6.10 |
 | F-52 | Revoke secret delivery | FR-6, FR-6.7, FR-6.8, SR-7.6-2 |
-| F-53 | Record security event | FR-7.1, FR-7.2, FR-7.6, FR-16.8, SR-6.1-1, SR-6.6-1, SR-6.7-1, SR-6.8-1, SR-6.13-1, SR-6.19-1 |
+| F-53 | Record security event | FR-7.1, FR-7.2, FR-16.8, SR-6.1-1, SR-6.7-1, SR-6.13-1, SR-6.19-1, FR-7.6 (deferred), SR-6.6-1 (deferred), SR-6.8-1 (deferred) |
 | F-54 | Link evidence | SR-6.4-1, SR-6.5-1, SR-6.10-1, SR-6.13-1, SR-6.18-1, SR-6.20-1 |
 | F-55 | Produce tamper-evident journal | FR-7.4, FR-7.5, FR-7.14, FR-17.7, FR-17.8, SR-1.2-2, SR-6.2-1, SR-6.3-1, SR-6.10-1, SR-6.12-1 |
 | F-56 | Enforce retention and purge | SR-6.15-1 |
 | F-57 | Serve audit queries | FR-7.3, FR-8.22, FR-11.8, SR-6.16-1 |
 | F-58 | Manage trust anchors | FR-7.10, FR-14.8 |
-| F-59 | Issue and revoke framework credentials | FR-2.18, FR-7.7, FR-16, FR-16.5, SR-2.2-1, SR-2.3-1, SR-2.11-2 |
-| F-60 | Protect Gateway keys | FR-7.7, FR-7.8, FR-17, FR-17.7, SR-2.8-4, SR-2.13-1 |
+| F-59 | Issue and revoke framework credentials | FR-2.18, FR-7.7, FR-16, FR-16.5, SR-2.2-1, SR-2.3-1, SR-2.11-2, FR-2.14 (deferred) |
+| F-60 | Protect Gateway keys | FR-7.7, FR-7.8, FR-17, FR-17.7, SR-2.8-4, SR-2.13-1, FR-7.9 (deferred) |
 | F-61 | Monitor enforcement health | FR-7.11, FR-7.12, FR-13.9, FR-13.10, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, SR-4-1, SR-6.11-1 |
 | F-62 | Drive fail-closed state | FR-7.12, FR-7.13, FR-9.17, FR-13.9, FR-13.13, SR-7.3-1 |
 | F-63 | Authenticate administrative user | FR-2.19, FR-2.23, FR-8, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
 | F-64 | Enforce administrative roles | FR-2.23, FR-8, FR-8.2, SR-2-2, SR-6-3, SR-6.16-1 |
 | F-65 | Present management views | FR-8, FR-8.1, FR-8.3, FR-8.4, FR-8.5, FR-8.14, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-13.10, FR-18, FR-18.4, FR-19.2, FR-19.4, SR-3.3-1, SR-3.4-1, SR-6.17-1 |
-| F-66 | Estimate observation cost | FR-3.7, FR-8.11 |
+| F-66 | Estimate observation cost | FR-8.11, FR-3.7 (deferred) |
 | F-67 | Provide parameter-selection workbench | FR-8, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.24, FR-8.25 |
 | F-68 | Present behavior analytics | FR-8, FR-8.13 |
 | F-69 | Present performance and resource views | FR-8, FR-8.15, FR-8.16 |
 | F-70 | Persist and index graph data | FR-9.1, FR-9.18 |
 | F-71 | Execute bounded graph queries and transactions | FR-9.18 |
-| F-72 | Authorize and execute typed data operations | FR-9.2, FR-9.3, SR-1.13-1, SR-1.13-2, SR-6-3, SR-7.1-1 |
+| F-72 | Authorize and execute typed data operations | FR-9.2, FR-9.3, SR-1.13-1, SR-1.13-2, SR-6-3, SR-7.1-1, SR-4.3-1 (deferred) |
 | F-73 | Batch and route writes | FR-9.4, FR-9.5, FR-11.6 |
 | F-74 | Apply backpressure | FR-9.6 |
 | F-75 | Store observation and meta-metric records | FR-9.7, FR-9.8, FR-11.6 |
 | F-76 | Serve aggregate queries | FR-9.9, FR-11.8 |
 | F-77 | Allocate and enforce memory budgets | FR-9.10, FR-9.11, FR-9.12, FR-11.9 |
-| F-78 | Manage storage tiers, retention and quotas | FR-9.14, FR-9.15, SR-6.14-1, SR-7.10-1 |
+| F-78 | Manage storage tiers, retention and quotas | FR-9.14, FR-9.15, SR-6.14-1, SR-7.10-1, FR-9.13 (deferred) |
 | F-79 | Schedule and verify backups | FR-9.16, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8, SR-7.7-1, SR-7.8-1 |
 | F-80 | Collect raw observables | FR-1.44, FR-1.45, FR-10.1, FR-10.3, FR-11.4 |
 | F-81 | Extract features | FR-10.3, FR-10.5 |
-| F-82 | Apply sampling, sensitivity and escalation rules | FR-10.4, FR-10.6, FR-10.7, FR-10.8, SR-6.6-1, SR-6.7-1 |
+| F-82 | Apply sampling, sensitivity and escalation rules | FR-10.4, FR-10.6, FR-10.7, FR-10.8, SR-6.7-1, SR-6.6-1 (deferred) |
 | F-83 | Collect meta-metrics | FR-10.2, FR-10.8, FR-10.9, FR-10.10, FR-10.11 |
 | F-84 | Update baseline statistics | FR-10.12, FR-10.13, FR-10.14, FR-10.15, FR-10.16, FR-10.17 |
 | F-85 | Build baseline snapshot | FR-10.18, FR-11.7 |
@@ -7848,13 +7731,13 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Requirements |
 |---|---|
-| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-1.51, FR-1.52, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-2.23, FR-3.14, FR-3.16, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.12, FR-12.9, FR-12.12, FR-12.13, FR-15, FR-15.8, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-2.11-3, SR-2.11-4, SR-2.11-5, SR-5.2-1, SR-5.2-2 |
+| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-1.51, FR-1.52, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-2.23, FR-3.14, FR-3.16, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.12, FR-12.9, FR-12.12, FR-12.13, FR-15, FR-15.8, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-2.11-4, SR-2.11-5, SR-5.2-1, SR-5.2-2, FR-5.25 (deferred), SR-2.8-2 (deferred), SR-2.11-3 (deferred) |
 | X-02 | FR-14, FR-14.3, FR-14.5, FR-14.6, FR-14.9, FR-14.12 |
 | X-03 | FR-5.1, FR-5.2, FR-5.3, FR-14, FR-14.4, FR-14.11 |
 | X-04 | FR-2.19, FR-2.23, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.22, FR-8.23, FR-8.24, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-16.5, SR-2.5-1, SR-2.8-1, SR-2.9-2 |
 | X-05 | FR-3.17, FR-3.18, FR-3.23, FR-3.24, FR-3.25, FR-8.21 |
 | X-06 | FR-5.36, FR-5.38, SR-4.5-2, SR-5.15-1 |
-| X-07 | FR-12.3, FR-12.4, FR-12.5, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1 |
+| X-07 | FR-12.3, FR-12.4, FR-12.5, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1, FR-7.9 (deferred) |
 | X-08 | FR-6.2 |
 | X-09 | FR-7.14 |
 | X-10 | FR-10.2 |
@@ -7875,14 +7758,14 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-03 | FR-1.11, FR-1.23, FR-4.1 |
 | I-04 | FR-2.6, SR-2.1-2 |
 | I-05 | FR-2.6, FR-2.7, FR-2.12, FR-2.13, SR-1-2, SR-1.5-1 |
-| I-06 | FR-2.18, FR-3.1, FR-3.3, FR-3.5, FR-3.6, FR-3.7, FR-3.8, FR-3.9, FR-4.14, FR-5.6, FR-6.2, FR-6.12, FR-7.3, FR-7.6, FR-7.10, FR-7.12, FR-8.1, FR-9.3, FR-10.19, FR-14.8, SR-1.19-1 |
-| I-07 | FR-1.27, FR-2.1, FR-3.1, FR-3.2, FR-3.10, FR-9.3, SR-1-1 |
+| I-06 | FR-2.18, FR-3.1, FR-3.5, FR-3.6, FR-3.8, FR-3.9, FR-4.14, FR-5.6, FR-6.2, FR-6.12, FR-7.3, FR-7.10, FR-7.12, FR-8.1, FR-9.3, FR-10.19, FR-14.8, SR-1.19-1, FR-2.14 (deferred), FR-3.3 (deferred), FR-3.7 (deferred), FR-7.6 (deferred), SR-4.3-1 (deferred) |
+| I-07 | FR-1.27, FR-2.1, FR-3.1, FR-3.2, FR-3.10, FR-9.3, SR-1-1, SR-4.3-1 (deferred) |
 | I-08 | FR-1.29, FR-1.50, FR-3.11, FR-3.12, FR-3.13, SR-1-2 |
 | I-09 | SR-5.12-1 |
 | I-10 | FR-3.14, FR-3.15, FR-3.20 |
 | I-11 | FR-3.20, FR-4.13 |
-| I-12 | FR-5.10 |
-| I-13 | FR-1.39, FR-4.9, FR-4.10, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.32, FR-5.40, FR-12.9, SR-2.10-1 |
+| I-12 | FR-5.10 (deferred) |
+| I-13 | FR-1.39, FR-4.9, FR-4.10, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.32, FR-5.40, FR-12.9, SR-2.10-1, FR-5.16 (deferred), FR-5.18 (deferred), FR-5.25 (deferred), FR-5.28 (deferred), FR-5.29 (deferred), FR-5.30 (deferred), FR-5.31 (deferred) |
 | I-14 | FR-6.10 |
 | I-15 | FR-4.11 |
 | I-16 | FR-1.31 |
@@ -7899,12 +7782,12 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-27 | SR-2.13-3 |
 | I-28 | FR-6.7, FR-6.8 |
 | I-29 | FR-1.44, FR-1.45, FR-4.2, FR-4.7, FR-5.15, FR-10.1, FR-10.2, FR-10.29 |
-| I-30 | FR-7.3, FR-9.3, SR-6.10-1 |
+| I-30 | FR-7.3, FR-9.3, SR-6.10-1, SR-4.3-1 (deferred) |
 | I-31 | FR-4.15, FR-10.7, FR-10.28, SR-1.12-2 |
 | I-32 | FR-7.11, FR-9.11, FR-9.12, FR-9.15 |
-| I-33 | FR-9.3, FR-9.4, FR-9.6 |
-| I-34 | FR-9.3, FR-10.12 |
-| I-35 | FR-9.3, FR-10.32, FR-10.33 |
+| I-33 | FR-9.3, FR-9.4, FR-9.6, SR-4.3-1 (deferred) |
+| I-34 | FR-9.3, FR-10.12, SR-4.3-1 (deferred) |
+| I-35 | FR-9.3, FR-10.32, FR-10.33, SR-4.3-1 (deferred) |
 | I-36 | FR-9.2, SR-1.13-1, SR-4.2-1 |
 | I-37 | FR-9.5, FR-9.9, SR-1.13-1, SR-4.2-2 |
 | I-38 | FR-9.6, FR-9.10, FR-9.11, FR-9.12 |
@@ -7920,13 +7803,13 @@ Use this matrix to code element by element. A requirement allocated to several e
 | D-04 | FR-6.1, FR-9.16 |
 | D-05 | FR-9.1, SR-6.10-1, SR-6.13-1 |
 | D-06 | FR-7.4, FR-7.5, FR-7.14, FR-9.16, FR-13.11, FR-13.12, FR-17.8, SR-1.2-2, SR-6.2-1, SR-6.3-1, SR-6.12-1, SR-6.13-1 |
-| D-07 | FR-2.8, FR-2.13, FR-2.16, FR-2.20, FR-9.1 |
-| D-08 | FR-7.7, FR-7.8, FR-9.16, FR-17.7, SR-1.1-2, SR-2.8-4 |
-| D-09 | FR-9.7, FR-9.8, FR-9.14 |
+| D-07 | FR-2.8, FR-2.13, FR-2.20, FR-9.1, FR-2.16 (deferred) |
+| D-08 | FR-7.7, FR-7.8, FR-9.16, FR-17.7, SR-1.1-2, SR-2.8-4, FR-7.9 (deferred) |
+| D-09 | FR-9.7, FR-9.8, FR-9.14, FR-9.13 (deferred) |
 | D-10 | FR-9.1, FR-10.13, FR-10.15, FR-10.16, FR-10.18 |
 | D-11 | FR-8.6, FR-8.7, FR-8.8, FR-9.1, FR-10.5, FR-10.37 |
 | D-12 | FR-9.14, FR-10.35, FR-10.36 |
-| D-13 | FR-9.7, FR-10.9, FR-10.11 |
+| D-13 | FR-9.7, FR-10.9, FR-10.11, FR-9.13 (deferred) |
 | D-14 | FR-17.1, FR-17.2, FR-17.3 |
 | D-15 | FR-9.16, FR-13.11, FR-17.6, SR-7.7-1 |
 
@@ -8021,7 +7904,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-2.12 | FR-2 | Test | E-04 | Revision change handling |
 | FR-2.13 | FR-2 | Test | E-04 | Baseline context key |
 | FR-2.15 | FR-2 | Test | E-03 | UDS peer mapping |
-| FR-2.16 | FR-2 | Test | E-04 | Restart invalidation |
 | FR-2.17 | FR-2 | Test | E-03 | Authorization metadata |
 | FR-2.18 | FR-2 | Test | E-03, E-22 | Client registration |
 | FR-2.19 | FR-2 | Test | E-04, E-24 | Authorization endpoint |
@@ -8032,11 +7914,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-3 | — | Analysis | E-05, E-06, E-07 | Policy capability |
 | FR-3.1 | FR-3 | Test | E-05 | Policy object types |
 | FR-3.2 | FR-3 | Test | E-05 | Policy schema |
-| FR-3.3 | FR-3 | Demonstration | E-05 | Draft workspace |
 | FR-3.4 | FR-3 | Inspection | E-05 | Revision record |
 | FR-3.5 | FR-3 | Test | E-05 | Policy simulation |
 | FR-3.6 | FR-3 | Test | E-05 | Effective permission report |
-| FR-3.7 | FR-3 | Test | E-05 | Observation cost estimate |
 | FR-3.8 | FR-3 | Test | E-05 | Policy export and import |
 | FR-3.9 | FR-3 | Test | E-05 | Policy rollback |
 | FR-3.10 | FR-3 | Test | E-06 | Compiled decision snapshot |
@@ -8084,8 +7964,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-5.7 | FR-5 | Test | E-14 | Enablement state |
 | FR-5.8 | FR-5 | Test | E-14 | Expiry suspension |
 | FR-5.9 | FR-5 | Inspection | E-15 | Launch specification |
-| FR-5.10 | FR-5 | Test | E-15 | Instance scope |
-| FR-5.11 | FR-5 | Test | E-15 | Instance reuse and idle teardown |
 | FR-5.12 | FR-5 | Test | E-15 | Crash handling |
 | FR-5.13 | FR-5 | Test | E-10 | stdio framing |
 | FR-5.14 | FR-5 | Test | E-10, E-15 | Invalid stdout |
@@ -8126,7 +8004,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-7.3 | FR-7 | Test | E-21 | Audit query API |
 | FR-7.4 | FR-7 | Inspection | E-21 | Journal segment format |
 | FR-7.5 | FR-7 | Test | E-21 | Journal verification |
-| FR-7.6 | FR-7 | Test | E-21 | Alerts |
 | FR-7.7 | FR-7 | Inspection | E-22 | Local certificate authorities |
 | FR-7.8 | FR-7 | Inspection | E-22 | Key purposes |
 | FR-7.10 | FR-7 | Demonstration | E-22 | Trust anchor enrollment |
@@ -8385,7 +8262,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-2.10-1 | SEC-2.10 | Test | E-10 | Credential separation |
 | SR-2.11-1 | SEC-2.11 | Test | E-03 | OAuth token validation |
 | SR-2.11-2 | SEC-2.11 | Test | E-03 | Dynamic registration approval |
-| SR-2.11-3 | SEC-2.11 | Test | E-03 | No open metadata fetch |
 | SR-2.11-4 | SEC-2.11 | Test | E-04 | Refresh token reuse |
 | SR-2.11-5 | SEC-2.11 | Test | E-03 | Truthful authorization metadata |
 | SR-2.13-1 | SEC-2.13 | Inspection | E-19, E-22 | Vault encryption |
@@ -8465,9 +8341,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-6.3-1 | SEC-6.3 | Test | E-12, E-21 | Outcome before release |
 | SR-6.4-1 | SEC-6.4 | Inspection | E-21 | Exact links |
 | SR-6.5-1 | SEC-6.5 | Test | E-21 | Origin attribution |
-| SR-6.6-1 | SEC-6.6 | Test | E-21, E-29 | Policy-directed payload capture |
 | SR-6.7-1 | SEC-6.7 | Test | E-21, E-29 | Secret scrubbing |
-| SR-6.8-1 | SEC-6.8 | Inspection | E-21, E-22 | Payload encryption |
 | SR-6.9-1 | SEC-6.9 | Test | E-05 | Retention validation |
 | SR-6.10-1 | SEC-6.10 | Test | E-21, E-26 | Idempotent export |
 | SR-6.11-1 | SEC-6.11 | Test | E-12, E-21, E-23 | Export lag stop |
@@ -8503,9 +8377,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 
 | Check | Result |
 |---|---|
-| Requirements | 543 total: 375 FR (19 roots), 168 SR |
-| Deferred from release 1.0 (Appendix N) | 16: FR-2.14, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.9, FR-9.13, SR-2.8-2, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2 |
-| Verification methods | Analysis 19, Demonstration 29, Inspection 78, Test 417 |
+| Requirements | 534 total: 369 FR (19 roots), 165 SR |
+| Deferred from release 1.0 (Appendix N) | 25: FR-2.14, FR-2.16, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.9, FR-9.13, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1 |
+| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 410 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
@@ -8683,6 +8557,76 @@ These records keep their IDs and text so that a later release can restore them u
 | Rationale | Only Hermes can present a per-server client certificate. mTLS is a hardening option, not the baseline credential. |
 | Deferral | Release 1.0 ships without the mTLS Harness Profile. Harness requests are authenticated by bearer access tokens over TLS on a loopback listener, and per-instance credentials are OAuth clients managed in G-11. Client-certificate issuance and the client CA are deferred with the profile. |
 
+#### FR-2.16 — Restart invalidation (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-2.16 |
+| Parent ID | FR-2 — Identity and sessions |
+| Statement | When the Gateway restarts, the Session Manager (E-04) **SHALL** reject every access token issued before the restart and **SHALL** keep each unexpired session resumable only through its current refresh token (FR-2.22), until the session's CP-18 maximum lifetime. |
+| Allocation | Elements: E-04 Session Manager; Functions: F-08, F-09; Data stores: D-07 |
+| Verification Method | Test |
+| Verification Statement | Restart the Gateway with active sessions; confirm the old access tokens receive -31006, a refresh with the current refresh token resumes the same session ID, and a refresh after the maximum lifetime fails. |
+| Source | ARCH §13 D-07; OWNER (sessions may survive restart via refresh tokens) |
+| Rationale | Requiring a new browser sign-in after every restart or upgrade makes the product unusable; a rotated refresh token keeps the resume bound to the one client that holds it. |
+| Deferral | Release 1.0 ends every session when the Gateway restarts: sessions, their session-taint marks and their quota counters are held in memory, and resuming a session with a refresh token issued before the restart would reset its taint and quota. Every access and refresh token issued before a restart is refused, and the harness signs in again. Resumable sessions with persisted taint and quota state are deferred. |
+
+#### FR-3.3 — Draft workspace (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-3.3 |
+| Parent ID | FR-3 — Policy capability |
+| Statement | The Policy Administration Service (E-05) **SHALL** hold edits in a named draft derived from a stated parent revision until the draft is published or discarded. |
+| Allocation | Elements: E-05 Policy Administration Service; Functions: F-10; Internal interfaces: I-06 |
+| Verification Method | Demonstration |
+| Verification Statement | Create a draft, edit it in two sessions of G-02, discard one and publish the other; confirm the active revision changes only on publish. |
+| Source | ARCH §4 E-05 |
+| Rationale | Authors iterate on policy without affecting enforcement. |
+| Deferral | Release 1.0 has no server-side named drafts. A document is validated and simulated through the control API without being stored, and published with a stated parent revision that must still be active (a stale parent is refused, so two editors cannot overwrite each other); the G-02 editor keeps the unpublished text in the browser. Named drafts shared between sessions are deferred. |
+
+#### FR-3.7 — Observation cost estimate (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-3.7 |
+| Parent ID | FR-3 — Policy capability |
+| Statement | The Policy Administration Service (E-05) **SHALL** estimate records per day, storage per day and added p95 latency for a draft Observation Policy or Research Campaign from the trailing 7 days of call rates. |
+| Allocation | Elements: E-05 Policy Administration Service; Functions: F-66; Internal interfaces: I-06 |
+| Verification Method | Test |
+| Verification Statement | Estimate a policy over a replayed 7-day fixture traffic set; confirm estimates are within ±25% of the measured values after one replayed day. |
+| Source | ARCH §11 item 6; ARCH §5 F-66 |
+| Rationale | Researchers must know the cost of a capture choice before publishing it. |
+| Deferral | Release 1.0 reports the measured cost of observation instead of an estimate: GET /api/v1/observations/cost ranks the time spent per stage, policy revision and Observation Policy from recorded spans, and the meta-metrics give records and store growth per interval. A forecast for a draft Observation Policy or Research Campaign from seven days of call rates is deferred until those object types have drafts (FR-3.3). |
+
+#### FR-5.10 — Instance scope (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.10 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | The Server Runtime Manager (E-15) **SHALL** create instances per call, per session or shared, as selected by the Runtime Profile from the scopes the manifest allows, defaulting to per session. |
+| Allocation | Elements: E-15 Server Runtime Manager; Functions: F-38; Internal interfaces: I-12 |
+| Verification Method | Test |
+| Verification Statement | Configure each scope; confirm instance counts after calls from two sessions. |
+| Source | ARCH §4 E-15; ARCH §19 OD-3 |
+| Rationale | Isolation versus cold-start cost is a policy choice. |
+| Deferral | Release 1.0 runs one shared instance per enabled server revision, started with the Gateway and replaced after an upstream timeout or failure. Per-session and per-call instances need per-instance secret delivery (the Secret Broker delivers S2 and S3 secrets per server alias) and per-instance sandbox resources that release 1.0 does not have; they are deferred to the release that adds the Runtime Profile object. |
+
+#### FR-5.11 — Instance reuse and idle teardown (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-5.11 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | The Server Runtime Manager (E-15) **SHALL** reuse a live instance of the matching scope and **SHALL** tear down an instance idle for the CP-38 interval. |
+| Allocation | Elements: E-15 Server Runtime Manager; Functions: F-39, F-40 |
+| Verification Method | Test |
+| Verification Statement | Make two calls in one session and then wait past CP-38; confirm one instance is reused and then torn down. |
+| Source | ARCH §4 E-15 |
+| Rationale | Bounds resource use on a single PC. |
+| Deferral | Deferred with per-session and per-call instance scopes (FR-5.10): with one shared instance per revision there is nothing to reuse by scope or to tear down when idle. The instance runs until the Gateway stops, its revision is suspended, or it is replaced after a failure. |
+
 #### FR-5.16 — Era probe (deferred)
 
 | Field | Value |
@@ -8795,6 +8739,20 @@ These records keep their IDs and text so that a later release can restore them u
 | Rationale | Detects runtime tool drift. |
 | Deferral | Deferred with the southbound Streamable HTTP client and modern-era instances (FR-5.28, FR-5.16). Release 1.0 acts on `notifications/tools/list_changed` from stdio instances by re-reading the tool list and comparing it with the manifest (SR-3.8-1). |
 
+#### FR-7.6 — Alerts (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-7.6 |
+| Parent ID | FR-7 — Assurance services |
+| Statement | The Audit & Evidence Service (E-21) **SHALL** raise an alert in the management console for each event matching an alert rule of the effective Audit Profile. |
+| Allocation | Elements: E-21 Audit & Evidence Service; Functions: F-53; Internal interfaces: I-06 |
+| Verification Method | Test |
+| Verification Statement | Configure an alert on `withheld`; trigger it; confirm the console alert. |
+| Source | ARCH §7.2 Audit Profile |
+| Rationale | Operators need notification of significant events. |
+| Deferral | The release 1.0 Audit Profile sets retention and escalation parameters only; it has no alert rules. The console raises alerts for anomaly bands (G-06) and health causes, and the evidence stream with filters (FR-8.23) follows any event class live. Alert rules in the Audit Profile are deferred. |
+
 #### FR-7.9 — Key protection at rest (deferred)
 
 | Field | Value |
@@ -8836,6 +8794,20 @@ These records keep their IDs and text so that a later release can restore them u
 | Source | SEC 2.8; ARCH §19 OD-2 |
 | Rationale | Optional transport-level framework authentication for harnesses that can present a client certificate. |
 | Deferral | Deferred with the mTLS Harness Profile (FR-2.14); release 1.0 authenticates harness requests with bearer access tokens. |
+
+#### SR-2.11-3 — No open metadata fetch (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-2.11-3 |
+| Parent ID | SEC-2.11 — OAuth boundary (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Identity & Authentication Service (E-03) **SHALL** fetch a Client ID Metadata Document only from a URL that is pre-registered or matches the CP-52 allowlist, within the CP-52 limits, and **SHALL** refuse every other metadata URL without a network request. |
+| Allocation | Elements: E-03 Identity & Authentication Service; Functions: F-04; External interfaces: X-01 |
+| Verification Method | Test |
+| Verification Statement | Present an allowlisted metadata URL, a non-allowlisted URL pointing at a capture server and an allowlisted URL that redirects to another host; confirm success, refusal with no request reaching the capture server, and refusal of the redirect. |
+| Source | SEC 2.11; REVIEW (I4: CIMD URL allowlist or pre-registration, no open outbound fetch) |
+| Rationale | An open fetch lets an unauthenticated caller make the Gateway send requests to arbitrary hosts. |
+| Deferral | Release 1.0 never fetches Client ID Metadata Documents: a metadata-URL client ID is accepted only when it is pre-registered in the configuration or approved through the Remote Access registration flow, and every other URL is refused without a network request. Fetching documents from an allowlist (CP-52) is deferred; no open fetch exists in the meantime. |
 
 #### SR-2.12-1 — Handle ownership (deferred)
 
@@ -8892,4 +8864,32 @@ These records keep their IDs and text so that a later release can restore them u
 | Source | SEC 5.3; MCP:basic/transports/stdio §Backward Compatibility |
 | Rationale | Specification fallback rule. |
 | Deferral | Deferred with the era probe (FR-5.16): release 1.0 sends no era probe, so there is no probe error to classify. |
+
+#### SR-6.6-1 — Policy-directed payload capture (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-6.6-1 |
+| Parent ID | SEC-6.6 — Policy-directed payload storage (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Audit & Evidence Service (E-21) **SHALL** capture optional payloads only as directed by the evaluated Audit Profile, Observation Policy or Research Campaign, into the storage class it names. |
+| Allocation | Elements: E-21 Audit & Evidence Service, E-29 Observation Collector; Functions: F-53, F-82 |
+| Verification Method | Test |
+| Verification Statement | Toggle capture in the profile; confirm payload presence follows it. |
+| Source | SEC 6.6 |
+| Rationale | Policy-directed capture. |
+| Deferral | Release 1.0 captures no payloads: observation records hold derived parameters only, and the S3 parameters (raw arguments and raw responses) are never stored. With no optional payload capture there is nothing for an Audit Profile, Observation Policy or Research Campaign to direct; directed payload capture is deferred with its encrypted storage (SR-6.8-1). |
+
+#### SR-6.8-1 — Payload encryption (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-6.8-1 |
+| Parent ID | SEC-6.8 — Payload encryption (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Audit & Evidence Service (E-21) **SHALL** store captured payloads as age-encrypted blobs referenced in the graph by ciphertext digest and key reference. |
+| Allocation | Elements: E-21 Audit & Evidence Service, E-22 Key & Trust Anchor Manager; Functions: F-53 |
+| Verification Method | Inspection |
+| Verification Statement | Inspect a payload blob and its graph reference. |
+| Source | SEC 6.8 |
+| Rationale | Encrypted payloads. |
+| Deferral | Deferred with payload capture (SR-6.6-1): release 1.0 stores no payloads, so there are no payload blobs to encrypt or reference from the graph. |
 

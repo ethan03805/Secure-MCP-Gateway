@@ -38,7 +38,7 @@ First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3
 
 ## Unreleased — SRS V1.2 draft, architecture V2.3 draft — 2026-10-16
 
-Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 543 requirements (375 FR in 19 roots, 168 SR) and 16 deferred requirements (Appendix N) with no errors or warnings. No snapshot or tag is made; the release process will make one.
+Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 534 requirements (369 FR in 19 roots, 165 SR) and 25 deferred requirements (Appendix N) with no errors or warnings. No snapshot or tag is made; the release process will make one.
 ### Installation and release (FR-13.2 to FR-13.6, security review RR-01)
 
 - `smcpctl install` (`cmd/smcpctl/install.go`). Standalone, on macOS and Linux: creates the CP-46 per-user directories (0700), keys, `smcp.toml` with `[profile] mode = "standalone"` and the log file in the CP-46 log directory, and `policy.json`; writes and loads the launchd agent `com.smcp.gateway` or writes, enables and starts the systemd user unit `smcpd.service`; waits for the control API and refuses `fail-closed`; prints that the installation is not enforced. Enforced, on Linux as root: runs the copy of `packaging/linux/install-enforced.sh` embedded in smcpctl (new package `packaging/linux`), bootstraps state and policy under `/var/lib/smcp` for `smcp-core`, writes `/etc/smcp/smcp.toml` (root:smcp 0640), starts the units and checks health. Every step reports `created` or `present`; a second run reports `present` and changes no file. `smcpctl bootstrap` gained an internal options form (`runBootstrap`) that install uses; its output and configuration are unchanged.
@@ -156,6 +156,12 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Egress secret scan (SR-5.8-2): the Egress Broker applies the registered secret fingerprints to the URL, headers and body of every brokered HTTP operation before it leaves and refuses a match with `EGRESS_SECRET_DETECTED`; only the S1 header the broker inserts is exempt.
 - SR-1.8-1 now names `SCHEMA_INVALID`, the reason code of Appendix B.
 - New tests verify SR-1.8-1, SR-3-4, SR-3.11-1, SR-5.8-2 and SR-7.5-1 (bootstrap credential: mode 0600, 24 h expiry, refused when wrong, expired or used).
+
+### Second set of requirements deferred from release 1.0 (Appendix N)
+
+- Deferred (9 more, 25 in all): per-session and per-call instance scopes and idle teardown (FR-5.10, FR-5.11; release 1.0 runs one shared instance per enabled revision), named policy drafts (FR-3.3; publication already refuses a stale parent), the observation cost estimate (FR-3.7; the measured cost route stays), Audit Profile alert rules (FR-7.6), fetching Client ID Metadata Documents (SR-2.11-3; unregistered metadata URLs stay refused without a request), session resumption after a restart (FR-2.16; sessions, taint and quotas are in memory, so a restart ends every session), and payload capture with its encrypted storage (SR-6.6-1, SR-6.8-1; no payloads are stored).
+- SR-2.11-5's verification now checks the registration endpoint with the Remote Access Profile off and on and that metadata documents are never advertised; a new test verifies it.
+- `gen.py`: an architecture item allocated only to deferred requirements is not a coverage gap; Appendix G lists those requirements marked "(deferred)".
 
 ### Owner decisions applied
 

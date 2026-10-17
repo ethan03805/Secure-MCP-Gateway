@@ -236,6 +236,11 @@ alloc_count = collections.Counter()
 for r in reqs.values():
     for tok in r["alloc_ids"]:
         alloc_count[tok] += 1
+# An architecture item allocated only to deferred requirements is covered
+# by them (Appendix G marks them deferred), not a coverage gap.
+for r in deferred.values():
+    for tok in r["alloc_ids"]:
+        alloc_count[tok] += 1
 gmention = collections.Counter()
 for r in reqs.values():
     for g in set(re.findall(r'\bG-\d\d\b', r["stmt"] + r["title"])):
@@ -334,6 +339,7 @@ def cov_table(prefix, label, names=None):
     out.append(f"### {label}\n\n| ID | {'Name | ' if names else ''}Requirements |\n|---|{'---|' if names else ''}---|\n")
     for x in sorted(arch[prefix], key=natkey):
         rs = [r["id"] for r in reqs.values() if x in r["alloc_ids"]]
+        rs += [r["id"] + " (deferred)" for r in deferred.values() if x in r["alloc_ids"]]
         nm = f" {esc(names.get(x,''))} |" if names else ""
         out.append(f"| {x} |{nm} {', '.join(rs) or ('context only — outside SoI' if x in CONTEXT_ONLY else '**none**')} |\n")
     out.append("\n")

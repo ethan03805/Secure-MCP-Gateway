@@ -161,6 +161,7 @@ A: E-21; F-53; I-06
 V: Test | Configure an alert on `withheld`; trigger it; confirm the console alert.
 SRC: ARCH §7.2 Audit Profile
 R: Operators need notification of significant events.
+DEFER: The release 1.0 Audit Profile sets retention and escalation parameters only; it has no alert rules. The console raises alerts for anomaly bands (G-06) and health causes, and the evidence stream with filters (FR-8.23) follows any event class live. Alert rules in the Audit Profile are deferred.
 
 @FR-7.7 | Local certificate authorities
 P: FR-7

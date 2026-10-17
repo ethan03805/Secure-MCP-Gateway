@@ -31,6 +31,7 @@ A: E-05; F-10; I-06
 V: Demonstration | Create a draft, edit it in two sessions of G-02, discard one and publish the other; confirm the active revision changes only on publish.
 SRC: ARCH §4 E-05
 R: Authors iterate on policy without affecting enforcement.
+DEFER: Release 1.0 has no server-side named drafts. A document is validated and simulated through the control API without being stored, and published with a stated parent revision that must still be active (a stale parent is refused, so two editors cannot overwrite each other); the G-02 editor keeps the unpublished text in the browser. Named drafts shared between sessions are deferred.
 
 @FR-3.4 | Revision record
 P: FR-3
@@ -63,6 +64,7 @@ A: E-05; F-66; I-06
 V: Test | Estimate a policy over a replayed 7-day fixture traffic set; confirm estimates are within ±25% of the measured values after one replayed day.
 SRC: ARCH §11 item 6; ARCH §5 F-66
 R: Researchers must know the cost of a capture choice before publishing it.
+DEFER: Release 1.0 reports the measured cost of observation instead of an estimate: GET /api/v1/observations/cost ranks the time spent per stage, policy revision and Observation Policy from recorded spans, and the meta-metrics give records and store growth per interval. A forecast for a draft Observation Policy or Research Campaign from seven days of call rates is deferred until those object types have drafts (FR-3.3).
 
 @FR-3.8 | Policy export and import
 P: FR-3
@@ -451,6 +453,7 @@ A: E-15; F-38; I-12
 V: Test | Configure each scope; confirm instance counts after calls from two sessions.
 SRC: ARCH §4 E-15; ARCH §19 OD-3
 R: Isolation versus cold-start cost is a policy choice.
+DEFER: Release 1.0 runs one shared instance per enabled server revision, started with the Gateway and replaced after an upstream timeout or failure. Per-session and per-call instances need per-instance secret delivery (the Secret Broker delivers S2 and S3 secrets per server alias) and per-instance sandbox resources that release 1.0 does not have; they are deferred to the release that adds the Runtime Profile object.
 
 @FR-5.11 | Instance reuse and idle teardown
 P: FR-5
@@ -459,6 +462,7 @@ A: E-15; F-39; F-40
 V: Test | Make two calls in one session and then wait past CP-38; confirm one instance is reused and then torn down.
 SRC: ARCH §4 E-15
 R: Bounds resource use on a single PC.
+DEFER: Deferred with per-session and per-call instance scopes (FR-5.10): with one shared instance per revision there is nothing to reuse by scope or to tear down when idle. The instance runs until the Gateway stops, its revision is suspended, or it is replaced after a failure.
 
 @FR-5.12 | Crash handling
 P: FR-5
