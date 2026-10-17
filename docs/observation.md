@@ -307,6 +307,6 @@ Tool-call reason codes added: `APPROVAL_REQUIRED` (existing code, now also from 
 - Instrumented elements other than the edge's evidence events and the two probes do not yet emit observables (FR-10.1); per-stage, per-rule and per-filter spans with CPU time (FR-10.2) are not recorded.
 - The configuration table is the only Observation Policy; observation policies published through E-05, per-band escalation parameter sets, first-N-per-session capture, and the overhead budget are not implemented.
 - The scorer uses one snapshot for all scopes; uncharacterized contexts are always treated as normal.
-- Control API routes are Administrator-only; the Auditor, Researcher and Policy Author roles of Appendix C do not exist yet.
+- The Researcher reads aggregates, not raw records: pseudonymized S2 fields in record listings are not implemented, so the raw record route is closed to that role.
 - Storage tiering, quotas and the memory manager (E-28) are not implemented beyond retention and the DuckDB memory limit.
 - The per-dataset key is kept by E-32 in the key directory, not issued by a separate key manager service.

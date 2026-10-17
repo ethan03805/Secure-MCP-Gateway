@@ -8,6 +8,9 @@ import { Link, match, navigate, useLocation } from "../router";
 import type { AuditEvent, EventPage } from "../types";
 import { Crumbs, DataTable, ErrorBlock, Help, JsonBlock, KV, Loaded, Mono, PageHeader, Section, ShortId, StateLabel, Time, toneOf, type Column } from "../ui";
 import { VerifyPanel } from "./Control";
+import { EventPathGraph, NeighborhoodGraph, type EventPath, type Neighborhood } from "../graph";
+import { usePerm } from "../perm";
+import { SelectField, TextField } from "../ui";
 
 const filterKeys = ["class", "outcome", "reason_code", "origin", "session_id", "correlation_id", "principal_id", "decision_id", "q", "since", "until"] as const;
 const primaryFilters: readonly (typeof filterKeys)[number][] = ["class", "outcome", "reason_code", "session_id", "q"];
@@ -115,7 +118,7 @@ function Journal() {
           </>
         }
       >
-        {exportError && <ErrorBlock error={exportError} what="the export" />}
+        {exportError && <ErrorBlock error={exportError} doing="the export" />}
         <Loaded res={res} what="journal events" route="/api/v1/audit/events">
           {(p) => (
             <>
@@ -152,7 +155,8 @@ function Journal() {
 
 function EventDetail({ id }: { id: string }) {
   const res = useResource<{ event: AuditEvent; position: number; related: AuditEvent[] }>(`/api/v1/audit/events/${encodeURIComponent(id)}`, { live: false });
-  const graph = useResource<unknown>(`/api/v1/graph/events/${encodeURIComponent(id)}`, { live: false });
+  const perm = usePerm();
+  const graph = useResource<EventPath>(perm.can("GET /api/v1/graph/events/{id}/path") ? `/api/v1/graph/events/${encodeURIComponent(id)}/path` : null, { live: false });
   const link = (k: string, v?: string): ReactNode => (v ? <Link to={`/audit?${k}=${encodeURIComponent(v)}`}><Mono>{v}</Mono></Link> : <span className="muted">none</span>);
   return (
     <>
@@ -195,11 +199,83 @@ function EventDetail({ id }: { id: string }) {
           </>
         )}
       </Loaded>
-      <Section title="Investigation graph">
-        <Loaded res={graph} what="the investigation graph" route="/api/v1/graph">
-          {(g) => <JsonBlock value={g} label="Graph neighbourhood of this event" />}
+      {perm.can("GET /api/v1/graph/events/{id}/path") && (
+        <Section title="Investigation graph" actions={<Link to={`/audit/graph?label=AuditEvent&id=${encodeURIComponent(id)}`}>Explore the neighborhood</Link>}>
+          <Loaded res={graph} what="the investigation graph" route="/api/v1/graph/events/{id}/path">
+            {(g) => <EventPathGraph path={g} />}
+          </Loaded>
+        </Section>
+      )}
+    </>
+  );
+}
+
+const labels = ["AuditEvent", "Session", "Principal", "Invocation", "Decision", "PolicyRevision", "ServerRevision", "ToolRevision", "Approval"];
+
+function GraphExplorer() {
+  const { query } = useLocation();
+  const label = labels.includes(query.get("label") ?? "") ? query.get("label")! : "Session";
+  const id = query.get("id") ?? "";
+  const limit = ["25", "50", "100"].includes(query.get("limit") ?? "") ? query.get("limit")! : "50";
+  const [form, setForm] = useState({ label, id, limit });
+  useEffect(() => setForm({ label, id, limit }), [label, id, limit]);
+  const res = useResource<Neighborhood>(id ? `/api/v1/graph/neighborhood?label=${label}&id=${encodeURIComponent(id)}&limit=${limit}` : null, { live: false });
+  const go = (l: string, i: string, n = limit) => navigate(`/audit/graph?label=${l}&id=${encodeURIComponent(i)}&limit=${n}`);
+  return (
+    <>
+      <Crumbs items={[["Audit investigation", "/audit"], ["Graph", null]]} />
+      <PageHeader code="G-14" title="Investigation graph">
+        <p>Any mirrored node and its neighbors: sessions, principals, calls, decisions, policy, server and tool revisions and approvals.</p>
+      </PageHeader>
+      <form
+        className="filters"
+        aria-label="Graph node"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (form.id.trim()) go(form.label, form.id.trim(), form.limit);
+        }}
+      >
+        <SelectField label="Node kind" value={form.label} onChange={(v) => setForm({ ...form, label: v })} options={labels} />
+        <TextField label="Node ID" value={form.id} onChange={(v) => setForm({ ...form, id: v })} mono required />
+        <SelectField label="Neighbors shown at most" value={form.limit} onChange={(v) => setForm({ ...form, limit: v })} options={["25", "50", "100"]} />
+        <div className="filter-actions">
+          <button type="submit" className="btn-primary">
+            Show neighborhood
+          </button>
+        </div>
+      </form>
+      {id ? (
+        <Loaded res={res} what="the neighborhood" route="/api/v1/graph/neighborhood">
+          {(d) => (
+            <>
+              <NeighborhoodGraph data={d} label={label} onRecenter={(l, i) => go(l, i)} />
+              <DataTable
+                caption="Relationships"
+                rows={d.edges.map((e, i) => ({ ...e, i, other: d.neighbors.find((n) => n.id === (e.from === d.node.id ? e.to : e.from)) }))}
+                rowKey={(e) => String(e.i)}
+                empty="The node has no relationship in the mirror."
+                columns={[
+                  { key: "type", label: "Relationship", sort: (e) => e.type, render: (e) => <Mono>{e.type}</Mono> },
+                  { key: "dir", label: "Direction", render: (e) => (e.from === d.node.id ? "outgoing" : "incoming") },
+                  { key: "kind", label: "Neighbor kind", sort: (e) => e.other?.labels?.[0] ?? "", render: (e) => e.other?.labels?.[0] ?? "" },
+                  {
+                    key: "id",
+                    label: "Neighbor",
+                    render: (e) =>
+                      e.other ? (
+                        <button type="button" className="link" onClick={() => go(e.other!.labels?.[0] ?? "AuditEvent", e.other!.id)}>
+                          <Mono>{e.other.id}</Mono>
+                        </button>
+                      ) : null,
+                  },
+                ]}
+              />
+            </>
+          )}
         </Loaded>
-      </Section>
+      ) : (
+        <p className="empty">Enter a node kind and ID, or open the graph from an event, to see its neighborhood.</p>
+      )}
     </>
   );
 }
@@ -207,6 +283,7 @@ function EventDetail({ id }: { id: string }) {
 export function Audit({ path }: { path: string }) {
   const m = match("/audit/events/:id", path);
   if (m?.id) return <EventDetail id={m.id} />;
+  if (path === "/audit/graph") return <GraphExplorer />;
   return (
     <>
       <PageHeader code="G-14" title="Audit investigation">

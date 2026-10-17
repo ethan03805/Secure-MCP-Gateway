@@ -15,10 +15,16 @@ Approval links in harness error messages (`data.approvalUrl`) and in desktop not
 | Account | Configured in | What it can open |
 |---|---|---|
 | Administrator | `[admin]` (`username`, `password_hash`), or the bootstrap token | Every view and action |
-| Approver | `[[approvals.account]]` | Approvals (G-13) only: list, inspect, approve, deny |
-| Session Approver | `[[approver]]` | Not the console. Session Approvers sign in on the Gateway's own OAuth page when a harness connects (FR-2.19) |
+| Operator | `[[console.account]]` with `role = "operator"` | Gateway control with emergency stop (not resume), sessions (terminate), servers and library (suspend), secrets metadata, egress, runtime (kill), data server, backups and keys, analytics, audit |
+| Policy Author | `[[console.account]]` with `role = "policy_author"` | Policy studio with drafts, simulation, publication, rollback and the filter workbench; baseline promotion; campaign approval; analytics and audit |
+| Auditor | `[[console.account]]` with `role = "auditor"` | Audit investigation and export; read-only policy, sessions, servers, secrets metadata, egress, runtime, analytics and campaigns |
+| Researcher | `[[console.account]]` with `role = "researcher"` | Observation workbench, analytics aggregates, research campaigns (create, submit, stop) and dataset exports of campaigns |
+| Approver | `[[approvals.account]]` | Approvals (G-13): list, inspect, approve, deny; Gateway control read-only |
+| Session Approver | `[[approver]]` | Remote access: approve or deny client registrations; Gateway control read-only. Harness sign-ins are approved on the Gateway's own OAuth page when a harness connects (FR-2.19) |
 
-Choose the account kind on the sign-in page, then enter the username and password. A sign-in lasts 30 minutes; when it ends the console returns to the sign-in page and keeps the path you were on. **Sign out** ends the token on the Gateway at once.
+The roles and their routes are the matrix of SRS Appendix C, listed in [api/console.md](api/console.md#roles). The console asks the Gateway which routes the signed-in role may use (`GET /api/v1/console/session`), lists only the views that role may open and offers only the actions it may take; the control API enforces the same table.
+
+Choose the account kind on the sign-in page (Administrator; Approver; Session Approver; or Operator, Policy Author, Auditor or Researcher, whose role comes from the account), then enter the username and password. A sign-in lasts 30 minutes; when it ends the console returns to the sign-in page and keeps the path you were on. **Sign out** ends the token on the Gateway at once.
 
 First installation: when `smcpctl bootstrap` ran without `--admin-password-file`, it printed a one-use bootstrap token valid for 24 hours. On the sign-in page select **set the administrator password with a bootstrap token**, enter the token and a password of at least 12 characters, then sign in.
 
@@ -28,8 +34,8 @@ The token is kept in the tab's session storage and sent as a bearer header; it i
 
 ## Layout
 
-- **Status bar** (top of every view): enforcement state (`healthy`, `degraded`, `fail-closed`, or `emergency stop`), profile and release label (`not enforced` in the Standalone profile, FR-13.10), active policy revision, active session count, whether live updates are connected, the **Emergency stop** or **Resume** button, the signed-in account and **Sign out**. In the fail-closed state the bar turns red.
-- **Navigation** (left): the views the signed-in role may open, grouped by task, each with its view code. An Approver sees only Approvals.
+- **Status bar** (top of every view): enforcement state (`healthy`, `degraded`, `fail-closed`, or `emergency stop`), profile and release label (`not enforced` in the Standalone profile, FR-13.10), active policy revision, active session count, whether live updates are connected, the **Emergency stop** or **Resume** button for roles that may use it, the signed-in role and account and **Sign out**. In the fail-closed state the bar turns red.
+- **Navigation** (left): the views the signed-in role may open, grouped by task, each with its view code. An Approver sees Gateway control and Approvals.
 - **Theme**: System, Light or Dark, kept per browser.
 
 Each view has a **Help for this view** section. Lists are tables; select a column header (or focus it and press Enter) to sort by it, again to reverse.
@@ -38,25 +44,25 @@ Each view has a **Help for this view** section. Lists are tables; select a colum
 
 | Code | View | Path | What it does | Backend |
 |---|---|---|---|---|
-| G-01 | Gateway control | `/` | Enforcement state and each health cause with its meaning, profile, policy revision, sessions, launcher, servers; **Reload policy**; journal verification; first-run checklist | `/admin/v1/health`, `/admin/v1/policy/reload`, `/api/v1/audit/verify` |
-| G-11 | Sessions and principals | `/sessions`, `/sessions/<id>` | Active sessions; a session's binding (principal, client, template, purpose, approving Session Approver, deadlines); **Terminate session**; principals, OAuth clients and Session Approver accounts | `/api/v1/sessions*` |
-| G-10 | Servers and library | `/servers`, `/servers/<alias>`, `/catalog` | Servers with state, revision, manifest source, protocol version and launcher; a server's argument vector, environment keys, secret slots, risk classes and tools with input schemas; the tool catalog per template with rule, approval and filters; signed packages when E-13 is installed | `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/packages` |
-| G-13 | Approvals | `/approvals`, `/approvals/<id>` | Pending approvals with time left; other states; an approval's bound request (tool, revisions, argument digest, decisive rules, session) and its canonical arguments; **Approve this call** and **Deny this call** with an optional comment | `/api/v1/approvals*` |
-| G-14 | Audit investigation | `/audit`, `/audit/events/<id>` | Journal verification; journal browser with filters and paging; **Export CSV** and **Export JSON Lines**; an event with links to its decision, call, session and principal, and every phase of the same call; the investigation graph when E-25/E-26 are installed | `/api/v1/audit/*`, `/api/v1/graph` |
-| G-02 | Policy studio | `/policy` | Policy revisions | `/api/v1/policy` |
-| G-03 | Audit profile tuning | `/audit-profiles` | Audit profiles | `/api/v1/policy/audit-profiles` |
-| G-06 | Anomaly response | `/anomaly-response` | Sigma-band response policy | `/api/v1/anomalies/policy` |
-| G-12 | Secrets | `/secrets` | Secret metadata (never values) | `/api/v1/secrets` |
-| G-04 | Observation workbench | `/observations` | Parameter Catalog and observation policies | `/api/v1/observations/catalog`, `/api/v1/observations/policies` |
-| G-05 | Behavior analytics | `/analytics` | Baselines and anomalies | `/api/v1/baselines`, `/api/v1/anomalies` |
-| G-07 | Performance | `/performance` | Throughput and stage timing | `/api/v1/health/performance` |
-| G-08 | Data server and memory | `/data-server` | Data server status and backups | `/api/v1/health/data`, `/api/v1/backup` |
-| G-09 | Research campaigns | `/research` | Campaigns | `/api/v1/research/campaigns` |
-| | Egress | `/egress` | Egress Broker state, grants and connections | `/api/v1/egress`, `/api/v1/egress/grants`, `/api/v1/egress/connections` |
-| | Runtime | `/runtime` | Sandbox summary and instances | `/api/v1/runtime`, `/api/v1/runtime/instances` |
-| | Remote access | `/remote` | Remote Access profile and client registrations | `/api/v1/remote`, `/api/v1/clients` |
+| G-01 | Gateway control | `/` | Enforcement state and each health cause with its meaning, health monitor causes with **Acknowledge** for latched ones, profile, policy revision, sessions, launcher, servers; **Reload policy**; journal verification; first-run checklist | `/admin/v1/health`, `/api/v1/health/*`, `/admin/v1/policy/reload`, `/api/v1/audit/verify` |
+| G-11 | Sessions and principals | `/sessions`, `/sessions/<id>` | Active sessions; a session's binding; **Terminate session**; principals, OAuth clients and Session Approver accounts | `/api/v1/sessions*` |
+| G-11 | Remote access | `/remote`, `/remote/clients/<id>` | Remote Access Profile state, **Enable remote access** (public URL, tunnel provider) and **Disable**; client registrations by state with **Approve** (bound to a principal), **Deny** and **Revoke** | `/api/v1/remote*`, `/api/v1/clients*` |
+| G-10 | Servers and library | `/servers`, `/servers/<alias>`, `/library`, `/library/<id>/<revision>`, `/catalog` | Servers with state, revision, manifest source and launcher; package revisions with state, reason (drift, expiry, revocation), alias, risk class, signer and trust anchor, **Enable** (with alias), **Suspend**, **Retire**; packaged servers; trust anchors with **Enroll a trust anchor** and **Remove**; import receipts; **Scan the library now**; a revision's signed manifest and provenance; the tool catalog per template | `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/packages*` |
+| G-12 | Secrets | `/secrets`, `/secrets/<name>` | Vault status, secret metadata, Secret Use Policy bindings and **Reload**; **Create a secret** (value write-only), **Rotate**, **Revoke** with the reference impact shown first, **Resume delivery** after a leak suspension | `/api/v1/secrets*` |
+| | Egress | `/egress` | Broker limits and attached instances, effective grants, the connection log with server, decision, time and limit filters | `/api/v1/egress*` |
+| | Runtime | `/runtime`, `/runtime/instances/<id>` | Launcher and sandbox defaults, enforced-profile prerequisite checks, instances with resource use and deviations; an instance's observations, launch specification, stderr tail and **Kill this instance** | `/api/v1/runtime*` |
+| G-02 | Policy studio | `/policy`, `/policy/revisions/<id>`, `/policy/draft`, `/policy/filters` | Revisions with **Roll back**; a revision's record, effective permissions per template and canonical document, diff against the active revision; a draft with structured editors for templates, rules and Framework Profiles and the whole document as JSON, **Validate**, **Diff against the active revision**, **Simulate** (journal replay) and **Publish**; the filter workbench (FR-8.27): run selected request or response filters on synthetic text and see each filter's matches, action and timing, the disposition and the transformed output | `/api/v1/policy*`, `/api/v1/filters*` |
+| G-03 | Audit profile tuning | `/audit-profiles` | The mandatory audit floor, read-only; the capture settings in force; an editor for sampling, retention and escalation parameters that produces the `[observation]` table | `/api/v1/observations/status` |
+| G-06 | Anomaly response | `/anomaly-response` | The action per band in force; an editor that maps each band to a restrict-only action and threshold and produces the `[observation]` table | `/api/v1/observations/status` |
+| G-13 | Approvals | `/approvals`, `/approvals/<id>` | Pending approvals with time left; other states; an approval's bound request and canonical arguments; **Approve this call** and **Deny this call** | `/api/v1/approvals*` |
+| G-14 | Audit investigation | `/audit`, `/audit/events/<id>`, `/audit/graph` | Journal browser with filters, paging and export; an event with links to its decision, call, session and principal and every phase of the call; the investigation path drawn as a graph (event, call, decision, policy revision, session, principal, tool and server revision) when the graph mirror is enabled; the neighborhood of any mirrored node, bounded at 25, 50 or 100 neighbors | `/api/v1/audit/*`, `/api/v1/graph/*` |
+| G-04 | Observation workbench | `/observations` | Collector status; the Parameter Catalog grouped by capture point with search, description, unit, sensitivity and cost class; five presets and saved presets; a cost preview; the configuration for the selection; up to 20 recent records with S2 and S3 values masked | `/api/v1/observations/*` |
+| G-05 | Behavior analytics | `/analytics`, `/analytics/snapshots/<id>` | z-score timeline and abnormal-event list with drill-down to the call in the journal; feature distribution and per-context statistics; baseline status, snapshots with **Build a snapshot now**, **Promote** and roll back, drift, promotion history; excluding a session from learning | `/api/v1/anomalies`, `/api/v1/observations/aggregate`, `/api/v1/baselines*` |
+| G-07 | Performance | `/performance` | Throughput and CPU over time, gateway overhead p50, p95 and p99 per policy revision, time per stage and policy object, filterable by policy revision and time range | `/api/v1/observations/metrics`, `/cost`, `/aggregate` |
+| G-08 | Data server and memory | `/data-server` | Graph mirror state, heap and page cache against budget, node counts, hardening findings, **Rebuild from the journal**; Observation Store size and queue; backups with **Take a backup now**; key inventory with listener certificate and evidence key rotation | `/api/v1/graph/status`, `/api/v1/observations/status`, `/api/v1/backup`, `/api/v1/keys*` |
+| G-09 | Research campaigns | `/research`, `/research/new`, `/research/campaigns/<id>`, `/research/exports/<id>` | Campaigns and exports; a new campaign with its scope chosen from observed principals, servers and tools and its parameters from the catalog; **Submit**, **Approve**, **Reject**, **Stop**, **Expire**; **Export** (CSV, JSON Lines, Parquet, GraphML), file downloads and the data dictionary of each dataset | `/api/v1/research/*` |
 
-The views from G-02 down read routes that belong to other elements. When this Gateway build does not serve the route, the view says **Not available in this build** and names the route. When the route exists, the view shows its records as a table of their fields, with each full record as text; editing those records is done with `smcpctl` until the console gains editors for them.
+When this Gateway build does not serve a view's route, the view says **Not available in this build** and names the route; when the element is present but turned off in the configuration (egress, graph mirror), it says **Not enabled on this Gateway** with the configuration key. Charts are drawn by the console itself, without a chart library; each has a table of the same values under **Show values as a table**, and its marks are reachable by keyboard.
 
 ### Emergency stop
 
@@ -90,7 +96,7 @@ Exports contain the events matching the current filter, oldest first, up to 100,
 
 ## Live updates
 
-While signed in as an Administrator, the console keeps an event stream open (`/api/v1/audit/stream`) and refreshes the open view when the journal records something, typically within a second (FR-8.23). Approvers use the approvals watch stream. The status bar shows `live`; if the stream drops it shows `not live: refresh to update` and reconnects with backoff.
+While signed in with a role that may read the journal (Administrator, Operator, Policy Author, Auditor), the console keeps an event stream open (`/api/v1/audit/stream`) and refreshes the open view when the journal records something, typically within a second (FR-8.23). Approvers use the approvals watch stream; Researchers and Session Approvers have no live channel and the status bar says `updates on reload`. The status bar shows `live`; if the stream drops it shows `not live: refresh to update` and reconnects with backoff.
 
 ## States and errors
 
@@ -99,7 +105,7 @@ Each view shows `Loading` while it reads, an empty state that says what would fi
 | Code | Meaning | What to do |
 |---|---|---|
 | `unauthenticated` | The sign-in ended or the token is unknown | Sign in again |
-| `role_refused` | The account's role may not use this route | Sign in as an Administrator |
+| `role_refused` | The account's role may not use this route | Sign in with an account whose role may (see Signing in) |
 | `origin_refused` | The page was opened from a different address than the configured admin URL | Open the console at the address in `[admin_listener]` |
 | `route_not_found` | This build does not serve the route | Shown as "Not available in this build" |
 | `audit_unavailable` | The journal could not record the action, so it was not taken | Check disk space and `smcpctl health` |
@@ -122,17 +128,17 @@ The sources are in `console/` (React, TypeScript, Vite; no component library). T
 |---|---|
 | `make console` | `npm ci` if needed, typecheck, and build `console/dist` |
 | `make console-check` | Fails when the committed `console/dist` differs from a fresh build |
-| `make console-e2e` | Builds `smcpd`, bootstraps a temporary instance in `console/.e2e`, and runs the Playwright acceptance and accessibility tests against it |
+| `make console-e2e` | Builds `smcpd`, bootstraps a temporary instance in `console/.e2e` (with the Secret Vault, the Egress Broker, an account per role and desktop notifications off), and runs the Playwright acceptance tests (`e2e/views.spec.ts` has one test per view) and the accessibility tests against it |
 | `cd console && npm run dev` | Development server on `http://localhost:5173` proxying `/api` and `/admin` to `https://127.0.0.1:8444`; sign-in from the development server is refused by the origin check unless the admin listener is configured for it, so use it for layout work |
 
 After changing anything under `console/src`, run `make console` and commit `console/dist` with the change. The CI job `console` fails when they differ.
 
 ## Not built yet
 
-- Session suspension, principal and credential management, and client registration approval are not in G-11; principals and clients are edited in `smcp.toml`.
-- G-10 has no enable, suspend, retire, alias or trust-anchor actions and shows no attestations, drift, SBOM, mounts or egress destinations; those come with E-13 and E-14.
-- The G-02 to G-09 and G-12 views list records only; their editors (policy drafts, diff and simulation, workbench controls, analytics charts, campaign actions, write-only secret entry) need those elements' APIs.
+- Principal and credential management and session suspension are not in G-11; principals and clients are edited in `smcp.toml`. Server aliases can be set only when a revision is enabled.
+- G-03, G-04 and G-06 produce the `[observation]` configuration instead of publishing Audit Profiles, Observation Policies or an Anomaly Response Policy, because those policy objects have no control API yet. G-08 shows memory budgets; they are edited in `[graph]` and `[observation]`.
+- The investigation graph needs the graph mirror (`[graph] enabled`, Neo4j); without it the event view shows the journal's phases only. The z-score timeline needs a promoted baseline with characterized contexts.
+- The Researcher's pseudonymized view of S2 fields is not implemented; the raw record route is closed to the Researcher instead. S3 payload grants are not implemented.
 - The console uses bearer tokens, not the cookie session with CSRF token and `If-Match` preconditions of SR-2.6-1 and SR-8.9-1.
-- The Operator, Policy Author, Auditor and Researcher roles of Appendix C do not exist yet; the console knows Administrator and Approver.
 - The journal browser reads the journal files on every request; it has no index, so large journals are slow to page (FR-11.8).
-- Playwright tests do not yet feed the requirement report; their claims are annotations only.
+- Playwright tests do not yet feed the requirement report; their claims are annotations only. CI runs them in Chromium only (FR-8.30 asks for Firefox and WebKit too).

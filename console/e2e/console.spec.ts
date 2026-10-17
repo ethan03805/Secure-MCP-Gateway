@@ -101,12 +101,13 @@ test("an administrator approves a held call in the Approvals view", async ({ pag
 test("an approver sees only the Approvals view and can deny a call", async ({ page }) => {
   claims("FR-8.2", "FR-8.21", "FR-8.28");
   await page.goto(g.adminURL + "/");
-  await page.getByLabel("Approver (tool-call approvals only)").check();
+  await page.getByLabel("Approver (tool-call approvals)").check();
   await page.getByLabel("Username").fill(g.approverUser);
   await page.getByLabel("Password").fill(g.approverPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Approvals" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link")).toHaveCount(1);
+  // Approvals and, as every role may read health (Appendix C), Gateway control.
+  await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link")).toHaveCount(2);
   await expect(page.getByTestId("emergency-button")).toHaveCount(0);
 
   const call = mcpCall(g, "ref_read_file", { path: "hello.txt" }, { scope: "smcp:template:approval-demo", expect: g.marker });
@@ -135,10 +136,13 @@ test("deep links open after sign-in; missing routes say not available", async ({
   await header.getByRole("button").click();
   await expect(header).toHaveAttribute("aria-sort", "descending");
 
-  // Policy studio reads /api/v1/policy, which E-05 now serves; Audit profile
-  // tuning reads a route no element provides yet.
+  // A route this build does not serve shows "Not available in this build".
+  await page.route("**/api/v1/observations/status", (r) =>
+    r.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "route_not_found", message: "not served" } }) }),
+  );
   await page.getByRole("link", { name: "Audit profile tuning" }).click();
-  await expect(page.getByText("Not available in this build")).toBeVisible();
+  await expect(page.getByText("Not available in this build").first()).toBeVisible();
+  await page.unroute("**/api/v1/observations/status");
   await page.getByRole("link", { name: "Sessions and principals" }).click();
   await expect(page.getByRole("table", { name: "Principals" })).toContainText("claude-code-local");
 });

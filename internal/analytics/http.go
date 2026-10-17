@@ -138,7 +138,8 @@ func (s *Service) parameters(w http.ResponseWriter, r *http.Request) {
 			sel = s.Collector.Selected(p.Name)
 		}
 		out = append(out, map[string]any{"id": p.ID, "name": p.Name, "description": p.Description, "unit": p.Unit, "data_type": p.DataType,
-			"sensitivity": p.Sensitivity, "capture_point": p.CapturePoint, "baselinable": p.Baselinable, "selected": sel, "escalation": esc[p.Name]})
+			"sensitivity": p.Sensitivity, "capture_point": p.CapturePoint, "baselinable": p.Baselinable, "selected": sel, "escalation": esc[p.Name],
+			"cost_class": p.CostClass, "derivation": p.Derivation, "source_element": p.SourceElement})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"catalog_version": s.Catalog.Version, "parameters": out})
 }

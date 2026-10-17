@@ -20,10 +20,13 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
+	"github.com/ethan03805/secure-mcp-gateway/internal/consoleauth"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
+	"github.com/ethan03805/secure-mcp-gateway/internal/filterapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
+	"github.com/ethan03805/secure-mcp-gateway/internal/openapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
@@ -160,6 +163,11 @@ func run(cfgPath, level string) error {
 			}
 		}
 	}()
+	// E-24: console accounts of the remaining Appendix C roles, the G-02
+	// filter test workbench and the OpenAPI document of every route.
+	consoleauth.New(consoleauth.Options{Config: cfg, Evidence: a.Evidence, Log: log}).Register(a.Admin)
+	filterapi.RegisterRoutes(a.Admin, cfg)
+	openapi.Register(a.Admin)
 	if err := a.Listen(); err != nil {
 		return err
 	}

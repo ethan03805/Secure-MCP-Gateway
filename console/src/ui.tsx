@@ -2,7 +2,7 @@
 // headers (FR-8.35); every view has loading, empty and error states that
 // show the control API message and reason code (FR-8.29).
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiError } from "./api";
+import { ApiError, asApiError } from "./api";
 import type { Resource } from "./data";
 import { Link, useViewTitle } from "./router";
 
@@ -126,7 +126,7 @@ export function toneOf(state: string): Tone {
   }
 }
 
-export function ErrorBlock({ error, retry, what }: { error: ApiError; retry?: () => void; what?: string }) {
+export function ErrorBlock({ error, retry, what, doing }: { error: ApiError; retry?: () => void; what?: string; doing?: string }) {
   if (error.status === 403) {
     return (
       <div className="notice notice-bad" role="alert">
@@ -142,7 +142,7 @@ export function ErrorBlock({ error, retry, what }: { error: ApiError; retry?: ()
   return (
     <div className="notice notice-bad" role="alert">
       <p>
-        <strong>{what ? `Could not load ${what}.` : "The request failed."}</strong> {error.message}
+        <strong>{what ? `Could not load ${what}.` : doing ? `Could not complete ${doing}.` : "The request failed."}</strong> {error.message}
       </p>
       <p className="mono small">
         {error.status ? `HTTP ${error.status}` : "no response"}
@@ -181,6 +181,7 @@ export function Loaded<T>({ res, what, route, children }: { res: Resource<T>; wh
   if (res.status === "loading") return <Loading what={what} />;
   if (res.status === "error") {
     if (route && res.error.unavailable) return <Unavailable route={route} what={what[0]!.toUpperCase() + what.slice(1)} />;
+    if (res.error.code.endsWith("_disabled")) return <Disabled error={res.error} />;
     return <ErrorBlock error={res.error} retry={res.reload} what={what} />;
   }
   return <>{children(res.data)}</>;
@@ -354,4 +355,173 @@ export function Section({ title, children, actions }: { title: string; children:
       {children}
     </section>
   );
+}
+
+/** An element that this Gateway has but whose configuration turns it off. */
+export function Disabled({ error }: { error: ApiError }) {
+  return (
+    <div className="notice notice-neutral" role="status">
+      <p>
+        <strong>Not enabled on this Gateway.</strong> {error.message}
+      </p>
+      <p className="mono small">reason {error.code}</p>
+    </div>
+  );
+}
+
+/** State of one control API action: busy flag, last error and last result. */
+export function useAction<T = unknown>() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [result, setResult] = useState<T | null>(null);
+  const run = async (f: () => Promise<T>, after?: (r: T) => void): Promise<boolean> => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await f();
+      setResult(r);
+      after?.(r);
+      return true;
+    } catch (e) {
+      setError(asApiError(e));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+  const reset = () => {
+    setError(null);
+    setResult(null);
+  };
+  return { busy, error, result, run, reset };
+}
+
+/** A labelled text input. */
+export function TextField({
+  label,
+  value,
+  onChange,
+  name,
+  required,
+  type = "text",
+  placeholder,
+  mono,
+  autoComplete = "off",
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  name?: string;
+  required?: boolean;
+  type?: string;
+  placeholder?: string;
+  mono?: boolean;
+  autoComplete?: string;
+  hint?: ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        name={name}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        placeholder={placeholder}
+        className={mono ? "mono" : undefined}
+        autoComplete={autoComplete}
+        spellCheck={false}
+        aria-describedby={hint ? id + "-hint" : undefined}
+      />
+      {hint && (
+        <span className="hint" id={id + "-hint"}>
+          {hint}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A labelled select of fixed options. */
+export function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  name,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: (string | [string, string])[];
+  name?: string;
+}) {
+  const id = useId();
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <select id={id} name={name} value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const [v, l] = typeof o === "string" ? [o, o] : o;
+          return (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          );
+        })}
+      </select>
+    </div>
+  );
+}
+
+/** A group of checkboxes choosing several of a fixed list (no free text). */
+export function CheckList({ legend, options, value, onChange }: { legend: string; options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+  return (
+    <fieldset className="checklist">
+      <legend>{legend}</legend>
+      {options.length === 0 && <span className="muted small">none available</span>}
+      {options.map((o) => (
+        <label key={o}>
+          <input type="checkbox" checked={value.includes(o)} onChange={(e) => onChange(e.target.checked ? [...value, o] : value.filter((x) => x !== o))} />
+          <span className="mono">{o}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** A short confirmation line after an action. */
+export function Done({ children }: { children: ReactNode }) {
+  return (
+    <p className="notice notice-ok" role="status">
+      {children}
+    </p>
+  );
+}
+
+/** Formats a byte count with binary units. */
+export function bytes(n?: number | null): string {
+  if (n === undefined || n === null || Number.isNaN(n)) return "unknown";
+  const u = ["B", "KiB", "MiB", "GiB", "TiB"];
+  let i = 0;
+  let v = n;
+  while (Math.abs(v) >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${i === 0 ? v : v.toFixed(v < 10 ? 1 : 0)} ${u[i]}`;
+}
+
+/** Formats a number compactly (1,284 / 12.9K / 4.2M). */
+export function compact(n?: number | null, digits = 1): string {
+  if (n === undefined || n === null || Number.isNaN(n)) return "none";
+  const a = Math.abs(n);
+  if (a >= 1e6) return `${(n / 1e6).toFixed(digits)}M`;
+  if (a >= 1e4) return `${(n / 1e3).toFixed(digits)}K`;
+  if (Number.isInteger(n)) return n.toLocaleString("en");
+  return n.toFixed(a < 10 ? 2 : 1);
 }

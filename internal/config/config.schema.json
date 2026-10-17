@@ -108,6 +108,25 @@
         }
       }
     },
+    "console": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "account": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["username", "password_hash", "role"],
+            "properties": {
+              "username": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,64}$" },
+              "password_hash": { "$ref": "#/$defs/argon2id" },
+              "role": { "enum": ["operator", "policy_author", "auditor", "researcher"] }
+            }
+          }
+        }
+      }
+    },
     "remote": {
       "type": "object",
       "additionalProperties": false,

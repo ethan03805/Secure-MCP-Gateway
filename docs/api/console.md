@@ -4,7 +4,7 @@ Routes of the Management Console & Control API (E-24) that the console owns: ses
 
 The listener's rules apply to every route: loopback TLS, `Host` must name the admin listener, a foreign `Origin` or a cross-site `Sec-Fetch-Site` is refused with 403 `origin_refused`, and every POST must have `Content-Type: application/json` (bodies up to 64 KiB). Responses carry `Cache-Control: no-store`.
 
-Authentication is a bearer token in the `Authorization` header: the operator token (`<state>/keys/admin.token`) or an administrator session token from `POST /admin/v1/login`. Every route below is Administrator-only. A missing or unknown token gets 401 `unauthenticated` (recorded as `ADMIN_AUTH_FAILED`); an Approver token gets 403 `role_refused` (recorded as `ADMIN_ROLE_REFUSED`).
+Authentication is a bearer token in the `Authorization` header: the operator token (`<state>/keys/admin.token`) or an administrator session token from `POST /admin/v1/login`. The tokens of the other Appendix C roles come from `POST /api/v1/console/login` and `POST /api/v1/approvals/login` (below). Which role may use which route is the role matrix under [Roles](#roles). A missing or unknown token gets 401 `unauthenticated` (recorded as `ADMIN_AUTH_FAILED`); a token of a role the route does not admit gets 403 `role_refused` (recorded as `ADMIN_ROLE_REFUSED`).
 
 Errors have the form `{"error": {"code": "<code>", "message": "<text>"}}`.
 
@@ -230,3 +230,75 @@ X-Frame-Options: DENY
 ```
 
 A method other than GET or HEAD on a page path gets 405 `method_not_allowed`. A request to an `/api/` or `/admin/` path that no element registered gets 404 `route_not_found` with the message `this Gateway build does not serve <METHOD> <path>`; the console shows such a route as "Not available in this build".
+
+## Roles
+
+The control API implements the seven application roles of SRS Appendix C (FR-8.2). The Administrator (operator token or `POST /admin/v1/login`) may use every route. The other roles sign in as follows and reach only the routes the matrix admits; any other route answers 403 `role_refused`.
+
+| Role | Accounts | Sign-in |
+|---|---|---|
+| Operator | `[[console.account]]` with `role = "operator"` | `POST /api/v1/console/login` |
+| Policy Author | `[[console.account]]` with `role = "policy_author"` | `POST /api/v1/console/login` |
+| Auditor | `[[console.account]]` with `role = "auditor"` | `POST /api/v1/console/login` |
+| Researcher | `[[console.account]]` with `role = "researcher"` | `POST /api/v1/console/login` |
+| Session Approver | `[[approver]]` | `POST /api/v1/console/login` with `"role": "session_approver"`; harness sign-ins stay on the OAuth page |
+| Approver | `[[approvals.account]]` | `POST /api/v1/approvals/login` ([approvals.md](approvals.md)) |
+
+```toml
+[[console.account]]
+username = "olga"
+password_hash = "$argon2id$..."   # smcpctl hash-password
+role = "operator"
+```
+
+A person who holds several roles has one account per role. The matrix, by Appendix C row (the exact roles per route are `x-smcp-roles` in `GET /api/v1/openapi.json`, and the table is `internal/adminapi/rolematrix.go`):
+
+| Appendix C row | Routes | Roles besides the Administrator |
+|---|---|---|
+| Emergency stop / resume | `POST /admin/v1/stop`; `POST /admin/v1/resume` | Operator may stop; resume is Administrator-only |
+| View health and status | `GET /admin/v1/health`, `GET /api/v1/health/status`, `GET /api/v1/console/session`, `GET /api/v1/openapi.json` | every role |
+| Edit, simulate, publish, roll back policy | `POST /api/v1/policy/*`, `POST /admin/v1/policy/reload`, `POST /api/v1/filters/scan` | Policy Author; policy reads also Operator and Auditor |
+| Approve research campaign | `POST /api/v1/research/campaigns/{id}/{action}` | Policy Author; a Researcher may `submit` and `stop` only |
+| Decide tool-call approvals | `/api/v1/approvals*` | Approver |
+| Approve dynamic client registrations | `GET /api/v1/clients*`, `POST /api/v1/clients/{id}/approve`, `deny` | Session Approver; revoke is Administrator-only |
+| Enable / suspend / retire servers | `POST /api/v1/packages/{id}/{rev}/enable`, `disable`, `retire`; `POST /api/v1/runtime/instances/{id}/kill`; `POST /api/v1/packages/scan` | Operator may suspend (`disable`), kill an instance and scan |
+| Enroll trust anchors | `POST /api/v1/packages/trust`, `DELETE /api/v1/packages/trust/{name}` | none |
+| Enable or disable the Remote Access Profile | `POST /api/v1/remote/enable`, `disable` | none |
+| Principals, credentials, sessions | `POST /api/v1/sessions/{id}/terminate` | Operator; session reads also Auditor |
+| Secret create / rotate / revoke | `POST /api/v1/secrets*`, `DELETE /api/v1/secrets/{name}` | none; metadata reads Operator and Auditor |
+| Audit query and redacted export | `GET /api/v1/audit/*`, `POST /api/v1/audit/verify`, graph reads, server and catalog reads | Operator, Policy Author, Auditor |
+| Observation analytics (S0/S1) | `GET /api/v1/observations/status`, `parameters`, `aggregate`, `metrics`, `cost`, `GET /api/v1/baselines*`, `GET /api/v1/anomalies` | Operator, Policy Author, Auditor, Researcher |
+| Observation S2 fields | `GET /api/v1/observations` (raw records) | Operator, Policy Author, Auditor (not the Researcher, whose S2 view would need pseudonymization) |
+| Baseline promotion / rollback | `POST /api/v1/baselines/snapshots`, `/{id}/promote`, `/flags` | Policy Author |
+| Memory budgets, backups, key rotation | `GET`/`POST /api/v1/backup`, `GET /api/v1/keys`, `POST /api/v1/keys/rotate`, `POST /api/v1/health/ack`, `POST /api/v1/graph/rebuild` | Operator |
+| Dataset export | `POST /api/v1/research/exports`, export reads and downloads | Researcher, for a request naming `campaign_id` (the export route refuses a campaign that is not active, completed or exported) |
+| Egress and runtime reads | `GET /api/v1/egress*`, `GET /api/v1/runtime*` | Operator, Auditor |
+| Purge, configuration reload, Session Approver accounts | `POST /api/v1/config/reload` | none |
+
+### POST /api/v1/console/login
+
+Signs in an account of `[[console.account]]` or, with `"role": "session_approver"`, a Session Approver of `[[approver]]`. Rate limits, lockout and the bounded Argon2id verification are as for the administrator sign-in.
+
+Request: `{"username": "olga", "password": "...", "role": "operator"}`; `role` is optional for console accounts (it must match when given) and required for Session Approvers.
+
+Response 200: `{"token": "...", "expires_in": 1800, "role": "operator", "actor": "operator:olga"}`. Errors: 400 `bad_request`, 401 `signin_failed`, 429 `rate_limited`, 503 `busy` or `audit_unavailable`. Evidence: `admin`/`signed_in`/`CONSOLE_SIGNIN` with the actor and role, or `auth_failure`/`CONSOLE_SIGNIN_FAILED`.
+
+### POST /api/v1/console/logout
+
+Ends the caller's console token. Response 204.
+
+### GET /api/v1/console/session
+
+The caller's actor and role and every registered route with the roles that may use it; the console builds its navigation and actions from it.
+
+```json
+{"actor": "operator:olga", "role": "operator", "roles": ["administrator", "operator", "policy_author", "approver", "session_approver", "auditor", "researcher"],
+ "routes": [{"pattern": "POST /admin/v1/stop", "method": "POST", "path": "/admin/v1/stop", "roles": ["administrator", "operator"]},
+            {"pattern": "POST /admin/v1/login", "method": "POST", "path": "/admin/v1/login", "public": true}]}
+```
+
+`refined` is true on a route where a listed role may use only part of it (campaign actions, dataset export).
+
+## OpenAPI document
+
+`GET /api/v1/openapi.json` (every role) is the OpenAPI 3.1 description of the control API (FR-8.1): one operation per registered route with its path and query parameters, a summary, the reference page under `docs/api/`, `x-smcp-roles` (or `x-smcp-public`) taken from the running Gateway's route table, and the common error schema. The operations are maintained in `internal/openapi/routes.go`; a test fails when a registered route, a route of the role matrix or a control API path used by the console is not described.

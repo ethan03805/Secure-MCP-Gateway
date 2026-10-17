@@ -6,13 +6,16 @@ import { useResource } from "../data";
 import { Link, match } from "../router";
 import type { Catalog, ServerView, ToolView } from "../types";
 import { Crumbs, DataTable, Help, JsonBlock, KV, Loaded, Mono, PageHeader, Section, ShortId, StateLabel, toneOf, type Column } from "../ui";
-import { recordsOf, columnsOf } from "./Generic";
+import { LibrarySections, PackageDetail } from "./Library";
 
-function Tabs({ current }: { current: "servers" | "catalog" }) {
+function Tabs({ current }: { current: "servers" | "library" | "catalog" }) {
   return (
     <nav aria-label="Servers and library sections" className="tabs">
       <Link to="/servers" aria-current={current === "servers" ? "page" : undefined}>
         Servers
+      </Link>
+      <Link to="/library" aria-current={current === "library" ? "page" : undefined}>
+        Library and trust anchors
       </Link>
       <Link to="/catalog" aria-current={current === "catalog" ? "page" : undefined}>
         Tool catalog
@@ -50,30 +53,6 @@ function ServerList() {
             empty="No server is configured. Add a [[server]] table to smcp.toml, or package one with smcpctl package, then restart smcpd."
           />
         )}
-      </Loaded>
-    </Section>
-  );
-}
-
-function Packages() {
-  const res = useResource<unknown>("/api/v1/packages");
-  return (
-    <Section title="Signed packages">
-      <Loaded res={res} what="the package library" route="/api/v1/packages">
-        {(d) => {
-          const rec = recordsOf(d);
-          if (!rec) return <JsonBlock value={d} label="Response" />;
-          const cols = columnsOf(rec.rows, 7);
-          return (
-            <DataTable
-              caption="Signed packages"
-              rows={rec.rows.map((r, i) => ({ r, i }))}
-              rowKey={(x) => String(x.i)}
-              empty="No package is in the library. Build and sign one with smcpctl package."
-              columns={cols.map((k) => ({ key: k, label: k.replace(/_/g, " "), sort: (x: { r: Record<string, unknown> }) => String(x.r[k] ?? ""), render: (x: { r: Record<string, unknown> }) => String(x.r[k] ?? "") }))}
-            />
-          );
-        }}
       </Loaded>
     </Section>
   );
@@ -184,7 +163,26 @@ function CatalogView() {
 export function Servers({ path }: { path: string }) {
   const m = match("/servers/:alias", path);
   if (m?.alias) return <ServerDetail alias={m.alias} />;
+  const pk = match("/library/:id/:rev", path);
+  if (pk?.id && pk.rev) return <PackageDetail id={pk.id} rev={pk.rev} />;
   if (path === "/catalog") return <CatalogView />;
+  if (path === "/library")
+    return (
+      <>
+        <PageHeader code="G-10" title="Library and trust anchors">
+          <p>Signed package revisions, their state and attestation, the actions that change it, and the keys allowed to sign packages.</p>
+        </PageHeader>
+        <Help>
+          <p>
+            A revision is <strong>enabled</strong> (it runs under its alias), <strong>verified-disabled</strong> (suspended; it can be enabled again),{" "}
+            <strong>retired</strong> (final) or <strong>revoked</strong> (by a signed revocation entry). A running server that drifts from its signed manifest or
+            whose manifest expires is suspended; the reason is shown under packaged servers. Enabling usually needs a restart of smcpd.
+          </p>
+        </Help>
+        <Tabs current="library" />
+        <LibrarySections />
+      </>
+    );
   return (
     <>
       <PageHeader code="G-10" title="Servers and library">
@@ -199,7 +197,6 @@ export function Servers({ path }: { path: string }) {
       </Help>
       <Tabs current="servers" />
       <ServerList />
-      <Packages />
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 Routes of SS-10 Observation & Analytics and the Observation Store (E-27, E-29 to E-32) on the control API (admin listener, CP-03). Feature description: [../observation.md](../observation.md).
 
-The listener's rules apply to every route: loopback TLS, `Host` must name the admin listener, a foreign `Origin` or a cross-site `Sec-Fetch-Site` is refused with 403 `origin_refused`, and every POST must have `Content-Type: application/json` (bodies up to 64 KiB). Responses carry `Cache-Control: no-store`. Every route is Administrator-only: the operator token (`<state>/keys/admin.token`) or an administrator session token from `POST /admin/v1/login`. A missing or unknown token gets 401 `unauthenticated` (recorded as an `auth_failure` event); a token of another role gets 403 `role_refused`.
+The listener's rules apply to every route: loopback TLS, `Host` must name the admin listener, a foreign `Origin` or a cross-site `Sec-Fetch-Site` is refused with 403 `origin_refused`, and every POST must have `Content-Type: application/json` (bodies up to 64 KiB). Responses carry `Cache-Control: no-store`. The roles that may use each route are those of the role matrix in [console.md](console.md#roles) (Appendix C), also listed per operation as `x-smcp-roles` in `GET /api/v1/openapi.json`. In short: analytics reads are open to the Operator, Policy Author, Auditor and Researcher (raw records, which carry S2 fields, not to the Researcher); baseline builds, promotion and flags to the Policy Author; campaigns to the Policy Author and Researcher, where a Researcher may only submit and stop and approval is the Policy Author's; dataset exports to the Researcher, for a campaign only. A missing or unknown token gets 401 `unauthenticated` (recorded as an `auth_failure` event); a token of a role the route does not admit gets 403 `role_refused`.
 
 Errors have the form `{"error": {"code": "<code>", "message": "<text>"}}`; the codes are listed in [../observation.md#errors](../observation.md#errors). When observation is disabled every route except `status` and `parameters` answers 503 `observation_disabled`; store-backed routes answer 503 `store_unavailable` when the store could not be opened.
 
@@ -49,7 +49,8 @@ The Parameter Catalog with the current selection.
 ```json
 {"catalog_version": "1.0.0", "parameters": [
   {"id": "P-024", "name": "request_bytes", "description": "...", "unit": "bytes", "data_type": "integer", "sensitivity": "S0",
-   "capture_point": "request-received", "baselinable": true, "selected": true, "escalation": false}
+   "capture_point": "request-received", "baselinable": true, "selected": true, "escalation": false,
+   "cost_class": "C0", "derivation": "...", "source_element": "E-01"}
 ]}
 ```
 

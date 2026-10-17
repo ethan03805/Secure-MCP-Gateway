@@ -5,12 +5,14 @@ import { useState, type ReactNode } from "react";
 import { ApiError, post } from "../api";
 import { useResource } from "../data";
 import { causeText, useHealth } from "../health";
+import { usePerm } from "../perm";
 import { Link } from "../router";
 import type { EventPage, Principals, ServerView, VerifyResult } from "../types";
 import { DataTable, ErrorBlock, Help, KV, Loaded, Mono, PageHeader, Section, StateLabel, Time, toneOf, type Column } from "../ui";
 
 export function VerifyPanel() {
-  const res = useResource<VerifyResult>("/api/v1/audit/verify", { live: false });
+  const perm = usePerm();
+  const res = useResource<VerifyResult>(perm.can("GET /api/v1/audit/verify") ? "/api/v1/audit/verify" : null, { live: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const run = async () => {
@@ -25,13 +27,16 @@ export function VerifyPanel() {
       setBusy(false);
     }
   };
+  if (!perm.can("GET /api/v1/audit/verify")) return null;
   return (
     <Section
       title="Journal verification"
       actions={
-        <button type="button" onClick={() => void run()} disabled={busy}>
-          {busy ? "Verifying" : "Verify the journal now"}
-        </button>
+        perm.can("POST /api/v1/audit/verify") && (
+          <button type="button" onClick={() => void run()} disabled={busy}>
+            {busy ? "Verifying" : "Verify the journal now"}
+          </button>
+        )
       }
     >
       {error && <ErrorBlock error={error} />}
@@ -106,12 +111,14 @@ interface CheckItem {
 
 function Checklist() {
   const health = useHealth();
-  const principals = useResource<Principals>("/api/v1/sessions/principals");
-  const servers = useResource<{ servers: ServerView[] }>("/api/v1/servers");
-  const sessions = useResource<EventPage>("/api/v1/audit/events?class=session&limit=1");
-  const approved = useResource<EventPage>("/api/v1/audit/events?class=approval&outcome=approved&limit=1");
-  const denied = useResource<EventPage>("/api/v1/audit/events?class=approval&outcome=denied&limit=1");
-  const backup = useResource<unknown>("/api/v1/backup");
+  const perm = usePerm();
+  const ifCan = (route: string, path: string) => (perm.can(route) ? path : null);
+  const principals = useResource<Principals>(ifCan("GET /api/v1/sessions/principals", "/api/v1/sessions/principals"));
+  const servers = useResource<{ servers: ServerView[] }>(ifCan("GET /api/v1/servers", "/api/v1/servers"));
+  const sessions = useResource<EventPage>(ifCan("GET /api/v1/audit/events", "/api/v1/audit/events?class=session&limit=1"));
+  const approved = useResource<EventPage>(ifCan("GET /api/v1/audit/events", "/api/v1/audit/events?class=approval&outcome=approved&limit=1"));
+  const denied = useResource<EventPage>(ifCan("GET /api/v1/audit/events", "/api/v1/audit/events?class=approval&outcome=denied&limit=1"));
+  const backup = useResource<unknown>(ifCan("GET /api/v1/backup", "/api/v1/backup"));
   const h = health?.status === "ok" ? health.data : undefined;
   const approvers = principals.status === "ok" ? principals.data.session_approvers.length : null;
   const srv = servers.status === "ok" ? servers.data.servers : null;
@@ -129,7 +136,13 @@ function Checklist() {
     backupDetail = `Backup status could not be read: ${backup.error.message}`;
   }
   const items: CheckItem[] = [
-    { item: "Administrator created", done: true, detail: "You are signed in with the administrator account or operator token.", to: "/sessions", action: "Accounts" },
+    {
+      item: "Administrator created",
+      done: true,
+      detail: perm.role === "administrator" ? "You are signed in with the administrator account or operator token." : "The Gateway was bootstrapped with an administrator.",
+      to: "/sessions",
+      action: "Accounts",
+    },
     {
       item: "Session Approver created",
       done: approvers === null ? null : approvers > 0,
@@ -191,8 +204,76 @@ function Checklist() {
   );
 }
 
+interface MonitorCause {
+  name: string;
+  critical: boolean;
+  detail: string;
+  active: boolean;
+  since?: string;
+  cleared_at?: string;
+  ack_required?: boolean;
+  acked_by?: string;
+}
+
+/** Health monitor causes, including latched ones that need acknowledgment (FR-7.13). */
+function Causes() {
+  const perm = usePerm();
+  const res = useResource<{ state: string; causes: MonitorCause[]; checked_at: string }>(perm.can("GET /api/v1/health/status") ? "/api/v1/health/status" : null);
+  const [error, setError] = useState<ApiError | null>(null);
+  if (!perm.can("GET /api/v1/health/status")) return null;
+  const ack = async (cause: string) => {
+    setError(null);
+    try {
+      await post("/api/v1/health/ack", { cause });
+      res.reload();
+    } catch (e) {
+      setError(e instanceof ApiError ? e : new ApiError(0, "client", String(e)));
+    }
+  };
+  return (
+    <Section title="Health monitor">
+      {error && <ErrorBlock error={error} />}
+      <Loaded res={res} what="the health monitor" route="/api/v1/health/status">
+        {(h) => (
+          <DataTable
+            caption="Health monitor causes"
+            rows={h.causes}
+            rowKey={(c) => c.name}
+            empty="The health monitor reports no cause."
+            columns={[
+              { key: "name", label: "Cause", sort: (c) => c.name, render: (c) => <Mono>{c.name}</Mono> },
+              { key: "state", label: "State", sort: (c) => String(c.active), render: (c) => (c.active ? <StateLabel tone={c.critical ? "bad" : "warn"}>{c.critical ? "active, critical" : "active"}</StateLabel> : <StateLabel tone="ok">cleared</StateLabel>) },
+              { key: "detail", label: "Detail", render: (c) => c.detail },
+              { key: "since", label: "Since", render: (c) => <Time value={c.since} /> },
+              {
+                key: "ack",
+                label: "Acknowledgment",
+                render: (c) =>
+                  c.ack_required ? (
+                    perm.can("POST /api/v1/health/ack") ? (
+                      <button type="button" className="link" onClick={() => void ack(c.name)}>
+                        Acknowledge {c.name}
+                      </button>
+                    ) : (
+                      "required"
+                    )
+                  ) : c.acked_by ? (
+                    <Mono>{c.acked_by}</Mono>
+                  ) : (
+                    <span className="muted">not needed</span>
+                  ),
+              },
+            ]}
+          />
+        )}
+      </Loaded>
+    </Section>
+  );
+}
+
 export function Control() {
   const health = useHealth();
+  const perm = usePerm();
   return (
     <>
       <PageHeader code="G-01" title="Gateway control">
@@ -251,9 +332,12 @@ export function Control() {
           </Loaded>
         </Section>
       )}
-      <Section title="Actions">
-        <ReloadPolicy />
-      </Section>
+      <Causes />
+      {perm.can("POST /admin/v1/policy/reload") && (
+        <Section title="Actions">
+          <ReloadPolicy />
+        </Section>
+      )}
       <VerifyPanel />
       <Checklist />
     </>

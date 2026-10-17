@@ -25,6 +25,7 @@ func (rt *Runtime) RegisterRoutes(s *adminapi.Server) {
 	s.Handle("POST /api/v1/packages/{id}/{rev}/enable", rt.apiEnable)
 	s.Handle("POST /api/v1/packages/{id}/{rev}/disable", rt.apiState(StateVerifiedDisabled))
 	s.Handle("POST /api/v1/packages/{id}/{rev}/retire", rt.apiState(StateRetired))
+	rt.RegisterTrustRoutes(s)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -1,6 +1,6 @@
 # Control API: graph
 
-Routes of the graph mirror (E-25, E-26, E-28) on the control API (admin listener, CP-03). The listener's rules apply: loopback TLS, `Host` must name the admin listener, a foreign `Origin` or cross-site `Sec-Fetch-Site` is refused with 403 `origin_refused`, POST bodies must be `application/json`. All routes need an Administrator token (operator token or administrator session token); a missing token gets 401 `unauthenticated`, a token of another role 403 `role_refused`.
+Routes of the graph mirror (E-25, E-26, E-28) on the control API (admin listener, CP-03). The listener's rules apply: loopback TLS, `Host` must name the admin listener, a foreign `Origin` or cross-site `Sec-Fetch-Site` is refused with 403 `origin_refused`, POST bodies must be `application/json`. The roles that may use each route are those of the role matrix in [console.md](console.md#roles) (Appendix C), also listed per operation as `x-smcp-roles` in `GET /api/v1/openapi.json`; reads are open to the Operator, Policy Author and Auditor, a rebuild to the Operator. A missing token gets 401 `unauthenticated`, a token of a role the route does not admit 403 `role_refused`.
 
 Errors have the form `{"error": {"code": "<code>", "message": "<text>"}}`:
 
