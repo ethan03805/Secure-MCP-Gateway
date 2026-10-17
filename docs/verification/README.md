@@ -7,7 +7,7 @@ Records for verification that is not an automated test: Inspection, Analysis and
 | Record | File |
 |---|---|
 | Acceptance scenario (FR-19.4) | `AT-nn.md`, for example `AT-18.md` |
-| Requirement verified by Inspection, Analysis or Demonstration | `<requirement ID>.md`, for example `FR-13.1.md` |
+| Requirement verified by Inspection, Analysis or Demonstration | `<requirement ID>.md`, for example `FR-13.1.md`, or a section of `inspections.md` |
 | Runbook execution (FR-18.8) | `runbook-<name>-<date>.md` |
 | Real-harness approval test (FR-3.25) | `FR-3.25.md` with the transcript beside it |
 
@@ -25,6 +25,20 @@ Each record starts with this table:
 | Method | Inspection, Analysis, Demonstration or Test |
 | Result | `pass` or `fail` |
 
-It then lists the steps as performed, the observations, and any deviation from the verification statement. A record for a failed or partial run is kept; a later passing run is a new record.
+It then lists the steps as performed, the observations, and any deviation from the verification statement. Evidence in source is cited as `` `path:line` `` (line numbers of the recorded commit). A record for a failed or partial run is kept; a later passing run is a new record.
 
-No records exist yet.
+## How the report counts records
+
+`tools/reqreport` (`make status`) reads every `*.md` file here except this README. A record starts at its `| Requirement or scenario | ... |` row. It verifies a requirement when:
+
+- every field above is filled in, the commit is a full SHA and the date is ISO 8601;
+- the record's method equals the requirement's SRS verification method, and that method is Inspection, Analysis or Demonstration (Test-method requirements are verified only by automated tests);
+- an Inspection record cites at least one `` `path:line` ``, and every cited file exists in the tree;
+- the record with the latest date for that requirement has result `pass` (a later `fail` makes the requirement failing).
+
+A record that does not meet these rules is reported as a warning and not counted. A parent requirement whose Analysis is "Review the verification results of every ... child requirement" is verified automatically when every child requirement is verified.
+
+## Files
+
+- [inspections.md](inspections.md): Inspection and Analysis records.
+- [gap-list.md](gap-list.md): requirements that are not verified, grouped by element, with what is missing.

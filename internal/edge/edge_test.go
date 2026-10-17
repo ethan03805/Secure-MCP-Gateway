@@ -130,6 +130,8 @@ type harnessOpts struct {
 	backend func() *mcp.Server
 	policy  string
 	screen  pipeline.ToolScreen
+	// healthGate is passed as Deps.HealthGate (gate_test.go).
+	healthGate func() []string
 }
 
 func newHarness(t *testing.T, o harnessOpts) *harness {
@@ -187,7 +189,8 @@ command = "/inproc/t"
 	prof, _ := profile.Resolve("auto", "in-process", false, profile.Host{OS: "darwin", Arch: "arm64"})
 	h.gw, err = New(Deps{Config: cfg, Store: h.store, OAuth: oauth, Decider: h.decider, Registry: reg, Evidence: h.rec,
 		EvidenceErr: func() error { h.evMu.Lock(); defer h.evMu.Unlock(); return h.evErr }, Log: diag.Discard(), Profile: prof,
-		Approver: o.approver, Filters: o.filters, Capabilities: h.caps, ConsoleURL: "https://127.0.0.1:8444", Screen: o.screen})
+		Approver: o.approver, Filters: o.filters, Capabilities: h.caps, ConsoleURL: "https://127.0.0.1:8444", Screen: o.screen,
+		HealthGate: o.healthGate})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -234,6 +234,12 @@ Findings, fixes and residual risks are in `docs/security-review-2026-10.md`.
 - `/api/v1/audit/stream` and `/api/v1/approvals/watch` end when the token that opened them is signed out or expires (`adminapi.StillAuthenticated`) and allow at most 32 open streams each (SR-09).
 - The Gateway refuses to start when the operator token, CA key, listener key or evidence keys have group or other permission bits (`keys.CheckPrivate`, SR-10).
 - The metrics endpoint answers only loopback `Host` values (SR-11); `notify-send` gets `--` before the notification text (SR-12); research export files are opened with `os.OpenInRoot` and names cannot start with a dot (SR-13).
+### Requirement verification coverage
+
+- `tools/reqreport` counts verification records under `docs/verification/` (SRS Section 2.6): a complete record with result `pass` verifies an Inspection, Analysis or Demonstration requirement when its method matches the SRS method and every cited `path:line` file exists; the latest record per requirement decides, and records that break a rule are reported as warnings. A parent whose Analysis reviews its children's results is verified when every child is. New flags `-records` and `-root`.
+- `docs/verification/inspections.md`: inspection records for FR-10.37, FR-12.11, FR-18.2, FR-19.2, SR-1.12-1, SR-2.9-3, SR-4.13-1 and SR-5.7-3.
+- New tests verify FR-1.8, FR-1.11, FR-1.23, FR-1.28, FR-1.33, FR-1.34, SR-2.1-1, SR-2.11-4, SR-5.2-1, SR-5.20-2, SR-6.16-1, SR-6.19-1 and SR-7.6-1, and claim FR-1.16, FR-1.18, FR-1.24, FR-1.35, SR-1.16-1, SR-2-2, SR-5.2-2, SR-5.6-1 and SR-5.18-1 in part, each test saying what is missing.
+- `docs/verification/gap-list.md`: every requirement still unverified, grouped by element, marked missing, unverified (behavior present, proof missing) or external, with what is missing. Defects found while writing it include: the southbound client declares the SDK's default `roots` capability (SR-5.6-2); a POST with `Last-Event-ID` is refused instead of ignored (FR-1.16); batches, response objects and unknown notifications are not answered as FR-1.4 and FR-1.5 require; a failed decision-intent commit reports `AUDIT_UNAVAILABLE` instead of `JOURNAL_UNAVAILABLE` (SR-1.2-2); configured Argon2id verifiers below CP-28 are accepted (SR-2.7-1); password files are read without a mode check (SR-7.5-2).
 
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 

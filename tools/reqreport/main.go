@@ -11,6 +11,11 @@
 //   - partial: only partial claims passed
 //   - unverified: no passing claim (skipped tests do not verify)
 //
+// A requirement verified by Inspection, Analysis or Demonstration can also
+// be verified by a passing record under docs/verification/ (records.go,
+// SRS Section 2.6), and a parent whose Analysis is the review of its
+// children's results is verified when every child is.
+//
 // Usage:
 //
 //	go test -json -coverpkg=./... -coverprofile=build/cover.out ./... > build/go-test.json
@@ -57,6 +62,7 @@ func main() {
 
 type options struct {
 	in, out, status, srs, arch, elements, coverprofile, agents, hostile, gomod string
+	records, root                                                              string
 	commit, conclusion                                                         string
 	failOnFailing                                                              bool
 }
@@ -74,6 +80,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 	flags.StringVar(&o.agents, "agents", "build/agents.json", "harness compatibility results (optional)")
 	flags.StringVar(&o.hostile, "hostile", "build/hostile.json", "hostile fixture results (optional)")
 	flags.StringVar(&o.gomod, "gomod", "go.mod", "go.mod, for the module path")
+	flags.StringVar(&o.records, "records", "docs/verification", "verification records directory (empty to skip)")
+	flags.StringVar(&o.root, "root", ".", "repository root that record evidence paths are relative to")
 	flags.StringVar(&o.commit, "commit", os.Getenv("GITHUB_SHA"), "commit SHA (default $GITHUB_SHA or git HEAD)")
 	flags.StringVar(&o.conclusion, "conclusion", "", "CI conclusion (default success or failure from the results)")
 	flags.BoolVar(&o.failOnFailing, "fail-on-failing", true, "exit 1 when any requirement is failing")
@@ -121,7 +129,14 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 		return 2, err
 	}
 
+	recs, err := loadRecords(o.records, o.root)
+	if err != nil {
+		return 2, err
+	}
+
 	results := buildResults(reqs, log, module)
+	recordWarnings := applyRecords(results, reqs, recs, o.records)
+	applyChildAnalysis(results, reqs)
 	for _, t := range log.Tests {
 		t.Package = shortPackage(t.Package, module)
 	}
@@ -181,6 +196,9 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 	rs := st.Requirements
 	fmt.Fprintf(stdout, "reqreport: %d requirements: %d verified, %d partial, %d failing, %d unverified; tests %d passed, %d failed, %d skipped; wrote %s\n",
 		rs.Total, rs.Verified, rs.Partial, rs.Failing, rs.Unverified, st.Tests.Passed, st.Tests.Failed, st.Tests.Skipped, strings.Join(written, ", "))
+	for _, w := range recordWarnings {
+		fmt.Fprintf(stdout, "reqreport: warning: %s\n", w)
+	}
 	for _, res := range results {
 		if !res.InSRS {
 			fmt.Fprintf(stdout, "reqreport: warning: %s is claimed by tests but is not an SRS requirement\n", res.ID)
