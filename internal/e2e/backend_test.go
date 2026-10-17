@@ -11,6 +11,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
 // TestMain doubles as the backend MCP server: when SMCP_E2E_BACKEND is set
@@ -64,6 +66,14 @@ func runBackend() {
 	mcp.AddTool(s, &mcp.Tool{Name: "big", Description: "returns kib kilobytes"}, func(ctx context.Context, req *mcp.CallToolRequest, a bigArgs) (*mcp.CallToolResult, any, error) {
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: strings.Repeat("x", a.KiB*1024)}}}, nil, nil
 	})
+	// noisy writes 10 MiB of diagnostic output before answering (FR-5.15).
+	mcp.AddTool(s, &mcp.Tool{Name: "noisy", Description: "writes to stderr"}, func(ctx context.Context, req *mcp.CallToolRequest, a struct{}) (*mcp.CallToolResult, any, error) {
+		line := strings.Repeat(stderrMarker, 1024/len(stderrMarker)) + "\n"
+		for i := 0; i < 10*1024; i++ {
+			_, _ = os.Stderr.WriteString(line)
+		}
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "quiet"}}}, nil, nil
+	})
 	if err := s.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		fmt.Fprintln(os.Stderr, "backend:", err)
 		os.Exit(1)
@@ -72,3 +82,36 @@ func runBackend() {
 }
 
 var _ = json.Marshal
+
+// TestStderrBoundedAndNotForwarded: a server that writes 10 MiB to stderr
+// keeps at most the CP-37 1 MiB ring of it, and none of it reaches the
+// harness, in the SDK client's view or on the wire (FR-5.15).
+func TestStderrBoundedAndNotForwarded(t *testing.T) {
+	reqtest.Verifies(t, "FR-5.15")
+	f := start(t, "")
+	access, _, _ := f.oauthLogin("")
+	res, err := f.mcpClient(access).CallTool(context.Background(), &mcp.CallToolParams{Name: "t_noisy", Arguments: map[string]any{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(res)
+	if strings.Contains(string(raw), stderrMarker) || res.Content[0].(*mcp.TextContent).Text != "quiet" {
+		t.Fatalf("result %s", raw[:min(len(raw), 200)])
+	}
+	status, _, body := f.post(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"t_noisy","arguments":{},`+modernMeta+`}}`,
+		map[string]string{"Authorization": "Bearer " + access, "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "tools/call", "Mcp-Name": "t_noisy"})
+	if status != 200 || strings.Contains(body, stderrMarker) || !strings.Contains(body, "quiet") {
+		t.Fatalf("wire response %d %.200s", status, body)
+	}
+	s := f.app.Registry.Servers()["t"]
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(s.Stderr(), stderrMarker) && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if got := len(s.Stderr()); got == 0 || got > 1<<20 || !strings.Contains(s.Stderr(), stderrMarker) {
+		t.Fatalf("stderr buffer holds %d bytes", got)
+	}
+}
+
+// stderrMarker fills the noisy tool's diagnostic output.
+const stderrMarker = "STDERR-ONLY-0123456789abcdef "

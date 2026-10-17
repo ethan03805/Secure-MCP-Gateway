@@ -16,6 +16,11 @@ import (
 // Eras are the southbound protocol eras a manifest may declare (FR-5.16).
 var Eras = []string{"2026-07-28", "2025-11-25"}
 
+// ProbeEra is the protocol version the probe requests: the 2025-11-25
+// handshake of the Gateway's dispatcher (FR-5.19). The 2026-07-28 probe
+// of FR-5.16 is deferred (SRS Appendix N).
+const ProbeEra = "2025-11-25"
+
 // ProbeResult is what the packaging run observed.
 type ProbeResult struct {
 	Era   string
@@ -70,7 +75,10 @@ func Probe(ctx context.Context, spec pipeline.ServerSpec, o ProbeOptions) (*Prob
 		return nil, Wrap(ReasonProbeFailed, "start the candidate server", err)
 	}
 	client := mcp.NewClient(&mcp.Implementation{Name: "smcpctl-package", Version: "1"}, nil)
-	sess, err := client.Connect(ctx, &mcp.IOTransport{Reader: proc, Writer: procWriteCloser{proc}}, nil)
+	// The probe uses the handshake the Gateway uses (FR-5.19): initialize
+	// with 2025-11-25, so the recorded era is the one the Gateway will
+	// negotiate (FR-5.40).
+	sess, err := client.Connect(ctx, &mcp.IOTransport{Reader: proc, Writer: procWriteCloser{proc}}, &mcp.ClientSessionOptions{ProtocolVersion: ProbeEra})
 	if err != nil {
 		stderr := proc.Stderr()
 		proc.Close()

@@ -31,6 +31,11 @@ type ServerSpec struct {
 	// cannot see the host file system (the sandbox) makes it available
 	// read-only and rewrites those paths.
 	SecretDir string
+	// NegotiatedEra is the protocol version the instance negotiated in the
+	// handshake. The dispatcher sets it after the launch, before asking the
+	// ManifestSource for the tool set, so a verified source can refuse an
+	// instance whose era differs from the manifest's (FR-5.40).
+	NegotiatedEra string
 }
 
 // Process is a running server instance speaking newline-delimited JSON-RPC:

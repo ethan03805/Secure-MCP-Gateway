@@ -15,6 +15,11 @@ import (
 // Confine is set (tests of the enforced profile).
 type InProcessLauncher struct {
 	Servers map[string]func() *mcp.Server
+	// Raw maps a command to a function that speaks newline-delimited
+	// JSON-RPC itself over in and out, for tests of protocol handling the
+	// SDK server would not produce. It returns when in is closed or ctx
+	// ends.
+	Raw     map[string]func(ctx context.Context, in io.Reader, out io.Writer) error
 	Confine bool
 }
 
@@ -27,17 +32,22 @@ func (l InProcessLauncher) Confined() bool { return l.Confine }
 // Launch implements Launcher.
 func (l InProcessLauncher) Launch(_ context.Context, spec ServerSpec) (Process, error) {
 	build := l.Servers[spec.Command]
-	if build == nil {
+	raw := l.Raw[spec.Command]
+	if build == nil && raw == nil {
 		return nil, fmt.Errorf("no in-process server for %q", spec.Command)
 	}
 	toSrvR, toSrvW := io.Pipe()
 	fromSrvR, fromSrvW := io.Pipe()
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &inProcess{Reader: fromSrvR, Writer: toSrvW, cancel: cancel, pipes: []io.Closer{toSrvW, toSrvR, fromSrvR, fromSrvW}, done: make(chan struct{})}
-	srv := build()
 	go func() {
 		defer close(p.done)
-		_ = srv.Run(ctx, &mcp.IOTransport{Reader: toSrvR, Writer: fromSrvW})
+		if raw != nil {
+			_ = raw(ctx, toSrvR, fromSrvW)
+			_ = fromSrvW.Close()
+			return
+		}
+		_ = build().Run(ctx, &mcp.IOTransport{Reader: toSrvR, Writer: fromSrvW})
 	}()
 	return p, nil
 }

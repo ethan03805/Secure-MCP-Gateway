@@ -159,7 +159,7 @@ func TestPolicyActivationNotifiesListenStreams(t *testing.T) {
 	waitFor("acknowledged")
 	// Publishing a revision that changes the session's catalog notifies the
 	// open stream; no request from the session is needed.
-	r2 := strings.Replace(strings.Replace(testPolicy, `"r1"`, `"r2"`, 1), `"echo", "dotted.name", "rpcerror", "slow", "big", "ghost"`, `"echo"`, 1)
+	r2 := strings.Replace(strings.Replace(testPolicy, `"r1"`, `"r2"`, 1), `"echo", "dotted.name", "rpcerror", "slow", "big", "ghost", "noisy"`, `"echo"`, 1)
 	f.publish(r2)
 	l := waitFor("notifications/tools/list_changed")
 	if !strings.Contains(l, "L1") {

@@ -34,6 +34,9 @@ var reasonMessages = map[string]string{
 	"CLIENT_DEADLINE":            "The tool did not finish in time.",
 	"UPSTREAM_TIMEOUT":           "The tool's server stopped responding. It may have completed the action; check before trying again.",
 	"INPUT_REQUIRED_UNSUPPORTED": "The tool asked for input that the Gateway does not relay.",
+	"RESULT_INVALID":             "The tool's server returned a result the Gateway could not validate, so it was withheld.",
+	"BACKEND_OUTPUT_INVALID":     "The tool's server sent data that is not valid MCP, so the call was stopped and the server restarted.",
+	"INSTANCE_FAILED":            "The tool's server stopped while running this call. It may have completed the action; check before trying again.",
 	"SCHEMA_INVALID":             "The arguments do not match what this tool accepts.",
 }
 

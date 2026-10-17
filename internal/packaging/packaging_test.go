@@ -255,7 +255,7 @@ func TestBuildSignVerifyBinary(t *testing.T) {
 	if d := packaging.Drift(m.CanonicalTools(), lc); len(d) != 0 || len(m.Tools) != 4 {
 		t.Fatalf("manifest tools differ from the live list: %v", d)
 	}
-	if m.Find("read_file").SourceTrust != "untrusted" || m.Find("echo").SourceTrust != "trusted" || m.Era != "2026-07-28" {
+	if m.Find("read_file").SourceTrust != "untrusted" || m.Find("echo").SourceTrust != "trusted" || m.Era != "2025-11-25" {
 		t.Fatal("classification or era")
 	}
 

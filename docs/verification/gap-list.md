@@ -101,22 +101,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - SR-1.8-1 unverified: `schema-validate` blocks arguments that do not match the input schema with reason `SCHEMA_INVALID` (Appendix B's code; the requirement text says `SCHEMA`); validation is against the live tool schema unless a signed manifest is used, and no test pins the manifest source.
 - SR-5.12-1 missing: no second decision after a filter transforms action-defining arguments.
 
-## E-10 Tool Dispatcher
-
-- FR-1.43 unverified: the CP-13 client deadline is applied (`internal/edge/pipeline.go` `ClientDeadline`) and maps to `-31008`; no test sets a client deadline shorter than the upstream timeout.
-- FR-5.13 unverified: stdio framing is the SDK's newline-delimited transport behind `frameFilter`; no test asserts single-line UTF-8 messages.
-- FR-5.14 unverified: an invalid stdout line fails the call (Appendix L HF-18 passes in the hostile suite, which runs under a build tag and does not claim requirements in the report).
-- FR-5.19 unverified: the SDK client sends `initialize` and `notifications/initialized`; the requested version is the SDK's latest, not pinned to 2025-11-25, and capabilities are not empty (see SR-5.6-2).
-- FR-5.21 unverified: the complete paged `tools/list` is read at start (`internal/backend/backend.go`, `sess.Tools`); no test pages a backend catalog.
-- FR-5.23 missing: no explicit handling of absent or unrecognized `resultType` from backends.
-- FR-5.26 missing: cancellation is not propagated southbound with `notifications/cancelled`.
-- FR-5.32 unverified: the backend now gets a Gateway-issued progress token and relayed progress carries the northbound token (`internal/backend`, `internal/edge/progress.go`); no test claims the requirement and checks that the southbound token is unique per call.
-- SR-7.12-1 missing: northbound cancellation is not propagated southbound.
-
-## E-11 Response Inspection Pipeline
-
-- SR-5.20-1 unverified: the SDK client rejects malformed envelopes and uncorrelated IDs, and `CallToolResult` decoding fails on invalid results; no test returns each malformed case and checks that the result is withheld with evidence.
-
 ## E-12 Enforcement Coordinator
 
 - FR-11.10 unverified: `Stop` takes the gate and every later launch authorization is refused; no test measures the 1 second bound under load.
@@ -137,7 +121,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 - FR-5.10 missing: instances are shared across sessions; per-call and per-session scopes do not exist.
 - FR-5.11 missing: no instance reuse by scope and no CP-38 idle teardown.
-- FR-5.15 unverified: stderr is kept in a bounded buffer and never forwarded to the harness; no test checks the CP-37 bound and the absence from harness traffic together.
 
 ## E-18 Egress Broker
 

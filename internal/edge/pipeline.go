@@ -75,6 +75,12 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		defer g.trackCall(sess.ID, cancel)()
+		// SR-7.12-1: the harness closing the response stream (or the
+		// connection) cancels the call; the dispatcher then cancels it
+		// southbound (FR-5.26).
+		if rc, ok := ctx.Value(ctxRequest).(context.Context); ok {
+			defer context.AfterFunc(rc, cancel)()
+		}
 
 		c := &callRun{g: g, corr: corr, base: audit.Event{CorrelationID: corr, SessionID: sess.ID, PrincipalID: sess.PrincipalID,
 			ServerRevision: ref.Server.Revision, ToolRevision: ref.Revision}}
@@ -371,6 +377,21 @@ func (g *Gateway) mapDispatchError(c *callRun, sessionID string, err error) erro
 	case errors.Is(err, backend.ErrInputRequired): // FR-5.24; the MRTR Relay Profile is not implemented
 		return c.refuse(gatewayError(CodeInputRequired, "input required", "INPUT_REQUIRED_UNSUPPORTED", corr, dec.ID, nil),
 			"call", audit.PhaseFailed, "E-10", "input_required", "INPUT_REQUIRED_UNSUPPORTED", "evaluated")
+	case errors.Is(err, backend.ErrInvalidResult): // FR-5.23, SR-5.20-1: nothing of the result is released
+		return c.refuse(gatewayError(CodeResponseWithheld, "response withheld", "RESULT_INVALID", corr, dec.ID, nil),
+			"call", audit.PhaseWithheld, "E-11", "withhold", "RESULT_INVALID", "evaluated")
+	case errors.Is(err, backend.ErrInvalidOutput): // FR-5.14: the instance is replaced
+		phase := audit.PhaseFailed
+		if policy.TaintGated(dec.SideEffect) { // the tool may have acted (SR-7.2-1)
+			phase = audit.PhaseIndeterminate
+		}
+		return c.refuse(gatewayError(CodeBackendError, "backend protocol error", "BACKEND_OUTPUT_INVALID", corr, dec.ID, nil),
+			"call", phase, "E-10", "failed", "BACKEND_OUTPUT_INVALID", "evaluated")
+	case errors.Is(err, backend.ErrInstanceFailed) && policy.TaintGated(dec.SideEffect):
+		// SR-7.2-1: a tool of side-effect class write, external or execute
+		// (or unclassified) lost its outcome; it is not retried.
+		return c.refuse(gatewayError(CodeIndeterminate, "instance failed", "INSTANCE_FAILED", corr, dec.ID, nil),
+			"call", audit.PhaseIndeterminate, "E-10", "indeterminate", "INSTANCE_FAILED", "evaluated")
 	case errors.Is(err, context.DeadlineExceeded):
 		return c.refuse(gatewayError(CodeTimeout, "client deadline expired", "CLIENT_DEADLINE", corr, dec.ID, nil),
 			"call", audit.PhaseIndeterminate, "E-10", "timeout", "CLIENT_DEADLINE", "evaluated")
