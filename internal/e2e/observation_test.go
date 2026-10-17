@@ -165,7 +165,11 @@ func (of *obsFixture) waitAssembled(n uint64) {
 }
 
 func TestObservationThroughGateway(t *testing.T) {
-	reqtest.Partial(t, "FR-10", "FR-10.3", "FR-10.20", "FR-10.36", "FR-9.7")
+	// FR-10.36: the export is written to the configured export directory
+	// and downloaded through the control API route the G-09 Research view
+	// uses (below).
+	reqtest.Verifies(t, "FR-10.36")
+	reqtest.Partial(t, "FR-10", "FR-10.3", "FR-10.20", "FR-9.7")
 	of := startObservation(t, `sampling_rate = 1.0
 flush_interval = "20ms"
 [observation.baseline]
