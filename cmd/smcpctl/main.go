@@ -49,6 +49,7 @@ Control API (running Gateway; backup and keys also work offline):
   policy ...       validate, diff, simulate, publish, rollback, history, show
                    (smcpctl policy help)
   approvals        list, show, approve, deny or watch tool-call approvals
+  approvers        list, add or remove Session Approver accounts (FR-2.23)
   graph            graph mirror status, rebuild, canned queries, engine config
   observe          observation status, anomalies, baselines, campaigns, exports
   admin redeem     set the administrator password with the one-use bootstrap token
@@ -119,6 +120,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = control(args[2:], stdout, "POST", "/admin/v1/policy/reload", map[string]any{})
 	case args[0] == "policy":
 		err = policyCmd(args[1:], stdout)
+	case args[0] == "approvers":
+		err = approversCmd(args[1:], stdout)
 	case args[0] == "approvals":
 		err = approvalsCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "graph":

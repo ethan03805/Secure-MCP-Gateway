@@ -43,6 +43,11 @@ export interface Principals {
   session_approvers: { username: string }[];
 }
 
+/** GET /api/v1/approvers (FR-2.23). */
+export interface SessionApprovers {
+  approvers: { username: string; source: "file" | "console"; created_by?: string; created_at?: string }[];
+}
+
 export interface PrincipalDirectory {
   principals: {
     id: string;

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -45,7 +46,7 @@ the latter).
 
 const trustUsage = `usage: smcpctl trust <command> [flags]
 
-  add     <pubkey-file> --name <n> [--classes low,moderate] [--expires 2027-10-16|365d]
+  add     <pubkey-file> --name <n> --key-id <ID> [--classes low,moderate] [--expires 2027-10-16|365d]
   list
   remove  <name-or-key-id>
 `
@@ -150,7 +151,7 @@ func pkgKeygen(args []string, out io.Writer) error {
 	if err := packaging.WriteFileAtomic(*prefix+".pub", pub, 0o644); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "key %s\nsecret key: %s.key\npublic key: %s.pub\nenroll it with: smcpctl trust add %s.pub --name <name>\n", id, *prefix, *prefix, *prefix)
+	fmt.Fprintf(out, "key %s\nsecret key: %s.key\npublic key: %s.pub\nenroll it with: smcpctl trust add %s.pub --name <name> --key-id %s\n", id, *prefix, *prefix, *prefix, id)
 	return nil
 }
 
@@ -528,6 +529,7 @@ func trustCmd(args []string, out io.Writer) error {
 	name := fs.String("name", "", "anchor name (add)")
 	classes := fs.String("classes", "", "comma-separated risk classes the key may admit (default low,moderate)")
 	expires := fs.String("expires", "365d", "expiry: a date (2027-10-16), an RFC 3339 time or a number of days (365d)")
+	keyID := fs.String("key-id", "", "add: the key ID you compared with the publisher's (confirms the fingerprint; prompted for when omitted on a terminal)")
 	pos, err := parseArgs(fs, args[1:])
 	if err != nil {
 		return err
@@ -543,11 +545,30 @@ func trustCmd(args []string, out io.Writer) error {
 	switch args[0] {
 	case "add":
 		if len(pos) != 1 || *name == "" {
-			return errors.New("usage: smcpctl trust add <pubkey-file> --name <name> [--classes low,moderate] [--expires 365d]")
+			return errors.New("usage: smcpctl trust add <pubkey-file> --name <name> --key-id <ID> [--classes low,moderate] [--expires 365d]")
 		}
 		raw, err := os.ReadFile(pos[0])
 		if err != nil {
 			return err
+		}
+		// FR-7.10: enroll only after the administrator confirmed the
+		// displayed fingerprint, with --key-id or at the prompt.
+		id, sha, err := packaging.Fingerprint(raw)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "key ID   %s\nSHA-256  %s\n", id, sha)
+		confirm := strings.TrimSpace(*keyID)
+		if confirm == "" {
+			if !stdinIsTerminal() {
+				return fmt.Errorf("compare the key ID %s with the publisher's, then pass it as --key-id to confirm", id)
+			}
+			fmt.Fprint(out, "Compare the key ID with the one the publisher gave you, then type it to confirm: ")
+			line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+			confirm = strings.TrimSpace(line)
+		}
+		if !strings.EqualFold(confirm, id) {
+			return fmt.Errorf("the confirmed key ID %q is not the key's fingerprint %s; nothing was enrolled", confirm, id)
 		}
 		exp, err := parseExpiry(*expires, time.Now())
 		if err != nil {

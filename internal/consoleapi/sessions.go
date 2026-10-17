@@ -169,7 +169,7 @@ func (c *Console) principals(w http.ResponseWriter, r *http.Request) {
 		uris := append([]string{}, cl.RedirectURIs...)
 		cs = append(cs, client{ClientID: cl.ClientID, Principal: cl.Principal, Confidential: cl.ClientSecretHash != "", RedirectURIs: uris})
 	}
-	for _, a := range c.d.Config.Approvers {
+	for _, a := range c.d.Config.SessionApprovers() {
 		as = append(as, approver{a.Username})
 	}
 	sort.Slice(ps, func(i, j int) bool { return ps[i].ID < ps[j].ID })

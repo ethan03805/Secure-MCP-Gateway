@@ -3,6 +3,7 @@ package library
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
@@ -29,15 +30,37 @@ func trustError(w http.ResponseWriter, status int, code, msg string) {
 
 func (rt *Runtime) apiTrustAdd(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name      string   `json:"name"`
-		PublicKey string   `json:"public_key"`
-		Classes   []string `json:"classes"`
-		Expires   string   `json:"expires"`
+		Name         string   `json:"name"`
+		PublicKey    string   `json:"public_key"`
+		Classes      []string `json:"classes"`
+		Expires      string   `json:"expires"`
+		Preview      bool     `json:"preview"`
+		ConfirmKeyID string   `json:"confirm_key_id"`
 	}
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&body); err != nil {
-		trustError(w, http.StatusBadRequest, "bad_request", "body must be {name, public_key, classes, expires}")
+		trustError(w, http.StatusBadRequest, "bad_request", "body must be {name, public_key, classes, expires, preview, confirm_key_id}")
+		return
+	}
+	// FR-7.10: the key is enrolled only after the administrator confirmed
+	// its displayed fingerprint. A preview returns the fingerprint and
+	// changes nothing; an enrollment must name the confirmed key ID.
+	keyID, sha, err := packaging.Fingerprint([]byte(body.PublicKey))
+	if err != nil {
+		trustError(w, http.StatusBadRequest, "invalid_anchor", err.Error())
+		return
+	}
+	if body.Preview {
+		writeJSON(w, http.StatusOK, map[string]any{"key_id": keyID, "sha256": sha, "name": body.Name, "classes": body.Classes, "expires": body.Expires})
+		return
+	}
+	switch {
+	case body.ConfirmKeyID == "":
+		trustError(w, http.StatusBadRequest, "confirmation_required", "compare the key fingerprint "+keyID+" with the publisher's and send it as confirm_key_id")
+		return
+	case !strings.EqualFold(strings.TrimSpace(body.ConfirmKeyID), keyID):
+		trustError(w, http.StatusBadRequest, "fingerprint_mismatch", "the confirmed key ID "+body.ConfirmKeyID+" is not the key's fingerprint "+keyID)
 		return
 	}
 	now := time.Now()
@@ -67,7 +90,7 @@ func (rt *Runtime) apiTrustAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := rt.lib.evidence(audit.Event{Origin: "E-13", Outcome: "anchor_enrolled", ReasonCode: "TRUST_ANCHOR_ENROLLED",
-		Detail: map[string]any{"actor": actor, "anchor": an.Name, "key_id": an.KeyID, "classes": an.Classes, "expires": an.Expires.Format(time.RFC3339)}}); err != nil {
+		Detail: map[string]any{"actor": actor, "anchor": an.Name, "key_id": an.KeyID, "sha256": sha, "fingerprint_confirmed": true, "classes": an.Classes, "expires": an.Expires.Format(time.RFC3339)}}); err != nil {
 		trustError(w, http.StatusServiceUnavailable, "audit_unavailable", "evidence journal unavailable; the anchor was not enrolled")
 		return
 	}

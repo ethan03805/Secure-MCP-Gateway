@@ -273,7 +273,7 @@ h1{font-size:1.25rem}label{display:block;margin:12px 0 4px}input{width:100%;box-
 button{margin-top:16px;padding:10px 16px;font-size:16px}dl{font-size:14px;background:#fff;padding:12px;border:1px solid #ddd}dt{font-weight:600}dd{margin:0 0 8px;word-break:break-all}.err{color:#a00}</style></head>
 <body><h1>Secure MCP Gateway</h1>
 <p>A framework instance is asking for a Gateway session. Sign in as a Session Approver to approve it.</p>
-<dl><dt>Client</dt><dd>{{.ClientID}}</dd><dt>Principal</dt><dd>{{.Principal}}</dd><dt>Requested scope</dt><dd>{{if .Scope}}{{.Scope}}{{else}}(default template){{end}}</dd></dl>
+<dl><dt>Client</dt><dd>{{.ClientID}}</dd><dt>Principal</dt><dd>{{.Principal}}</dd><dt>Requested template</dt><dd>{{.Template}}</dd><dt>Requested scope</dt><dd>{{if .Scope}}{{.Scope}}{{else}}(default template){{end}}</dd></dl>
 {{if .Error}}<p class="err" role="alert">{{.Error}}</p>{{end}}
 <form method="post" action="{{.Action}}">
 {{range $k, $v := .Hidden}}<input type="hidden" name="{{$k}}" value="{{$v}}">{{end}}
@@ -301,8 +301,18 @@ func (o *OAuth) renderLogin(w http.ResponseWriter, status int, p authorizeParams
 	SecurityHeaders(w.Header())
 	w.WriteHeader(status)
 	_ = loginPage.Execute(w, map[string]any{
-		"ClientID": p.ClientID, "Principal": c.Principal, "Scope": p.Scope, "Error": errMsg, "Action": pathAuthorize, "Hidden": hidden,
+		"ClientID": p.ClientID, "Principal": c.Principal, "Template": TemplateLabel(p.Scope), "Scope": p.Scope, "Error": errMsg, "Action": pathAuthorize, "Hidden": hidden,
 	})
+}
+
+// TemplateLabel names the Session Allow Policy Template a scope requests,
+// for the sign-in page (FR-2.23): the smcp:template value, or the
+// principal's default when the scope names none.
+func TemplateLabel(scope string) string {
+	if c, err := ParseScopes(strings.Fields(scope)); err == nil && c.Template != "" {
+		return c.Template
+	}
+	return "(default template of the principal's framework profile)"
 }
 
 // FR-2.19: authorization endpoint, step 1 (validate and show sign-in).
@@ -340,7 +350,7 @@ func (o *OAuth) checkAuthorize(p authorizeParams) string {
 // respect to whether the username exists.
 func (o *OAuth) verifyApprover(ctx context.Context, user, pw string) (bool, error) {
 	hash := ""
-	for _, a := range o.cfg.Approvers {
+	for _, a := range o.cfg.SessionApprovers() {
 		if authguard.EqualName(a.Username, user) {
 			hash = a.PasswordHash
 		}

@@ -192,6 +192,22 @@ func (s *Server) endBrowserLocked(k [32]byte) {
 	}
 }
 
+// EndSessionsOf ends every browser session of an actor ("role:user"),
+// cancelling its requests, and returns how many it ended. It is used when
+// an account is removed.
+func (s *Server) EndSessionsOf(actor string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for k, bs := range s.browser {
+		if bs.actor == actor {
+			s.endBrowserLocked(k)
+			n++
+		}
+	}
+	return n
+}
+
 func (s *Server) endBrowser(id string) {
 	s.mu.Lock()
 	s.endBrowserLocked(sessionKey(id))

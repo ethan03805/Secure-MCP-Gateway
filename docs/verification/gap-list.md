@@ -45,7 +45,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-05 Policy Administration Service
 
-- FR-3.1 missing: only Framework Profiles and Session Allow Policy Templates exist; Secret Use, Response, Audit Profile, Observation, Anomaly Response and Research Campaign policy objects are not part of the policy document.
 - FR-18.5 partial: `internal/policy` `TestPolicyReferenceExamples` compiles every policy example in `docs/policy-reference.md` and checks that every schema field is described; object types, predicate operators and obligations that do not exist (FR-3.1, SR-1.7-1, FR-3.12) cannot be described.
 - SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; rolling back the application version is not exercised, and there are no revocation epochs.
 
@@ -85,24 +84,22 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-22 Key & Trust Anchor Manager
 
-- FR-7.10 unverified: trust anchors are enrolled with `smcpctl trust` and `POST /api/v1/packages/trust` (G-10); no Demonstration record shows the fingerprint confirmation and the stored risk classes and expiry.
+- FR-7.10 unverified: enrollment needs the confirmed key ID (`POST /api/v1/packages/trust` with `preview` then `confirm_key_id`, `smcpctl trust add --key-id`), and G-10 shows the fingerprint, classes and expiry before the confirmation (`console/e2e/views.spec.ts`, `keyboard.spec.ts`, `internal/library` `TestTrustAnchorRoutes`). The Demonstration record is missing.
 
 ## E-24 Management Console & Control API
 
-- FR-2.23 missing: Session Approver accounts are configuration entries; no Administrator flow creates them, and no check that the password differs from the Administrator's.
-- FR-8.4 to FR-8.8, FR-8.11 to FR-8.13, FR-8.15 to FR-8.17 (G-02 to G-05, G-07 to G-09 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each; the tests' partial claims reach the requirement report (`console/e2e/reqreport.ts`), but no Demonstration record exists. Where a requirement names policy objects that do not exist (FR-3.1: Audit Profile, Observation Policy, Anomaly Response Policy and Research Campaign as published policy objects), that part is missing; the G-03 and G-06 editors produce the `[observation]` configuration table instead.
+- FR-8.4 to FR-8.8, FR-8.11 to FR-8.13, FR-8.15 to FR-8.17 (G-02 to G-05, G-07 to G-09 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each; the tests' partial claims reach the requirement report (`console/e2e/reqreport.ts`), but no Demonstration record exists. The G-03, G-04 and G-06 editors publish the Audit Profile, Observation Policy and Anomaly Response Policy objects of FR-3.1.
 - FR-8.24 external: the timed first-time-user task has not been run.
-- FR-8.25 missing: every view carries a `Help` section (`console/src/ui.tsx`) and every catalog parameter shows its catalog description in G-04, but the G-02 policy fields (rule, template and profile fields) have no per-field help; only four fields carry a hint.
+- FR-8.25 unverified: every view has a help section, every G-02 draft field is described by its help and the G-02 field reference covers every policy schema field (`console/src/policyhelp.ts`, checked by `console/e2e/help.spec.ts`); catalog parameters show their catalog descriptions in G-04. The Inspection record (each view and 30 parameters) is missing.
 - FR-8.29 unverified: `console/e2e/views.spec.ts` covers loading, empty and error states with partial claims; no test covers all three states for every view.
 - FR-8.30 external: no browser-support matrix run.
 - FR-8.31 unverified: G-01 shows a first-run checklist (`console/src/views/Control.tsx`); no record compares its items with the requirement's list.
-- FR-8.32, FR-8.33 unverified (partial claims): `console/e2e/a11y.spec.ts` runs axe (WCAG 2.2 AA tags) on every view as it loads and tabs through every control of every view in Chromium and Firefox, checking reachability and focus-indicator contrast; the manual check is recorded in `FR-8.32.md`. Missing: axe on every intermediate state of the acceptance tests (FR-8.32), and completing every action with keyboard events only (FR-8.33).
+- FR-8.32, FR-8.33 unverified (partial claims): `console/e2e/a11y.spec.ts` runs axe on every view as it loads and tabs through every control of every view in Chromium and Firefox; `console/e2e/keyboard.spec.ts` completes a set of actions in seven views with keyboard events only in all three browsers (WebKit with Option+Tab) and runs axe on each of its 21 intermediate states; the manual check is in `FR-8.32.md`. Missing: keyboard-only completion and axe for the remaining actions of the acceptance tests (for example G-04, G-05, G-09, G-12 and G-13 actions).
 - FR-11.8 external: no 30-day reference dataset query latency measurement; the journal has no index (E-21 note).
 - FR-13.1 external: no GitHub Release has been inspected; the release workflow signs the checksum file with minisign (key in `SECURITY.md`), but the SBOMs are separate release assets, not files inside each archive.
 - FR-13.3 external: GoReleaser writes `Formula/smcp.rb` to `ethan03805/homebrew-tap` on release; no release has published it, and no CI job installs from the tap on macOS and Linux and compares digests.
 - FR-19.3 missing: no release-labelling step that checks AT-01 to AT-21 results.
 - FR-19.4 missing: no AT scenario is claimed by an automated test or a `docs/verification/AT-nn.md` record.
-- SR-3.3-1 unverified: React escapes text by default; no test renders HTML or script in manifests and SBOMs, and no 256 KiB per-page bound is enforced.
 - SR-7.5-2 unverified (partial claim exists): bootstrap, hash-password and admin redeem refuse arguments, standard input and files looser than 0600; the interactive prompt is not exercised (no terminal in tests), and there is no separate install command (installation runs bootstrap).
 
 ## E-25 Graph Database Engine

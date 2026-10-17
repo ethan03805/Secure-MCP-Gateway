@@ -77,7 +77,7 @@ Backends are signed packages. To admit a server: build it from a recipe, sign it
 
 ```sh
 smcpctl package keygen --out mykey
-smcpctl trust add mykey.pub --name mykey --classes low,moderate
+smcpctl trust add mykey.pub --name mykey --key-id <ID printed by keygen> --classes low,moderate
 smcpctl package build --recipe recipe.json --out pkg
 smcpctl package sign pkg --key mykey.key
 smcpctl package install pkg --enable --alias fs

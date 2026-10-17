@@ -120,6 +120,16 @@ Issues an OAuth client bound to the principal (FR-2.18). Request: `{"redirect_ur
 
 Revokes an issued credential: the client can no longer authorize or refresh, and every session it opened is terminated (listed in `terminated_sessions`). Clients of `[[client]]` answer 409 `defined_in_file`. Request: `{"reason": "..."}`. Evidence: `CREDENTIAL_REVOKED`.
 
+### Session Approver accounts (FR-2.23)
+
+Session Approvers sign in harnesses at the OAuth authorization endpoint (FR-2.19) and use nothing else of the control API beyond their Appendix C rows. These routes are the Administrator's; the accounts are kept in the principal directory (`<state>/principals.json`) next to the `[[approver]]` entries of `smcp.toml`, and every sign-in path (local and remote authorization endpoints, console sign-in) reads both.
+
+- `GET /api/v1/approvers`: `{"approvers": [{"username", "source": "file" | "console", "created_by", "created_at"}]}`. Password hashes are never returned.
+- `POST /api/v1/approvers`: `{"username": "desk", "password": "..."}`. `username` matches `^[a-z0-9][a-z0-9._-]{0,63}$` and is not the Administrator's, another Session Approver's, a console account's or an Approver's; the password has 12 to 1024 characters and is refused with 400 `invalid` when it is the Administrator's password. The password is stored as an Argon2id hash and is never recorded in evidence. Response 201: the account. Evidence: `SESSION_APPROVER_CREATED`. Errors: 400 `invalid`, 409 `exists`.
+- `POST /api/v1/approvers/{username}/remove`: `{"reason": "..."}`. Deletes an account of the directory, refuses its console tokens and ends its console sessions (`ended_console_sessions`); harness sessions it approved earlier are not affected. Accounts of `[[approver]]` answer 409 `defined_in_file`. Evidence: `SESSION_APPROVER_REMOVED`.
+
+`smcpctl approvers list|add|rm` calls these routes.
+
 ### GET /api/v1/sessions/principals
 
 The framework principals, OAuth clients and Session Approver accounts of the configuration. Password and client-secret hashes are never returned.

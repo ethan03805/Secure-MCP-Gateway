@@ -268,3 +268,28 @@ Observations:
 
 Deviation: none.
 
+
+## FR-7.7 Local certificate authorities
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-7.7 |
+| Commit | `5e43a626323809132161cb9fb85bab8c6d71d5a8` |
+| Profile and platform | Standalone; darwin/arm64 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (console gap task) |
+| Method | Inspection |
+| Result | pass |
+
+The statement inspected is the release 1.0 form of FR-7.7 (one server CA; the client CA is deferred with the mTLS Harness Profile as FR-7.15).
+
+Steps: bootstrapped an instance with `smcpctl bootstrap` (the Playwright acceptance setup, `console/e2e/gateway.ts`), ran `openssl x509 -noout -text` on `state/tls/ca.crt` and `state/tls/server.crt`, read the key inventory code, and searched the source for every use of the CA key file and every certificate the Gateway signs.
+
+Observations:
+
+- The CA certificate is `CN=Secure MCP Gateway server CA`, `CA:TRUE, pathlen:0`, key usage `Certificate Sign, CRL Sign, Digital Signature`, with critical name constraints permitting only the listener names (`DNS:localhost` here) (`internal/keys/keys.go:169`, `internal/keys/keys.go:183`).
+- The issued listener certificate has issuer `Secure MCP Gateway server CA`, key usage `Digital Signature` and extended key usage `TLS Web Server Authentication` only (`internal/keys/keys.go:266`, `internal/keys/keys.go:267`).
+- The Gateway signs exactly two kinds of certificate: the self-signed CA (`internal/keys/keys.go:188`) and the listener certificate (`internal/keys/keys.go:271`). The CA key file is loaded only to issue or renew the listener certificate (`internal/keys/keys.go:337`, `internal/keys/rotate.go:151`); no other package opens it (the only other reference is the list of key files that `smcpctl bootstrap` refuses to overwrite, `cmd/smcpctl/bootstrap.go:233`).
+- The key inventory names one file per purpose, with `server_ca` mapped to `tls/ca.key` and no other purpose sharing it (`internal/keys/rotate.go:460`).
+
+Deviation: none for the release 1.0 statement. A separate client CA does not exist; it is FR-7.15, deferred.

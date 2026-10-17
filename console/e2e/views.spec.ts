@@ -6,7 +6,8 @@
 // without a tunnel), the route is answered with a fixture and the test
 // says so. Claims are annotations (see docs/console.md).
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { bin, mcpCall, work } from "./gateway";
@@ -573,6 +574,82 @@ test("the OpenAPI document describes every route with its roles", async ({ reque
 });
 
 // Last: suspending the reference server stops it until smcpd restarts.
+// FR-7.10 and FR-8.18: a second, separately signed revision of the
+// reference server. Its key is enrolled from G-10 only after the fingerprint
+// is shown and confirmed; the revision is installed with smcpctl and
+// retired from G-10.
+test("G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision", async ({ page }) => {
+  claims("FR-8.18", "FR-7.10", "FR-5.7");
+  const ctl = join(bin, "smcpctl");
+  const prefix = join(work, `rev2-${Date.now()}`);
+  const keyID = execFileSync(ctl, ["package", "keygen", "--out", prefix, "--unencrypted"], { encoding: "utf8" }).match(/^key (\S+)/m)![1]!;
+  const refserver = join(bin, "smcp-refserver");
+  const sha = createHash("sha256").update(readFileSync(refserver)).digest("hex");
+  const rev = "99.0.0-e2e";
+  const recipe = {
+    recipe_version: 1,
+    server: { id: "smcp-ref-filesystem", alias: "ref", publisher: "Secure MCP Gateway project", description: "Second revision of the reference server for the G-10 retire test.", revision: rev },
+    artifact: { type: "binary", reference: refserver, version: rev, sha256: sha },
+    launch: { runtime: "native", argv: ["smcp-refserver", "--root", "{root}"] },
+    risk_class: "low",
+    instance_scope: ["shared"],
+    tools: { default: { side_effect: "read", source_trust: "trusted" }, expect: ["echo", "time_now", "list_files", "read_file"] },
+    capabilities: { filesystem: [{ slot: "root", mode: "ro", argv_placeholder: "{root}" }], egress: [] },
+    licenses: ["Apache-2.0"],
+    operator_note: "Acceptance test package.",
+    source: { kind: "archive", uri: "file://" + refserver, sha256: sha },
+  };
+  const recipeFile = prefix + "-recipe.json";
+  writeFileSync(recipeFile, JSON.stringify(recipe));
+  const pkg = prefix + "-pkg";
+  execFileSync(ctl, ["package", "build", "--recipe", recipeFile, "--out", pkg]);
+  execFileSync(ctl, ["package", "sign", pkg, "--key", prefix + ".key"]);
+
+  await signIn(page, "/library");
+  const anchors = page.getByRole("table", { name: "Trust anchors" });
+  await page.getByText("Enroll a trust anchor").click();
+  const form = page.getByRole("form", { name: "Enroll a trust anchor" });
+  await form.getByLabel("Anchor name").fill("e2e-rev2");
+  await form.getByLabel("Minisign public key (the .pub file)").fill(readFileSync(prefix + ".pub", "utf8"));
+  await form.getByLabel("moderate").uncheck();
+  await form.getByLabel("Expires (date, default one year)").fill("2027-10-16");
+  await form.getByRole("button", { name: "Show fingerprint" }).click();
+  // The fingerprint step: nothing is enrolled until the key ID is confirmed.
+  const fp = form.getByRole("status", { name: "Key fingerprint" });
+  await expect(fp).toContainText(keyID);
+  await expect(fp).toContainText(/[0-9a-f]{64}/);
+  await expect(fp).toContainText("low");
+  await expect(form.getByRole("button", { name: "Enroll anchor" })).toBeDisabled();
+  await expect(anchors).not.toContainText("e2e-rev2");
+  await form.getByLabel("The key ID matches the publisher's").check();
+  await form.getByRole("button", { name: "Enroll anchor" }).click();
+  const row = anchors.getByRole("row").filter({ hasText: "e2e-rev2" });
+  await expect(row).toContainText(keyID);
+  await expect(row).toContainText("low");
+  await expect(row).not.toContainText("moderate");
+  await expect(row).toContainText("2027");
+
+  // smcpctl installs the second revision through the running Gateway.
+  execFileSync(ctl, ["package", "install", pkg, "--config", g.config]);
+  await page.reload();
+  const revs = page.getByRole("table", { name: "Package revisions" });
+  const second = revs.getByRole("row").filter({ hasText: rev });
+  await expect(second).toContainText("verified-disabled", { timeout: 20_000 });
+  await expect(second).toContainText("e2e-rev2");
+  await second.getByRole("button", { name: `Retire smcp-ref-filesystem ${rev}` }).click();
+  const dialog = page.getByRole("dialog", { name: `Retire smcp-ref-filesystem ${rev}` });
+  await dialog.getByLabel("Reason (optional, recorded)").fill("superseded test revision");
+  await dialog.getByRole("button", { name: "Retire" }).click();
+  await expect(page.getByText(`Retired smcp-ref-filesystem ${rev}. This cannot be undone.`)).toBeVisible();
+  await expect(second).toContainText("retired");
+  await expect(second.getByRole("button")).toHaveCount(0);
+  // The enabled first revision is unaffected.
+  await expect(revs.getByRole("row").filter({ hasText: "enabled" })).toHaveCount(1);
+  // Clean up the anchor so later tests see the bootstrap state.
+  await page.getByRole("button", { name: "Remove e2e-rev2" }).click();
+  await expect(anchors).not.toContainText("e2e-rev2");
+});
+
 test("G-10 servers and library: suspend, enable, trust anchors and receipts", async ({ page }) => {
   claims("FR-8.18", "FR-5.7");
   await signIn(page, "/servers");
@@ -587,6 +664,8 @@ test("G-10 servers and library: suspend, enable, trust anchors and receipts", as
   await page.getByText("Enroll a trust anchor").click();
   await page.getByLabel("Anchor name").fill("e2e-anchor");
   await page.getByLabel("Minisign public key (the .pub file)").fill(readFileSync(prefix + ".pub", "utf8"));
+  await page.getByRole("button", { name: "Show fingerprint" }).click();
+  await page.getByLabel("The key ID matches the publisher's").check();
   await page.getByRole("button", { name: "Enroll anchor" }).click();
   await expect(page.getByRole("table", { name: "Trust anchors" })).toContainText("e2e-anchor");
   await page.getByRole("button", { name: "Remove e2e-anchor" }).click();
@@ -602,7 +681,7 @@ test("G-10 servers and library: suspend, enable, trust anchors and receipts", as
   await page.getByRole("dialog", { name: /Enable smcp-ref-filesystem/ }).getByRole("button", { name: "Enable" }).click();
   await expect(page.getByText(/Enabled smcp-ref-filesystem/)).toBeVisible();
   await expect(revs).toContainText("enabled");
-  await page.getByRole("link", { name: "smcp-ref-filesystem" }).click();
+  await revs.getByRole("row").filter({ hasText: "enabled" }).getByRole("link", { name: "smcp-ref-filesystem" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Package smcp-ref-filesystem" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /^Signed manifest/ })).toBeVisible();
 });
