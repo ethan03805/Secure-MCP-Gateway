@@ -389,9 +389,10 @@ func TestFrameFilterScreensBatch(t *testing.T) {
 	if progress != 1 {
 		t.Fatalf("progress routed %d", progress)
 	}
-	// A line that is not a valid batch passes unchanged.
+	// A line that is not a valid batch is not JSON-RPC: nothing passes and
+	// the connection ends (FR-5.14).
 	f = newFrameFilter(strings.NewReader(`[{"method":`+"\n"), 1<<10)
-	if out, _ := io.ReadAll(f); string(out) != `[{"method":`+"\n" {
-		t.Fatalf("malformed batch changed: %q", out)
+	if out, err := io.ReadAll(f); len(out) != 0 || !errors.Is(err, errInvalidLine) || !f.invalid.Load() {
+		t.Fatalf("malformed batch: %q %v", out, err)
 	}
 }
