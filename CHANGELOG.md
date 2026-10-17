@@ -172,6 +172,10 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Obligation types (FR-3.12): every permit also carries the effective Audit Profile revision, Observation Policy, Anomaly Response Policy revision, size limit, timeout, the server's egress and secret grants and its runtime profile, from `app.Options.ObservationContext` and the configuration; decision records show them.
 - New reason codes in Appendix B, `docs/troubleshooting.md` and the edge messages. New tests verify FR-3.6, FR-3.12, SR-1.5-1, SR-1.7-1, SR-1.7-2, SR-1.11-1 and SR-3.13-1 and claim SR-1.10-1 in part.
 
+### Exact historical links in the evidence mirror (E-21, E-26)
+
+- The graph mirror projects the rule revisions of each decision record (`RuleRevision`, contained in the policy revision, linked from the decision by `CONSIDERED_RULE`, `APPLICABLE_RULE` and `DECIDED_BY`) and the effective Audit Profile revision (`PolicyObject`, linked from the decision event by `RECORDED_UNDER`). The event path query returns the decisive rules and the audit profile. Templates digest updated. A new end-to-end test verifies SR-6.4-1 on a real tool call.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

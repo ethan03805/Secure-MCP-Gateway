@@ -152,7 +152,9 @@ SMCP_E2E_BACKEND = "1"
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	a, err := app.Start(ctx, cfg, app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond})
+	a, err := app.Start(ctx, cfg, app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond,
+		// The observation objects smcpd reports when none is published.
+		ObservationContext: func() (string, string, string) { return "audit_profile@file", "default", "anomaly_response@file" }})
 	if err != nil {
 		cancel()
 		t.Fatal(err)

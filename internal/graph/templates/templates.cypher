@@ -113,6 +113,26 @@ WITH n, row
 WHERE coalesce(n.lastSeen, -1) <= row.ts
 SET n += row.props, n.lastSeen = row.ts
 
+// op: upsert.RuleRevision
+// mode: write
+// params: rows:rows
+UNWIND $rows AS row
+MERGE (n:RuleRevision {id: row.id})
+SET n.firstSeen = CASE WHEN n.firstSeen IS NULL OR row.ts < n.firstSeen THEN row.ts ELSE n.firstSeen END
+WITH n, row
+WHERE coalesce(n.lastSeen, -1) <= row.ts
+SET n += row.props, n.lastSeen = row.ts
+
+// op: upsert.PolicyObject
+// mode: write
+// params: rows:rows
+UNWIND $rows AS row
+MERGE (n:PolicyObject {id: row.id})
+SET n.firstSeen = CASE WHEN n.firstSeen IS NULL OR row.ts < n.firstSeen THEN row.ts ELSE n.firstSeen END
+WITH n, row
+WHERE coalesce(n.lastSeen, -1) <= row.ts
+SET n += row.props, n.lastSeen = row.ts
+
 // op: link.AuditEvent.IN_SESSION.Session
 // mode: write
 // params: rows:rows
@@ -216,6 +236,46 @@ UNWIND $rows AS row
 MERGE (a:ToolRevision {id: row.from})
 MERGE (b:ServerRevision {id: row.to})
 MERGE (a)-[:BELONGS_TO]->(b)
+
+// op: link.AuditEvent.RECORDED_UNDER.PolicyObject
+// mode: write
+// params: rows:rows
+UNWIND $rows AS row
+MERGE (a:AuditEvent {id: row.from})
+MERGE (b:PolicyObject {id: row.to})
+MERGE (a)-[:RECORDED_UNDER]->(b)
+
+// op: link.PolicyRevision.CONTAINS.RuleRevision
+// mode: write
+// params: rows:rows
+UNWIND $rows AS row
+MERGE (a:PolicyRevision {id: row.from})
+MERGE (b:RuleRevision {id: row.to})
+MERGE (a)-[:CONTAINS]->(b)
+
+// op: link.Decision.CONSIDERED_RULE.RuleRevision
+// mode: write
+// params: rows:rows
+UNWIND $rows AS row
+MERGE (a:Decision {id: row.from})
+MERGE (b:RuleRevision {id: row.to})
+MERGE (a)-[:CONSIDERED_RULE]->(b)
+
+// op: link.Decision.APPLICABLE_RULE.RuleRevision
+// mode: write
+// params: rows:rows
+UNWIND $rows AS row
+MERGE (a:Decision {id: row.from})
+MERGE (b:RuleRevision {id: row.to})
+MERGE (a)-[:APPLICABLE_RULE]->(b)
+
+// op: link.Decision.DECIDED_BY.RuleRevision
+// mode: write
+// params: rows:rows
+UNWIND $rows AS row
+MERGE (a:Decision {id: row.from})
+MERGE (b:RuleRevision {id: row.to})
+MERGE (a)-[:DECIDED_BY]->(b)
 
 // op: link.Approval.FOR_INVOCATION.Invocation
 // mode: write
@@ -405,13 +465,24 @@ OPTIONAL MATCH (s)-[:OF_PRINCIPAL]->(p:Principal)
 OPTIONAL MATCH (e)-[:OBSERVED_FROM]->(sr:ServerRevision)
 OPTIONAL MATCH (i)-[:INVOKED]->(t:ToolRevision)
 OPTIONAL MATCH (e)-[:RECORDED_UNDER]->(pr:PolicyRevision)
+CALL (d) {
+  OPTIONAL MATCH (d)-[:DECIDED_BY]->(r:RuleRevision)
+  WITH r ORDER BY r.id LIMIT 256
+  RETURN collect(r {.*}) AS decisiveRules
+}
+CALL (d) {
+  OPTIONAL MATCH (d)<-[:FOR_DECISION]-(:AuditEvent)-[:RECORDED_UNDER]->(ap:PolicyObject)
+  WITH ap ORDER BY ap.id LIMIT 1
+  RETURN collect(ap {.*}) AS auditProfiles
+}
 CALL (e) {
   OPTIONAL MATCH (o:AuditEvent {correlationId: e.correlationId})
   WITH o ORDER BY o.ts, o.id LIMIT $limit
   RETURN collect(o {.*}) AS phases
 }
 RETURN e {.*} AS event, d {.*} AS decision, i {.*} AS invocation, s {.*} AS session, p {.*} AS principal,
-       sr {.*} AS serverRevision, t {.*} AS toolRevision, pr {.*} AS policyRevision, phases
+       sr {.*} AS serverRevision, t {.*} AS toolRevision, pr {.*} AS policyRevision, decisiveRules,
+       CASE WHEN size(auditProfiles) > 0 THEN auditProfiles[0] END AS auditProfile, phases
 
 // op: query.recent_sessions
 // mode: read
@@ -515,7 +586,7 @@ RETURN count(*) AS deleted
 // params: limit:int
 MATCH (n)
 WHERE n:AuditEvent OR n:Session OR n:Principal OR n:Invocation OR n:Decision OR n:PolicyRevision OR n:PolicyControl
-   OR n:ServerRevision OR n:ToolRevision OR n:Approval
+   OR n:ServerRevision OR n:ToolRevision OR n:Approval OR n:RuleRevision OR n:PolicyObject
 WITH n LIMIT $limit
 DETACH DELETE n
 RETURN count(*) AS deleted

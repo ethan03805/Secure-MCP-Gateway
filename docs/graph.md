@@ -104,8 +104,10 @@ Mirrored labels and their properties:
 | `PolicyControl` | `control` | `activeRevisionId` |
 | `ServerRevision`, `ToolRevision` | revision | `name` (tool) |
 | `Approval` | approval ID | `sessionId`, `state`, `argsDigest`, `expiresAt`, `approver`, `publicName`, `correlationId` |
+| `RuleRevision` | `<policy revision>/<template>/<rule>` | `parentId` (the policy revision) |
+| `PolicyObject` | observation object revision, for example `audit_profile@3` | `type` (`audit_profile`) |
 
-Every mirrored node also has `firstSeen` and `lastSeen` (Unix ns of the events that touched it). Properties are applied only from an event at least as new as `lastSeen`, so replaying older events never regresses a state. Relationships: `IN_SESSION`, `OF_PRINCIPAL`, `FOR_INVOCATION`, `FOR_DECISION`, `OBSERVED_FROM`, `RECORDED_UNDER`, `INVOKED`, `AUTHORIZED_BY`, `EVALUATED_UNDER`, `TARGETED`, `BELONGS_TO` (SRS Appendix D). No tool arguments or results are mirrored.
+Every mirrored node also has `firstSeen` and `lastSeen` (Unix ns of the events that touched it). Properties are applied only from an event at least as new as `lastSeen`, so replaying older events never regresses a state. Relationships: `IN_SESSION`, `OF_PRINCIPAL`, `FOR_INVOCATION`, `FOR_DECISION`, `OBSERVED_FROM`, `RECORDED_UNDER`, `INVOKED`, `AUTHORIZED_BY`, `EVALUATED_UNDER`, `TARGETED`, `BELONGS_TO`, `CONTAINS` (policy revision to rule revision), `CONSIDERED_RULE`, `APPLICABLE_RULE` and `DECIDED_BY` (decision to rule revision), and `RECORDED_UNDER` from a decision event to the effective Audit Profile revision (SRS Appendix D). The event path query (`GET /api/v1/graph/events/{id}/path`) returns, with the decision, the decision's decisive rule revisions (`decisiveRules`) and Audit Profile revision (`auditProfile`), so every evaluated-request event reaches its decision, policy revision, decisive rules, server and tool revisions and audit profile (SR-6.4-1). No tool arguments or results are mirrored.
 
 ## Commands
 

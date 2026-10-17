@@ -89,7 +89,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-21 Audit & Evidence Service
 
-- SR-6.4-1 missing: events carry decision, policy revision, server and tool revision IDs, but no decisive rule revision IDs (rules are not versioned objects) and no audit profile revision.
 - SR-6.12-1 external: the evidence key and checkpoint directory permissions depend on the Enforced installation's identities; not exercised.
 - SR-6.18-1 missing: stderr, backend error messages and notifications are not recorded as `server_asserted` evidence.
 
