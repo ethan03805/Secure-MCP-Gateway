@@ -31,6 +31,7 @@ type Settings struct {
 	FlushInterval    time.Duration
 	MetricsInterval  time.Duration
 	MemoryLimit      int64
+	StorageQuota     int64 // Observation Store quota (FR-9.15, default 10 GiB)
 	Scoring          string
 	RequireApproval  string
 	Withhold         string
@@ -131,6 +132,9 @@ func Resolve(cfg *config.Config, cat *observe.Catalog) (Settings, error) {
 	}
 	s.FlushInterval = dur(o.FlushInterval, 200*time.Millisecond)
 	s.MetricsInterval = dur(o.MetricsInterval, 10*time.Second)
+	if s.StorageQuota = o.StorageQuotaBytes; s.StorageQuota == 0 {
+		s.StorageQuota = 10 << 30
+	}
 	if s.MemoryLimit == 0 {
 		s.MemoryLimit = 512 << 20 // CP-33
 	}

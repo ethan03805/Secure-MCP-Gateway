@@ -120,6 +120,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 
 - CI: the `graph` job writes `go test -json` to `build/graph-test.json` and uploads it as `graph-results`; the `status` job merges it after the `go` job's results, so the claims of tests that need Neo4j (skipped in the `go` job, for example `TestNeo4jSchemaMigrationAndIndexes` for FR-9.18 and `TestNeo4jInjectedTextIsNeverExecuted` for SR-1.13-1) are counted with the Neo4j run's result.
 - New tests over the graph projection verify SR-6.20-1 (every event with a decision, permitted or denied, has a `FOR_DECISION` link) and SR-6.13-1 (events recorded while the database is down reach the mirror after recovery with their original `policy_status`).
+### Observation degradation, backpressure and storage quotas (E-26, E-28)
+
+- Degradation stages (FR-9.12): while the store writer's queue is at 80% or more (the P2 backpressure signal, FR-9.6), the heap is above 90% of the observation memory budget, or less than 10% of host memory is available (Linux), the observation path steps once per second through reduced normal-band sampling, suspended S3 capture, paused research campaigns and a shrunk per-session cache, and steps back once the trigger clears. The stage is in `GET /api/v1/observations/status` (`degradation`) and in health as the non-critical cause `observation_degraded`; drops from reduced sampling are counted as `degraded`.
+- Storage quotas (FR-9.15): `[evidence] quota_bytes` (CP-26, 10 GiB) for the journal and `[observation] storage_quota_bytes` (10 GiB) for the observation directory; health warns with `storage_quota_<store>` at 80% and every health report carries each store's level under `quotas`.
+- New tests verify FR-9.5 (batches of at most 1,000 rows or 200 ms at 5,000 records per second), FR-9.6, FR-9.12 and FR-9.15.
 
 ### Policy decisions: approval floor, profile ceiling, re-decision, explanations (E-05, E-06, E-07, E-09)
 

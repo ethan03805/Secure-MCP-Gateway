@@ -79,6 +79,7 @@ type Monitor struct {
 
 	mu      sync.Mutex
 	checks  []namedCheck
+	quotas  []*Quota
 	active  map[string]Cause
 	latches map[string]*latch
 	state   string
@@ -286,6 +287,8 @@ type Report struct {
 	Causes    []CauseReport  `json:"causes"`
 	CheckedAt time.Time      `json:"checked_at"`
 	Info      map[string]any `json:"info,omitempty"`
+	// Quotas are the storage quota levels (FR-9.15).
+	Quotas []QuotaLevel `json:"quotas,omitempty"`
 }
 
 // Report returns the current report.
@@ -318,6 +321,9 @@ func (m *Monitor) Report() Report {
 	sort.Slice(r.Causes, func(i, k int) bool { return r.Causes[i].Name < r.Causes[k].Name })
 	if info != nil {
 		r.Info = info()
+	}
+	if q := m.Quotas(); len(q) > 0 {
+		r.Quotas = q
 	}
 	return r
 }

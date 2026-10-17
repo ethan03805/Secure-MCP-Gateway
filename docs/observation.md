@@ -189,6 +189,20 @@ Pseudonymization: `principal_id`, `session_id`, `end_user_claim`, `correlation_i
 
 Tables: `records`, `spans`, `metrics`, `scores`, partitioned by UTC day. Each flushed batch (at most `flush_records` rows or `flush_interval`) is one new file; files are never rewritten. A newer catalog version that adds a parameter adds a column to new files only; queries read older files with the column as null. Directories are 0700 and files 0600. DuckDB runs in memory with `memory_limit_bytes` (CP-33: 512 MiB) and two threads, and never installs or loads extensions from the network. Day partitions older than `retention` (CP-25: 90 days) are deleted at start and hourly. Aggregate queries (count, mean, sample variance, minimum, maximum, quantiles by linear interpolation, histograms over given bounds) can be grouped by any columns, by `context` (the baseline dimensions) and by a time bucket.
 
+## Degradation
+
+The Observation Collector sheds load in stages instead of slowing the Gateway (FR-9.12). The path is overloaded while the store writer's queue is at 80% or more of its capacity (the backpressure signal, FR-9.6), while the process heap is above 90% of the observation memory budget (`memory_limit_bytes`, CP-33), or, on Linux, while less than 10% of host memory is available. Every second the stage moves one step: up while overloaded, down once not.
+
+| Stage | Name | Effect |
+|---|---|---|
+| 0 | `normal` | None |
+| 1 | `reduced_sampling` | Normal-band sampling at a tenth of `sampling_rate`; the calls sampled out are counted as drop reason `degraded`. Escalated captures are kept |
+| 2 | `s3_capture_suspended` | S3 parameters (`raw_arguments`, `raw_response`) are not captured |
+| 3 | `campaigns_paused` | Research campaigns capture nothing |
+| 4 | `caches_shrunk` | The per-session cache keeps a quarter of its sessions |
+
+`GET /api/v1/observations/status` reports `degradation` (`stage`, `name`, `reason`, `backpressure`), and health reports the non-critical cause `observation_degraded` while the stage is above 0. Enforcement never degrades. The writer appends to the store in batches of at most `flush_records` (1,000) rows or `flush_interval` (200 ms), whichever comes first (FR-9.5).
+
 ## Configuration
 
 Every key of the `[observation]` table is optional.
@@ -211,7 +225,8 @@ Every key of the `[observation]` table is optional.
 | `flush_records` | `1000` | Maximum rows per store batch |
 | `flush_interval` | `"200ms"` | Maximum batch age |
 | `metrics_interval` | `"10s"` | Meta-metrics interval |
-| `memory_limit_bytes` | `536870912` | DuckDB memory limit |
+| `memory_limit_bytes` | `536870912` | DuckDB memory limit and the observation memory budget the degradation stages use |
+| `storage_quota_bytes` | `10737418240` | Storage quota of the observation directory; health warns at 80% (FR-9.15) |
 | `scoring` | `"async"` | `off`, `async` or `sync` |
 | `require_approval_band` | `"off"` | `sync` only: band that adds the approval obligation |
 | `withhold_band` | `"off"` | `sync` only: band that withholds the result |

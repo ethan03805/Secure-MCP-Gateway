@@ -116,7 +116,9 @@ func (s *Service) status(w http.ResponseWriter, r *http.Request) {
 		"sampling_rate": s.S.SamplingRate, "parameters": s.Collector.SelectedParameters(), "escalation_parameters": s.S.Escalation,
 		"retention": s.S.Retention.String(), "collector": s.Collector.Stats(), "drops": s.Drops(),
 		"baseline": s.Baselines.LifecycleStatus(), "loaded_snapshot": s.Scorer.SnapshotID(), "thresholds": s.Scorer.Thresholds(),
-		"contexts": s.S.Baseline.Dimensions, "features": s.S.Baseline.Features, "duckdb_available": obsstore.DuckDBAvailable()}
+		"contexts": s.S.Baseline.Dimensions, "features": s.S.Baseline.Features, "duckdb_available": obsstore.DuckDBAvailable(),
+		"degradation": map[string]any{"stage": s.degrade.Stage(), "name": StageNames[s.degrade.Stage()], "reason": s.degrade.Reason(),
+			"backpressure": s.writer.underPressure()}}
 	if s.Store != nil {
 		if st, err := s.Store.Stats(); err == nil {
 			out["store"] = st

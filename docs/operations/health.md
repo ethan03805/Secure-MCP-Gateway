@@ -30,6 +30,8 @@ An emergency stop (`smcpctl stop`) also makes the reported state `fail-closed`; 
 | `unverified_manifests` | no | | A server's tool list comes from the live server, not a signed manifest |
 | `observer_events_dropped` | no | | An evidence observer (graph mirror, Observation Collector) dropped events since the previous evaluation |
 | `evidence_export_failed` | no | | The last evidence export attempt failed (see [backup.md](backup.md)) |
+| `storage_quota_journal`, `storage_quota_observation_store` | no | | The store uses 80% or more of its quota (`[evidence] quota_bytes`, CP-26 10 GiB; `[observation] storage_quota_bytes`, 10 GiB); measured every minute. Every report carries each store's level under `quotas` (FR-9.15) |
+| `observation_degraded` | no | | The observation path is degraded; the detail names the stage and the trigger (FR-9.12, see [observation.md](../observation.md#degradation)) |
 
 The graph mirror (when `[graph] enabled`) and the Observation Store register their own checks with `health.Monitor.Register`; they report `degraded`, never `fail-closed`. Not yet checked: vault availability (E-19) and the memory degradation stage (E-28).
 

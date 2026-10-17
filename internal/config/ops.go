@@ -48,7 +48,13 @@ type Evidence struct {
 	// anchor. Empty disables export.
 	ExportDir      string   `toml:"export_dir" json:"export_dir"`
 	ExportInterval Duration `toml:"export_interval" json:"export_interval"`
+	// QuotaBytes is the Evidence Journal's storage quota (CP-26, default
+	// 10 GiB); health warns at 80% (FR-9.15).
+	QuotaBytes int64 `toml:"quota_bytes" json:"quota_bytes"`
 }
+
+// DefaultEvidenceQuota is CP-26.
+const DefaultEvidenceQuota = 10 << 30
 
 // Backup configures where `smcpctl backup` writes archives (D-15).
 type Backup struct {
@@ -101,6 +107,9 @@ func (c *Config) applyOpsDefaults() error {
 	}
 	if c.Log.MaxFiles == 0 {
 		c.Log.MaxFiles = DefaultLogMaxFiles
+	}
+	if c.Evidence.QuotaBytes == 0 {
+		c.Evidence.QuotaBytes = DefaultEvidenceQuota
 	}
 	if c.Evidence.ExportInterval.Duration == 0 {
 		c.Evidence.ExportInterval.Duration = DefaultExportInterval

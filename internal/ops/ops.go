@@ -245,6 +245,7 @@ func (r *Runtime) registerChecks() {
 	m.Register("journal", health.Journal(a.Journal))
 	m.Register("journal_writable", health.Every(5*time.Second, health.JournalWritable(jdir)))
 	m.Register("disk", health.Every(5*time.Second, health.Disk(jdir)))
+	m.AddQuota(&health.Quota{Name: "journal", Dir: jdir, Limit: a.Config.Evidence.QuotaBytes}) // CP-26, FR-9.15
 	m.Register("clock", health.Clock())
 	m.Register("trust_anchors", health.Every(30*time.Second, health.TrustAnchors(filepath.Join(stateDir, keys.CACertFile), a.Config.Listener.TLSCert)))
 	m.Register("backends", health.Every(10*time.Second, health.Backends(func() map[string]health.Pinger {

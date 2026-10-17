@@ -119,7 +119,8 @@ func run(cfgPath, level string) error {
 	if err != nil {
 		return fmt.Errorf("observation: %w", err)
 	}
-	mon.Register("observation", obs.HealthCheck()) // degraded while the Observation Store cannot be opened
+	mon.Register("observation", obs.HealthCheck()) // degraded while the Observation Store cannot be opened, or while observation is degraded (FR-9.12)
+	mon.AddQuota(obs.StorageQuota())               // FR-9.15
 	opts.ExtraFilters = obs.RegisterFilters
 	if o := obs.Observer(); o != nil {
 		opts.Observers["observation"] = o
