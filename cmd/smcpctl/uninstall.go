@@ -134,6 +134,9 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 		for _, line := range removeLSMProfiles() {
 			fmt.Fprintln(out, line)
 		}
+		for _, line := range removeServerIdentitySetup() {
+			fmt.Fprintln(out, line)
+		}
 	}
 	for _, name := range releaseBinaries {
 		for _, p := range []string{filepath.Join(*binDir, name), filepath.Join(*binDir, name+".prev")} {
@@ -238,6 +241,37 @@ func removeLSMProfiles() []string {
 			out = append(out, "LSM profile "+m+": "+err.Error())
 		} else {
 			out = append(out, "removed LSM profile "+m)
+		}
+	}
+	return out
+}
+
+// serverIdentityFiles are the files packaging/linux/setup-server-identity.sh
+// writes so that smcpd can run servers as smcp-srv.
+var serverIdentityFiles = []string{"/etc/sudoers.d/smcp-srv", "/etc/systemd/system/smcpd.service.d/smcp-srv.conf"}
+
+// removeServerIdentitySetup removes the sudoers rule, the smcpd.service
+// drop-in and lingering of smcp-srv.
+func removeServerIdentitySetup() []string {
+	if runtime.GOOS != "linux" {
+		return nil
+	}
+	var out []string
+	for _, p := range serverIdentityFiles {
+		if _, err := os.Stat(p); err != nil {
+			continue
+		}
+		if err := runQuiet(asRoot("rm", "-f", p)...); err != nil {
+			out = append(out, p+": "+err.Error())
+		} else {
+			out = append(out, "removed "+p)
+		}
+	}
+	if _, err := os.Stat("/var/lib/systemd/linger/smcp-srv"); err == nil {
+		if err := runQuiet(asRoot("loginctl", "disable-linger", "smcp-srv")...); err != nil {
+			out = append(out, "lingering of smcp-srv: "+err.Error())
+		} else {
+			out = append(out, "disabled lingering of smcp-srv")
 		}
 	}
 	return out

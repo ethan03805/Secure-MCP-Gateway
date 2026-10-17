@@ -594,7 +594,7 @@ func (in *installer) enforced() error {
 	}
 	fmt.Fprintf(in.out, `
 Enforced profile installed. smcpd runs as smcp-core under %s and starts each
-server in a rootless Podman container. The release label is "enforced" only
+server in a rootless Podman container of the server identity smcp-srv. The release label is "enforced" only
 for a build whose AT-01 to AT-21 acceptance evidence passed.
 
 Check the host:  sudo -u smcp-core XDG_RUNTIME_DIR=/run/smcp smcpctl runtime doctor --config %s
@@ -629,7 +629,10 @@ mode = "enforced"
 
 [runtime]
 sandbox = "podman"
-cgroup_manager = "cgroupfs"
+# Servers run in the rootless Podman of the CP-46 server identity
+# (packaging/linux/setup-server-identity.sh prepares it).
+run_as = "smcp-srv"
+shared_dir = "/var/lib/smcp/srv"
 
 [[runtime.server]]
 alias = "ref"

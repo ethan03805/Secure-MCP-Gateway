@@ -1,8 +1,8 @@
 // Package linux embeds the Linux Enforced-profile installation files
-// (install-enforced.sh, the systemd units, the nftables ruleset and the
-// AppArmor profile) so that `smcpctl install --profile enforced` can run the
-// same installer from a release archive, which does not ship this
-// directory.
+// (install-enforced.sh, setup-server-identity.sh, the systemd units, the
+// nftables ruleset and the AppArmor profiles) so that `smcpctl install
+// --profile enforced` can run the same installer from a release archive,
+// which does not ship this directory.
 package linux
 
 import (
@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 )
 
-//go:embed install-enforced.sh systemd/*.service nftables/smcp.nft apparmor/smcpd
+//go:embed install-enforced.sh setup-server-identity.sh systemd/*.service nftables/smcp.nft apparmor/smcpd apparmor/smcp-server
 var files embed.FS
 
 // Files returns the embedded tree.
