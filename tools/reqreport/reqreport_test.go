@@ -89,8 +89,12 @@ func TestLoadRequirements(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := fmt.Sprint(reqs)
-	want := "[{FR-1 Northbound MCP server [E-01 E-02]} {FR-1.1 Listeners [E-02]} {SR-1-1 Capability ceiling [E-05 E-14]}]"
+	var parts []string
+	for _, r := range reqs {
+		parts = append(parts, fmt.Sprintf("{%s %s %v %q %s %q}", r.ID, r.Title, r.Elements, r.Parent, r.Method, r.Verify))
+	}
+	got := "[" + strings.Join(parts, " ") + "]"
+	want := `[{FR-1 Northbound MCP server [E-01 E-02] "" Analysis "Review."} {FR-1.1 Listeners [E-02] "FR-1" Test "Check."} {SR-1-1 Capability ceiling [E-05 E-14] "" Test "Check."}]`
 	if got != want {
 		t.Fatalf("got %s\nwant %s", got, want)
 	}

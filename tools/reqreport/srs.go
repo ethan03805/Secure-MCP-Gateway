@@ -18,6 +18,9 @@ type Requirement struct {
 	ID       string
 	Title    string
 	Elements []string // E-xx IDs from the A: allocation line, in source order
+	Parent   string   // the P: line ("" for "—" or a SEC parent)
+	Method   string   // verification method from the V: line (Test, Inspection, Analysis, Demonstration)
+	Verify   string   // verification statement from the V: line
 }
 
 // Element returns the primary element: the first E-xx in the allocation.
@@ -74,6 +77,13 @@ func loadRequirements(dir string) ([]Requirement, error) {
 				cur = &Requirement{ID: strings.TrimSpace(id), Title: strings.TrimSpace(title)}
 			case line == "":
 				flush()
+			case cur != nil && strings.HasPrefix(line, "P: "):
+				if p := strings.TrimSpace(line[3:]); idPattern.MatchString(p) {
+					cur.Parent = p
+				}
+			case cur != nil && strings.HasPrefix(line, "V: "):
+				m, stmt, _ := strings.Cut(line[3:], "|")
+				cur.Method, cur.Verify = strings.TrimSpace(m), strings.TrimSpace(stmt)
 			case cur != nil && strings.HasPrefix(line, "A: "):
 				for _, tok := range strings.Split(line[3:], ";") {
 					tok = strings.TrimSpace(tok)
