@@ -91,6 +91,33 @@ func (g *Gateway) syncCatalogs() int {
 	return n
 }
 
+// dropUnresolved removes from every cached session catalog the tools the
+// registry no longer resolves, which happens when a server is suspended
+// (backend.Registry.OnSuspend). Each changed server sends
+// notifications/tools/list_changed to its open listen streams (FR-1.35);
+// sessions whose catalog holds none of those tools are not touched.
+func (g *Gateway) dropUnresolved() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	n := 0
+	for _, ss := range g.servers {
+		ss.catalog.mu.Lock()
+		var gone []string
+		for name := range ss.catalog.names {
+			if g.reg.Resolve(name) == nil {
+				gone = append(gone, name)
+				delete(ss.catalog.names, name)
+			}
+		}
+		ss.catalog.mu.Unlock()
+		if len(gone) > 0 {
+			ss.srv.RemoveTools(gone...)
+			n++
+		}
+	}
+	return n
+}
+
 func (g *Gateway) serverOptions() *mcp.ServerOptions {
 	return &mcp.ServerOptions{
 		SupportedProtocolVersions: ProtocolVersions,

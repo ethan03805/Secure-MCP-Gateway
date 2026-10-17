@@ -59,13 +59,16 @@ type Session struct {
 	EndUser        string
 	ApprovedBy     string // Session Approver who signed in at the authorization endpoint (FR-2.19)
 	HarnessVersion string
-	State          string
-	EndReason      string
-	CreatedAt      time.Time
-	IdleDeadline   time.Time
-	MaxDeadline    time.Time
-	EndedAt        time.Time
-	Listener       string
+	// HarnessType is the harness type the create request named, or the
+	// principal's framework type when it named none (FR-2.3).
+	HarnessType  string
+	State        string
+	EndReason    string
+	CreatedAt    time.Time
+	IdleDeadline time.Time
+	MaxDeadline  time.Time
+	EndedAt      time.Time
+	Listener     string
 	// ClientAddress is the tunnel-supplied caller address at creation
 	// (Remote Access Profile); a server-asserted value, not verified.
 	ClientAddress string
@@ -216,6 +219,7 @@ type CreateParams struct {
 	PrincipalID    string
 	ClientID       string
 	HarnessVersion string
+	HarnessType    string
 	Claims         Claims
 	ApprovedBy     string
 	Listener       string
@@ -290,9 +294,12 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 		ID: ids.New(), PrincipalID: pr.ID, Framework: pr.Framework, Profile: pr.Profile, ClientID: p.ClientID,
 		Template: tmpl, PolicyRevision: snap.Revision,
 		Purpose: p.Claims.Purpose, Project: p.Claims.Project, EndUser: p.Claims.EndUser,
-		ApprovedBy: p.ApprovedBy, HarnessVersion: p.HarnessVersion, State: StateActive,
+		ApprovedBy: p.ApprovedBy, HarnessVersion: p.HarnessVersion, HarnessType: p.HarnessType, State: StateActive,
 		CreatedAt: now, IdleDeadline: now.Add(idle),
 		MaxDeadline: now.Add(maxLife), Listener: p.Listener, ClientAddress: p.ClientAddress, idle: p.IdleTimeout,
+	}
+	if sess.HarnessType == "" {
+		sess.HarnessType = pr.Framework
 	}
 	if sess.IdleDeadline.After(sess.MaxDeadline) {
 		sess.IdleDeadline = sess.MaxDeadline

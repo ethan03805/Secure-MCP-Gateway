@@ -18,6 +18,7 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 |---|---|---|---|
 | `NO_PERMIT` | `-31001` | No rule of the session's template permits this tool | Grant the tool in the template, publish the policy, and start a new session |
 | `NO_TEMPLATE` | `-31001` | The session's template is not in the active policy | Sign in again; the session was created under a template that no longer exists |
+| `TEMPLATE_NOT_PERMITTED` | `-31001` | A session create request (token endpoint or session API) named a template the principal's Framework Profile does not permit; carried in `smcp_error` of the OAuth error | Request a permitted template (or none for the profile default), or add the template to the Framework Profile |
 | `PRINCIPAL_DISABLED` | `-31001` | The principal is disabled or suspended (SR-1.5-1) | Re-enable the principal in G-11 (`POST /api/v1/principals/{id}/enable`) if the suspension is over |
 | `CREDENTIAL_INVALID` | `-31001` | The client credential is expired or revoked (SR-1.5-1) | Issue a new credential in G-11 and sign the harness in again |
 | `REVISION_NOT_ENABLED` | `-31001` | The tool's server revision is not enabled (SR-1.5-1) | Check the server's revision in G-10 (`GET /api/v1/packages`); enable it or restore it from suspension |
@@ -58,7 +59,8 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `CAPABILITY` | `-31004` | The one-use launch capability was missing or already used | Repeat the request; if it repeats, report the correlation ID |
 | `RATE_LIMITED` | `-31005` | A rate or burst limit was reached (principal, session or session-tool window) | Wait; `data.callsPerMinute` and `data.burst` show the limits |
 | `QUOTA_EXHAUSTED` | `-31005` | The session used its `calls_per_session` quota | Start a new session, or raise the quota in the template or rule |
-| `QUEUE_FULL` | `-31005` | The dispatch queue is full | Wait, or raise the concurrency limits (CP-10) |
+| `QUEUE_FULL` | `-31005` | The dispatch queue is full, or (before authentication) the CP-09 unauthenticated-work limit of the harness listener is in use | Wait, or raise the concurrency limits (CP-10) |
+| `SESSION_LIMIT` | `-31005` | A session create request would exceed `sessions_per_principal` (CP-18); carried in `smcp_error` of the OAuth error | End an open session of the principal, or raise `sessions_per_principal` |
 | `LISTEN_LIMIT` | `-31005` | The session already holds `listen_streams_per_session` (CP-20) open `subscriptions/listen` streams | Close a listen stream, or raise the limit |
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Sign in again; the harness normally does this itself after a 401 |
 | `SESSION_STATE` | `-31006` | The session is suspended or terminated | Sign in again |

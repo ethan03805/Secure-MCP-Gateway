@@ -340,6 +340,18 @@
         }
       }
     },
+    "client_metadata": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url", "principal"],
+        "properties": {
+          "url": { "type": "string", "pattern": "^https://" },
+          "principal": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "runtime": {
       "type": "object",
       "additionalProperties": false,

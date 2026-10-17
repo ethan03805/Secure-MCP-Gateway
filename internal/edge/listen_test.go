@@ -81,14 +81,13 @@ func next(t *testing.T, msgs <-chan listenMessage, within time.Duration) listenM
 // acknowledged carrying the listen request ID as subscriptionId, and only
 // toolsListChanged is acknowledged even when other types are requested.
 //
-// It also covers FR-1.35 in part: after a policy activation changes the
-// session's catalog, notifications/tools/list_changed tagged with the
-// subscription ID arrives within 2 seconds. Partial: a catalog change from
-// a server suspension is not notified (catalogs built before a suspension
-// keep listing the tools until rebuilt).
+// It also verifies FR-1.35 for both causes of a catalog change: after a
+// policy activation removes a granted tool, and after the server providing
+// the remaining tool is suspended, notifications/tools/list_changed tagged
+// with the subscription ID arrives within 2 seconds, and tools/list then
+// shows the changed catalog.
 func TestListenAcknowledgementAndListChanged(t *testing.T) {
-	reqtest.Verifies(t, "FR-1.33", "FR-1.34")
-	reqtest.Partial(t, "FR-1.35")
+	reqtest.Verifies(t, "FR-1.33", "FR-1.34", "FR-1.35")
 	h := newHarness(t, harnessOpts{})
 	_, tok := h.session("ro")
 	msgs := openListen(t, h, tok, "sub-7", `{"toolsListChanged":true,"resourcesListChanged":true,"promptsListChanged":true}`)
@@ -113,5 +112,26 @@ func TestListenAcknowledgementAndListChanged(t *testing.T) {
 	}
 	if d := time.Since(start); d > 2*time.Second {
 		t.Fatalf("list_changed after %s", d)
+	}
+
+	// A server suspension (SR-3.8-1) changes the catalog without a new
+	// revision.
+	list := fmt.Sprintf(`{"jsonrpc":"2.0","id":9,"method":"tools/list","params":{"_meta":{%s}}}`, wireMeta)
+	if _, _, body := h.post(list, wireHeaders(tok, "tools/list")); !strings.Contains(body, `"t_echo"`) {
+		t.Fatalf("catalog before suspension: %s", body)
+	}
+	start = time.Now()
+	if !h.reg.Suspend("t", "test suspension") {
+		t.Fatal("suspend refused")
+	}
+	m = next(t, msgs, 2*time.Second)
+	if m.Method != "notifications/tools/list_changed" || m.Params.Meta["io.modelcontextprotocol/subscriptionId"] != "sub-7" {
+		t.Fatalf("after suspension: %+v", m)
+	}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Fatalf("list_changed after %s", d)
+	}
+	if _, _, body := h.post(list, wireHeaders(tok, "tools/list")); strings.Contains(body, `"t_echo"`) {
+		t.Fatalf("catalog after suspension still lists the server's tool: %s", body)
 	}
 }
