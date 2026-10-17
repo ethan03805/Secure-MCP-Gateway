@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T00:29:37Z",
-  "commit": "1d4ecbe92539e3c9d38e610eb607366c9b71669d",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1d4ecbe92539e3c9d38e610eb607366c9b71669d",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38986499316",
+  "generatedAt": "2026-10-17T00:37:29Z",
+  "commit": "6efbf641a3e46e48803d825c29ee9fe7ba60528e",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/6efbf641a3e46e48803d825c29ee9fe7ba60528e",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38987107221",
   "tests": {
-    "total": 160,
-    "passed": 154,
-    "failed": 1,
+    "total": 186,
+    "passed": 181,
+    "failed": 0,
     "skipped": 5,
-    "durationSec": 66.2,
+    "durationSec": 68.5,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 7,
+        "passed": 9,
         "failed": 0,
         "skipped": 0
       },
@@ -67,14 +67,14 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 14,
+        "passed": 17,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 11,
-        "failed": 1,
+        "passed": 12,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -97,7 +97,19 @@
       },
       {
         "name": "internal/policy",
-        "passed": 7,
+        "passed": 19,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/policyadmin",
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/policystore",
+        "passed": 4,
         "failed": 0,
         "skipped": 0
       },
@@ -134,7 +146,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.7,
+    "totalPct": 75.2,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -142,7 +154,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 34.2
+        "pct": 23.3
       },
       {
         "name": "cmd/smcpd",
@@ -154,7 +166,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 76.8
+        "pct": 77.7
       },
       {
         "name": "internal/approval",
@@ -162,7 +174,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 82
+        "pct": 82.2
       },
       {
         "name": "internal/authguard",
@@ -182,7 +194,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.5
+        "pct": 90.7
       },
       {
         "name": "internal/egress",
@@ -202,7 +214,15 @@
       },
       {
         "name": "internal/policy",
-        "pct": 94
+        "pct": 93
+      },
+      {
+        "name": "internal/policyadmin",
+        "pct": 81.5
+      },
+      {
+        "name": "internal/policystore",
+        "pct": 81.9
       },
       {
         "name": "internal/profile",
@@ -240,10 +260,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 54,
-    "partial": 62,
-    "failing": 2,
-    "unverified": 440,
+    "verified": 61,
+    "partial": 70,
+    "failing": 0,
+    "unverified": 427,
     "byElement": [
       {
         "element": "E-01",
@@ -273,24 +293,24 @@
         "element": "E-04",
         "name": "Session Manager",
         "total": 19,
-        "verified": 7,
-        "partial": 5,
-        "failing": 1
+        "verified": 8,
+        "partial": 6,
+        "failing": 0
       },
       {
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 22,
-        "verified": 0,
-        "partial": 1,
+        "verified": 3,
+        "partial": 6,
         "failing": 0
       },
       {
         "element": "E-06",
         "name": "Policy Decision Service",
         "total": 23,
-        "verified": 4,
-        "partial": 1,
+        "verified": 6,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -337,9 +357,9 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 2,
+        "verified": 3,
         "partial": 2,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-13",
@@ -961,7 +981,7 @@
       {
         "id": "FR-2.11",
         "element": "E-04",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestSubscriptionsListenEndsWithSession",
           "internal/edge.TestSessionEndCancelsInFlightCall"
@@ -1088,20 +1108,31 @@
       {
         "id": "FR-3.4",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestPolicyControlAPI",
+          "internal/policystore.TestRevisionRecordAndSignature"
+        ]
       },
       {
         "id": "FR-3.5",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestPolicyCommands",
+          "internal/e2e.TestPolicyControlAPI",
+          "internal/policy.TestSimulateReplaysRatesAndTaint",
+          "internal/policy.TestSimulateReportsDecisionChanges",
+          "internal/policyadmin.TestJournalFixturesAndSimulation"
+        ]
       },
       {
         "id": "FR-3.6",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/policyadmin.TestPermissionsAndErrorMapping"
+        ]
       },
       {
         "id": "FR-3.7",
@@ -1112,14 +1143,21 @@
       {
         "id": "FR-3.8",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestPolicyCommands",
+          "internal/policy.TestCanonicalDigest"
+        ]
       },
       {
         "id": "FR-3.9",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestPolicyCommands",
+          "internal/e2e.TestPolicyControlAPI",
+          "internal/policyadmin.TestRollback"
+        ]
       },
       {
         "id": "FR-3.10",
@@ -1127,6 +1165,7 @@
         "status": "verified",
         "tests": [
           "internal/adminapi.TestPolicyReload",
+          "internal/e2e.TestPolicyActivationNotifiesListenStreams",
           "internal/e2e.TestPolicyReloadThroughControlAPI",
           "internal/edge.TestPolicyHotSwapRebuildsCatalog",
           "internal/policy.TestReplaceHotSwap"
@@ -1152,6 +1191,7 @@
         "status": "verified",
         "tests": [
           "internal/e2e.TestRateLimitThroughEdge",
+          "internal/policy.TestBurstWindow",
           "internal/policy.TestProfileRateAndRefusalConsumesNothing",
           "internal/policy.TestRateLimit"
         ]
@@ -3076,20 +3116,28 @@
       {
         "id": "SR-1.1-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/policyadmin.TestLoadImportsOnceThenUsesTheStore"
+        ]
       },
       {
         "id": "SR-1.1-2",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestTamperedPolicyStartsFailClosed",
+          "internal/policystore.TestRevisionRecordAndSignature",
+          "internal/policystore.TestTamperingIsDetected"
+        ]
       },
       {
         "id": "SR-1-2",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/policy.TestProfileMustStillPermitTemplate"
+        ]
       },
       {
         "id": "SR-1.2-1",
@@ -3123,8 +3171,10 @@
       {
         "id": "SR-1.4-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/policy.TestDenyPrecedence"
+        ]
       },
       {
         "id": "SR-1.5-1",
@@ -3231,14 +3281,22 @@
       {
         "id": "SR-1.14-1",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestPolicyCommands",
+          "internal/e2e.TestPolicyControlAPI",
+          "internal/policyadmin.TestPublishOrderAndFailures",
+          "internal/policystore.TestPublishedRevisionsAreImmutable"
+        ]
       },
       {
         "id": "SR-1.15-1",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/policyadmin.TestPublishOrderAndFailures",
+          "internal/policystore.TestActivationAndRestore"
+        ]
       },
       {
         "id": "SR-1.16-1",
@@ -3257,7 +3315,7 @@
       {
         "id": "SR-1.17-2",
         "element": "E-12",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/edge.TestSessionEndCancelsInFlightCall"
         ]
@@ -3294,8 +3352,10 @@
       {
         "id": "SR-1.20-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/policy.TestEvaluationBounds"
+        ]
       },
       {
         "id": "SR-2-1",
@@ -3890,8 +3950,12 @@
       {
         "id": "SR-5.13-2",
         "element": "E-04",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestSessionTaintEndToEnd",
+          "internal/policy.TestSessionTaintObligation",
+          "internal/policy.TestTaintClassesRestrictOnly"
+        ]
       },
       {
         "id": "SR-5.14-1",
@@ -4511,6 +4575,6 @@
   "hostile": [],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
