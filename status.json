@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T09:16:48Z",
-  "commit": "539797fb555a6259fef40041c68c8b6bd5ea46b9",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/539797fb555a6259fef40041c68c8b6bd5ea46b9",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39020022745",
+  "generatedAt": "2026-10-17T09:38:25Z",
+  "commit": "5feb84734af6bcb426932211d77bc167b7dc16cf",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/5feb84734af6bcb426932211d77bc167b7dc16cf",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39021425670",
   "tests": {
-    "total": 896,
-    "passed": 879,
-    "failed": 3,
+    "total": 906,
+    "passed": 892,
+    "failed": 0,
     "skipped": 14,
-    "durationSec": 409.5,
+    "durationSec": 393.4,
     "packages": [
       {
         "name": "console/e2e/browsers",
-        "passed": 1,
-        "failed": 1,
+        "passed": 2,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -25,8 +25,8 @@
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 35,
-        "failed": 2,
+        "passed": 37,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -151,7 +151,7 @@
       },
       {
         "name": "internal/edge",
-        "passed": 48,
+        "passed": 49,
         "failed": 0,
         "skipped": 0
       },
@@ -253,13 +253,13 @@
       },
       {
         "name": "internal/policy",
-        "passed": 26,
+        "passed": 33,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/policyadmin",
-        "passed": 10,
+        "passed": 12,
         "failed": 0,
         "skipped": 0
       },
@@ -362,7 +362,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.7,
+    "totalPct": 75.8,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -414,7 +414,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 71.4
+        "pct": 72.5
       },
       {
         "name": "internal/approval",
@@ -462,11 +462,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.7
+        "pct": 92.6
       },
       {
         "name": "internal/egress",
-        "pct": 81.3
+        "pct": 80.5
       },
       {
         "name": "internal/filterapi",
@@ -478,7 +478,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.8
+        "pct": 82.6
       },
       {
         "name": "internal/gwtest",
@@ -518,7 +518,7 @@
       },
       {
         "name": "internal/obspolicy",
-        "pct": 87
+        "pct": 84.9
       },
       {
         "name": "internal/obsstore",
@@ -546,11 +546,11 @@
       },
       {
         "name": "internal/policy",
-        "pct": 93.3
+        "pct": 92.4
       },
       {
         "name": "internal/policyadmin",
-        "pct": 81.4
+        "pct": 81.8
       },
       {
         "name": "internal/policystore",
@@ -590,7 +590,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 78.9
+        "pct": 78.4
       },
       {
         "name": "internal/session",
@@ -598,7 +598,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 64.5
+        "pct": 61.3
       },
       {
         "name": "internal/tunnel",
@@ -632,10 +632,10 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 256,
-    "partial": 201,
-    "failing": 2,
-    "unverified": 71,
+    "verified": 264,
+    "partial": 202,
+    "failing": 0,
+    "unverified": 64,
     "byElement": [
       {
         "element": "E-01",
@@ -673,16 +673,16 @@
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 18,
-        "verified": 6,
-        "partial": 9,
+        "verified": 8,
+        "partial": 8,
         "failing": 0
       },
       {
         "element": "E-06",
         "name": "Policy Decision Service",
         "total": 22,
-        "verified": 11,
-        "partial": 4,
+        "verified": 16,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -825,9 +825,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 20,
-        "partial": 39,
-        "failing": 2
+        "verified": 21,
+        "partial": 40,
+        "failing": 0
       },
       {
         "element": "E-25",
@@ -1556,8 +1556,9 @@
       {
         "id": "FR-3.6",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/policyadmin.TestEffectivePermissionReport",
           "internal/policyadmin.TestPermissionsAndErrorMapping"
         ]
       },
@@ -1606,8 +1607,10 @@
       {
         "id": "FR-3.12",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/policy.TestObligationTypes"
+        ]
       },
       {
         "id": "FR-3.13",
@@ -2813,7 +2816,7 @@
       {
         "id": "FR-8.30",
         "element": "E-24",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "console/e2e/browsers.TestConsoleSuiteOnEveryBrowser"
         ]
@@ -2871,7 +2874,7 @@
       {
         "id": "FR-8.35",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
@@ -4270,20 +4273,28 @@
       {
         "id": "SR-1.5-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/policy.TestPrerequisiteChecks"
+        ]
       },
       {
         "id": "SR-1.7-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestPredicatesThroughGateway",
+          "internal/policy.TestPredicateOperators"
+        ]
       },
       {
         "id": "SR-1.7-2",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestPredicatesThroughGateway",
+          "internal/policy.TestMissingAttributeDenies"
+        ]
       },
       {
         "id": "SR-1.8-1",
@@ -4342,14 +4353,18 @@
       {
         "id": "SR-1.10-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/policy.TestObligationPrecedence"
+        ]
       },
       {
         "id": "SR-1.11-1",
         "element": "E-06",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/policy.TestSingleRoute"
+        ]
       },
       {
         "id": "SR-1.12-1",
@@ -4852,8 +4867,11 @@
       {
         "id": "SR-3.13-1",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/policy.TestHighRiskFlags",
+          "internal/policyadmin.TestHighRiskRefusedAtPublication"
+        ]
       },
       {
         "id": "SR-3.14-1",
@@ -6233,7 +6251,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6268,7 +6286,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:42311: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:46005: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6324,6 +6342,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
