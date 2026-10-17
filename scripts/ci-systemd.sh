@@ -177,6 +177,9 @@ wait_healthy() {
   [ -n "$ready" ] || { cat "$work/systemd-health.json" >&2; fail "smcpd.service did not become healthy within 60 s"; }
 }
 
+say "runtime doctor as smcp-core (Podman as smcp-srv)"
+as_core /usr/local/bin/smcpctl runtime doctor --config "$cfg" || fail "runtime doctor as smcp-core"
+
 say "starting smcpd.service"
 sudo -n systemctl daemon-reload
 sudo -n systemctl start smcpd.service || fail "systemctl start smcpd.service"

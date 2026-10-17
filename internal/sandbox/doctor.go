@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -135,7 +136,12 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 			if runAs != nil {
 				cmd.Env, cmd.Dir = runner{runAs: runAs}.env(nil), "/"
 			}
-			return cmd.Output()
+			out, err := cmd.Output()
+			var ee *exec.ExitError
+			if errors.As(err, &ee) && len(ee.Stderr) > 0 {
+				err = fmt.Errorf("%w: %s", err, bounded(ee.Stderr))
+			}
+			return out, err
 		}
 	}
 	if o.LookPath == nil {
@@ -253,7 +259,11 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 	if runAs != nil {
 		remedy = fmt.Sprintf("run `sudo -n -E -u %s %s info` as this user: it needs the sudoers rule and the lingering user manager that install-enforced.sh sets up", runAs.Name, pod)
 	}
-	add("podman", "Podman responds (podman info)", err == nil, info.Version.Version, remedy)
+	detail = info.Version.Version
+	if err != nil {
+		detail = err.Error()
+	}
+	add("podman", "Podman responds (podman info)", err == nil, detail, remedy)
 	if err != nil {
 		return out
 	}
