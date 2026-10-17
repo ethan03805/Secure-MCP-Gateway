@@ -26,6 +26,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/egress"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
@@ -68,6 +69,7 @@ type App struct {
 	Profile      profile.Report
 	Capabilities *pipeline.Capabilities
 	TLS          keys.TLSStatus
+	Egress       *egress.Broker // nil unless [egress] enabled = true
 
 	log       *slog.Logger
 	janitor   time.Duration
@@ -133,6 +135,10 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if o.Launcher == nil {
 		o.Launcher = pipeline.SubprocessLauncher{}
 	}
+	if a.Egress, err = egress.FromConfig(cfg, a.Evidence, o.Log); err != nil {
+		return a, fmt.Errorf("egress broker: %w", err)
+	}
+	o.Launcher = a.Egress.Wrap(o.Launcher)
 	host := profile.DetectHost()
 	if o.Host != nil {
 		host = *o.Host
@@ -171,6 +177,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if a.Admin, err = adminapi.New(adminapi.Options{Config: cfg, Controller: a.Gateway, Evidence: a.Evidence, Guard: guard, Approvals: o.Approvals, Log: o.Log}); err != nil {
 		return a, err
 	}
+	a.Egress.Register(a.Admin)
 	if err = a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "started", PolicyRevision: snap.Revision, PolicyStatus: "not_evaluated",
 		Detail: map[string]any{"version": backend.Version, "listener": cfg.Listener.Address, "admin_listener": cfg.AdminListener.Address,
 			"profile": a.Profile.Profile, "release_label": a.Profile.Label}}); err != nil {
@@ -220,6 +227,9 @@ func (a *App) Close() {
 		}
 		if a.Registry != nil {
 			a.Registry.Close()
+		}
+		if err := a.Egress.Close(); err != nil {
+			a.log.Error("egress broker close failed", "err", err)
 		}
 		if a.Evidence != nil {
 			if err := a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "stopped", PolicyStatus: "not_evaluated"}); err != nil {

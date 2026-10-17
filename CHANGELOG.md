@@ -77,6 +77,12 @@ Made while hardening the Go slice (PR #8). They interpret the SRS where the code
 - E-07: Approver accounts are a new `[[approvals.account]]` table. Session Approver accounts (`[[approver]]`) cannot decide tool-call approvals, following SRS Appendix C; ARCH E-24 says a Session Approver "may only approve harness sign-ins and tool-call approvals", which conflicts with Appendix C and should be corrected in the architecture.
 - E-02: every Gateway error now carries the Appendix B `data.message` (FR-1.51); a `tools/call` is answered as an event stream only while it is held, and as JSON otherwise.
 - E-24: control API role seam (`adminapi.Authenticator`, `HandleRoles`, `HandlePublic`); existing `Handle` routes are Administrator-only and refuse other roles with 403 `role_refused`.
+### Implementation: Egress Broker (E-18)
+
+- New package `internal/egress`: per-instance forward proxy (HTTP CONNECT without TLS interception, plain HTTP) and per-destination plain-HTTP endpoints with broker-originated TLS (FR-5.36); grants by host, port, method and SNI; broker-side DNS resolution with the dialed IP pinned to the validated address; refusal of loopback, private, link-local, CGNAT, multicast, reserved and cloud-metadata addresses for IPv4 and IPv6 unless the grant names the exact address; redirects re-validated, at most 3; request size, response size, duration, request-rate and byte-rate limits; Cookie, Set-Cookie and `Smcp-Egress-Auth` stripped; public-fetch method profile; an evidence record per operation.
+- nftables rules (github.com/google/nftables) installed in a sandbox network namespace so that only the broker's listeners are reachable; `scripts/ci-egress-netns.sh` proves it on a real kernel in the linux-integration job.
+- New seam `pipeline.EgressAttacher` (default `NoEgress`) and `pipeline.EgressAware` for the confining launcher; unconfined launchers are wrapped so instances get `HTTP_PROXY`/`HTTPS_PROXY`, documented as advisory in the standalone profile.
+- New `[egress]` configuration section and `[[egress.grant]]` tables, control API routes `GET /api/v1/egress`, `/api/v1/egress/grants`, `/api/v1/egress/connections`, and `smcpctl egress status|grants|connections`. Documentation in `docs/egress.md` and `docs/api/egress.md`.
 
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 

@@ -207,6 +207,10 @@ jobs:
           SMCP_ITEST_DIR: ${{ runner.temp }}/itest
           SMCP_REQUIRE_PREREQS: "1"
         run: scripts/ci-integration.sh
+      - name: Egress broker in a network namespace (direct egress blocked, brokered egress allowed)
+        env:
+          SMCP_ITEST_DIR: ${{ runner.temp }}/egress
+        run: scripts/ci-egress-netns.sh
       - name: Upload the smcpd log
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

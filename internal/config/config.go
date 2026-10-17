@@ -40,6 +40,7 @@ type Config struct {
 	Principals    []Principal   `toml:"principal" json:"principal"`
 	Clients       []Client      `toml:"client" json:"client"`
 	Servers       []Server      `toml:"server" json:"server"`
+	Egress        Egress        `toml:"egress" json:"egress"`
 
 	// Dir is the directory of the configuration file; set by Load.
 	Dir string `toml:"-" json:"-"`
@@ -256,6 +257,7 @@ func Parse(raw []byte) (*Config, error) {
 		return nil, fmt.Errorf("decode: %w", err)
 	}
 	cfg.applyDefaults(presentKeys(generic, "limits"))
+	cfg.Egress.applyDefaults(presentKeys(generic, "egress"))
 	if err := cfg.check(); err != nil {
 		return nil, err
 	}
@@ -426,7 +428,7 @@ func (c *Config) check() error {
 			}
 		}
 	}
-	return nil
+	return c.Egress.check(aliases)
 }
 
 func sameHostPort(a, b string) bool {
