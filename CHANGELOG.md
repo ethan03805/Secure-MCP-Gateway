@@ -178,6 +178,10 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 ### Server-asserted evidence (E-10, E-15, E-21)
 
 - A server instance's stderr, the messages of the JSON-RPC errors it returns and the notifications it sends are recorded as `server_asserted` events attributed to the server revision and instance (SR-6.18-1): batched once a second, at most 16 per second per instance, text cut to 4 KiB with delivered secret values redacted. `docs/sandbox.md` describes the events. A new end-to-end test verifies SR-6.18-1.
+### Reason-code documentation check (FR-18.7)
+
+- `docs/troubleshooting.md` now explains every reason code the source emits: five harness codes were added (`CANCELLED`, `CAPABILITY_INVALID`, `SESSION_ENDED`, `FILTER_WITHHELD`, `ANOMALY_WITHHELD`), and the operator table gained a "What to do" column and rows for the sign-in, session, remote access, package, trust, secret, egress, anomaly, baseline and lifecycle codes.
+- New build check `TestReasonCodesDocumented` (`internal/edge`): it scans the Go source for reason codes (including the codes built from a prefix and a state) and fails when one has no row in the guide or its row has no next action. It verifies FR-18.7.
 
 ### Owner decisions applied
 
