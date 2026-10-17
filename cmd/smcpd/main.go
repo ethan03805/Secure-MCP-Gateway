@@ -201,7 +201,7 @@ func run(cfgPath, level string) error {
 	// components at once (obs.Update); the rest wait for the next start.
 	objs.SetApplier(obs.Update)
 	(&obspolicy.Service{Store: objs, Evidence: a.Evidence}).Register(a.Admin)
-	(&principals.Service{Dir: pdir, Sessions: a.Store, Snapshot: a.Decider.Snapshot, Evidence: a.Evidence, Log: log}).Register(a.Admin)
+	(&principals.Service{Dir: pdir, Sessions: a.Store, Snapshot: a.Decider.Snapshot, Evidence: a.Evidence, Log: log, Gate: a.Gateway.Serialize}).Register(a.Admin)
 	mirror.Register(a.Admin)
 	mirror.Start(ctx, a.Evidence)
 	defer mirror.Close()

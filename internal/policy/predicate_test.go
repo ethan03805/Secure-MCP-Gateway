@@ -233,22 +233,54 @@ func TestObligationTypes(t *testing.T) {
 	}
 }
 
-// TestObligationPrecedence: the obligations that apply to a permit are
-// combined restrict-only: the smallest rate and quota of rule, template,
-// profile and default, the union of filters, and the most restrictive
-// approval (rule, approval predicate, floor, taint). Overlapping permits
-// are refused at publication (SR-1.9-1), so the rules combined are the
-// permit and the layers above it, not several permits (SR-1.10-1).
+// TestObligationPrecedence is SR-1.10-1's test: the obligations that apply
+// to a permitted call are combined restrict-only: the smallest rate bound
+// of rule, template, profile and the CP-11 default, a burst never above
+// that bound, the smallest session quota of rule and template, the rule's
+// filters (the mandatory filters run on every call besides them, FR-4.4),
+// and approval when any layer requires it (rule, approval predicate,
+// approval floor, session taint). Overlapping permits are refused at
+// publication (SR-1.9-1), so the rules combined are the permit and the
+// layers above it; size, time and resource bounds and the retention and
+// capture settings have one source each in release 1.0 and are carried
+// unchanged (TestObligationTypes).
 func TestObligationPrecedence(t *testing.T) {
-	reqtest.Partial(t, "SR-1.10-1")
+	reqtest.Verifies(t, "SR-1.10-1")
 	s := mustCompile(t, `{"revision": "c1",
   "framework_profiles": {"dev": {"templates": ["t"], "default_template": "t", "calls_per_minute": 20}},
   "templates": {"t": {"calls_per_minute": 40, "calls_per_session": 5, "rules": [
     {"id": "r", "server": "fs", "tools": ["write"], "calls_per_minute": 50, "calls_per_session": 7, "filters": ["size-limit"],
-     "when": [{"op": "approval", "value": "required"}]}]}}}`)
-	dec := NewDecider(s, 60).Decide(Request{PrincipalID: "p", SessionID: "s", Profile: "dev", Template: "t", Server: "fs", Tool: "write", SideEffect: SideWrite})
-	if dec.Outcome != Permit || dec.Obligations.CallsPerMinute != 20 || dec.Obligations.CallsPerSession != 5 || !dec.Obligations.Approval ||
-		strings.Join(dec.Obligations.Filters, ",") != "size-limit" {
-		t.Fatalf("%+v", dec.Obligations)
+     "when": [{"op": "approval", "value": "required"}]},
+    {"id": "e", "server": "fs", "tools": ["edit"], "calls_per_session": 3, "filters": ["path-canonicalize", "unicode-control"]},
+    {"id": "m", "server": "fs", "tools": ["move"], "side_effect": "write"}]}}}`)
+	d := NewDecider(s, 60)
+	d.SetBurst(30)
+	dec := d.Decide(Request{PrincipalID: "p", SessionID: "s", Profile: "dev", Template: "t", Server: "fs", Tool: "write", SideEffect: SideWrite})
+	if dec.Outcome != Permit || dec.Obligations.CallsPerMinute != 20 || dec.Obligations.Burst != 20 || dec.Obligations.CallsPerSession != 5 ||
+		!dec.Obligations.Approval || strings.Join(dec.Obligations.Filters, ",") != "size-limit" {
+		t.Fatalf("predicate approval: %+v", dec.Obligations)
+	}
+	// The rule's quota is smaller than the template's; no rule approval,
+	// but the manifest's write class sets the approval floor.
+	dec = d.Decide(Request{PrincipalID: "p", SessionID: "s", Profile: "dev", Template: "t", Server: "fs", Tool: "edit", SideEffect: SideWrite})
+	if dec.Outcome != Permit || dec.Obligations.CallsPerSession != 3 || !dec.Obligations.Approval || dec.Obligations.ApprovalReason != "" ||
+		strings.Join(dec.Obligations.Filters, ",") != "path-canonicalize,unicode-control" {
+		t.Fatalf("floor: %+v", dec.Obligations)
+	}
+	// A smaller CP-11 default wins over every policy bound, and the burst
+	// is cut to it.
+	d2 := NewDecider(s, 10)
+	d2.SetBurst(30)
+	dec = d2.Decide(Request{PrincipalID: "p", SessionID: "s2", Profile: "dev", Template: "t", Server: "fs", Tool: "move"})
+	if dec.Outcome != Permit || dec.Obligations.CallsPerMinute != 10 || dec.Obligations.Burst != 10 || dec.Obligations.Approval {
+		t.Fatalf("default bound: %+v", dec.Obligations)
+	}
+	// Session taint adds approval to a non-read tool that had none and
+	// changes no bound.
+	d2.Taint("s2")
+	dec = d2.Decide(Request{PrincipalID: "p", SessionID: "s2", Profile: "dev", Template: "t", Server: "fs", Tool: "move"})
+	if dec.Outcome != Permit || !dec.Obligations.Approval || dec.Obligations.ApprovalReason != ReasonTaintApproval ||
+		dec.Obligations.CallsPerMinute != 10 || dec.Obligations.Burst != 10 {
+		t.Fatalf("taint: %+v", dec.Obligations)
 	}
 }

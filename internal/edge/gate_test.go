@@ -50,15 +50,11 @@ func holdLaunch(h *harness) (entered, release chan struct{}) {
 // waits for a launch authorization in progress, and no launch
 // authorization follows the stop.
 //
-// It also covers SR-1.16-1 in part: emergency stop and policy activation
+// It also covers SR-1.16-1 for emergency stop and policy activation: both
 // are serialized with launch and release authorization through the one
-// gate. Partial: credential and session revocation change the session
-// store without taking the gate; authorization re-reads the store under
-// the gate, which orders a launch against a completed revocation but does
-// not make revocation itself a gate operation.
+// gate (revocation: TestRevocationSerializedWithLaunch).
 func TestEmergencyStopSerializedWithLaunch(t *testing.T) {
-	reqtest.Verifies(t, "SR-7.6-1")
-	reqtest.Partial(t, "SR-1.16-1")
+	reqtest.Verifies(t, "SR-7.6-1", "SR-1.16-1")
 	h := newHarness(t, harnessOpts{})
 	_, tok := h.session("ro")
 	cs := h.client(tok)

@@ -689,6 +689,15 @@ type Directory interface {
 	Suspended(id string) bool
 }
 
+// CredentialRevoked reports whether the run-time directory holds the
+// client credential id as revoked. Clients of the configuration file are
+// never revoked there (they are removed from the file instead), and
+// clients the directory does not know are not reported.
+func (c *Config) CredentialRevoked(id string) bool {
+	r, ok := c.directory.(interface{ CredentialRevoked(string) bool })
+	return ok && id != "" && r.CredentialRevoked(id)
+}
+
 // SetDirectory attaches the run-time directory. Call it before the
 // listeners start; the configuration is read without locks.
 func (c *Config) SetDirectory(d Directory) { c.directory = d }

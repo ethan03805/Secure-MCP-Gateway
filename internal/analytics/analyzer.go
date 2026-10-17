@@ -170,10 +170,12 @@ func (p *requestProbe) FilterRequest(_ context.Context, call *pipeline.Call, arg
 			call.RequireApproval = true
 			call.ApprovalReason = "anomaly band " + res.Band
 			call.AnomalySnapshot = res.SnapshotID // SR-1.12-3
+			call.Anomaly = anomalyEvidence(res)   // FR-3.18
 			res.Actions = append(res.Actions, "require_approval")
 		case res.Band == anomaly.Uncharacterized && s.S.Uncharacterized == "approve":
 			call.RequireApproval = true
 			call.ApprovalReason = "anomaly context uncharacterized"
+			call.Anomaly = anomalyEvidence(res)
 			res.Actions = append(res.Actions, "require_approval")
 		}
 		pr.Score = &res
@@ -182,6 +184,11 @@ func (p *requestProbe) FilterRequest(_ context.Context, call *pipeline.Call, arg
 	pr.CaptureCost = time.Since(start) - pr.ScoringCost
 	s.Collector.Offer(pr)
 	return pipeline.RequestVerdict{Action: pipeline.Pass}, nil
+}
+
+// anomalyEvidence is the approver's view of a score (FR-3.18).
+func anomalyEvidence(res anomaly.Result) *pipeline.AnomalyEvidence {
+	return &pipeline.AnomalyEvidence{Band: res.Band, Feature: res.Contributor, ZScore: res.Combined, SnapshotID: res.SnapshotID, Context: res.Context}
 }
 
 // score scores the request-time features of a call: the argument features

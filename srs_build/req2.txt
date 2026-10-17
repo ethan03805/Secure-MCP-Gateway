@@ -435,9 +435,9 @@ R: Aliases form public tool names.
 P: FR-5
 S: The Local Server Registry (E-14) SHALL keep each server revision in one of the states `verified-disabled`, `enabled`, `suspended`, `revoked` or `retired`.
 A: E-14; F-36; D-02
-V: Test | Drive a revision through each transition from G-10; confirm the state and that only `enabled` revisions appear in catalogs.
+V: Test | Drive a revision through each transition (enable, disable and retire through the G-10 control API routes, suspension by drift, revocation by a signed revocation entry applied by a library scan); confirm the state and that only `enabled` revisions appear in catalogs.
 SRC: ARCH §4 E-14; SEC 8.1
-R: Verified does not mean enabled.
+R: Verified does not mean enabled. Suspension and revocation are not operator buttons in release 1.0: the Gateway suspends a revision on drift, tampering or repeated crashes, and a signed revocation entry revokes it, so the test reaches those states the way they occur.
 
 @FR-5.8 | Expiry suspension
 P: FR-5

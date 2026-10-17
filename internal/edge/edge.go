@@ -418,6 +418,17 @@ func adminEvent(class, outcome, reason, actor string, detail map[string]any) aud
 // the error is still returned so the caller can report it.
 func (g *Gateway) Stop(actor, reason string) error { return g.stop(actor, reason, true) }
 
+// Serialize runs a revocation (credential revocation, principal or session
+// suspension, server revision suspension) under the coordinator gate, like
+// emergency stop and policy activation (SR-1.16-1): every launch and
+// release authorization is ordered entirely before or after it, and one
+// that comes after sees the revocation in its recheck (SR-1.17-1).
+func (g *Gateway) Serialize(fn func()) {
+	g.gate.Lock()
+	defer g.gate.Unlock()
+	fn()
+}
+
 // StopDraining stops dispatch like Stop but lets calls in flight run to
 // their end and release their results, so that they can drain (SR-7.7-1).
 // The online backup uses it before sealing the journal and lifts it with

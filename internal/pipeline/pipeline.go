@@ -20,9 +20,22 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 )
 
+// AnomalyEvidence is the Anomaly Scorer's evidence for an approval
+// obligation it added (FR-3.18): the band of the call, the feature that
+// contributed most and that feature's z-score, the baseline snapshot and
+// the baseline context. A call whose context has no baseline has band
+// "uncharacterized" and no feature.
+type AnomalyEvidence struct {
+	Band       string  `json:"band"`
+	Feature    string  `json:"contributing_feature,omitempty"`
+	ZScore     float64 `json:"z_score"`
+	SnapshotID string  `json:"snapshot_id,omitempty"`
+	Context    string  `json:"context,omitempty"`
+}
+
 // Call is what every stage knows about one tools/call after the decision.
 // Stages must treat it as read-only, except RequireApproval,
-// ApprovalReason and AnomalySnapshot.
+// ApprovalReason, AnomalySnapshot and Anomaly.
 type Call struct {
 	CorrelationID  string
 	SessionID      string
@@ -56,6 +69,10 @@ type Call struct {
 	// AnomalySnapshot is the baseline snapshot ID of the score that set
 	// RequireApproval; the decision record carries it (SR-1.12-3).
 	AnomalySnapshot string
+	// Anomaly is the score evidence of an anomaly approval obligation:
+	// the band, the contributing feature and its z-score, shown to the
+	// approver (FR-3.18). Nil when the obligation has another cause.
+	Anomaly *AnomalyEvidence
 	// Remote origin (FR-16.8): set for calls received on the Remote Access
 	// listener; stages that write evidence copy them onto their events.
 	Channel       string

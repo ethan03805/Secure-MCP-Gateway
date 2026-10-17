@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -17,7 +18,61 @@ const (
 	// markerScenario is an acceptance scenario claim (FR-19.4):
 	// "SCENARIO: AT-01 AT-02 profile=standalone".
 	markerScenario = "SCENARIO:"
+	// markerCorpus is a detection corpus measurement (FR-19.5), logged by
+	// internal/filters TestCorpusRates: "CORPUS rule_set=... version=...
+	// positives=n negatives=n fp_rate=x fn_rate=x target_fp=x target_fn=x".
+	markerCorpus = "CORPUS "
 )
+
+// CorpusRate is the measured false-positive and false-negative rate of one
+// detection rule-set version against its labelled corpus (FR-19.5), with
+// the targets recorded in the rule-set index.
+type CorpusRate struct {
+	RuleSet   string  `json:"ruleSet"`
+	Version   string  `json:"version"`
+	Positives int     `json:"positives"`
+	Negatives int     `json:"negatives"`
+	FPRate    float64 `json:"fpRate"`
+	FNRate    float64 `json:"fnRate"`
+	TargetFP  float64 `json:"targetFp"`
+	TargetFN  float64 `json:"targetFn"`
+	// Test is the measuring test; Passed is false when it failed, which
+	// is how a rate above its target is reported.
+	Test   string `json:"test"`
+	Passed bool   `json:"passed"`
+}
+
+// parseCorpusLine reads the key=value fields after the CORPUS marker; it
+// returns false when the rule set or version is missing.
+func parseCorpusLine(s string) (CorpusRate, bool) {
+	var c CorpusRate
+	for _, f := range strings.Fields(s) {
+		k, v, ok := strings.Cut(f, "=")
+		if !ok {
+			continue
+		}
+		num, _ := strconv.ParseFloat(v, 64)
+		switch k {
+		case "rule_set":
+			c.RuleSet = v
+		case "version":
+			c.Version = v
+		case "positives":
+			c.Positives = int(num)
+		case "negatives":
+			c.Negatives = int(num)
+		case "fp_rate":
+			c.FPRate = num
+		case "fn_rate":
+			c.FNRate = num
+		case "target_fp":
+			c.TargetFP = num
+		case "target_fn":
+			c.TargetFN = num
+		}
+	}
+	return c, c.RuleSet != "" && c.Version != ""
+}
 
 type event struct {
 	Time    time.Time `json:"Time"`
@@ -42,6 +97,8 @@ type TestRun struct {
 	Claims  []Claim
 	// Scenarios are the acceptance scenarios the test claims to execute.
 	Scenarios []ScenarioClaim
+	// Corpora are the detection corpus measurements the test logged.
+	Corpora []CorpusRate
 }
 
 // ScenarioClaim is one acceptance scenario claimed by one test in one
@@ -103,6 +160,11 @@ func parseTestLog(r io.Reader) (*TestLog, error) {
 		return p
 	}
 	scanLine := func(t *TestRun, line string) {
+		if i := strings.Index(line, markerCorpus); i >= 0 {
+			if c, ok := parseCorpusLine(line[i+len(markerCorpus):]); ok {
+				t.Corpora = append(t.Corpora, c)
+			}
+		}
 		if i := strings.Index(line, markerScenario); i >= 0 {
 			t.Scenarios = append(t.Scenarios, parseScenarioLine(line[i+len(markerScenario):])...)
 		}

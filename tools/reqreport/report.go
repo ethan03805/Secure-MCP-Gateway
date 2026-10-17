@@ -120,6 +120,9 @@ type Status struct {
 	Elements     []ElementInfo `json:"elements"`
 	Agents       []any         `json:"agents"`
 	Hostile      []any         `json:"hostile"`
+	// Corpora holds the false-positive and false-negative rate of each
+	// detection rule-set version against its labelled corpus (FR-19.5).
+	Corpora []CorpusRate `json:"corpora"`
 	// Acceptance holds the AT-01 to AT-21 results and the release label
 	// (FR-19.3, FR-19.4).
 	Acceptance *Acceptance `json:"acceptance,omitempty"`
@@ -291,10 +294,36 @@ func buildStatus(meta Meta, log *TestLog, cov *Coverage, results []*ReqResult, e
 	if st.Hostile == nil {
 		st.Hostile = []any{}
 	}
+	st.Corpora = corpusRates(log)
 	if st.Elements == nil {
 		st.Elements = []ElementInfo{}
 	}
 	return st
+}
+
+// corpusRates collects the corpus measurements of every test, one per
+// rule set and version (the last run wins), sorted by rule set and version.
+func corpusRates(log *TestLog) []CorpusRate {
+	byKey := map[string]CorpusRate{}
+	if log != nil {
+		for _, t := range log.Tests {
+			for _, c := range t.Corpora {
+				c.Test, c.Passed = t.Package+"."+t.Name, t.Result == "pass"
+				byKey[c.RuleSet+"\x00"+c.Version] = c
+			}
+		}
+	}
+	out := make([]CorpusRate, 0, len(byKey))
+	for _, c := range byKey {
+		out = append(out, c)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].RuleSet != out[j].RuleSet {
+			return out[i].RuleSet < out[j].RuleSet
+		}
+		return out[i].Version < out[j].Version
+	})
+	return out
 }
 
 // renderMarkdown writes the human-readable report.

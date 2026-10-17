@@ -34,15 +34,19 @@ import (
 //   - restoring a backup taken before a principal was suspended re-applies
 //     the suspension from the current journal before service starts
 //     (SR-7.8-1 as its verification states);
-//   - a policy rollback leaves the suspension in force (SR-7.9-1);
+//   - a policy rollback leaves the suspension and a credential revocation
+//     in force (SR-7.9-1);
 //   - an upgrade to a release whose smcpd never becomes healthy restores
 //     the previous binaries, which run with the journal intact, and the
-//     journal records upgrade_rolled_back (FR-13.8, unhealthy case).
+//     journal records upgrade_rolled_back (FR-13.8, unhealthy case); the
+//     application rollback leaves the suspension and the credential
+//     revocation in force (SR-7.9-1).
 //
 // Partial: SR-7.7-1 does not open the archive to list each component;
 // SR-7.8-1 does not rebuild a graph mirror (none configured); SR-7.9-1
-// rolls back the policy, not the application version; FR-13.8 does not
-// inject a failing migration.
+// does not suspend a server revision here (internal/e2e
+// TestPolicyRollbackKeepsRevocations covers it for a policy rollback);
+// FR-13.8 does not inject a failing migration.
 func TestAT19BackupRestoreRollback(t *testing.T) {
 	g := newGateway(t, options{limits: "principal_calls_per_minute = 1000000"})
 	g.start()
@@ -145,18 +149,60 @@ func TestAT19BackupRestoreRollback(t *testing.T) {
 	g.mustCtl("journal", "verify")
 	g.start()
 	g.expectSuspended("after restore")
-	// SR-7.9-1: roll the policy back; the suspension stays.
+	// A second principal's credential is revoked.
+	if code, out := g.api("POST", "/api/v1/principals", map[string]any{"id": "at19-second", "framework": "codex", "profile": "dev"}); code != 201 {
+		t.Fatalf("create principal: %d %v", code, out)
+	}
+	code, out := g.api("POST", "/api/v1/principals/at19-second/credentials", map[string]any{"redirect_uris": []string{"http://localhost:51234/callback"}, "confidential": false})
+	revoked, _ := out["client_id"].(string)
+	if code != 201 || revoked == "" {
+		t.Fatalf("issue credential: %d %v", code, out)
+	}
+	if code, out := g.api("POST", "/api/v1/credentials/"+revoked+"/revoke", map[string]any{"reason": "AT-19"}); code != 200 {
+		t.Fatalf("revoke: %d %v", code, out)
+	}
+	// SR-7.9-1: roll the policy back; the suspension and the revocation
+	// stay.
 	g.mustCtl("policy", "rollback", "r1", "--as", "at19-rollback")
 	g.expectSuspended("after a policy rollback")
+	g.expectRevoked(revoked, "after a policy rollback")
 	g.stop()
 
-	// FR-13.8: an upgrade whose new smcpd never becomes healthy rolls back.
-	upgradeRollback(t, g, pass)
+	// FR-13.8: an upgrade whose new smcpd never becomes healthy rolls back;
+	// SR-7.9-1: the previous version keeps both.
+	upgradeRollback(t, g, pass, func() {
+		g.expectSuspended("after an application rollback")
+		g.expectRevoked(revoked, "after an application rollback")
+	})
+}
+
+// expectRevoked requires that the control API lists the client credential
+// as revoked.
+func (g *gateway) expectRevoked(clientID, when string) {
+	g.t.Helper()
+	code, out := g.api("GET", "/api/v1/principals", nil)
+	if code != 200 {
+		g.t.Fatalf("%s: principals: %d %v", when, code, out)
+	}
+	ps, _ := out["principals"].([]any)
+	for _, p := range ps {
+		creds, _ := p.(map[string]any)["credentials"].([]any)
+		for _, c := range creds {
+			m, _ := c.(map[string]any)
+			if m["client_id"] == clientID {
+				if m["revoked_at"] == nil {
+					g.t.Fatalf("%s: credential %s is no longer revoked: %v", when, clientID, m)
+				}
+				return
+			}
+		}
+	}
+	g.t.Fatalf("%s: credential %s not listed: %v", when, clientID, out)
 }
 
 // upgradeRollback installs the binaries into a directory, then upgrades to
 // a release whose smcpd exits at once, and requires the rollback.
-func upgradeRollback(t *testing.T, g *gateway, pass string) {
+func upgradeRollback(t *testing.T, g *gateway, pass string, afterRollback func()) {
 	t.Helper()
 	work := t.TempDir()
 	installed, badrel := filepath.Join(work, "installed"), filepath.Join(work, "bad-release")
@@ -208,6 +254,7 @@ func upgradeRollback(t *testing.T, g *gateway, pass string) {
 	if _, err := g.ctl("health"); err != nil {
 		t.Fatalf("the previous version is not serving after the rollback: %v", err)
 	}
+	afterRollback()
 	if err := exec.Command("sh", "-c", stopCmd).Run(); err != nil {
 		t.Fatal(err)
 	}
