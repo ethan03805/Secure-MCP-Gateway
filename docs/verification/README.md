@@ -36,9 +36,11 @@ It then lists the steps as performed, the observations, and any deviation from t
 - an Inspection record cites at least one `` `path:line` ``, and every cited file exists in the tree;
 - the record with the latest date for that requirement has result `pass` (a later `fail` makes the requirement failing).
 
-A record that does not meet these rules is reported as a warning and not counted. A parent requirement whose Analysis is "Review the verification results of every ... child requirement" is verified automatically when every child requirement is verified.
+A record that does not meet these rules is reported as a warning and not counted. A record with method `Test` is a supporting record: it documents a manual step that the SRS asks to file next to the automated tests of a Test-method requirement (for example the manual check of FR-8.32). It is validated like any record but never counts as verification. A parent requirement whose Analysis is "Review the verification results of every ... child requirement" is verified automatically when every child requirement is verified.
 
 ## Files
 
 - [inspections.md](inspections.md): Inspection and Analysis records.
+- [FR-8.32.md](FR-8.32.md): the manual focus-order, target-size and contrast check of the console (supporting record).
+- [FR-3.25.md](FR-3.25.md): the real-harness approval run with Claude Code, with its [transcript](FR-3.25-transcript.md).
 - [gap-list.md](gap-list.md): requirements that are not verified, grouped by element, with what is missing.

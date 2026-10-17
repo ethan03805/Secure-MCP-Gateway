@@ -30,6 +30,8 @@ An approval can be used once. It expires `approvals.lifetime` (CP-17, default an
 | The approval service failed (for example, the journal could not record the request) | Error `-31002`; the call is refused | `APPROVAL_UNAVAILABLE` |
 | Retry of the same request after approval | The tool result, without a hold | none |
 
+For these approval errors the JSON-RPC `error.message` is the short name followed by `data.message`, for example `approval required: This call needs approval. Open <approvalUrl> to approve it, then run the same request again.` Claude Code 2.1.302 shows a failed tool call as `error.message` only, so without this the person would not see the explanation or the approval link. The FR-3.25 run in [verification/FR-3.25.md](verification/FR-3.25.md) records what Claude Code shows for each outcome.
+
 `data.retry` and `data.consoleUrl` repeat `data.message` and `data.approvalUrl` for clients written against the first slice.
 
 ### Keep-alives and the response format

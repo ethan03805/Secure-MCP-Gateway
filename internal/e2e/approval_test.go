@@ -304,7 +304,8 @@ func TestApprovalHeldApprovedDeniedAndReplay(t *testing.T) {
 	}
 	o = <-ch
 	we, data := rpcErr(t, o.err)
-	if we.Code != edge.CodePolicyDenied || data["reasonCode"] != "APPROVAL_DENIED" || data["message"] != "A person reviewing this call denied it." || data["approvalId"] != replayID {
+	if we.Code != edge.CodePolicyDenied || data["reasonCode"] != "APPROVAL_DENIED" || data["message"] != "A person reviewing this call denied it." || data["approvalId"] != replayID ||
+		we.Message != "approval denied: A person reviewing this call denied it." {
 		t.Fatalf("denial: %+v %v", we, data)
 	}
 	corr := data["correlationId"]
@@ -483,7 +484,9 @@ func TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry(t *testing.T) {
 	id := idOf(items[0])
 	url := af.cfg.AdminURL() + "/approvals/" + id
 	for _, want := range []string{`"code":-31002`, `"reasonCode":"APPROVAL_REQUIRED"`, `"approvalId":"` + id + `"`, `"expiresAt":"`, `"approvalUrl":"` + url + `"`,
-		`"message":"This call needs approval. Open ` + url + ` to approve it, then run the same request again."`} {
+		`"message":"This call needs approval. Open ` + url + ` to approve it, then run the same request again."`,
+		// error.message carries the same text, because Claude Code shows only error.message (FR-3.25).
+		`"message":"approval required: This call needs approval. Open ` + url + ` to approve it, then run the same request again."`} {
 		if !strings.Contains(final, want) {
 			t.Fatalf("-31002 lacks %s: %s", want, final)
 		}

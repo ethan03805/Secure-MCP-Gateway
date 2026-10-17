@@ -39,6 +39,13 @@ var (
 // requirements are verified only by automated tests.
 var recordMethods = map[string]bool{"Inspection": true, "Analysis": true, "Demonstration": true}
 
+// supportingMethod marks a record of a manual step that the SRS asks to
+// file next to the automated tests of a Test-method requirement (for
+// example the manual focus-order, target-size and contrast check of
+// FR-8.32). It is validated like any record and must name a Test-method
+// requirement, but it never counts as verification.
+const supportingMethod = "Test"
+
 // Record is one parsed verification record.
 type Record struct {
 	File     string            // path relative to the records directory
@@ -146,7 +153,7 @@ func (r *Record) validate(root string) {
 	if d := r.Fields["Date"]; d != "" && !isoDate.MatchString(d) {
 		r.Problems = append(r.Problems, "date is not ISO 8601")
 	}
-	if m := r.Fields["Method"]; m != "" && !recordMethods[m] {
+	if m := r.Fields["Method"]; m != "" && !recordMethods[m] && m != supportingMethod {
 		r.Problems = append(r.Problems, "method "+m+" cannot be verified by a record")
 	}
 	if res := r.Fields["Result"]; res != "" && res != "pass" && res != "fail" {
@@ -196,6 +203,8 @@ func applyRecords(results []*ReqResult, reqs []Requirement, recs []Record, dir s
 			case m != rec.Fields["Method"]:
 				warnings = append(warnings, fmt.Sprintf("%s: %s is verified by %s, not %s", rec.Label(dir), id, m, rec.Fields["Method"]))
 				continue
+			case m == supportingMethod:
+				continue // supporting record of a Test-method requirement
 			}
 			if prev, ok := latest[id]; !ok || rec.Fields["Date"] >= prev.Fields["Date"] {
 				latest[id] = rec
