@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T06:55:36Z",
-  "commit": "e739ea10a0c707722f65fca8f9d4fd12b884e2cc",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/e739ea10a0c707722f65fca8f9d4fd12b884e2cc",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39011256309",
+  "generatedAt": "2026-10-17T07:05:34Z",
+  "commit": "1e4e9d6f2696375d154d63e33100462727eb9f50",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1e4e9d6f2696375d154d63e33100462727eb9f50",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39011907979",
   "tests": {
-    "total": 840,
-    "passed": 821,
+    "total": 856,
+    "passed": 837,
     "failed": 0,
     "skipped": 19,
-    "durationSec": 395.1,
+    "durationSec": 356,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -103,7 +103,7 @@
       },
       {
         "name": "internal/backend",
-        "passed": 19,
+        "passed": 28,
         "failed": 0,
         "skipped": 0
       },
@@ -145,13 +145,13 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 38,
+        "passed": 39,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 36,
+        "passed": 40,
         "failed": 0,
         "skipped": 0
       },
@@ -205,7 +205,7 @@
       },
       {
         "name": "internal/library",
-        "passed": 26,
+        "passed": 27,
         "failed": 0,
         "skipped": 0
       },
@@ -247,7 +247,7 @@
       },
       {
         "name": "internal/pipeline",
-        "passed": 14,
+        "passed": 15,
         "failed": 0,
         "skipped": 0
       },
@@ -406,7 +406,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 70.9
+        "pct": 70.8
       },
       {
         "name": "internal/anomaly",
@@ -430,7 +430,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 89.9
+        "pct": 90.6
       },
       {
         "name": "internal/backup",
@@ -462,7 +462,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92
+        "pct": 92.1
       },
       {
         "name": "internal/egress",
@@ -478,7 +478,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83
+        "pct": 82.6
       },
       {
         "name": "internal/gwtest",
@@ -542,7 +542,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 90.1
+        "pct": 90.9
       },
       {
         "name": "internal/policy",
@@ -598,7 +598,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 64.5
+        "pct": 61.3
       },
       {
         "name": "internal/tunnel",
@@ -632,10 +632,10 @@
   },
   "requirements": {
     "total": 543,
-    "verified": 202,
-    "partial": 210,
+    "verified": 215,
+    "partial": 208,
     "failing": 0,
-    "unverified": 131,
+    "unverified": 120,
     "byElement": [
       {
         "element": "E-01",
@@ -713,15 +713,15 @@
         "element": "E-10",
         "name": "Tool Dispatcher",
         "total": 22,
-        "verified": 7,
-        "partial": 5,
+        "verified": 18,
+        "partial": 3,
         "failing": 0
       },
       {
         "element": "E-11",
         "name": "Response Inspection Pipeline",
         "total": 10,
-        "verified": 7,
+        "verified": 8,
         "partial": 2,
         "failing": 0
       },
@@ -753,7 +753,7 @@
         "element": "E-15",
         "name": "Server Runtime Manager",
         "total": 11,
-        "verified": 1,
+        "verified": 2,
         "partial": 7,
         "failing": 0
       },
@@ -1245,8 +1245,10 @@
       {
         "id": "FR-1.43",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestClientDeadline"
+        ]
       },
       {
         "id": "FR-1.44",
@@ -2026,28 +2028,36 @@
       {
         "id": "FR-5.13",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestStdioFraming"
+        ]
       },
       {
         "id": "FR-5.14",
         "element": "E-10",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/backend.TestInvalidStdoutLine",
+          "internal/edge.TestBackendProtocolFailures",
           "internal/hostile.TestHostileFixtures/HF-18"
         ]
       },
       {
         "id": "FR-5.15",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/e2e.TestStderrBoundedAndNotForwarded"
+        ]
       },
       {
         "id": "FR-5.19",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestLegacyHandshake"
+        ]
       },
       {
         "id": "FR-5.20",
@@ -2064,8 +2074,10 @@
       {
         "id": "FR-5.21",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestPagedToolList"
+        ]
       },
       {
         "id": "FR-5.22",
@@ -2078,8 +2090,10 @@
       {
         "id": "FR-5.23",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestResultTypeHandling"
+        ]
       },
       {
         "id": "FR-5.24",
@@ -2094,8 +2108,10 @@
       {
         "id": "FR-5.26",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestSouthboundCancellation"
+        ]
       },
       {
         "id": "FR-5.27",
@@ -2108,8 +2124,10 @@
       {
         "id": "FR-5.32",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestProgressTokensUnique"
+        ]
       },
       {
         "id": "FR-5.33",
@@ -2187,8 +2205,10 @@
       {
         "id": "FR-5.40",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/library.TestEraMismatchSuspends"
+        ]
       },
       {
         "id": "FR-6",
@@ -5240,8 +5260,11 @@
       {
         "id": "SR-5.20-1",
         "element": "E-11",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestResponseValidation",
+          "internal/edge.TestBackendProtocolFailures"
+        ]
       },
       {
         "id": "SR-5.20-2",
@@ -5446,8 +5469,10 @@
       {
         "id": "SR-7.2-1",
         "element": "E-10",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/backend.TestInstanceFailureNotRetried",
+          "internal/edge.TestInstanceFailureIndeterminate",
           "internal/hostile.TestHostileFixtures/HF-17"
         ]
       },
@@ -5537,8 +5562,10 @@
       {
         "id": "SR-7.12-1",
         "element": "E-10",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestNorthboundCancellationPropagated"
+        ]
       },
       {
         "id": "SR-8.9-1",
@@ -6184,7 +6211,7 @@
       "attack": "Invalid stdout",
       "expected": "Instance terminated; call fails with `-31007`; event recorded",
       "fixture": "HF-18",
-      "observed": "standalone: call: error -31007 DISPATCH_FAILED after 0s; instance terminated: true; refusal event recorded: true | enforced: call: error -31007 DISPATCH_FAILED after 0s; instance terminated: true; refusal event recorded: true",
+      "observed": "standalone: call: error -31007 BACKEND_OUTPUT_INVALID after 0s; instance terminated: true; refusal event recorded: true | enforced: call: error -31007 BACKEND_OUTPUT_INVALID after 100ms; instance terminated: true; refusal event recorded: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6195,7 +6222,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6206,7 +6233,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6241,7 +6268,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40927: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:38223: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
