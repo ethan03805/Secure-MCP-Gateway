@@ -18,6 +18,12 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 |---|---|---|---|
 | `NO_PERMIT` | `-31001` | No rule of the session's template permits this tool | Grant the tool in the template, publish the policy, and start a new session |
 | `NO_TEMPLATE` | `-31001` | The session's template is not in the active policy | Sign in again; the session was created under a template that no longer exists |
+| `PRINCIPAL_DISABLED` | `-31001` | The principal is disabled or suspended (SR-1.5-1) | Re-enable the principal in G-11 (`POST /api/v1/principals/{id}/enable`) if the suspension is over |
+| `CREDENTIAL_INVALID` | `-31001` | The client credential is expired or revoked (SR-1.5-1) | Issue a new credential in G-11 and sign the harness in again |
+| `REVISION_NOT_ENABLED` | `-31001` | The tool's server revision is not enabled (SR-1.5-1) | Check the server's revision in G-10 (`GET /api/v1/packages`); enable it or restore it from suspension |
+| `NO_ROUTE` | `-31001` | No route serves the tool's server and tool revision (SR-1.11-1) | Check that the server is running (`smcpctl health`, G-10) |
+| `AMBIGUOUS_ROUTE` | `-31001` | More than one route is eligible for the tool (SR-1.11-1) | Report it: release 1.0 has one route per server alias |
+| `HIGH_RISK_UNFLAGGED` | `-31001` | The server is in a high-risk class the template or framework profile does not flag (SR-3.13-1) | Add the class to `high_risk` on the template and its framework profile, if the grant is intended |
 | `DENY_RULE` | `-31001` | A deny rule of the session's template covers the tool | Remove or narrow the deny rule and publish; `data.decisiveRules` names it |
 | `EVAL_BOUND` | `-31001` | The decision exceeded CP-12 (more than 256 candidate rules for the server, or 500 ms) | Split the template's rules for that server |
 | `APPROVAL_DENIED` | `-31001` | An approver denied the call | None; the decision is recorded with the approver's identity |

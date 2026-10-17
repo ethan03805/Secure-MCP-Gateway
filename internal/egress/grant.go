@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/netip"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,6 +55,22 @@ func (g Grant) Destination() string {
 // source with grants derived from decision obligations.
 type GrantSource interface {
 	Grants(server string) []Grant
+}
+
+// GrantHosts returns the destinations granted to server as host:port
+// entries, sorted (an FR-3.12 obligation).
+func (b *Broker) GrantHosts(server string) []string {
+	if b == nil || b.o.Grants == nil {
+		return nil
+	}
+	var out []string
+	for _, g := range b.o.Grants.Grants(server) {
+		for _, p := range g.Ports {
+			out = append(out, joinHostPort(g.Host, p))
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // StaticGrants is a GrantSource over a fixed list, replaceable at run time.

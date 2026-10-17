@@ -193,6 +193,23 @@ func (b *Broker) SetInjector(i pipeline.SecretHeaderInjector) {
 	b.mu.Unlock()
 }
 
+// GrantedSlots returns the slots of server that the Secret Use Policy
+// binds a secret to, sorted (an FR-3.12 obligation).
+func (b *Broker) GrantedSlots(server string) []string {
+	u := b.UsePolicy()
+	if u == nil {
+		return nil
+	}
+	var out []string
+	for _, bd := range u.Bindings() {
+		if bd.Server == server && !slices.Contains(out, bd.Slot) {
+			out = append(out, bd.Slot)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // Vault returns the vault.
 func (b *Broker) Vault() *Vault { return b.vault }
 

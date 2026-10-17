@@ -7261,6 +7261,12 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 |---|---|---|---|
 | `NO_PERMIT` | `-31001` | No rule of the session's template permits the call | The Gateway's policy does not allow this tool in this session. Ask the Gateway operator to grant it. |
 | `NO_TEMPLATE` | `-31001` | The session's template is not in the active policy | This session's policy template no longer exists. Sign in again to start a new session. |
+| `PRINCIPAL_DISABLED` | `-31001` | The principal is disabled or suspended (SR-1.5-1) | This agent's access to the Gateway is suspended. Ask the Gateway operator. |
+| `CREDENTIAL_INVALID` | `-31001` | The client credential is expired or revoked (SR-1.5-1) | This agent's Gateway credential is no longer valid. Ask the Gateway operator for a new one. |
+| `REVISION_NOT_ENABLED` | `-31001` | The tool's server revision is not enabled (SR-1.5-1) | The tool's server is not enabled on the Gateway. Ask the Gateway operator. |
+| `NO_ROUTE` | `-31001` | No route serves the tool's server and tool revision (SR-1.11-1) | The tool's server is not available right now. Try again later or ask the Gateway operator. |
+| `AMBIGUOUS_ROUTE` | `-31001` | More than one route is eligible for the tool (SR-1.11-1) | The Gateway could not choose how to reach this tool and refused the call. Ask the Gateway operator. |
+| `HIGH_RISK_UNFLAGGED` | `-31001` | The server is in a high-risk class the template or framework profile does not flag (SR-3.13-1) | This tool is in a high-risk class that this session's policy does not allow. |
 | `DENY_RULE` | `-31001` | A deny rule of the session's template covers the tool (SR-1.4-1) | The Gateway's policy forbids this tool in this session. |
 | `EVAL_BOUND` | `-31001` | The evaluation exceeded the CP-12 deadline or candidate-rule bound (SR-1.20-1) | The Gateway could not finish checking this call within its limits and refused it. Ask the operator to simplify the policy. |
 | `APPROVAL_DENIED` | `-31001` | An approver denied the call | A person reviewing this call denied it. |

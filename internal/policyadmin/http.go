@@ -140,15 +140,25 @@ type Permission struct {
 	SideEffect      string   `json:"side_effect,omitempty"`
 	SourceTrust     string   `json:"source_trust,omitempty"`
 	Filters         []string `json:"filters,omitempty"`
+	// Constraints are the rule's argument predicates (FR-3.6): the call
+	// is permitted only when every one holds.
+	Constraints []policy.Predicate `json:"constraints,omitempty"`
 }
 
-// Permissions lists what a template of snap permits after deny rules
-// (FR-3.6). The policy model has no argument constraints yet.
+// Permissions lists what a template of snap permits after deny rules, with
+// each grant's argument constraints (FR-3.6).
 func Permissions(snap *policy.Snapshot, template string) []Permission {
 	out := []Permission{}
 	for _, g := range snap.Grants(template) {
-		out = append(out, Permission{Server: g.Server, Tool: g.Tool, Rule: g.Rule.ID, Approval: g.Rule.Approval, CallsPerMinute: g.Rule.CallsPerMinute,
-			CallsPerSession: g.Rule.CallsPerSession, SideEffect: g.Rule.SideEffect, SourceTrust: g.Rule.SourceTrust, Filters: g.Rule.Filters})
+		approval := g.Rule.Approval
+		for _, p := range g.Rule.When {
+			if p.Op == policy.OpApproval {
+				approval = true
+			}
+		}
+		out = append(out, Permission{Server: g.Server, Tool: g.Tool, Rule: g.Rule.ID, Approval: approval, CallsPerMinute: g.Rule.CallsPerMinute,
+			CallsPerSession: g.Rule.CallsPerSession, SideEffect: g.Rule.SideEffect, SourceTrust: g.Rule.SourceTrust, Filters: g.Rule.Filters,
+			Constraints: g.Rule.When})
 	}
 	return out
 }

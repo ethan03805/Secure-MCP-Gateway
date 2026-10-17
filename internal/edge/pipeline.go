@@ -87,8 +87,16 @@ func (c *callRun) decisionDetail() map[string]any {
 		"outcome": d.Outcome, "reason_code": d.ReasonCode, "template": d.Template, "route": d.Route,
 		"considered_rules": rr(d.ConsideredRules), "applicable_rules": rr(d.ApplicableRules), "decisive_rules": rr(d.DecisiveRules),
 		"obligations": map[string]any{"approval": ob.Approval, "approval_reason": ob.ApprovalReason, "calls_per_minute": ob.CallsPerMinute,
-			"burst": ob.Burst, "calls_per_session": ob.CallsPerSession, "filters": append([]string{}, ob.Filters...)},
+			"burst": ob.Burst, "calls_per_session": ob.CallsPerSession, "filters": append([]string{}, ob.Filters...),
+			// FR-3.12: the obligations that come from objects outside the
+			// policy document.
+			"audit_profile": ob.AuditProfile, "observation_policy": ob.ObservationPolicy, "anomaly_response": ob.AnomalyResponse,
+			"size_limit_bytes": ob.SizeLimit, "timeout_ms": ob.Timeout.Milliseconds(), "egress_grants": append([]string{}, ob.EgressGrants...),
+			"secret_grants": append([]string{}, ob.SecretGrants...), "runtime_profile": ob.RuntimeProfile},
 		"side_effect": d.SideEffect, "source_trust": d.SourceTrust, "tainted": d.Tainted, "duration_us": d.Duration.Microseconds(),
+	}
+	if d.FailedPredicate != "" {
+		m["failed_predicate"] = d.FailedPredicate
 	}
 	if c.superseded != "" {
 		m["superseded_decision_id"] = c.superseded
@@ -159,8 +167,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		}
 
 		// Decision (SR-5.5-1: every call is evaluated).
-		c.dec = g.decider.Decide(policy.Request{PrincipalID: sess.PrincipalID, SessionID: sess.ID, Profile: sess.Profile, Template: sess.Template,
-			Server: ref.Server.Alias, Tool: ref.Tool.Name, SideEffect: side, SourceTrust: trust})
+		c.dec = g.decider.Decide(g.policyRequest(sess, ref, side, trust, req.Params.Arguments))
 		dec := c.dec
 		if dec.Outcome != policy.Permit {
 			var e *jsonrpc.Error
@@ -212,8 +219,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		// governs approval and launch; its record names the first one.
 		if argumentsChanged(req.Params.Arguments, args) {
 			first := c.dec
-			c.dec = g.decider.Recheck(policy.Request{PrincipalID: sess.PrincipalID, SessionID: sess.ID, Profile: sess.Profile, Template: sess.Template,
-				Server: ref.Server.Alias, Tool: ref.Tool.Name, SideEffect: side, SourceTrust: trust})
+			c.dec = g.decider.Recheck(g.policyRequest(sess, ref, side, trust, args))
 			c.superseded = first.ID
 			dec = c.dec
 			if dec.Outcome != policy.Permit {
@@ -450,6 +456,28 @@ func argumentsDigest(args json.RawMessage) string {
 	}
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+// policyRequest builds the request the Policy Decision Service evaluates:
+// the canonical request subset, the arguments for rule predicates
+// (SR-1.7-1), the prerequisites it checks (SR-1.5-1: principal enabled,
+// session active, server revision enabled), the eligible routes
+// (SR-1.11-1: the server alias, while the revision serves the tool) and
+// the server's risk classes (SR-3.13-1). Credential revocation ends the
+// credential's sessions, so it reaches the decision as an inactive
+// session.
+func (g *Gateway) policyRequest(sess session.Session, ref *backend.ToolRef, side, trust string, args json.RawMessage) policy.Request {
+	r := policy.Request{PrincipalID: sess.PrincipalID, SessionID: sess.ID, Profile: sess.Profile, Template: sess.Template,
+		Server: ref.Server.Alias, Tool: ref.Tool.Name, SideEffect: side, SourceTrust: trust, Arguments: args,
+		SessionInactive: !g.store.IsActive(sess.ID), RevisionNotEnabled: ref.Server.Suspended(),
+		RoutesKnown: true, RiskClasses: ref.Server.RiskClasses()}
+	if p := g.cfg.FindPrincipal(sess.PrincipalID); p != nil && p.Enabled != nil && !*p.Enabled {
+		r.PrincipalDisabled = true
+	}
+	if live := g.reg.Resolve(ref.Public); live != nil && live.Server == ref.Server && !ref.Server.Suspended() {
+		r.Routes = []string{ref.Server.Alias}
+	}
+	return r
 }
 
 // mapDispatchError maps a dispatcher error to an Appendix B error and

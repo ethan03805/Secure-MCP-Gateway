@@ -49,7 +49,7 @@ func SchemaJSON() []byte { return append([]byte(nil), schemaJSON...) }
 // every published revision (FR-3.4).
 const (
 	SchemaVersion    = "1"
-	EvaluatorVersion = "3"
+	EvaluatorVersion = "4"
 )
 
 var compiledSchema = func() *jsonschema.Schema {
@@ -87,6 +87,11 @@ type FrameworkProfile struct {
 	// rejected at publication (SR-1-3), and a session of this profile is
 	// denied other servers even when its template names them (SR-1-2).
 	Servers []string `json:"servers,omitempty"`
+	// HighRisk lists the high-risk tool classes (general-sql,
+	// code-execution, cad-scripting, browser-automation) the profile's
+	// sessions may be granted; a grant of a server in such a class needs
+	// the flag here and on the template (SR-3.13-1).
+	HighRisk []string `json:"high_risk,omitempty"`
 }
 
 // Template is a Session Allow Policy Template (ARCH §7.1 layer 3).
@@ -100,7 +105,10 @@ type Template struct {
 	// side-effect class: "approve" (default) adds an approval obligation,
 	// "deny" refuses the call (SR-5.13-2).
 	TaintAction string `json:"taint_action,omitempty"`
-	Rules       []Rule `json:"rules"`
+	// HighRisk lists the high-risk tool classes this template may grant
+	// (SR-3.13-1); see FrameworkProfile.HighRisk.
+	HighRisk []string `json:"high_risk,omitempty"`
+	Rules    []Rule   `json:"rules"`
 }
 
 // Rule permits (or, with effect "deny", forbids) the named backend tools of
@@ -124,6 +132,9 @@ type Rule struct {
 	SideEffect      string   `json:"side_effect,omitempty"`
 	SourceTrust     string   `json:"source_trust,omitempty"`
 	Filters         []string `json:"filters,omitempty"`
+	// When holds the rule's argument predicates (FR-3.6, SR-1.7-1): a
+	// permit rule applies only when every one holds.
+	When []Predicate `json:"when,omitempty"`
 }
 
 // Rule effects, taint actions, side-effect classes and source-trust values
@@ -298,8 +309,13 @@ func Compile(raw []byte) (*Snapshot, error) {
 			}
 			ruleIDs[r.ID] = true
 			s.rulesByTemplate[tname] = append(s.rulesByTemplate[tname], r)
+			for j := range r.When {
+				if err := r.When[j].compile(); err != nil {
+					return nil, fmt.Errorf("template %q rule %q: %w", tname, r.ID, err)
+				}
+			}
 			if r.Effect == EffectDeny {
-				if r.Approval || r.CallsPerMinute > 0 || r.CallsPerSession > 0 || len(r.Filters) > 0 || r.SideEffect != "" || r.SourceTrust != "" {
+				if r.Approval || r.CallsPerMinute > 0 || r.CallsPerSession > 0 || len(r.Filters) > 0 || r.SideEffect != "" || r.SourceTrust != "" || len(r.When) > 0 {
 					return nil, fmt.Errorf("template %q: deny rule %q carries obligations or classes; a deny rule has none", tname, r.ID)
 				}
 				denyByServer[r.Server] = append(denyByServer[r.Server], r)
@@ -373,6 +389,44 @@ func RuleRevisionID(revision, template, rule string) string {
 	return revision + "/" + template + "/" + rule
 }
 
+// HighRiskClasses are the tool classes that need explicit high-risk flags
+// on a template and its framework profile (SR-3.13-1).
+var HighRiskClasses = []string{"general-sql", "code-execution", "cad-scripting", "browser-automation"}
+
+// CheckHighRisk rejects a revision that grants a server of a high-risk
+// class from a template, or to a framework profile, that does not flag the
+// class (SR-3.13-1). classes maps server aliases to their declared tool
+// classes.
+func (s *Snapshot) CheckHighRisk(classes map[string][]string) error {
+	names := make([]string, 0, len(s.doc.Templates))
+	for n := range s.doc.Templates {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, tname := range names {
+		t := s.doc.Templates[tname]
+		for _, r := range t.Rules {
+			if r.Effect == EffectDeny {
+				continue
+			}
+			for _, c := range classes[r.Server] {
+				if !slices.Contains(HighRiskClasses, c) {
+					continue
+				}
+				if !slices.Contains(t.HighRisk, c) {
+					return fmt.Errorf("template %q rule %q grants server %q of high-risk class %q, which the template does not flag in high_risk (SR-3.13-1)", tname, r.ID, r.Server, c)
+				}
+				for pname, p := range s.doc.FrameworkProfiles {
+					if slices.Contains(p.Templates, tname) && !slices.Contains(p.HighRisk, c) {
+						return fmt.Errorf("framework profile %q uses template %q, which grants server %q of high-risk class %q, without flagging the class in high_risk (SR-3.13-1)", pname, tname, r.Server, c)
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // ApprovalFloor reports whether a tool of manifest side-effect class c
 // always needs approval, whatever the policy says (SR-1.18-1): the write,
 // external and execute classes cover the approval triggers of the security
@@ -435,6 +489,14 @@ const (
 	ReasonSessionState  = "SESSION_STATE"
 	ReasonTaintDenied   = "TAINT_DENIED"   // SR-5.13-2
 	ReasonTaintApproval = "TAINT_APPROVAL" // SR-5.13-2
+	// SR-1.5-1 prerequisites, SR-1.11-1 routes and SR-3.13-1 high-risk
+	// flags.
+	ReasonPrincipalDisabled  = "PRINCIPAL_DISABLED"
+	ReasonCredentialInvalid  = "CREDENTIAL_INVALID"
+	ReasonRevisionNotEnabled = "REVISION_NOT_ENABLED"
+	ReasonNoRoute            = "NO_ROUTE"
+	ReasonAmbiguousRoute     = "AMBIGUOUS_ROUTE"
+	ReasonHighRisk           = "HIGH_RISK_UNFLAGGED"
 )
 
 // Obligations the evaluator can express (FR-3.12 subset).
@@ -447,7 +509,29 @@ type Obligations struct {
 	Burst          int
 	// CallsPerSession is the session quota that applied (0 when none).
 	CallsPerSession int
-	Filters         []string // optional filter IDs that must run
+	Filters         []string // optional filter IDs that must run (request and response chains)
+	// The obligations of FR-3.12 that come from objects outside the policy
+	// document, as the Decider's context provides them for the server.
+	AuditProfile      string        `json:",omitempty"` // effective Audit Profile revision
+	ObservationPolicy string        `json:",omitempty"` // Observation Policy ID
+	AnomalyResponse   string        `json:",omitempty"` // Anomaly Response Policy revision
+	SizeLimit         int64         `json:",omitempty"` // result bound in bytes (CP-08)
+	Timeout           time.Duration `json:",omitempty"` // upstream timeout (CP-13)
+	EgressGrants      []string      `json:",omitempty"` // granted egress destinations of the server
+	SecretGrants      []string      `json:",omitempty"` // secret slots granted to the server
+	RuntimeProfile    string        `json:",omitempty"` // launcher and sandbox profile of the instance
+}
+
+// ObligationContext is what the Decider adds to every permit's obligations
+// for a server (FR-3.12): the parts of the effective policy that live in
+// other objects (observation objects, Secret Use Policy, egress grants,
+// limits, runtime).
+type ObligationContext struct {
+	AuditProfile, ObservationPolicy, AnomalyResponse string
+	SizeLimit                                        int64
+	Timeout                                          time.Duration
+	EgressGrants, SecretGrants                       []string
+	RuntimeProfile                                   string
 }
 
 // Decision is the FR-3.11 record.
@@ -471,6 +555,9 @@ type Decision struct {
 	SourceTrust   string
 	Tainted       bool
 	TaintsSession bool
+	// FailedPredicate names the predicate of the decisive permit rule that
+	// did not hold (a NO_PERMIT decision), for the decision record.
+	FailedPredicate string
 }
 
 // Request is the canonical request subset E-06 evaluates.
@@ -485,6 +572,20 @@ type Request struct {
 	// declares for the tool ("" when the manifest is unverified or silent).
 	SideEffect  string
 	SourceTrust string
+	// Arguments are the call's arguments, for rule predicates (SR-1.7-1).
+	Arguments json.RawMessage
+	// Prerequisites (SR-1.5-1), set by the caller; the zero value means
+	// satisfied.
+	PrincipalDisabled  bool
+	CredentialInvalid  bool
+	SessionInactive    bool
+	RevisionNotEnabled bool
+	// Routes are the routes eligible for the server and tool revision
+	// (SR-1.11-1); RoutesKnown false skips the check (replays).
+	Routes      []string
+	RoutesKnown bool
+	// RiskClasses are the server's declared tool classes (SR-3.13-1).
+	RiskClasses []string
 }
 
 // Decider evaluates requests against the current snapshot and keeps the
@@ -503,6 +604,15 @@ type Decider struct {
 	bound    int
 	deadline time.Duration
 	evalHook func() // tests: runs inside evaluation, before the deadline check
+	context  func(server string) ObligationContext
+}
+
+// SetContext sets the source of the FR-3.12 obligations that live outside
+// the policy document.
+func (d *Decider) SetContext(f func(server string) ObligationContext) {
+	d.mu.Lock()
+	d.context = f
+	d.mu.Unlock()
 }
 
 // NewDecider returns a decider with the given snapshot (may be nil, which
@@ -634,6 +744,21 @@ func (d *Decider) decide(req Request, consume bool) Decision {
 		return done()
 	}
 	dec.PolicyRevision = d.snap.Revision
+	// SR-1.5-1: prerequisites, before any rule is evaluated.
+	switch {
+	case req.PrincipalDisabled:
+		dec.ReasonCode = ReasonPrincipalDisabled
+		return done()
+	case req.CredentialInvalid:
+		dec.ReasonCode = ReasonCredentialInvalid
+		return done()
+	case req.SessionInactive:
+		dec.ReasonCode = ReasonSessionState
+		return done()
+	case req.RevisionNotEnabled:
+		dec.ReasonCode = ReasonRevisionNotEnabled
+		return done()
+	}
 	tmpl := d.snap.templates[req.Template]
 	if tmpl == nil {
 		dec.ReasonCode = ReasonNoTemplate
@@ -664,6 +789,18 @@ func (d *Decider) decide(req Request, consume bool) Decision {
 		dec.ReasonCode = ReasonEvalBound
 		return done()
 	}
+	// SR-1.11-1: exactly one route bound to the server and tool revision.
+	if req.RoutesKnown {
+		switch len(req.Routes) {
+		case 0:
+			dec.ReasonCode = ReasonNoRoute
+			return done()
+		case 1:
+		default:
+			dec.ReasonCode = ReasonAmbiguousRoute
+			return done()
+		}
+	}
 	rule := d.snap.grants[req.Template][req.Server][req.Tool]
 	deny := d.snap.denyRule(req.Template, req.Server, req.Tool)
 	if rule != nil {
@@ -679,6 +816,27 @@ func (d *Decider) decide(req Request, consume bool) Decision {
 		dec.ReasonCode = ReasonNoPermit
 		return done()
 	}
+	// SR-1.7-1, SR-1.7-2: the permit applies only when its predicates
+	// hold; a missing or malformed argument does not match.
+	matched, failed, predApproval := matchPredicates(rule.When, req.Arguments, d.now())
+	if !matched {
+		dec.ApplicableRules = slices.DeleteFunc(dec.ApplicableRules, func(id string) bool { return id == rule.ID })
+		dec.FailedPredicate = failed
+		dec.ReasonCode = ReasonNoPermit
+		return done()
+	}
+	// SR-3.13-1: a server in a high-risk class needs the class flagged on
+	// the template and on the framework profile.
+	for _, c := range req.RiskClasses {
+		if !slices.Contains(HighRiskClasses, c) {
+			continue
+		}
+		if !slices.Contains(tmpl.HighRisk, c) || (req.Profile != "" && !slices.Contains(d.snap.Profiles[req.Profile].HighRisk, c)) {
+			dec.DecisiveRules = []string{rule.ID}
+			dec.ReasonCode = ReasonHighRisk
+			return done()
+		}
+	}
 	dec.DecisiveRules = []string{rule.ID}
 	if BrokenBuild { // deliberate defect, smcp_broken builds only (FR-15.8)
 		dec.Outcome, dec.ReasonCode, dec.Route = Permit, ReasonPermit, req.Server
@@ -689,7 +847,13 @@ func (d *Decider) decide(req Request, consume bool) Decision {
 	dec.TaintsSession = dec.SourceTrust == TrustUntrusted
 	dec.Tainted = d.tainted[req.SessionID]
 
-	ob := Obligations{Approval: rule.Approval, Filters: slices.Clone(rule.Filters)}
+	ob := Obligations{Approval: rule.Approval || predApproval, Filters: slices.Clone(rule.Filters)}
+	if d.context != nil { // FR-3.12
+		c := d.context(req.Server)
+		ob.AuditProfile, ob.ObservationPolicy, ob.AnomalyResponse = c.AuditProfile, c.ObservationPolicy, c.AnomalyResponse
+		ob.SizeLimit, ob.Timeout, ob.RuntimeProfile = c.SizeLimit, c.Timeout, c.RuntimeProfile
+		ob.EgressGrants, ob.SecretGrants = slices.Clone(c.EgressGrants), slices.Clone(c.SecretGrants)
+	}
 	// SR-1.18-1: the manifest's write, external and execute classes always
 	// need approval; a policy can add approvals but not remove this floor.
 	if ApprovalFloor(req.SideEffect) {
