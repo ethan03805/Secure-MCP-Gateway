@@ -39,7 +39,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-12.9 missing: no automated conformance suite over `mcp-spec/2026-07-28/schema/examples`.
 - SR-5.2-2 missing (partial claim exists): header values with control characters are refused by `net/http` with a plain 400 before any Gateway handler runs, not with `-32020`; the edge cannot answer them without replacing the HTTP server.
 - SR-5.6-1 unverified (partial claim exists): rejection of resources, prompts, completion, logging and tasks methods and the tools-only capabilities are tested; no test or record shows that no server-initiated request reaches the harness.
-- SR-5.11-1 unverified: results are buffered (`heldWriter`) and released after release authorization; no test shows that no backend-derived byte reaches the harness earlier.
 
 ## E-03 Identity & Authentication Service
 
