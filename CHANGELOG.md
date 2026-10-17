@@ -53,7 +53,7 @@ First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3
 
 - `docs/security-limitations.md` (what the Gateway does not protect against) and `docs/security-review-2026-10.md` (findings of the pre-release review and residual risks).
 - MCP tools only: resources, prompts, sampling, elicitation and roots are not relayed; backends are local signed packages, not remote MCP servers.
-- The tap check (FR-13.3) and the SBOM inside each archive (FR-13.1) first run for real on a published release; until then only the pre-release `v1.0.0-rc.1` exercised the pipeline, and GoReleaser did not push a formula for it.
+- Until v1.0.0 is tagged, the Homebrew tap holds the formula of the pre-release `v1.0.0-rc.2` (pushed to rehearse the tap); the release workflow replaces it with v1.0.0.
 
 ### Release pipeline rehearsal (FR-13.1, FR-13.3, FR-13.5, FR-13.6, FR-13.7)
 
@@ -64,6 +64,7 @@ First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3
 - New workflow `tap` (FR-13.3): on macOS and Ubuntu it waits for the tap to hold the formula for the tag, runs `brew install ethan03805/tap/smcp` and `brew test`, fetches the archive with `install.sh` and compares the SHA-256 of every installed binary with the archive's. The release workflow dispatches it after a release whose formula was pushed (a release published with `GITHUB_TOKEN` starts no `release: published` workflow); it also runs on a release published by hand. The repository variable `SMCP_TAP_PRERELEASE=true` makes GoReleaser push the formula for a pre-release, to rehearse the tap.
 - `scripts/ci-systemd.sh` installs the Enforced profile with `smcpctl install --profile enforced` (FR-13.5) instead of `install-enforced.sh` plus a manual bootstrap, checks the started unit and health, runs the install a second time and compares the digests of configuration, keys, policy and the unit (FR-13.4). The second run first reported `updated directory /var/lib/smcp/home/smcp-srv`: rootless Podman had set the home to 0711 so that subordinate UIDs reach its storage, and the installer reset it to 0700. `setup-server-identity.sh` now creates it 0711.
 - New CI job `install-standalone` (Ubuntu and macOS, not required): `scripts/ci-install-standalone.sh` runs `smcpctl install` with the runner's real systemd user manager or launchd, checks directories, unit, configuration value, notice, service state and health, installs again and compares digests, then uninstalls and verifies the kept journal (FR-13.6, FR-13.4).
+- `v1.0.0-rc.2` (main `4ba2189`, release run 39032406916) carries `sbom.spdx.json` in every archive and binaries that report `1.0.0-rc.2` with `--version`. With the repository variable `SMCP_TAP_PRERELEASE=true` set for that tag only, GoReleaser pushed `Formula/smcp.rb` to `ethan03805/homebrew-tap`, and the dispatched `tap` workflow (run 39032895870) installed it on macOS and Ubuntu with every binary equal to the release archive. The variable was deleted afterwards. FR-13.1 is verified by an inspection of the rc.2 release (`docs/verification/inspections.md`); the tap run is the supporting record `docs/verification/FR-13.3.md`.
 - `docs/release-checklist.md` records what the rehearsal showed.
 
 ## Unreleased — SRS V1.2 draft, architecture V2.3 draft — 2026-10-16
