@@ -177,7 +177,8 @@ func TestPolicyActivationNotifiesListenStreams(t *testing.T) {
 }
 
 func TestPolicyControlAPI(t *testing.T) {
-	reqtest.Partial(t, "FR-3.4", "FR-3.5", "FR-3.9", "SR-1.14-1")
+	reqtest.Verifies(t, "SR-1.14-1")
+	reqtest.Partial(t, "FR-3.4", "FR-3.5", "FR-3.9")
 	f := start(t, "")
 	// Every route requires control-API authentication.
 	for _, p := range []string{"/api/v1/policy", "/api/v1/policy/revisions", "/api/v1/policy/revisions/r1"} {
@@ -234,6 +235,31 @@ func TestPolicyControlAPI(t *testing.T) {
 	}
 	if st, _ := f.admin("GET", "/api/v1/policy/revisions/nope", f.operator, nil); st != 404 {
 		t.Fatalf("unknown revision: %d", st)
+	}
+	// SR-1.14-1: every control API route that could change a published
+	// revision refuses. No route updates or deletes a revision; publishing
+	// other content under a published ID, or rolling back onto one, is a
+	// conflict; and the stored revision is unchanged afterwards. (The store
+	// side, read-only files named by digest, is TestPublishedRevisionsAreImmutable.)
+	r2Doc, _ := json.Marshal(got["document"])
+	for _, m := range []string{"PUT", "PATCH", "DELETE"} {
+		for _, p := range []string{"/api/v1/policy/revisions/r2", "/api/v1/policy/revisions", "/api/v1/policy/revisions/r2/permissions"} {
+			if st, _ := f.admin(m, p, f.operator, map[string]any{"document": json.RawMessage(r2Doc)}); st != http.StatusMethodNotAllowed {
+				t.Fatalf("%s %s: %d", m, p, st)
+			}
+		}
+	}
+	altered := strings.Replace(r2, `"approval": false`, `"approval": true`, 1)
+	if st, v := f.admin("POST", "/api/v1/policy/revisions", f.operator, map[string]any{"document": json.RawMessage(altered)}); st != 409 || v["error"].(map[string]any)["code"] != "revision_exists" {
+		t.Fatalf("other content under r2: %d %v", st, v)
+	}
+	if st, v := f.admin("POST", "/api/v1/policy/rollback", f.operator, map[string]any{"to": "r1", "revision": "r2"}); st != 409 {
+		t.Fatalf("rollback onto r2: %d %v", st, v)
+	}
+	if st, again := f.admin("GET", "/api/v1/policy/revisions/r2", f.operator, nil); st != 200 {
+		t.Fatalf("get r2: %d", st)
+	} else if b, _ := json.Marshal(again["document"]); string(b) != string(r2Doc) || again["record"].(map[string]any)["digest"] != got["record"].(map[string]any)["digest"] {
+		t.Fatalf("r2 changed:\n%s\n%s", r2Doc, b)
 	}
 	// The reload route publishes the policy file through the store; r1 is
 	// published and not active, so it is refused rather than reactivated.

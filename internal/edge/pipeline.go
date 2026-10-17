@@ -94,6 +94,7 @@ func (c *callRun) decisionDetail() map[string]any {
 			"size_limit_bytes": ob.SizeLimit, "timeout_ms": ob.Timeout.Milliseconds(), "egress_grants": append([]string{}, ob.EgressGrants...),
 			"secret_grants": append([]string{}, ob.SecretGrants...), "runtime_profile": ob.RuntimeProfile},
 		"side_effect": d.SideEffect, "source_trust": d.SourceTrust, "tainted": d.Tainted, "duration_us": d.Duration.Microseconds(),
+		"baseline_snapshot_id": d.BaselineSnapshot,
 	}
 	if d.FailedPredicate != "" {
 		m["failed_predicate"] = d.FailedPredicate

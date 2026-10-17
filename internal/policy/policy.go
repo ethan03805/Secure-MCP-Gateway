@@ -547,6 +547,10 @@ type Decision struct {
 	PolicyRevision  string
 	Template        string // the session template the decision evaluated
 	Duration        time.Duration
+	// BaselineSnapshot is the behavior baseline snapshot loaded by the
+	// Anomaly Scorer when the decision was made ("" when none is loaded or
+	// observation is off), part of the FR-3.11 decision record.
+	BaselineSnapshot string
 	// SideEffect and SourceTrust are the effective classes of the tool
 	// ("" when unclassified). Tainted reports that the session was tainted
 	// when the decision was made; TaintsSession that releasing this call's
@@ -605,6 +609,16 @@ type Decider struct {
 	deadline time.Duration
 	evalHook func() // tests: runs inside evaluation, before the deadline check
 	context  func(server string) ObligationContext
+	baseline func() string
+}
+
+// SetBaseline sets the source of the baseline snapshot ID recorded on
+// every decision (FR-3.11). The function is called once per decision and
+// must not block.
+func (d *Decider) SetBaseline(f func() string) {
+	d.mu.Lock()
+	d.baseline = f
+	d.mu.Unlock()
 }
 
 // SetContext sets the source of the FR-3.12 obligations that live outside
@@ -738,6 +752,9 @@ func (d *Decider) decide(req Request, consume bool) Decision {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	dec := Decision{ID: ids.New(), Outcome: Deny, Template: req.Template}
+	if d.baseline != nil {
+		dec.BaselineSnapshot = d.baseline()
+	}
 	done := func() Decision { dec.Duration = time.Since(start); return dec }
 	if d.snap == nil {
 		dec.ReasonCode = ReasonNoSnapshot

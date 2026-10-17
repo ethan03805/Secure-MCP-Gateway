@@ -130,8 +130,8 @@ Every state change is committed to the evidence journal before it takes effect. 
 | Outcome | Reason code | Detail |
 |---|---|---|
 | `requested` | `APPROVAL_REQUESTED` | approval ID, public tool name, server, backend tool, argument digest, expiry, hold bound |
-| `approved` | `APPROVAL_GRANTED` | as above plus `approver`, `comment` |
-| `denied` | `APPROVAL_DENIED` | as above plus `approver`, `comment` |
+| `approved` | `APPROVAL_GRANTED` | as above plus `approver`, `comment`, `decided_at` |
+| `denied` | `APPROVAL_DENIED` | as above plus `approver`, `comment`, `decided_at` |
 | `expired` | `APPROVAL_EXPIRED` | as above plus `previous_state` |
 | `consumed` | `APPROVAL_CONSUMED` | as above plus `consumed_correlation_id`, `approver` |
 
