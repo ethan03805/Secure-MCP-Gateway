@@ -128,7 +128,7 @@ secret_value="s3-secret-$(date +%s)-$RANDOM"
 secret_sum="sha256:$(printf '%s' "$secret_value" | sha256sum | cut -d' ' -f1)"
 cat > "$work/systemd-policy.json" <<'EOF'
 {
-  "revision": "r1",
+  "revision": "ci-systemd-1",
   "framework_profiles": { "dev": { "templates": ["sandbox"], "default_template": "sandbox" } },
   "templates": {
     "sandbox": {
