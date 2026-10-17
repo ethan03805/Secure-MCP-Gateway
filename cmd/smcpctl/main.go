@@ -45,6 +45,7 @@ Control API (running Gateway; backup and keys also work offline):
   policy ...       validate, diff, simulate, publish, rollback, history, show
                    (smcpctl policy help)
   approvals        list, show, approve, deny or watch tool-call approvals
+  graph            graph mirror status, rebuild, canned queries, engine config
   admin redeem     set the administrator password with the one-use bootstrap token
   egress           Egress Broker status, grants and recent connections (smcpctl egress -h)
   runtime          sandboxed server instances and enforced-profile checks (smcpctl runtime help)
@@ -104,6 +105,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = policyCmd(args[1:], stdout)
 	case args[0] == "approvals":
 		err = approvalsCmd(args[1:], os.Stdin, stdout)
+	case args[0] == "graph":
+		err = graphCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "admin" && sub("redeem"):
 		err = redeem(args[2:], stdout)
 	case args[0] == "egress":

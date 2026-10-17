@@ -162,7 +162,9 @@ if "$bin/smcpctl" help 2>&1 | grep -q "keys rotate"; then
   "$bin/smcpctl" backup --config "$cfg" --passphrase-file "$work/backup.pw"
   archive=$(ls -t "$inst"/backups/*.age | head -n1)
   [ -f "$archive.sha256" ] || fail "no checksum file for $archive"
-  "$bin/smcpctl" health --config "$cfg" | head -n1
+  # sed reads all of its input; head -n1 would close the pipe early and
+  # pipefail would fail the script on smcpctl's SIGPIPE (exit 141).
+  "$bin/smcpctl" health --config "$cfg" | sed -n 1p
   ops=1
 else
   skip "operations commands (keys, backup, restore, upgrade): not in this build"

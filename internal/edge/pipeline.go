@@ -123,6 +123,12 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		// Request inspection (E-09).
 		args, reqApplied, verdict := g.filters.RunRequest(ctx, call, req.Params.Arguments)
+		if verdict != nil && ctx.Err() != nil && !g.store.IsActive(sess.ID) {
+			// FR-2.11: the session ended while the filters ran; their
+			// cancellation verdict is not an inspection finding.
+			return nil, c.refuse(gatewayError(CodeSessionInvalid, "session ended during the call", ReasonSessionEnded, corr, dec.ID, nil),
+				"call", audit.PhaseIndeterminate, "E-04", "cancelled", ReasonSessionEnded, "evaluated")
+		}
 		if verdict != nil {
 			var e *jsonrpc.Error
 			if verdict.ReasonCode == pipeline.ReasonSchemaInvalid {

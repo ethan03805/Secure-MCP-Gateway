@@ -16,9 +16,11 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
+	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
+	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
@@ -69,7 +71,12 @@ func run(cfgPath, level string) error {
 		return fmt.Errorf("approvals: %w", err)
 	}
 	defer approvals.Close()
-	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate}
+	mirror, err := graph.New(graph.Options{Config: cfg, Log: log}) // E-25, E-26, E-28: never gates enforcement
+	if err != nil {
+		return fmt.Errorf("graph: %w", err)
+	}
+	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate,
+		Observers: map[string]audit.Observer{"graph": mirror}}
 	if rt != nil {
 		opts.Launcher = rt
 		rt.Start(ctx)
@@ -104,6 +111,9 @@ func run(cfgPath, level string) error {
 			}
 		}
 	}()
+	mirror.Register(a.Admin)
+	mirror.Start(ctx, a.Evidence)
+	defer mirror.Close()
 	if err := a.Listen(); err != nil {
 		return err
 	}

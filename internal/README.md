@@ -32,6 +32,7 @@ keeps today's behavior, and test the default.
 | `backup` | E-28 (part) | age-encrypted backup archive with manifest; restore into an isolated directory with verification. |
 | `ops` | E-21, E-22, E-23 | Daemon operations runtime: attaches monitor, metrics, export, key maintenance, online backup and reload to a started `app.App`; `/api/v1/health/*`, `/api/v1/keys*`, `/api/v1/backup*`, `/api/v1/config/reload`. |
 | `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload; role seam (`AddAuthenticator`, `HandleRoles`, `HandlePublic`, `ActorOf`, `RoleOf`). |
+| `graph` | E-25, E-26, E-28 (graph part) | Neo4j graph mirror as an evidence observer: digest-verified template catalog, Data Access Service, migrations, journal catch-up and rebuild, retention, engine configuration and heap check, `/api/v1/graph*`. Wired in `cmd/smcpd`; disabled unless `[graph] enabled`. |
 | `approval` | E-07 | Approval Service: persisted one-use approvals bound per SR-1.18-2, hold mode, CP-17 expiry, `/api/v1/approvals*`, Approver accounts, watch stream, desktop notifier, harness status route. Wired in `cmd/smcpd`. |
 | `consoleapi` | E-24 | Console backend: serves the embedded console (`console/`, `go:embed`) under a strict CSP, `/api/v1/sessions*`, `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/audit/*` (journal browser, export, verification, evidence stream). Attached in `cmd/smcpd` with `consoleapi.Attach`. |
 | `profile` | E-23 (part), E-16 | Standalone versus enforced profile decision. |
