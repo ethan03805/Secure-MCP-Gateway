@@ -23,16 +23,25 @@ const actions: [string, string][] = [
   ["withhold", "Require approval and withhold the result"],
 ];
 
+/** Restrict-only actions in the uncharacterized state (no snapshot for the context). */
+const unchar: [string, string][] = [
+  ["record", "Record only"],
+  ["escalate", "Escalate capture"],
+  ["approve", "Escalate and require approval"],
+];
+
 function current(s: ObsStatus, b: Band): string {
   const rank = (x?: string) => (x && x !== "off" ? bands.indexOf(x as Band) : 99);
   if (rank(s.withhold_band) <= bands.indexOf(b)) return "withhold";
   if (rank(s.require_approval_band) <= bands.indexOf(b)) return "approve";
-  return "escalate";
+  if (rank(s.escalate_capture_band ?? "elevated") <= bands.indexOf(b)) return "escalate";
+  return "alert";
 }
 
 function Editor({ s }: { s: ObsStatus }) {
   const objects = useObjects();
   const [map, setMap] = useState<Record<Band, string>>(() => ({ elevated: current(s, "elevated"), abnormal: current(s, "abnormal"), critical: current(s, "critical") }));
+  const [un, setUn] = useState(s.uncharacterized || "record");
   const t = s.thresholds ?? { elevated: 2, abnormal: 3, critical: 4 };
   const [th, setTh] = useState<Record<Band, string>>({ elevated: String(t.elevated ?? 2), abnormal: String(t.abnormal ?? 3), critical: String(t.critical ?? 4) });
   // A band's action is at least as strict as the band below it.
@@ -52,13 +61,14 @@ function Editor({ s }: { s: ObsStatus }) {
     if (changed) setMap(next);
   }, [map]);
   const first = (a: string) => bands.find((b) => actions.findIndex((x) => x[0] === map[b]) >= actions.findIndex((x) => x[0] === a));
+  const escalate = first("escalate") ?? "off";
   const approve = first("approve") ?? "off";
   const withhold = first("withhold") ?? "off";
-  const sync = approve !== "off" || withhold !== "off";
+  const sync = approve !== "off" || withhold !== "off" || un === "approve";
   const nums = bands.map((b) => Number(th[b]));
   const ordered = nums.every((n, i) => n > 0 && (i === 0 || n > nums[i - 1]!));
   const scoring = sync ? "sync" : ((s.scoring === "off" ? "async" : s.scoring) ?? "async");
-  const toml = `[observation]\nscoring = "${scoring}"\nrequire_approval_band = "${approve}"\nwithhold_band = "${withhold}"\n\n[observation.baseline]\nbands = [${nums.join(", ")}]\n`;
+  const toml = `[observation]\nscoring = "${scoring}"\nescalate_capture_band = "${escalate}"\nuncharacterized_action = "${un}"\nrequire_approval_band = "${approve}"\nwithhold_band = "${withhold}"\n\n[observation.baseline]\nbands = [${nums.join(", ")}]\n`;
   return (
     <Section title="Edit the response">
       <p className="small">Each band applies its action and every action of the bands below it. A higher band cannot be set less strict than a lower one.</p>
@@ -76,7 +86,9 @@ function Editor({ s }: { s: ObsStatus }) {
             <tr>
               <td>uncharacterized</td>
               <td className="muted">no snapshot for the context</td>
-              <td>Record only. A call that cannot be scored is never restricted by anomaly response.</td>
+              <td>
+                <SelectField label="uncharacterized action" value={un} onChange={setUn} options={unchar} />
+              </td>
             </tr>
             {bands.map((b) => (
               <tr key={b}>
@@ -98,11 +110,15 @@ function Editor({ s }: { s: ObsStatus }) {
         </p>
       )}
       {sync && <p className="small">Requiring approval or withholding results needs synchronous scoring, which adds the scoring time to each call.</p>}
+      <p className="small">
+        A band set to "Record and alert" records the score and alerts without escalating capture. In the uncharacterized state the context has no snapshot, so
+        no score exists; the action applies to every such call.
+      </p>
       {objects.status === "ok" && <ObjectState objects={objects.data} kind="anomaly_response" label="Anomaly Response Policy" />}
       <Publish
         route="/api/v1/observations/anomaly-response"
         label="Anomaly Response Policy"
-        body={{ scoring, require_approval_band: approve, withhold_band: withhold }}
+        body={{ scoring, escalate_capture_band: escalate, uncharacterized: un, require_approval_band: approve, withhold_band: withhold }}
         onPublished={objects.reload}
       />
       {ordered && (
@@ -150,8 +166,10 @@ export function AnomalyResponse() {
                       key: "a",
                       label: "Action",
                       render: (r) =>
-                        r.b === "uncharacterized" || s.scoring === "off" ? (
+                        s.scoring === "off" ? (
                           "record only"
+                        ) : r.b === "uncharacterized" ? (
+                          (unchar.find((a) => a[0] === (s.uncharacterized || "record"))?.[1] ?? "")
                         ) : (
                           <StateLabel tone={current(s, r.b as Band) === "withhold" ? "bad" : current(s, r.b as Band) === "approve" ? "pending" : "neutral"}>
                             {actions.find((a) => a[0] === current(s, r.b as Band))?.[1] ?? ""}

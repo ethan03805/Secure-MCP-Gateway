@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -38,6 +39,22 @@ type Options struct {
 	Log     *slog.Logger
 	Catalog *observe.Catalog // default the shipped catalog
 	Now     func() time.Time
+	// FrameworkOf returns a principal's framework type, for the
+	// framework_type parameter and Observation Policy scope (FR-8.9).
+	FrameworkOf func(principal string) string
+}
+
+// scopeFilter is the collector's Observation Policy scope test (FR-8.9),
+// nil when the scope matches every call.
+func scopeFilter(sc config.ObservationScope) func(*observe.Record) bool {
+	if sc.Empty() {
+		return nil
+	}
+	in := func(list []string, v string) bool { return len(list) == 0 || slices.Contains(list, v) }
+	return func(r *observe.Record) bool {
+		return in(sc.Principals, r.Str("principal_id")) && in(sc.Frameworks, r.Str("framework_type")) &&
+			in(sc.Templates, r.Str("session_template")) && in(sc.Servers, r.ServerID) && in(sc.Tools, r.ServerID+"/"+r.Str("tool_name"))
+	}
 }
 
 // Service is the running analytics subsystem.
@@ -155,6 +172,8 @@ func New(o Options) (*Service, error) {
 			Dir: st.ExportDir, KeyDir: st.KeyDir, Now: o.Now}
 	}
 	s.Collector = observe.New(observe.Options{Catalog: o.Catalog, PolicyID: st.PolicyID, Parameters: st.Parameters, Escalation: st.Escalation,
+		EscalateFrom: st.EscalateCapture, EscalateUncharacterized: st.Uncharacterized != "record", EscalationByBand: st.EscalationByBand,
+		InScope: scopeFilter(st.Scope), FrameworkOf: o.FrameworkOf,
 		SamplingRate: st.SamplingRate, Queue: st.Queue, Analyzer: (*analyzer)(s), Campaigns: s.Campaigns.Active, Now: o.Now})
 	return s, nil
 }

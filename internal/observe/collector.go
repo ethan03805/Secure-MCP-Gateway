@@ -111,12 +111,25 @@ type Campaign struct {
 
 // Options configure a Collector.
 type Options struct {
-	Catalog      *Catalog
-	PolicyID     string   // Observation Policy ID recorded with records
-	Parameters   []string // selected parameter names (identifiers are added)
-	Escalation   []string // added when the band is elevated or worse
-	SamplingRate float64  // normal-band capture rate (CP-31: 0.1)
-	Queue        int      // input queue bound (default 4096)
+	Catalog    *Catalog
+	PolicyID   string   // Observation Policy ID recorded with records
+	Parameters []string // selected parameter names (identifiers are added)
+	Escalation []string // added when the call's capture is escalated
+	// EscalateFrom is the lowest band whose calls get capture escalation
+	// ("" for elevated, "off" for none); EscalateUncharacterized escalates
+	// calls whose context has no baseline (FR-8.14).
+	EscalateFrom            string
+	EscalateUncharacterized bool
+	// EscalationByBand adds parameters for escalated calls of a band and
+	// every higher band (FR-8.10).
+	EscalationByBand map[string][]string
+	// InScope, when set, limits Observation Policy capture (sampling and
+	// escalation) to the calls it accepts (FR-8.9); campaigns keep their
+	// own scope. FrameworkOf fills framework_type from the principal ID.
+	InScope      func(r *Record) bool
+	FrameworkOf  func(principal string) string
+	SamplingRate float64 // normal-band capture rate (CP-31: 0.1)
+	Queue        int     // input queue bound (default 4096)
 	PendingTTL   time.Duration
 	MaxSessions  int
 	Analyzer     Analyzer
@@ -128,6 +141,7 @@ type Options struct {
 const (
 	DropQueueFull   = "queue_full"
 	DropSampledDown = "sampled_down"
+	DropOutOfScope  = "out_of_scope"
 	DropUnfinished  = "unterminated"
 	DropOrphanProbe = "orphan_probe"
 	DropStoreQueue  = "store_queue_full"
@@ -407,6 +421,11 @@ func (c *Collector) onEvent(ev *audit.Event) {
 		r := p.rec
 		r.Time = ts
 		r.Values["principal_id"] = ev.PrincipalID
+		if c.o.FrameworkOf != nil {
+			if f := c.o.FrameworkOf(ev.PrincipalID); f != "" {
+				r.Values["framework_type"] = f
+			}
+		}
 		r.Values["session_id"] = ev.SessionID
 		r.Values["server_revision"] = ev.ServerRevision
 		if _, tool, ok := strings.Cut(ev.ToolRevision, "/"); ok {
@@ -688,14 +707,23 @@ func (c *Collector) capture(r *Record) {
 		band = r.Score.Band
 	}
 	h := SampleHash(r.CorrelationID)
+	inScope := c.o.InScope == nil || c.o.InScope(r)
 	switch {
-	case anomaly.Rank(band) >= anomaly.Rank(anomaly.Elevated):
+	case !inScope:
+	case c.escalates(band):
 		r.Capture = "escalated" // FR-10.7: full capture with the band's escalation parameters
 		for p := range c.params {
 			sel[p] = true
 		}
 		for p := range c.escalate {
 			sel[p] = true
+		}
+		for b, ps := range c.o.EscalationByBand {
+			if band != anomaly.Uncharacterized && anomaly.Rank(band) >= anomaly.Rank(b) {
+				for _, p := range ps {
+					sel[p] = true
+				}
+			}
 		}
 		sel["anomaly_band"], sel["max_abs_z"] = true, true // the reason for the escalation
 	case h < c.o.SamplingRate:
@@ -725,7 +753,11 @@ func (c *Collector) capture(r *Record) {
 		}
 	}
 	if r.Capture == "" {
-		c.Drop(DropSampledDown, 1)
+		if inScope {
+			c.Drop(DropSampledDown, 1)
+		} else {
+			c.Drop(DropOutOfScope, 1)
+		}
 		return
 	}
 	for k := range r.Values {
@@ -737,6 +769,19 @@ func (c *Collector) capture(r *Record) {
 	if c.o.Analyzer != nil {
 		c.o.Analyzer.Captured(r)
 	}
+}
+
+// escalates reports whether a call of band gets capture escalation under
+// the Anomaly Response Policy (FR-8.14).
+func (c *Collector) escalates(band string) bool {
+	if band == anomaly.Uncharacterized {
+		return c.o.EscalateUncharacterized
+	}
+	from := c.o.EscalateFrom
+	if from == "" {
+		from = anomaly.Elevated
+	}
+	return from != "off" && anomaly.Rank(band) >= anomaly.Rank(anomaly.Elevated) && anomaly.Rank(band) >= anomaly.Rank(from)
 }
 
 // metaKeys are record fields that are not catalog parameters but are kept

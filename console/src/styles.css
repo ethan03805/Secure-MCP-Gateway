@@ -840,7 +840,7 @@ dialog input {
 }
 .check input,
 .checklist input,
-table.params input {
+.params table input {
   width: 1rem;
   height: 1rem;
   min-height: 0;
@@ -941,7 +941,7 @@ td .field > label {
   overflow: hidden;
   clip: rect(0 0 0 0);
 }
-table.params td {
+.params table td {
   height: auto;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;

@@ -12,7 +12,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useResource } from "../data";
 import { usePerm } from "../perm";
 import { navigate } from "../router";
-import { CheckList, DataTable, Done, Help, JsonBlock, KV, Loaded, Mono, PageHeader, Section, StateLabel, TextField, bytes, compact } from "../ui";
+import { CheckList, DataTable, Done, Help, JsonBlock, KV, Loaded, Loading, Mono, PageHeader, Section, SelectField, StateLabel, TextField, bytes, compact } from "../ui";
+import type { Catalog, PrincipalDirectory, ServerView } from "../types";
 
 export interface Parameter {
   id: string;
@@ -45,7 +46,17 @@ export interface ObsStatus {
   scoring?: string;
   require_approval_band?: string;
   withhold_band?: string;
+  /** Lowest band whose calls get capture escalation ("off": alert only). */
+  escalate_capture_band?: string;
+  /** Action in the uncharacterized state: record, escalate or approve. */
+  uncharacterized?: string;
   sampling_rate?: number;
+  /** Extra escalation parameters per band (FR-8.10). */
+  escalation_bands?: Record<string, string[]> | null;
+  /** Baselined features with their statistics options (FR-8.10). */
+  features?: { name: string; kind: string; transform: { kind: string; lambda?: number }; robust?: boolean; sigma_floor: number }[];
+  /** Observation Policy scope (FR-8.9). */
+  scope?: Scope;
   parameters?: string[];
   escalation_parameters?: string[] | null;
   retention?: string;
@@ -141,6 +152,173 @@ function Preview({ selected, catalog }: { selected: string[]; catalog: Parameter
   );
 }
 
+/** Observation Policy scope: lists chosen from registered values (FR-8.9). */
+export interface Scope {
+  principals?: string[];
+  frameworks?: string[];
+  templates?: string[];
+  servers?: string[];
+  tools?: string[];
+}
+
+/** One baselined feature and its statistics options (FR-8.10). */
+interface Feature {
+  parameter: string;
+  kind: string;
+  transform: string;
+  robust: boolean;
+  sigma_floor: string;
+}
+
+const scopeKeys: [keyof Scope, string][] = [
+  ["principals", "Principals"],
+  ["frameworks", "Framework types"],
+  ["templates", "Session templates"],
+  ["servers", "Servers"],
+  ["tools", "Tools"],
+];
+
+/** Builds the scope from lists of registered principals, framework types, templates, servers and tools; no free text (FR-8.9). */
+function ScopeBuilder({ value, onChange }: { value: Scope; onChange: (v: Scope) => void }) {
+  const perm = usePerm();
+  const dir = useResource<PrincipalDirectory & { frameworks?: string[] }>(perm.can("GET /api/v1/principals") ? "/api/v1/principals" : null, { live: false });
+  const cat = useResource<Catalog>(perm.can("GET /api/v1/catalog") ? "/api/v1/catalog" : null, { live: false });
+  const srv = useResource<{ servers: ServerView[] }>(perm.can("GET /api/v1/servers") ? "/api/v1/servers" : null, { live: false });
+  const uniq = (xs: string[]) => [...new Set(xs)].sort();
+  const lists: Record<keyof Scope, string[]> = {
+    principals: uniq(dir.data?.principals.map((p) => p.id) ?? []),
+    frameworks: uniq(dir.data?.frameworks ?? dir.data?.principals.map((p) => p.framework) ?? []),
+    templates: uniq(cat.data?.templates.map((t) => t.name) ?? []),
+    servers: uniq(srv.data?.servers.map((s) => s.alias) ?? []),
+    tools: uniq(cat.data?.templates.flatMap((t) => t.tools.map((x) => `${x.server}/${x.tool}`)) ?? []),
+  };
+  return (
+    <div className="scope-builder">
+      <p className="small">
+        The policy samples and escalates only calls that match every list with a choice; an empty list matches all. Research campaigns keep their own scope.
+      </p>
+      {scopeKeys.map(([k, label]) => (
+        <CheckList key={k} legend={label} options={lists[k]} value={value[k] ?? []} onChange={(v) => onChange({ ...value, [k]: v })} />
+      ))}
+    </div>
+  );
+}
+
+const escBands = ["elevated", "abnormal", "critical"] as const;
+
+/** Per-band escalation parameters (FR-8.10): parameters a band adds for its escalated calls and those of higher bands. */
+function EscalationEditor({ catalog, selected, value, onChange }: { catalog: Parameter[]; selected: string[]; value: Record<string, string[]>; onChange: (v: Record<string, string[]>) => void }) {
+  const rows = catalog.filter((p) => p.capture_point !== "periodic" && p.sensitivity !== "S3" && !selected.includes(p.name));
+  const chosen = escBands.reduce((n, b) => n + (value[b]?.length ?? 0), 0);
+  return (
+    <details className="editor">
+      <summary>Escalation parameters per band ({chosen} chosen)</summary>
+      <p className="small">An escalated call records the policy's parameters plus those of its band and of every lower band. Parameters already selected above are not listed.</p>
+      <DataTable
+        caption="Escalation parameters per band"
+        rows={rows}
+        rowKey={(p) => p.name}
+        initialSort="name"
+        empty="Every per-call parameter is already selected."
+        columns={[
+          { key: "name", label: "Parameter", sort: (p) => p.name, render: (p) => <Mono>{p.name}</Mono> },
+          { key: "sens", label: "Sensitivity", sort: (p) => p.sensitivity, render: (p) => p.sensitivity },
+          ...escBands.map((b) => ({
+            key: b,
+            label: b,
+            render: (p: Parameter) => (
+              <input
+                type="checkbox"
+                aria-label={`${p.name} ${b}`}
+                checked={value[b]?.includes(p.name) ?? false}
+                onChange={(e) => onChange({ ...value, [b]: e.target.checked ? [...(value[b] ?? []), p.name] : (value[b] ?? []).filter((x) => x !== p.name) })}
+              />
+            ),
+          })),
+        ]}
+      />
+    </details>
+  );
+}
+
+const transforms: [string, string][] = [
+  ["none", "none"],
+  ["log1p", "log1p"],
+  ["box-cox(0.5)", "box-cox(0.5)"],
+  ["box-cox(0)", "box-cox(0)"],
+];
+
+/** Baselined features and their statistics options (FR-8.10). */
+function FeatureEditor({ catalog, value, onChange }: { catalog: Parameter[]; value: Feature[]; onChange: (v: Feature[]) => void }) {
+  const numeric = catalog.filter((p) => p.baselinable && (p.data_type === "integer" || p.data_type === "number") && !value.some((f) => f.parameter === p.name));
+  const [add, setAdd] = useState("");
+  const set = (i: number, f: Partial<Feature>) => onChange(value.map((x, j) => (j === i ? { ...x, ...f } : x)));
+  return (
+    <details className="editor">
+      <summary>Baselined features and statistics ({value.length})</summary>
+      <DataTable
+        caption="Baselined features"
+        rows={value.map((f, i) => ({ f, i }))}
+        rowKey={(r) => r.f.parameter}
+        empty="No feature is baselined; add one below."
+        columns={[
+          { key: "p", label: "Feature", sort: (r) => r.f.parameter, render: (r) => <Mono>{r.f.parameter}</Mono> },
+          { key: "k", label: "Kind", sort: (r) => r.f.kind, render: (r) => r.f.kind },
+          {
+            key: "t",
+            label: "Transform",
+            render: (r) =>
+              r.f.kind === "categorical" ? (
+                <span className="muted">none</span>
+              ) : (
+                <SelectField
+                  label={`${r.f.parameter} transform`}
+                  value={r.f.transform}
+                  onChange={(v) => set(r.i, { transform: v })}
+                  options={transforms.some((t) => t[0] === r.f.transform) ? transforms : [...transforms, [r.f.transform, r.f.transform]]}
+                />
+              ),
+          },
+          {
+            key: "r",
+            label: "Robust (median, MAD)",
+            render: (r) => <input type="checkbox" aria-label={`${r.f.parameter} robust statistics`} checked={r.f.robust} onChange={(e) => set(r.i, { robust: e.target.checked })} />,
+          },
+          {
+            key: "s",
+            label: "σ floor",
+            render: (r) => <TextField label={`${r.f.parameter} sigma floor`} value={r.f.sigma_floor} onChange={(v) => set(r.i, { sigma_floor: v })} type="number" />,
+          },
+          {
+            key: "x",
+            label: "Remove",
+            render: (r) => (
+              <button type="button" className="btn-quiet" onClick={() => onChange(value.filter((_, j) => j !== r.i))}>
+                Remove {r.f.parameter}
+              </button>
+            ),
+          },
+        ]}
+      />
+      <div className="inline-form">
+        <SelectField label="Add a numeric feature" value={add} onChange={setAdd} options={[["", "choose a parameter"], ...numeric.map((p): [string, string] => [p.name, p.name])]} />
+        <button
+          type="button"
+          disabled={!add}
+          onClick={() => {
+            onChange([...value, { parameter: add, kind: "numeric", transform: "none", robust: false, sigma_floor: "" }]);
+            setAdd("");
+          }}
+        >
+          Add feature
+        </button>
+      </div>
+    </details>
+  );
+}
+
+const tfText = (t: { kind: string; lambda?: number }) => (t.kind === "box-cox" ? `box-cox(${t.lambda ?? 0})` : t.kind);
+
 /** Baseline context dimensions the Observation Policy may key on. */
 const contextDims = ["principal", "framework_type", "session_template", "end_user", "server", "server_revision", "tool", "hour", "weekday"];
 
@@ -152,6 +330,11 @@ function Workbench({ catalog, version, status }: { catalog: Parameter[]; version
   const [contexts, setContexts] = useState<string[]>(status?.contexts?.length ? status.contexts : ["principal", "tool"]);
   const th = status?.thresholds ?? {};
   const [bandsText, setBandsText] = useState<[string, string, string]>([String(th.elevated ?? 2), String(th.abnormal ?? 3), String(th.critical ?? 4)]);
+  const [scope, setScope] = useState<Scope>(status?.scope ?? {});
+  const [escalation, setEscalation] = useState<Record<string, string[]>>(status?.escalation_bands ?? {});
+  const [features, setFeatures] = useState<Feature[]>(() =>
+    (status?.features ?? []).map((f) => ({ parameter: f.name, kind: f.kind, transform: tfText(f.transform), robust: !!f.robust, sigma_floor: String(f.sigma_floor) })),
+  );
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>(() => catalog.filter((p) => p.selected).map((p) => p.name));
   const [presetName, setPresetName] = useState("");
@@ -213,45 +396,52 @@ function Workbench({ catalog, version, status }: { catalog: Parameter[]; version
             <summary>
               {group} ({ps.filter((p) => sel.includes(p.name)).length} of {ps.length} selected)
             </summary>
-            <div className="table-wrap" tabIndex={0} role="region" aria-label={`Parameters captured at ${group}`}>
-              <table className="params">
-                <caption className="sr-only">Parameters captured at {group}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Capture</th>
-                    <th scope="col">ID</th>
-                    <th scope="col">Name</th>
-                    <th scope="col">Description</th>
-                    <th scope="col">Unit</th>
-                    <th scope="col">Sensitivity</th>
-                    <th scope="col">Cost class</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ps.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          aria-label={`Capture ${p.name}`}
-                          checked={sel.includes(p.name)}
-                          onChange={(e) => setSel(e.target.checked ? [...sel, p.name] : sel.filter((x) => x !== p.name))}
-                        />
-                      </td>
-                      <td className="mono">{p.id}</td>
-                      <td className="mono">{p.name}</td>
-                      <td>{p.description}</td>
-                      <td className="mono">{p.unit}</td>
-                      <td>
-                        <StateLabel tone={p.sensitivity === "S0" ? "neutral" : p.sensitivity === "S1" ? "neutral" : "warn"}>{p.sensitivity}</StateLabel>
-                      </td>
-                      <td>
-                        <span className="mono" title={costText[p.cost_class ?? ""] ?? ""}>{p.cost_class ?? "none"}</span> <span className="muted small">{costText[p.cost_class ?? ""] ?? ""}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="params">
+              <DataTable
+                caption={`Parameters captured at ${group}`}
+                rows={ps}
+                rowKey={(p) => p.id}
+                initialSort="id"
+                empty=""
+                columns={[
+                  {
+                    key: "capture",
+                    label: "Capture",
+                    sort: (p) => (sel.includes(p.name) ? 0 : 1),
+                    render: (p) => (
+                      <input
+                        type="checkbox"
+                        aria-label={`Capture ${p.name}`}
+                        checked={sel.includes(p.name)}
+                        onChange={(e) => setSel(e.target.checked ? [...sel, p.name] : sel.filter((x) => x !== p.name))}
+                      />
+                    ),
+                  },
+                  { key: "id", label: "ID", sort: (p) => p.id, className: "mono", render: (p) => p.id },
+                  { key: "name", label: "Name", sort: (p) => p.name, className: "mono", render: (p) => p.name },
+                  { key: "description", label: "Description", render: (p) => p.description },
+                  { key: "unit", label: "Unit", sort: (p) => p.unit, className: "mono", render: (p) => p.unit },
+                  {
+                    key: "sensitivity",
+                    label: "Sensitivity",
+                    sort: (p) => p.sensitivity,
+                    render: (p) => <StateLabel tone={p.sensitivity === "S0" || p.sensitivity === "S1" ? "neutral" : "warn"}>{p.sensitivity}</StateLabel>,
+                  },
+                  {
+                    key: "cost",
+                    label: "Cost class",
+                    sort: (p) => p.cost_class ?? "",
+                    render: (p) => (
+                      <>
+                        <span className="mono" title={costText[p.cost_class ?? ""] ?? ""}>
+                          {p.cost_class ?? "none"}
+                        </span>{" "}
+                        <span className="muted small">{costText[p.cost_class ?? ""] ?? ""}</span>
+                      </>
+                    ),
+                  },
+                ]}
+              />
             </div>
           </details>
         ))}
@@ -297,6 +487,13 @@ function Workbench({ catalog, version, status }: { catalog: Parameter[]; version
         setContexts={setContexts}
         bandsText={bandsText}
         setBandsText={setBandsText}
+        scope={scope}
+        setScope={setScope}
+        escalation={escalation}
+        setEscalation={setEscalation}
+        features={features}
+        setFeatures={setFeatures}
+        catalog={catalog}
         selected={chosen.filter((x) => x.capture_point !== "periodic" && x.sensitivity !== "S3").map((x) => x.name)}
         excluded={chosen.filter((x) => x.capture_point === "periodic" || x.sensitivity === "S3").length}
         perRecord={perRecord}
@@ -322,6 +519,13 @@ function PolicyEditor(p: {
   setContexts: (v: string[]) => void;
   bandsText: [string, string, string];
   setBandsText: (v: [string, string, string]) => void;
+  scope: Scope;
+  setScope: (v: Scope) => void;
+  escalation: Record<string, string[]>;
+  setEscalation: (v: Record<string, string[]>) => void;
+  features: Feature[];
+  setFeatures: (v: Feature[]) => void;
+  catalog: Parameter[];
   selected: string[];
   excluded: number;
   perRecord: number;
@@ -330,7 +534,17 @@ function PolicyEditor(p: {
   const bands = p.bandsText.map(Number);
   const rateOk = rate > 0 && rate <= 1;
   const bandsOk = bands.every((n, i) => n > 0 && (i === 0 || n > bands[i - 1]!));
-  const ok = rateOk && bandsOk && p.selected.length > 0 && p.policyId.trim() !== "" && p.contexts.length > 0;
+  const floorsOk = p.features.every((f) => f.sigma_floor.trim() === "" || Number(f.sigma_floor) > 0);
+  const ok = rateOk && bandsOk && floorsOk && p.selected.length > 0 && p.policyId.trim() !== "" && p.contexts.length > 0 && p.features.length > 0;
+  const scope = Object.fromEntries(Object.entries(p.scope).filter(([, v]) => v && v.length));
+  const escalation = Object.fromEntries(Object.entries(p.escalation).filter(([, v]) => v.length));
+  const features = p.features.map((f) => ({
+    parameter: f.parameter,
+    kind: f.kind,
+    ...(f.kind === "categorical" ? {} : { transform: f.transform }),
+    robust: f.robust,
+    ...(f.sigma_floor.trim() ? { sigma_floor: Number(f.sigma_floor) } : {}),
+  }));
   const labels = ["elevated", "abnormal", "critical"] as const;
   return (
     <Section title="Observation Policy: sampling and baseline">
@@ -353,6 +567,15 @@ function PolicyEditor(p: {
         ))}
       </div>
       <CheckList legend="Baseline context dimensions" options={contextDims} value={p.contexts} onChange={p.setContexts} />
+      <h3>Scope</h3>
+      <ScopeBuilder value={p.scope} onChange={p.setScope} />
+      <EscalationEditor catalog={p.catalog} selected={p.selected} value={p.escalation} onChange={p.setEscalation} />
+      <FeatureEditor catalog={p.catalog} value={p.features} onChange={p.setFeatures} />
+      {!floorsOk && (
+        <p className="notice notice-bad" role="alert">
+          A σ floor must be a positive number or empty (the catalog default).
+        </p>
+      )}
       {!rateOk && (
         <p className="notice notice-bad" role="alert">
           The sampling rate must be above 0 and at most 1.
@@ -370,7 +593,16 @@ function PolicyEditor(p: {
       <Publish
         route="/api/v1/observations/observation-policy"
         label="Observation Policy"
-        body={{ policy_id: p.policyId.trim(), parameters: p.selected, sampling_rate: rate, contexts: p.contexts, bands }}
+        body={{
+          policy_id: p.policyId.trim(),
+          parameters: p.selected,
+          sampling_rate: rate,
+          contexts: p.contexts,
+          bands,
+          features,
+          ...(Object.keys(escalation).length ? { escalation } : {}),
+          ...(Object.keys(scope).length ? { scope } : {}),
+        }}
         disabled={!ok}
         onPublished={p.objects.reload}
       />
@@ -416,7 +648,14 @@ export function Observations(): ReactNode {
         </Loaded>
       </Section>
       <Loaded res={cat} what="the Parameter Catalog" route="/api/v1/observations/parameters">
-        {(c) => <Workbench catalog={c.parameters} version={c.catalog_version} status={status.status === "ok" ? status.data : undefined} />}
+        {(c) =>
+          // The editors start from the settings in force, so wait for them.
+          status.status === "loading" ? (
+            <Loading what="the observation settings" />
+          ) : (
+            <Workbench catalog={c.parameters} version={c.catalog_version} status={status.status === "ok" ? status.data : undefined} />
+          )
+        }
       </Loaded>
     </>
   );
