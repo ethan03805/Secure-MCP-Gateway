@@ -173,6 +173,22 @@ func (m *Monitor) sampleOnce(in *Instance, failures *int) {
 	m.evaluate(in, s)
 }
 
+// keepMonotonic carries the cgroup's peaks and event counters over from the
+// previous sample when the new one is lower. They never decrease while the
+// cgroup exists, but a cgroup that is being removed (a kernel OOM kill ends
+// the container) can still be found while its files are gone, and ReadCgroup
+// then reads zeros. Without this, that last sample erased the OOM kill and
+// the memory peak the exit evidence is judged by.
+func keepMonotonic(prev, s Sample) Sample {
+	s.MemoryPeak = max(s.MemoryPeak, prev.MemoryPeak)
+	s.PidsPeak = max(s.PidsPeak, prev.PidsPeak)
+	s.OOMEvents = max(s.OOMEvents, prev.OOMEvents)
+	s.OOMKills = max(s.OOMKills, prev.OOMKills)
+	s.PidsMaxEvents = max(s.PidsMaxEvents, prev.PidsMaxEvents)
+	s.CPUUsageUsec = max(s.CPUUsageUsec, prev.CPUUsageUsec)
+	return s
+}
+
 // evaluate applies the limit and declared-behavior rules to a sample.
 func (m *Monitor) evaluate(in *Instance, s Sample) {
 	in.mu.Lock()
@@ -187,6 +203,7 @@ func (m *Monitor) evaluate(in *Instance, s Sample) {
 		}
 	}
 	prev := in.last
+	s = keepMonotonic(prev, s)
 	in.last = s
 	base := in.base
 	main := in.mainPID

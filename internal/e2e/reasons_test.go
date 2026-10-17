@@ -902,9 +902,13 @@ sessions_per_principal = 1`})
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(journal, 0o700) })
-	deadline := time.Now().Add(20 * time.Second)
+	// The journal fails when it next opens a segment, after 1,000 events
+	// (audit.Options.MaxEvents), so this takes about 170 calls. Under the
+	// race detector on a loaded CI runner that took more than the 20 s this
+	// loop used to allow; the bound only stops a journal that never fails.
+	deadline := time.Now().Add(120 * time.Second)
 	for {
-		_, err := cs2.CallTool(context.Background(), &mcp.CallToolParams{Name: "r_echo", Arguments: map[string]any{"text": strings.Repeat("j", 32<<10)}})
+		_, err := cs2.CallTool(context.Background(), &mcp.CallToolParams{Name: "r_echo", Arguments: map[string]any{"text": "j"}})
 		var we *jsonrpc.Error
 		if errors.As(err, &we) && strings.Contains(string(we.Data), edge.ReasonJournalUnavailable) {
 			fromErr("JOURNAL_UNAVAILABLE", err)

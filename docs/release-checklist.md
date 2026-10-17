@@ -38,7 +38,7 @@ RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
 
 ## Before tagging
 
-- [ ] Every pull request intended for the release is merged; `main` is green on all required jobs (srs, go, lint, site, security, linux-integration, hostile).
+- [ ] Every pull request intended for the release is merged; `main` is green on all required jobs (srs, go, lint, site, security, linux-integration, console).
 - [ ] `make check` passes on a clean checkout of `main`.
 - [ ] `make status` and `build/reqreport.md` reviewed: no requirement newly failing; `docs/verification/gap-list.md` matches the report.
 - [ ] Runbook records (FR-18.8): `docs/verification/runbooks/` holds an execution record of each runbook in `docs/runbooks/`. When code that a runbook uses (`smcpctl stop`/`resume`, `keys`, `backup`/`restore`, `upgrade`, `package revoke`, `policy rollback`) changed after the recorded commit, execute the runbook again on the release candidate's commit and add a new dated record.

@@ -114,3 +114,59 @@ func TestContainmentActionsWithinOneSecond(t *testing.T) {
 		})
 	}
 }
+
+// TestMonitorKeepsPeaksWhenCgroupFilesVanish: a cgroup that is being removed
+// (the kernel OOM-killed the container) can still be found while its files
+// are gone, and ReadCgroup then reads zeros. The instance's usage must keep
+// the memory peak and the OOM kill count of the earlier samples, because the
+// exit evidence is judged by them (seen as an intermittent failure of
+// TestIntegrationMonitorContainment, whose OOM instance exited with every
+// counter at zero).
+func TestMonitorKeepsPeaksWhenCgroupFilesVanish(t *testing.T) {
+	rt := testRuntime()
+	rt.Servers = []config.RuntimeServer{{Alias: "gone"}}
+	h := newHarness(t, rt)
+	p, err := h.l.Launch(context.Background(), h.spec("gone"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	connect(t, p)
+	name := h.l.Instances()[0].Container
+	eventually(t, 3*time.Second, "running", func() bool { return h.l.Instances()[0].State == StateRunning })
+	h.cg(name, "memory.peak", "73400320\n")
+	h.cg(name, "pids.peak", "7\n")
+	// An OOM event without a kill: a kill would end the instance and its
+	// sampling (the kill count is covered by TestKeepMonotonic).
+	h.cg(name, "memory.events", "low 0\nhigh 0\nmax 1\noom 1\noom_kill 0\n")
+	eventually(t, 3*time.Second, "usage sample", func() bool {
+		u := h.l.Instances()[0].Usage
+		return u.MemoryPeak == 73400320 && u.OOMEvents == 1 && u.PidsPeak == 7
+	})
+	for _, f := range []string{"memory.peak", "pids.peak", "memory.events", "memory.current", "pids.current", "cpu.stat"} {
+		if err := os.Remove(filepath.Join(h.dir, "cgroup", name, f)); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+	}
+	// Wait for samples of the emptied directory, then check nothing decreased.
+	time.Sleep(max(4*rt.MonitorInterval.Duration, time.Second))
+	u := h.l.Instances()[0].Usage
+	if h.l.Instances()[0].State != StateRunning {
+		t.Fatalf("instance state %s: the test needs a running instance", h.l.Instances()[0].State)
+	}
+	if u.MemoryPeak != 73400320 || u.OOMEvents != 1 || u.PidsPeak != 7 {
+		t.Fatalf("usage after the cgroup files vanished: %+v", u)
+	}
+}
+
+func TestKeepMonotonic(t *testing.T) {
+	prev := Sample{MemoryCurrent: 10, MemoryPeak: 100, PidsPeak: 5, OOMEvents: 1, OOMKills: 1, PidsMaxEvents: 2, CPUUsageUsec: 900}
+	got := keepMonotonic(prev, Sample{})
+	if got.MemoryCurrent != 0 || got.MemoryPeak != 100 || got.PidsPeak != 5 || got.OOMEvents != 1 || got.OOMKills != 1 || got.PidsMaxEvents != 2 || got.CPUUsageUsec != 900 {
+		t.Fatalf("zero sample after %+v: %+v", prev, got)
+	}
+	got = keepMonotonic(prev, Sample{MemoryPeak: 200, OOMKills: 3, CPUUsageUsec: 1000})
+	if got.MemoryPeak != 200 || got.OOMKills != 3 || got.CPUUsageUsec != 1000 {
+		t.Fatalf("higher sample: %+v", got)
+	}
+}

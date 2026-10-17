@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { DocHead, Note, Sec } from "@/components/Sheet";
 import { readDoc } from "@/lib/content";
-import { RELEASES_PAGE, assetKind, loadReleases, minisignKeyIn, type AssetKind, type Release } from "@/lib/release";
+import {
+  RELEASES_PAGE,
+  assetKind,
+  isReleaseRef,
+  loadReleases,
+  loadWorkflowResults,
+  minisignKeyIn,
+  type AssetKind,
+  type Release,
+} from "@/lib/release";
 import { REPO_URL, buildCommit, chapter, fmtDate, fmtDateTime, plural } from "@/lib/site";
 
 export const metadata = { title: "Install" };
@@ -34,6 +43,7 @@ export default function InstallPage() {
   const snap = loadReleases();
   const rels = snap.releases;
   const latest = rels[0];
+  const wf = loadWorkflowResults();
   const key = minisignKeyIn(readDoc("SECURITY.md"));
   const version = latest?.tag.replace(/^v/, "") ?? "<version>";
   const tag = latest?.tag ?? "<tag>";
@@ -236,6 +246,53 @@ smcpctl install          # or: smcpctl bootstrap --dir ~/smcp`}</code>
           the <Link href="/docs/verification/inspections/">inspection records</Link>, and what the rehearsal showed is in
           the <Link href="/docs/release-checklist/">release checklist</Link>.
         </p>
+        <p>
+          Two workflows check a published release from outside the build: <code>tap</code> installs it from the
+          Homebrew tap and with <code>install.sh</code> on macOS and Ubuntu and compares every binary with the release
+          archive (FR-13.3); <code>reference-packages</code> builds, signs, imports and calls the four reference
+          packages (FR-14.9). Each publishes its latest result, which the requirement report counts as a full claim for
+          a release tag and a partial claim for a branch.
+        </p>
+        {wf.source === "unavailable" ? (
+          <p className="empty-state">The workflow results could not be read at build time ({wf.reason}).</p>
+        ) : wf.results.length === 0 ? (
+          <p className="empty-state">No workflow result has been published yet.</p>
+        ) : (
+          <div className="table-wrap wide">
+            <table>
+              <caption>Latest published result of each release verification workflow.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Workflow</th>
+                  <th scope="col">Requirements</th>
+                  <th scope="col">Ref</th>
+                  <th scope="col">Commit</th>
+                  <th scope="col">Result</th>
+                  <th scope="col">Run</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wf.results.map((w) => (
+                  <tr key={w.workflow}>
+                    <th scope="row">{w.workflow}</th>
+                    <td>{w.requirements.join(", ")}</td>
+                    <td>
+                      {w.ref}
+                      {isReleaseRef(w.ref) ? " (release tag)" : " (branch)"}
+                    </td>
+                    <td>
+                      <a href={`${REPO_URL}/commit/${w.commit}`}>
+                        <code>{w.commit.slice(0, 7)}</code>
+                      </a>
+                    </td>
+                    <td>{w.conclusion || "unknown"}</td>
+                    <td>{w.runUrl ? <a href={w.runUrl}>{w.date ? fmtDateTime(w.date) : "run"}</a> : w.date ? fmtDateTime(w.date) : ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Sec>
 
       <Sec no={`${CH.n}.4`} id="packages" title="Verify a server package">

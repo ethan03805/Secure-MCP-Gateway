@@ -34,23 +34,32 @@ func TestRetentionExecution(t *testing.T) {
 	if err := s.Store.Append("records", []obsstore.Row{{"ts": old, "correlation_id": "old"}, {"ts": recent, "correlation_id": "recent"}}); err != nil {
 		t.Fatal(err)
 	}
+	// The key and the data are written before the manifest, as an export
+	// does: the start-up retention run of s.Start runs concurrently and
+	// may already remove the expired dataset once its manifest exists.
+	// Written in the other order, that run could delete the directory
+	// before the key existed and leave the key behind.
 	dataset := func(id string, created time.Time) {
 		t.Helper()
-		dir := filepath.Join(s.Exporter.Dir, id)
-		if err := os.MkdirAll(dir, 0o700); err != nil {
+		if err := os.MkdirAll(s.Exporter.KeyDir, 0o700); err != nil {
 			t.Fatal(err)
 		}
-		mb, _ := json.Marshal(map[string]any{"dataset_id": id, "created_at": created})
-		if err := os.WriteFile(filepath.Join(dir, "manifest.json"), mb, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(s.Exporter.KeyDir, id+".key"), []byte("00\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		dir := filepath.Join(s.Exporter.Dir, id)
+		if err := os.MkdirAll(dir, 0o700); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(filepath.Join(dir, "dataset.jsonl"), []byte("{}\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.MkdirAll(s.Exporter.KeyDir, 0o700); err != nil {
+		mb, _ := json.Marshal(map[string]any{"dataset_id": id, "created_at": created})
+		tmp := filepath.Join(dir, "manifest.json.tmp")
+		if err := os.WriteFile(tmp, mb, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(s.Exporter.KeyDir, id+".key"), []byte("00\n"), 0o600); err != nil {
+		if err := os.Rename(tmp, filepath.Join(dir, "manifest.json")); err != nil {
 			t.Fatal(err)
 		}
 	}

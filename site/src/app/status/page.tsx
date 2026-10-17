@@ -139,7 +139,9 @@ export default function StatusPage() {
         </Note>
         <p>
           Each element of the architecture with the implementation state recorded in <code>docs/status/elements.json</code>.
-          An element is implemented when the code covers its allocated functions, partial when some are covered.
+          An element is recorded as implemented when its code is wired into <code>smcpd</code>, every requirement
+          allocated to it is verified, none is deferred from release 1.0 and its note names no other gap in what the
+          release ships; it is partial when it has code but one of those does not hold.
         </p>
         <div className="table-wrap wide">
           <table className="matrix">
