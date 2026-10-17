@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T12:05:03Z",
-  "commit": "d364edfbb26d582675d33528b46063c93d07ad98",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d364edfbb26d582675d33528b46063c93d07ad98",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39030508298",
+  "generatedAt": "2026-10-17T12:15:13Z",
+  "commit": "1e88e910f55d5d114af6e4e5a178292c5f626339",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1e88e910f55d5d114af6e4e5a178292c5f626339",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39031124403",
   "tests": {
-    "total": 961,
-    "passed": 947,
+    "total": 969,
+    "passed": 955,
     "failed": 0,
     "skipped": 14,
-    "durationSec": 543.9,
+    "durationSec": 552.9,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -85,7 +85,7 @@
       },
       {
         "name": "internal/approval",
-        "passed": 14,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       },
@@ -253,13 +253,13 @@
       },
       {
         "name": "internal/policy",
-        "passed": 33,
+        "passed": 35,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/policyadmin",
-        "passed": 12,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       },
@@ -362,7 +362,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76,
+    "totalPct": 76.1,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -398,7 +398,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 67.1
+        "pct": 67.3
       },
       {
         "name": "internal/adminapi",
@@ -462,11 +462,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.8
+        "pct": 93.1
       },
       {
         "name": "internal/egress",
-        "pct": 80.5
+        "pct": 80.6
       },
       {
         "name": "internal/filterapi",
@@ -478,11 +478,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.5
+        "pct": 83.8
       },
       {
         "name": "internal/gwtest",
-        "pct": 79.7
+        "pct": 80.5
       },
       {
         "name": "internal/harness",
@@ -546,15 +546,15 @@
       },
       {
         "name": "internal/policy",
-        "pct": 92.4
+        "pct": 92.6
       },
       {
         "name": "internal/policyadmin",
-        "pct": 81.8
+        "pct": 84
       },
       {
         "name": "internal/policystore",
-        "pct": 82.4
+        "pct": 83.3
       },
       {
         "name": "internal/posixacl",
@@ -632,8 +632,8 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 283,
-    "partial": 198,
+    "verified": 294,
+    "partial": 187,
     "failing": 0,
     "unverified": 49,
     "byElement": [
@@ -673,24 +673,24 @@
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 18,
-        "verified": 9,
-        "partial": 8,
+        "verified": 14,
+        "partial": 3,
         "failing": 0
       },
       {
         "element": "E-06",
         "name": "Policy Decision Service",
         "total": 22,
-        "verified": 16,
-        "partial": 5,
+        "verified": 19,
+        "partial": 2,
         "failing": 0
       },
       {
         "element": "E-07",
         "name": "Approval Service",
         "total": 13,
-        "verified": 7,
-        "partial": 6,
+        "verified": 10,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -1549,10 +1549,11 @@
       {
         "id": "FR-3.2",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/policy.TestCompileAndDecide",
-          "internal/policy.TestPublicationInvariants"
+          "internal/policy.TestPublicationInvariants",
+          "internal/policyadmin.TestSchemaRejectsWithFieldMessages"
         ]
       },
       {
@@ -1570,13 +1571,14 @@
       {
         "id": "FR-3.5",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestPolicyCommands",
           "internal/e2e.TestPolicyControlAPI",
           "internal/policy.TestSimulateReplaysRatesAndTaint",
           "internal/policy.TestSimulateReportsDecisionChanges",
-          "internal/policyadmin.TestJournalFixturesAndSimulation"
+          "internal/policyadmin.TestJournalFixturesAndSimulation",
+          "internal/policyadmin.TestSimulationFiftyFixtures"
         ]
       },
       {
@@ -1591,10 +1593,11 @@
       {
         "id": "FR-3.8",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestPolicyCommands",
-          "internal/policy.TestCanonicalDigest"
+          "internal/policy.TestCanonicalDigest",
+          "internal/policyadmin.TestExportImportIdenticalDecisions"
         ]
       },
       {
@@ -1625,9 +1628,10 @@
       {
         "id": "FR-3.11",
         "element": "E-06",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/policy.TestCompileAndDecide"
+          "internal/policy.TestCompileAndDecide",
+          "internal/policy.TestDecisionRecordFields"
         ]
       },
       {
@@ -1679,8 +1683,9 @@
       {
         "id": "FR-3.17",
         "element": "E-07",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/approval.TestDecisionRecordsApproverTimeAndComment",
           "internal/approval.TestDenyDuringHold",
           "internal/approval.TestHoldApprovedContinuesAndConsumes",
           "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay"
@@ -1697,7 +1702,7 @@
       {
         "id": "FR-3.19",
         "element": "E-07",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/approval.TestHoldApprovedContinuesAndConsumes",
           "internal/e2e.TestApprovalHeldApprovedDeniedAndReplay",
@@ -4285,8 +4290,9 @@
       {
         "id": "SR-1-2",
         "element": "E-06",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/policy.TestLayerIntersection",
           "internal/policy.TestProfileMustStillPermitTemplate",
           "internal/policy.TestProfileServerCeiling"
         ]
@@ -4439,7 +4445,7 @@
       {
         "id": "SR-1.12-2",
         "element": "E-06",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/e2e.TestSynchronousAnomalyObligation"
         ]
@@ -4472,7 +4478,7 @@
       {
         "id": "SR-1.14-1",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestPolicyCommands",
           "internal/e2e.TestPolicyControlAPI",
@@ -4483,8 +4489,9 @@
       {
         "id": "SR-1.15-1",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/policyadmin.TestActivationCrashAtEachStep",
           "internal/policyadmin.TestPublishOrderAndFailures",
           "internal/policystore.TestActivationAndRestore"
         ]
@@ -4524,8 +4531,9 @@
       {
         "id": "SR-1.18-2",
         "element": "E-07",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/approval.TestBindingRefusesEveryMismatch",
           "internal/approval.TestCanonicalDigest",
           "internal/approval.TestExpiry",
           "internal/approval.TestHoldBoundFallbackAndRetry",
@@ -6334,7 +6342,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6369,7 +6377,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44071: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37429: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
