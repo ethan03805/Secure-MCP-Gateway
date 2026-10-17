@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T04:09:52Z",
-  "commit": "06e7d4b5af1df65d9bf3af2cfb41336587ea0e26",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/06e7d4b5af1df65d9bf3af2cfb41336587ea0e26",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39001227756",
+  "generatedAt": "2026-10-17T04:21:02Z",
+  "commit": "b6bddf0485f523f23fca7d0fbb5eb226f1c7ab52",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/b6bddf0485f523f23fca7d0fbb5eb226f1c7ab52",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39001806084",
   "tests": {
-    "total": 721,
-    "passed": 708,
+    "total": 727,
+    "passed": 714,
     "failed": 0,
     "skipped": 13,
-    "durationSec": 239.2,
+    "durationSec": 352.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -127,7 +127,7 @@
       },
       {
         "name": "internal/consoleapi",
-        "passed": 10,
+        "passed": 11,
         "failed": 0,
         "skipped": 0
       },
@@ -222,6 +222,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/obspolicy",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/obsstore",
         "passed": 19,
         "failed": 0,
@@ -264,6 +270,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/principals",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/profile",
         "passed": 1,
         "failed": 0,
@@ -301,7 +313,7 @@
       },
       {
         "name": "internal/session",
-        "passed": 11,
+        "passed": 12,
         "failed": 0,
         "skipped": 0
       },
@@ -320,7 +332,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 74.8,
+    "totalPct": 74.9,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -356,7 +368,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 67.3
+        "pct": 67.1
       },
       {
         "name": "internal/adminapi",
@@ -404,11 +416,11 @@
       },
       {
         "name": "internal/config",
-        "pct": 89.7
+        "pct": 90
       },
       {
         "name": "internal/consoleapi",
-        "pct": 89.7
+        "pct": 87.8
       },
       {
         "name": "internal/consoleauth",
@@ -424,7 +436,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 80.5
+        "pct": 80.6
       },
       {
         "name": "internal/filterapi",
@@ -436,7 +448,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.7
+        "pct": 82.6
       },
       {
         "name": "internal/gwtest",
@@ -475,6 +487,10 @@
         "pct": 88.3
       },
       {
+        "name": "internal/obspolicy",
+        "pct": 85.3
+      },
+      {
         "name": "internal/obsstore",
         "pct": 80.9
       },
@@ -511,6 +527,10 @@
         "pct": 81.9
       },
       {
+        "name": "internal/principals",
+        "pct": 80.8
+      },
+      {
         "name": "internal/profile",
         "pct": 94.7
       },
@@ -540,7 +560,7 @@
       },
       {
         "name": "internal/session",
-        "pct": 85.1
+        "pct": 85.7
       },
       {
         "name": "internal/tunnel",
@@ -566,10 +586,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 153,
-    "partial": 208,
+    "verified": 155,
+    "partial": 207,
     "failing": 0,
-    "unverified": 197,
+    "unverified": 196,
     "byElement": [
       {
         "element": "E-01",
@@ -759,8 +779,8 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 7,
-        "partial": 44,
+        "verified": 9,
+        "partial": 43,
         "failing": 0
       },
       {
@@ -1273,7 +1293,12 @@
         "element": "E-04",
         "status": "verified",
         "tests": [
-          "internal/session.TestCreateSelectsTemplateAndLimits"
+          "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "internal/consoleapi.TestSessionSuspendAndResume",
+          "internal/session.TestCreateSelectsTemplateAndLimits",
+          "internal/session.TestSuspendAndResume"
         ]
       },
       {
@@ -1344,7 +1369,11 @@
         "element": "E-03",
         "status": "partial",
         "tests": [
-          "internal/e2e.TestOAuthSessionAndToolCall"
+          "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "internal/e2e.TestOAuthSessionAndToolCall",
+          "internal/principals.TestDirectory"
         ]
       },
       {
@@ -2432,11 +2461,13 @@
       {
         "id": "FR-8.5",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "console/e2e/chromium.views.spec.ts > G-03 audit profile tuning: the floor is read-only and capture is edited",
-          "console/e2e/firefox.views.spec.ts > G-03 audit profile tuning: the floor is read-only and capture is edited",
-          "console/e2e/webkit.views.spec.ts > G-03 audit profile tuning: the floor is read-only and capture is edited"
+          "console/e2e/chromium.views.spec.ts > G-03 audit profile tuning: the floor is read-only and the profile publishes",
+          "console/e2e/firefox.views.spec.ts > G-03 audit profile tuning: the floor is read-only and the profile publishes",
+          "console/e2e/webkit.views.spec.ts > G-03 audit profile tuning: the floor is read-only and the profile publishes",
+          "internal/obspolicy.TestPublishAndApply",
+          "internal/obspolicy.TestRoutes"
         ]
       },
       {
@@ -2482,8 +2513,10 @@
       {
         "id": "FR-8.10",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/obspolicy.TestPublishAndApply"
+        ]
       },
       {
         "id": "FR-8.11",
@@ -2522,7 +2555,9 @@
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
           "console/e2e/firefox.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
-          "console/e2e/webkit.views.spec.ts > G-06 anomaly response: only restrict-only actions per band"
+          "console/e2e/webkit.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
+          "internal/obspolicy.TestPublishAndApply",
+          "internal/obspolicy.TestRoutes"
         ]
       },
       {
@@ -2542,7 +2577,9 @@
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/firefox.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
-          "console/e2e/webkit.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys"
+          "console/e2e/webkit.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
+          "internal/obspolicy.TestPublishAndApply",
+          "internal/obspolicy.TestRoutes"
         ]
       },
       {
@@ -2570,14 +2607,18 @@
       {
         "id": "FR-8.19",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "console/e2e/chromium.views.spec.ts > G-11 sessions and principals",
-          "console/e2e/firefox.views.spec.ts > G-11 sessions and principals",
-          "console/e2e/webkit.views.spec.ts > G-11 sessions and principals",
+          "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
+          "internal/consoleapi.TestSessionSuspendAndResume",
           "internal/consoleapi.TestSessionsListInspectTerminate",
           "internal/consoleapi.TestTerminateRefusedWhenJournalFails",
-          "internal/e2e.TestConsoleOnRunningGateway"
+          "internal/e2e.TestConsoleOnRunningGateway",
+          "internal/principals.TestDirectory",
+          "internal/principals.TestRoutes",
+          "internal/session.TestSuspendAndResume"
         ]
       },
       {
@@ -6019,7 +6060,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6054,7 +6095,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37423: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40757: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
