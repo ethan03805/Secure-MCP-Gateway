@@ -2,6 +2,8 @@ module github.com/ethan03805/secure-mcp-gateway
 
 go 1.26.0
 
+toolchain go1.26.9
+
 require (
 	aead.dev/minisign v0.3.0
 	filippo.io/age v1.3.2

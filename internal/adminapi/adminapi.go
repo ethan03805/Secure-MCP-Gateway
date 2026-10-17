@@ -262,8 +262,29 @@ func (s *Server) authenticated(next http.HandlerFunc) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthenticated", "administrator authentication required")
 			return
 		}
-		next(w, r.WithContext(withRole(r.Context(), actor, role)))
+		ctx := withRole(r.Context(), actor, role)
+		if tok != "" {
+			ctx = context.WithValue(ctx, stillValidKey{}, func() bool { a, _ := s.tokenActor(tok); return a == actor })
+		} else {
+			// A browser session's request context ends with the session
+			// (browserActor), so the context alone tells.
+			reqCtx := r.Context()
+			ctx = context.WithValue(ctx, stillValidKey{}, func() bool { return reqCtx.Err() == nil })
+		}
+		next(w, r.WithContext(ctx))
 	})
+}
+
+type stillValidKey struct{}
+
+// StillAuthenticated reports whether the credential of an authenticated
+// request still resolves to the same actor: a bearer token has not expired
+// or been signed out, a browser session has not ended. Long-lived responses such as event streams call it
+// periodically and end when it turns false. It is false for a request
+// that did not pass through an authenticated route.
+func StillAuthenticated(r *http.Request) bool {
+	f, ok := r.Context().Value(stillValidKey{}).(func() bool)
+	return ok && f()
 }
 
 func actorOf(r *http.Request) string { a, _ := r.Context().Value(actorKey{}).(string); return a }

@@ -82,10 +82,13 @@ type Service struct {
 	now   func() time.Time
 	mcp   http.Handler
 	guard *authguard.Guard
-	reg   *registry
-	lim   *limiters
-	oauth *oauthState
-	dir   string
+	// approvers locks Session Approver usernames after twice the client
+	// threshold of failures across all clients and sources.
+	approvers *authguard.Guard
+	reg       *registry
+	lim       *limiters
+	oauth     *oauthState
+	dir       string
 
 	mu    sync.Mutex
 	state State
@@ -116,6 +119,8 @@ func New(o Options) (*Service, error) {
 	s := &Service{cfg: o.Config, store: o.Store, rec: o.Evidence, log: o.Log, now: o.Now,
 		dir: filepath.Join(o.Config.State.Dir, "remote"),
 		guard: authguard.New(authguard.Config{PerSourcePerMinute: 1 << 30, MaxFailures: l.LockoutFailures, FailureWindow: l.Lockout.Duration,
+			LockoutBase: l.Lockout.Duration, LockoutMax: l.Lockout.Duration, Now: o.Now}),
+		approvers: authguard.New(authguard.Config{PerSourcePerMinute: 1 << 30, MaxFailures: 2 * l.LockoutFailures, FailureWindow: l.Lockout.Duration,
 			LockoutBase: l.Lockout.Duration, LockoutMax: l.Lockout.Duration, Now: o.Now}),
 		lim: newLimiters(l, o.Now), oauth: newOAuthState()}
 	if err := os.MkdirAll(s.dir, 0o700); err != nil {
@@ -169,6 +174,7 @@ func (s *Service) janitor(ctx context.Context) {
 			return
 		case <-t.C:
 			s.guard.Prune()
+			s.approvers.Prune()
 			s.lim.prune()
 			s.oauth.prune(s.now())
 			s.reg.prunePending(s.now(), pendingMaxAge)

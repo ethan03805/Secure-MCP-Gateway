@@ -39,6 +39,15 @@ type OAuth struct {
 
 	mu    sync.Mutex
 	codes map[string]*authCode // keyed by SHA-256 of the code
+	// redeemed maps the SHA-256 of a redeemed code to the session it
+	// created, until the code would have expired, so that a second
+	// redemption revokes that session (OAuth 2.1 section 4.1.3).
+	redeemed map[string]redeemedCode
+}
+
+type redeemedCode struct {
+	sessionID string
+	expires   time.Time
 }
 
 type authCode struct {
@@ -73,7 +82,7 @@ func NewOAuth(cfg *config.Config, store *Store, rec audit.Recorder, guard *authg
 	if guard == nil {
 		guard = authguard.New(authguard.Config{})
 	}
-	return &OAuth{cfg: cfg, store: store, audit: rec, guard: guard, now: time.Now, codes: map[string]*authCode{}}
+	return &OAuth{cfg: cfg, store: store, audit: rec, guard: guard, now: time.Now, codes: map[string]*authCode{}, redeemed: map[string]redeemedCode{}}
 }
 
 // SetNow replaces the clock (tests).
@@ -104,6 +113,11 @@ func (o *OAuth) Prune() {
 	for k, c := range o.codes {
 		if now.After(c.expires) {
 			delete(o.codes, k)
+		}
+	}
+	for k, c := range o.redeemed {
+		if now.After(c.expires) {
+			delete(o.redeemed, k)
 		}
 	}
 	o.mu.Unlock()
@@ -464,8 +478,14 @@ func (o *OAuth) token(w http.ResponseWriter, r *http.Request) {
 		key := hash(r.PostForm.Get("code"))
 		ac := o.codes[key]
 		delete(o.codes, key) // one use, even when the redemption below fails
+		reused, wasRedeemed := o.redeemed[key]
 		now := o.now()
 		o.mu.Unlock()
+		if ac == nil && wasRedeemed && now.Before(reused.expires) {
+			o.revokeReused(reused.sessionID, c.ClientID)
+			oauthError(w, 400, "invalid_grant", "authorization code already used; the session it created has been revoked")
+			return
+		}
 		switch {
 		case ac == nil || now.After(ac.expires) || ac.clientID != c.ClientID:
 			oauthError(w, 400, "invalid_grant", "code unknown, expired or issued to another client")
@@ -489,6 +509,11 @@ func (o *OAuth) token(w http.ResponseWriter, r *http.Request) {
 		if !o.recordCreated(w, sess, "OAUTH_CODE", c.ClientID) {
 			return
 		}
+		o.mu.Lock()
+		if len(o.redeemed) < maxCodes {
+			o.redeemed[key] = redeemedCode{sessionID: sess.ID, expires: ac.expires}
+		}
+		o.mu.Unlock()
 		writeJSON(w, 200, o.tokenResponse(sess, tok))
 	case "refresh_token":
 		sess, tok, err := o.store.Refresh(r.PostForm.Get("refresh_token"), c.ClientID)
@@ -510,6 +535,15 @@ func (o *OAuth) token(w http.ResponseWriter, r *http.Request) {
 	default:
 		oauthError(w, 400, "unsupported_grant_type", "use authorization_code or refresh_token")
 	}
+}
+
+// revokeReused ends the session a reused authorization code created: a
+// second redemption means the code leaked, so the tokens issued for it
+// are no longer trusted.
+func (o *OAuth) revokeReused(sessionID, clientID string) {
+	ended := o.store.Terminate(sessionID)
+	_ = o.audit.Commit(audit.Event{Class: "auth_failure", Origin: "E-03", SessionID: sessionID, Outcome: "deny", ReasonCode: "AUTH_CODE_REUSE",
+		PolicyStatus: "not_evaluated", Detail: map[string]any{"client_id": clientID, "session_ended": ended}})
 }
 
 // recordCreated commits the session-creation event before any token leaves

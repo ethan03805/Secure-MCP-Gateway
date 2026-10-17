@@ -247,12 +247,33 @@ func (r *Registry) Write(w io.Writer) {
 // Handler serves GET /metrics.
 func (r *Registry) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, req *http.Request) {
+		if !loopbackHost(req.Host) {
+			// A browser page whose name re-resolves to 127.0.0.1 (DNS
+			// rebinding) sends its own name as Host; only scrapers that
+			// address the loopback listener directly are answered.
+			http.Error(w, "unknown host", http.StatusMisdirectedRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		r.Write(w)
 	})
 	return mux
+}
+
+// loopbackHost reports whether a Host header names a loopback address or
+// localhost, with or without a port.
+func loopbackHost(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // ErrNotLoopback is returned for a metrics address that is not loopback.

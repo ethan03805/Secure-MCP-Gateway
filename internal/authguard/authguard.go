@@ -128,6 +128,7 @@ func (g *Guard) Check(source, account string) (time.Duration, error) {
 	if len(g.rate)+len(g.failure) > g.cfg.MaxEntries {
 		g.pruneLocked(now)
 	}
+	source = g.sourceLocked(now, source)
 	w := g.rate[source]
 	if w == nil || now.Sub(w.start) >= time.Minute {
 		w = &window{start: now}
@@ -150,22 +151,36 @@ func (g *Guard) Failure(source, account string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	now := g.cfg.Now()
+	source = g.sourceLocked(now, source)
 	for _, k := range []string{"s:" + source, accountKey(account)} {
-		f := g.failure[k]
-		if f == nil || now.Sub(f.last) > g.cfg.FailureWindow {
-			f = &failures{}
-			g.failure[k] = f
-		}
-		f.n++
-		f.last = now
-		if f.n >= g.cfg.MaxFailures {
-			lock := g.cfg.LockoutBase << min(f.n-g.cfg.MaxFailures, 20)
-			if lock > g.cfg.LockoutMax || lock <= 0 {
-				lock = g.cfg.LockoutMax
-			}
-			f.lockedUntil = now.Add(lock)
-		}
+		g.failLocked(now, k)
 	}
+}
+
+func (g *Guard) failLocked(now time.Time, k string) {
+	f := g.failure[k]
+	if f == nil || now.Sub(f.last) > g.cfg.FailureWindow {
+		f = &failures{}
+		g.failure[k] = f
+	}
+	f.n++
+	f.last = now
+	if f.n >= g.cfg.MaxFailures {
+		lock := g.cfg.LockoutBase << min(f.n-g.cfg.MaxFailures, 20)
+		if lock > g.cfg.LockoutMax || lock <= 0 {
+			lock = g.cfg.LockoutMax
+		}
+		f.lockedUntil = now.Add(lock)
+	}
+}
+
+// FailAccount records a failed attempt for the account only, for a second
+// account checked in the same request (the source was already counted by
+// Failure).
+func (g *Guard) FailAccount(account string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.failLocked(g.cfg.Now(), accountKey(account))
 }
 
 // Success clears the account's failures (the source's remain, so one valid
@@ -174,6 +189,26 @@ func (g *Guard) Success(account string) {
 	g.mu.Lock()
 	delete(g.failure, accountKey(account))
 	g.mu.Unlock()
+}
+
+// overflowSource is the source key shared by every new source that
+// arrives while the rate table is full of live entries, so a caller who
+// rotates source addresses shares one limit instead of growing the table
+// without bound. Account failures are always recorded: each one costs an
+// Argon2id verification, which bounds their rate.
+const overflowSource = "\x00overflow"
+
+// sourceLocked returns source, or overflowSource when source is not yet
+// tracked and the rate table holds MaxEntries live sources after pruning.
+func (g *Guard) sourceLocked(now time.Time, source string) string {
+	if _, ok := g.rate[source]; ok || len(g.rate) < g.cfg.MaxEntries {
+		return source
+	}
+	g.pruneLocked(now)
+	if len(g.rate) < g.cfg.MaxEntries {
+		return source
+	}
+	return overflowSource
 }
 
 func (g *Guard) pruneLocked(now time.Time) {
@@ -200,14 +235,8 @@ func (g *Guard) Prune() {
 // hash (unknown account) is verified against a dummy hash and never matches,
 // so both paths cost one Argon2id evaluation.
 func (g *Guard) Verify(ctx context.Context, hash, password string) (bool, error) {
-	t := time.NewTimer(g.cfg.VerifyWait)
-	defer t.Stop()
-	select {
-	case g.sem <- struct{}{}:
-	case <-t.C:
-		return false, ErrBusy
-	case <-ctx.Done():
-		return false, ctx.Err()
+	if err := g.acquire(ctx); err != nil {
+		return false, err
 	}
 	defer func() { <-g.sem }()
 	if hash == "" {
@@ -215,6 +244,30 @@ func (g *Guard) Verify(ctx context.Context, hash, password string) (bool, error)
 		return false, nil
 	}
 	return keys.VerifyPassword(hash, password), nil
+}
+
+// Hash computes an Argon2id hash of password under the same concurrency
+// bound as Verify, so that endpoints which create secrets for
+// unauthenticated callers cannot run unbounded Argon2id evaluations.
+func (g *Guard) Hash(ctx context.Context, password string) (string, error) {
+	if err := g.acquire(ctx); err != nil {
+		return "", err
+	}
+	defer func() { <-g.sem }()
+	return keys.HashPassword(password)
+}
+
+func (g *Guard) acquire(ctx context.Context) error {
+	t := time.NewTimer(g.cfg.VerifyWait)
+	defer t.Stop()
+	select {
+	case g.sem <- struct{}{}:
+		return nil
+	case <-t.C:
+		return ErrBusy
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // EqualName compares two account names in time independent of where they

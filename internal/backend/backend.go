@@ -34,6 +34,7 @@ import (
 	"log/slog"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -262,7 +263,7 @@ func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (
 	sess, err := client.Connect(cctx, transport, nil)
 	if err != nil {
 		proc.Close()
-		return nil, fmt.Errorf("connect %s: %w (stderr: %s)", sc.Command, err, proc.Stderr())
+		return nil, fmt.Errorf("connect %s: %w (stderr: %s)", sc.Command, err, stderrForError(proc.Stderr(), secrets))
 	}
 	s := &Server{Alias: sc.Alias, cfg: sc, spec: spec, session: sess, proc: proc, filter: ff}
 	if ir := sess.InitializeResult(); ir != nil && ir.ProtocolVersion != "" {
@@ -291,6 +292,26 @@ func (r *Registry) launch(ctx context.Context, sc config.Server, opts Options) (
 		r.log.Warn("server tool definitions are unverified (live list; no signed manifest)", "alias", sc.Alias, "revision", ts.Revision)
 	}
 	return s, nil
+}
+
+// stderrTailBytes bounds the server output quoted in a start error.
+const stderrTailBytes = 2 << 10
+
+// stderrForError is the end of a server's diagnostic output for a start
+// error: at most stderrTailBytes, with every secret value delivered to the
+// instance replaced. The error reaches the diagnostic log and the
+// service manager's log, and a server can print its own environment.
+func stderrForError(stderr string, secrets map[string]string) string {
+	// Redact before cutting, so that a cut cannot leave part of a value.
+	for _, v := range secrets {
+		if len(v) >= 4 {
+			stderr = strings.ReplaceAll(stderr, v, "[REDACTED]")
+		}
+	}
+	if len(stderr) > stderrTailBytes {
+		stderr = "[...]" + strings.ToValidUTF8(stderr[len(stderr)-stderrTailBytes:], "")
+	}
+	return stderr
 }
 
 // procCloser makes the process the transport's writer; closing it runs the

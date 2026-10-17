@@ -3,6 +3,7 @@ package authguard
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -92,4 +93,49 @@ func TestPruneBoundsTables(t *testing.T) {
 	if len(g.rate) != 0 || len(g.failure) != 0 {
 		t.Fatalf("tables not pruned: %d %d", len(g.rate), len(g.failure))
 	}
+}
+
+// A caller rotating source addresses cannot grow the rate table past
+// MaxEntries: new sources share one overflow limit while the table is full
+// of live entries, and get their own again once old entries expire.
+func TestSourceTableBounded(t *testing.T) {
+	now := time.Now()
+	g := New(Config{PerSourcePerMinute: 2, MaxEntries: 4, Now: func() time.Time { return now }})
+	for i := range 4 {
+		if _, err := g.Check(fmt.Sprintf("10.0.0.%d", i), "a"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := range 2 {
+		if _, err := g.Check(fmt.Sprintf("10.0.1.%d", i), "a"); err != nil {
+			t.Fatalf("overflow request %d: %v", i, err)
+		}
+	}
+	if _, err := g.Check("10.0.2.1", "a"); !errors.Is(err, ErrRateLimited) {
+		t.Fatalf("third new source while full: err = %v, want the shared overflow limit", err)
+	}
+	if n := len(g.rate); n > 5 {
+		t.Fatalf("rate table holds %d entries, want at most MaxEntries+1", n)
+	}
+	now = now.Add(2 * time.Minute)
+	if _, err := g.Check("10.0.3.1", "a"); err != nil {
+		t.Fatalf("after expiry: %v", err)
+	}
+	if _, ok := g.rate["10.0.3.1"]; !ok {
+		t.Fatal("after expiry a new source should get its own entry")
+	}
+}
+
+// Hash shares Verify's concurrency bound.
+func TestHashBounded(t *testing.T) {
+	g := New(Config{VerifyConcurrency: 1, VerifyWait: 20 * time.Millisecond})
+	h, err := g.Hash(context.Background(), "secret-value")
+	if err != nil || !keys.VerifyPassword(h, "secret-value") {
+		t.Fatalf("hash %q err %v", h, err)
+	}
+	g.sem <- struct{}{} // occupy the only slot
+	if _, err := g.Hash(context.Background(), "x"); !errors.Is(err, ErrBusy) {
+		t.Fatalf("hash with no free slot: %v, want ErrBusy", err)
+	}
+	<-g.sem
 }

@@ -217,6 +217,18 @@ Made while hardening the Go slice (PR #8). They interpret the SRS where the code
 - Hermes Agent was never installed in CI: the main installer cannot install the pinned tag v2026.6.19 ("No module named 'pm'"). `install-clis.sh` now uses the installer from the pinned tag and prints the installer's last lines when an install fails.
 - Broken-build check: `smcpd` built with `-tags smcp_broken` has a deliberate defect in the policy decider (no rate limits, no approval obligations) and logs an error at startup. `go run ./scripts/agents -broken-gateway` builds it and passes only if every client that runs reaches the Gateway and fails. The workflow runs it with Claude Code after the main run; its results go to `build/agents-broken.json` and are not published.
 - The Claude Code and OpenCode failures in CI before #26 were the BoringSSL iPAddress name constraint finding; with the DNS-only CA both clients pass. `docs/clients/matrix.json` and `docs/clients/README.md` updated.
+### Security review and hardening (phase 4)
+
+Findings, fixes and residual risks are in `docs/security-review-2026-10.md`.
+
+- Tool schemas from backends no longer resolve `$ref` outside the schema document; the default loader read local files (`file://` and relative names), so a malicious server could make the Gateway open any local path (SR-01).
+- `go.mod` requires `toolchain go1.26.9`; `govulncheck` reports no reachable advisories (SR-02).
+- Remote listener: IPv6 callers count as their /64 for limits and lockout; the OAuth limiter and the authguard source table are bounded with a shared overflow key (SR-03, SR-04); a full registration queue is refused before any hashing or evidence, and registration hashing shares the guard's Argon2id bound (SR-05); a Session Approver username locks after twice `lockout_failures` failures across all clients and sources, event `REMOTE_APPROVER_LOCKOUT` (SR-06).
+- Local and remote authorization servers end the session created by an authorization code when the code is redeemed again, event `AUTH_CODE_REUSE` (SR-07).
+- Server start errors quote at most 2 KiB of the server's stderr, with delivered secret values redacted (SR-08).
+- `/api/v1/audit/stream` and `/api/v1/approvals/watch` end when the token that opened them is signed out or expires (`adminapi.StillAuthenticated`) and allow at most 32 open streams each (SR-09).
+- The Gateway refuses to start when the operator token, CA key, listener key or evidence keys have group or other permission bits (`keys.CheckPrivate`, SR-10).
+- The metrics endpoint answers only loopback `Host` values (SR-11); `notify-send` gets `--` before the notification text (SR-12); research export files are opened with `os.OpenInRoot` and names cannot start with a dot (SR-13).
 
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 
