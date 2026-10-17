@@ -47,9 +47,13 @@ type Config struct {
 	Graph         Graph         `toml:"graph" json:"graph"`
 	Observation   Observation   `toml:"observation" json:"observation"`
 	// Secrets enables the Secret Vault and Broker (E-19, E-20) when present.
-	Secrets  *Secrets `toml:"secrets" json:"secrets"`
-	Remote   Remote   `toml:"remote" json:"remote"`
-	Packages Packages `toml:"packages" json:"packages"`
+	Secrets *Secrets `toml:"secrets" json:"secrets"`
+
+	// directory adds principals and clients managed at run time
+	// (SetDirectory); not part of the file.
+	directory Directory
+	Remote    Remote   `toml:"remote" json:"remote"`
+	Packages  Packages `toml:"packages" json:"packages"`
 
 	// Operations (E-21 export, E-22, E-23); see ops.go.
 	SchemaVersion int      `toml:"schema_version" json:"schema_version"`
@@ -572,7 +576,17 @@ func (c *Config) AdminURL() string { return "https://" + c.AdminListener.Address
 func (c *Config) FindPrincipal(id string) *Principal {
 	for i := range c.Principals {
 		if c.Principals[i].ID == id {
+			if c.directory != nil && c.directory.Suspended(id) {
+				p, off := c.Principals[i], false
+				p.Enabled = &off
+				return &p
+			}
 			return &c.Principals[i]
+		}
+	}
+	if c.directory != nil {
+		if p, ok := c.directory.Principal(id); ok {
+			return &p
 		}
 	}
 	return nil
@@ -585,8 +599,27 @@ func (c *Config) FindClient(id string) *Client {
 			return &c.Clients[i]
 		}
 	}
+	if c.directory != nil {
+		if cl, ok := c.directory.Client(id); ok {
+			return &cl
+		}
+	}
 	return nil
 }
+
+// Directory holds principals and OAuth clients managed at run time from the
+// control API (internal/principals), in addition to those of the file, and
+// can suspend a file principal. FindPrincipal and FindClient consult it
+// after the file, so every element sees the same principals.
+type Directory interface {
+	Principal(id string) (Principal, bool)
+	Client(id string) (Client, bool)
+	Suspended(id string) bool
+}
+
+// SetDirectory attaches the run-time directory. Call it before the
+// listeners start; the configuration is read without locks.
+func (c *Config) SetDirectory(d Directory) { c.directory = d }
 
 // FindApprover returns the Session Approver with the given username.
 func (c *Config) FindApprover(username string) *Approver {

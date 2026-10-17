@@ -1,12 +1,13 @@
 // G-03 Audit profile tuning (FR-8.5): the mandatory audit floor, shown
-// read-only because it cannot be lowered, and the optional capture,
-// retention and alert settings above it. In this build the optional
-// settings are the [observation] and [evidence] configuration tables;
-// the editor produces them, and the values in force are read from GET
-// /api/v1/observations/status.
+// read-only because it cannot be lowered, and the Audit Profile above it:
+// observation retention and the parameters captured when a call scores
+// elevated or worse. The editor publishes Audit Profile revisions
+// (POST /api/v1/observations/audit-profile); the values in force are read
+// from GET /api/v1/observations/status. Alert bands are under G-06.
 import { useState } from "react";
 import { useResource } from "../data";
 import { DataTable, Help, JsonBlock, KV, Loaded, Mono, PageHeader, Section, TextField } from "../ui";
+import { ObjectState, Publish, useObjects } from "./objects";
 import type { ObsStatus } from "./Observations";
 
 /** Evidence the journal always records, whatever the profile. */
@@ -25,32 +26,27 @@ const floor: [string, string, string][] = [
 ];
 
 function Editor({ s }: { s: ObsStatus }) {
-  const [rate, setRate] = useState(String(s.sampling_rate ?? 0.1));
-  const [retention, setRetention] = useState(s.retention?.replace(/0m0s$/, "") ?? "2160h");
+  const objects = useObjects();
+  const [retention, setRetention] = useState(s.retention?.replace(/m0s$/, "m").replace(/h0m$/, "h") ?? "2160h");
   const [escalation, setEscalation] = useState((s.escalation_parameters ?? []).join(" "));
-  const r = Number(rate);
-  const ok = r > 0 && r <= 1;
-  const toml = `[observation]\nsampling_rate = ${r}\nretention = "${retention}"\nescalation_parameters = [${escalation
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .map((p) => JSON.stringify(p))
-    .join(", ")}]\n`;
+  const params = escalation.split(/[\s,]+/).filter(Boolean);
+  const ok = /^\d+(h|m)$|^\d+h\d+m$/.test(retention.trim());
+  const toml = `[observation]\nretention = "${retention}"\nescalation_parameters = [${params.map((p) => JSON.stringify(p)).join(", ")}]\n`;
   return (
-    <Section title="Optional capture and retention">
+    <Section title="Audit Profile: optional capture and retention">
+      {objects.status === "ok" && <ObjectState objects={objects.data} kind="audit_profile" label="Audit Profile" />}
       <div className="rule-grid">
-        <TextField label="Normal-band sampling rate (0 to 1)" value={rate} onChange={setRate} type="number" />
-        <TextField label="Observation retention (Go duration)" value={retention} onChange={setRetention} mono />
+        <TextField label="Observation retention (Go duration, at least 24h)" value={retention} onChange={setRetention} mono />
         <TextField label="Escalation parameters (captured from elevated)" value={escalation} onChange={setEscalation} mono />
       </div>
       {!ok && (
         <p className="notice notice-bad" role="alert">
-          The sampling rate must be above 0 and at most 1.
+          The retention must be a duration in hours or minutes, such as 2160h.
         </p>
       )}
-      {ok && <JsonBlock value={toml} label="Configuration for this audit profile" />}
-      <p className="small">
-        Apply by putting this in smcp.toml and reloading the configuration. Nothing here can remove an event of the mandatory floor.
-      </p>
+      <Publish route="/api/v1/observations/audit-profile" label="Audit Profile" body={{ retention: retention.trim(), escalation_parameters: params }} disabled={!ok} onPublished={objects.reload} />
+      {ok && <JsonBlock value={toml} label="The same settings as smcp.toml configuration" />}
+      <p className="small">Nothing here can remove an event of the mandatory floor. The normal-band sampling rate is part of the Observation Policy (Observation workbench).</p>
     </Section>
   );
 }

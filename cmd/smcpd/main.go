@@ -26,8 +26,10 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
+	"github.com/ethan03805/secure-mcp-gateway/internal/obspolicy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/openapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
+	"github.com/ethan03805/secure-mcp-gateway/internal/principals"
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
@@ -97,7 +99,17 @@ func run(cfgPath, level string) error {
 	mon.Register("graph", mirror.HealthCheck()) // degraded, never fail-closed, while Neo4j is unreachable
 	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs,
 		Observers: map[string]audit.Observer{"graph": mirror}}
-	obs, err := analytics.New(analytics.Options{Config: cfg, Log: log}) // SS-10, E-27
+	// G-03, G-04, G-06, G-08: published observation objects overlay the
+	// [observation] table of the copy the analytics service reads.
+	objs, err := obspolicy.Open(cfg)
+	if err != nil {
+		return fmt.Errorf("observation objects: %w", err)
+	}
+	obsCfg := *cfg
+	if err := objs.Apply(&obsCfg); err != nil {
+		log.Error("published observation objects not applied; smcp.toml settings kept for them", "err", err)
+	}
+	obs, err := analytics.New(analytics.Options{Config: &obsCfg, Log: log}) // SS-10, E-27
 	if err != nil {
 		return fmt.Errorf("observation: %w", err)
 	}
@@ -131,6 +143,15 @@ func run(cfgPath, level string) error {
 	if _, err := consoleapi.Attach(a, log); err != nil { // E-24 console and its routes
 		return fmt.Errorf("console: %w", err)
 	}
+	// G-11: principals and credentials managed from the console, seen by
+	// every element through config.FindPrincipal and FindClient.
+	pdir, err := principals.Open(cfg)
+	if err != nil {
+		return fmt.Errorf("principal directory: %w", err)
+	}
+	cfg.SetDirectory(pdir)
+	(&obspolicy.Service{Store: objs, Evidence: a.Evidence}).Register(a.Admin)
+	(&principals.Service{Dir: pdir, Sessions: a.Store, Snapshot: a.Decider.Snapshot, Evidence: a.Evidence, Log: log}).Register(a.Admin)
 	mirror.Register(a.Admin)
 	mirror.Start(ctx, a.Evidence)
 	defer mirror.Close()

@@ -40,7 +40,7 @@ func viewSession(s *session.Session) SessionView {
 
 func (c *Console) listSessions(w http.ResponseWriter, r *http.Request) {
 	out := []SessionView{}
-	for _, s := range c.d.Sessions.Active() {
+	for _, s := range c.d.Sessions.List() {
 		out = append(out, viewSession(s))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"sessions": out})
@@ -72,7 +72,7 @@ func (c *Console) terminateSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such session")
 		return
 	}
-	if s.State != session.StateActive {
+	if s.State != session.StateActive && s.State != session.StateSuspended {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]string{"code": "not_active", "message": "the session has already ended"}, "state": s.State})
 		return
 	}
@@ -86,6 +86,54 @@ func (c *Console) terminateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, viewSession(c.d.Sessions.Get(id)))
+}
+
+// suspendSession suspends an active session or resumes a suspended one
+// (FR-2.8, FR-8.19). A suspended session's tokens are refused and its calls
+// in flight are refused at the next session check; it keeps its deadlines.
+// The action is committed to the journal before it takes effect.
+func (c *Console) suspendSession(suspend bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Reason string `json:"reason"`
+		}
+		if err := decode(r, &body); err != nil || len(body.Reason) > 1000 {
+			writeError(w, http.StatusBadRequest, "bad_request", "body must be {reason} with at most 1000 characters")
+			return
+		}
+		id := r.PathValue("id")
+		s := c.d.Sessions.Get(id)
+		if s == nil {
+			writeError(w, http.StatusNotFound, "not_found", "no such session")
+			return
+		}
+		want, outcome, reason := session.StateActive, "suspend_requested", "SESSION_SUSPENDED_BY_OPERATOR"
+		if !suspend {
+			want, outcome, reason = session.StateSuspended, "resume_requested", "SESSION_RESUMED_BY_OPERATOR"
+		}
+		if s.State != want {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]string{"code": "wrong_state", "message": "the session is " + s.State}, "state": s.State})
+			return
+		}
+		if err := c.commit(r, outcome, reason, audit.Event{SessionID: id, PrincipalID: s.PrincipalID, Detail: map[string]any{"reason": body.Reason}}); err != nil {
+			writeError(w, http.StatusServiceUnavailable, "audit_unavailable", "the evidence journal could not record the action; the session was not changed")
+			return
+		}
+		ok := c.d.Sessions.Resume(id)
+		if suspend {
+			ok = c.d.Sessions.Suspend(id)
+		}
+		if !ok {
+			cur := c.d.Sessions.Get(id)
+			st := ""
+			if cur != nil {
+				st = cur.State
+			}
+			writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]string{"code": "wrong_state", "message": "the session changed state before the action applied"}, "state": st})
+			return
+		}
+		writeJSON(w, http.StatusOK, viewSession(c.d.Sessions.Get(id)))
+	}
 }
 
 // principals lists the configured framework principals, their OAuth

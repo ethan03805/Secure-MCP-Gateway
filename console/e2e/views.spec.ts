@@ -83,14 +83,21 @@ test("G-02 filter workbench: a redaction profile on synthetic text", async ({ pa
   await expect(page.locator("figure.json pre").last()).not.toContainText("jane@example.com");
 });
 
-test("G-03 audit profile tuning: the floor is read-only and capture is edited", async ({ page }) => {
-  claims("FR-8.5");
+// FR-8.5's verification: edit an Audit Profile, the floor is not editable
+// and the profile publishes (a full claim).
+test("G-03 audit profile tuning: the floor is read-only and the profile publishes", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.5" });
   await signIn(page, "/audit-profiles");
   const floor = page.getByRole("table", { name: "Mandatory audit floor" });
   await expect(floor).toContainText("auth_failure");
   await expect(floor.locator("input, select, textarea")).toHaveCount(0);
-  await page.getByLabel("Normal-band sampling rate (0 to 1)").fill("0.5");
-  await expect(page.getByText("sampling_rate = 0.5")).toBeVisible();
+  await page.getByLabel(/Observation retention/).fill("720h");
+  await expect(page.getByText('retention = "720h"')).toBeVisible();
+  const form = page.getByRole("form", { name: "Publish the Audit Profile" });
+  await form.getByLabel(/Reason for this revision/).fill("acceptance test");
+  await form.getByRole("button", { name: "Publish the Audit Profile" }).click();
+  await expect(page.getByText(/Published Audit Profile revision \d+\. It takes effect at the next start/)).toBeVisible();
+  await expect(page.getByText(/Revision \d+ takes effect at the next start of smcpd/)).toBeVisible();
 });
 
 test("G-04 observation workbench: grouped catalog search, presets, cost and preview", async ({ page }) => {
@@ -109,6 +116,13 @@ test("G-04 observation workbench: grouped catalog search, presets, cost and prev
   await page.getByRole("button", { name: "Show the configuration for this selection" }).click();
   await expect(page.getByText(/parameters = \[/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Live record preview" })).toBeVisible();
+  // Sampling and baseline controls (FR-8.10), published after the cost preview.
+  await page.getByLabel("Normal-band sampling rate (0 to 1)").fill("0.25");
+  await page.getByLabel("critical band from |z|").fill("5");
+  await page.getByRole("checkbox", { name: "server", exact: true }).check();
+  const form = page.getByRole("form", { name: "Publish the Observation Policy" });
+  await form.getByRole("button", { name: "Publish the Observation Policy" }).click();
+  await expect(page.getByText(/Published Observation Policy revision \d+/)).toBeVisible();
 });
 
 test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly drill-down", async ({ page }) => {
@@ -139,16 +153,21 @@ test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly dr
 });
 
 test("G-06 anomaly response: only restrict-only actions per band", async ({ page }) => {
+  // Partial: the published object carries the approval and withhold bands;
+  // alert-only versus escalated capture is not a setting of this build.
   claims("FR-8.14");
   await signIn(page, "/anomaly-response");
   await expect(page.getByRole("table", { name: "Current response per band" })).toContainText("uncharacterized");
   const options = await page.getByLabel("critical action").locator("option").allTextContents();
   expect(options).toEqual(["Record and alert", "Alert and escalate capture", "Escalate and require approval", "Require approval and withhold the result"]);
+  await page.getByLabel("elevated action").selectOption("escalate");
   await page.getByLabel("critical action").selectOption("withhold");
   await page.getByLabel("abnormal action").selectOption("approve");
   await expect(page.getByText(/withhold_band = "critical"/)).toBeVisible();
   await expect(page.getByText(/require_approval_band = "abnormal"/)).toBeVisible();
   await expect(page.getByText(/scoring = "sync"/)).toBeVisible();
+  await page.getByRole("form", { name: "Publish the Anomaly Response Policy" }).getByRole("button", { name: "Publish the Anomaly Response Policy" }).click();
+  await expect(page.getByText(/Published Anomaly Response Policy revision \d+/)).toBeVisible();
 });
 
 test("G-07 performance: throughput, overhead per revision and stage time", async ({ page }) => {
@@ -167,6 +186,11 @@ test("G-08 data server: graph state, store sizes, backup and keys", async ({ pag
   await signIn(page, "/data-server");
   await expect(page.getByText("The graph mirror is disabled")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Observation Store" })).toBeVisible();
+  // Change the Observation Store memory budget; it is published and shown as pending until the next start.
+  await page.getByLabel(/Observation Store memory budget \(MiB\)/).fill("384");
+  await page.getByRole("form", { name: "Publish the memory budget" }).getByRole("button", { name: "Publish the memory budget" }).click();
+  await expect(page.getByText(/Published memory budget revision \d+/)).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: /^384 MiB$/ })).toBeVisible();
   await page.getByLabel("Passphrase").fill("console e2e backup passphrase");
   await page.getByRole("button", { name: "Take a backup now" }).click();
   await expect(page.getByText(/Backup written/)).toBeVisible({ timeout: 60_000 });
@@ -198,11 +222,66 @@ test("G-09 research campaigns: create, submit, approve, export and dictionary", 
   await expect(page.getByRole("table", { name: "Dataset exports" })).toContainText("csv");
 });
 
-test("G-11 sessions and principals", async ({ page }) => {
-  claims("FR-8.19");
+// FR-8.19's verification: create a principal, issue a credential and
+// terminate one of its sessions from G-11 (a full claim). The session is
+// opened by the test MCP client signing in through OAuth with the new
+// credential; suspension and resumption are exercised on the way.
+test("G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.19" });
+  claims("FR-2.8", "FR-2.18");
   await signIn(page, "/sessions");
   await expect(page.getByRole("table", { name: "Principals" })).toContainText("claude-code-local");
-  await expect(page.getByRole("heading", { name: "Active sessions" })).toBeVisible();
+  const id = `e2e-agent-${Date.now() % 1_000_000}`;
+  const add = page.getByRole("form", { name: "Add a principal" });
+  await add.getByLabel("Principal ID").fill(id);
+  await add.getByLabel("Framework", { exact: true }).selectOption("other");
+  await add.getByLabel("Display name").fill("Acceptance test agent");
+  await add.getByRole("button", { name: "Create principal" }).click();
+  await expect(page.getByText(`Created principal ${id}.`)).toBeVisible();
+  await expect(page.getByRole("table", { name: "Principals" })).toContainText(id);
+
+  const issue = page.getByRole("form", { name: "Issue a credential" });
+  await issue.getByLabel("Principal").selectOption(id);
+  await issue.getByRole("button", { name: "Issue credential" }).click();
+  const issued = issue.getByRole("status");
+  await expect(issued).toContainText("Issued client");
+  const clientID = ((await issued.locator(".mono").first().textContent()) ?? "").trim();
+  expect(clientID).toMatch(/^smcp-client-/);
+  await expect(page.getByRole("table", { name: "Credentials" })).toContainText(clientID);
+
+  // A harness signs in with the new credential and makes one call.
+  const r = await mcpCall(g, "ref_read_file", { path: "hello.txt" }, { expect: g.marker, clientID }).done;
+  expect(r.code, r.out).toBe(0);
+  const row = page.getByRole("table", { name: "Sessions" }).getByRole("row").filter({ hasText: clientID });
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await row.getByRole("link").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Suspend session" }).click();
+  await page.getByRole("dialog", { name: "Suspend this session" }).getByRole("button", { name: "Suspend session" }).click();
+  await expect(page.getByText("Suspended.")).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: /^suspended$/ })).toBeVisible();
+  await page.getByRole("button", { name: "Resume session" }).click();
+  await page.getByRole("dialog", { name: "Resume this session" }).getByRole("button", { name: "Resume session" }).click();
+  await expect(page.getByRole("definition").filter({ hasText: /^active$/ })).toBeVisible();
+  await page.getByRole("button", { name: "Terminate session" }).click();
+  const term = page.getByRole("dialog", { name: "Terminate this session" });
+  await term.getByLabel(/Reason/).fill("acceptance test");
+  await term.getByRole("button", { name: "Terminate session" }).click();
+  await expect(page.getByRole("definition").filter({ hasText: /^terminated$/ })).toBeVisible();
+
+  // Suspend and enable the principal, then revoke the credential.
+  await go(page, "/sessions");
+  await page.getByRole("button", { name: `Suspend ${id}` }).click();
+  await page.getByRole("dialog", { name: `Suspend principal ${id}` }).getByRole("button", { name: "Suspend principal" }).click();
+  await expect(page.getByText(`Suspended principal ${id}.`)).toBeVisible();
+  await page.getByRole("button", { name: `Enable ${id}` }).click();
+  await page.getByRole("dialog", { name: `Enable principal ${id}` }).getByRole("button", { name: "Enable principal" }).click();
+  await expect(page.getByText(`Enabled principal ${id}.`)).toBeVisible();
+  await page.getByRole("button", { name: `Revoke ${clientID}` }).click();
+  await page.getByRole("dialog", { name: `Revoke credential ${clientID}` }).getByRole("button", { name: "Revoke credential" }).click();
+  await expect(page.getByText(`Revoked credential ${clientID}.`)).toBeVisible();
+  await expect(page.getByRole("table", { name: "Credentials" }).getByRole("row").filter({ hasText: clientID })).toContainText("revoked");
 });
 
 test("G-11 remote access: enable, disable and decide a client registration", async ({ page }) => {

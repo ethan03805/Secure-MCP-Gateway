@@ -3,6 +3,7 @@
 // and taking one, and the key inventory with rotation. Routes:
 // /api/v1/graph/status, /api/v1/graph/rebuild, /api/v1/observations/status,
 // /api/v1/backup, /api/v1/keys*.
+import { ObjectState, Publish, useObjects } from "./objects";
 import { useState, type ReactNode } from "react";
 import { post } from "../api";
 import { Meter } from "../charts";
@@ -106,6 +107,37 @@ function Graph() {
                 />
               </>
             )}
+          </>
+        )}
+      </Loaded>
+    </Section>
+  );
+}
+
+/** The Observation Store memory budget (FR-8.16), published as a revision. */
+function MemoryBudget() {
+  const objects = useObjects();
+  const eff = objects.status === "ok" ? (objects.data.effective?.memory_limit_bytes as number | undefined) : undefined;
+  const [mib, setMib] = useState<string | null>(null);
+  const value = mib ?? (eff ? String(Math.round(eff / (1 << 20))) : "512");
+  const n = Number(value);
+  const ok = Number.isInteger(n) && n >= 64 && n <= 65536;
+  return (
+    <Section title="Memory budget">
+      <Loaded res={objects} what="the memory budget" route="/api/v1/observations/objects">
+        {(o) => (
+          <>
+            <KV rows={[["Observation Store budget (published or configured)", <Mono>{eff ? bytes(eff) : "default 512 MiB"}</Mono>]]} />
+            <ObjectState objects={o} kind="memory_budget" label="memory budget" />
+            <div className="rule-grid">
+              <TextField label="Observation Store memory budget (MiB)" value={value} onChange={setMib} type="number" hint="64 MiB to 64 GiB; DuckDB memory_limit" />
+            </div>
+            {!ok && (
+              <p className="notice notice-bad" role="alert">
+                The budget must be a whole number of MiB from 64 to 65536.
+              </p>
+            )}
+            <Publish route="/api/v1/observations/memory-budget" label="memory budget" body={{ observation_memory_limit_bytes: n * (1 << 20) }} disabled={!ok} onPublished={objects.reload} />
           </>
         )}
       </Loaded>
@@ -253,12 +285,13 @@ export function DataServer() {
       <Help>
         <p>
           The Data Server (graph mirror and Observation Store) is optional: enforcement never waits for it, and when it is full or down, observations are
-          dropped and counted rather than slowing calls. Memory budgets are set in the [graph] and [observation] configuration tables. Backups are encrypted with
+          dropped and counted rather than slowing calls. The Observation Store memory budget is published here and takes effect at the next start; the graph memory budget is set in the [graph] table. Backups are encrypted with
           age; keep the passphrase or identity elsewhere.
         </p>
       </Help>
       {perm.can("GET /api/v1/graph/status") && <Graph />}
       {perm.can("GET /api/v1/observations/status") && <ObservationStore />}
+      {perm.can("GET /api/v1/observations/objects") && <MemoryBudget />}
       {perm.can("GET /api/v1/backup") && <Backups />}
       {perm.can("GET /api/v1/keys") && <Keys />}
     </>
