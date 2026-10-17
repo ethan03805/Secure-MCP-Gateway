@@ -820,7 +820,7 @@ R: Remote access arrives only through the tunnel connector; no port is opened to
 
 @SR-4.14-2 | Remote authentication
 P: SEC-4.14
-S: When the Remote Access Profile is enabled, the Harness Interface Endpoint (E-01) SHALL require on the remote listener an access token issued to an approved client for every request except OAuth metadata, authorization, token and registration requests.
+S: When the Remote Access Profile is enabled, the Harness Interface Endpoint (E-01) SHALL require on the remote listener an access token issued to an approved client for every request except OAuth metadata, authorization, token, registration, device authorization and device verification requests.
 A: E-01; E-03; F-01; F-04; X-13
 V: Test | Send MCP requests through the tunnel without a token, with a token from a pending client and with a valid token; confirm `-31006` for the first two and success for the third.
 SRC: SEC 4.14; OWNER (OAuth 2.1 with per-client registration)

@@ -53,4 +53,9 @@ type Call struct {
 	// obligation (E-31, FR-4.15) uses it. ApprovalReason names the cause.
 	RequireApproval bool
 	ApprovalReason  string
+	// Remote origin (FR-16.8): set for calls received on the Remote Access
+	// listener; stages that write evidence copy them onto their events.
+	Channel       string
+	ClientID      string
+	ClientAddress string
 }

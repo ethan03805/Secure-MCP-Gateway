@@ -47,6 +47,7 @@ type Config struct {
 	Observation   Observation   `toml:"observation" json:"observation"`
 	// Secrets enables the Secret Vault and Broker (E-19, E-20) when present.
 	Secrets *Secrets `toml:"secrets" json:"secrets"`
+	Remote  Remote   `toml:"remote" json:"remote"`
 
 	// Operations (E-21 export, E-22, E-23); see ops.go.
 	SchemaVersion int      `toml:"schema_version" json:"schema_version"`
@@ -315,6 +316,7 @@ func Parse(raw []byte) (*Config, error) {
 	if err := cfg.applyOpsDefaults(); err != nil {
 		return nil, err
 	}
+	cfg.Remote.applyDefaults(cfg.AdminListener.Address)
 	if err := cfg.check(); err != nil {
 		return nil, err
 	}
@@ -488,6 +490,9 @@ func (c *Config) check() error {
 				return fmt.Errorf("server %q: %s is in both env and secret_env", s.Alias, k)
 			}
 		}
+	}
+	if err := c.checkRemote(); err != nil {
+		return err
 	}
 	return c.Egress.check(aliases)
 }

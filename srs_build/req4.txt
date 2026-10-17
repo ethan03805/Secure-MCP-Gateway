@@ -855,7 +855,7 @@ R: Tokens must be audience-bound to the URL the agent actually uses.
 
 @FR-16.4 | Remote endpoint set
 P: FR-16
-S: The Harness Interface Endpoint (E-01) SHALL serve on the remote listener only the MCP endpoint and the OAuth metadata, authorization, token and registration endpoints, and SHALL answer every other path with HTTP 404.
+S: The Harness Interface Endpoint (E-01) SHALL serve on the remote listener only the MCP endpoint and the OAuth metadata, authorization, token, registration, device authorization and device verification endpoints, and SHALL answer every other path with HTTP 404.
 A: E-01; F-01; X-13
 V: Test | Request the session API, health, metrics and console paths through the remote listener; confirm 404 for each.
 SRC: OWNER (Remote Access profile); SEC 2.5

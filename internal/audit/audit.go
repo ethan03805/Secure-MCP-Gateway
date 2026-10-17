@@ -88,7 +88,15 @@ type Event struct {
 	Outcome        string `json:"outcome,omitempty"`
 	ReasonCode     string `json:"reason_code,omitempty"`
 	PolicyStatus   string `json:"policy_status"` // evaluated, not_evaluated, unavailable (SR-6.19-1)
-	Detail         any    `json:"detail,omitempty"`
+	// Remote origin (FR-16.8): Channel is "remote" on every event of a
+	// request received on the Remote Access listener; ClientAddress is the
+	// tunnel-supplied caller address and ClientAddressSource says it is
+	// "server-asserted" (a claim of the tunnel provider, not verified).
+	Channel             string `json:"channel,omitempty"`
+	ClientID            string `json:"client_id,omitempty"`
+	ClientAddress       string `json:"client_address,omitempty"`
+	ClientAddressSource string `json:"client_address_source,omitempty"`
+	Detail              any    `json:"detail,omitempty"`
 }
 
 // Recorder is the interface every element uses to write evidence. Record

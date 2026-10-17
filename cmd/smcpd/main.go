@@ -24,6 +24,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
+	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
 )
@@ -133,7 +134,16 @@ func run(cfgPath, level string) error {
 	defer mirror.Close()
 	sec.Attach(a.Admin, a.Registry)
 	go sec.Run(ctx, 0)
+	rs, err := remote.New(remote.Options{Config: cfg, Store: a.Store, Evidence: a.Evidence, Gateway: a.Gateway, Log: log}) // FR-16
+	if err != nil {
+		return fmt.Errorf("remote access: %w", err)
+	}
+	defer rs.Close()
+	rs.Register(a.Admin)
 	if err := a.Listen(); err != nil {
+		return err
+	}
+	if err := rs.Start(ctx); err != nil {
 		return err
 	}
 	revision := "none (fail-closed)"

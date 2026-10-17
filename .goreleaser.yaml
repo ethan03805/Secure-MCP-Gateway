@@ -49,6 +49,37 @@ builds:
       - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version={{ .Version }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
+  - id: smcp-session
+    main: ./cmd/smcp-session
+    binary: smcp-session
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/adapter.Version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  - id: smcp-stdio
+    main: ./cmd/smcp-stdio
+    binary: smcp-stdio
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/adapter.Version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+  - id: smcp-connect
+    main: ./cmd/smcp-connect
+    binary: smcp-connect
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/adapter.Version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
   - id: smcp
     formats: [tar.gz]
