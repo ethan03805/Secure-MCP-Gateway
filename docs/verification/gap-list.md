@@ -18,6 +18,8 @@ Updated on 2026-10-17 by the acceptance work: FR-11.1 and FR-10.11 are verified,
 
 Updated on 2026-10-17 by the E-01 to E-04 partials sweep: SR-7.11-1 is verified (CP-09 connection and unauthenticated-work limits, slow headers and bodies, `internal/edge.TestPreParseBounds`).
 
+Updated on 2026-10-17 by the egress-capability work: SR-5.16-1 is restored from Appendix N and verified (`TestEgressCapabilities`), and AT-10 is claimed by `TestAT10WebBroker`, so every scenario has a claiming test (FR-19.4). Whether the release label is "enforced" depends on the scenarios passing in the Enforced profile for the release commit (FR-19.3).
+
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
 ## E-01 Harness Interface Endpoint
@@ -66,7 +68,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-18 Egress Broker
 
-- SR-5.16-1 missing (partial claim exists): the broker removes the `Smcp-Egress-Auth` header before forwarding but neither requires it nor checks a one-use capability bound to the correlation ID, decision ID, policy revision and destination. Acceptance scenario AT-10 is not claimed until it does.
 
 ## E-20 Secret Broker
 
@@ -89,7 +90,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-8.32, FR-8.33 unverified (partial claims): `console/e2e/a11y.spec.ts` runs axe on every view as it loads and tabs through every control of every view in Chromium and Firefox; `console/e2e/keyboard.spec.ts` completes a set of actions in seven views with keyboard events only in all three browsers (WebKit with Option+Tab) and runs axe on each of its 21 intermediate states; the manual check is in `FR-8.32.md`. Missing: keyboard-only completion and axe for the remaining actions of the acceptance tests (for example G-04, G-05, G-09, G-12 and G-13 actions).
 - FR-11.8 external: the CI job `perf` measures the console's audit queries over a 100,000-event, 30-day journal (partial claim); analytics queries over 30 days of observation data and reference hardware are missing. The journal has no index (E-21 note).
 - FR-13.3 external: the `tap` workflow installed v1.0.0-rc.2 from the tap on macOS and Ubuntu and found every binary equal to the release archive (supporting record `FR-13.3.md`), but it is a CI workflow, not a test `tools/reqreport` counts.
-- FR-19.4 partial: 20 of the 21 scenarios are claimed by automated tests (`internal/acceptance`, the hostile, graph and edge suites, and `console/e2e/inert.spec.ts` for AT-07; `docs/acceptance.md`). AT-10 has none because the Egress Broker does not check the one-use capability of SR-5.16-1, so FR-19.3's label stays "not enforced".
 - SR-7.5-2 unverified (partial claim exists): bootstrap, hash-password and admin redeem refuse arguments, standard input and files looser than 0600; the interactive prompt is not exercised (no terminal in tests), and there is no separate install command (installation runs bootstrap).
 
 ## E-25 Graph Database Engine

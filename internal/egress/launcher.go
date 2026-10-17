@@ -52,13 +52,25 @@ func (l *attachingLauncher) Launch(ctx context.Context, spec pipeline.ServerSpec
 	if err != nil {
 		return nil, errors.Join(err, att.Close())
 	}
-	return &attachedProcess{Process: p, detach: att.Close}, nil
+	return &attachedProcess{Process: p, detach: att.Close, issue: att.Issue}, nil
 }
 
 type attachedProcess struct {
 	pipeline.Process
 	detach func() error
+	issue  func(pipeline.Binding) (*pipeline.EgressAuth, func())
 }
+
+// IssueEgress implements pipeline.EgressIssuer (SR-5.16-1).
+func (p *attachedProcess) IssueEgress(b pipeline.Binding) (*pipeline.EgressAuth, func()) {
+	if p.issue == nil {
+		return nil, func() {}
+	}
+	return p.issue(b)
+}
+
+// Unwrap implements pipeline.ProcessUnwrapper.
+func (p *attachedProcess) Unwrap() pipeline.Process { return p.Process }
 
 func (p *attachedProcess) Close() error {
 	return errors.Join(p.Process.Close(), p.detach())

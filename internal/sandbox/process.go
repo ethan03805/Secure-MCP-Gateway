@@ -30,6 +30,17 @@ type container struct {
 	once    sync.Once
 	err     error
 	release func()
+	// issue mints the egress capabilities of a call (SR-5.16-1); nil
+	// without an egress attachment or when capabilities are not required.
+	issue func(pipeline.Binding) (*pipeline.EgressAuth, func())
+}
+
+// IssueEgress implements pipeline.EgressIssuer.
+func (c *container) IssueEgress(b pipeline.Binding) (*pipeline.EgressAuth, func()) {
+	if c.issue == nil {
+		return nil, func() {}
+	}
+	return c.issue(b)
 }
 
 func (c *container) Read(b []byte) (int, error) {

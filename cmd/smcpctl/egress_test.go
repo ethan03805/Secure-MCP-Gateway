@@ -32,7 +32,14 @@ func TestEgressCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Fprintf(f, "\n[egress]\nenabled = true\n[[egress.grant]]\nserver = \"ref\"\nhost = \"127.0.0.1\"\nports = [%s]\nmethods = [\"GET\"]\naddresses = [\"127.0.0.1\"]\n", du.Port())
+	// The grant names an unpackaged server: the packaged reference server's
+	// manifest declares no egress, so a grant for it would keep it from
+	// starting (library.CheckEgressCeiling). The test process stands in for
+	// the instance and holds no per-call capabilities, so they are off here
+	// (internal/egress and the AT-10 acceptance test cover them).
+	fmt.Fprintf(f, "\n[[server]]\nalias = \"web\"\ncommand = %q\n\n[egress]\nenabled = true\nrequire_capability = false\n"+
+		"[[egress.grant]]\nserver = \"web\"\nhost = \"127.0.0.1\"\nports = [%s]\nmethods = [\"GET\"]\naddresses = [\"127.0.0.1\"]\n",
+		filepath.Join(binDir, "smcp-refserver"), du.Port())
 	f.Close()
 	mustCtl(t, "config", "validate", "--config", cfgPath)
 	d := startDaemon(t, cfgPath)
@@ -44,10 +51,19 @@ func TestEgressCommands(t *testing.T) {
 			Server, Proxy string
 		} `json:"instances"`
 	}
-	if err := json.Unmarshal([]byte(out), &st); err != nil || st.Advisory != 1 || len(st.Instances) != 1 || st.Instances[0].Server != "ref" {
+	if err := json.Unmarshal([]byte(out), &st); err != nil || st.Advisory != 2 || len(st.Instances) != 2 {
 		t.Fatalf("status %v: %s", err, out)
 	}
-	pu, _ := url.Parse(st.Instances[0].Proxy)
+	proxy := ""
+	for _, in := range st.Instances {
+		if in.Server == "web" {
+			proxy = in.Proxy
+		}
+	}
+	if proxy == "" {
+		t.Fatalf("no instance of web: %s", out)
+	}
+	pu, _ := url.Parse(proxy)
 	c := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{Proxy: http.ProxyURL(pu)}}
 	resp, err := c.Get(dest.URL + "/x")
 	if err != nil {
@@ -67,7 +83,7 @@ func TestEgressCommands(t *testing.T) {
 		t.Fatalf("ungranted: %d", resp.StatusCode)
 	}
 
-	if out := mustCtl(t, "egress", "grants", "--config", cfgPath, "--server", "ref"); !strings.Contains(out, `"host": "127.0.0.1"`) {
+	if out := mustCtl(t, "egress", "grants", "--config", cfgPath, "--server", "web"); !strings.Contains(out, `"host": "127.0.0.1"`) {
 		t.Fatal(out)
 	}
 	var conns string

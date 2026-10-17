@@ -14,16 +14,29 @@ import (
 // smaller request size, response size or timeout, never a larger one
 // (FR-5.38).
 type Egress struct {
-	Enabled           bool          `toml:"enabled" json:"enabled"`
-	ProxyEnv          *bool         `toml:"proxy_env" json:"proxy_env"`
-	RequestBytes      int64         `toml:"request_bytes" json:"request_bytes"`
-	ResponseBytes     int64         `toml:"response_bytes" json:"response_bytes"`
-	OperationTimeout  Duration      `toml:"operation_timeout" json:"operation_timeout"`
-	DialTimeout       Duration      `toml:"dial_timeout" json:"dial_timeout"`
-	RequestsPerMinute int           `toml:"requests_per_minute" json:"requests_per_minute"`
-	BytesPerMinute    int64         `toml:"bytes_per_minute" json:"bytes_per_minute"`
-	RecentRecords     int           `toml:"recent_records" json:"recent_records"`
-	Grants            []EgressGrant `toml:"grant" json:"grant"`
+	Enabled           bool     `toml:"enabled" json:"enabled"`
+	ProxyEnv          *bool    `toml:"proxy_env" json:"proxy_env"`
+	RequestBytes      int64    `toml:"request_bytes" json:"request_bytes"`
+	ResponseBytes     int64    `toml:"response_bytes" json:"response_bytes"`
+	OperationTimeout  Duration `toml:"operation_timeout" json:"operation_timeout"`
+	DialTimeout       Duration `toml:"dial_timeout" json:"dial_timeout"`
+	RequestsPerMinute int      `toml:"requests_per_minute" json:"requests_per_minute"`
+	BytesPerMinute    int64    `toml:"bytes_per_minute" json:"bytes_per_minute"`
+	RecentRecords     int      `toml:"recent_records" json:"recent_records"`
+	// RequireCapability (default true) makes the broker forward an
+	// operation only with a one-use capability of the current call in the
+	// Smcp-Egress-Auth header (SR-5.16-1).
+	RequireCapability *bool `toml:"require_capability" json:"require_capability"`
+	// CapabilityTokens is the number of capabilities delivered per grant
+	// with each call (default 8).
+	CapabilityTokens int `toml:"capability_tokens" json:"capability_tokens"`
+	// Resolvers, when set, are the DNS servers (host:port) the broker asks
+	// instead of the host's resolver.
+	Resolvers []string `toml:"resolvers" json:"resolvers"`
+	// CAFile is a PEM file of certificates trusted, in addition to the
+	// system trust store, for destinations whose TLS the broker originates.
+	CAFile string        `toml:"ca_file" json:"ca_file"`
+	Grants []EgressGrant `toml:"grant" json:"grant"`
 }
 
 // EgressGrant permits one server alias to reach one destination host on the
@@ -70,6 +83,7 @@ var EgressDefaults = []EgressDefault{
 	{"requests_per_minute", 60, func(e *Egress) any { return &e.RequestsPerMinute }},
 	{"bytes_per_minute", int64(64 << 20), func(e *Egress) any { return &e.BytesPerMinute }},
 	{"recent_records", 256, func(e *Egress) any { return &e.RecentRecords }},
+	{"capability_tokens", 8, func(e *Egress) any { return &e.CapabilityTokens }},
 }
 
 func (e *Egress) applyDefaults(set map[string]bool) {
@@ -89,6 +103,10 @@ func (e *Egress) applyDefaults(set map[string]bool) {
 	if e.ProxyEnv == nil {
 		t := true
 		e.ProxyEnv = &t
+	}
+	if e.RequireCapability == nil {
+		t := true
+		e.RequireCapability = &t
 	}
 	for i := range e.Grants {
 		g := &e.Grants[i]
@@ -112,6 +130,11 @@ func (e *Egress) check(servers map[string]bool) error {
 	}{{"operation_timeout", e.OperationTimeout}, {"dial_timeout", e.DialTimeout}} {
 		if d.v.Duration <= 0 {
 			return fmt.Errorf("egress.%s must be a positive duration", d.key)
+		}
+	}
+	for _, r := range e.Resolvers {
+		if _, err := netip.ParseAddrPort(r); err != nil {
+			return fmt.Errorf("egress.resolvers: %q is not an IP address and port", r)
 		}
 	}
 	envs := map[string]string{}

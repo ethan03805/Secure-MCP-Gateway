@@ -28,7 +28,7 @@ on the status data published for the tagged commit and adds the result to the re
 
 | Scenario | Tests | Profile |
 |---|---|---|
-| AT-01 to AT-06, AT-09, AT-13 to AT-16, AT-18 to AT-21 | `internal/acceptance`: the real `smcpd`, `smcpctl` and `smcp-refserver`, bootstrapped in temporary directories and driven through the CLI, the control API and an OAuth-signed MCP client | Standalone in the `go` job; Enforced in the `acceptance-enforced` job (`SMCP_ACCEPTANCE_PROFILE=enforced`, rootless Podman) |
+| AT-01 to AT-06, AT-09, AT-10, AT-13 to AT-16, AT-18 to AT-21 | `internal/acceptance`: the real `smcpd`, `smcpctl` and `smcp-refserver`, bootstrapped in temporary directories and driven through the CLI, the control API and an OAuth-signed MCP client | Standalone in the `go` job; Enforced in the `acceptance-enforced` job (`SMCP_ACCEPTANCE_PROFILE=enforced`, rootless Podman) |
 | AT-08 | `internal/hostile`: HF-20 to HF-24 must all pass | Enforced (CI job `hostile`) |
 | AT-09 | also `internal/hostile`: HF-04 to HF-09 and HF-16 | Standalone and Enforced (CI job `hostile`) |
 | AT-11 | `internal/graph` `TestAT11AuditLinkageSurvivesChanges` | Standalone |
@@ -36,9 +36,7 @@ on the status data published for the tagged commit and adds the result to the re
 | AT-17 | `internal/acceptance` `TestAT17OfflineEngineeringWorkflow`, in the CI job `offline`: the reference filesystem and git packages are built with network access, then the acceptance suite runs in a network namespace with loopback only | Standalone |
 | AT-20 | `internal/acceptance` `TestAT20LimitsAndLoad` mounts a 320 MiB file system (disk image on macOS, tmpfs with sudo on Linux) to fill the audit reserve | Standalone |
 | AT-07 | `console/e2e/inert.spec.ts` (Playwright): hostile strings in every view are inert text, and G-10 bounds evidence to 256 KiB per page | Standalone (CI job `console`) |
-| AT-10 | none yet: see the gap list | not run |
-
-AT-10 needs the one-use egress capability of SR-5.16-1, which the Egress Broker does not check. It is not claimed until that exists.
+| AT-10 | `internal/acceptance` `TestAT10WebBroker`: the `EGRESS` probe fixture of `smcp-hostile` behind the Egress Broker with one-use capabilities required, a DNS fixture (`[egress] resolvers`) and a test CA (`ca_file`); grant scope, capabilities, reserved addresses, rebinding, redirect chains and public fetch | Standalone in the `go` job; Enforced in the `acceptance-enforced` job (`network = "egress"`) |
 
 Run the suite locally with `go test ./internal/acceptance/` (about 100 seconds; skipped with `-short`). AT-17 skips unless `SMCP_ACCEPTANCE_OFFLINE=1` and `SMCP_REFPKG_DIR` are set.
 

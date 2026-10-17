@@ -36,11 +36,14 @@ func disabled(w http.ResponseWriter) {
 
 // StatusView is the body of GET /api/v1/egress.
 type StatusView struct {
-	Enabled   bool           `json:"enabled"`
-	Enforced  int            `json:"enforced_instances"`
-	Advisory  int            `json:"advisory_instances"`
-	Instances []InstanceInfo `json:"instances"`
-	Limits    LimitsView     `json:"limits"`
+	Enabled  bool `json:"enabled"`
+	Enforced int  `json:"enforced_instances"`
+	Advisory int  `json:"advisory_instances"`
+	// RequireCapability reports whether each operation needs a one-use
+	// capability of the current call (SR-5.16-1).
+	RequireCapability bool           `json:"require_capability"`
+	Instances         []InstanceInfo `json:"instances"`
+	Limits            LimitsView     `json:"limits"`
 }
 
 // LimitsView is Limits in JSON form.
@@ -58,7 +61,7 @@ func (b *Broker) apiStatus(w http.ResponseWriter, _ *http.Request) {
 		disabled(w)
 		return
 	}
-	v := StatusView{Enabled: true, Instances: b.Instances()}
+	v := StatusView{Enabled: true, Instances: b.Instances(), RequireCapability: b.o.RequireCapability}
 	for _, in := range v.Instances {
 		if in.Enforced {
 			v.Enforced++

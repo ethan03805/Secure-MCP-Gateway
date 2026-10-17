@@ -6594,6 +6594,19 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 5.15 |
 | Rationale | SSRF defense. |
 
+#### SR-5.16-1 — One-use egress capability
+
+| Field | Value |
+|---|---|
+| ID | SR-5.16-1 |
+| Parent ID | SEC-5.16 — One-use web authorization (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Egress Broker (E-18) **SHALL** require on each operation a one-use capability in the `Smcp-Egress-Auth` header bound to the correlation ID, decision ID, policy revision and destination, and **SHALL** remove the header before forwarding. |
+| Allocation | Elements: E-18 Egress Broker, E-12 Enforcement Coordinator; Functions: F-45; Internal interfaces: I-25 |
+| Verification Method | Test |
+| Verification Statement | Replay a used capability and present one for another destination; confirm refusal and header removal. |
+| Source | SEC 5.16 |
+| Rationale | Each outbound operation is individually authorized. The capabilities of a call are minted when the call is dispatched to the instance and delivered in its `_meta` (CP-23); unused ones are revoked when the call returns. An operator may turn the check off (`[egress] require_capability = false`) for a server whose HTTP client cannot attach the header; the broker then authorizes each operation by instance and grant (SR-4.5-2) and reports the setting in its status. |
+
 #### SR-5.17-1 — No ambient cookies
 
 | Field | Value |
@@ -7174,7 +7187,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-20 | Listen keep-alive / listen streams per session | 15 s / 2 | New |
 | CP-21 | Progress relay rate | ≤ 10 notifications/s per request | New |
 | CP-22 | Gateway error codes | Appendix B | New |
-| CP-23 | Gateway metadata names | `_meta` prefix `local.smcpgw/`; session token in `Authorization: Bearer` (RFC 6750 header only) on the TLS listener; on the UDS listener the session is bound to the connection (first message `local.smcpgw/authenticate`, FR-2.15); egress header `Smcp-Egress-Auth` | New |
+| CP-23 | Gateway metadata names | `_meta` prefix `local.smcpgw/`; session token in `Authorization: Bearer` (RFC 6750 header only) on the TLS listener; on the UDS listener the session is bound to the connection (first message `local.smcpgw/authenticate`, FR-2.15); egress header `Smcp-Egress-Auth`, whose one-use capabilities each call delivers in `_meta` `local.smcpgw/egress_auth` | New |
 | CP-24 | Default instance budget | 512 MiB RAM, 1 CPU, 128 PIDs | SEC |
 | CP-25 | Retention defaults | Metadata 90 d; payload 7 d; temporary full capture ≤ 24 h | SEC |
 | CP-26 | Audit/evidence quota | 10 GiB; warn at 80% | SEC |
@@ -7442,7 +7455,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 5.13 | Untrusted content treatment | MUST | Realized by SR | SR-5.13-1, SR-5.13-2 |
 | 5.14 | Context-sensitive text checks | MUST | Realized by SR | SR-5.14-1 |
 | 5.15 | Connection-time destination checks | MUST | Realized by SR | SR-5.15-1, SR-5.15-2 |
-| 5.16 | One-use web authorization | MUST | Deferred | SR-5.16-1 (Appendix N) |
+| 5.16 | One-use web authorization | MUST | Realized by SR | SR-5.16-1 |
 | 5.17 | Web content execution | MUST | Realized by SR | SR-5.17-1 |
 | 5.18 | Uninspected binary content | MUST | Realized by SR | SR-5.18-1, SR-5.18-2 |
 | 5.19 | Public-fetch method profile | MUST | Realized by SR | SR-5.19-1 |
@@ -7528,13 +7541,13 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-09 | Request Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
 | E-10 | Tool Dispatcher | FR-1.32, FR-1.39, FR-1.40, FR-1.41, FR-1.43, FR-4, FR-4.3, FR-4.8, FR-4.9, FR-4.10, FR-4.13, FR-5, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.32, FR-5.40, FR-11.5, FR-12.9 | SR-2.10-1, SR-5.6-2, SR-5.7-3, SR-7.2-1, SR-7.6-2, SR-7.12-1 |
 | E-11 | Response Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.12, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-2-1, SR-5.7-3, SR-5.9-1, SR-5.10-1, SR-5.13-1, SR-5.14-1, SR-5.18-1, SR-5.20-1, SR-5.20-2 |
-| E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8 | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1 |
+| E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8 | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-5.16-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1 |
 | E-13 | Library Trust Verifier | FR-5, FR-5.1, FR-5.2, FR-5.3, FR-5.4, FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.4, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.11, FR-14.12, FR-18.6 | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3.1-1, SR-3.2-1, SR-3.5-1, SR-5.9-2 |
 | E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.21, FR-5.22, FR-5.39, FR-5.40, FR-14, FR-14.9, FR-19.1, FR-19.5 | SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
 | E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1 | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1 |
 | E-16 | Execution Sandbox | FR-5, FR-12.3, FR-13.5, FR-19.1 | SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2 |
 | E-17 | Runtime Monitor | FR-5, FR-5.33, FR-5.34, FR-5.35 | — |
-| E-18 | Egress Broker | FR-5, FR-5.36, FR-5.37, FR-5.38, FR-6.6, FR-12.2, FR-19.1 | SR-4.5-1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.17-1, SR-5.19-1 |
+| E-18 | Egress Broker | FR-5, FR-5.36, FR-5.37, FR-5.38, FR-6.6, FR-12.2, FR-19.1 | SR-4.5-1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1 |
 | E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12 | SR-2.13-1, SR-2.13-3, SR-4.1-1 |
 | E-20 | Secret Broker | FR-3.1, FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11 | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
 | E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8 | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1 |
@@ -7601,7 +7614,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-42 | Observe runtime behavior | FR-5.33 |
 | F-43 | Detect declared-behavior deviation | FR-5.34 |
 | F-44 | Trigger containment response | FR-5.35 |
-| F-45 | Authorize and mediate egress | FR-5.36, FR-5.38, FR-19.1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.17-1, SR-5.19-1, SR-5.16-1 (deferred) |
+| F-45 | Authorize and mediate egress | FR-5.36, FR-5.38, FR-19.1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1 |
 | F-46 | Inject credential at egress | FR-6.6, SR-5.8-2 |
 | F-47 | Store and protect secrets | FR-6, FR-6.1, FR-6.2, FR-6.12, SR-2.13-1 |
 | F-48 | Rotate and retire secrets | FR-6, FR-6.3, FR-6.4 |
@@ -7707,7 +7720,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-22 | FR-5.9, FR-5.37 |
 | I-23 | FR-5.9, FR-5.27 |
 | I-24 | FR-5.33 |
-| I-25 | FR-5.36, SR-4.5-1, SR-5.16-1 (deferred) |
+| I-25 | FR-5.36, SR-4.5-1, SR-5.16-1 |
 | I-26 | FR-6.6 |
 | I-27 | SR-2.13-3 |
 | I-28 | FR-6.7, FR-6.8 |
@@ -8252,6 +8265,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-5.14-1 | SEC-5.14 | Test | E-09, E-11 | Unicode corpus |
 | SR-5.15-1 | SEC-5.15 | Test | E-18 | Connection-time resolution |
 | SR-5.15-2 | SEC-5.15 | Test | E-18 | Reserved address denial |
+| SR-5.16-1 | SEC-5.16 | Test | E-18, E-12 | One-use egress capability |
 | SR-5.17-1 | SEC-5.17 | Test | E-18 | No ambient cookies |
 | SR-5.18-1 | SEC-5.18 | Test | E-11 | Binary content gate |
 | SR-5.18-2 | SEC-5.18 | Test | E-08 | Icon handling |
@@ -8301,9 +8315,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 
 | Check | Result |
 |---|---|
-| Requirements | 528 total: 367 FR (19 roots), 161 SR |
-| Deferred from release 1.0 (Appendix N) | 33: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-5.16-1, SR-6.6-1, SR-6.8-1, SR-6.9-1 |
-| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 404 |
+| Requirements | 529 total: 367 FR (19 roots), 162 SR |
+| Deferred from release 1.0 (Appendix N) | 32: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1 |
+| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 405 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
@@ -8872,20 +8886,6 @@ These records keep their IDs and text so that a later release can restore them u
 | Source | SEC 5.3; MCP:basic/transports/stdio §Backward Compatibility |
 | Rationale | Specification fallback rule. |
 | Deferral | Deferred with the era probe (FR-5.16): release 1.0 sends no era probe, so there is no probe error to classify. |
-
-#### SR-5.16-1 — One-use egress capability (deferred)
-
-| Field | Value |
-|---|---|
-| ID | SR-5.16-1 |
-| Parent ID | SEC-5.16 — One-use web authorization (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Egress Broker (E-18) **SHALL** require on each operation a one-use capability in the `Smcp-Egress-Auth` header bound to the correlation ID, decision ID, policy revision and destination, and **SHALL** remove the header before forwarding. |
-| Allocation | Elements: E-18 Egress Broker, E-12 Enforcement Coordinator; Functions: F-45; Internal interfaces: I-25 |
-| Verification Method | Test |
-| Verification Statement | Replay a used capability and present one for another destination; confirm refusal and header removal. |
-| Source | SEC 5.16 |
-| Rationale | Each outbound operation is individually authorized. |
-| Deferral | A per-operation capability would have to be attached by the server's own HTTP client, and the third-party MCP servers release 1.0 runs do not send one. Release 1.0 authorizes each operation instead by the instance it comes from and the destination: an instance reaches only its own broker listeners (SR-4.5-1), each operation is checked against that instance's current grants before any connection (SR-4.5-2), and the broker removes any `Smcp-Egress-Auth` header it receives. Per-call capabilities are deferred until servers can be given an egress client that carries them. |
 
 #### SR-6.6-1 — Policy-directed payload capture (deferred)
 
