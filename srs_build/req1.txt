@@ -472,11 +472,11 @@ R: The harness needs the token and the policy context for diagnostics.
 
 @FR-2.5 | Session token presentation
 P: FR-2
-S: The Identity & Authentication Service (E-03) SHALL read the session token from the `Authorization: Bearer` request header on the TLS listener, never from a query parameter, and from `_meta["local.smcpgw/session"]` on the UDS listener.
+S: The Identity & Authentication Service (E-03) SHALL read the session token from the `Authorization: Bearer` request header on the TLS listener, never from a query parameter, and on the UDS listener SHALL bind the session to the connection that authenticated under FR-2.15, reading no token from the messages it carries.
 A: E-03; F-05; X-01; I-02
-V: Test | Send MCP requests with the token in each documented location and as a query parameter; confirm acceptance of the header and `_meta` forms, and rejection with -31006 when the token is absent or sent only as a query parameter.
+V: Test | Send MCP requests with the token in the header, as a query parameter and without a token; confirm acceptance of the header form and rejection with -31006 otherwise; on the UDS listener confirm that messages on an authenticated connection are served without a token.
 SRC: Appendix A CP-23; RFC 6750; Client-Compatibility-Brief §3
-R: Every shipping client sends bearer tokens in the Authorization header. None can send a custom session header without a helper.
+R: Every shipping client sends bearer tokens in the Authorization header. None can send a custom session header without a helper. On the UDS socket the kernel peer credentials and the key authenticate the connection once (FR-2.15); a per-message token would add no assurance and would stop relays such as smcp-stdio from forwarding messages unchanged (FR-12.13).
 
 @FR-2.6 | Template selection
 P: FR-2

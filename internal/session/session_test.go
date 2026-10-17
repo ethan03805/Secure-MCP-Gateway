@@ -101,7 +101,7 @@ func TestCreateSelectsTemplateAndLimits(t *testing.T) {
 }
 
 func TestAuthenticateAndLifetimes(t *testing.T) {
-	// FR-2.5 also covers the UDS listener, which does not exist yet.
+	// FR-2.5 is verified by internal/edge.TestTokenPresentation.
 	reqtest.Verifies(t, "FR-2.9", "FR-2.22", "SR-2.1-2")
 	reqtest.Partial(t, "FR-2.5", "SR-2.3-1")
 	s := newStore(t)

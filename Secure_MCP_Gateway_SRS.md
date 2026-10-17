@@ -988,12 +988,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-2.5 |
 | Parent ID | FR-2 — Identity and sessions |
-| Statement | The Identity & Authentication Service (E-03) **SHALL** read the session token from the `Authorization: Bearer` request header on the TLS listener, never from a query parameter, and from `_meta["local.smcpgw/session"]` on the UDS listener. |
+| Statement | The Identity & Authentication Service (E-03) **SHALL** read the session token from the `Authorization: Bearer` request header on the TLS listener, never from a query parameter, and on the UDS listener **SHALL** bind the session to the connection that authenticated under FR-2.15, reading no token from the messages it carries. |
 | Allocation | Elements: E-03 Identity & Authentication Service; Functions: F-05; External interfaces: X-01; Internal interfaces: I-02 |
 | Verification Method | Test |
-| Verification Statement | Send MCP requests with the token in each documented location and as a query parameter; confirm acceptance of the header and `_meta` forms, and rejection with -31006 when the token is absent or sent only as a query parameter. |
+| Verification Statement | Send MCP requests with the token in the header, as a query parameter and without a token; confirm acceptance of the header form and rejection with -31006 otherwise; on the UDS listener confirm that messages on an authenticated connection are served without a token. |
 | Source | Appendix A CP-23; RFC 6750; Client-Compatibility-Brief §3 |
-| Rationale | Every shipping client sends bearer tokens in the Authorization header. None can send a custom session header without a helper. |
+| Rationale | Every shipping client sends bearer tokens in the Authorization header. None can send a custom session header without a helper. On the UDS socket the kernel peer credentials and the key authenticate the connection once (FR-2.15); a per-message token would add no assurance and would stop relays such as smcp-stdio from forwarding messages unchanged (FR-12.13). |
 
 #### FR-2.6 — Template selection
 
@@ -7200,7 +7200,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-20 | Listen keep-alive / listen streams per session | 15 s / 2 | New |
 | CP-21 | Progress relay rate | ≤ 10 notifications/s per request | New |
 | CP-22 | Gateway error codes | Appendix B | New |
-| CP-23 | Gateway metadata names | `_meta` prefix `local.smcpgw/`; session token in `Authorization: Bearer` (RFC 6750 header only) on the TLS listener and `_meta["local.smcpgw/session"]` on the UDS listener; egress header `Smcp-Egress-Auth` | New |
+| CP-23 | Gateway metadata names | `_meta` prefix `local.smcpgw/`; session token in `Authorization: Bearer` (RFC 6750 header only) on the TLS listener; on the UDS listener the session is bound to the connection (first message `local.smcpgw/authenticate`, FR-2.15); egress header `Smcp-Egress-Auth` | New |
 | CP-24 | Default instance budget | 512 MiB RAM, 1 CPU, 128 PIDs | SEC |
 | CP-25 | Retention defaults | Metadata 90 d; payload 7 d; temporary full capture ≤ 24 h | SEC |
 | CP-26 | Audit/evidence quota | 10 GiB; warn at 80% | SEC |

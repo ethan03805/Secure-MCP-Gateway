@@ -228,6 +228,7 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - New optional `[uds]` table: the Gateway listens on a Unix-domain socket (CP-02 default `/run/smcp/harness.sock`) created with mode 0660 and owned by the configured group (default `smcp-harness`). The socket carries newline-delimited JSON-RPC; the first message (`local.smcpgw/authenticate`) must carry the bearer key registered in `[[uds.peer]]` for the kernel-reported peer UID, otherwise `-31006` and the connection closes. Later messages go through the same chain as the TLS endpoint; `notifications/cancelled` cancels a request in flight, listen streams keep their `subscriptionId`, closing the socket ends the session (`internal/edge/uds.go`, `docs/harness.md`).
 - `smcp-stdio` uses the socket when the credential file names `[gateway] socket` and `uds_key`; the old HTTP-over-socket dialing of the adapters is removed.
 - New tests verify FR-1.1 (the process's listening sockets enumerated from the kernel are exactly the TLS, UDS and admin listeners), FR-1.47, FR-2.15 and SR-2.8-3.
+- FR-2.5 is changed in the SRS (and CP-23): on the UDS listener the session is bound to the connection that authenticated, instead of a per-message `_meta["local.smcpgw/session"]` token, so relays forward messages unchanged; a new test verifies FR-2.5.
 
 ### Conformance suite, interface control documents, header characters (FR-12.9, FR-1.19, FR-1.48, SR-5.2-2, SR-5.6-1, FR-1.42)
 
