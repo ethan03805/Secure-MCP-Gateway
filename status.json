@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T02:41:10Z",
-  "commit": "ef055504ca267b32c87b79fdde4a27e06cc05441",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ef055504ca267b32c87b79fdde4a27e06cc05441",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38995699560",
+  "generatedAt": "2026-10-17T03:02:06Z",
+  "commit": "9e29ef00dcc41fd9be4a0293e2f0547eda280ab1",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/9e29ef00dcc41fd9be4a0293e2f0547eda280ab1",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38996980704",
   "tests": {
-    "total": 578,
-    "passed": 565,
-    "failed": 0,
+    "total": 586,
+    "passed": 572,
+    "failed": 1,
     "skipped": 13,
-    "durationSec": 122.7,
+    "durationSec": 172.5,
     "packages": [
       {
         "name": "cmd/smcp-hostile",
@@ -25,8 +25,8 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 33,
-        "failed": 0,
+        "passed": 32,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -37,7 +37,7 @@
       },
       {
         "name": "internal/adminapi",
-        "passed": 6,
+        "passed": 8,
         "failed": 0,
         "skipped": 0
       },
@@ -108,6 +108,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/consoleauth",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/diag",
         "passed": 4,
         "failed": 0,
@@ -132,8 +138,14 @@
         "skipped": 2
       },
       {
+        "name": "internal/filterapi",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/filters",
-        "passed": 57,
+        "passed": 58,
         "failed": 0,
         "skipped": 0
       },
@@ -169,7 +181,7 @@
       },
       {
         "name": "internal/library",
-        "passed": 25,
+        "passed": 26,
         "failed": 0,
         "skipped": 0
       },
@@ -188,6 +200,12 @@
       {
         "name": "internal/obsstore",
         "passed": 19,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/openapi",
+        "passed": 2,
         "failed": 0,
         "skipped": 0
       },
@@ -278,7 +296,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 74.6,
+    "totalPct": 74.4,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -302,7 +320,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 32.5
+        "pct": 30.4
       },
       {
         "name": "cmd/smcpd",
@@ -318,11 +336,11 @@
       },
       {
         "name": "internal/adminapi",
-        "pct": 81.2
+        "pct": 83.2
       },
       {
         "name": "internal/analytics",
-        "pct": 68.8
+        "pct": 65.5
       },
       {
         "name": "internal/anomaly",
@@ -354,7 +372,7 @@
       },
       {
         "name": "internal/baseline",
-        "pct": 85.2
+        "pct": 85
       },
       {
         "name": "internal/channel",
@@ -369,6 +387,10 @@
         "pct": 89.9
       },
       {
+        "name": "internal/consoleauth",
+        "pct": 83.5
+      },
+      {
         "name": "internal/diag",
         "pct": 81.7
       },
@@ -381,12 +403,16 @@
         "pct": 80.6
       },
       {
+        "name": "internal/filterapi",
+        "pct": 89.7
+      },
+      {
         "name": "internal/filters",
         "pct": 88.8
       },
       {
         "name": "internal/graph",
-        "pct": 82.9
+        "pct": 82.8
       },
       {
         "name": "internal/gwtest",
@@ -414,7 +440,7 @@
       },
       {
         "name": "internal/library",
-        "pct": 86.1
+        "pct": 85.3
       },
       {
         "name": "internal/metrics",
@@ -429,12 +455,16 @@
         "pct": 80.9
       },
       {
+        "name": "internal/openapi",
+        "pct": 98.1
+      },
+      {
         "name": "internal/ops",
         "pct": 72.4
       },
       {
         "name": "internal/packaging",
-        "pct": 74.4
+        "pct": 74.8
       },
       {
         "name": "internal/packaging/pkgtest",
@@ -470,7 +500,7 @@
       },
       {
         "name": "internal/research",
-        "pct": 80.9
+        "pct": 79.4
       },
       {
         "name": "internal/sandbox",
@@ -482,7 +512,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.2
+        "pct": 79.1
       },
       {
         "name": "internal/session",
@@ -513,9 +543,9 @@
   "requirements": {
     "total": 558,
     "verified": 149,
-    "partial": 185,
-    "failing": 0,
-    "unverified": 224,
+    "partial": 182,
+    "failing": 4,
+    "unverified": 223,
     "byElement": [
       {
         "element": "E-01",
@@ -705,7 +735,7 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 3,
+        "verified": 4,
         "partial": 23,
         "failing": 0
       },
@@ -753,9 +783,9 @@
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 9,
-        "partial": 2,
-        "failing": 0
+        "verified": 8,
+        "partial": 0,
+        "failing": 3
       },
       {
         "element": "E-31",
@@ -770,8 +800,8 @@
         "name": "Research Dataset Service",
         "total": 9,
         "verified": 6,
-        "partial": 3,
-        "failing": 0
+        "partial": 2,
+        "failing": 1
       },
       {
         "element": "E-33",
@@ -2296,15 +2326,22 @@
       {
         "id": "FR-8.1",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/openapi.TestEveryRouteIsDescribed",
+          "internal/openapi.TestServedDocument"
+        ]
       },
       {
         "id": "FR-8.2",
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "internal/adminapi.TestRoleSeam"
+          "internal/adminapi.TestAppendixCMatrix",
+          "internal/adminapi.TestRoleSeam",
+          "internal/adminapi.TestRoutesRecordRoles",
+          "internal/consoleauth.TestConsoleAccounts",
+          "internal/openapi.TestServedDocument"
         ]
       },
       {
@@ -2402,7 +2439,8 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "internal/consoleapi.TestServersAndCatalog"
+          "internal/consoleapi.TestServersAndCatalog",
+          "internal/library.TestTrustAnchorRoutes"
         ]
       },
       {
@@ -2471,7 +2509,9 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestFiltersCommand"
+          "cmd/smcpctl.TestFiltersCommand",
+          "internal/filterapi.TestScanRoutes",
+          "internal/filters.TestScanWorkbench"
         ]
       },
       {
@@ -2819,7 +2859,7 @@
       {
         "id": "FR-10.18",
         "element": "E-30",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestSnapshotTriggersAndImmutability"
@@ -2836,7 +2876,7 @@
       {
         "id": "FR-10.20",
         "element": "E-30",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestPromotionManualAndAutomatic",
@@ -2846,7 +2886,7 @@
       {
         "id": "FR-10.21",
         "element": "E-30",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/anomaly.TestRollbackScoresRecordSnapshot",
@@ -2968,7 +3008,7 @@
       {
         "id": "FR-10.36",
         "element": "E-32",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/e2e.TestObservationThroughGateway"
@@ -3344,7 +3384,8 @@
         "status": "verified",
         "tests": [
           "cmd/smcpctl.TestPackageCommands",
-          "internal/library.TestOperatorAnchorScope"
+          "internal/library.TestOperatorAnchorScope",
+          "internal/library.TestTrustAnchorRoutes"
         ]
       },
       {
@@ -5740,7 +5781,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5775,7 +5816,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:43711: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44121: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -5831,6 +5872,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
