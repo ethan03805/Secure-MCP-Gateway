@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T00:02:35Z",
-  "commit": "c125e1945e0a6eac216910817c06184845488289",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/c125e1945e0a6eac216910817c06184845488289",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38984375242",
+  "generatedAt": "2026-10-17T00:10:26Z",
+  "commit": "adb1b9b6b6203f2a78853d184008de4e29a970b0",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/adb1b9b6b6203f2a78853d184008de4e29a970b0",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38984956929",
   "tests": {
-    "total": 107,
-    "passed": 107,
+    "total": 129,
+    "passed": 127,
     "failed": 0,
-    "skipped": 0,
-    "durationSec": 50.8,
+    "skipped": 2,
+    "durationSec": 58.8,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -19,7 +19,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 4,
+        "passed": 5,
         "failed": 0,
         "skipped": 0
       },
@@ -55,7 +55,7 @@
       },
       {
         "name": "internal/config",
-        "passed": 4,
+        "passed": 7,
         "failed": 0,
         "skipped": 0
       },
@@ -67,7 +67,7 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 12,
+        "passed": 14,
         "failed": 0,
         "skipped": 0
       },
@@ -78,6 +78,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/egress",
+        "passed": 13,
+        "failed": 0,
+        "skipped": 2
+      },
+      {
         "name": "internal/keys",
         "passed": 4,
         "failed": 0,
@@ -85,7 +91,7 @@
       },
       {
         "name": "internal/pipeline",
-        "passed": 5,
+        "passed": 6,
         "failed": 0,
         "skipped": 0
       },
@@ -122,7 +128,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.9,
+    "totalPct": 77.1,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -130,7 +136,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 42.8
+        "pct": 39.9
       },
       {
         "name": "cmd/smcpd",
@@ -142,7 +148,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 77.4
+        "pct": 76.8
       },
       {
         "name": "internal/approval",
@@ -150,7 +156,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 81.6
+        "pct": 82
       },
       {
         "name": "internal/authguard",
@@ -162,7 +168,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 88.3
+        "pct": 90.6
       },
       {
         "name": "internal/diag",
@@ -171,6 +177,10 @@
       {
         "name": "internal/edge",
         "pct": 90.7
+      },
+      {
+        "name": "internal/egress",
+        "pct": 79.9
       },
       {
         "name": "internal/ids",
@@ -182,7 +192,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 86.7
+        "pct": 86.8
       },
       {
         "name": "internal/policy",
@@ -212,10 +222,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 50,
-    "partial": 42,
+    "verified": 54,
+    "partial": 48,
     "failing": 0,
-    "unverified": 466,
+    "unverified": 456,
     "byElement": [
       {
         "element": "E-01",
@@ -334,7 +344,7 @@
         "name": "Server Runtime Manager",
         "total": 11,
         "verified": 0,
-        "partial": 1,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -342,7 +352,7 @@
         "name": "Execution Sandbox",
         "total": 5,
         "verified": 0,
-        "partial": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -357,8 +367,8 @@
         "element": "E-18",
         "name": "Egress Broker",
         "total": 9,
-        "verified": 0,
-        "partial": 0,
+        "verified": 4,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -1596,20 +1606,27 @@
       {
         "id": "FR-5.36",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/egress.TestEndpoints"
+        ]
       },
       {
         "id": "FR-5.37",
         "element": "E-15",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/egress.TestEndpoints",
+          "internal/egress.TestWrapLauncher"
+        ]
       },
       {
         "id": "FR-5.38",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/egress.TestLimits"
+        ]
       },
       {
         "id": "FR-5.39",
@@ -3581,14 +3598,20 @@
       {
         "id": "SR-4.5-1",
         "element": "E-16",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/egress.TestAttachNetwork"
+        ]
       },
       {
         "id": "SR-4.5-2",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/egress.TestConnectTunnel",
+          "internal/egress.TestProxyAllowsGrantedHTTP",
+          "internal/egress.TestProxyRefusesUngranted"
+        ]
       },
       {
         "id": "SR-4.6-1",
@@ -3799,26 +3822,34 @@
       {
         "id": "SR-5.15-1",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/egress.TestRebindingAndRedirects"
+        ]
       },
       {
         "id": "SR-5.15-2",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/egress.TestReservedAddressesRefused"
+        ]
       },
       {
         "id": "SR-5.16-1",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/egress.TestProxyAllowsGrantedHTTP"
+        ]
       },
       {
         "id": "SR-5.17-1",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/egress.TestProxyAllowsGrantedHTTP"
+        ]
       },
       {
         "id": "SR-5.18-1",
@@ -3835,8 +3866,10 @@
       {
         "id": "SR-5.19-1",
         "element": "E-18",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/egress.TestPublicFetch"
+        ]
       },
       {
         "id": "SR-5.20-1",
