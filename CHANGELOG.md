@@ -261,6 +261,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - `docs/icd/x-01-harness-interface.md` and `docs/icd/x-12-adapter-hooks.md` (FR-1.48), shipped in the release archives; a test checks that they cover the listed topics and every framework of the client matrix.
 - The harness listener answers a request whose header name or value has control characters, or whose header block is malformed, with HTTP 400 and `-32020` instead of net/http's plain-text 400 (`internal/edge/headerconn.go`): it terminates TLS itself and rewrites that fixed response. The harness listener now serves HTTP/1.1 only; clients that offer HTTP/2 fall back by ALPN. A new test verifies SR-5.2-2 on the running Gateway.
 
+### Partial claims sweep: profile refusal and client inventory (E-23, E-33)
+
+- SRS: FR-15.3 now covers the Appendix K clients whose configuration location is recorded, and requires doctor to say for the others (Grok Build, to be confirmed at pinning) that their servers are not listed, which it does.
+- New tests verify FR-13.9 (smcpd configured for the Enforced profile on a host without Podman and nftables on the PATH exits naming both; on a non-Linux host the refusal names the platform and the claim stays partial) and FR-15.3 (every server of every recorded client listed and the non-Gateway ones flagged, in each scope the client has, and the Grok Build statement).
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

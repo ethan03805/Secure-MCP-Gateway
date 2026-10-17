@@ -758,11 +758,11 @@ R: Claude Code's managed settings cannot be overridden from user or project sett
 
 @FR-15.3 | Doctor: MCP server inventory
 P: FR-15
-S: The `smcpctl doctor` command SHALL list, for each client of Appendix K installed for the current user, every MCP server configured in the client's user, project and managed scopes, and SHALL flag each server that is not the Gateway.
+S: The `smcpctl doctor` command SHALL list, for each client of Appendix K installed for the current user whose configuration location Appendix K records, every MCP server configured in the client's user, project and managed scopes, SHALL flag each server that is not the Gateway, and SHALL state for each other installed client that its servers are not listed.
 A: E-33; F-98; X-12
-V: Test | Create fixture configurations for each client with one Gateway entry and one other server in each scope; confirm every other server is listed and flagged.
+V: Test | Create fixture configurations for each client with one Gateway entry and one other server in each scope; confirm every other server is listed and flagged, and that a client without a recorded location is reported as not listed.
 SRC: OWNER (smcpctl doctor reporting non-Gateway MCP servers); REVIEW (C4)
-R: The operator cannot remove a bypass they do not know about.
+R: The operator cannot remove a bypass they do not know about. A client whose configuration location is still to be confirmed at pinning (Grok Build in Appendix K) cannot be read, so doctor says so instead of reporting it clean.
 
 @FR-15.4 | Doctor: readable paths
 P: FR-15
