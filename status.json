@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T16:05:34Z",
-  "commit": "b9131f471200b9076f1742d584cdc5795ce7b430",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/b9131f471200b9076f1742d584cdc5795ce7b430",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39047277243",
+  "generatedAt": "2026-10-17T16:25:59Z",
+  "commit": "ce158f5c4b710b231f013947fd055eac9aaae7f9",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ce158f5c4b710b231f013947fd055eac9aaae7f9",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39048202390",
   "tests": {
-    "total": 1115,
-    "passed": 1098,
-    "failed": 0,
+    "total": 1124,
+    "passed": 1106,
+    "failed": 1,
     "skipped": 17,
-    "durationSec": 440,
+    "durationSec": 762.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -109,7 +109,7 @@
       },
       {
         "name": "internal/app",
-        "passed": 1,
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
@@ -187,7 +187,7 @@
       },
       {
         "name": "internal/edge",
-        "passed": 71,
+        "passed": 72,
         "failed": 0,
         "skipped": 0
       },
@@ -288,6 +288,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/perf/run",
+        "passed": 4,
+        "failed": 1,
+        "skipped": 0
+      },
+      {
         "name": "internal/pipeline",
         "passed": 18,
         "failed": 0,
@@ -361,7 +367,7 @@
       },
       {
         "name": "internal/session",
-        "passed": 17,
+        "passed": 18,
         "failed": 0,
         "skipped": 0
       },
@@ -460,7 +466,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 73.6
+        "pct": 74.5
       },
       {
         "name": "internal/approval",
@@ -508,7 +514,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.8
+        "pct": 90.9
       },
       {
         "name": "internal/egress",
@@ -524,7 +530,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.6
+        "pct": 83.5
       },
       {
         "name": "internal/gwtest",
@@ -576,7 +582,7 @@
       },
       {
         "name": "internal/ops",
-        "pct": 72.3
+        "pct": 72.5
       },
       {
         "name": "internal/packaging",
@@ -648,11 +654,11 @@
       },
       {
         "name": "internal/testport",
-        "pct": 77.5
+        "pct": 80
       },
       {
         "name": "internal/tunnel",
-        "pct": 75.6
+        "pct": 77.2
       },
       {
         "name": "packaging/linux",
@@ -683,9 +689,9 @@
   "requirements": {
     "total": 528,
     "verified": 366,
-    "partial": 132,
-    "failing": 0,
-    "unverified": 30,
+    "partial": 134,
+    "failing": 1,
+    "unverified": 27,
     "byElement": [
       {
         "element": "E-01",
@@ -876,7 +882,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 26,
-        "partial": 41,
+        "partial": 42,
         "failing": 0
       },
       {
@@ -908,7 +914,7 @@
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
         "verified": 4,
-        "partial": 6,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -917,7 +923,7 @@
         "total": 14,
         "verified": 7,
         "partial": 6,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-30",
@@ -1473,7 +1479,8 @@
           "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "internal/consoleapi.TestSessionSuspendAndResume",
           "internal/session.TestCreateSelectsTemplateAndLimits",
-          "internal/session.TestSuspendAndResume"
+          "internal/session.TestSuspendAndResume",
+          "internal/session.TestSweepKeepsSuspendedSessions"
         ]
       },
       {
@@ -3538,7 +3545,8 @@
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
-          "internal/acceptance/offline.TestAT20LimitsAndLoad"
+          "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/perf/run.TestPerfFR_11_2"
         ]
       },
       {
@@ -3552,8 +3560,10 @@
       {
         "id": "FR-11.4",
         "element": "E-29",
-        "status": "unverified",
-        "tests": []
+        "status": "failing",
+        "tests": [
+          "internal/perf/run.TestPerfFR_11_4"
+        ]
       },
       {
         "id": "FR-11.5",
@@ -3562,7 +3572,8 @@
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
-          "internal/acceptance/offline.TestAT20LimitsAndLoad"
+          "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/perf/run.TestPerfFR_11_5"
         ]
       },
       {
@@ -3584,14 +3595,18 @@
       {
         "id": "FR-11.8",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/perf/run.TestPerfFR_11_8"
+        ]
       },
       {
         "id": "FR-11.9",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/perf/run.TestPerfFR_11_9"
+        ]
       },
       {
         "id": "FR-11.10",
@@ -5913,7 +5928,8 @@
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestAT19BackupRestoreRollback",
           "internal/audit.TestSealUnsignedAndFlush",
-          "internal/e2e.TestOpsOnlineBackup"
+          "internal/e2e.TestOpsOnlineBackup",
+          "internal/edge.TestDrainStopReleasesInFlightResults"
         ]
       },
       {
@@ -6643,7 +6659,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6678,7 +6694,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45365: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:46353: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6733,7 +6749,7 @@
     }
   ],
   "acceptance": {
-    "commit": "b9131f471200b9076f1742d584cdc5795ce7b430",
+    "commit": "ce158f5c4b710b231f013947fd055eac9aaae7f9",
     "label": "not enforced",
     "reasons": [
       "AT-07 Safe evidence display: no automated or recorded result in the Enforced profile",
@@ -7377,6 +7393,88 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
+  },
+  "performance": {
+    "schema": 1,
+    "commit": "ce158f5c4b710b231f013947fd055eac9aaae7f9",
+    "generatedAt": "2026-10-17T16:12:52Z",
+    "host": {
+      "os": "linux",
+      "arch": "amd64",
+      "cpus": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "goVersion": "go1.26.9",
+      "runner": "GitHub Actions 1000004980"
+    },
+    "referenceHardware": false,
+    "dataset": {
+      "rules": 9995,
+      "registryNodes": 5,
+      "candidateRules": 256,
+      "events": 100000,
+      "days": 30,
+      "callers": 8
+    },
+    "measurements": [
+      {
+        "requirement": "FR-11.2",
+        "name": "Decision latency",
+        "metric": "p95",
+        "unit": "ms",
+        "value": 0.025658,
+        "budget": 10,
+        "ceiling": 100,
+        "samples": 100000,
+        "pass": true,
+        "method": "policy.Decider.Decide on the compiled reference policy (9995 rules, 256 candidates per decision), 8 concurrent callers, latency as the caller sees it"
+      },
+      {
+        "requirement": "FR-11.5",
+        "name": "Gateway-added overhead (P-213)",
+        "metric": "p95",
+        "unit": "ms",
+        "value": 23.833119,
+        "budget": 50,
+        "ceiling": 250,
+        "samples": 2000,
+        "pass": true,
+        "method": "real smcpd with synchronous scoring, 8 concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (requested to dispatched plus completed to delivered)"
+      },
+      {
+        "requirement": "FR-11.4",
+        "name": "Observation capture overhead",
+        "metric": "p95 difference",
+        "unit": "ms",
+        "value": 8.861345500000002,
+        "budget": 1,
+        "samples": 4000,
+        "pass": false,
+        "method": "p95 P-213 with observation enabled (24.604 ms, mean of 23.704 and 25.504) minus disabled (15.743 ms, mean of 14.965 and 16.521), four fresh instances run in the order enabled, disabled, disabled, enabled"
+      },
+      {
+        "requirement": "FR-11.8",
+        "name": "Console query latency",
+        "metric": "p95",
+        "unit": "ms",
+        "value": 799.403779,
+        "budget": 2000,
+        "samples": 600,
+        "pass": true,
+        "method": "the console's audit queries (latest page, by class, by reason, by correlation, by time window, text search) over a journal of 100000 events spanning 30 days, 100 repetitions",
+        "note": "audit queries only; analytics queries over 30 days of observation data are not in the reference dataset yet"
+      },
+      {
+        "requirement": "FR-11.9",
+        "name": "Idle resident memory",
+        "metric": "RSS",
+        "unit": "MiB",
+        "value": 126.51171875,
+        "budget": 4096,
+        "samples": 1,
+        "pass": true,
+        "method": "resident set size of smcpd 12m41s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+      }
+    ]
   }
 }
