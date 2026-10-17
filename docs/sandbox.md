@@ -140,7 +140,7 @@ write = false              # read-only unless true
 | `network` | `"none"` | `"none"`: loopback only. `"egress"`: attached to the Egress Broker and confined to its listeners (see "Egress"); needs `[egress] enabled = true` |
 | `scope` | `"shared"` | Instance scope (FR-5.10). Only `"shared"` (one instance per server) is implemented; `"session"` and `"call"` are refused at load |
 | `userns` | `"auto"` | `"auto"` gives each instance its own range of subordinate UIDs. `"keep-id"` maps the identity that runs Podman (the Gateway user, or `run_as`) into the container so that writable grants on directories that user owns work; instances of that server then share one mapping |
-| `allow_spawn` | `false` | Declares that the server may start processes. When false, every process besides the first is a deviation |
+| `allow_spawn` | `false` | Declares that the server may start processes. When false, and the server's signed manifest does not declare `spawns_processes`, every process besides the first is a deviation |
 | `on_deviation` | `"alert"` | Containment action for a deviation: record it (`alert`) or also kill the instance (`kill-instance`). Resource-limit breaches always kill |
 | `mount` | none | Host paths granted to this server |
 
@@ -317,7 +317,7 @@ Errors that Podman reports when it starts a container appear in the server's std
 - Egress for sandboxed servers uses slirp4netns with host loopback (see "Egress" below). Only TCP to the instance's own broker listeners leaves the namespace; UDP, ICMP and every other destination are dropped. The broker's listeners are bound on the host's 127.0.0.1, so a host process could also use an instance's listener as that server; the broker's grants still apply.
 - Instance scope is shared (one instance per server, started with the Gateway). An instance that times out or exits is relaunched, and later calls wait for the new one; a relaunch that fails or reports another revision suspends the server. Per-session and per-call instances (FR-5.10), reuse and idle teardown (FR-5.11) and a crash-loop threshold (FR-5.12) need the registry to acquire instances per call; they are not built.
 - Containment actions `suspend-revision` and `suspend-session` (FR-5.35) are not built; `alert` and `kill-instance` are.
-- Declared behavior rules come from `[[runtime.server]]` (`allow_spawn`, `on_deviation`), not yet from signed manifests (E-13).
+- Declared behavior rules: process creation is declared by the signed manifest's `capabilities.spawns_processes` or by `allow_spawn` in `[[runtime.server]]` (FR-5.34); the containment action comes from `on_deviation`.
 - File opens outside mounts and network connection attempts are prevented (read-only root, no network) but not observed: observing them needs eBPF or a seccomp notifier.
 - Mount grants come from the operator's configuration; the intersection with manifest-declared and policy-granted roots (SR-4.6-1) needs manifests and policy roots.
 - Without `run_as`, the Gateway and rootless Podman run as one identity. With `run_as`, `smcp-core` can run any Podman command as `smcp-srv` (the sudoers rule names the Podman binary, not its arguments), and the `conmon` processes and the Podman client of each instance run as `smcp-srv`: smcpd cannot signal them directly and stops instances through `podman kill`.

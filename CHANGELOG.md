@@ -265,6 +265,10 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 
 - SRS: FR-15.3 now covers the Appendix K clients whose configuration location is recorded, and requires doctor to say for the others (Grok Build, to be confirmed at pinning) that their servers are not listed, which it does.
 - New tests verify FR-13.9 (smcpd configured for the Enforced profile on a host without Podman and nftables on the PATH exits naming both; on a non-Linux host the refusal names the platform and the claim stays partial) and FR-15.3 (every server of every recorded client listed and the non-Gateway ones flagged, in each scope the client has, and the Grok Build statement).
+### Partial claims sweep: declared behavior and anomaly scoring modes (E-09, E-17, E-31)
+
+- Declared behavior from the manifest (FR-5.34): the launcher wrapper of the package library passes the signed manifest's `capabilities.spawns_processes` with the launch (`pipeline.ServerSpec.SpawnsProcesses`), and the sandbox allows process creation when the manifest or `allow_spawn` declares it; any other new process is an `UNDECLARED_PROCESS` deviation. `docs/sandbox.md`.
+- New tests verify FR-5.34, FR-4.15 (with synchronous scoring an abnormal request gets the approval obligation and is never dispatched, and an abnormal response is withheld after dispatch and never delivered) and FR-10.28 (with asynchronous scoring an abnormal call is released, scored after its delivered event, and its score carries no blocking action).
 
 ### Owner decisions applied
 
