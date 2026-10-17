@@ -20,7 +20,7 @@
         "confirm": false
       },
       "label": "gateway-available",
-      "lastResult": "fail",
+      "lastResult": "pass",
       "lastRun": "2026-10-16",
       "quickStart": "docs/clients/claude-code.md"
     },
@@ -83,7 +83,7 @@
         "confirm": false
       },
       "label": "gateway-available",
-      "lastResult": "fail",
+      "lastResult": "pass",
       "lastRun": "2026-10-16",
       "quickStart": "docs/clients/opencode.md"
     },
