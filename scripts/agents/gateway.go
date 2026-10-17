@@ -108,7 +108,7 @@ func newPassword() string { return "agents-" + randomString(18) }
 
 // startGateway builds the binaries, bootstraps an instance with the
 // conformance policy and starts smcpd. The caller must call stop.
-func startGateway(ctx context.Context, root, work string, clients []*client, dnsOnlyCA bool, logf func(string, ...any)) (*gateway, error) {
+func startGateway(ctx context.Context, root, work string, clients []*client, dnsOnlyCA, broken bool, logf func(string, ...any)) (*gateway, error) {
 	g := &gateway{root: root, work: work, bin: filepath.Join(work, "bin"), dir: filepath.Join(work, "instance")}
 	if _, err := os.Stat(g.dir); err == nil {
 		return nil, fmt.Errorf("%s already exists; use an empty -work directory", g.dir)
@@ -116,8 +116,15 @@ func startGateway(ctx context.Context, root, work string, clients []*client, dns
 	if err := os.MkdirAll(g.bin, 0o755); err != nil {
 		return nil, err
 	}
+	args := []string{"build", "-trimpath"}
+	if broken {
+		// FR-15.8 broken-build check: internal/policy compiled with its
+		// deliberate defect (no rate limits, no approval obligations).
+		logf("BROKEN-BUILD CHECK: building smcpd with -tags smcp_broken")
+		args = append(args, "-tags", "smcp_broken")
+	}
 	logf("building smcpd, smcpctl and smcp-refserver into %s", g.bin)
-	build := exec.CommandContext(ctx, "go", "build", "-trimpath", "-o", g.bin+string(os.PathSeparator), "./cmd/smcpd", "./cmd/smcpctl", "./cmd/smcp-refserver")
+	build := exec.CommandContext(ctx, "go", append(args, "-o", g.bin+string(os.PathSeparator), "./cmd/smcpd", "./cmd/smcpctl", "./cmd/smcp-refserver")...)
 	build.Dir = root
 	if out, err := build.CombinedOutput(); err != nil {
 		return nil, fmt.Errorf("go build: %w\n%s", err, out)

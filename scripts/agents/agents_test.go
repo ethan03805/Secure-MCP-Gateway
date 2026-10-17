@@ -75,6 +75,60 @@ func TestReferenceRun(t *testing.T) {
 	}
 }
 
+// TestBrokenGatewayRun is the FR-15.8 broken-build check with the scripted
+// reference client: against smcpd built with -tags smcp_broken the client
+// still reaches the Gateway, its denied and approval scenarios fail, and
+// the broken-build verdict accepts the run.
+func TestBrokenGatewayRun(t *testing.T) {
+	reqtest.Partial(t, "FR-15.8")
+	if testing.Short() {
+		t.Skip("builds and starts smcpd")
+	}
+	dir := t.TempDir()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	res, err := run(ctx, options{
+		clients: "reference", out: filepath.Join(dir, "agents.json"), report: filepath.Join(dir, "report.json"),
+		work: filepath.Join(dir, "work"), timeout: time.Minute, maxTurns: 2, brokenGateway: true,
+	}, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res) != 1 || res[0].Result != resultFail || res[0].Mode != modeScripted+"+broken-gateway" {
+		t.Fatalf("reference client against the broken build: %+v", res)
+	}
+	for _, want := range []string{"denied (", "approval ("} {
+		if !strings.Contains(res[0].Detail, want) {
+			t.Errorf("detail lacks %q: %s", want, res[0].Detail)
+		}
+	}
+	if err := brokenVerdict(lastReports); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestClaudeCodeControlProtocol: Claude Code runs with the SDK control
+// protocol, so approval-obligated calls are asked of the suite, not
+// refused, and the prompt travels on stdin.
+func TestClaudeCodeControlProtocol(t *testing.T) {
+	reqtest.Partial(t, "FR-15.8")
+	t.Setenv(aiKeyEnv, "aigw-test-key-0123456789")
+	c := claudeCode()
+	e := &runEnv{g: &gateway{endpoint: "https://127.0.0.1:1/mcp", ca: "/ca.crt"}, dir: t.TempDir(), token: "t", maxTurns: 2, bin: "/bin/claude"}
+	argv := strings.Join(c.command(c, e, "the prompt").Args, " ")
+	for _, want := range []string{"--input-format stream-json", "--output-format stream-json", "--permission-prompt-tool stdio"} {
+		if !strings.Contains(argv, want) {
+			t.Errorf("argv lacks %q: %s", want, argv)
+		}
+	}
+	if strings.Contains(argv, "the prompt") {
+		t.Errorf("prompt must go to stdin, not argv: %s", argv)
+	}
+	if c.session == nil || c.localRefusal == nil {
+		t.Fatal("Claude Code needs a session driver and a refusal check")
+	}
+}
+
 func TestMatrixClientsCovered(t *testing.T) {
 	reqtest.Partial(t, "FR-15.8", "FR-15.10")
 	root, err := repoRoot()

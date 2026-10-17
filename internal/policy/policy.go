@@ -599,6 +599,10 @@ func (d *Decider) Decide(req Request) Decision {
 		return done()
 	}
 	dec.DecisiveRules = []string{rule.ID}
+	if BrokenBuild { // deliberate defect, smcp_broken builds only (FR-15.8)
+		dec.Outcome, dec.ReasonCode, dec.Route = Permit, ReasonPermit, req.Server
+		return done()
+	}
 	dec.SideEffect = EffectiveSideEffect(rule.SideEffect, req.SideEffect)
 	dec.SourceTrust = EffectiveSourceTrust(rule.SourceTrust, req.SourceTrust)
 	dec.TaintsSession = dec.SourceTrust == TrustUntrusted
