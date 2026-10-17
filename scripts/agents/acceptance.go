@@ -408,13 +408,13 @@ func acceptanceTranscript(reports []*caseReport, version, pinned, mode, verify s
 	for i, r := range reports {
 		fmt.Fprintf(&b, "\n## Case %d: %s\n\n", i+1, r.Title)
 		fmt.Fprintf(&b, "Result: %s. Duration %s, Claude Code exit status %s.\n\n", verdictText(r.Err), r.Duration.Round(100*time.Millisecond), r.Exit)
-		fmt.Fprintf(&b, "Prompt:\n\n```\n%s\n```\n\n", r.Prompt)
-		fmt.Fprintf(&b, "Tool call sent by Claude Code:\n\n```\n%s\n```\n\n", orDash(r.View.ToolUse))
+		fmt.Fprintf(&b, "Prompt:\n\n~~~~\n%s\n~~~~\n\n", r.Prompt)
+		fmt.Fprintf(&b, "Tool call sent by Claude Code:\n\n~~~~\n%s\n~~~~\n\n", orDash(r.View.ToolUse))
 		if r.Decision != "" {
-			fmt.Fprintf(&b, "Decision step:\n\n```\n%s\n```\n\n", r.Decision)
+			fmt.Fprintf(&b, "Decision step:\n\n~~~~\n%s\n~~~~\n\n", r.Decision)
 		}
-		fmt.Fprintf(&b, "Tool result received by Claude Code (is_error %v):\n\n```\n%s\n```\n\n", r.View.ResultError, orDash(r.View.ToolResult))
-		fmt.Fprintf(&b, "Final reply:\n\n```\n%s\n```\n\n", orDash(strings.TrimSpace(r.View.Reply)))
+		fmt.Fprintf(&b, "Tool result received by Claude Code (is_error %v):\n\n~~~~\n%s\n~~~~\n\n", r.View.ResultError, orDash(r.View.ToolResult))
+		fmt.Fprintf(&b, "Final reply:\n\n~~~~\n%s\n~~~~\n\n", orDash(strings.TrimSpace(r.View.Reply)))
 		b.WriteString("Journal events:\n\n| Time | Class | Phase | Outcome | Reason | Approver |\n|---|---|---|---|---|---|\n")
 		evs := append(append([]audit.Event{}, r.Calls...), r.Approvals...)
 		slices.SortStableFunc(evs, func(a, b audit.Event) int { return strings.Compare(a.Time, b.Time) })
