@@ -1,7 +1,8 @@
 package edge
 
 import (
-	"context"
+	"bufio"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,23 +13,35 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-// TestStreamCloseCancelsWithinOneSecond is FR-1.41: the harness closes the
-// SSE response stream of an in-flight tools/call (a request with a
-// progress token, answered as an event stream from its first message), and
-// notifications/cancelled for the call reaches the backend within 1 second.
+// TestStreamCloseCancelsWithinOneSecond is FR-1.41: a tools/call with a
+// progress token is answered as an event stream; once the backend's first
+// progress notification has arrived on it, the harness closes the
+// connection, and notifications/cancelled for the call reaches the backend
+// within 1 second. (Closing before the stream starts is
+// TestNorthboundCancellationPropagated.)
 func TestStreamCloseCancelsWithinOneSecond(t *testing.T) {
 	reqtest.Verifies(t, "FR-1.41")
 	ids := make(chan json.RawMessage, 1)
-	sc := &scripted{call: func(_ func(string), id json.RawMessage, _ string) bool {
+	sc := &scripted{call: func(w func(string), id json.RawMessage, _ string) bool {
+		// One progress notification (the registry's first southbound
+		// token) starts the harness's event stream; the call then never
+		// answers.
+		w(`{"jsonrpc":"2.0","method":"notifications/progress","params":{"progressToken":"smcp-1","progress":1,"message":"working"}}`)
 		ids <- id
-		return true // never answers
+		return true
 	}}
 	h := newScriptedHarness(t, sc, "")
 	_, tok := h.session("rw")
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// A raw TLS connection, so that closing it is exactly the harness
+	// closing the stream (no client transport in between).
+	tc := h.srv.Client().Transport.(*http.Transport).TLSClientConfig.Clone()
+	conn, err := tls.Dial("tcp", h.srv.Listener.Addr().String(), tc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
 	body := fmt.Sprintf(`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"t_w","arguments":{},"_meta":{"progressToken":"p8",%s}}}`, wireMeta)
-	req, err := http.NewRequestWithContext(ctx, "POST", h.srv.URL+"/mcp", strings.NewReader(body))
+	req, err := http.NewRequest("POST", h.srv.URL+"/mcp", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +51,10 @@ func TestStreamCloseCancelsWithinOneSecond(t *testing.T) {
 		req.Header.Set(k, v)
 	}
 	req.Header.Set("Mcp-Name", "t_w")
-	resp, err := h.srv.Client().Do(req)
+	if err := req.Write(conn); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.ReadResponse(bufio.NewReader(conn), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,10 +67,24 @@ func TestStreamCloseCancelsWithinOneSecond(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("the call was not dispatched")
 	}
+	// The relayed progress shows the stream is open and the call in
+	// flight.
+	br := bufio.NewReader(resp.Body)
+	for {
+		line, err := br.ReadString('\n')
+		if err != nil {
+			t.Fatalf("stream ended before the progress event: %v", err)
+		}
+		if strings.HasPrefix(line, "data:") {
+			if !strings.Contains(line, "notifications/progress") {
+				t.Fatalf("first event %q", line)
+			}
+			break
+		}
+	}
 	closed := time.Now()
-	cancel()
-	resp.Body.Close()
-	for time.Since(closed) < 2*time.Second {
+	conn.Close()
+	for time.Since(closed) < 3*time.Second {
 		for _, l := range sc.received() {
 			var m struct {
 				Method string `json:"method"`
@@ -71,5 +101,5 @@ func TestStreamCloseCancelsWithinOneSecond(t *testing.T) {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
-	t.Fatalf("no southbound notifications/cancelled for %s", id)
+	t.Fatalf("no southbound notifications/cancelled for %s within 3 s", id)
 }
