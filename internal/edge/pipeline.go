@@ -246,7 +246,7 @@ func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, 
 		if res.ApprovalID != "" {
 			extra["approvalId"] = res.ApprovalID
 		}
-		return c.refuse(gatewayError(CodePolicyDenied, "approval denied", reason, c.corr, c.dec.ID, extra),
+		return c.refuse(harnessVisible(gatewayError(CodePolicyDenied, "approval denied", reason, c.corr, c.dec.ID, extra)),
 			"approval", audit.PhaseDenied, "E-07", "deny", reason, "evaluated")
 	default:
 		reason := res.ReasonCode
@@ -271,9 +271,24 @@ func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, 
 		if !res.ExpiresAt.IsZero() {
 			extra["expiresAt"] = res.ExpiresAt.UTC().Format(time.RFC3339)
 		}
-		return c.refuse(gatewayError(CodeApprovalRequired, "approval required", reason, c.corr, c.dec.ID, extra),
+		return c.refuse(harnessVisible(gatewayError(CodeApprovalRequired, "approval required", reason, c.corr, c.dec.ID, extra)),
 			"approval", audit.PhaseDenied, "E-07", "pending", reason, "evaluated")
 	}
+}
+
+// harnessVisible appends the plain-language data.message to the JSON-RPC
+// error message of an approval outcome. Claude Code 2.1.302 shows a failed
+// tool call to the person as error.message only (FR-3.25 run,
+// docs/verification/FR-3.25.md), so without this the denial text and the
+// approval link of -31002 (FR-1.51) never reach the person.
+func harnessVisible(e *jsonrpc.Error) *jsonrpc.Error {
+	var data struct {
+		Message string `json:"message"`
+	}
+	if json.Unmarshal(e.Data, &data) == nil && data.Message != "" {
+		e.Message += ": " + data.Message
+	}
+	return e
 }
 
 // authorizeLaunch rechecks state under the barrier, commits the decision
