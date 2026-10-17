@@ -219,8 +219,7 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 		// Rootless Podman cannot apply an AppArmor profile itself; the
 		// packaged server profile attaches by path (docs/sandbox.md).
 		c := Check{ID: "apparmor-server", Name: "AppArmor profile " + ServerAppArmorProfile + " loaded", Status: CheckPass}
-		profiles, err := read("/sys/kernel/security/apparmor/profiles")
-		if err != nil || !strings.Contains(profiles, ServerAppArmorProfile+" (enforce)") {
+		if !appArmorEnforced(o.Root, ServerAppArmorProfile) {
 			c.Status, c.Detail = CheckWarn, "not loaded in enforce mode"
 			c.Remedy = "load packaging/linux/apparmor/" + ServerAppArmorProfile + " (install-enforced.sh does): apparmor_parser -r -W /etc/apparmor.d/" + ServerAppArmorProfile
 		}
@@ -272,6 +271,27 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 		strings.Join(h.CgroupControllers, ","), "systemd delegates them to user@.service by default; check /etc/systemd/system/user@.service.d (missing: "+strings.Join(missing, ",")+")")
 	add("seccomp", "seccomp available to Podman", h.Security.SeccompEnabled, "", "install a kernel with seccomp and the containers-common seccomp profile")
 	return out
+}
+
+// appArmorEnforced reports whether the AppArmor profile name is loaded in
+// enforce mode. The per-profile directories of apparmorfs are readable
+// without privilege; the profiles list, tried second, needs root.
+func appArmorEnforced(root, name string) bool {
+	dir := filepath.Join(root, "/sys/kernel/security/apparmor/policy/profiles")
+	if entries, err := os.ReadDir(dir); err == nil {
+		for _, e := range entries {
+			if !strings.HasPrefix(e.Name(), name+".") {
+				continue
+			}
+			n, _ := os.ReadFile(filepath.Join(dir, e.Name(), "name")) // #nosec G304 -- apparmorfs
+			m, _ := os.ReadFile(filepath.Join(dir, e.Name(), "mode")) // #nosec G304 -- apparmorfs
+			if strings.TrimSpace(string(n)) == name && strings.TrimSpace(string(m)) == "enforce" {
+				return true
+			}
+		}
+	}
+	b, err := os.ReadFile(filepath.Join(root, "/sys/kernel/security/apparmor/profiles")) // #nosec G304 -- fixed host path
+	return err == nil && slices.Contains(strings.Split(string(b), "\n"), name+" (enforce)")
 }
 
 // Failed returns the checks that did not pass (warnings excluded).

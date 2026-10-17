@@ -21,11 +21,8 @@ import (
 // installer ran) makes a missing profile a failure.
 func TestIntegrationServerAppArmorProfile(t *testing.T) {
 	reqtest.Partial(t, "FR-13.5", "SR-4.7-1")
-	profiles, _ := os.ReadFile("/sys/kernel/security/apparmor/profiles")
-	if !strings.Contains(string(profiles), ServerAppArmorProfile+" (enforce)") {
-		if os.Getenv("SMCP_SANDBOX_IT_APPARMOR") == "1" {
-			t.Fatalf("AppArmor profile %s is not loaded in enforce mode", ServerAppArmorProfile)
-		}
+	required := os.Getenv("SMCP_SANDBOX_IT_APPARMOR") == "1"
+	if !appArmorEnforced("", ServerAppArmorProfile) && !required {
 		t.Skipf("AppArmor profile %s is not loaded", ServerAppArmorProfile)
 	}
 	h := realHarness(t, itRuntime(t))
@@ -36,7 +33,8 @@ func TestIntegrationServerAppArmorProfile(t *testing.T) {
 	defer p.Close()
 	s := connect(t, p)
 	if label := strings.TrimSpace(callText(t, s, "read_file", map[string]any{"path": "/proc/self/attr/current"})); label != ServerAppArmorProfile+" (enforce)" {
-		t.Fatalf("server AppArmor label %q, want %q", label, ServerAppArmorProfile+" (enforce)")
+		t.Fatalf("server AppArmor label %q, want %q (profile loaded according to apparmorfs: %v)", label, ServerAppArmorProfile+" (enforce)",
+			appArmorEnforced("", ServerAppArmorProfile))
 	}
 	for _, path := range []string{"/proc/self/environ", "/proc/1/environ"} {
 		if got := callText(t, s, "read_file", map[string]any{"path": path}); !strings.HasPrefix(got, "blocked:") || !strings.Contains(got, "permission denied") {

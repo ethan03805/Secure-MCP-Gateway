@@ -81,6 +81,8 @@ profile smcpd /usr/local/bin/smcpd flags=(attach_disconnected) {
   /usr/bin/sudo PUx,
   # The apparmor-server doctor check.
   /sys/kernel/security/apparmor/profiles r,
+  /sys/kernel/security/apparmor/policy/profiles/ r,
+  /sys/kernel/security/apparmor/policy/profiles/*/{name,mode} r,
   /usr/bin/newuidmap r,
   /usr/bin/newgidmap r,
   /usr/sbin/nft r,

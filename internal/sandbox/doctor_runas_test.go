@@ -55,8 +55,22 @@ func TestDoctorReportsTheServerAppArmorProfile(t *testing.T) {
 	if s := status(Doctor(context.Background(), o)); s["apparmor-server"] != CheckWarn {
 		t.Fatalf("profile not loaded: %v", s)
 	}
+	// The unprivileged view: apparmorfs per-profile directories.
+	pd := filepath.Join(root, "sys/kernel/security/apparmor/policy/profiles/smcp-server.7")
+	_ = os.MkdirAll(pd, 0o700)
+	_ = os.WriteFile(filepath.Join(pd, "name"), []byte("smcp-server\n"), 0o600)
+	_ = os.WriteFile(filepath.Join(pd, "mode"), []byte("complain\n"), 0o600)
+	if s := status(Doctor(context.Background(), o)); s["apparmor-server"] != CheckWarn {
+		t.Fatalf("profile in complain mode: %v", s)
+	}
+	_ = os.WriteFile(filepath.Join(pd, "mode"), []byte("enforce\n"), 0o600)
+	if s := status(Doctor(context.Background(), o)); s["apparmor-server"] != CheckPass {
+		t.Fatalf("profile loaded (apparmorfs): %v", s)
+	}
+	// The root view: the profiles list.
+	_ = os.RemoveAll(filepath.Join(root, "sys/kernel/security/apparmor/policy"))
 	_ = os.WriteFile(filepath.Join(root, "sys/kernel/security/apparmor/profiles"), []byte("smcpd (enforce)\nsmcp-server (enforce)\n"), 0o600)
 	if s := status(Doctor(context.Background(), o)); s["apparmor-server"] != CheckPass {
-		t.Fatalf("profile loaded: %v", s)
+		t.Fatalf("profile loaded (profiles list): %v", s)
 	}
 }
