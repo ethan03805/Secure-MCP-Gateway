@@ -112,18 +112,32 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.5", Name: "Gateway-added overhead (P-213)", Metric: "p95", Unit: "ms",
 		Value: p95, Budget: BudgetOverheadMs, Ceiling: CeilingOverheadMs, Samples: len(syncScoring), Pass: p95 <= BudgetOverheadMs,
 		Method: fmt.Sprintf("real smcpd with synchronous scoring, %d concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (requested to dispatched plus completed to delivered)", o.Callers)})
-	captureOn, err := load("capture-on", "")
-	if err != nil {
-		return nil, err
+	// Two instances of each, in the order on, off, off, on, so that warm-up
+	// and drift on the runner affect both conditions alike; the p95 of each
+	// condition is the mean of its two runs.
+	var on, off []float64
+	var onN, offN int
+	for i, cond := range []bool{true, false, false, true} {
+		extra := ""
+		if !cond {
+			extra = "\n[observation]\nenabled = false\n"
+		}
+		lat, err := load(fmt.Sprintf("capture-%d", i), extra)
+		if err != nil {
+			return nil, err
+		}
+		if cond {
+			on, onN = append(on, Quantile(lat, 0.95)), onN+len(lat)
+		} else {
+			off, offN = append(off, Quantile(lat, 0.95)), offN+len(lat)
+		}
 	}
-	captureOff, err := load("capture-off", "\n[observation]\nenabled = false\n")
-	if err != nil {
-		return nil, err
-	}
-	diff := Quantile(captureOn, 0.95) - Quantile(captureOff, 0.95)
+	pOn, pOff := (on[0]+on[1])/2, (off[0]+off[1])/2
+	diff := pOn - pOff
 	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.4", Name: "Observation capture overhead", Metric: "p95 difference", Unit: "ms",
-		Value: diff, Budget: BudgetCaptureMs, Samples: min(len(captureOn), len(captureOff)), Pass: diff <= BudgetCaptureMs,
-		Method: fmt.Sprintf("p95 P-213 with observation enabled (%.3f ms) minus disabled (%.3f ms), same workload on two fresh instances", Quantile(captureOn, 0.95), Quantile(captureOff, 0.95))})
+		Value: diff, Budget: BudgetCaptureMs, Samples: min(onN, offN), Pass: diff <= BudgetCaptureMs,
+		Method: fmt.Sprintf("p95 P-213 with observation enabled (%.3f ms, mean of %.3f and %.3f) minus disabled (%.3f ms, mean of %.3f and %.3f), four fresh instances run in the order enabled, disabled, disabled, enabled",
+			pOn, on[0], on[1], pOff, off[0], off[1])})
 
 	// FR-11.8: the console's audit queries over 30 days of reference data.
 	qi, err := newInstance(o.BinDir, filepath.Join(o.Work, "queries"), "", doc)

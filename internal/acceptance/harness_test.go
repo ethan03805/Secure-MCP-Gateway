@@ -168,8 +168,13 @@ func newGateway(t *testing.T, o options) *gateway {
 	// calls; the CP-11 burst and session limits are tested elsewhere.
 	g.appendConfig("\n[limits]\nsessions_per_principal = 64\nprincipal_call_burst = 0\n" + o.limits + "\n")
 	if requestedProfile() == reqtest.Enforced {
-		if err := os.Chmod(g.sandbox, 0o755); err != nil {
-			t.Fatal(err)
+		// Server instances run under subordinate UIDs: the sandbox and the
+		// directories above it (0700 from t.TempDir) must be searchable.
+		// The sandbox reserves /tmp, so the job sets TMPDIR elsewhere.
+		for _, d := range []string{filepath.Dir(dir), dir, g.sandbox} {
+			if err := os.Chmod(d, 0o755); err != nil {
+				t.Fatal(err)
+			}
 		}
 		g.appendConfig(fmt.Sprintf("\n[profile]\nmode = \"enforced\"\n\n[runtime]\nsandbox = \"podman\"\n%s\n[[runtime.server]]\nalias = \"ref\"\n[[runtime.server.mount]]\nsource = %q\n",
 			cgroupLine(), g.sandbox))

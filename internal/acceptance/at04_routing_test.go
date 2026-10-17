@@ -63,8 +63,10 @@ func TestAT04RoutingAndOverlap(t *testing.T) {
 	}
 	g.appendConfig(fmt.Sprintf("\n[[server]]\nalias = \"ref2\"\npackage = \"smcp-ref-filesystem\"\npackage_sha256 = %q\nslots = { root = %q }\n", sum[1], second))
 	if requestedProfile() == reqtest.Enforced {
-		if err := os.Chmod(second, 0o755); err != nil {
-			t.Fatal(err)
+		for _, d := range []string{filepath.Dir(second), second} {
+			if err := os.Chmod(d, 0o755); err != nil {
+				t.Fatal(err)
+			}
 		}
 		g.appendConfig(fmt.Sprintf("\n[[runtime.server]]\nalias = \"ref2\"\n[[runtime.server.mount]]\nsource = %q\n", second))
 	}

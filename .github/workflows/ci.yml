@@ -534,6 +534,10 @@ jobs:
         env:
           SMCP_ACCEPTANCE_PROFILE: enforced
         run: |
+          # The sandbox refuses mounts at or below /tmp: instance
+          # directories go under the runner's temporary directory.
+          mkdir -p "$RUNNER_TEMP/acceptance"
+          export TMPDIR="$RUNNER_TEMP/acceptance"
           mkdir -p build
           rc=0
           go test -count=1 -json -timeout 25m -run 'TestAT' ./internal/acceptance/ > build/acceptance-raw.json || rc=$?

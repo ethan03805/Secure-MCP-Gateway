@@ -105,7 +105,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-29 Observation Collector
 
-- FR-11.4 external: the CI job `perf` compares p95 P-213 with observation enabled and disabled (partial claim); not on recorded reference hardware.
+- FR-11.4 missing: the CI job `perf` compares p95 P-213 with observation enabled and disabled; the first runs measured a difference of about 8 ms on a CI runner and 15 ms on a developer laptop, above the 1 ms budget, so the measurement is a failing test until capture cost is reduced (and it is not on recorded reference hardware).
 
 ## E-31 Anomaly Scorer
 
