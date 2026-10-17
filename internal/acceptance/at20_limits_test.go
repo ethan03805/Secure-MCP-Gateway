@@ -67,9 +67,10 @@ func p95(xs []float64) float64 {
 //   - pre-routing bounds: an oversized header and an oversized body are
 //     refused before any call is created;
 //   - latency under load: eight concurrent callers read a 64 KiB file 50
-//     times each; the p95 gateway-added overhead (P-213 from the journal
-//     timestamps) is within the FR-11.5 budget of 50 ms and the p95
-//     decision time within the FR-11.2 budget of 10 ms;
+//     times each; the p95 of the gateway's time before dispatch and after
+//     the completed event (journal timestamps) is within the FR-11.5
+//     budget of 50 ms and the p95 decision time within the FR-11.2 budget
+//     of 10 ms;
 //   - disk exhaustion: filling the volume below the 256 MiB audit reserve
 //     makes the Gateway fail closed and refuse calls (SR-7.10-1); freeing
 //     the space and acknowledging the cause restores service;
@@ -79,6 +80,12 @@ func p95(xs []float64) float64 {
 // The latency figures are from the CI runner or developer machine, not the
 // recorded reference hardware and dataset, so FR-11.2 and FR-11.5 are
 // partial here; the perf job measures them under the reference workload.
+// The overhead here leaves out request receipt and response inspection
+// (the completed event follows it), which P-213 includes: this test runs
+// in the go job beside every other package's tests, where the response
+// stage's CPU time under contention put the full P-213 over the budget,
+// so the perf job (cmd/smcp-workload, from receipt to delivery minus
+// server execution to the backend's response) is the FR-11.5 measurement.
 // SR-7.11-1 lacks slow bodies, connection floods and CP-09.
 func TestAT20LimitsAndLoad(t *testing.T) {
 	needBinaries(t)
@@ -223,9 +230,11 @@ func waitHealth(t *testing.T, g *gateway, ok func(map[string]any) bool, what str
 	}
 }
 
-// callTimings returns, per delivered call, the gateway-added overhead in
-// milliseconds (requested to dispatched plus completed to delivered) and
-// the decision time of its launch authorization.
+// callTimings returns, per delivered call, the gateway's time in
+// milliseconds before dispatch and after the completed event (requested to
+// dispatched plus completed to delivered; P-213 without request receipt
+// and response inspection) and the decision time of its launch
+// authorization.
 func callTimings(t *testing.T, evs []event) (overhead, decision []float64) {
 	t.Helper()
 	type marks struct{ req, disp, comp, del time.Time }

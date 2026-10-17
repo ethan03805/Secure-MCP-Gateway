@@ -16,8 +16,14 @@ import (
 // revision, decisive rule revision and filter that caused the work. The
 // collector takes them through its bounded queue (never blocking the
 // call), adds the Observation Policy in force, aggregates span time per
-// stage and policy object, and hands each batch to Options.SpanSink for
-// storage.
+// stage and policy object for every call, and hands the batch to
+// Options.SpanSink for storage when the call's observation record was
+// captured (sampled, escalated or for a campaign). Storing about 20 span
+// rows for every call was most of the Observation Store's cost per call
+// (FR-11.4); the aggregate, which the cost route reports, still covers
+// every call. The call's terminal event is queued before its spans (the
+// evidence fan-out offers it before the call returns), so the record is
+// decided when the spans arrive.
 
 // CostKey is the policy object a span's time is attributed to.
 type CostKey struct {
@@ -76,7 +82,7 @@ func (c *Collector) onSpans(spans []pipeline.StageSpan) {
 		r.MaxMs = max(r.MaxMs, d)
 	}
 	c.cost.mu.Unlock()
-	if c.o.SpanSink != nil {
+	if c.o.SpanSink != nil && c.spansKept(spans[0].CorrelationID) {
 		c.o.SpanSink(policyID, spans)
 	}
 }

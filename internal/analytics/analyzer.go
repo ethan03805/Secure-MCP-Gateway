@@ -242,7 +242,7 @@ func (p *responseProbe) ID() string { return "observe-response" }
 // anomaly band.
 const ReasonAnomalyWithheld = "ANOMALY_WITHHELD"
 
-func (p *responseProbe) FilterResponse(_ context.Context, call *pipeline.Call, res *mcp.CallToolResult) (pipeline.ResponseVerdict, error) {
+func (p *responseProbe) FilterResponse(ctx context.Context, call *pipeline.Call, res *mcp.CallToolResult) (pipeline.ResponseVerdict, error) {
 	start := time.Now()
 	s := p.s
 	hasSchema := call.OutputSchema != nil
@@ -251,7 +251,7 @@ func (p *responseProbe) FilterResponse(_ context.Context, call *pipeline.Call, r
 		if err != nil {
 			return "unserializable"
 		}
-		return pipeline.ValidateArguments(call.OutputSchema, raw)
+		return pipeline.ValidateArgumentsContext(ctx, call.OutputSchema, raw)
 	}, hasSchema)
 	pr := &observe.Probe{Response: true, CorrelationID: call.CorrelationID, Time: s.now(), ServerID: call.Server, Values: vals}
 	verdict := pipeline.ResponseVerdict{Action: pipeline.Pass}

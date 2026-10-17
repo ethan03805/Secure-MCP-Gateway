@@ -132,11 +132,16 @@ type Options struct {
 	FrameworkOf  func(principal string) string
 	SamplingRate float64 // normal-band capture rate (CP-31: 0.1)
 	Queue        int     // input queue bound (default 4096)
-	PendingTTL   time.Duration
-	MaxSessions  int
-	Analyzer     Analyzer
-	Campaigns    func() []Campaign
-	Now          func() time.Time
+	// Batch is how long inputs wait in the queue before the collector
+	// takes them (default 10 ms; it takes them sooner when the queue is
+	// half full). The collector is woken per batch, not per input, so that
+	// an offer from the call path does not wake it.
+	Batch       time.Duration
+	PendingTTL  time.Duration
+	MaxSessions int
+	Analyzer    Analyzer
+	Campaigns   func() []Campaign
+	Now         func() time.Time
 	// Degradation returns the observation path's degradation stage
 	// (FR-9.12): 1 or more reduces normal-band sampling to a tenth, 2 or
 	// more stops capturing S3 parameters, 3 or more pauses campaigns, 4
@@ -213,8 +218,9 @@ type sessionSeq struct {
 
 // Collector assembles observation records.
 type Collector struct {
-	o  Options
-	ch chan item
+	o    Options
+	ch   chan item
+	kick chan struct{} // take the queued inputs now
 
 	mu        sync.Mutex
 	pending   map[string]*pending
@@ -222,6 +228,9 @@ type Collector struct {
 	principal map[string][]time.Time
 	drops     map[string]uint64
 	early     map[string][]earlyProbe
+	// keepSpans holds the calls whose record was captured until their
+	// call-path spans arrive: only those spans are stored.
+	keepSpans map[string]struct{}
 	sel       atomic.Pointer[selection] // replaced whole by SetPolicy
 
 	assembled atomic.Uint64
@@ -271,6 +280,9 @@ func New(o Options) *Collector {
 	if o.Queue <= 0 {
 		o.Queue = 4096
 	}
+	if o.Batch <= 0 {
+		o.Batch = 10 * time.Millisecond
+	}
 	if o.PendingTTL <= 0 {
 		o.PendingTTL = 10 * time.Minute
 	}
@@ -280,12 +292,18 @@ func New(o Options) *Collector {
 	if o.Now == nil {
 		o.Now = time.Now
 	}
-	c := &Collector{o: o, ch: make(chan item, o.Queue), pending: map[string]*pending{}, sessions: map[string]*sessionSeq{},
-		principal: map[string][]time.Time{}, drops: map[string]uint64{}, early: map[string][]earlyProbe{},
+	c := &Collector{o: o, ch: make(chan item, o.Queue), kick: make(chan struct{}, 1), pending: map[string]*pending{}, sessions: map[string]*sessionSeq{},
+		principal: map[string][]time.Time{}, drops: map[string]uint64{}, early: map[string][]earlyProbe{}, keepSpans: map[string]struct{}{},
 		done: make(chan struct{})}
 	c.SetPolicy(o.Parameters, o.Escalation, o.SamplingRate)
 	return c
 }
+
+// NonBlockingObserver marks the collector as an audit.NonBlocking observer:
+// Observe is a non-blocking offer to the collector's bounded queue, which
+// counts its drops (DropQueueFull), so the evidence fan-out calls it
+// directly.
+func (c *Collector) NonBlockingObserver() {}
 
 // Observe implements audit.Observer. It never blocks.
 func (c *Collector) Observe(ev audit.Event) {
@@ -305,6 +323,17 @@ func (c *Collector) offer(it item) {
 	case c.ch <- it:
 	default:
 		c.Drop(DropQueueFull, 1)
+	}
+	if len(c.ch)*2 >= cap(c.ch) {
+		c.wake()
+	}
+}
+
+// wake makes Run take the queued inputs now.
+func (c *Collector) wake() {
+	select {
+	case c.kick <- struct{}{}:
+	default:
 	}
 }
 
@@ -361,22 +390,43 @@ func (c *Collector) Sync() {
 	select {
 	case c.ch <- item{flush: ch}:
 		c.inMu.RUnlock()
+		c.wake()
 		<-ch
 	case <-c.done:
 		c.inMu.RUnlock()
 	}
 }
 
-// Run processes inputs until Close.
+// Run processes inputs until Close, a batch at a time: every Batch
+// interval, when the queue is half full, and for Sync and Close.
 func (c *Collector) Run() {
 	defer close(c.done)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
+	batch := time.NewTicker(c.o.Batch)
+	defer batch.Stop()
+	for {
+		select {
+		case <-batch.C:
+		case <-c.kick:
+		case <-t.C:
+			c.expire()
+			continue
+		}
+		if !c.take() {
+			return
+		}
+	}
+}
+
+// take processes the queued inputs; it reports false once the queue is
+// closed and empty.
+func (c *Collector) take() bool {
 	for {
 		select {
 		case it, ok := <-c.ch:
 			if !ok {
-				return
+				return false
 			}
 			switch {
 			case it.flush != nil:
@@ -388,8 +438,8 @@ func (c *Collector) Run() {
 			case it.ev != nil:
 				c.onEvent(it.ev)
 			}
-		case <-t.C:
-			c.expire()
+		default:
+			return true
 		}
 	}
 }
@@ -403,6 +453,7 @@ func (c *Collector) Close() {
 		close(c.ch)
 	}
 	c.inMu.Unlock()
+	c.wake()
 	<-c.done
 }
 
@@ -520,6 +571,16 @@ func (c *Collector) onEvent(ev *audit.Event) {
 		p.dispatched = ts
 	case ev.Phase == audit.PhaseCompleted:
 		p.completed = ts
+		// The completed event follows response inspection; the backend's
+		// response time ends server execution (P-101).
+		if d, ok := ev.Detail.(map[string]any); ok {
+			if at, ok := d["responded_at"].(string); ok {
+				p.completed = parseTime(at)
+			}
+		}
+		if p.completed.IsZero() {
+			p.completed = ts
+		}
 	}
 	if ev.DecisionID != "" {
 		p.sawDecision = true
@@ -850,9 +911,25 @@ func (c *Collector) capture(r *Record) {
 		}
 	}
 	c.captured.Add(1)
+	c.mu.Lock()
+	if len(c.keepSpans) >= c.o.Queue {
+		clear(c.keepSpans) // spans that never arrived
+	}
+	c.keepSpans[r.CorrelationID] = struct{}{}
+	c.mu.Unlock()
 	if c.o.Analyzer != nil {
 		c.o.Analyzer.Captured(r)
 	}
+}
+
+// spansKept reports whether the record of the call corr was captured, and
+// forgets it.
+func (c *Collector) spansKept(corr string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, ok := c.keepSpans[corr]
+	delete(c.keepSpans, corr)
+	return ok
 }
 
 // escalates reports whether a call of band gets capture escalation under

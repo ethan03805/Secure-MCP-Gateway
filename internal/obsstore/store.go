@@ -26,6 +26,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 )
 
 // Column types.
@@ -198,15 +199,20 @@ func DayOf(t time.Time) string { return t.UTC().Format("2006-01-02") }
 type base struct {
 	dir    string
 	tables map[string]Table
-	mu     sync.Mutex // serializes appends and retention
+	cols   map[string]map[string]Column // table -> column name -> column
+	mu     sync.Mutex                   // serializes appends and retention
 	seq    atomic.Uint64
 	rows   sync.Map // table -> *atomic.Int64
 }
 
 func newBase(o Options) *base {
-	b := &base{dir: o.Dir, tables: map[string]Table{}}
+	b := &base{dir: o.Dir, tables: map[string]Table{}, cols: map[string]map[string]Column{}}
 	for _, t := range o.Tables {
 		b.tables[t.Name] = t
+		b.cols[t.Name] = make(map[string]Column, len(t.Columns))
+		for _, c := range t.Columns {
+			b.cols[t.Name][c.Name] = c
+		}
 		b.rows.Store(t.Name, new(atomic.Int64))
 	}
 	return b
@@ -223,9 +229,10 @@ func (b *base) countRows(table string, n int) {
 // normalize converts a row to the column types. Unknown columns are
 // refused so that every stored column is a declared one.
 func (b *base) normalize(t Table, r Row) (Row, error) {
-	out := Row{}
+	out := make(Row, len(r))
+	cols := b.cols[t.Name]
 	for k, v := range r {
-		c, ok := t.column(k)
+		c, ok := cols[k]
 		if !ok {
 			return nil, fmt.Errorf("%w: %s.%s not declared", ErrBadColumn, t.Name, k)
 		}
@@ -356,20 +363,22 @@ func (b *base) nextName() string {
 	return fmt.Sprintf("part-%d-%06d", time.Now().UTC().UnixNano(), b.seq.Add(1))
 }
 
-// writeJSONL writes rows to path (mode 0600) using the column order of t.
-func writeJSONL(path string, t Table, rows []Row) error {
+// writeJSONL writes rows to path (mode 0600) using the column order of t,
+// and with durable set syncs the file before it returns.
+func writeJSONL(path string, t Table, rows []Row, durable bool) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
 	w := bufio.NewWriter(f)
-	enc := json.NewEncoder(w)
+	var line []byte
 	for _, r := range rows {
-		obj := make(map[string]any, len(r))
-		for k, v := range r {
-			obj[k] = jsonValue(v)
+		var err error
+		if line, err = appendRowJSON(line[:0], t, r); err != nil {
+			f.Close()
+			return err
 		}
-		if err := enc.Encode(obj); err != nil {
+		if _, err := w.Write(line); err != nil {
 			f.Close()
 			return err
 		}
@@ -378,9 +387,11 @@ func writeJSONL(path string, t Table, rows []Row) error {
 		f.Close()
 		return err
 	}
-	if err := f.Sync(); err != nil {
-		f.Close()
-		return err
+	if durable {
+		if err := f.Sync(); err != nil {
+			f.Close()
+			return err
+		}
 	}
 	return f.Close()
 }
@@ -713,4 +724,102 @@ func groupKey(g map[string]string) string {
 		sb.WriteByte(0)
 	}
 	return sb.String()
+}
+
+// appendRowJSON appends a normalized row as one JSON object and a newline,
+// with its members in the column order of t. The normalized values
+// (string, int64, float64, time.Time) are encoded directly; any other value
+// is encoded with encoding/json. The object decodes to the values the
+// encoding/json encoding of the row decodes to: one batch of span rows per
+// call made the per-row encoder (a map per row, members sorted by
+// reflection) most of the store's per-call cost (FR-11.4).
+func appendRowJSON(b []byte, t Table, r Row) ([]byte, error) {
+	b = append(b, '{')
+	first := true
+	for _, c := range t.Columns {
+		v, ok := r[c.Name]
+		if !ok {
+			continue
+		}
+		if !first {
+			b = append(b, ',')
+		}
+		first = false
+		b = appendJSONString(b, c.Name)
+		b = append(b, ':')
+		switch x := v.(type) {
+		case string:
+			b = appendJSONString(b, x)
+		case int64:
+			b = strconv.AppendInt(b, x, 10)
+		case float64:
+			if math.IsInf(x, 0) || math.IsNaN(x) {
+				return b, fmt.Errorf("%s.%s: unsupported value %v", t.Name, c.Name, x)
+			}
+			b = strconv.AppendFloat(b, x, 'g', -1, 64)
+		case time.Time:
+			b = append(b, '"')
+			b = x.UTC().AppendFormat(b, tsLayout)
+			b = append(b, '"')
+		default:
+			raw, err := json.Marshal(jsonValue(v))
+			if err != nil {
+				return b, err
+			}
+			b = append(b, raw...)
+		}
+	}
+	return append(b, '}', '\n'), nil
+}
+
+// appendJSONString appends s as a JSON string: quotes, backslashes and
+// control characters escaped, invalid UTF-8 replaced by U+FFFD, and U+2028
+// and U+2029 escaped, as encoding/json does (without its HTML escaping,
+// which does not change the decoded string).
+func appendJSONString(b []byte, s string) []byte {
+	const hex = "0123456789abcdef"
+	b = append(b, '"')
+	start := 0
+	for i := 0; i < len(s); {
+		if c := s[i]; c < utf8.RuneSelf {
+			if c >= 0x20 && c != '"' && c != '\\' {
+				i++
+				continue
+			}
+			b = append(b, s[start:i]...)
+			switch c {
+			case '"', '\\':
+				b = append(b, '\\', c)
+			case '\n':
+				b = append(b, '\\', 'n')
+			case '\r':
+				b = append(b, '\\', 'r')
+			case '\t':
+				b = append(b, '\\', 't')
+			default:
+				b = append(b, '\\', 'u', '0', '0', hex[c>>4], hex[c&0xf])
+			}
+			i++
+			start = i
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && size == 1 {
+			b = append(b, s[start:i]...)
+			b = append(b, `\ufffd`...)
+			i += size
+			start = i
+			continue
+		}
+		if r == '\u2028' || r == '\u2029' {
+			b = append(b, s[start:i]...)
+			b = append(b, '\\', 'u', '2', '0', '2', hex[r&0xf])
+			i += size
+			start = i
+			continue
+		}
+		i += size
+	}
+	b = append(b, s[start:]...)
+	return append(b, '"')
 }

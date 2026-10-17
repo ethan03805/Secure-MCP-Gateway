@@ -112,7 +112,11 @@ func (s *duckStore) Append(table string, rows []Row) error {
 		}
 		name := s.nextName()
 		tmp := filepath.Join(s.staging, name+".jsonl")
-		if err := writeJSONL(tmp, t, rs); err != nil {
+		// The staging file is read once by the COPY below and removed
+		// (and removed at open after a crash), so it is not synced: an
+		// fsync per batch and table only competed with the journal's
+		// commits for the disk.
+		if err := writeJSONL(tmp, t, rs, false); err != nil {
 			return err
 		}
 		// Write under a temporary name and rename, so that a reader never

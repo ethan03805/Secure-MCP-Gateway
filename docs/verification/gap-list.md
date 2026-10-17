@@ -20,11 +20,13 @@ Updated on 2026-10-17 by the E-01 to E-04 partials sweep: SR-7.11-1 is verified 
 
 Updated on 2026-10-17 by the egress-capability work: SR-5.16-1 is restored from Appendix N and verified (`TestEgressCapabilities`), and AT-10 is claimed by `TestAT10WebBroker`, so every scenario has a claiming test (FR-19.4). Whether the release label is "enforced" depends on the scenarios passing in the Enforced profile for the release commit (FR-19.3).
 
+Updated on 2026-10-17 by the perf work: FR-11.4 is within its budget in the CI job `perf` (partial claim, no longer missing). The perf harness now takes P-213 from the request's receipt to delivery minus server execution to the backend's response; before, it ended server execution at the completed event, which follows response inspection, and so left response inspection out of FR-11.4 and FR-11.5.
+
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
 ## E-01 Harness Interface Endpoint
 
-- FR-11.5 external: the CI job `perf` measures p95 P-213 for 64 KiB results at eight concurrent calls with synchronous scoring (partial claim, `cmd/smcp-workload`); no measurement on recorded reference hardware.
+- FR-11.5 external: the CI job `perf` measures p95 P-213 (request receipt to delivery minus server execution to the backend's response) for 64 KiB results at eight concurrent calls with synchronous scoring (partial claim, `cmd/smcp-workload`; 17.4 ms and 19.0 ms on 4-CPU runners); no measurement on recorded reference hardware. AT-20 in the go job checks only the time before dispatch and after the completed event.
 - FR-12.1 external: no release SBOM license check; needs a release artifact.
 - FR-12.8 external: release provenance bundle (commit IDs, digests, recipes, lockfiles, SBOM, notices) not inspected; needs a release.
 - SR-4.14-1 missing: `smcpctl remote enable` installs no nftables rules in the Enforced profile.
@@ -102,7 +104,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-29 Observation Collector
 
-- FR-11.4 missing: the CI job `perf` compares p95 P-213 with observation enabled and disabled; the first runs measured a difference of about 8 ms on a CI runner and 15 ms on a developer laptop, above the 1 ms budget, so the measurement is a failing test until capture cost is reduced (and it is not on recorded reference hardware).
+- FR-11.4 external: the CI job `perf` compares p95 P-213 with observation enabled and disabled over eight fresh instances in a balanced order (partial claim; -0.04 ms and -0.02 ms in two runs on 4-CPU runners, enabled 10.27 ms and disabled 10.28 ms in the second, after the capture path changes of 2026-10-17; the runners' processor model varies between runs); no measurement on recorded reference hardware.
 
 ## E-31 Anomaly Scorer
 

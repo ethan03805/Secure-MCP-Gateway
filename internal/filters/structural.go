@@ -113,7 +113,7 @@ type outputSchema struct{}
 func (outputSchema) ID() string      { return IDOutputSchema }
 func (outputSchema) Version() string { return filterVersion }
 
-func (outputSchema) FilterResponse(_ context.Context, call *pipeline.Call, res *mcp.CallToolResult) (pipeline.ResponseVerdict, error) {
+func (outputSchema) FilterResponse(ctx context.Context, call *pipeline.Call, res *mcp.CallToolResult) (pipeline.ResponseVerdict, error) {
 	if call.OutputSchema == nil || res.IsError {
 		return pipeline.ResponseVerdict{Action: pipeline.Pass}, nil
 	}
@@ -130,7 +130,7 @@ func (outputSchema) FilterResponse(_ context.Context, call *pipeline.Call, res *
 	if bytes.Equal(raw, []byte("null")) {
 		return withhold("missing", "the tool declares an output schema but returned null structuredContent")
 	}
-	if msg := pipeline.ValidateArguments(call.OutputSchema, raw); msg != "" {
+	if msg := pipeline.ValidateArgumentsContext(ctx, call.OutputSchema, raw); msg != "" {
 		return withhold("invalid", "structuredContent does not match the output schema: "+msg)
 	}
 	return pipeline.ResponseVerdict{Action: pipeline.Pass}, nil
@@ -291,7 +291,7 @@ func (f delimitUntrusted) FilterResponse(_ context.Context, call *pipeline.Call,
 			continue
 		}
 		body := t.Text
-		if delimiterLine.MatchString(body) {
+		if strings.Contains(body, "<<<") && delimiterLine.MatchString(body) { // a delimiter line contains <<<
 			body = delimiterLine.ReplaceAllString(body, "")
 			findings = append(findings, pipeline.Finding{Filter: IDDelimitUntrusted, Rule: "forged-delimiter-removed", Location: "/content/" + strconv.Itoa(i) + "/text"})
 		}

@@ -2,7 +2,7 @@
 
 The Gateway records an observation record for every tool call, learns statistical baselines of normal behavior, scores calls by their distance from the baseline in standard deviations, and exports research datasets. These functions are SS-10 Observation & Analytics (E-29 Observation Collector, E-30 Behavior Baseline Engine, E-31 Anomaly Scorer, E-32 Research Dataset Service) and the E-27 Observation Store, specified in SRS FR-10, FR-9.7 to FR-9.9 and ArchitectureV2 §9 and §10.
 
-Observation never decides a call by itself. It cannot block, slow or fail a call: evidence events reach it through the evidence fan-out after the journal has accepted them, and the inspection probes hand their data to a bounded queue without waiting. When a queue is full the item is dropped and counted (parameter P-246). If the store cannot be opened the Gateway runs without storage and `smcpctl observe status` shows the cause. The only effects on calls are the optional synchronous obligations described under [Synchronous scoring](#synchronous-scoring), which are off by default and can only add restrictions.
+Observation never decides a call by itself. It cannot block, slow or fail a call: evidence events reach it through the evidence fan-out after the journal has accepted them, and the inspection probes hand their data to a bounded queue without waiting. When a queue is full the item is dropped and counted (parameter P-246). The collector takes its queued inputs every 10 ms (sooner when the queue is half full) and the store writer every `flush_interval`, so an offer from the call path does not wake either of them; the evidence fan-out calls the collector's non-blocking offer directly instead of through a queue and goroutine of its own. On Linux the store writer, DuckDB's worker threads and baseline snapshot builds run at nice 10. These keep observation's work from delaying calls on a busy host (FR-11.4). If the store cannot be opened the Gateway runs without storage and `smcpctl observe status` shows the cause. The only effects on calls are the optional synchronous obligations described under [Synchronous scoring](#synchronous-scoring), which are off by default and can only add restrictions.
 
 Commands: `smcpctl observe` ([reference](#smcpctl-observe)). Control API: [api/observation.md](api/observation.md).
 
@@ -56,7 +56,7 @@ P-246 counts drops by reason:
 | Reason | Meaning |
 |---|---|
 | `queue_full` | The collector's input queue was full |
-| `observer_queue_full` | The evidence fan-out dropped an event for the observation observer |
+| `observer_queue_full` | The evidence fan-out dropped an event for the observation observer (not used since the fan-out calls the collector directly; its drops are `queue_full`) |
 | `sampled_down` | The record was not selected by sampling and no campaign captured it |
 | `unterminated` | The call had no terminal event within 10 minutes |
 | `orphan_probe` | A probe whose call never appeared |
@@ -65,7 +65,7 @@ P-246 counts drops by reason:
 
 ### Timing spans
 
-The `spans` table holds, for every stored record, the stages that the collector can derive from the evidence: `pre_dispatch` (requested to dispatched), `dispatch` (dispatched to completed), `release` (completed to delivered) and `approval_wait`. Each span has the policy revision and the Observation Policy ID, so `GET /api/v1/observations/cost` ranks the time spent per stage and revision. In addition, the edge emits for every call a span per pipeline stage and per filter run (FR-10.2) with monotonic times, thread CPU time and the decision's policy revision and decisive rule revision; these are stored with `monotonic = 1`, `cpu_ms`, `rule_id` and `filter_id`, and the collector aggregates them by stage, policy revision, rule, filter and Observation Policy (FR-10.11, `policy_objects` and `filters` of the cost route).
+The `spans` table holds, for every stored record, the stages that the collector can derive from the evidence: `pre_dispatch` (requested to dispatched), `dispatch` (dispatched to the backend's response, `responded_at` of the completed event), `release` (the backend's response to delivered, which includes response inspection) and `approval_wait`. Each span has the policy revision and the Observation Policy ID, so `GET /api/v1/observations/cost` ranks the time spent per stage and revision. In addition, the edge emits for every call a span per pipeline stage and per filter run (FR-10.2) with monotonic times, thread CPU time and the decision's policy revision and decisive rule revision. The collector aggregates every call's spans by stage, policy revision, rule, filter and Observation Policy (FR-10.11, `policy_objects` and `filters` of the cost route), and stores the spans of the calls whose record is stored (sampled, escalated or for a campaign) with `monotonic = 1`, `cpu_ms`, `rule_id` and `filter_id`. Until 2026-10-17 the spans of every call were stored, about 20 rows per call, which was most of the store's cost per call.
 
 ## Sampling and capture
 

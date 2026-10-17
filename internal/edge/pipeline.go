@@ -85,15 +85,27 @@ func (c *callRun) event(class string, phase audit.Phase, origin, outcome, reason
 	return e
 }
 
+// Evidence writes wait for the journal (its lock, and for a commit the
+// group fsync), so they are made outside the stage's CPU measurement.
 func (c *callRun) record(class string, phase audit.Phase, origin, outcome, reason, status string) error {
-	return c.g.evidence.Record(c.event(class, phase, origin, outcome, reason, status, nil))
+	return c.recordDetail(class, phase, origin, outcome, reason, status, nil)
+}
+
+func (c *callRun) recordDetail(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) error {
+	ev := c.event(class, phase, origin, outcome, reason, status, detail)
+	var err error
+	c.spans.Wait(func() { err = c.g.evidence.Record(ev) })
+	return err
 }
 
 func (c *callRun) commit(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) error {
 	// FR-17.1, FR-17.3: a debug trace of the call's progress; identifiers
 	// and outcomes only, never arguments or results.
 	c.g.log.Debug("call event", "correlation", c.corr, "class", class, "phase", string(phase), "outcome", outcome, "reason", reason)
-	return c.g.evidence.Commit(c.event(class, phase, origin, outcome, reason, status, detail))
+	ev := c.event(class, phase, origin, outcome, reason, status, detail)
+	var err error
+	c.spans.Wait(func() { err = c.g.evidence.Commit(ev) })
+	return err
 }
 
 // refuse commits a terminal refusal event and returns err. A refusal is the
@@ -257,7 +269,12 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		// Request inspection (E-09).
 		endInspect := c.stage(pipeline.SpanRequestInspection)
-		args, reqApplied, verdict := g.filters.RunRequest(ctx, call, req.Params.Arguments)
+		// The filters run on their own goroutines; their CPU time is
+		// added to the stage by filterSpans.
+		var args json.RawMessage
+		var reqApplied []string
+		var verdict *pipeline.RequestVerdict
+		c.spans.Wait(func() { args, reqApplied, verdict = g.filters.RunRequest(ctx, call, req.Params.Arguments) })
 		endInspect()
 		c.filterSpans(pipeline.StageRequest)
 		if verdict != nil && ctx.Err() != nil && !g.store.IsActive(sess.ID) {
@@ -299,7 +316,8 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		// Approval (E-07).
 		if dec.Obligations.Approval || call.RequireApproval {
 			endApproval := c.stage(pipeline.SpanApproval)
-			err := g.approve(ctx, c, call, args, req)
+			var err error
+			c.spans.Wait(func() { err = g.approve(ctx, c, call, args, req) })
 			endApproval()
 			if err != nil {
 				return nil, err
@@ -329,7 +347,9 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		if c.prog.enabled() { // FR-1.39
 			dispatch.Progress = c.prog.relay
 		}
-		res, err := g.reg.Call(cctx, dispatch)
+		var res *mcp.CallToolResult
+		c.spans.Wait(func() { res, err = g.reg.Call(cctx, dispatch) })
+		responded := time.Now()
 		endDispatch()
 		c.prog.stop() // FR-1.40: no progress after the final response
 		if err != nil {
@@ -338,7 +358,9 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		// Response inspection (E-11).
 		endRespInspect := c.stage(pipeline.SpanResponseInspection)
-		res, respApplied, rv := g.filters.RunResponse(ctx, call, res)
+		var respApplied []string
+		var rv *pipeline.ResponseVerdict
+		c.spans.Wait(func() { res, respApplied, rv = g.filters.RunResponse(ctx, call, res) })
 		endRespInspect()
 		c.filterSpans(pipeline.StageResponse)
 		if rv != nil {
@@ -366,7 +388,11 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		if res.IsError {
 			outcome = "tool_error"
 		}
-		if err := c.record("call", audit.PhaseCompleted, "E-10", outcome, "", "evaluated"); err != nil {
+		// The completed event follows response inspection; responded_at is
+		// when the backend's response arrived, the end of server execution
+		// (P-101) for P-213.
+		if err := c.recordDetail("call", audit.PhaseCompleted, "E-10", outcome, "", "evaluated",
+			map[string]any{"responded_at": responded.UTC().Format(time.RFC3339Nano)}); err != nil {
 			return nil, c.auditFailure(err)
 		}
 		// Release authorization under the barrier (SR-1.17-2); the delivered
