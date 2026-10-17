@@ -27,3 +27,18 @@ func TestMarkers(t *testing.T) {
 		t.Fatalf("bad ID accepted: %q", r.fatal)
 	}
 }
+
+func TestScenarioMarker(t *testing.T) {
+	reqtest := &recorder{TB: t}
+	Scenario(reqtest, Standalone, "AT-01", "AT-21")
+	if len(reqtest.logs) != 1 || reqtest.logs[0] != "SCENARIO: AT-01 AT-21 profile=standalone" {
+		t.Fatalf("%q", reqtest.logs)
+	}
+	for _, c := range []struct{ profile, id string }{{"lab", "AT-01"}, {Enforced, "AT-22"}, {Enforced, "AT-1"}, {Enforced, "FR-1.1"}} {
+		r := &recorder{TB: t}
+		Scenario(r, c.profile, c.id)
+		if r.fatal == "" {
+			t.Fatalf("Scenario(%q, %q) accepted", c.profile, c.id)
+		}
+	}
+}

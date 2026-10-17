@@ -47,7 +47,7 @@ keeps today's behavior, and test the default.
 | `config` | all | TOML configuration validated against `config.schema.json`; Appendix A defaults by key presence. |
 | `diag` | all | Diagnostic logger (slog); daemon logger with rotating JSON Lines file and redaction of sensitive attribute names. Not evidence; never logs secrets, tokens or arguments. |
 | `ids` | all | UUIDv7 identifiers and 256-bit secrets. |
-| `reqtest` | FR-12.10 | `Verifies` and `Partial` requirement claims in tests. |
+| `reqtest` | FR-12.10, FR-19.4 | `Verifies` and `Partial` requirement claims and `Scenario` acceptance-scenario claims in tests. |
 | `remote` | E-01, E-03 (FR-16) | Remote Access Profile: loopback remote listener with CP-49 bounds and limits, public-name host check, RFC 7591 registration with operator approval, authorization-code and device grants, `/api/v1/remote*` and `/api/v1/clients*`. Wired in `cmd/smcpd`. |
 | `adapter` | E-33 | CP-43 credential file, session acquisition and refresh, stdio relay; `smcp-session`, `smcp-stdio`, `smcp-connect` (`cmd/`). npm twin in `packaging/npm/smcp-connect`. |
 | `harness` | E-33 | Client setup, lockdown profiles and doctor checks for the Appendix K clients (`smcpctl clients setup`, `lockdown`, `doctor`). |
@@ -56,6 +56,8 @@ keeps today's behavior, and test the default.
 | `gwtest` | tests | Starts a full Gateway with an in-process backend and a fake tunnel for tests. |
 | `testport` | tests | Loopback ports below the ephemeral range for listener addresses written into test configurations. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
+| `acceptance` | FR-19.4, AT-01 to AT-21 | Acceptance scenarios as tests of the real binaries (bootstrap, CLI, control API, OAuth MCP client); `SMCP_ACCEPTANCE_PROFILE=enforced` runs them in the Enforced profile. See `docs/acceptance.md`. |
+| `perf` | FR-11 | Reference dataset and workload, FR-11 measurements against real smcpd (`cmd/smcp-workload`, CI job `perf`). |
 | `hostile` | FR-19.1, FR-19.2 | Hostile backend fixture server for every SRS Appendix L row (also `cmd/smcp-hostile`) and the suite (build tag `hostile`) that runs the Gateway against each fixture and writes `build/hostile.json`. See `docs/hostile-fixtures.md`. |
 | `egress` | E-18 | Egress Broker: per-instance forward proxy and destination endpoints, grants, pinned DNS, reserved-address refusal, limits, evidence, nftables confinement of sandbox namespaces, `/api/v1/egress` routes. See `docs/egress.md`. |
 | `sandbox` | E-15, E-16, E-17 | Rootless Podman launcher (`sandbox.Launcher`, `Confined() == true`), launch specification, Runtime Monitor (cgroup sampling, inotify, `podman events`), FR-5.27 shutdown, `sandbox.Doctor` prerequisite checks, `/api/v1/runtime*`. Selected by `[runtime] sandbox = "podman"`; with `run_as`, Podman runs as the CP-46 server identity through sudo (`runner.go`); secret files for other UIDs get ACL entries (`secretacl.go`). See `docs/sandbox.md`. |

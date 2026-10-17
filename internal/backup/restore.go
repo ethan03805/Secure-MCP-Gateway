@@ -1,6 +1,7 @@
 package backup
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -58,10 +59,13 @@ type RestoreReport struct {
 	JournalKeys      int          `json:"journal_keys"`
 	PolicyRevision   string       `json:"policy_revision"`
 	Revocations      []Revocation `json:"revocations"`
-	GraphMirror      string       `json:"graph_mirror"`
-	Isolated         string       `json:"isolated_dir"`
-	PreviousState    string       `json:"previous_state,omitempty"`
-	Applied          bool         `json:"applied"`
+	// DirectoryChanges counts the principal suspensions and credential
+	// revocations re-applied to the restored principal directory.
+	DirectoryChanges int    `json:"directory_changes"`
+	GraphMirror      string `json:"graph_mirror"`
+	Isolated         string `json:"isolated_dir"`
+	PreviousState    string `json:"previous_state,omitempty"`
+	Applied          bool   `json:"applied"`
 }
 
 // Restore decrypts the archive into an isolated directory next to the
@@ -140,6 +144,17 @@ func Restore(o RestoreOptions) (RestoreReport, error) {
 	if err := writeRevocations(rstate, revs); err != nil {
 		return rep, err
 	}
+	enabled := map[string]string{}
+	for _, jd := range []string{filepath.Join(rstate, "journal"), filepath.Join(o.StateDir, "journal")} {
+		if exists(jd) {
+			if err := enablements(jd, enabled); err != nil {
+				return rep, err
+			}
+		}
+	}
+	if rep.DirectoryChanges, err = applyDirectoryRevocations(rstate, revs, enabled); err != nil {
+		return rep, err
+	}
 	if o.VerifyOnly {
 		return rep, nil
 	}
@@ -193,11 +208,119 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	return keys.WriteFileAtomic(dst, b, mode)
 }
 
-// isRevocation reports whether an event revokes a credential, a session
-// or a server. Elements record revocations with a reason code ending in
-// _REVOKED or with class "revocation".
+// isRevocation reports whether an event revokes a credential, a session,
+// a principal or a server. Elements record revocations with a reason code
+// ending in _REVOKED or with class "revocation"; a principal suspension
+// (PRINCIPAL_SUSPENDED) revokes the principal (SR-2.4-1).
 func isRevocation(ev audit.Event) bool {
-	return ev.Class == "revocation" || strings.HasSuffix(ev.ReasonCode, "_REVOKED") || ev.Outcome == "revoked"
+	return ev.Class == "revocation" || strings.HasSuffix(ev.ReasonCode, "_REVOKED") || ev.Outcome == "revoked" || ev.ReasonCode == reasonPrincipalSuspended
+}
+
+// Reason codes of the principal directory (internal/principals).
+const (
+	reasonPrincipalSuspended = "PRINCIPAL_SUSPENDED"
+	reasonPrincipalEnabled   = "PRINCIPAL_ENABLED"
+	reasonCredentialRevoked  = "CREDENTIAL_REVOKED"
+	principalsFile           = "principals.json" // principals.File
+)
+
+// enablements returns, per principal, the time of the latest
+// PRINCIPAL_ENABLED event in the journal.
+func enablements(journalDir string, into map[string]string) error {
+	evs, err := audit.ReadEvents(journalDir)
+	if err != nil {
+		return err
+	}
+	for _, ev := range evs {
+		if ev.ReasonCode == reasonPrincipalEnabled && ev.PrincipalID != "" && after(ev.Time, into[ev.PrincipalID]) {
+			into[ev.PrincipalID] = ev.Time
+		}
+	}
+	return nil
+}
+
+// applyDirectoryRevocations re-applies principal suspensions and
+// credential revocations to the restored principal directory
+// (state/principals.json) before service starts (SR-7.8-1): a backup taken
+// before a revocation must not bring the revoked principal or credential
+// back. A suspension is skipped when the principal was enabled again
+// later. The file is edited as JSON so that fields this package does not
+// know are kept. It returns the number of changes made.
+func applyDirectoryRevocations(rstate string, revs []Revocation, enabled map[string]string) (int, error) {
+	path := filepath.Join(rstate, principalsFile)
+	st := map[string]any{}
+	raw, err := os.ReadFile(path)
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		st["version"] = 1
+	case err != nil:
+		return 0, err
+	default:
+		if err := json.Unmarshal(raw, &st); err != nil {
+			return 0, fmt.Errorf("restored %s: %w", principalsFile, err)
+		}
+	}
+	suspended, _ := st["suspended"].(map[string]any)
+	if suspended == nil {
+		suspended = map[string]any{}
+	}
+	creds, _ := st["credentials"].([]any)
+	changed := 0
+	for _, r := range revs {
+		switch r.ReasonCode {
+		case reasonPrincipalSuspended:
+			if r.Principal == "" || after(enabled[r.Principal], r.Time) {
+				continue
+			}
+			if _, ok := suspended[r.Principal]; !ok {
+				reason, _ := detailString(r.Detail, "reason")
+				suspended[r.Principal] = map[string]any{"by": "restore", "at": r.Time, "reason": "re-applied from journal event " + r.EventID + ": " + reason}
+				changed++
+			}
+		case reasonCredentialRevoked:
+			id, _ := detailString(r.Detail, "client_id")
+			for _, c := range creds {
+				m, _ := c.(map[string]any)
+				if m != nil && m["client_id"] == id && m["revoked_at"] == nil {
+					m["revoked_at"], m["revoked_by"] = r.Time, "restore"
+					changed++
+				}
+			}
+		}
+	}
+	if changed == 0 {
+		return 0, nil
+	}
+	st["suspended"] = suspended
+	if creds != nil {
+		st["credentials"] = creds
+	}
+	b, err := json.MarshalIndent(st, "", "  ")
+	if err != nil {
+		return 0, err
+	}
+	return changed, keys.WriteFileAtomic(path, append(b, '\n'), 0o600)
+}
+
+// after reports whether event time a is later than b. Journal times are
+// RFC 3339 with variable fractional digits, so they are compared as times;
+// an empty or unparsable time is the earliest.
+func after(a, b string) bool {
+	ta, errA := time.Parse(time.RFC3339Nano, a)
+	if errA != nil {
+		return false
+	}
+	tb, errB := time.Parse(time.RFC3339Nano, b)
+	return errB != nil || ta.After(tb)
+}
+
+func detailString(d any, k string) (string, bool) {
+	m, ok := d.(map[string]any)
+	if !ok {
+		return "", false
+	}
+	s, ok := m[k].(string)
+	return s, ok
 }
 
 func revocations(journalDir string) ([]Revocation, error) {
@@ -223,7 +346,7 @@ func mergeRevocations(a, b []Revocation) []Revocation {
 			out = append(out, r)
 		}
 	}
-	sort.Slice(out, func(i, k int) bool { return out[i].Time < out[k].Time })
+	sort.SliceStable(out, func(i, k int) bool { return after(out[k].Time, out[i].Time) })
 	return out
 }
 

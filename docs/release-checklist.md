@@ -36,7 +36,7 @@ RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
 - [ ] `make check` passes on a clean checkout of `main`.
 - [ ] `make status` and `build/reqreport.md` reviewed: no requirement newly failing; `docs/verification/gap-list.md` matches the report.
 - [ ] `CHANGELOG.md` has a `## v<version>` section at the top that lists what the release contains and its known limitations, dated with the release day.
-- [ ] Release label: the release is labelled "not enforced" unless AT-01 to AT-21 evidence for the release commit is complete and passing (FR-19.3). There is no automated labelling step yet; the release notes state the label.
+- [ ] Release label: the release is labelled "not enforced" unless AT-01 to AT-21 evidence for the release commit is complete and passing in the Enforced profile (FR-19.3). Tag a commit whose CI run on main has finished, so that the status data is for that commit: the release workflow's "Release label" step reads it with `go run ./tools/reqreport label` and appends the label, the scenario table and the reasons to the release notes (see `docs/acceptance.md`).
 - [ ] Local snapshot with signing proves the configuration:
 
   ```sh

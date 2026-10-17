@@ -55,6 +55,51 @@ export type AgentResult = {
   detail: string;
 };
 export type HostileResult = { fixture: string; attack: string; expected: string; observed: string; pass: boolean };
+export type ScenarioOutcome = "pass" | "fail" | "not-run";
+/** One Appendix M acceptance scenario (FR-19.4), computed by tools/reqreport. */
+export type ScenarioResult = {
+  id: string;
+  title: string;
+  evidence: string;
+  requirements: string[];
+  enforced: ScenarioOutcome;
+  standalone: ScenarioOutcome;
+  tests: { test: string; result: string; profile: string }[];
+  records: { record: string; commit: string; profile: string; date: string; result: string; counted: boolean; note?: string }[];
+};
+/** AT-01 to AT-21 and the release label of FR-19.3. */
+export type Acceptance = {
+  commit: string;
+  label: string;
+  reasons: string[];
+  total: number;
+  enforcedPassed: number;
+  standalonePassed: number;
+  scenarios: ScenarioResult[];
+};
+/** One FR-11 measurement of the perf job (cmd/smcp-workload). */
+export type PerfMeasurement = {
+  requirement: string;
+  name: string;
+  metric: string;
+  unit: string;
+  value: number;
+  budget: number;
+  ceiling?: number;
+  samples: number;
+  pass: boolean;
+  method: string;
+  note?: string;
+};
+export type Performance = {
+  schema: number;
+  commit: string;
+  generatedAt: string;
+  host: { os: string; arch: string; cpus: number; cpu?: string; goVersion: string; runner?: string };
+  referenceHardware: boolean;
+  dataset: { rules: number; registryNodes: number; candidateRules: number; events: number; days: number; callers: number };
+  measurements: PerfMeasurement[];
+};
 
 export type Status = {
   schema: 1;
@@ -84,6 +129,10 @@ export type Status = {
   elements: ElementStatus[];
   agents: AgentResult[];
   hostile: HostileResult[];
+  /** Present when the run computed the Appendix M scenarios. */
+  acceptance?: Acceptance;
+  /** Present when the perf job's results were merged. */
+  performance?: Performance;
   ci: { workflow: string; conclusion: string };
 };
 
@@ -203,6 +252,8 @@ function normalize(x: Status): Status {
     coverage: { totalPct: x.coverage.totalPct, packages: x.coverage.packages ?? [] },
     agents: isArr(x.agents) ? x.agents : [],
     hostile: isArr(x.hostile) ? x.hostile : [],
+    acceptance: x.acceptance && isArr(x.acceptance.scenarios) ? x.acceptance : undefined,
+    performance: x.performance && isArr(x.performance.measurements) ? x.performance : undefined,
     ci: x.ci ?? { workflow: "", conclusion: "" },
   };
 }

@@ -360,7 +360,7 @@ func TestRunWritesContractDocuments(t *testing.T) {
 	out := filepath.Join(dir, "build", "reqreport")
 	statusPath := filepath.Join(dir, "build", "status.json")
 	args := []string{"-in", in, "-out", out, "-status", statusPath, "-srs", filepath.Join(dir, "srs"), "-arch", arch,
-		"-elements", "", "-gomod", gomod, "-commit", "deadbeef", "-agents", "", "-hostile", ""}
+		"-elements", "", "-gomod", gomod, "-commit", "deadbeef", "-agents", "", "-hostile", "", "-appendix", ""}
 	var stdout bytes.Buffer
 	code, err := run(args, nil, &stdout)
 	if err != nil {

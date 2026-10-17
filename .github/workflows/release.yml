@@ -108,6 +108,27 @@ jobs:
           grep -qF "$key" SECURITY.md || { echo "::error::install.sh and SECURITY.md publish different keys"; exit 1; }
           sums=$(ls build/dist/*_checksums.txt)
           minisign -V -P "$key" -m "$sums" -x "$sums.minisig"
+      # FR-19.3: "enforced" only when every Appendix M scenario passed in the
+      # Enforced profile for this commit, per the status data the CI status
+      # job published (site-data/status.json); "not enforced" otherwise,
+      # including when that data is for another commit.
+      - name: Release label (FR-19.3)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build
+          if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null && git show FETCH_HEAD:status.json > build/release-status.json 2>/dev/null; then
+            echo "status data for commit $(jq -r .commit build/release-status.json)"
+          else
+            echo '{}' > build/release-status.json
+            echo "::warning::no published status data; the release is labelled not enforced"
+          fi
+          go run ./tools/reqreport label -status build/release-status.json -commit "$GITHUB_SHA" -out build/release-label.md
+          gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json body -q .body > build/release-notes.md
+          { echo; cat build/release-label.md; } >> build/release-notes.md
+          gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --notes-file build/release-notes.md
+          gh release upload "$GITHUB_REF_NAME" build/release-label.md -R "$GITHUB_REPOSITORY" --clobber
+          cat build/release-label.md >> "$GITHUB_STEP_SUMMARY"
       - name: Install cosign
         if: vars.SMCP_COSIGN != 'false'
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2

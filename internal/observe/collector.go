@@ -21,6 +21,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/anomaly"
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
 
 // Record is one assembled observation record. Values are keyed by
@@ -141,6 +142,12 @@ type Options struct {
 	// shrinks the per-session cache to a quarter of MaxSessions. nil is
 	// stage 0.
 	Degradation func() int
+	// SpanSink receives each call's stage spans (FR-10.2) with the
+	// Observation Policy ID in force, on the collector's goroutine.
+	SpanSink func(policyID string, spans []pipeline.StageSpan)
+	// CurrentPolicy returns the Observation Policy ID in force when it can
+	// change while the collector runs; nil means PolicyID.
+	CurrentPolicy func() string
 }
 
 // Degradation stages the collector acts on (see Options.Degradation).
@@ -177,6 +184,7 @@ const (
 type item struct {
 	ev    *audit.Event
 	probe *Probe
+	spans []pipeline.StageSpan
 	flush chan struct{}
 }
 
@@ -217,6 +225,7 @@ type Collector struct {
 
 	assembled atomic.Uint64
 	captured  atomic.Uint64
+	cost      costAgg // FR-10.11
 	done      chan struct{}
 	inMu      sync.RWMutex // guards ch against send after close
 	closed    bool
@@ -373,6 +382,8 @@ func (c *Collector) Run() {
 				close(it.flush)
 			case it.probe != nil:
 				c.onProbe(it.probe)
+			case it.spans != nil:
+				c.onSpans(it.spans)
 			case it.ev != nil:
 				c.onEvent(it.ev)
 			}

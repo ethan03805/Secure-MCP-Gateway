@@ -44,6 +44,10 @@ type FilterRun struct {
 	ReasonCode string        `json:"reasonCode,omitempty"`
 	Findings   []Finding     `json:"findings,omitempty"`
 	Duration   time.Duration `json:"-"`
+	// Start is when the filter began (monotonic) and CPU the thread CPU
+	// time it used (FR-10.2); CPU is zero where it cannot be measured.
+	Start time.Time     `json:"-"`
+	CPU   time.Duration `json:"-"`
 }
 
 // String is the FR-4.4 name of an action.

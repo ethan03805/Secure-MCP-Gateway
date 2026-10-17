@@ -164,6 +164,7 @@ func TestMirrorExactlyOncePerEventAcrossCrashAndRestart(t *testing.T) {
 	// one AuditEvent per event ID, and re-applying changes nothing).
 	// The evidence export (X-09) half of SR-6.10-1 is not built here.
 	reqtest.Partial(t, "SR-6.10-1")
+	reqtest.Scenario(t, reqtest.Standalone, "AT-12") // mirror replay and duplicate event IDs
 	f := NewFake()
 	cb := &crashingBackend{Fake: f}
 	cb.left.Store(1 << 40)

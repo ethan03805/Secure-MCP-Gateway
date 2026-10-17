@@ -88,6 +88,15 @@ builds:
     ldflags:
       - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/adapter.Version={{ .Version }}
     mod_timestamp: "{{ .CommitTimestamp }}"
+  # Reference workload generator and FR-11 measurements (SRS FR-11.1).
+  - id: smcp-workload
+    main: ./cmd/smcp-workload
+    binary: smcp-workload
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
   - id: smcp

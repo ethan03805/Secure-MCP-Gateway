@@ -196,8 +196,9 @@ func (f *Filters) RunRequest(ctx context.Context, call *Call, args json.RawMessa
 			continue
 		}
 		start := time.Now()
-		v, err := runBounded(ctx, func() (RequestVerdict, error) { return e.f.FilterRequest(ctx, call, args) })
-		run := FilterRun{Stage: StageRequest, Filter: e.id, Version: versionOf(e.f), Action: v.Action, ReasonCode: v.ReasonCode, Findings: v.Findings, Duration: time.Since(start)}
+		v, cpu, err := runBounded(ctx, func() (RequestVerdict, error) { return e.f.FilterRequest(ctx, call, args) })
+		run := FilterRun{Stage: StageRequest, Filter: e.id, Version: versionOf(e.f), Action: v.Action, ReasonCode: v.ReasonCode, Findings: v.Findings, Duration: time.Since(start),
+			Start: start, CPU: cpu}
 		applied = append(applied, e.id)
 		if err != nil {
 			run.Action, run.ReasonCode, run.Findings = Block, errReason(err), nil
@@ -249,8 +250,9 @@ func (f *Filters) RunResponse(ctx context.Context, call *Call, res *mcp.CallTool
 		}
 		start := time.Now()
 		cur := res
-		v, err := runBounded(ctx, func() (ResponseVerdict, error) { return e.f.FilterResponse(ctx, call, cur) })
-		run := FilterRun{Stage: StageResponse, Filter: e.id, Version: versionOf(e.f), Action: v.Action, ReasonCode: v.ReasonCode, Findings: v.Findings, Duration: time.Since(start)}
+		v, cpu, err := runBounded(ctx, func() (ResponseVerdict, error) { return e.f.FilterResponse(ctx, call, cur) })
+		run := FilterRun{Stage: StageResponse, Filter: e.id, Version: versionOf(e.f), Action: v.Action, ReasonCode: v.ReasonCode, Findings: v.Findings, Duration: time.Since(start),
+			Start: start, CPU: cpu}
 		applied = append(applied, e.id)
 		if err != nil {
 			run.Action, run.ReasonCode, run.Findings = Block, errReason(err), nil
@@ -308,9 +310,10 @@ func errText(err error) string {
 // slow or stuck filter cannot hold the call past the CP-14 deadline. A
 // panic is converted to an error. A filter that ignores ctx keeps running
 // until it returns; its result is discarded.
-func runBounded[V any](ctx context.Context, fn func() (V, error)) (V, error) {
+func runBounded[V any](ctx context.Context, fn func() (V, error)) (V, time.Duration, error) {
 	type out struct {
 		v   V
+		cpu time.Duration
 		err error
 	}
 	ch := make(chan out, 1)
@@ -322,14 +325,15 @@ func runBounded[V any](ctx context.Context, fn func() (V, error)) (V, error) {
 			}
 			ch <- o
 		}()
-		o.v, o.err = fn()
+		// The filter's own CPU time (FR-10.2), measured on its thread.
+		o.cpu, _ = MeasureCPU(func() { o.v, o.err = fn() })
 	}()
 	select {
 	case o := <-ch:
-		return o.v, o.err
+		return o.v, o.cpu, o.err
 	case <-ctx.Done():
 		var zero V
-		return zero, errFilterTimeout
+		return zero, 0, errFilterTimeout
 	}
 }
 

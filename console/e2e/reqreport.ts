@@ -2,8 +2,9 @@
 // `go test -json` event format, so that tools/reqreport counts them with
 // the Go tests (FR-8.34, FR-12.10). Each test's annotations become claim
 // lines: type "requirement" is a full claim (VERIFIES), type
-// "requirement-partial" a partial one (PARTIAL). Only the last attempt of a
-// retried test counts.
+// "requirement-partial" a partial one (PARTIAL), type "scenario" an
+// acceptance scenario claim (SCENARIO). Only the last attempt of a retried
+// test counts.
 //
 // Output: build/console-<project>-test.json at the repository root, one
 // file per browser project, with Package "console/e2e/<project>". The CI
@@ -49,7 +50,14 @@ export default class ReqReporter implements Reporter {
       const at = new Date(r.startTime.getTime() + r.duration).toISOString();
       evs.push({ Time: r.startTime.toISOString(), Action: "run", Package: pkg, Test: name });
       for (const a of t.annotations) {
-        const marker = a.type === "requirement" ? "VERIFIES:" : a.type === "requirement-partial" ? "PARTIAL:" : "";
+        // type "scenario" claims an acceptance scenario (FR-19.4), with a
+        // description such as "AT-15 profile=standalone".
+        const markers: Record<string, string> = {
+          requirement: "VERIFIES:",
+          "requirement-partial": "PARTIAL:",
+          scenario: "SCENARIO:",
+        };
+        const marker = markers[a.type] ?? "";
         if (marker && a.description) evs.push({ Time: at, Action: "output", Package: pkg, Test: name, Output: `    ${marker} ${a.description}\n` });
       }
       if (r.error?.message) evs.push({ Time: at, Action: "output", Package: pkg, Test: name, Output: r.error.message.split("\n").slice(0, 5).join("\n") + "\n" });
