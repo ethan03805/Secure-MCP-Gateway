@@ -430,7 +430,17 @@ type sseLine struct {
 
 func (af *approvalFixture) rawCall(access, text string) (string, []sseLine) {
 	af.t.Helper()
-	body := `{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"t_echo","arguments":{"text":"` + text + `"}}}`
+	return af.rawCallMeta(access, text, "")
+}
+
+// rawCallMeta is rawCall with a params._meta object (JSON) when meta is not empty.
+func (af *approvalFixture) rawCallMeta(access, text, meta string) (string, []sseLine) {
+	af.t.Helper()
+	m := ""
+	if meta != "" {
+		m = `,"_meta":` + meta
+	}
+	body := `{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"t_echo","arguments":{"text":"` + text + `"}` + m + `}}`
 	req, _ := http.NewRequest("POST", af.cfg.ResourceURI(), strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
@@ -450,10 +460,12 @@ func (af *approvalFixture) rawCall(access, text string) (string, []sseLine) {
 }
 
 func TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry(t *testing.T) {
-	reqtest.Verifies(t, "FR-3.22", "FR-3.15")
-	// FR-3.19: the progress-token form is checked in the test above; this
-	// one checks the SSE comment form and the bound.
-	reqtest.Partial(t, "FR-3.19", "FR-1.51")
+	// FR-3.19: both keep-alive forms over a 1 s hold bound at the 100 ms
+	// interval: SSE comment lines without a progress token (first) and
+	// notifications/progress with one (at the end), each with no response
+	// before the bound.
+	reqtest.Verifies(t, "FR-3.22", "FR-3.15", "FR-3.19")
+	reqtest.Partial(t, "FR-1.51")
 	af := startApprovals(t, "1s", "3s")
 	access, _, _ := af.oauthLogin("")
 
@@ -480,7 +492,7 @@ func TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry(t *testing.T) {
 			final = l.text
 		}
 	}
-	if comments < 5 || time.Since(start) < time.Second {
+	if comments < 5 || comments > 15 || time.Since(start) < time.Second {
 		t.Fatalf("%d keep-alives over %v", comments, time.Since(start))
 	}
 	items := af.pending(1)
@@ -550,5 +562,33 @@ func TestApprovalHoldBoundSSEKeepAliveRetryAndExpiry(t *testing.T) {
 		if time.Now().After(deadline) {
 			t.Fatal("no expiry evidence")
 		}
+	}
+
+	// With a progress token the keep-alives are notifications/progress for
+	// that token, and the only response is the -31002 at the bound.
+	start = time.Now()
+	ct, lines = af.rawCallMeta(access, "progress", `{"progressToken":"pt-19"}`)
+	if !strings.HasPrefix(ct, "text/event-stream") || time.Since(start) < time.Second {
+		t.Fatalf("content type %q after %v", ct, time.Since(start))
+	}
+	var progress, responses int
+	final = ""
+	for _, l := range lines {
+		if !strings.HasPrefix(l.text, "data: ") {
+			continue
+		}
+		switch {
+		case strings.Contains(l.text, `"method":"notifications/progress"`):
+			if !strings.Contains(l.text, `"progressToken":"pt-19"`) || final != "" {
+				t.Fatalf("progress keep-alive %s (after the response: %v)", l.text, final != "")
+			}
+			progress++
+		case strings.Contains(l.text, `"id":7`):
+			responses++
+			final = l.text
+		}
+	}
+	if progress < 5 || progress > 15 || responses != 1 || !strings.Contains(final, `"code":-31002`) {
+		t.Fatalf("%d progress keep-alives, %d responses, final %s", progress, responses, final)
 	}
 }
