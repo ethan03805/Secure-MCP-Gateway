@@ -345,6 +345,17 @@ jobs:
         with:
           name: go-results
           path: build
+      - name: Merge the latest real-agent results (agents workflow, site-data/agents.json)
+        run: |
+          if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null &&
+             git show FETCH_HEAD:agents.json > build/agents.json 2>/dev/null &&
+             jq -e 'type == "array"' build/agents.json >/dev/null; then
+            jq --slurpfile a build/agents.json '.agents = $a[0]' build/status.json > build/status.tmp
+            mv build/status.tmp build/status.json
+            echo "merged $(jq length build/agents.json) agent results"
+          else
+            echo "no published agent results yet"
+          fi
       - name: Record the overall CI conclusion
         env:
           NEEDS: ${{ toJSON(needs) }}
