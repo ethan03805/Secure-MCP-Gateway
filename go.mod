@@ -3,6 +3,7 @@ module github.com/ethan03805/secure-mcp-gateway
 go 1.26.0
 
 require (
+	aead.dev/minisign v0.3.0
 	filippo.io/age v1.3.2
 	github.com/google/nftables v0.3.0
 	github.com/google/uuid v1.6.0

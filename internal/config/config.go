@@ -46,8 +46,9 @@ type Config struct {
 	Graph         Graph         `toml:"graph" json:"graph"`
 	Observation   Observation   `toml:"observation" json:"observation"`
 	// Secrets enables the Secret Vault and Broker (E-19, E-20) when present.
-	Secrets *Secrets `toml:"secrets" json:"secrets"`
-	Remote  Remote   `toml:"remote" json:"remote"`
+	Secrets  *Secrets `toml:"secrets" json:"secrets"`
+	Remote   Remote   `toml:"remote" json:"remote"`
+	Packages Packages `toml:"packages" json:"packages"`
 
 	// Operations (E-21 export, E-22, E-23); see ops.go.
 	SchemaVersion int      `toml:"schema_version" json:"schema_version"`
@@ -230,6 +231,24 @@ type Server struct {
 	SecretEnv   map[string]string `toml:"secret_env" json:"secret_env"`
 	Dir         string            `toml:"dir" json:"dir"`
 	RiskClasses []string          `toml:"risk_classes" json:"risk_classes"`
+	// Package names a signed server package (E-13/E-14) instead of a
+	// command: the enabled revision of that server ID is launched from the
+	// content-addressed store. PackageSHA256 optionally pins its artifact
+	// digest; Slots bind the manifest's filesystem slots to host paths.
+	Package       string            `toml:"package" json:"package"`
+	PackageSHA256 string            `toml:"package_sha256" json:"package_sha256"`
+	Slots         map[string]string `toml:"slots" json:"slots"`
+}
+
+// Packages configures the Library Trust Verifier and Local Server
+// Registry (E-13, E-14; docs/packaging.md).
+type Packages struct {
+	Library       string   `toml:"library" json:"library"`             // default <state>/library
+	ScanInterval  Duration `toml:"scan_interval" json:"scan_interval"` // FR-5.3, default 300s
+	RequireSigned bool     `toml:"require_signed" json:"require_signed"`
+	Node          string   `toml:"node" json:"node"`
+	Python        string   `toml:"python" json:"python"`
+	Podman        string   `toml:"podman" json:"podman"`
 }
 
 // Secrets configures the Secret Vault (E-19) and Secret Broker (E-20).
@@ -402,6 +421,9 @@ func (c *Config) applyDefaults(limitsSet map[string]bool) {
 	if c.Policy.File == "" {
 		c.Policy.File = "policy.json"
 	}
+	if c.Packages.ScanInterval.Duration == 0 {
+		c.Packages.ScanInterval.Duration = 300 * time.Second
+	}
 	for _, d := range LimitDefaults {
 		if limitsSet[d.Key] {
 			continue
@@ -485,6 +507,12 @@ func (c *Config) check() error {
 			return fmt.Errorf("duplicate server alias %q", s.Alias)
 		}
 		aliases[s.Alias] = true
+		if (s.Command == "") == (s.Package == "") {
+			return fmt.Errorf("server %q: set exactly one of command and package", s.Alias)
+		}
+		if s.Package == "" && (s.PackageSHA256 != "" || len(s.Slots) > 0) {
+			return fmt.Errorf("server %q: package_sha256 and slots apply only to a package", s.Alias)
+		}
 		for k := range s.SecretEnv {
 			if _, dup := s.Env[k]; dup {
 				return fmt.Errorf("server %q: %s is in both env and secret_env", s.Alias, k)
@@ -522,9 +550,14 @@ func (c *Config) resolvePaths() {
 	}
 	for i := range c.Servers {
 		res(&c.Servers[i].Dir)
+		for k, v := range c.Servers[i].Slots {
+			res(&v)
+			c.Servers[i].Slots[k] = v
+		}
 	}
 	c.Runtime.resolvePaths(c.Dir)
 	c.resolveOpsPaths(res)
+	res(&c.Packages.Library)
 }
 
 // ResourceURI is the CP-41 resource indicator: the public URL of the MCP

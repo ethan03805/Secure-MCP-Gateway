@@ -39,6 +39,12 @@ sequenceDiagram
   Note over E14: At each launch E-13 re-verifies the artifact digest (SR-3-2). A changed tool list at run time suspends the revision (SR-3.8-1)
 ```
 
-## Implementation as of commit a3193a5
+## Implementation
 
-Not implemented. Servers are configured as commands in `smcp.toml`; `internal/backend` starts each one and reads its live tool list at startup. The example written by `smcpctl bootstrap` launches the filesystem server through `npx`, which FR-14.10 and SR-3.6-1 forbid once packaging exists.
+Implemented in `internal/packaging` (formats, build, probe, minisign signing and verification, trust anchors) and `internal/library` (verifier, registry, run-time manifest source, control API routes); the operator procedure is the [packaging guide](../packaging-guide.md). Differences from the diagram:
+
+- Only the directory library is scanned; there is no OCI registry library (FR-5.1).
+- The probe runs with the host network in the Standalone profile; network removal needs a confining launcher (E-16).
+- Enabling is done by `smcpctl package enable` or `POST /api/v1/packages/{id}/{revision}/enable`; the console view G-10 does not exist yet. A revision enabled while `smcpd` runs is launched at the next start.
+- Instances are torn down by the backend registry (`Registry.Suspend`); there is no separate E-15 instance manager.
+- `smcpctl bootstrap` packages the bundled `smcp-refserver`, signs it with a one-time key enrolled for the `low` class, and writes it as the example's only backend (FR-14.10).

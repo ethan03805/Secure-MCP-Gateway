@@ -23,6 +23,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
+	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
@@ -74,11 +75,15 @@ func run(cfgPath, level string) error {
 		return fmt.Errorf("approvals: %w", err)
 	}
 	defer approvals.Close()
+	pkgs, err := library.OpenRuntime(cfg, log) // E-13, E-14
+	if err != nil {
+		return fmt.Errorf("packages: %w", err)
+	}
 	mirror, err := graph.New(graph.Options{Config: cfg, Log: log}) // E-25, E-26, E-28: never gates enforcement
 	if err != nil {
 		return fmt.Errorf("graph: %w", err)
 	}
-	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate,
+	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs,
 		Observers: map[string]audit.Observer{"graph": mirror}}
 	obs, err := analytics.New(analytics.Options{Config: cfg, Log: log}) // SS-10, E-27
 	if err != nil {

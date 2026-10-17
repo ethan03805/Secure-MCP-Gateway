@@ -1899,7 +1899,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-5.6 |
 | Parent ID | FR-5 — Server trust and execution |
-| Statement | The Local Server Registry (E-14) **SHALL** assign each server a unique alias of 1 to 32 characters drawn from `a-z 0-9 _ -`, defaulting to the manifest server ID and editable by an administrator. |
+| Statement | The Local Server Registry (E-14) **SHALL** assign each server a unique alias of 1 to 16 characters drawn from `a-z 0-9` (CP-42), defaulting to the manifest `server.alias` and editable by an administrator. |
 | Allocation | Elements: E-14 Local Server Registry; Functions: F-36; Internal interfaces: I-06 |
 | Verification Method | Test |
 | Verification Statement | Register two servers whose default aliases collide; confirm enablement of the second is blocked until a unique alias is set. |

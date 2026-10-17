@@ -34,7 +34,8 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Policy reference](policy-reference.md) | FR-18.5 | Written for Framework Profiles and Session Allow Policy Templates, the Policy Store and `smcpctl policy` |
 | [Control API: policy routes](api/policy.md) | FR-18.5 | Written |
 | [Control API: operations routes](api/ops.md) | FR-18.4 | Written |
-| Packaging guide (`packaging-guide.md`) | FR-18.6 | To be written with `smcpctl package` (FR-14) |
+| [Packaging guide](packaging-guide.md) | FR-18.6 | Written |
+| [Control API: packages](api/packages.md) | — | Written |
 | Runbooks (`runbooks/`) | FR-18.8 | [Backup and restore](runbooks/backup-restore.md), [key rotation](runbooks/key-rotation.md) and [upgrade rollback](runbooks/upgrade-rollback.md) written, without execution records yet; emergency stop and revocation to be written |
 
 ## Flows

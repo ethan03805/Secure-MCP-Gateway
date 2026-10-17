@@ -62,6 +62,21 @@ type Options struct {
 	// HealthGate is the Health & Safety Monitor's fail-closed gate (E-23,
 	// internal/health); default none.
 	HealthGate func() []string
+	// Packages is the Library Trust Verifier and Local Server Registry
+	// (E-13, E-14; internal/library). Default none: [[server]] entries
+	// naming a package are refused.
+	Packages Packages
+}
+
+// Packages is the seam for signed server packages (internal/library).
+// Prepare resolves packaged [[server]] entries and may wrap the launcher;
+// Started hands over the registry's suspend function (drift, revocation).
+type Packages interface {
+	pipeline.ManifestSource
+	Prepare(rec audit.Recorder, servers []config.Server, l pipeline.Launcher, standalone bool) ([]config.Server, pipeline.Launcher, error)
+	Started(suspend func(alias, reason string) bool)
+	RegisterRoutes(s *adminapi.Server)
+	Close() error
 }
 
 // App is a started Gateway.
@@ -84,6 +99,7 @@ type App struct {
 
 	log       *slog.Logger
 	janitor   time.Duration
+	packages  Packages
 	harnessLn net.Listener
 	adminLn   net.Listener
 	closeOnce sync.Once
@@ -188,8 +204,24 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		o.Log.Warn("standalone profile: server instances run unconfined; high-risk server classes are refused", "reasons", a.Profile.Reasons)
 	}
 
+	servers := cfg.Servers
+	if o.Packages != nil {
+		a.packages = o.Packages
+		if servers, o.Launcher, err = o.Packages.Prepare(a.Evidence, cfg.Servers, o.Launcher, a.Profile.Profile == profile.Standalone); err != nil {
+			return a, fmt.Errorf("packages: %w", err)
+		}
+		if o.Manifests == nil {
+			o.Manifests = o.Packages
+		}
+	} else {
+		for _, s := range servers {
+			if s.Package != "" {
+				return a, fmt.Errorf("server %q names package %q but package support is not configured", s.Alias, s.Package)
+			}
+		}
+	}
 	a.Capabilities = pipeline.NewCapabilities(2 * cfg.Limits.ClientDeadline.Duration)
-	if a.Registry, err = backend.Start(ctx, cfg.Servers, backend.Options{
+	if a.Registry, err = backend.Start(ctx, servers, backend.Options{
 		Limits: backend.Limits{PerPrincipal: cfg.Limits.ToolConcurrencyPerUser, Total: cfg.Limits.ToolConcurrencyTotal, Queue: cfg.Limits.ToolQueue,
 			UpstreamTimeout: cfg.Limits.UpstreamTimeout.Duration, ResultBytes: cfg.Limits.ResultBytes},
 		Launcher: o.Launcher, Manifests: o.Manifests, Secrets: o.Secrets, Capabilities: a.Capabilities, Log: o.Log,
@@ -198,6 +230,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 	for alias, s := range a.Registry.Servers() {
 		o.Log.Info("server enabled", "alias", alias, "revision", s.Revision, "era", s.Era, "tools", len(s.Tools), "verified", s.Verified)
+	}
+	if o.Packages != nil {
+		o.Packages.Started(a.Registry.Suspend)
 	}
 
 	a.Decider = policy.NewDecider(snap, cfg.Limits.PrincipalCallsPerMin)
@@ -225,6 +260,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	revision := ""
 	if snap != nil {
 		revision = snap.Revision
+	}
+	if o.Packages != nil {
+		o.Packages.RegisterRoutes(a.Admin)
 	}
 	if err = a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "started", PolicyRevision: revision, PolicyStatus: "not_evaluated",
 		Detail: map[string]any{"version": backend.Version, "listener": cfg.Listener.Address, "admin_listener": cfg.AdminListener.Address,
@@ -278,6 +316,11 @@ func (a *App) Close() {
 		}
 		if err := a.Egress.Close(); err != nil {
 			a.log.Error("egress broker close failed", "err", err)
+		}
+		if a.packages != nil {
+			if err := a.packages.Close(); err != nil {
+				a.log.Error("package registry close failed", "err", err)
+			}
 		}
 		if a.Evidence != nil {
 			if err := a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "stopped", PolicyStatus: "not_evaluated"}); err != nil {

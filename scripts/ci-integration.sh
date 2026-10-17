@@ -104,6 +104,12 @@ done
 [ -n "$ready" ] || { cat "$log" >&2; fail "smcpd did not become healthy within 60 s"; }
 "$bin/smcpctl" health --config "$cfg"
 
+say "The example server is a signed, verified package (FR-14.10)"
+"$bin/smcpctl" package list --config "$cfg"
+if "$bin/smcpctl" health --config "$cfg" | grep -q unverified_servers; then
+  fail "the bootstrap example server is not served from a verified package"
+fi
+
 say "Driving an MCP client through OAuth and tool calls"
 ca="$inst/state/tls/ca.crt"
 [ -f "$ca" ] || fail "CA certificate not found at $ca"

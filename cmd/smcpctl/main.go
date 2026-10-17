@@ -28,6 +28,8 @@ Offline:
   journal export   copy closed journal segments and the anchor to an export directory
   config migrate   rewrite the configuration to this release's schema_version
   hash-password    print an Argon2id hash of a password (prompt or --password-file)
+  package          build, sign, verify, install and manage server packages (smcpctl package help)
+  trust            enroll, list and remove package signing keys (trust anchors)
   filters          list, export and test the inspection rule sets (rules, export, scan)
   restore          restore an encrypted backup (the Gateway must be stopped)
   upgrade          install a new release with backup, health check and rollback
@@ -77,6 +79,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = validate(args[2:], stdout)
 	case args[0] == "journal" && sub("verify"):
 		err = verifyJournal(args[2:], stdout)
+	case args[0] == "package":
+		err = packageCmd(args[1:], stdout)
+	case args[0] == "trust":
+		err = trustCmd(args[1:], stdout)
 	case args[0] == "hash-password":
 		err = hashPassword(args[1:], stdout)
 	case args[0] == "filters":
