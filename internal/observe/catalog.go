@@ -139,7 +139,7 @@ var Computed = []string{
 	"principal_id", "session_template", "calls_in_session", "end_user_claim",
 	"harness_adapter_version", "trace_parent", "mcp_method", "server_revision", "tool_name",
 	"request_bytes", "argument_count", "argument_max_depth", "argument_string_lengths", "argument_entropy",
-	"path_argument_count", "url_argument_count", "argument_value_hashes", "unicode_control_count",
+	"path_argument_count", "url_argument_count", "argument_value_hashes", "unicode_control_count", "injection_detect_score",
 	"previous_tool", "transition_surprise", "inter_call_interval", "calls_per_minute_session",
 	"calls_per_minute_principal", "distinct_tools_in_session", "repeated_identical_calls",
 	"decision_outcome", "decisive_rule_ids", "obligations_applied", "approval_state",
@@ -147,7 +147,8 @@ var Computed = []string{
 	"server_execution_time",
 	"response_bytes", "content_parts_by_type", "output_schema_conformance", "response_entropy",
 	"response_token_estimate", "is_error", "structured_field_count", "embedded_url_count",
-	"release_outcome", "delivery_confirmation", "end_to_end_latency",
+	"filter_hits", "redaction_count", "secret_fingerprint_matches", "injection_marker_score", "pii_hits",
+	"release_outcome", "delivery_confirmation", "end_to_end_latency", "t_request_filters", "t_response_filters",
 	"t_approval_wait", "t_scoring", "t_capture", "gateway_overhead",
 	"session_id",
 }

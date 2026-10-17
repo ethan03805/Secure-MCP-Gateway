@@ -405,12 +405,27 @@ func adminEvent(class, outcome, reason, actor string, detail map[string]any) aud
 // Stop enters the emergency-stop state (FR-4.14). The state changes even
 // when the evidence write fails, because stopping is the safe direction;
 // the error is still returned so the caller can report it.
-func (g *Gateway) Stop(actor, reason string) error {
+func (g *Gateway) Stop(actor, reason string) error { return g.stop(actor, reason, true) }
+
+// StopDraining enters the emergency-stop state like Stop but lets calls in
+// flight run to their end (their results are withheld at release). The
+// online backup uses it to drain dispatch before sealing the journal.
+func (g *Gateway) StopDraining(actor, reason string) error { return g.stop(actor, reason, false) }
+
+func (g *Gateway) stop(actor, reason string, cancelCalls bool) error {
 	g.gate.Lock()
 	g.stopped.Store(true)
 	g.gate.Unlock()
 	g.log.Warn("emergency stop", "actor", actor, "reason", reason)
-	if err := g.evidence.Commit(adminEvent("admin", "stopped", ReasonEmergencyStop, actor, map[string]any{"reason": reason})); err != nil {
+	detail := map[string]any{"reason": reason}
+	if cancelCalls {
+		// SR-7.6-2: every call in flight is cancelled (the dispatcher sends
+		// notifications/cancelled southbound); the stopped event below makes
+		// the Secret Broker withdraw its grants.
+		detail["calls_cancelled"] = g.track.count(kindCall)
+		g.track.cancelKind(kindCall, errEmergencyStop)
+	}
+	if err := g.evidence.Commit(adminEvent("admin", "stopped", ReasonEmergencyStop, actor, detail)); err != nil {
 		return fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
 	}
 	return nil

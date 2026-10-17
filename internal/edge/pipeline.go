@@ -382,6 +382,10 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 // (stream.go).
 func (g *Gateway) approve(ctx context.Context, c *callRun, call *pipeline.Call, args json.RawMessage, req *mcp.CallToolRequest) error {
 	res, err := g.approver.Request(ctx, pipeline.ApprovalRequest{Call: *call, Arguments: args, Hold: g.cfg.Limits.ApprovalHold.Duration, Progress: g.keepAlive(ctx, c.prog)})
+	if ctx.Err() != nil && g.stopped.Load() { // SR-7.6-2: the stop cancelled the held call
+		return c.refuse(gatewayError(CodeGatewayFailClosed, "call cancelled by emergency stop", ReasonEmergencyStop, c.corr, c.dec.ID, nil),
+			"call", audit.PhaseDenied, "E-12", "cancelled", ReasonEmergencyStop, "evaluated")
+	}
 	if err != nil {
 		g.log.Warn("approval service failed; refusing the call", "err", err, "correlation", c.corr)
 		res = pipeline.ApprovalResult{Outcome: pipeline.Pending, ReasonCode: ReasonApprovalNoSvc,
@@ -600,6 +604,12 @@ func (g *Gateway) mapDispatchError(c *callRun, sessionID string, err error) erro
 	case errors.Is(err, context.DeadlineExceeded):
 		return c.refuse(gatewayError(CodeTimeout, "client deadline expired", "CLIENT_DEADLINE", corr, dec.ID, nil),
 			"call", audit.PhaseIndeterminate, "E-10", "timeout", "CLIENT_DEADLINE", "evaluated")
+	case errors.Is(err, context.Canceled) && g.stopped.Load():
+		// SR-7.6-2: the emergency stop cancelled the call. As for a call
+		// whose release the stop refuses (SR-1.17-2), nothing is released;
+		// the backend may have acted before the cancellation reached it.
+		return c.refuse(gatewayError(CodeResponseWithheld, "call cancelled by emergency stop", ReasonEmergencyStop, corr, dec.ID, nil),
+			"call", audit.PhaseIndeterminate, "E-12", "cancelled", ReasonEmergencyStop, "evaluated")
 	case errors.Is(err, context.Canceled) && !g.store.IsActive(sessionID):
 		return c.refuse(gatewayError(CodeSessionInvalid, "session ended during the call", ReasonSessionEnded, corr, dec.ID, nil),
 			"call", audit.PhaseIndeterminate, "E-04", "cancelled", ReasonSessionEnded, "evaluated")
