@@ -12,3 +12,7 @@ CHANGELOG.md merge=union
 # Shell scripts must keep LF line endings to run.
 *.sh text eol=lf
 install.sh text eol=lf
+
+# Built console (make console), embedded into smcpd.
+console/dist/** linguist-generated=true
+console/package-lock.json linguist-generated=true

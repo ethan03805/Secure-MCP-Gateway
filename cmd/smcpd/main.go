@@ -17,6 +17,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 )
@@ -72,6 +73,9 @@ func run(cfgPath, level string) error {
 		rt.SetEvidence(a.Evidence)
 	}
 	(&sandbox.API{Launcher: rt, Actor: adminapi.Actor}).Register(a.Admin)
+	if _, err := consoleapi.Attach(a, log); err != nil { // E-24 console and its routes
+		return fmt.Errorf("console: %w", err)
+	}
 	if err := a.Listen(); err != nil {
 		return err
 	}

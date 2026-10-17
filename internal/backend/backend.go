@@ -419,8 +419,14 @@ func (r *Registry) Waiting() int { r.mu.Lock(); defer r.mu.Unlock(); return r.wa
 // Stderr returns the bounded diagnostic buffer of a server (FR-5.15).
 func (s *Server) Stderr() string { return s.proc.Stderr() }
 
-// OversizedFrames returns how many oversized messages the server sent.
-func (s *Server) OversizedFrames() uint64 { return s.filter.oversized.Load() }
+// OversizedFrames returns how many oversized messages the server sent (0
+// for a Server value that was not launched, such as a test fixture).
+func (s *Server) OversizedFrames() uint64 {
+	if s.filter == nil {
+		return 0
+	}
+	return s.filter.oversized.Load()
+}
 
 // Close shuts every instance down after in-flight calls finish (FR-5.27
 // ordering is the Process's shutdown sequence).
