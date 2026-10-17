@@ -257,7 +257,9 @@ All runtime events have class `runtime` and `policy_status` `not_evaluated`.
 | `monitor_degraded` | E-17 | `MONITOR_UNAVAILABLE` | no | The monitor could not find the instance's cgroup after 20 tries |
 | `evidence_dropped` | E-15 | | yes | `events`: runtime events dropped because more than 1,024 were produced before the journal was attached |
 
-Stderr content never enters evidence or harness traffic; only its size does. It is kept in a 1 MiB ring per instance (CP-37) and the control API returns its last 64 KiB.
+Stderr content never enters harness traffic. It is kept in a 1 MiB ring per instance (CP-37) and the control API returns its last 64 KiB.
+
+Text a server asserts is recorded as evidence of class `server_asserted` (SR-6.18-1), origin E-15, `policy_status` `not_evaluated`, attributed to the server revision and the instance. The outcome is `stderr` (output written since the last record), `error` (the message and code of a JSON-RPC error the server returned; the harness sees only `BACKEND_ERROR` and the code) or `notification` (any notification the server sent, with its method and parameters). Detail: `server`, `instance` (`<alias>#<n>`), `text`, and `method`, `code`, `truncated_bytes`, `skipped_bytes` (stderr overwritten in the ring before it was read) and `dropped` when they apply. Records are written once a second per instance, at most 16 per second; each `text` holds at most 4 KiB, and every secret value delivered to the instance is replaced with `[REDACTED]`. These events are labelled origin `backend`; their claims are not facts about a call and are not linked to one.
 
 ## Commands
 

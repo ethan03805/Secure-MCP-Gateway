@@ -90,7 +90,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-21 Audit & Evidence Service
 
 - SR-6.12-1 external: the evidence key and checkpoint directory permissions depend on the Enforced installation's identities; not exercised.
-- SR-6.18-1 missing: stderr, backend error messages and notifications are not recorded as `server_asserted` evidence.
 
 ## E-22 Key & Trust Anchor Manager
 

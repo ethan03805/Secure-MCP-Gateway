@@ -72,6 +72,9 @@ func runBackend() {
 		for i := 0; i < 10*1024/64; i++ {
 			_, _ = os.Stderr.WriteString(block)
 		}
+		// A notification the Gateway does not forward (no client token);
+		// it is recorded as server-asserted evidence (SR-6.18-1).
+		_ = req.Session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{ProgressToken: "noisy", Progress: 1, Message: "noisy done"})
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "quiet"}}}, nil, nil
 	})
 	if err := s.Run(context.Background(), &mcp.StdioTransport{}); err != nil {

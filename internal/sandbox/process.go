@@ -43,6 +43,9 @@ func (c *container) Read(b []byte) (int, error) {
 func (c *container) Write(b []byte) (int, error) { return c.stdin.Write(b) }
 func (c *container) Stderr() string              { return c.stderr.Tail() }
 
+// StderrSince implements pipeline.StderrReader (SR-6.18-1).
+func (c *container) StderrSince(off uint64) (string, uint64, uint64) { return c.stderr.Since(off) }
+
 // exited reports whether the podman client process has ended.
 func (c *container) exited() bool {
 	select {

@@ -57,6 +57,9 @@ type Options struct {
 	GuardConfig authguard.Config
 	// JanitorInterval is how often expired state is pruned (default 30s).
 	JanitorInterval time.Duration
+	// AssertInterval is how often server-asserted text is recorded
+	// (SR-6.18-1); zero means one second.
+	AssertInterval time.Duration
 	// ConsoleURL is the base of approval deep links (default the admin URL).
 	ConsoleURL string
 	// HealthGate is the Health & Safety Monitor's fail-closed gate (E-23,
@@ -261,6 +264,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		Limits: backend.Limits{PerPrincipal: cfg.Limits.ToolConcurrencyPerUser, Total: cfg.Limits.ToolConcurrencyTotal, Queue: cfg.Limits.ToolQueue,
 			UpstreamTimeout: cfg.Limits.UpstreamTimeout.Duration, ResultBytes: cfg.Limits.ResultBytes},
 		Launcher: o.Launcher, Manifests: o.Manifests, Secrets: o.Secrets, Capabilities: a.Capabilities, Log: o.Log,
+		Asserted: a.recordAssertion, AssertInterval: o.AssertInterval,
 	}); err != nil {
 		return a, fmt.Errorf("backend servers: %w", err)
 	}

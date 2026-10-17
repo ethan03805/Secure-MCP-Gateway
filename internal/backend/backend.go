@@ -81,6 +81,12 @@ type Options struct {
 	Secrets      pipeline.SecretBroker
 	Capabilities pipeline.CapabilityChecker
 	Log          *slog.Logger
+	// Asserted, when set, receives the text a server instance asserted:
+	// its stderr, the messages of its JSON-RPC errors and its
+	// notifications, batched every AssertInterval (default one second),
+	// for server-asserted evidence (SR-6.18-1).
+	Asserted       func(Assertion)
+	AssertInterval time.Duration
 }
 
 // Server is one launched backend instance with its recorded revision.
@@ -107,16 +113,20 @@ type Server struct {
 
 // instance is one running process of a server and its MCP client session.
 type instance struct {
-	session *mcp.ClientSession
-	proc    pipeline.Process
-	filter  *frameFilter
-	live    pipeline.LiveLister
-	started atomic.Bool // tool set established; list_changed is acted on
+	session  *mcp.ClientSession
+	proc     pipeline.Process
+	filter   *frameFilter
+	live     pipeline.LiveLister
+	started  atomic.Bool // tool set established; list_changed is acted on
+	asserted *asserter   // nil unless Options.Asserted is set
 }
 
 func (in *instance) close() {
 	if in != nil && in.session != nil {
 		_ = in.session.Close()
+	}
+	if in != nil {
+		in.asserted.stop()
 	}
 }
 
@@ -178,6 +188,7 @@ type Registry struct {
 	// owns the Gateway-issued token (FR-1.39).
 	progress sync.Map // token string -> func(*mcp.ProgressNotificationParams)
 	progSeq  atomic.Uint64
+	instSeq  atomic.Uint64 // instance IDs for server-asserted evidence
 
 	smu      sync.RWMutex // guards servers, tools, public and disabled
 	servers  map[string]*Server
@@ -384,6 +395,10 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	ff.progress = r.routeProgress
 	transport := &mcp.IOTransport{Reader: ff, Writer: w, MaxLineLength: limit + 1024}
 	inst := &instance{proc: proc, filter: ff}
+	if r.opts.Asserted != nil {
+		inst.asserted = newAsserter(sc.Alias, fmt.Sprintf("%s#%d", sc.Alias, r.instSeq.Add(1)), proc, secrets, r.opts.Asserted)
+		ff.notified = inst.asserted.notification
+	}
 	copts := &mcp.ClientOptions{
 		// SR-5.6-2: no sampling, elicitation or roots capability
 		// southbound (the SDK declares roots unless told otherwise).
@@ -432,6 +447,7 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 		sess.Close()
 		return nil, pipeline.ToolSet{}, "", err
 	}
+	inst.asserted.run(ts.Revision, r.opts.AssertInterval)
 	return inst, ts, era, nil
 }
 
@@ -745,6 +761,9 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 			case we.Code == tooLargeCode && we.Message == invalidResultMessage:
 				return nil, ErrInvalidResult
 			}
+			// SR-6.18-1: the backend's error message is server-asserted
+			// evidence; the client sees only the mapped code.
+			inst.asserted.add(Assertion{Kind: AssertError, Code: we.Code, Text: we.Message})
 			return nil, &BackendError{Code: we.Code}
 		}
 		if inst.filter.invalid.Load() {
@@ -982,6 +1001,7 @@ type frameFilter struct {
 	reply    func([]byte) (int, error)
 	refused  func(method string)
 	progress func(*mcp.ProgressNotificationParams)
+	notified func(method string, params []byte) // every notification (SR-6.18-1)
 }
 
 func newFrameFilter(r io.Reader, limit int) *frameFilter {
@@ -1094,6 +1114,9 @@ func (f *frameFilter) screenOne(line []byte) []byte {
 		return nil
 	}
 	hasID := len(m.ID) > 0 && string(m.ID) != "null"
+	if m.Method != nil && !hasID && f.notified != nil {
+		f.notified(*m.Method, m.Params)
+	}
 	switch {
 	case m.Method != nil && hasID && *m.Method != "ping":
 		f.refusedN.Add(1)
