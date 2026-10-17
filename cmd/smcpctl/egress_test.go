@@ -26,7 +26,7 @@ func TestEgressCommands(t *testing.T) {
 	secrets := t.TempDir()
 	mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", writeFile(t, secrets, "a", "admin password 12"),
 		"--approver-password-file", writeFile(t, secrets, "b", "approver password 1"),
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	f, err := os.OpenFile(cfgPath, os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {

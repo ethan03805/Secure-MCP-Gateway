@@ -405,25 +405,59 @@ func TestFilterSeamAndProvenance(t *testing.T) {
 	}
 }
 
+// gatedBackend is testBackend whose "slow" tool reports on started when
+// it begins and returns only when its context ends or release is closed,
+// so tests synchronize on the backend instead of sleeping.
+func gatedBackend(started chan<- struct{}, release <-chan struct{}) func() *mcp.Server {
+	return func() *mcp.Server {
+		s := testBackend()
+		mcp.AddTool(s, &mcp.Tool{Name: "slow"}, func(ctx context.Context, req *mcp.CallToolRequest, a struct{}) (*mcp.CallToolResult, any, error) {
+			started <- struct{}{}
+			select {
+			case <-release:
+			case <-ctx.Done():
+			}
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "slow"}}}, nil, nil
+		})
+		return s
+	}
+}
+
 func TestSessionEndCancelsInFlightCall(t *testing.T) {
 	reqtest.Partial(t, "FR-2.11")
 	reqtest.Verifies(t, "SR-1.17-2")
-	h := newHarness(t, harnessOpts{})
+	started := make(chan struct{}, 1)
+	release := make(chan struct{})
+	h := newHarness(t, harnessOpts{backend: gatedBackend(started, release)})
 	s, tok := h.session("ro")
 	cs := h.client(tok)
 	errc := make(chan error, 1)
+	recv := func(what string) error {
+		t.Helper()
+		select {
+		case err := <-errc:
+			return err
+		case <-time.After(30 * time.Second):
+			t.Fatalf("%s: call did not end", what)
+			return nil
+		}
+	}
+	wait := func(what string) {
+		t.Helper()
+		select {
+		case <-started:
+		case err := <-errc:
+			t.Fatalf("%s: call ended before reaching the backend: %v", what, err)
+		case <-time.After(30 * time.Second):
+			t.Fatalf("%s: call never reached the backend", what)
+		}
+	}
 	go func() {
-		_, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_slow", Arguments: map[string]any{"ms": 1500}})
+		_, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_slow", Arguments: map[string]any{}})
 		errc <- err
 	}()
-	deadline := time.Now().Add(2 * time.Second)
-	for h.gw.InFlight() == 0 {
-		if time.Now().After(deadline) {
-			t.Fatal("call never started")
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	start := time.Now()
+	// The backend is executing the call; it returns only when cancelled.
+	wait("terminate")
 	// Concurrent terminations: exactly one succeeds.
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -444,12 +478,8 @@ func TestSessionEndCancelsInFlightCall(t *testing.T) {
 		t.Fatalf("%d terminations succeeded", ok)
 	}
 	var we *jsonrpc.Error
-	err := <-errc
-	if !errors.As(err, &we) || we.Code != CodeSessionInvalid {
+	if err := recv("terminate"); !errors.As(err, &we) || we.Code != CodeSessionInvalid {
 		t.Fatalf("got %v", err)
-	}
-	if time.Since(start) > time.Second {
-		t.Fatal("in-flight call was not cancelled")
 	}
 	if e := h.rec.find(func(e audit.Event) bool { return e.ReasonCode == ReasonSessionEnded || e.Phase == audit.PhaseWithheld }); e == nil {
 		t.Fatal("no terminal event for the cancelled call")
@@ -459,17 +489,15 @@ func TestSessionEndCancelsInFlightCall(t *testing.T) {
 	_, tok2 := h.session("ro")
 	cs2 := h.client(tok2)
 	go func() {
-		_, err := cs2.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_slow", Arguments: map[string]any{"ms": 300}})
+		_, err := cs2.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_slow", Arguments: map[string]any{}})
 		errc <- err
 	}()
-	for h.gw.InFlight() == 0 {
-		time.Sleep(5 * time.Millisecond)
-	}
+	wait("stop")
 	if err := h.gw.Stop("test", "release recheck"); err != nil {
 		t.Fatal(err)
 	}
-	err = <-errc
-	if !errors.As(err, &we) || we.Code != CodeResponseWithheld {
+	close(release)
+	if err := recv("stop"); !errors.As(err, &we) || we.Code != CodeResponseWithheld {
 		t.Fatalf("stopped release: %v", err)
 	}
 }

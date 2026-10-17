@@ -176,6 +176,22 @@ func (b *Broker) SetRevisions(f func() map[string]string) {
 // for other filters and the Observation Collector.
 func (b *Broker) Fingerprints() *Fingerprints { return b.fp }
 
+// ShareFingerprints passes every secret version the broker delivers from
+// now on to fn as well (app.Start registers the E-09/E-11 inspector's
+// fingerprint set, so the secret-fingerprint filter detects delivered
+// values). fn must not keep value.
+func (b *Broker) ShareFingerprints(fn func(ref string, version int, value []byte)) {
+	b.fp.OnRegister(fn)
+}
+
+// SetInjector sets the Egress Broker's S1 seam. app.Start calls it before
+// any server launches, when [egress] is enabled.
+func (b *Broker) SetInjector(i pipeline.SecretHeaderInjector) {
+	b.mu.Lock()
+	b.injector = i
+	b.mu.Unlock()
+}
+
 // Vault returns the vault.
 func (b *Broker) Vault() *Vault { return b.vault }
 

@@ -49,6 +49,16 @@ type Fingerprints struct {
 	set   map[[32]byte]fpInfo
 	short map[int]int // form length (< Window) -> registered count
 	done  map[string]bool
+	sinks []func(ref string, version int, value []byte)
+}
+
+// OnRegister adds a function that receives each secret version when it is
+// first registered, so another leak-detection set (the E-09/E-11 filters'
+// registered fingerprints) learns it too. fn must not keep value.
+func (f *Fingerprints) OnRegister(fn func(ref string, version int, value []byte)) {
+	f.mu.Lock()
+	f.sinks = append(f.sinks, fn)
+	f.mu.Unlock()
 }
 
 var _ pipeline.SecretFingerprints = (*Fingerprints)(nil)
@@ -127,6 +137,9 @@ func (f *Fingerprints) Register(ref string, version int, value []byte) {
 		return
 	}
 	f.done[id] = true
+	for _, fn := range f.sinks {
+		fn(ref, version, value)
+	}
 	h := hmac.New(sha256.New, f.key)
 	for _, fm := range forms(value) {
 		info := fpInfo{ref: ref, version: version, form: fm.name}

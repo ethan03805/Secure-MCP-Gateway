@@ -123,22 +123,22 @@ Secret files are created with mode 0600 inside a per-instance directory with mod
 
 When a version is retired at the end of its rotation overlap, S3 files holding it are rewritten with the current version and S1 grants are rebound, so a rotated secret stops being deliverable at the overlap limit. S4 values cannot be replaced in a running process.
 
-S1 needs an Egress Broker. Until one is configured, an S1 binding is denied with `SECRET_MODE_UNAVAILABLE` and the server does not start.
+S1 needs the Egress Broker: set `[egress] enabled = true` and give the server a grant with `endpoint_env` for the slot's destination; the server sends its requests to that endpoint and the broker inserts the header (see [egress.md](egress.md)). Without `[egress]`, an S1 binding is denied with `SECRET_MODE_UNAVAILABLE` and the server does not start.
 
 ## Leak detection
 
-For every delivered version the broker registers keyed HMAC-SHA-256 fingerprints of the full value and of every 12-byte window of its raw, Base64 (standard and URL-safe, at all three byte alignments), hex (lower and upper case), and URL query- and path-escaped forms (FR-6.10). The HMAC key is random per Gateway process and never stored; the set holds no plaintext. The set implements `pipeline.SecretFingerprints` (`Scan`, `Redact`, `Len`) for other filters and the Observation Collector; `Broker.Fingerprints()` returns it.
+For every delivered version the broker registers keyed HMAC-SHA-256 fingerprints of the full value and of every 12-byte window of its raw, Base64 (standard and URL-safe, at all three byte alignments), hex (lower and upper case), and URL query- and path-escaped forms (FR-6.10). The HMAC key is random per Gateway process and never stored; the set holds no plaintext. The set implements `pipeline.SecretFingerprints` (`Scan`, `Redact`, `Len`) for other filters and the Observation Collector; `Broker.Fingerprints()` returns it. Each delivered version is also registered with the E-09/E-11 inspector's fingerprint set, so the built-in `secret-fingerprint` request and response filters detect it as well.
 
 The broker registers four mandatory filters:
 
 | Filter ID | Chain | Order | Action |
 |---|---|---|---|
-| `secret-vault-args` | request | 150 | Blocks a call whose arguments contain a delivered value: `SECRET_IN_ARGUMENTS`. |
+| `secret-vault-args` | request | 115 | Blocks a call whose arguments contain a delivered value: `SECRET_IN_ARGUMENTS`. |
 | `secret-delivery-s2` | request | 1000 | Delivers S2 secrets for the call; blocks with the denial reason when a delivery is denied. |
 | `secret-release-s2` | response | 0 | Deletes the call's S2 files. |
-| `secret-vault-leak` | response | 50 | Withholds a result that contains a delivered value: `SECRET_LEAK`, and suspends S2 delivery of that secret until `smcpctl secrets resume`. |
+| `secret-vault-leak` | response | 35 | Withholds a result that contains a delivered value: `SECRET_LEAK`, and suspends S2 delivery of that secret until `smcpctl secrets resume`. |
 
-These filters match the vault's own values. The rule-set filters named `secret-fingerprint` in the SRS (FR-4.16) belong to the inspection pipelines.
+These filters match the vault's own values. The rule-set filters named `secret-fingerprint` in the SRS (FR-4.16) belong to the inspection pipelines; they run after these (orders 120 and 40), so a leak of a delivered value is withheld, suspended and recorded by the broker first; the built-in filter is a second check on the same values.
 
 ## Evidence
 
@@ -163,7 +163,7 @@ If the journal cannot accept an event, nothing is delivered and the vault change
 | `SECRET_EXPIRED` | The secret's expiry has passed. | Rotate it and update `--expires`, or create a new one. |
 | `SECRET_VERSION_RETIRED` | A pinned version was retired. | Remove or update `version` in the policy. |
 | `SECRET_OUTSIDE_WINDOW` | Outside `not_before`, `not_after`, `hours`, or the S4 waiver expired. | Wait for the window or change the policy. |
-| `SECRET_MODE_UNAVAILABLE` | S1 without an Egress Broker. | Use S3 or S2 until E-18 is available. |
+| `SECRET_MODE_UNAVAILABLE` | S1 without an Egress Broker. | Set `[egress] enabled = true`, or use S3 or S2. |
 | `SECRET_RATE_LIMITED` | S2 `calls_per_minute` reached. | Retry later. |
 | `SECRET_PURPOSE_MISMATCH` | S2 `session_purpose` differs from the session's purpose. | Sign in with the right purpose. |
 | `SECRET_APPROVAL_REQUIRED` | S2 binding requires approval but the decision carries none. | Make the policy rule approval-obligated. |
@@ -184,6 +184,6 @@ Control API error codes are listed in [api/secrets.md](api/secrets.md).
 - Plaintext is held briefly in Go strings: the S4 environment map, the decoded control API request and the CLI's request body. Byte buffers the broker controls are overwritten after use. Overwriting cannot be guaranteed for strings.
 - The vault is protected by file modes for the Gateway's user. Separate service identities for the vault and broker (SR-2.13-3) need the Enforced profile's identity layout.
 - In the Standalone profile nothing stops a server from copying an S2 or S3 file or its environment; containment needs the Enforced profile.
-- S1 is implemented to the `pipeline.SecretHeaderInjector` seam only; the Egress Broker that performs the injection is a separate element.
+- S1 headers are inserted only on Egress Broker endpoint requests; a server that ignores its endpoint variable and connects through the forward proxy does not get the header.
 - Session termination does not withdraw launch-time deliveries: instances are not session-scoped yet.
 - Fingerprints are registered when a value is delivered, so a value that was never delivered is not detected. The scan runs at about 9 MB/s on an Apple M4.

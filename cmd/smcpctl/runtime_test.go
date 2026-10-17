@@ -19,7 +19,7 @@ func TestRuntimeCommands(t *testing.T) {
 	adminPW := writeFile(t, secrets, "admin", "admin password 12\n")
 	approverPW := writeFile(t, secrets, "approver", "approver password 1\n")
 	mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", adminPW, "--approver-password-file", approverPW,
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	share := filepath.Join(dir, "sandbox")
 	f, err := os.OpenFile(cfgPath, os.O_APPEND|os.O_WRONLY, 0o600)
@@ -85,7 +85,7 @@ func TestRuntimeControlCommandsStandalone(t *testing.T) {
 	adminPW := writeFile(t, secrets, "admin", "admin password 12\n")
 	approverPW := writeFile(t, secrets, "approver", "approver password 1\n")
 	mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", adminPW, "--approver-password-file", approverPW,
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	d := startDaemon(t, cfgPath)
 	defer stopDaemon(t, d)

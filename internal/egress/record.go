@@ -81,6 +81,7 @@ type Record struct {
 	Address      string    `json:"address,omitempty"`
 	AddressClass string    `json:"address_class,omitempty"`
 	Redirects    int       `json:"redirects,omitempty"`
+	Injected     []string  `json:"injected_headers,omitempty"` // S1 header names, never values
 	Decision     string    `json:"decision"`
 	Reason       string    `json:"reason,omitempty"`
 	Detail       string    `json:"detail,omitempty"`

@@ -58,7 +58,7 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `BACKEND_ERROR` | `-31007` | The server returned a protocol error | `data.backendCode` is the server's code; check the server's stderr in the diagnostic log |
 | `DISPATCH_FAILED` | `-31007` | The server could not be started or reached | Check the Servers view (G-10) and the diagnostic log |
 | `CLIENT_DEADLINE` | `-31008` | The call did not finish within the client deadline (CP-13) | Repeat with a smaller request, or raise the deadline |
-| `UPSTREAM_TIMEOUT` | `-31009` | The server stopped responding; it may have acted | Check whether the action happened before repeating it. The first slice (commit a3193a5) returns `-31008` for this reason code; SRS Appendix B specifies `-31009` |
+| `UPSTREAM_TIMEOUT` | `-31009` | The server stopped responding; it may have acted | Check whether the action happened before repeating it |
 | `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The server asked for client input that is not relayed | Enable the MRTR Relay Profile only if you need it |
 | `SCHEMA_INVALID` | `-32602` | Arguments do not match the tool's input schema | `data.findings` lists the violations |
 

@@ -6,9 +6,14 @@
 // sealing and passphrase encryption (FR-7.9) are not yet implemented.
 //
 // Certificate lifetimes (CP-53): the server CA is valid for CALifetime (365
-// days), has path length 0 and is name-constrained to DNS localhost, the
-// configured listener names, IP 127.0.0.0/8 and ::1/128, so a leaked CA key
-// cannot mint certificates for any public name. Listener certificates are
+// days), has path length 0 and carries dNSName name constraints only:
+// localhost and the configured listener host names, so a leaked CA key
+// cannot mint certificates for any public DNS name. It carries no iPAddress
+// subtrees because TLS stacks built on BoringSSL (the Bun runtime of the
+// native Claude Code and OpenCode builds) reject the whole chain with
+// "unsupported name constraint type" when one is present. IP addresses in
+// listener certificates are limited by this package instead: loopback
+// addresses and the configured listener IP literals. Listener certificates are
 // valid for LeafLifetime (90 days) and are reissued when RotateBefore (30
 // days) remain; smcpd calls RotateIfDue at startup and the operations
 // runtime calls it daily. Replacing the CA is an operator action with an
@@ -66,12 +71,6 @@ const (
 
 // loopbackIPs are always in the listener certificate.
 var loopbackIPs = []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
-
-// loopbackRanges are always permitted by the CA name constraints (CP-53).
-var loopbackRanges = []*net.IPNet{
-	{IP: net.IPv4(127, 0, 0, 0).To4(), Mask: net.CIDRMask(8, 32)},
-	{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)},
-}
 
 // Ensure creates any missing key material under stateDir. names are the
 // listener host names or IP literals the leaf certificate must cover in
@@ -162,26 +161,17 @@ func generateTLS(stateDir string, names []string) error {
 	return issueLeaf(stateDir, caCert, caKey, dns, ips)
 }
 
-// newCA creates a CP-53 server CA: 365 days, path length 0, name
-// constraints DNS localhost plus the listener names, IP 127.0.0.0/8 and
-// ::1/128 plus any other listener IP.
+// newCA creates a CP-53 server CA: 365 days, path length 0, dNSName name
+// constraints localhost plus the listener host names. It has no iPAddress
+// subtrees (see the package comment); under RFC 5280 the IP addresses of
+// the listener certificate are then not constrained by the CA; they are
+// the loopback addresses plus the listener IP literals (leafNames).
 func newCA(now time.Time, names []string) (*x509.Certificate, *ecdsa.PrivateKey, []byte, []byte, error) {
 	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	dns, ips := leafNames(names)
-	ipNets := append([]*net.IPNet(nil), loopbackRanges...)
-	for _, ip := range ips {
-		if ip.IsLoopback() {
-			continue
-		}
-		bits := 32
-		if ip.To4() == nil {
-			bits = 128
-		}
-		ipNets = append(ipNets, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
-	}
+	dns, _ := leafNames(names)
 	caTmpl := &x509.Certificate{
 		SerialNumber:          serial(),
 		Subject:               pkix.Name{CommonName: "Secure MCP Gateway server CA", SerialNumber: now.UTC().Format("20060102T150405Z")},
@@ -191,10 +181,9 @@ func newCA(now time.Time, names []string) (*x509.Certificate, *ecdsa.PrivateKey,
 		BasicConstraintsValid: true,
 		MaxPathLenZero:        true,
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageDigitalSignature,
-		// The CA can only vouch for the loopback listener names.
+		// The CA can only vouch for the listener host names.
 		PermittedDNSDomainsCritical: true,
 		PermittedDNSDomains:         dns,
-		PermittedIPRanges:           ipNets,
 	}
 	caDER, err := x509.CreateCertificate(rand.Reader, caTmpl, caTmpl, &caKey.PublicKey, caKey)
 	if err != nil {
@@ -216,7 +205,10 @@ func newCA(now time.Time, names []string) (*x509.Certificate, *ecdsa.PrivateKey,
 // (SR-2.8-4).
 var ErrOutsideConstraints = errors.New("name is outside the server CA name constraints")
 
-// permitted reports whether the CA's name constraints allow the name.
+// permitted reports whether the CA's name constraints allow the name. A CA
+// made before iPAddress subtrees were dropped still has them and is
+// honored; a current CA has none, so every IP passes here and issueLeaf
+// applies the IP limit.
 func permitted(ca *x509.Certificate, dns string, ip net.IP) bool {
 	if ip != nil {
 		for _, r := range ca.PermittedIPRanges {
@@ -300,6 +292,10 @@ type TLSStatus struct {
 	// permit; the listener certificate does not cover them. Rotating the
 	// CA (`smcpctl keys rotate ca`) adds them.
 	Uncovered []string
+	// IPConstrained reports a CA made by an earlier release with iPAddress
+	// name constraints, which BoringSSL-based clients (native Claude Code,
+	// OpenCode) reject. Rotating the CA replaces it.
+	IPConstrained bool
 }
 
 // RotateIfDue reissues the leaf certificate from the existing CA when it
@@ -318,6 +314,7 @@ func RotateIfDue(stateDir string, now time.Time, names ...string) (TLSStatus, er
 	}
 	st.CANotAfter, st.LeafNotAfter = caCert.NotAfter, leaf.NotAfter
 	st.CADue = now.Add(RotateBefore).After(caCert.NotAfter)
+	st.IPConstrained = len(caCert.PermittedIPRanges) > 0
 	dns, ips := leafNames(names)
 	dns, ips, st.Uncovered = splitPermitted(caCert, dns, ips)
 	covers := true

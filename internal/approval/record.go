@@ -62,6 +62,12 @@ type Record struct {
 	DecisiveRules  []string        `json:"decisive_rules"`
 	Arguments      json.RawMessage `json:"arguments"`
 
+	// Origin of the call (FR-16.8): set when it arrived on the Remote
+	// Access listener, and applied to every approval event.
+	Channel       string `json:"channel,omitempty"`
+	ClientID      string `json:"client_id,omitempty"`
+	ClientAddress string `json:"client_address,omitempty"`
+
 	// Decision (FR-3.17).
 	DecidedBy string     `json:"decided_by,omitempty"`
 	DecidedAt *time.Time `json:"decided_at,omitempty"`
@@ -87,13 +93,14 @@ type Summary struct {
 	URL            string     `json:"approval_url"`
 	DecidedBy      string     `json:"decided_by,omitempty"`
 	DecidedAt      *time.Time `json:"decided_at,omitempty"`
+	Channel        string     `json:"channel,omitempty"`
 }
 
 // Summary returns the record's summary.
 func (r *Record) Summary() Summary {
 	return Summary{ID: r.ID, State: r.State, PublicName: r.PublicName, Server: r.Server, ServerRevision: r.ServerRevision,
 		SessionID: r.SessionID, PrincipalID: r.PrincipalID, CreatedAt: r.CreatedAt, ExpiresAt: r.ExpiresAt, URL: r.URL,
-		DecidedBy: r.DecidedBy, DecidedAt: r.DecidedAt}
+		DecidedBy: r.DecidedBy, DecidedAt: r.DecidedAt, Channel: r.Channel}
 }
 
 // live reports whether the record can still be decided or consumed.

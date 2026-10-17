@@ -24,12 +24,19 @@ Health monitor report (FR-7.12) combined with the enforcement edge's report.
   ],
   "checked_at": "2026-10-16T22:01:10Z",
   "info": { "profile": "standalone", "release_label": "not enforced", "version": "0.0.0-dev",
-            "policy_revision": "r1", "emergency_stop": false, "sessions": 1 },
+            "policy_revision": "r1", "emergency_stop": false, "sessions": 1,
+            "elements": [
+              { "id": "E-07", "name": "Approval Service", "state": "active", "detail": "0 pending approvals; notify off" },
+              { "id": "E-18", "name": "Egress Broker", "state": "disabled", "detail": "set [egress] enabled = true" },
+              { "id": "E-25/E-26/E-28", "name": "Graph mirror", "state": "degraded", "detail": "unavailable dial tcp 127.0.0.1:7687: connect: connection refused" }
+            ] },
   "gateway": { "state": "degraded", "causes": ["unconfined", "unverified_manifests"], "profile": "standalone", "...": "..." }
 }
 ```
 
 `state` is the worse of the monitor's state and `gateway.state` (an emergency stop is only in `gateway`). Latched causes carry `since`, `cleared_at` (when clear), `ack_required` and `acked_by`.
+
+`info.elements` lists every architecture element `smcpd` wires, in element order, with `state` `active` (running), `disabled` (configured off; `detail` says how to enable it) or `degraded` (configured but not working; enforcement continues). The graph mirror and the Observation Store also report the non-critical causes `graph_mirror_unavailable` and `observation_store_unavailable`, which make the Gateway `degraded`, never fail-closed.
 
 ## POST /api/v1/health/ack
 

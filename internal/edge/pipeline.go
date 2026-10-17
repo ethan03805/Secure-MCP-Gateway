@@ -338,7 +338,7 @@ func (g *Gateway) mapDispatchError(c *callRun, sessionID string, err error) erro
 		return c.refuse(gatewayError(CodeRateLimited, "dispatch queue full", "QUEUE_FULL", corr, dec.ID, nil),
 			"call", audit.PhaseDenied, "E-10", "deny", "QUEUE_FULL", "evaluated")
 	case errors.Is(err, backend.ErrTimeout):
-		return c.refuse(gatewayError(CodeTimeout, "upstream timeout", "UPSTREAM_TIMEOUT", corr, dec.ID, nil),
+		return c.refuse(gatewayError(CodeIndeterminate, "upstream timeout", "UPSTREAM_TIMEOUT", corr, dec.ID, nil),
 			"call", audit.PhaseIndeterminate, "E-10", "timeout", "UPSTREAM_TIMEOUT", "evaluated")
 	case errors.Is(err, backend.ErrTooLarge):
 		return c.refuse(gatewayError(CodeResponseWithheld, "response withheld", "RESULT_TOO_LARGE", corr, dec.ID, nil),

@@ -52,7 +52,7 @@ func TestBootstrapUsesPackagedServer(t *testing.T) {
 	adminPW := writeFile(t, secrets, "admin", "admin password 12\n")
 	approverPW := writeFile(t, secrets, "approver", "approver password 1\n")
 	mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", adminPW, "--approver-password-file", approverPW,
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	raw, _ := os.ReadFile(filepath.Join(dir, "smcp.toml"))
 	checkPackagedBootstrap(t, dir, string(raw))
 	// The Gateway serves the package as verified; health has no
@@ -79,7 +79,7 @@ func TestPackageCommands(t *testing.T) {
 	secrets := t.TempDir()
 	mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", writeFile(t, secrets, "a", "admin password 12"),
 		"--approver-password-file", writeFile(t, secrets, "b", "approver password 1"),
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	ref := filepath.Join(binDir, "smcp-refserver")
 	sum, _, _ := packaging.FileSHA256(ref)

@@ -46,7 +46,7 @@ func TestSecretsCommands(t *testing.T) {
 	adminPW := writeFile(t, priv, "admin", "admin password 12\n")
 	approverPW := writeFile(t, priv, "approver", "approver password 1\n")
 	mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", adminPW, "--approver-password-file", approverPW,
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	pp := writeFile(t, priv, "vault-pass", "vault passphrase for tests\n")
 	usePath := filepath.Join(dir, "secret-use.json")

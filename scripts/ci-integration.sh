@@ -17,8 +17,9 @@
 #   SMCP_ENFORCED_CGROUP_MANAGER  runtime.cgroup_manager for that instance
 #   SMCP_RUN_INSTALLER    1 to run packaging/linux/install-enforced.sh twice
 #                         with sudo (default: SMCP_REQUIRE_PREREQS)
-#   SMCP_ITEST_PORT       harness listener port (admin listener: port + 1);
-#                         default the bootstrap defaults 8443 and 8444
+#   SMCP_ITEST_PORT       harness listener port (admin listener: port + 1,
+#                         metrics: port + 2); default the bootstrap defaults
+#                         8443, 8444 and 8445
 #
 # Features that the current build does not provide are reported under
 # "Skipped" and do not fail the run.
@@ -72,7 +73,7 @@ port_args=()
 if [ -n "${SMCP_ITEST_PORT:-}" ]; then
   port_args=(--port "$SMCP_ITEST_PORT" --admin-port "$((SMCP_ITEST_PORT + 1))")
 fi
-"$bin/smcpctl" bootstrap --dir "$inst" ${port_args[@]+"${port_args[@]}"} \
+"$bin/smcpctl" bootstrap --dir "$inst" ${port_args[@]+"${port_args[@]}"} --notify off \
   --admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw"
 cfg="$inst/smcp.toml"
 [ -f "$cfg" ] || fail "bootstrap did not write $cfg"
@@ -111,6 +112,26 @@ if grep -q unverified_servers "$work/package-health.json"; then
   fail "the bootstrap example server is not served from a verified package"
 fi
 
+say "Every standalone element of the bootstrap configuration is wired (info.elements)"
+# smcpctl health prints a summary line, then the status JSON. The element
+# objects are printed with sorted keys: detail, id, name, state.
+"$bin/smcpctl" health --config "$cfg" | tail -n +2 | tr -d ' \n' > "$work/elements.json"
+for id in E-01/E-02/E-08/E-12 E-03/E-04 E-05/E-06 E-07 E-09/E-11 E-10 E-13/E-14 E-21 E-22 E-23 E-24 E-27/E-29-E-32; do
+  grep -q "\"id\":\"$id\",\"name\":\"[^\"]*\",\"state\":\"active\"" "$work/elements.json" \
+    || { cat "$work/elements.json" >&2; fail "element $id is not active"; }
+done
+for id in E-15/E-16/E-17 E-18 E-19/E-20 E-25/E-26/E-28 E-33; do
+  grep -q "\"id\":\"$id\"" "$work/elements.json" || fail "element $id is missing from the report"
+done
+echo "elements: $(grep -o '"state":"active"' "$work/elements.json" | wc -l | tr -d ' ') active"
+metrics_addr=$(sed -n '/^\[metrics\]/,/^\[/s/^address *= *"\(.*\)"/\1/p' "$cfg" | head -n1)
+if command -v curl >/dev/null 2>&1 && [ -n "$metrics_addr" ]; then
+  curl -fsS "http://$metrics_addr/metrics" > "$work/metrics.txt" || fail "metrics endpoint $metrics_addr"
+  grep -q '^smcp_pending_approvals ' "$work/metrics.txt" || fail "metrics lack smcp_pending_approvals"
+else
+  skip "metrics endpoint check: curl or metrics address missing"
+fi
+
 say "Driving an MCP client through OAuth and tool calls"
 ca="$inst/state/tls/ca.crt"
 [ -f "$ca" ] || fail "CA certificate not found at $ca"
@@ -126,6 +147,24 @@ read_marker || { cat "$log" >&2; fail "MCP client flow (ref_read_file)"; }
 "$bin/itest-client" -url "$public_url" -ca "$ca" \
   -call ref_list_files -args '{"path":"."}' -expect "hello.txt" \
   || { cat "$log" >&2; fail "MCP client flow (ref_list_files)"; }
+
+say "A held call passes the filters and is released by an approval (E-07)"
+# The approval-demo template obliges approval for read_file; the call is
+# held (CP-45) until smcpctl approves it.
+"$bin/itest-client" -url "$public_url" -ca "$ca" -scope "smcp:template:approval-demo" \
+  -call ref_read_file -args '{"path":"hello.txt"}' -expect "$marker" >"$work/approval-call.log" 2>&1 &
+approval_pid=$!
+approval_id=""
+for _ in $(seq 1 120); do
+  approval_id=$("$bin/smcpctl" approvals list --state pending --json --config "$cfg" | tr -d ' \n' | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+  [ -n "$approval_id" ] && break
+  kill -0 "$approval_pid" 2>/dev/null || { cat "$work/approval-call.log" >&2; fail "the approval-obligated call ended without being held"; }
+  sleep 0.5
+done
+[ -n "$approval_id" ] || { cat "$work/approval-call.log" >&2; fail "no pending approval appeared"; }
+"$bin/smcpctl" approvals approve "$approval_id" --yes --config "$cfg" >/dev/null
+wait "$approval_pid" || { cat "$work/approval-call.log" "$log" >&2; fail "the approved call did not return the tool result"; }
+echo "approval $approval_id released the held call"
 
 say "Emergency stop refuses tool calls; resume restores them"
 "$bin/smcpctl" stop --config "$cfg" --reason "integration test"
@@ -319,7 +358,7 @@ enforced_section() {
   emarker="smcp-enforced-$(date +%s)"
   printf '%s\n' "$emarker" > "$share/hello.txt"
   chmod 644 "$share/hello.txt"
-  "$bin/smcpctl" bootstrap --dir "$einst" --port 8543 --admin-port 8544 --refserver "$sbin/smcp-refserver" --sandbox "$share" \
+  "$bin/smcpctl" bootstrap --dir "$einst" --port 8543 --admin-port 8544 --notify off --refserver "$sbin/smcp-refserver" --sandbox "$share" \
     --admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw"
   local ecfg="$einst/smcp.toml" cgm_line=""
   if [ -n "${SMCP_ENFORCED_CGROUP_MANAGER:-}" ]; then

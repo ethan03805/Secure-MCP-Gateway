@@ -21,7 +21,7 @@ Not yet implemented: TPM sealing, macOS Keychain storage and passphrase encrypti
 
 | Item | Validity | Renewal |
 |---|---|---|
-| Server CA | 365 days, path length 0, name constraints DNS `localhost` and the configured listener names, IP `127.0.0.0/8` and `::1/128` | Operator action: `smcpctl keys rotate ca`; health reports `keys_expiring` 30 days ahead |
+| Server CA | 365 days, path length 0, dNSName name constraints `localhost` and the configured listener host names, no iPAddress constraints (BoringSSL clients such as native Claude Code and OpenCode reject them); the listener certificate names loopback addresses and the listener IP literals | Operator action: `smcpctl keys rotate ca`; health reports `keys_expiring` 30 days ahead |
 | Listener certificate | 90 days, never past the CA's expiry | Automatic when 30 days remain: at start and hourly while running |
 
 A listener certificate is issued only for names inside the CA's name constraints (SR-2.8-4). When the configuration names a listener host the CA does not permit, the certificate leaves that name out, `smcpctl keys rotate tls` reports it under `uncovered_names`, and rotating the CA adds it.

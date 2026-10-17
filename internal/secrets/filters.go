@@ -22,10 +22,10 @@ const (
 	FilterResultLeak   = "secret-vault-leak"
 	FilterS2Delivery   = "secret-delivery-s2"
 	FilterS2Release    = "secret-release-s2"
-	orderArgsLeak      = 150
+	orderArgsLeak      = 115 // before the built-in secret-fingerprint (120), which also knows delivered values
 	orderS2Delivery    = 1000
 	orderS2Release     = 0
-	orderResultLeak    = 50
+	orderResultLeak    = 35 // before the built-in secret-fingerprint (40), so a leak still suspends the secret
 	maxScannedStrings  = 1 << 16
 	s2ReleaseSafetyNet = 10 * time.Minute
 )
