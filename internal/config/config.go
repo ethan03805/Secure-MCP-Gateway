@@ -651,11 +651,28 @@ type Directory interface {
 // listeners start; the configuration is read without locks.
 func (c *Config) SetDirectory(d Directory) { c.directory = d }
 
+// ApproverDirectory is implemented by a Directory that also holds Session
+// Approver accounts created from the control API (FR-2.23).
+type ApproverDirectory interface {
+	Approvers() []Approver
+}
+
+// SessionApprovers returns every Session Approver account: the [[approver]]
+// entries of the file, then those of the run-time directory. Every element
+// that verifies a Session Approver sign-in reads this list.
+func (c *Config) SessionApprovers() []Approver {
+	out := append([]Approver(nil), c.Approvers...)
+	if d, ok := c.directory.(ApproverDirectory); ok {
+		out = append(out, d.Approvers()...)
+	}
+	return out
+}
+
 // FindApprover returns the Session Approver with the given username.
 func (c *Config) FindApprover(username string) *Approver {
-	for i := range c.Approvers {
-		if c.Approvers[i].Username == username {
-			return &c.Approvers[i]
+	for _, a := range c.SessionApprovers() {
+		if a.Username == username {
+			return &a
 		}
 	}
 	return nil

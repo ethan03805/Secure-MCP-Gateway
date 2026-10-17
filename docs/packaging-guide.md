@@ -25,8 +25,10 @@ The repository ships recipes for four reference servers in `packaging/reference/
 #    (or read with --passphrase-file); --unencrypted writes it without one.
 smcpctl package keygen --out ~/keys/smcp-packages
 
-# 2. Enroll the public key. Without --classes it may admit low and moderate.
-smcpctl trust add ~/keys/smcp-packages.pub --name operator --expires 365d
+# 2. Enroll the public key after comparing its key ID (printed by keygen and
+#    by trust add) with the one you expect; --key-id confirms it (FR-7.10).
+#    Without --classes it may admit low and moderate.
+smcpctl trust add ~/keys/smcp-packages.pub --name operator --key-id 7B3357B76507695D --expires 365d
 
 # 3. Build: fetch the pinned artifact, verify its digest, install the locked
 #    dependencies, start the server once in a throwaway directory and read
@@ -120,12 +122,12 @@ Packages built from npm or PyPI artifacts that contain compiled code run only on
 ## Trust anchors
 
 ```sh
-smcpctl trust add <pubkey-file> --name <name> [--classes low,moderate,high] [--expires 2027-10-16|365d]
+smcpctl trust add <pubkey-file> --name <name> --key-id <ID> [--classes low,moderate,high] [--expires 2027-10-16|365d]
 smcpctl trust list
 smcpctl trust remove <name-or-key-id>
 ```
 
-Anchors are stored in `<state>/keys/trust-anchors.json` (mode 0600). Without `--classes` an anchor admits `low` and `moderate`; a package is accepted only when its highest risk class (server or any tool) is in the anchor's classes and the anchor has not expired (SR-3-1). An anchor can sign revocation entries even after it expires.
+`trust add` prints the key ID (the minisign key ID) and the SHA-256 of the key line and enrolls the key only when `--key-id` names that key ID, or, on a terminal, when the key ID is typed at the prompt (FR-7.10): the administrator compares it with the value the publisher gave out of band. Anchors are stored in `<state>/keys/trust-anchors.json` (mode 0600). Without `--classes` an anchor admits `low` and `moderate`; a package is accepted only when its highest risk class (server or any tool) is in the anchor's classes and the anchor has not expired (SR-3-1). An anchor can sign revocation entries even after it expires.
 
 ## Importing, enabling and states
 

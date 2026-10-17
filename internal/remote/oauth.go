@@ -543,7 +543,7 @@ func (s *Service) authorizeGET(w http.ResponseWriter, r *http.Request) {
 // respect to whether the username exists.
 func (s *Service) verifyApprover(ctx context.Context, user, pw string) (bool, error) {
 	hash := ""
-	for _, a := range s.cfg.Approvers {
+	for _, a := range s.cfg.SessionApprovers() {
 		if authguard.EqualName(a.Username, user) {
 			hash = a.PasswordHash
 		}

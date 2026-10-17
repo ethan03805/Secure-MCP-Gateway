@@ -60,8 +60,8 @@ mkdir -p "$inst"
 cfg="$inst/smcp.toml"
 
 say "Creating a test signing key and enrolling it for low and moderate"
-"$bin/smcpctl" package keygen --out "$work/reference-test" --unencrypted >/dev/null
-"$bin/smcpctl" trust add "$work/reference-test.pub" --name reference-test --classes low,moderate --expires 30d --config "$cfg"
+keyid=$("$bin/smcpctl" package keygen --out "$work/reference-test" --unencrypted | awk '/^key /{print $2}')
+"$bin/smcpctl" trust add "$work/reference-test.pub" --name reference-test --key-id "$keyid" --classes low,moderate --expires 30d --config "$cfg"
 
 for r in $only; do
   say "Packaging $r"

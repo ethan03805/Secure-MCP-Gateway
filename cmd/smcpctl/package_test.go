@@ -104,7 +104,8 @@ func TestPackageCommands(t *testing.T) {
 		t.Fatal(out)
 	}
 	key := filepath.Join(work, "op")
-	mustCtl(t, "package", "keygen", "--out", key, "--unencrypted")
+	keyOut := mustCtl(t, "package", "keygen", "--out", key, "--unencrypted")
+	keyID := strings.Fields(keyOut)[1]
 	if st, _ := os.Stat(key + ".key"); st.Mode().Perm() != 0o600 {
 		t.Fatalf("secret key mode %v", st.Mode())
 	}
@@ -143,7 +144,14 @@ func TestPackageCommands(t *testing.T) {
 		}
 	}
 	// Enroll with the default classes (low, moderate) and install.
-	out = mustCtl(t, "trust", "add", key+".pub", "--name", "operator", "--config", cfgPath)
+	// FR-7.10: without the confirmed key ID, or with another, nothing is enrolled.
+	if out, err := ctl(t, "", "trust", "add", key+".pub", "--name", "operator", "--config", cfgPath); err == nil || !strings.Contains(out, "--key-id") || !strings.Contains(out, keyID) {
+		t.Fatalf("unconfirmed enrollment: %v %s", err, out)
+	}
+	if out, err := ctl(t, "", "trust", "add", key+".pub", "--name", "operator", "--key-id", "0000000000000001", "--config", cfgPath); err == nil || !strings.Contains(out, "nothing was enrolled") {
+		t.Fatalf("wrong key ID: %v %s", err, out)
+	}
+	out = mustCtl(t, "trust", "add", key+".pub", "--name", "operator", "--key-id", keyID, "--config", cfgPath)
 	if !strings.Contains(out, "low,moderate") {
 		t.Fatal(out)
 	}

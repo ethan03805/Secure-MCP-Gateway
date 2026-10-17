@@ -26,6 +26,14 @@
 //	POST /api/v1/principals/{id}/enable            {reason}
 //	POST /api/v1/principals/{id}/credentials       {redirect_uris, confidential} -> client_id, client_secret once
 //	POST /api/v1/credentials/{client_id}/revoke    {reason}
+//	GET  /api/v1/approvers                         Session Approver accounts of the file and the directory
+//	POST /api/v1/approvers                         {username, password}
+//	POST /api/v1/approvers/{username}/remove       {reason}
+//
+// Session Approver accounts (FR-2.23) approve harness sign-ins at the OAuth
+// authorization endpoint and nothing else. The Administrator creates them
+// here in addition to the [[approver]] entries of the file; the password is
+// stored as an Argon2id hash and must differ from the Administrator's.
 package principals
 
 import (
@@ -100,6 +108,7 @@ type state struct {
 	Principals  []Principal           `json:"principals"`
 	Credentials []Credential          `json:"credentials"`
 	Suspended   map[string]Suspension `json:"suspended"`
+	Approvers   []Approver            `json:"approvers,omitempty"`
 }
 
 // Directory is the run-time principal directory. It implements

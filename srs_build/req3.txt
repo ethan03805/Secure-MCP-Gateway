@@ -165,11 +165,20 @@ DEFER: The release 1.0 Audit Profile sets retention and escalation parameters on
 
 @FR-7.7 | Local certificate authorities
 P: FR-7
-S: The Key & Trust Anchor Manager (E-22) SHALL operate separate local certificate authorities for harness client certificates and for Gateway TLS server certificates.
+S: The Key & Trust Anchor Manager (E-22) SHALL operate a local certificate authority for Gateway TLS server certificates whose key is used for no other purpose, and SHALL issue from it only certificates limited to TLS server authentication.
 A: E-22; F-59; F-60; D-08
-V: Inspection | Inspect the CA certificates and an issued certificate of each kind; confirm separate roots.
+V: Inspection | Inspect the CA certificate, an issued server certificate and the key inventory; confirm the CA key has one purpose and the issued certificate allows server authentication only.
+SRC: ARCH §4 E-22; OWNER (mTLS Harness Profile deferred)
+R: Separates client identity from server identity. Release 1.0 issues no client certificates (the mTLS Harness Profile, FR-2.14, is deferred), so the separate client CA is deferred with it (FR-7.15).
+
+@FR-7.15 | Client certificate authority
+P: FR-7
+S: The Key & Trust Anchor Manager (E-22) SHALL operate a local certificate authority for harness client certificates separate from the server certificate authority.
+A: E-22; F-59; F-60; D-08
+V: Inspection | Inspect both CA certificates and an issued certificate of each kind; confirm separate roots.
 SRC: ARCH §4 E-22
 R: Separates client identity from server identity.
+DEFER: Deferred with the mTLS Harness Profile (FR-2.14): release 1.0 authenticates harnesses with bearer access tokens and issues no client certificates, so a client CA would have nothing to sign.
 
 @FR-7.8 | Key purposes
 P: FR-7

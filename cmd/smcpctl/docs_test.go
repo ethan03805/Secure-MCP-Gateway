@@ -62,6 +62,7 @@ func codeText(md string) []string {
 func subcommands() map[string]string {
 	return map[string]string{
 		"approvals": approvalsUsage,
+		"approvers": approversUsage,
 		"clients":   clientsUsage,
 		"client":    clientsUsage,
 		"egress":    egressUsage,

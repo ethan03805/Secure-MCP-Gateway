@@ -102,6 +102,12 @@ func (s *Service) Authenticate(tok string) (string, string, bool) {
 		delete(s.tokens, sum)
 		return "", "", false
 	}
+	// A Session Approver removed from the directory (FR-2.23) loses its
+	// tokens at the next request.
+	if ss.role == adminapi.RoleSessionApprover && s.cfg.FindApprover(ss.user) == nil {
+		delete(s.tokens, sum)
+		return "", "", false
+	}
 	return ss.role + ":" + ss.user, ss.role, true
 }
 
@@ -119,7 +125,7 @@ func (s *Service) Revoke(tok string) {
 // account is found in [[console.account]].
 func (s *Service) lookup(user, role string) (hash, resolved string) {
 	if role == adminapi.RoleSessionApprover {
-		for _, a := range s.cfg.Approvers {
+		for _, a := range s.cfg.SessionApprovers() {
 			if authguard.EqualName(a.Username, user) {
 				return a.PasswordHash, role
 			}
