@@ -328,13 +328,16 @@ func (in *instance) api(hc *http.Client, path string) (int, time.Duration, error
 }
 
 // overheads reads the journal and returns, per delivered call, the
-// gateway-added overhead P-213 in milliseconds: the time from the call's
-// requested event to its dispatched event plus the time from its completed
-// event to its delivered event (end-to-end time without server execution;
-// no call here waits for an approval).
+// gateway-added overhead P-213 in milliseconds: end-to-end time (P-162,
+// from the request's receipt, received_at of the requested event, to the
+// delivered event) minus server execution (P-101, from the dispatched
+// event to the backend's response, responded_at of the completed event);
+// no call here waits for an approval (P-206). The completed event is
+// written after response inspection, so its own time is not the end of
+// server execution: P-213 measured to it left response inspection out.
 func (in *instance) overheads() ([]float64, error) {
 	segs, _ := filepath.Glob(filepath.Join(in.state, "journal", "segment-*.jsonl"))
-	type marks struct{ req, disp, comp, del time.Time }
+	type marks struct{ recv, disp, resp, del time.Time }
 	m := map[string]*marks{}
 	for _, s := range segs {
 		f, err := os.Open(s)
@@ -347,11 +350,22 @@ func (in *instance) overheads() ([]float64, error) {
 			var e struct {
 				Type, Class, Phase, Time string
 				Corr                     string `json:"correlation_id"`
+				Detail                   struct {
+					ReceivedAt  string `json:"received_at"`
+					RespondedAt string `json:"responded_at"`
+				}
 			}
 			if json.Unmarshal(sc.Bytes(), &e) != nil || e.Type != "event" || e.Class != "call" || e.Corr == "" {
 				continue
 			}
-			t, err := time.Parse(time.RFC3339Nano, e.Time)
+			at := e.Time
+			switch e.Phase {
+			case "requested":
+				at = e.Detail.ReceivedAt
+			case "completed":
+				at = e.Detail.RespondedAt
+			}
+			t, err := time.Parse(time.RFC3339Nano, at)
 			if err != nil {
 				continue
 			}
@@ -362,11 +376,11 @@ func (in *instance) overheads() ([]float64, error) {
 			}
 			switch e.Phase {
 			case "requested":
-				x.req = t
+				x.recv = t
 			case "dispatched":
 				x.disp = t
 			case "completed":
-				x.comp = t
+				x.resp = t
 			case "delivered":
 				x.del = t
 			}
@@ -375,8 +389,8 @@ func (in *instance) overheads() ([]float64, error) {
 	}
 	var out []float64
 	for _, x := range m {
-		if !x.req.IsZero() && !x.disp.IsZero() && !x.comp.IsZero() && !x.del.IsZero() {
-			out = append(out, float64(x.disp.Sub(x.req)+x.del.Sub(x.comp))/1e6)
+		if !x.recv.IsZero() && !x.disp.IsZero() && !x.resp.IsZero() && !x.del.IsZero() {
+			out = append(out, float64(x.del.Sub(x.recv)-x.resp.Sub(x.disp))/1e6)
 		}
 	}
 	return out, nil

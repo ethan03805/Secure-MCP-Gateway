@@ -39,7 +39,7 @@ func (s *jsonlStore) Append(table string, rows []Row) error {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return err
 		}
-		if err := writeJSONL(filepath.Join(dir, s.nextName()+".jsonl"), t, rs); err != nil {
+		if err := writeJSONL(filepath.Join(dir, s.nextName()+".jsonl"), t, rs, true); err != nil {
 			return err
 		}
 	}

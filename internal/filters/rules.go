@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // Rule-set IDs the built-in filters load (FR-4.16).
@@ -107,10 +108,15 @@ type Rule struct {
 	PermitAfter      []string `json:"permit_after,omitempty"`      // ranges that may precede a run (tag sequences)
 	PermitAtStart    bool     `json:"permit_at_start,omitempty"`   // e.g. a byte-order mark
 
-	re      *regexp.Regexp
-	ranges  *unicode.RangeTable
-	scripts []*unicode.RangeTable
-	after   *unicode.RangeTable
+	re     *regexp.Regexp
+	lits   []literal // one of them is in every match of re (nil: unknown)
+	run    *classRun // re is one character class repeated (nil: not)
+	ranges *unicode.RangeTable
+	// asciiFree: no ASCII code point is in ranges, so a codepoints scan
+	// passes over ASCII bytes without decoding them.
+	asciiFree bool
+	scripts   []*unicode.RangeTable
+	after     *unicode.RangeTable
 }
 
 var idPat = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,63}$`)
@@ -277,6 +283,8 @@ func (r *Rule) compile(normalized bool) error {
 			return err
 		}
 		r.re = re
+		r.lits = requiredLiterals(p)
+		r.run = classRunOf(p)
 		if r.Kind == "entropy" && (r.MinLength <= 0 || r.MinEntropy <= 0) {
 			return errors.New("entropy rules need min_length and min_entropy")
 		}
@@ -289,6 +297,13 @@ func (r *Rule) compile(normalized bool) error {
 			return errors.New("ranges are required")
 		}
 		r.ranges = t
+		r.asciiFree = true
+		for c := rune(0); c < utf8.RuneSelf; c++ {
+			if unicode.Is(t, c) {
+				r.asciiFree = false
+				break
+			}
+		}
 		for _, name := range r.PermittedScripts {
 			s, ok := unicode.Scripts[name]
 			if !ok {

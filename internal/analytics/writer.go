@@ -18,12 +18,15 @@ type tableRow struct {
 
 // writer batches rows into the store: a batch is written at maxRows rows or
 // after interval, whichever comes first. offer never blocks; a full queue
-// drops the row and counts it.
+// drops the row and counts it. The writer takes queued rows when its
+// interval ends or when maxRows are queued, not one at a time, so that an
+// offer does not wake it (and run its low-priority thread) once per row.
 type writer struct {
 	store    obsstore.Store
 	maxRows  int
 	interval time.Duration
 	ch       chan tableRow
+	full     chan struct{} // maxRows rows are queued
 	syncCh   chan chan struct{}
 	log      *slog.Logger
 
@@ -34,8 +37,8 @@ type writer struct {
 }
 
 func newWriter(s obsstore.Store, maxRows int, interval time.Duration, queue int, log *slog.Logger) *writer {
-	return &writer{store: s, maxRows: maxRows, interval: interval, ch: make(chan tableRow, queue), syncCh: make(chan chan struct{}),
-		log: log, dropCount: map[string]uint64{}}
+	return &writer{store: s, maxRows: maxRows, interval: interval, ch: make(chan tableRow, queue), full: make(chan struct{}, 1),
+		syncCh: make(chan chan struct{}), log: log, dropCount: map[string]uint64{}}
 }
 
 // sync writes every row offered before the call, or returns when ctx ends
@@ -62,6 +65,12 @@ func (w *writer) offer(table string, r obsstore.Row) {
 	default:
 		w.drop(observe.DropStoreQueue, 1)
 	}
+	if len(w.ch) >= w.maxRows {
+		select {
+		case w.full <- struct{}{}:
+		default:
+		}
+	}
 }
 
 // underPressure reports the P2 backpressure signal (FR-9.6): the queue is
@@ -86,7 +95,10 @@ func (w *writer) drops() map[string]uint64 {
 	return out
 }
 
+// run writes batches until ctx ends, on a thread of lowered priority
+// (lowPriority), and writes what is queued before it returns.
 func (w *writer) run(ctx context.Context) {
+	lowPriority() // the goroutine keeps its thread until it returns
 	t := time.NewTicker(w.interval)
 	defer t.Stop()
 	buf := map[string][]obsstore.Row{}
@@ -106,37 +118,35 @@ func (w *writer) run(ctx context.Context) {
 		}
 		n = 0
 	}
+	// take moves the queued rows into batches of at most maxRows.
+	take := func() {
+		for {
+			select {
+			case tr := <-w.ch:
+				buf[tr.table] = append(buf[tr.table], tr.row)
+				if n++; n >= w.maxRows {
+					flush()
+				}
+			default:
+				return
+			}
+		}
+	}
 	for {
 		select {
 		case <-ctx.Done():
-			// Drain what is queued, then stop.
-			for {
-				select {
-				case tr := <-w.ch:
-					buf[tr.table] = append(buf[tr.table], tr.row)
-				default:
-					flush()
-					return
-				}
-			}
-		case tr := <-w.ch:
-			buf[tr.table] = append(buf[tr.table], tr.row)
-			n++
-			if n >= w.maxRows {
-				flush()
-			}
+			take()
+			flush()
+			return
 		case <-t.C:
+			take()
+			flush()
+		case <-w.full:
+			take()
 			flush()
 		case done := <-w.syncCh:
 			// Rows offered before the request are queued; take them all.
-			for drained := false; !drained; {
-				select {
-				case tr := <-w.ch:
-					buf[tr.table] = append(buf[tr.table], tr.row)
-				default:
-					drained = true
-				}
-			}
+			take()
 			flush()
 			close(done)
 		}

@@ -27,7 +27,11 @@ func (rs *RuleSet) Scan(text string) []Match {
 		subject = normalizeText(text)
 	}
 	var out []Match
+	pf := &prefilterText{s: subject}
 	for _, r := range rs.Rules {
+		if r.re != nil && !pf.mayMatch(r.lits) {
+			continue // none of the literals the rule needs is in the text
+		}
 		out = append(out, r.scan(subject)...)
 	}
 	return out
@@ -39,7 +43,7 @@ func (r *Rule) scan(s string) []Match {
 		return r.scanCodepoints(s)
 	case "entropy":
 		var out []Match
-		for _, loc := range r.re.FindAllStringIndex(s, -1) {
+		for _, loc := range r.findAll(s) {
 			tok := s[loc[0]:loc[1]]
 			if len(tok) >= r.MinLength && classes(tok) >= r.MinClasses && entropy(tok) >= r.MinEntropy {
 				out = append(out, Match{Rule: r, Start: loc[0], End: loc[1]})
@@ -48,7 +52,7 @@ func (r *Rule) scan(s string) []Match {
 		return out
 	case "luhn":
 		var out []Match
-		for _, loc := range r.re.FindAllStringIndex(s, -1) {
+		for _, loc := range r.findAll(s) {
 			if luhn(s[loc[0]:loc[1]]) {
 				out = append(out, Match{Rule: r, Start: loc[0], End: loc[1]})
 			}
@@ -56,7 +60,7 @@ func (r *Rule) scan(s string) []Match {
 		return out
 	default:
 		var out []Match
-		for _, loc := range r.re.FindAllStringIndex(s, -1) {
+		for _, loc := range r.findAll(s) {
 			out = append(out, Match{Rule: r, Start: loc[0], End: loc[1]})
 		}
 		return out
@@ -69,6 +73,11 @@ func (r *Rule) scanCodepoints(s string) []Match {
 	var out []Match
 	prev := rune(-1)
 	for i := 0; i < len(s); {
+		if b := s[i]; b < utf8.RuneSelf && r.asciiFree {
+			prev = rune(b)
+			i++
+			continue
+		}
 		c, w := utf8.DecodeRuneInString(s[i:])
 		if !unicode.Is(r.ranges, c) {
 			prev = c
@@ -142,7 +151,28 @@ func normalizeText(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	space := false
-	for _, c := range s {
+	for i := 0; i < len(s); {
+		// ASCII: no format characters; the spaces are \t \n \v \f \r and
+		// the space itself.
+		if c := s[i]; c < utf8.RuneSelf {
+			i++
+			switch {
+			case c == ' ' || (c >= '\t' && c <= '\r'):
+				if !space {
+					b.WriteByte(' ')
+				}
+				space = true
+			case c >= 'A' && c <= 'Z':
+				space = false
+				b.WriteByte(c + 'a' - 'A')
+			default:
+				space = false
+				b.WriteByte(c)
+			}
+			continue
+		}
+		c, w := utf8.DecodeRuneInString(s[i:])
+		i += w
 		if unicode.Is(unicode.Cf, c) {
 			continue
 		}

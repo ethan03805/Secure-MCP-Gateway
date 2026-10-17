@@ -293,3 +293,43 @@ func TestFanoutObserversCannotBlockOrFail(t *testing.T) {
 		t.Fatal("store failure not returned")
 	}
 }
+
+// directObs is a NonBlocking observer for the test below.
+type directObs struct {
+	seen  []Event
+	panic bool
+}
+
+func (d *directObs) Observe(e Event) {
+	if d.panic {
+		panic("observer bug")
+	}
+	d.seen = append(d.seen, e)
+}
+func (d *directObs) NonBlockingObserver() {}
+
+// TestFanoutCallsNonBlockingObserversDirectly: a NonBlocking observer sees
+// each event before the write returns, without a queue of its own; its
+// panic is contained, and it is listed in Dropped with no drops.
+func TestFanoutCallsNonBlockingObserversDirectly(t *testing.T) {
+	m := &Memory{}
+	f := NewFanout(m, nil)
+	d, bad := &directObs{}, &directObs{panic: true}
+	f.AddObserver("direct", d, 1)
+	f.AddObserver("direct-panics", bad, 1)
+	for i := 0; i < 3; i++ {
+		if err := f.Record(Event{Class: "x", Origin: "E-21"}); err != nil {
+			t.Fatal(err)
+		}
+		if len(d.seen) != i+1 || d.seen[i].EventID == "" {
+			t.Fatalf("after write %d the observer saw %d events", i+1, len(d.seen))
+		}
+	}
+	if dr := f.Dropped(); dr["direct"] != 0 || len(dr) != 2 {
+		t.Fatalf("dropped %v", dr)
+	}
+	f.Close()
+	if err := f.Record(Event{Class: "x", Origin: "E-21"}); err != nil || len(d.seen) != 3 {
+		t.Fatalf("after Close: %v, %d events", err, len(d.seen))
+	}
+}

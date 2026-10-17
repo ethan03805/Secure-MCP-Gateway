@@ -3,6 +3,8 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -75,6 +77,59 @@ func TestFilterFailureFailsClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res, _, v := k.RunResponse(context.Background(), schemaCall(), &mcp.CallToolResult{}); res != nil || v == nil || v.ReasonCode != ReasonFilterError {
+		t.Fatalf("%+v %+v", res, v)
+	}
+}
+
+// goid returns the current goroutine's ID from its stack header.
+func goid() string {
+	b := make([]byte, 64)
+	b = b[:runtime.Stack(b, false)]
+	f := strings.Fields(string(b))
+	if len(f) < 2 {
+		return ""
+	}
+	return f[1]
+}
+
+// TestInlineFilterRunsOnTheChainGoroutine: an inline filter runs on the
+// goroutine that runs the chain, a bounded one on its own; both are
+// recorded as filter runs, and a panic in an inline filter blocks the
+// request.
+func TestInlineFilterRunsOnTheChainGoroutine(t *testing.T) {
+	var inlineG, boundedG string
+	f := NewFilters()
+	if err := f.RegisterRequest(funcReq{"inline", func(context.Context) (RequestVerdict, error) {
+		inlineG = goid()
+		return RequestVerdict{Action: Pass}, nil
+	}}, Registration{Order: 1, Mandatory: true, Inline: true}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.RegisterRequest(funcReq{"bounded", func(context.Context) (RequestVerdict, error) {
+		boundedG = goid()
+		return RequestVerdict{Action: Pass}, nil
+	}}, Registration{Order: 2, Mandatory: true}); err != nil {
+		t.Fatal(err)
+	}
+	call := schemaCall()
+	if _, _, v := f.RunRequest(context.Background(), call, json.RawMessage(`{"text":"x"}`)); v != nil {
+		t.Fatalf("verdict %+v", v)
+	}
+	if me := goid(); inlineG != me || boundedG == me || boundedG == "" {
+		t.Fatalf("chain goroutine %s, inline filter on %s, bounded filter on %s", me, inlineG, boundedG)
+	}
+	seen := map[string]bool{}
+	for _, r := range call.Inspection.Runs() {
+		seen[r.Filter] = true
+	}
+	if !seen["inline"] || !seen["bounded"] {
+		t.Fatalf("runs %v", seen)
+	}
+	g := NewFilters()
+	if err := g.RegisterResponse(funcResp{"inline-crash", func(context.Context) (ResponseVerdict, error) { panic("boom") }}, Registration{Mandatory: true, Inline: true}); err != nil {
+		t.Fatal(err)
+	}
+	if res, _, v := g.RunResponse(context.Background(), schemaCall(), &mcp.CallToolResult{}); res != nil || v == nil || v.ReasonCode != ReasonFilterError {
 		t.Fatalf("%+v %+v", res, v)
 	}
 }
