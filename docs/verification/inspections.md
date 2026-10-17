@@ -364,3 +364,29 @@ Observations:
 - Local loading: view and policy help is part of the embedded console bundle, and parameter descriptions come from the catalog the Gateway serves (`docs/parameters.json` built into the binary); the help test records no request to another origin.
 
 Deviation: none.
+
+## FR-13.1 Release archives
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-13.1 |
+| Commit | `4ba218973fd4279d3e385cd4751285417a68103f` |
+| Profile and platform | Not profile-specific; the GitHub Release v1.0.0-rc.2 (pre-release), inspected on darwin/arm64 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (release rehearsal task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: tagged v1.0.0-rc.2 on main `4ba2189`; the release workflow (run 39032406916) published it. Downloaded every asset with `gh release download v1.0.0-rc.2 -R ethan03805/Secure-MCP-Gateway`, ran `minisign -Vm smcp_1.0.0-rc.2_checksums.txt -P <key from SECURITY.md>`, `shasum -a 256 -c smcp_1.0.0-rc.2_checksums.txt`, `tar -tzf` on each archive, read `sbom.spdx.json` from the linux-amd64 archive, and installed the darwin-arm64 archive with `install.sh --version v1.0.0-rc.2`.
+
+Observations:
+
+- Four archives: `smcp_1.0.0-rc.2_darwin_arm64.tar.gz`, `_darwin_amd64`, `_linux_amd64`, `_linux_arm64` (`.goreleaser.yaml:95`). Each lists `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `LICENSE`, `README.md`, `CHANGELOG.md`, `docs/icd/x-01-harness-interface.md`, `docs/icd/x-12-adapter-hooks.md` and `sbom.spdx.json`; the release workflow checked the same list for all four (`.github/workflows/release.yml:88`).
+- Console assets: `smcpd` embeds the built console (`console/embed.go:13`, served through `internal/consoleapi/consoleapi.go:130`, attached in `cmd/smcpd/main.go:181`); there is no separate asset directory to ship.
+- License notices: `LICENSE` in every archive (`.goreleaser.yaml:102`).
+- SBOM: `sbom.spdx.json` in every archive (`.goreleaser.yaml:26`, `.goreleaser.yaml:105`), SPDX-2.3 with 51 packages: the Go modules of `go.mod` (for example `github.com/modelcontextprotocol/go-sdk@v1.8.0`, `aead.dev/minisign@v0.3.0`) and the console's npm packages (`react@19.3.1`, `@fontsource/ibm-plex-sans@5.3.0`).
+- One checksum file `smcp_1.0.0-rc.2_checksums.txt` (`.goreleaser.yaml:113`) lists the four archives and their SBOM assets; every line verified.
+- Signature: `smcp_1.0.0-rc.2_checksums.txt.minisig` (`.goreleaser.yaml:123`) verified with the key published at `SECURITY.md:33` ("Signature and comment signature verified", trusted comment `smcp 1.0.0-rc.2 file:smcp_1.0.0-rc.2_checksums.txt`). `install.sh` and `smcpctl upgrade` embed the same key (`cmd/smcpctl/release.go:23`).
+- Installed binaries report the release version: `smcpd 1.0.0-rc.2`, `smcpctl 1.0.0-rc.2`, `smcp-stdio 1.0.0-rc.2`, `smcp-session 1.0.0-rc.2`, `smcp-connect 1.0.0-rc.2`.
+
+Deviation: the inspected release is a pre-release candidate. v1.0.0 is built by the same workflow and configuration; the release checklist repeats this inspection for it.
