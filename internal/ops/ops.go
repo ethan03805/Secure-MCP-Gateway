@@ -119,6 +119,10 @@ type Options struct {
 	// Elements, when set, is reported as info.elements in the health
 	// status: the elements the daemon wired and their state (cmd/smcpd).
 	Elements func() any
+	// MetricsListener, when set, is the metrics listener bound before the
+	// Gateway started (app.BindListeners); Attach serves it instead of
+	// binding [metrics] address.
+	MetricsListener net.Listener
 }
 
 // Runtime is the attached operations runtime.
@@ -180,10 +184,13 @@ func Attach(ctx context.Context, a *app.App, o Options) (*Runtime, error) {
 	a.Evidence.AddObserver("metrics", r.metrics, 4096)
 	a.Journal.SetFlushObserver(r.metrics.Flush.Observe)
 	if a.Config.Metrics.Enabled {
-		ln, err := metrics.Listen(a.Config.Metrics.Address)
-		if err != nil {
-			cancel()
-			return nil, fmt.Errorf("metrics: %w", err)
+		ln := o.MetricsListener
+		if ln == nil {
+			var err error
+			if ln, err = metrics.Listen(a.Config.Metrics.Address); err != nil {
+				cancel()
+				return nil, fmt.Errorf("metrics: %w", err)
+			}
 		}
 		r.goRun(func() {
 			if err := r.metrics.Serve(ctx, ln, o.Log); err != nil {
@@ -193,6 +200,9 @@ func Attach(ctx context.Context, a *app.App, o Options) (*Runtime, error) {
 		o.Log.Info("metrics endpoint listening", "address", ln.Addr().String())
 	}
 	r.recordUpgradeEvent()
+	// The first evaluation finishes before Attach returns, so the health
+	// report has its causes by the time the listeners serve.
+	r.mon.Evaluate()
 	r.goRun(func() { r.mon.Run(ctx) })
 	r.goRun(func() { r.keyLoop(ctx) })
 	if iv := a.Config.Backup.Interval.Duration; iv > 0 {
@@ -371,11 +381,14 @@ func (r *Runtime) commit(outcome, reason, actor string, detail map[string]any) {
 
 // backupLoop runs a scheduled backup every interval (FR-9.16) with the
 // encryption of [backup]. Each run is the SR-7.7-1 procedure of an
-// on-demand backup and records its result and checksum the same way.
+// on-demand backup and records its result and checksum the same way. The
+// interval is counted from the end of the previous run, so that dispatch,
+// which a backup stops, runs for at least the interval between backups
+// however long a backup takes.
 func (r *Runtime) backupLoop(ctx context.Context, every time.Duration) {
-	t := time.NewTicker(every)
+	t := time.NewTimer(every)
 	defer t.Stop()
-	for {
+	for ; ; t.Reset(every) {
 		select {
 		case <-ctx.Done():
 			return

@@ -325,7 +325,13 @@ func (g *gateway) approveFor(ctx context.Context, sessionID, tool string, logf f
 					continue
 				}
 				seen[a.ID] = true
-				out, err := g.ctl(ctx, "approvals", "approve", a.ID, "--yes", "--comment", "real-agent conformance suite", "--config", g.cfg)
+				// The approval releases the held call, and the caller ends
+				// ctx when the agent exits, which can be before smcpctl
+				// does: the command runs to its end on its own deadline, so
+				// an approval made is never reported as failed.
+				actx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
+				out, err := g.ctl(actx, "approvals", "approve", a.ID, "--yes", "--comment", "real-agent conformance suite", "--config", g.cfg)
+				cancel()
 				if err != nil {
 					logf("smcpctl approvals approve %s: %v: %s", a.ID, err, lastLine(out))
 					continue

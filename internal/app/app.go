@@ -80,6 +80,9 @@ type Options struct {
 	// (E-13, E-14; internal/library). Default none: [[server]] entries
 	// naming a package are refused.
 	Packages Packages
+	// Listeners, when set, are the harness and admin listeners bound by
+	// BindListeners before Start; Listen uses them instead of binding.
+	Listeners *Listeners
 }
 
 // Packages is the seam for signed server packages (internal/library).
@@ -118,6 +121,7 @@ type App struct {
 	harnessLn net.Listener
 	adminLn   net.Listener
 	udsLn     net.Listener // UDS Harness Profile socket; nil unless [uds] enabled
+	prebound  *Listeners
 	closeOnce sync.Once
 }
 
@@ -143,7 +147,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if o.JanitorInterval <= 0 {
 		o.JanitorInterval = 30 * time.Second
 	}
-	a = &App{Config: cfg, log: o.Log, janitor: o.JanitorInterval}
+	a = &App{Config: cfg, log: o.Log, janitor: o.JanitorInterval, prebound: o.Listeners}
 	defer func() {
 		if err != nil {
 			a.Close()
@@ -347,12 +351,16 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 // runs, so callers may connect as soon as Listen returns.
 func (a *App) Listen() error {
 	var err error
-	if a.harnessLn, err = a.Gateway.Listen(); err != nil {
-		return err
-	}
-	if a.adminLn, err = a.Admin.Listen(); err != nil {
-		a.harnessLn.Close()
-		return err
+	if p := a.prebound; p != nil && p.Harness != nil && p.Admin != nil {
+		a.harnessLn, a.adminLn = p.Harness, p.Admin
+	} else {
+		if a.harnessLn, err = a.Gateway.Listen(); err != nil {
+			return err
+		}
+		if a.adminLn, err = a.Admin.Listen(); err != nil {
+			a.harnessLn.Close()
+			return err
+		}
 	}
 	if a.Config.UDS.Enabled { // CP-02 UDS harness listener (FR-1.1, FR-1.47)
 		if a.udsLn, err = a.Gateway.ListenUDS(); err != nil {
