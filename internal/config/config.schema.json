@@ -24,7 +24,8 @@
       "additionalProperties": false,
       "properties": {
         "export_dir": { "type": "string", "minLength": 1 },
-        "export_interval": { "$ref": "#/$defs/duration" }
+        "export_interval": { "$ref": "#/$defs/duration" },
+        "quota_bytes": { "type": "integer", "minimum": 1048576 }
       }
     },
     "backup": {
@@ -176,6 +177,7 @@
         "flush_interval": { "$ref": "#/$defs/duration" },
         "metrics_interval": { "$ref": "#/$defs/duration" },
         "memory_limit_bytes": { "type": "integer", "minimum": 16777216 },
+        "storage_quota_bytes": { "type": "integer", "minimum": 1048576 },
         "scoring": { "enum": ["off", "async", "sync"] },
         "require_approval_band": { "enum": ["off", "elevated", "abnormal", "critical"] },
         "withhold_band": { "enum": ["off", "elevated", "abnormal", "critical"] },

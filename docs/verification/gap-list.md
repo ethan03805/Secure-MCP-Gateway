@@ -154,14 +154,10 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-26 Data Access Service
 
 - FR-9.4 missing: no priority classes for queued writes.
-- FR-9.5 missing: observation records are not batched through the Data Access Service.
-- FR-9.6 missing: no P2 backpressure signal.
 - SR-6-3 missing: observation data served to the console is filtered by route role only, not by each field's sensitivity class.
 
 ## E-28 Data Lifecycle & Memory Manager
 
-- FR-9.12 missing: no memory manager or degradation order.
-- FR-9.15 missing: no storage quotas, warnings or quota reporting to E-23.
 - FR-11.9 external: idle resident memory not measured.
 - FR-12.4 external: CP-46 directories, owners and modes have not been inspected on installed Enforced and Standalone hosts.
 

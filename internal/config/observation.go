@@ -40,6 +40,9 @@ type Observation struct {
 	MetricsInterval Duration `toml:"metrics_interval" json:"metrics_interval"`
 	// MemoryLimitBytes bounds DuckDB memory (CP-33: 512 MiB).
 	MemoryLimitBytes int64 `toml:"memory_limit_bytes" json:"memory_limit_bytes"`
+	// StorageQuotaBytes is the Observation Store's storage quota (default
+	// 10 GiB); health warns at 80% (FR-9.15).
+	StorageQuotaBytes int64 `toml:"storage_quota_bytes" json:"storage_quota_bytes"`
 	// Scoring selects "async" (default: scored after release, alert and
 	// capture escalation only), "sync" (scored in the inspection stages
 	// before launch and release authorization) or "off".

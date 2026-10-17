@@ -64,6 +64,12 @@ func (w *writer) offer(table string, r obsstore.Row) {
 	}
 }
 
+// underPressure reports the P2 backpressure signal (FR-9.6): the queue is
+// at 80% or more of its capacity.
+func (w *writer) underPressure() bool {
+	return w != nil && len(w.ch)*5 >= cap(w.ch)*4
+}
+
 func (w *writer) drop(reason string, n uint64) {
 	w.mu.Lock()
 	w.dropCount[reason] += n

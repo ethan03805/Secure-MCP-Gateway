@@ -72,6 +72,7 @@ type Service struct {
 	now      func() time.Time
 	writer   *writer
 	storeErr error
+	degrade  *degrader
 
 	mu        sync.Mutex
 	rec       audit.Recorder
@@ -171,7 +172,8 @@ func New(o Options) (*Service, error) {
 		s.Exporter = &research.Exporter{Store: s.Store, Catalog: o.Catalog, Campaigns: s.Campaigns, Snapshots: s.Baselines.Store(),
 			Dir: st.ExportDir, KeyDir: st.KeyDir, Now: o.Now}
 	}
-	s.Collector = observe.New(observe.Options{Catalog: o.Catalog, PolicyID: st.PolicyID, Parameters: st.Parameters, Escalation: st.Escalation,
+	s.degrade = newDegrader(st.MemoryLimit, s.writer.underPressure, o.Log)
+	s.Collector = observe.New(observe.Options{Catalog: o.Catalog, PolicyID: st.PolicyID, Parameters: st.Parameters, Escalation: st.Escalation, Degradation: s.degrade.Stage,
 		EscalateFrom: st.EscalateCapture, EscalateUncharacterized: st.Uncharacterized != "record", EscalationByBand: st.EscalationByBand,
 		InScope: scopeFilter(st.Scope), FrameworkOf: o.FrameworkOf,
 		SamplingRate: st.SamplingRate, Queue: st.Queue, Analyzer: (*analyzer)(s), Campaigns: s.Campaigns.Active, Now: o.Now})
@@ -282,6 +284,7 @@ func (s *Service) loop(ctx context.Context) {
 			s.sampleMetrics()
 		case <-ct.C:
 			s.tickCampaigns()
+			s.degrade.step()
 		case <-rt.C:
 			s.retain()
 		}

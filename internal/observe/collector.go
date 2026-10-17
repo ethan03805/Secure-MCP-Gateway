@@ -135,6 +135,31 @@ type Options struct {
 	Analyzer     Analyzer
 	Campaigns    func() []Campaign
 	Now          func() time.Time
+	// Degradation returns the observation path's degradation stage
+	// (FR-9.12): 1 or more reduces normal-band sampling to a tenth, 2 or
+	// more stops capturing S3 parameters, 3 or more pauses campaigns, 4
+	// shrinks the per-session cache to a quarter of MaxSessions. nil is
+	// stage 0.
+	Degradation func() int
+}
+
+// Degradation stages the collector acts on (see Options.Degradation).
+const (
+	stageReducedSampling = 1
+	stageS3Suspended     = 2
+	stageCampaignsPaused = 3
+	stageCachesShrunk    = 4
+)
+
+// DropDegraded counts records not captured because degradation reduced
+// normal-band sampling (FR-9.12).
+const DropDegraded = "degraded"
+
+func (c *Collector) stage() int {
+	if c.o.Degradation == nil {
+		return 0
+	}
+	return c.o.Degradation()
 }
 
 // Drop reasons counted in P-246.
@@ -675,7 +700,11 @@ func prune(w []time.Time, now time.Time) []time.Time {
 }
 
 func (c *Collector) evictSessionsLocked() {
-	if len(c.sessions) <= c.o.MaxSessions {
+	limit := c.o.MaxSessions
+	if c.stage() >= stageCachesShrunk {
+		limit = max(limit/4, 1) // the cache floor (FR-9.12)
+	}
+	if len(c.sessions) <= limit {
 		return
 	}
 	type kv struct {
@@ -687,7 +716,7 @@ func (c *Collector) evictSessionsLocked() {
 		all = append(all, kv{id, s.seen})
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].seen.Before(all[j].seen) })
-	for _, e := range all[:len(all)-c.o.MaxSessions] {
+	for _, e := range all[:len(all)-limit] {
 		delete(c.sessions, e.id)
 	}
 }
@@ -708,6 +737,12 @@ func (c *Collector) capture(r *Record) {
 	}
 	h := SampleHash(r.CorrelationID)
 	inScope := c.o.InScope == nil || c.o.InScope(r)
+	stage := c.stage()
+	rate := c.o.SamplingRate
+	if stage >= stageReducedSampling {
+		rate /= 10
+	}
+	degraded := false
 	switch {
 	case !inScope:
 	case c.escalates(band):
@@ -726,13 +761,15 @@ func (c *Collector) capture(r *Record) {
 			}
 		}
 		sel["anomaly_band"], sel["max_abs_z"] = true, true // the reason for the escalation
-	case h < c.o.SamplingRate:
+	case h < rate:
 		r.Capture = "sampled"
 		for p := range c.params {
 			sel[p] = true
 		}
+	case h < c.o.SamplingRate:
+		degraded = true // sampled at the normal rate, not at the reduced one
 	}
-	if c.o.Campaigns != nil {
+	if c.o.Campaigns != nil && stage < stageCampaignsPaused {
 		for _, cp := range c.o.Campaigns() {
 			if cp.Matches != nil && !cp.Matches(r) {
 				continue
@@ -753,12 +790,22 @@ func (c *Collector) capture(r *Record) {
 		}
 	}
 	if r.Capture == "" {
-		if inScope {
+		switch {
+		case degraded:
+			c.Drop(DropDegraded, 1)
+		case inScope:
 			c.Drop(DropSampledDown, 1)
-		} else {
+		default:
 			c.Drop(DropOutOfScope, 1)
 		}
 		return
+	}
+	if stage >= stageS3Suspended {
+		for k := range sel {
+			if p, ok := c.o.Catalog.Lookup(k); ok && p.Sensitivity == "S3" {
+				delete(sel, k)
+			}
+		}
 	}
 	for k := range r.Values {
 		if !sel[k] && !metaKeys[k] {

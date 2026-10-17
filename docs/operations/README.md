@@ -44,6 +44,7 @@ Every command takes `--config <file>` (default `smcp.toml`).
 | `[metrics] address` | `127.0.0.1:9464` | Metrics listener; must be loopback and differ from the other listeners |
 | `[evidence] export_dir` | none (export off) | Directory that receives closed journal segments and the anchor (FR-7.14) |
 | `[evidence] export_interval` | `10s` | How often the export runs; 1 s to 50 s so a closed segment is copied within 60 s |
+| `[evidence] quota_bytes` | `10737418240` | Journal storage quota (CP-26); health warns with `storage_quota_journal` at 80% (FR-9.15) |
 | `[backup] dir` | `backups` next to the configuration file | Where backup archives and `index.json` are written |
 
 Relative paths are resolved against the directory of the configuration file.
