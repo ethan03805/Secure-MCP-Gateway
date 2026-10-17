@@ -62,10 +62,8 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-3.1 missing: only Framework Profiles and Session Allow Policy Templates exist; Secret Use, Response, Audit Profile, Observation, Anomaly Response and Research Campaign policy objects are not part of the policy document.
 - FR-3.3 missing: no named draft workspace derived from a parent revision.
 - FR-3.7 missing: no cost estimate for a draft Observation Policy or Research Campaign from 7 days of call rates.
-- FR-18.5 missing: `docs/policy-reference.md` exists, but its examples are not validated by the build against the policy schema, and object types that do not exist are not described.
+- FR-18.5 partial: `internal/policy` `TestPolicyReferenceExamples` compiles every policy example in `docs/policy-reference.md` and checks that every schema field is described; object types, predicate operators and obligations that do not exist (FR-3.1, SR-1.7-1, FR-3.12) cannot be described.
 - SR-1-1 missing: publication does not check grants against the manifest capability ceiling.
-- SR-1-3 missing: publication does not check a template against the Framework Profiles that may use it.
-- SR-1.9-1 missing: no overlap analysis of permits at publication.
 - SR-3.13-1 missing: no high-risk class flags on profiles and templates; high-risk grants are not refused at publication.
 - SR-6.9-1 missing: retention and capture settings are not part of the policy document, so they are not validated at publication.
 - SR-7.3-1 unverified: signature and schema are validated at start and publication and a bad signature fails closed (`policy_signature`); no test covers a broken cross-reference after restart with the matching health cause.
@@ -81,14 +79,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - SR-1.7-2 missing: no predicates, so missing-attribute handling does not exist.
 - SR-1.10-1 missing: one permit rule applies per tool; obligations of several applicable rules are not combined.
 - SR-1.11-1 missing: no route objects; the route is the server alias.
-- SR-1.12-3 missing: decision records carry no baseline snapshot ID for anomaly obligations.
-- SR-1.18-1 missing: approval is required only where a rule sets `approval`; no floor by manifest side-effect class or Appendix F trigger class.
-- SR-1.19-1 missing: no `GET /api/v1/decisions/{id}/explanation` route.
-- SR-3.10-1 missing: grants name server aliases and tool names, so a newly enabled revision of a granted server is usable without a new grant.
-
-## E-07 Approval Service
-
-- SR-1.18-3 missing: an approval is not re-requested when a request filter transforms action-defining arguments.
 
 ## E-08 Access Enforcement Point
 
@@ -99,7 +89,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-09 Request Inspection Pipeline
 
 - SR-1.8-1 unverified: `schema-validate` blocks arguments that do not match the input schema with reason `SCHEMA_INVALID` (Appendix B's code; the requirement text says `SCHEMA`); validation is against the live tool schema unless a signed manifest is used, and no test pins the manifest source.
-- SR-5.12-1 missing: no second decision after a filter transforms action-defining arguments.
 
 ## E-12 Enforcement Coordinator
 

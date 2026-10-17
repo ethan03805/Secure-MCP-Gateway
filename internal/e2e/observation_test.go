@@ -20,6 +20,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
@@ -284,6 +285,7 @@ func (of *obsFixture) journal() []audit.Event {
 
 func TestSynchronousAnomalyObligation(t *testing.T) {
 	reqtest.Partial(t, "FR-4.15", "SR-1.12-2", "FR-10.28")
+	reqtest.Verifies(t, "SR-1.19-1", "SR-1.12-3")
 	of := startObservation(t, `sampling_rate = 1.0
 scoring = "sync"
 require_approval_band = "abnormal"
@@ -295,6 +297,9 @@ parameter = "request_bytes"
 transform = "log1p"
 sigma_floor = 0.05
 `)
+	if _, err := consoleapi.Attach(of.app, diag.Discard()); err != nil { // the explanation route (SR-1.19-1)
+		t.Fatal(err)
+	}
 	access, _, _ := of.oauthLogin("smcp:template:ro")
 	cs := of.mcpClient(access)
 	for i := 0; i < 40; i++ {
@@ -311,9 +316,12 @@ sigma_floor = 0.05
 		t.Fatal(err)
 	}
 	// Normal call: permitted.
-	if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_echo", Arguments: map[string]any{"text": "v999"}}); err != nil {
+	normal, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_echo", Arguments: map[string]any{"text": "v999"}})
+	if err != nil {
 		t.Fatalf("normal call: %v", err)
 	}
+	prov, _ := normal.Meta["local.smcpgw/provenance"].(map[string]any)
+	normalID, _ := prov["decisionId"].(string)
 	// Abnormal call: the scorer adds the approval obligation before
 	// dispatch; with no approval service the call is refused as approval
 	// required and never reaches the backend.
@@ -334,5 +342,61 @@ sigma_floor = 0.05
 	jerr, _ = callErr(t, cs, "t_secret", map[string]any{})
 	if jerr == nil {
 		t.Fatal("denied call permitted")
+	}
+	// A decision that denies: a revision with a per-session quota of one
+	// call, spent by the next call.
+	of.publish(strings.Replace(strings.Replace(testPolicy, `"r1"`, `"r2"`, 1), `"ro": {"rules"`, `"ro": {"calls_per_session": 1, "rules"`, 1))
+	if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_echo", Arguments: map[string]any{"text": "v997"}}); err != nil {
+		t.Fatalf("first call under the quota: %v", err)
+	}
+	jerr, denied := callErr(t, cs, "t_echo", map[string]any{"text": "v998"})
+	if jerr == nil || denied["reasonCode"] != "QUOTA_EXHAUSTED" {
+		t.Fatalf("quota: %v %v", jerr, denied)
+	}
+	checkExplanations(t, of, res.Snapshot.ID, normalID, data["decisionId"].(string), denied["decisionId"].(string))
+}
+
+// checkExplanations reads GET /api/v1/decisions/{id}/explanation for a
+// permitted, an anomaly-restricted and a denied decision (SR-1.19-1); the
+// anomaly-restricted one records the baseline snapshot of its obligation
+// (SR-1.12-3).
+func checkExplanations(t *testing.T, of *obsFixture, snapshot, permitID, anomalyID, denyID string) {
+	t.Helper()
+	get := func(id string) map[string]any {
+		t.Helper()
+		status, body := of.admin("GET", "/api/v1/decisions/"+id+"/explanation", of.operator, nil)
+		if status != 200 {
+			t.Fatalf("explanation of %s: %d %v", id, status, body)
+		}
+		return body
+	}
+	p := get(permitID)
+	if p["outcome"] != "permit" || p["phase"] != "authorized" || p["route"] != "t" || fmt.Sprint(p["decisive_rules"]) != "[r1/ro/ro-t]" ||
+		len(p["considered_rules"].([]any)) != 2 || p["obligations"] == nil {
+		t.Fatalf("permit explanation %v", p)
+	}
+	d := get(denyID)
+	if d["outcome"] != "deny" || d["phase"] != "denied" || d["reason_code"] != "QUOTA_EXHAUSTED" || d["policy_revision"] != "r2" ||
+		fmt.Sprint(d["decisive_rules"]) != "[r2/ro/ro-t]" || len(d["considered_rules"].([]any)) != 2 {
+		t.Fatalf("deny explanation %v", d)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		a := get(anomalyID)
+		ob, _ := a["anomaly_obligation"].(map[string]any)
+		obl, _ := a["obligations"].(map[string]any)
+		if ob == nil || ob["snapshot_id"] != snapshot || obl["approval"] != true || a["reason_code"] != "APPROVAL_REQUIRED" {
+			t.Fatalf("anomaly explanation %v", a)
+		}
+		if ev, _ := a["anomaly"].([]any); len(ev) > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no anomaly evidence in %v", a)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if status, _ := of.admin("GET", "/api/v1/decisions/no-such-decision/explanation", of.operator, nil); status != 404 {
+		t.Fatalf("unknown decision: %d", status)
 	}
 }

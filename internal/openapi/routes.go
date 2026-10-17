@@ -51,6 +51,7 @@ var ops = []op{
 	{Pattern: "GET /api/v1/audit/events", Tag: "audit", Summary: "Journal browser with filters and paging", Doc: "console.md",
 		Query: []string{"class", "phase", "outcome", "reason_code", "session_id", "correlation_id", "principal_id", "decision_id", "origin", "q", "since", "until", "limit", "before"}},
 	{Pattern: "GET /api/v1/audit/events/{id}", Tag: "audit", Summary: "One evidence event with its related phases", Doc: "console.md"},
+	{Pattern: "GET /api/v1/decisions/{id}/explanation", Tag: "audit", Summary: "Decision explanation: considered, applicable and decisive rule revisions, route, obligations and anomaly evidence (SR-1.19-1)", Doc: "policy.md"},
 	{Pattern: "GET /api/v1/audit/export", Tag: "audit", Summary: "Export matching events as CSV or JSON Lines", Doc: "console.md", File: true,
 		Query: []string{"format", "class", "phase", "outcome", "reason_code", "session_id", "correlation_id", "principal_id", "decision_id", "origin", "q", "since", "until"}},
 	{Pattern: "GET /api/v1/audit/verify", Tag: "audit", Summary: "Result of the last journal verification", Doc: "console.md"},

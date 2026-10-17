@@ -186,3 +186,22 @@ Response 201: as for publish, with `record.origin` `rollback` and `record.rollba
 ## POST /admin/v1/policy/reload (existing route)
 
 Reads the configured `[policy] file` and publishes it through the store as above (origin `reload`). It answers `{"revision", "digest", "changed"}`; it answers 409 `revision_reused` when the file's revision ID is already published with other content, or is published and not active.
+
+## GET /api/v1/decisions/{id}/explanation
+
+Explains one decision (SR-1.19-1) from the decision record the Enforcement Coordinator commits with the `decision` event: the permit (`authorized`, at launch authorization) or the deny (`denied`). Roles: Operator, Policy Author, Auditor.
+
+```json
+{
+  "decision_id": "019a...", "correlation_id": "019a...", "policy_revision": "r2", "phase": "authorized", "outcome": "permit",
+  "reason_code": "PERMIT", "template": "dev", "route": "fs",
+  "considered_rules": ["r2/dev/read-fs", "r2/dev/no-shell"],
+  "applicable_rules": ["r2/dev/read-fs"],
+  "decisive_rules": ["r2/dev/read-fs"],
+  "obligations": {"approval": true, "approval_reason": "", "calls_per_minute": 60, "burst": 0, "calls_per_session": 0, "filters": ["path-canonicalize"]},
+  "side_effect": "write", "source_trust": "trusted", "tainted": false,
+  "anomaly": []
+}
+```
+
+Rule-revision IDs are `<policy revision>/<template>/<rule id>`: rules are versioned with the revision that contains them. `anomaly` lists the anomaly events recorded for the same call. When a request filter transformed the arguments, the call was decided again (SR-5.12-1): the second decision carries `superseded_decision_id` and `redecision_reason: "arguments_transformed"`, and asking for the first decision's ID returns `{"decision_id", "superseded_by"}`. 404 `not_found` when the journal has no decision with the ID; 503 `journal_unreadable` when the journal cannot be read.

@@ -29,6 +29,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,7 +49,7 @@ func SchemaJSON() []byte { return append([]byte(nil), schemaJSON...) }
 // every published revision (FR-3.4).
 const (
 	SchemaVersion    = "1"
-	EvaluatorVersion = "2"
+	EvaluatorVersion = "3"
 )
 
 var compiledSchema = func() *jsonschema.Schema {
@@ -80,6 +81,12 @@ type FrameworkProfile struct {
 	Templates       []string `json:"templates"`
 	DefaultTemplate string   `json:"default_template"`
 	CallsPerMinute  int      `json:"calls_per_minute,omitempty"`
+	// Servers, when set, is the profile's authority ceiling: the server
+	// aliases its sessions may reach through any of its templates. A
+	// template granting a server that no profile using it permits is
+	// rejected at publication (SR-1-3), and a session of this profile is
+	// denied other servers even when its template names them (SR-1-2).
+	Servers []string `json:"servers,omitempty"`
 }
 
 // Template is a Session Allow Policy Template (ARCH §7.1 layer 3).
@@ -259,6 +266,9 @@ func Compile(raw []byte) (*Snapshot, error) {
 			return nil, fmt.Errorf("framework profile %q: default_template %q is not in its templates", name, p.DefaultTemplate)
 		}
 	}
+	if err := checkProfileCeilings(doc); err != nil {
+		return nil, err
+	}
 	digest := sha256.Sum256(canon)
 	s := &Snapshot{
 		Revision:        doc.Revision,
@@ -312,6 +322,59 @@ func Compile(raw []byte) (*Snapshot, error) {
 	}
 	return s, nil
 }
+
+// checkProfileCeilings rejects a template that grants a server absent from
+// every framework profile permitted to use it (SR-1-3). A profile without
+// servers is unrestricted; a template no profile uses grants nothing.
+func checkProfileCeilings(doc Document) error {
+	names := make([]string, 0, len(doc.Templates))
+	for n := range doc.Templates {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, tname := range names {
+		var users []string
+		open := false
+		allowed := map[string]bool{}
+		for pname, p := range doc.FrameworkProfiles {
+			if !slices.Contains(p.Templates, tname) {
+				continue
+			}
+			users = append(users, pname)
+			if len(p.Servers) == 0 {
+				open = true
+			}
+			for _, sv := range p.Servers {
+				allowed[sv] = true
+			}
+		}
+		if open || len(users) == 0 {
+			continue
+		}
+		sort.Strings(users)
+		for _, r := range doc.Templates[tname].Rules {
+			if r.Effect != EffectDeny && !allowed[r.Server] {
+				return fmt.Errorf("template %q rule %q grants server %q, which no framework profile using the template permits (%s) (SR-1-3)",
+					tname, r.ID, r.Server, strings.Join(users, ", "))
+			}
+		}
+	}
+	return nil
+}
+
+// RuleRevisionID names a rule within a published revision: rules are not
+// versioned on their own, so a rule's revision is the policy revision, the
+// template and the rule ID (SR-1.19-1, SR-6.4-1).
+func RuleRevisionID(revision, template, rule string) string {
+	return revision + "/" + template + "/" + rule
+}
+
+// ApprovalFloor reports whether a tool of manifest side-effect class c
+// always needs approval, whatever the policy says (SR-1.18-1): the write,
+// external and execute classes cover the approval triggers of the security
+// SRS (file and repository mutation, external transmission, code
+// execution).
+func ApprovalFloor(c string) bool { return c == SideWrite || c == SideExternal || c == SideExecute }
 
 // HasTemplate reports whether the snapshot defines the template.
 func (s *Snapshot) HasTemplate(name string) bool { _, ok := s.grants[name]; return ok }
@@ -394,6 +457,7 @@ type Decision struct {
 	Obligations     Obligations
 	Route           string // server alias
 	PolicyRevision  string
+	Template        string // the session template the decision evaluated
 	Duration        time.Duration
 	// SideEffect and SourceTrust are the effective classes of the tool
 	// ("" when unclassified). Tainted reports that the session was tainted
@@ -547,11 +611,19 @@ func TaintGated(c string) bool { return c != SideRead }
 // Decide evaluates one request. It is deterministic given the snapshot, the
 // counter state and the session's taint mark; it never consults anything
 // else (SR-1.12-1).
-func (d *Decider) Decide(req Request) Decision {
+func (d *Decider) Decide(req Request) Decision { return d.decide(req, true) }
+
+// Recheck evaluates a request again without counting it against rate
+// windows or quotas: the call was already counted by its first decision.
+// The Request Inspection Pipeline uses it when a filter transformed the
+// arguments (SR-5.12-1). The result is a new decision with its own ID.
+func (d *Decider) Recheck(req Request) Decision { return d.decide(req, false) }
+
+func (d *Decider) decide(req Request, consume bool) Decision {
 	start := time.Now()
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	dec := Decision{ID: ids.New(), Outcome: Deny}
+	dec := Decision{ID: ids.New(), Outcome: Deny, Template: req.Template}
 	done := func() Decision { dec.Duration = time.Since(start); return dec }
 	if d.snap == nil {
 		dec.ReasonCode = ReasonNoSnapshot
@@ -569,6 +641,11 @@ func (d *Decider) Decide(req Request) Decision {
 		p, ok := d.snap.Profiles[req.Profile]
 		if !ok || !slices.Contains(p.Templates, req.Template) {
 			dec.ReasonCode = ReasonNoTemplate
+			return done()
+		}
+		// SR-1-2: the profile's server ceiling bounds every template.
+		if len(p.Servers) > 0 && !slices.Contains(p.Servers, req.Server) {
+			dec.ReasonCode = ReasonNoPermit
 			return done()
 		}
 	}
@@ -609,6 +686,11 @@ func (d *Decider) Decide(req Request) Decision {
 	dec.Tainted = d.tainted[req.SessionID]
 
 	ob := Obligations{Approval: rule.Approval, Filters: slices.Clone(rule.Filters)}
+	// SR-1.18-1: the manifest's write, external and execute classes always
+	// need approval; a policy can add approvals but not remove this floor.
+	if ApprovalFloor(req.SideEffect) {
+		ob.Approval = true
+	}
 	// Session taint (SR-5.13-2): restrict-only, decided before any counter
 	// is touched so that a refusal consumes nothing.
 	if dec.Tainted && TaintGated(dec.SideEffect) {
@@ -658,6 +740,10 @@ func (d *Decider) Decide(req Request) Decision {
 	}
 	if d.deadline > 0 && time.Since(start) > d.deadline { // SR-1.20-1
 		dec.ReasonCode = ReasonEvalBound
+		return done()
+	}
+	if !consume {
+		dec.Outcome, dec.ReasonCode, dec.Obligations, dec.Route = Permit, ReasonPermit, ob, req.Server
 		return done()
 	}
 	used := d.quota[req.SessionID]
