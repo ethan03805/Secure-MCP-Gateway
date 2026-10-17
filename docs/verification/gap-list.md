@@ -154,7 +154,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-2.23 missing: Session Approver accounts are configuration entries; no Administrator flow creates them, and no check that the password differs from the Administrator's.
 - FR-8.4 to FR-8.8, FR-8.11 to FR-8.13, FR-8.15 to FR-8.17 (G-02 to G-05, G-07 to G-09 view requirements) unverified: every view exists and `console/e2e/views.spec.ts` exercises each; the tests' partial claims reach the requirement report (`console/e2e/reqreport.ts`), but no Demonstration record exists. Where a requirement names policy objects that do not exist (FR-3.1: Audit Profile, Observation Policy, Anomaly Response Policy and Research Campaign as published policy objects), that part is missing; the G-03 and G-06 editors produce the `[observation]` configuration table instead.
 - FR-8.24 external: the timed first-time-user task has not been run.
-- FR-8.25 unverified: views carry a `Help` section (`console/src/ui.tsx`); help for every policy field and catalog parameter has not been inspected.
+- FR-8.25 missing: every view carries a `Help` section (`console/src/ui.tsx`) and every catalog parameter shows its catalog description in G-04, but the G-02 policy fields (rule, template and profile fields) have no per-field help; only four fields carry a hint.
 - FR-8.29 unverified: `console/e2e/views.spec.ts` covers loading, empty and error states with partial claims; no test covers all three states for every view.
 - FR-8.30 external: no browser-support matrix run.
 - FR-8.31 unverified: G-01 shows a first-run checklist (`console/src/views/Control.tsx`); no record compares its items with the requirement's list.
