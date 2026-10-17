@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -51,6 +53,7 @@ type fakeRun struct {
 	Mounts   map[string]string `json:"mounts"`
 	EnvNames []string          `json:"env_names"`
 	EnvSet   map[string]bool   `json:"env_set"`
+	Env      map[string]string `json:"env"`
 }
 
 func fakeDir() string { return os.Getenv("SMCP_FAKE_DIR") }
@@ -74,6 +77,15 @@ func fakePodman(args []string) int {
 	switch args[0] {
 	case "run":
 		return fakeRunCmd(dir, args[1:])
+	case "create":
+		return fakeCreate(dir, args[1:])
+	case "init":
+		appendLine(filepath.Join(dir, name+".init"), "init")
+		return 0
+	case "start":
+		return fakeStart(dir, name)
+	case "unshare":
+		return fakeUnshare(dir, args[1:])
 	case "kill":
 		sig := "KILL"
 		for i, a := range args {
@@ -94,6 +106,13 @@ func fakePodman(args []string) int {
 		_ = syscall.Kill(pid, s)
 		return 0
 	case "inspect":
+		if slices.Contains(args, "{{.NetworkSettings.SandboxKey}}") {
+			if _, err := os.Stat(filepath.Join(dir, name+".create.json")); err != nil {
+				return 125
+			}
+			fmt.Println("/run/user/1000/netns/netns-" + name)
+			return 0
+		}
 		b, err := os.ReadFile(filepath.Join(dir, name+".pid"))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "no such container")
@@ -160,7 +179,7 @@ func isZombie(pid int) bool {
 }
 
 func fakeRunCmd(dir string, args []string) int {
-	r := fakeRun{Argv: args, Mounts: map[string]string{}, EnvSet: map[string]bool{}}
+	r := fakeRun{Argv: args, Mounts: map[string]string{}, EnvSet: map[string]bool{}, Env: map[string]string{}}
 	rootfs := false
 	i := 0
 	for ; i < len(args); i++ {
@@ -190,8 +209,13 @@ func fakeRunCmd(dir string, args []string) int {
 			r.Mounts[dst] = src
 		case strings.HasPrefix(a, "--env="):
 			n := strings.TrimPrefix(a, "--env=")
+			if k, v, ok := strings.Cut(n, "="); ok {
+				// A value on the command line (egress addresses).
+				_ = os.Setenv(k, v)
+				n = k
+			}
 			r.EnvNames = append(r.EnvNames, n)
-			_, r.EnvSet[n] = os.LookupEnv(n)
+			r.Env[n], r.EnvSet[n] = os.LookupEnv(n)
 		}
 	}
 	if i >= len(args) {
@@ -234,5 +258,79 @@ func fakeRunCmd(dir string, args []string) int {
 		fmt.Fprintln(os.Stderr, "fake podman exec:", err)
 		return 127
 	}
+	return 0
+}
+
+// fakeCreated is what the fake keeps between `podman create` and
+// `podman start`: the create arguments and the values of the environment
+// variables they name (Podman stores them in the container).
+type fakeCreated struct {
+	Args []string          `json:"args"`
+	Env  map[string]string `json:"env"`
+}
+
+func fakeCreate(dir string, args []string) int {
+	c := fakeCreated{Args: args, Env: map[string]string{}}
+	name := ""
+	for i, a := range args {
+		if a == "--name" && i+1 < len(args) {
+			name = args[i+1]
+		}
+		if n, ok := strings.CutPrefix(a, "--env="); ok && !strings.Contains(n, "=") {
+			if v, ok := os.LookupEnv(n); ok {
+				c.Env[n] = v
+			}
+		}
+	}
+	if name == "" {
+		return 125
+	}
+	if _, err := os.Stat(filepath.Join(dir, "create.fail")); err == nil {
+		fmt.Fprintln(os.Stderr, "Error: fake create failure")
+		return 125
+	}
+	b, _ := json.Marshal(c)
+	_ = os.WriteFile(filepath.Join(dir, name+".create.json"), b, 0o600)
+	fmt.Println("0123456789ab")
+	return 0
+}
+
+func fakeStart(dir, name string) int {
+	b, err := os.ReadFile(filepath.Join(dir, name+".create.json"))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error: no such container")
+		return 125
+	}
+	var c fakeCreated
+	if err := json.Unmarshal(b, &c); err != nil {
+		return 125
+	}
+	for k, v := range c.Env {
+		_ = os.Setenv(k, v)
+	}
+	// The created container must not have been started by create itself.
+	appendLine(filepath.Join(dir, name+".start"), "start")
+	return fakeRunCmd(dir, c.Args)
+}
+
+// fakeUnshare records `podman unshare` invocations with their standard
+// input. `... nft list table ...` prints back the last installed script.
+func fakeUnshare(dir string, args []string) int {
+	in, _ := io.ReadAll(os.Stdin)
+	appendLine(filepath.Join(dir, "unshare.log"), strings.Join(args, " "))
+	if _, err := os.Stat(filepath.Join(dir, "unshare.fail")); err == nil {
+		fmt.Fprintln(os.Stderr, "Error: fake nft failure")
+		return 1
+	}
+	if slices.Contains(args, "list") {
+		b, err := os.ReadFile(filepath.Join(dir, "rules.nft"))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error: No such file or directory")
+			return 1
+		}
+		os.Stdout.Write(b)
+		return 0
+	}
+	_ = os.WriteFile(filepath.Join(dir, "rules.nft"), in, 0o600)
 	return 0
 }

@@ -12,12 +12,17 @@
 //	spawn        starts a copy of itself that sleeps (process creation)
 //	alloc        allocates and touches the given number of MiB
 //	identity     reports uid, gid and the uid_map of the process
+//	http_get     fetches a URL through the proxy in HTTP_PROXY, if any
+//	             ("blocked: ..." or "status <code>: <body>")
 package probe
 
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -48,6 +53,10 @@ type pathArgs struct {
 
 type allocArgs struct {
 	MiB int `json:"mib" jsonschema:"MiB to allocate"`
+}
+
+type urlArgs struct {
+	URL string `json:"url" jsonschema:"http URL to fetch"`
 }
 
 type noArgs struct{}
@@ -114,6 +123,31 @@ func Server() *mcp.Server {
 				b[i] = 1
 			}
 			return text(fmt.Sprintf("allocated %d MiB", len(b)>>20)), nil, nil
+		})
+	mcp.AddTool(s, &mcp.Tool{Name: "http_get", Description: "Fetch a URL through the Egress Broker proxy (HTTP_PROXY)."},
+		func(ctx context.Context, _ *mcp.CallToolRequest, a urlArgs) (*mcp.CallToolResult, any, error) {
+			// The proxy is used for every destination, loopback included
+			// (http.ProxyFromEnvironment would bypass it for 127.0.0.1).
+			tr := &http.Transport{Proxy: nil, DisableKeepAlives: true}
+			if p := os.Getenv("HTTP_PROXY"); p != "" {
+				pu, err := url.Parse(p)
+				if err != nil {
+					return blocked(err)
+				}
+				tr.Proxy = http.ProxyURL(pu)
+			}
+			c := &http.Client{Transport: tr, Timeout: 10 * time.Second}
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.URL, nil)
+			if err != nil {
+				return blocked(err)
+			}
+			resp, err := c.Do(req) // #nosec G704 -- the probe's purpose is to attempt egress
+			if err != nil {
+				return blocked(err)
+			}
+			defer resp.Body.Close()
+			b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+			return text(fmt.Sprintf("status %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))), nil, nil
 		})
 	mcp.AddTool(s, &mcp.Tool{Name: "identity", Description: "Report process identity and user namespace mapping."},
 		func(_ context.Context, _ *mcp.CallToolRequest, _ noArgs) (*mcp.CallToolResult, any, error) {

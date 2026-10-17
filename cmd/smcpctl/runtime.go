@@ -90,14 +90,18 @@ func runtimeDoctor(args []string, out io.Writer) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if *podman == "" && *cfgPath != "" {
+	cgm := ""
+	if *cfgPath != "" {
 		cfg, err := config.Load(*cfgPath)
 		if err != nil {
 			return err
 		}
-		*podman = cfg.Runtime.Podman
+		if *podman == "" {
+			*podman = cfg.Runtime.Podman
+		}
+		cgm = cfg.Runtime.CgroupManager
 	}
-	checks := sandbox.Doctor(context.Background(), sandbox.DoctorOptions{Podman: *podman})
+	checks := sandbox.Doctor(context.Background(), sandbox.DoctorOptions{Podman: *podman, CgroupManager: cgm})
 	failed := sandbox.Failed(checks)
 	if *asJSON {
 		printJSON(out, map[string]any{"ready": len(failed) == 0, "checks": checks})
@@ -160,7 +164,7 @@ func runtimeSpec(args []string, out io.Writer) error {
 		srv := cfg.Runtime.FindServer(s.Alias)
 		network := sandbox.NetworkNone
 		if srv.Network == "egress" {
-			network = "<egress broker network>"
+			network = sandbox.EgressNetworkMode // confined to the broker listeners before start
 		}
 		if srv.Scope == "" {
 			srv.Scope = "shared"

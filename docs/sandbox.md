@@ -74,7 +74,7 @@ The Gateway currently keeps keys and the journal in one state directory owned by
 
 ### smcpd.service
 
-The unit runs `/usr/local/bin/smcpd --config /etc/smcp/smcp.toml` as `smcp-core:smcp` with `Delegate=yes` and `DelegateSubgroup=supervisor`, so that container cgroups are created below the service's own cgroup, and with `XDG_RUNTIME_DIR=/run/smcp`. With this unit set `runtime.cgroup_manager = "cgroupfs"`. It applies `ProtectSystem=strict` (writable: `/var/lib/smcp`, `/run/smcp`, `/var/log/smcp`), `ProtectHome=read-only`, `PrivateTmp`, `ProtectKernelModules`, `ProtectKernelLogs`, `ProtectClock`, `ProtectHostname`, `LockPersonality`, `RestrictRealtime`, `RestrictAddressFamilies` and `SystemCallArchitectures=native`. The unit file lists the options it does not set and why (rootless Podman needs setuid `newuidmap`, its own namespaces and capabilities inside them). A writable mount grant outside `/var/lib/smcp` needs a drop-in with `ReadWritePaths=` as well as the grant in `smcp.toml`.
+The unit runs `/usr/local/bin/smcpd --config /etc/smcp/smcp.toml` as `smcp-core:smcp` with `Delegate=yes` and `DelegateSubgroup=supervisor`, so that container cgroups are created below the service's own cgroup, and with `XDG_RUNTIME_DIR=/run/smcp`. With this unit set `runtime.cgroup_manager = "cgroupfs"`. It applies `ProtectSystem=strict` (writable: `/var/lib/smcp`, `/run/smcp`, `/var/log/smcp`), `ProtectHome=read-only`, `PrivateTmp`, `ProtectKernelModules`, `ProtectClock`, `LockPersonality`, `RestrictRealtime`, `RestrictAddressFamilies` and `SystemCallArchitectures=native`. The unit file lists the options it does not set and why (rootless Podman needs setuid `newuidmap`, its own namespaces and capabilities inside them). A writable mount grant outside `/var/lib/smcp` needs a drop-in with `ReadWritePaths=` as well as the grant in `smcp.toml`.
 
 ### nftables table `inet smcp`
 
@@ -226,6 +226,20 @@ Stderr content never enters evidence or harness traffic; only its size does. It 
 
 The control routes are documented in [api/runtime.md](api/runtime.md).
 
+## Egress
+
+A server whose `[[runtime.server]]` entry sets `network = "egress"` is attached to the Egress Broker (E-18, [egress.md](egress.md)); `[egress] enabled = true` is required. The launcher, not the broker, confines the network, because only the rootless user namespace that owns the container's network namespace holds `CAP_NET_ADMIN` over it:
+
+1. The broker opens the instance's listeners on 127.0.0.1 and returns their addresses as the instance sees them (`10.0.2.2:<port>`) in `HTTP_PROXY`, `HTTPS_PROXY` and the grant endpoint variables.
+2. `podman create` with `--network=slirp4netns:allow_host_loopback=true`, `--http-proxy=false` and the broker variables (addresses only, so they are passed on the Podman command line; every other value still goes through the Podman process environment).
+3. `podman init`: the network namespace and the mounts exist; the server process has not started.
+4. `podman unshare nsenter --net=<namespace> nft -f -` installs table `inet smcp_egress`: output policy drop, loopback and established traffic accepted, TCP to each broker listener accepted, everything else rejected; input policy drop. `nft list table` reads it back, and the launch fails unless the drop policy and every listener port are present.
+5. `podman start --attach --interactive` starts the server.
+
+Any failure removes the container and closes the broker attachment, so a server is never started on an unconfined network. The instance has every capability dropped and cannot change the table. The `instance_launched` evidence names the attachment, the namespace and the allowed endpoints; the broker's `attached` evidence has `"confined_by": "launcher"`.
+
+Host requirements: `slirp4netns`, `nsenter` (util-linux) and `nft`. `scripts/ci-integration.sh` and `TestIntegrationEgressBroker` check on real Podman that direct connections (to the granted server itself, to other loopback services, to the slirp4netns DNS forwarder 10.0.2.3 and to the Internet) are refused and that a proxied request to a granted local HTTP server succeeds.
+
 ## Errors
 
 | Message | Cause |
@@ -236,7 +250,8 @@ The control routes are documented in [api/runtime.md](api/runtime.md).
 | `server artifact unavailable: <path> is not a regular file` | The server command does not exist (no image configured) |
 | `environment variable X is reserved: it would configure Podman itself` | A reserved name in `env` or `secret_env` |
 | `runtime.server "x" requests egress but no Egress Broker is enabled ([egress] enabled = true)` | `network = "egress"` without `[egress] enabled = true` |
-| `runtime.server "x": egress for sandboxed servers is not available yet: ...` | `network = "egress"` with the broker enabled; see "Limits" |
+| `runtime.server "x": egress confinement: podman create: ... slirp4netns ...` | `network = "egress"` needs `slirp4netns` (`apt-get install slirp4netns`) |
+| `runtime.server "x": egress confinement: install the egress rules in ...` | `podman unshare nsenter --net=<namespace> nft -f -` failed: `nft` or `nsenter` missing, or nftables unavailable in the namespace. The container is removed before it starts |
 | `runtime.server "x": scope "session" is not supported yet` | Only shared instances exist |
 | `runtime.image must be referenced by digest` | An image without `@sha256:` (SR-3.6-1) |
 
@@ -251,11 +266,11 @@ Errors that Podman reports when it starts a container appear in the server's std
 
 ## Limits of this implementation
 
-- Sandboxed servers cannot use the Egress Broker (E-18) yet. The launcher implements `pipeline.EgressAware`, so the broker hands it its attacher instead of wrapping it, but creating a network namespace for a rootless container that reaches the broker's listeners and letting the broker install its nftables rules in it (which needs privileges in the container's user namespace) is not built. A server with `network = "egress"` is refused rather than started without a network or with an unconfined one.
+- Egress for sandboxed servers uses slirp4netns with host loopback (see "Egress" below). Only TCP to the instance's own broker listeners leaves the namespace; UDP, ICMP and every other destination are dropped. The broker's listeners are bound on the host's 127.0.0.1, so a host process could also use an instance's listener as that server; the broker's grants still apply.
 - Instance scope is shared (one instance per server, started with the Gateway). Per-session and per-call instances (FR-5.10), reuse and idle teardown (FR-5.11), and restart or revision suspension after crashes (FR-5.12) need the registry to acquire instances per call; they are not built.
 - Containment actions `suspend-revision` and `suspend-session` (FR-5.35) are not built; `alert` and `kill-instance` are.
 - Declared behavior rules come from `[[runtime.server]]` (`allow_spawn`, `on_deviation`), not yet from signed manifests (E-13).
 - File opens outside mounts and network connection attempts are prevented (read-only root, no network) but not observed: observing them needs eBPF or a seccomp notifier.
 - Mount grants come from the operator's configuration; the intersection with manifest-declared and policy-granted roots (SR-4.6-1) needs manifests and policy roots.
-- The Gateway and rootless Podman run as one identity, `smcp-core`; CP-46's separate `smcp-srv` identity is created with its range but not used yet.
-- No AppArmor or SELinux profile is shipped; Podman applies its defaults where it can, and `apparmor_profile` and `selinux_type` select others.
+- The Gateway and rootless Podman run as one identity, `smcp-core`; CP-46's separate `smcp-srv` identity is created with its range but not used. Rootless Podman runs as the user that starts it, so `smcp-srv` would need either a privileged helper that starts Podman as `smcp-srv` or a Podman API service running as `smcp-srv` that smcpd drives remotely; the launcher's `podman unshare` confinement step and its cgroup sampling then need changes too. See [enforced-profile.md](enforced-profile.md).
+- An AppArmor profile is shipped for smcpd itself (`packaging/linux/apparmor/smcpd`, applied by `smcpd.service`). None is shipped for the server containers: Podman applies its default profile where it can, and `apparmor_profile` and `selinux_type` select others.

@@ -32,7 +32,7 @@ func PrepareRootfs(dir string, mounts []Mount) error {
 		return err
 	}
 	for _, d := range rootfsDirs {
-		if err := os.MkdirAll(filepath.Join(dir, d), 0o755); err != nil { // #nosec G301 -- mount points
+		if err := mkdirTree(dir, filepath.Join(dir, d)); err != nil {
 			return err
 		}
 	}
@@ -56,6 +56,11 @@ func PrepareRootfs(dir string, mounts []Mount) error {
 		if err := os.WriteFile(filepath.Join(dir, "etc", "group"), []byte("root:x:0:\nsmcp:x:1000:\n"), 0o644); err != nil { // #nosec G306 -- as above
 			return err
 		}
+		for _, f := range []string{passwd, filepath.Join(dir, "etc", "group")} {
+			if err := os.Chmod(f, 0o644); err != nil { // #nosec G302 -- world-readable by design; the umask may have narrowed it
+				return err
+			}
+		}
 	}
 	for _, m := range mounts {
 		p := filepath.Join(dir, filepath.Clean("/"+m.Target))
@@ -67,12 +72,12 @@ func PrepareRootfs(dir string, mounts []Mount) error {
 			return err
 		}
 		if st.IsDir() {
-			if err := os.MkdirAll(p, 0o755); err != nil { // #nosec G301 -- mount point
+			if err := mkdirTree(dir, p); err != nil {
 				return err
 			}
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil { // #nosec G301 -- mount point
+		if err := mkdirTree(dir, filepath.Dir(p)); err != nil {
 			return err
 		}
 		if err := touch(p); err != nil {
@@ -87,5 +92,32 @@ func touch(p string) error {
 	if err != nil {
 		return err
 	}
-	return f.Close()
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Chmod(p, 0o644) // #nosec G302 -- the umask (UMask=0077 in smcpd.service) must not narrow it
+}
+
+// mkdirTree creates p and every missing directory between root and p with
+// mode 0755, whatever the process umask: instances run under other UIDs and
+// must traverse every mount point (smcpd.service sets UMask=0077).
+func mkdirTree(root, p string) error {
+	rel, err := filepath.Rel(root, p)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, "../") {
+		return fmt.Errorf("mount point %q leaves the root directory", p)
+	}
+	cur := root
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		if part == "." || part == "" {
+			continue
+		}
+		cur = filepath.Join(cur, part)
+		if err := os.Mkdir(cur, 0o755); err != nil && !errors.Is(err, os.ErrExist) { // #nosec G301 -- see above
+			return err
+		}
+		if err := os.Chmod(cur, 0o755); err != nil { // #nosec G302 -- see above
+			return err
+		}
+	}
+	return nil
 }

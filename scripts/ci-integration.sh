@@ -4,7 +4,10 @@
 # real MCP client through OAuth (PKCE, sign-in form) and a tool call, stop
 # the daemon and verify the evidence journal. On Linux with Podman it then
 # runs a second instance in the enforced profile and proves that a sandboxed
-# backend cannot open network sockets or write outside its mount.
+# backend cannot open network sockets or write outside its mount, that a
+# sandboxed backend with network = "egress" reaches a granted local HTTP
+# server only through the Egress Broker, and (scripts/ci-systemd.sh) that
+# smcpd.service starts under systemd from packaging/linux.
 #
 # Used by the "linux-integration" CI job; runs locally too:
 #   scripts/ci-integration.sh
@@ -17,6 +20,9 @@
 #   SMCP_ENFORCED_CGROUP_MANAGER  runtime.cgroup_manager for that instance
 #   SMCP_RUN_INSTALLER    1 to run packaging/linux/install-enforced.sh twice
 #                         with sudo (default: SMCP_REQUIRE_PREREQS)
+#   SMCP_RUN_SYSTEMD      1 to install packaging/linux and run smcpd.service
+#                         under systemd (scripts/ci-systemd.sh; changes the
+#                         host; default: SMCP_REQUIRE_PREREQS)
 #   SMCP_ITEST_PORT       harness listener port (admin listener: port + 1,
 #                         metrics: port + 2); default the bootstrap defaults
 #                         8443, 8444 and 8445
@@ -281,6 +287,16 @@ if [ "$(uname -s)" = "Linux" ]; then
     say "nft not found; installing nftables"
     sudo apt-get install -y -qq nftables >/dev/null
   fi
+  # Sandboxed servers with network = "egress" run on slirp4netns.
+  if ! command -v slirp4netns >/dev/null 2>&1 && [ "${SMCP_REQUIRE_PREREQS:-0}" = 1 ]; then
+    say "slirp4netns not found; installing it"
+    sudo apt-get install -y -qq slirp4netns >/dev/null
+  fi
+  if command -v slirp4netns >/dev/null 2>&1; then
+    slirp4netns --version | head -n 1
+  else
+    skip "slirp4netns: not installed (egress for sandboxed servers)"
+  fi
   if command -v nft >/dev/null 2>&1; then
     nft --version
     if sudo -n nft list ruleset >/dev/null; then
@@ -349,6 +365,19 @@ enforced_section() {
     skip "enforced installer: set SMCP_RUN_INSTALLER=1 with passwordless sudo to exercise it"
   fi
 
+  # A local HTTP server that only the Egress Broker may reach (server
+  # "net", network = "egress").
+  local web="$work/enforced-web" webport webpid=""
+  mkdir -p "$web"
+  printf '%s\n' "egress-$(date +%s)" > "$web/hello.txt"
+  webport=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()')
+  python3 -m http.server "$webport" --bind 127.0.0.1 --directory "$web" >"$work/enforced-web.log" 2>&1 &
+  webpid=$!
+  for _ in $(seq 1 50); do
+    curl -fsS "http://127.0.0.1:$webport/hello.txt" >/dev/null 2>&1 && break
+    sleep 0.1
+  done
+
   mkdir -p "$einst" "$share" "$rw"
   # Instances run under subordinate UIDs: granted paths must be readable
   # (and the writable grant writable) by other users.
@@ -397,6 +426,31 @@ alias = "probe"
 source = "$rw"
 target = "/rw"
 write = true
+
+# A second copy of the probe attached to the Egress Broker.
+[[server]]
+alias = "net"
+command = "$sbin/sandbox-probe"
+
+[[runtime.server]]
+alias = "net"
+network = "egress"
+
+[egress]
+enabled = true
+
+# The egress checks pass loopback URLs as tool arguments; the request
+# filter refuses those by default (URL_PRIVATE_ADDRESS). The network
+# confinement and the broker's own grant check are what is tested here.
+[filters.urls]
+allow_private = true
+
+[[egress.grant]]
+server = "net"
+host = "127.0.0.1"
+addresses = ["127.0.0.1"]
+ports = [$webport]
+methods = ["GET"]
 EOF
   cat > "$einst/policy.json" <<'EOF'
 {
@@ -407,7 +461,8 @@ EOF
       "description": "Reference server and the hostile sandbox probe",
       "rules": [
         { "id": "ref", "server": "ref", "tools": ["echo", "time_now", "list_files", "read_file"] },
-        { "id": "probe", "server": "probe", "tools": ["echo", "net_connect", "write_file", "read_file", "identity"] }
+        { "id": "probe", "server": "probe", "tools": ["echo", "net_connect", "write_file", "read_file", "identity"] },
+        { "id": "net", "server": "net", "tools": ["net_connect", "http_get"] }
       ]
     }
   }
@@ -443,8 +498,24 @@ EOF
 
   local eca="$einst/state/tls/ca.crt"
   ecall() { # tool, args, expected substring
-    "$bin/itest-client" -url "$epublic" -ca "$eca" -call "$1" -args "$2" -expect "$3" \
-      || { cat "$elog" >&2; fail "enforced: $1 $2 (expected \"$3\")"; }
+    # Every run signs in again; the sign-in guard allows 30 requests per
+    # source per minute (authguard), so a refused sign-in waits out the
+    # window once.
+    local out
+    if out=$("$bin/itest-client" -url "$epublic" -ca "$eca" -call "$1" -args "$2" -expect "$3" 2>&1); then
+      printf '%s\n' "$out"
+      return 0
+    fi
+    if printf '%s' "$out" | grep -q 'status 429'; then
+      echo "sign-in rate limit reached; waiting 61 s"
+      sleep 61
+      "$bin/itest-client" -url "$epublic" -ca "$eca" -call "$1" -args "$2" -expect "$3" \
+        || { cat "$elog" >&2; fail "enforced: $1 $2 (expected \"$3\")"; }
+      return 0
+    fi
+    printf '%s\n' "$out" >&2
+    cat "$elog" >&2
+    fail "enforced: $1 $2 (expected \"$3\")"
   }
   say "Enforced profile: the reference server works inside the sandbox"
   ecall ref_read_file '{"path":"hello.txt"}' "$emarker"
@@ -464,6 +535,14 @@ EOF
   [ -e "$rw/inside.txt" ] || fail "the writable grant did not reach the host"
   ecall probe_identity '{}' "NoNewPrivs:"$'\t'"1"
   ecall probe_identity '{}' "CapEff:"$'\t'"0000000000000000"
+  say "Enforced profile: a server with network = \"egress\" reaches only its Egress Broker"
+  ecall net_http_get "{\"url\":\"http://127.0.0.1:$webport/hello.txt\"}" "status 200: $(cat "$web/hello.txt")"
+  ecall net_http_get '{"url":"http://127.0.0.1:8544/"}' "status 403"
+  ecall net_net_connect "{\"address\":\"10.0.2.2:$webport\"}" "blocked:"
+  ecall net_net_connect '{"address":"10.0.2.2:8544"}' "blocked:"
+  ecall net_net_connect '{"address":"10.0.2.3:53"}' "blocked:"
+  ecall net_net_connect '{"address":"1.1.1.1:443"}' "blocked:"
+  grep -q "\"GET /hello.txt" "$work/enforced-web.log" || fail "the granted HTTP server saw no brokered request"
 
   say "Stopping the enforced smcpd"
   kill -TERM "$pid"
@@ -475,7 +554,15 @@ EOF
     podman ps -a --filter label=smcp.managed=1 >&2
     fail "server containers left behind after shutdown"
   fi
+  kill "$webpid" 2>/dev/null || true
   say "Enforced profile: sandbox checks passed"
+
+  if [ "${SMCP_RUN_SYSTEMD:-${SMCP_REQUIRE_PREREQS:-0}}" = 1 ] && [ -d /run/systemd/system ] && sudo -n true 2>/dev/null; then
+    say "Enforced profile: smcpd.service under systemd (scripts/ci-systemd.sh)"
+    "$root/scripts/ci-systemd.sh" "$bin" "$sbin" "$work" || fail "smcpd.service under systemd"
+  else
+    skip "smcpd.service under systemd: set SMCP_RUN_SYSTEMD=1 on a disposable Linux host with systemd and passwordless sudo"
+  fi
 }
 
 if [ "$(uname -s)" = "Linux" ] && command -v podman >/dev/null 2>&1; then

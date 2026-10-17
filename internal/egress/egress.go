@@ -269,11 +269,12 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 		}
 	}()
 	host := netip.MustParseAddr("127.0.0.1")
+	var guest netip.Addr
 	if req.Network != nil {
-		if req.Network.NetNS == "" || !req.Network.ListenAddr.IsValid() {
+		if (req.Network.NetNS == "" && !req.Network.LauncherConfines) || !req.Network.ListenAddr.IsValid() {
 			return nil, errors.New("egress: a sandbox network needs a namespace and a listen address")
 		}
-		host = req.Network.ListenAddr
+		host, guest = req.Network.ListenAddr, req.Network.GuestAddr
 	}
 	var allow []netip.AddrPort
 	listen := func(h http.Handler) (string, error) {
@@ -285,6 +286,11 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 		if err != nil {
 			ln.Close()
 			return "", err
+		}
+		// The instance addresses the listener by the guest address when
+		// its namespace translates it (slirp4netns host loopback).
+		if guest.IsValid() {
+			ap = netip.AddrPortFrom(guest, ap.Port())
 		}
 		allow = append(allow, ap)
 		srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: time.Minute, ErrorLog: slog.NewLogLogger(b.o.Log.Handler(), slog.LevelDebug)}
@@ -305,11 +311,15 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 		}
 		in.endpoints[g.EndpointEnv] = u
 	}
-	if req.Network != nil {
+	confinedBy := ""
+	switch {
+	case req.Network != nil && req.Network.LauncherConfines:
+		in.enforced, confinedBy = true, "launcher"
+	case req.Network != nil:
 		if in.remove, err = b.o.Rules.Install(req.Network.NetNS, allow); err != nil {
 			return nil, fmt.Errorf("egress: confine %s: %w", req.Network.NetNS, err)
 		}
-		in.enforced = true
+		in.enforced, confinedBy = true, "broker"
 	}
 	env := map[string]string{}
 	if b.o.ProxyEnv {
@@ -322,7 +332,7 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 		env[k] = v
 	}
 	if err := b.o.Evidence.Record(audit.Event{Class: "egress", Origin: Origin, Outcome: "attached", PolicyStatus: "not_evaluated",
-		Detail: map[string]any{"instance": in.id, "server": in.alias, "enforced": in.enforced, "proxy": in.proxyURL, "endpoints": in.endpoints}}); err != nil {
+		Detail: map[string]any{"instance": in.id, "server": in.alias, "enforced": in.enforced, "confined_by": confinedBy, "proxy": in.proxyURL, "endpoints": in.endpoints}}); err != nil {
 		return nil, fmt.Errorf("egress: evidence: %w", err)
 	}
 	b.mu.Lock()
@@ -335,7 +345,7 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 	if !in.enforced {
 		b.o.Log.Warn("egress for this instance is advisory: the standalone profile does not confine its network", "server", in.alias, "proxy", in.proxyURL)
 	}
-	return &pipeline.EgressAttachment{ID: in.id, Env: env, Enforced: in.enforced, Close: func() error { return b.detach(in) }}, nil
+	return &pipeline.EgressAttachment{ID: in.id, Env: env, Enforced: in.enforced, Allow: slices.Clone(allow), Close: func() error { return b.detach(in) }}, nil
 }
 
 func (b *Broker) detach(in *instance) error {

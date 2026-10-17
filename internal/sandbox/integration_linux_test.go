@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
+	"net/netip"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +22,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/egress"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
@@ -274,5 +277,95 @@ func TestIntegrationLeftoverContainersAreReaped(t *testing.T) {
 	h.l.Reap(ctx)
 	if err := h.l.podman(ctx, "container", "exists", name).Run(); err == nil {
 		t.Fatal("leftover container still exists")
+	}
+}
+
+// TestIntegrationEgressBroker: a sandboxed server with network = "egress"
+// reaches a granted local HTTP server only through its Egress Broker
+// proxy. Direct connections, to the granted server itself, to other host
+// loopback services, to the slirp4netns DNS forwarder and to the Internet,
+// are refused by the nftables table in the container's namespace; a
+// proxied request to an ungranted destination is refused by the broker.
+func TestIntegrationEgressBroker(t *testing.T) {
+	reqtest.Partial(t, "SR-4.5-1", "FR-5.37", "SR-5.15-1")
+	allowed := &http.Server{ReadHeaderTimeout: 5 * time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("egress-ok"))
+	})}
+	aln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() { _ = allowed.Serve(aln) }()
+	defer allowed.Close()
+	canary, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer canary.Close()
+	hits := make(chan struct{}, 16)
+	go func() {
+		for {
+			c, err := canary.Accept()
+			if err != nil {
+				return
+			}
+			hits <- struct{}{}
+			c.Close()
+		}
+	}()
+	aport, cport := aln.Addr().(*net.TCPAddr).Port, canary.Addr().(*net.TCPAddr).Port
+
+	h := realHarness(t, itRuntime(t, config.RuntimeServer{Alias: "web", Network: "egress"}))
+	ev := &audit.Memory{}
+	b, err := egress.New(egress.Options{Evidence: ev, ProxyEnv: true, Servers: []string{"web"},
+		Grants: egress.NewStaticGrants([]egress.Grant{{Server: "web", Host: "127.0.0.1", Ports: []int{aport}, Methods: []string{"GET"},
+			Addresses: []netip.Addr{netip.MustParseAddr("127.0.0.1")}}})})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	h.l.SetEgress(b)
+	p, err := h.l.Launch(context.Background(), h.spec("web"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	s := connect(t, p)
+
+	for _, addr := range []string{fmt.Sprintf("10.0.2.2:%d", aport), fmt.Sprintf("10.0.2.2:%d", cport), "10.0.2.3:53", "1.1.1.1:443", "10.0.2.2:22"} {
+		if got := callText(t, s, "net_connect", map[string]any{"address": addr}); !strings.HasPrefix(got, "blocked:") {
+			t.Errorf("direct connect %s: %s", addr, got)
+		}
+	}
+	if got := callText(t, s, "http_get", map[string]any{"url": fmt.Sprintf("http://127.0.0.1:%d/", aport)}); got != "status 200: egress-ok" {
+		t.Errorf("brokered request to the granted server: %q", got)
+	}
+	if got := callText(t, s, "http_get", map[string]any{"url": fmt.Sprintf("http://127.0.0.1:%d/", cport)}); !strings.HasPrefix(got, "status 403") {
+		t.Errorf("brokered request to an ungranted destination: %q", got)
+	}
+	select {
+	case <-hits:
+		t.Error("the ungranted canary was reached")
+	case <-time.After(200 * time.Millisecond):
+	}
+	name := h.l.Instances()[0].Container
+	hc := podmanInspect(t, h.l, name)["HostConfig"].(map[string]any)
+	if nm := fmt.Sprint(hc["NetworkMode"]); !strings.HasPrefix(nm, "slirp4netns") {
+		t.Errorf("network mode %s", nm)
+	}
+	var allowedOp, deniedOp bool
+	for _, e := range ev.Events() {
+		if e.Class == "egress" && e.Outcome == "allow" {
+			allowedOp = true
+		}
+		if e.Class == "egress" && e.Outcome == "deny" {
+			deniedOp = true
+		}
+	}
+	if !allowedOp || !deniedOp {
+		t.Errorf("egress evidence: allow %v deny %v", allowedOp, deniedOp)
+	}
+	if e := findEvent(h.mem.Events(), "instance_launched", ""); e == nil || e.Detail.(map[string]any)["egress"] == nil {
+		t.Error("launch evidence lacks the egress attachment")
 	}
 }

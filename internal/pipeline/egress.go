@@ -47,6 +47,19 @@ type EgressNetwork struct {
 	// ListenAddr is the host address, reachable from inside the namespace,
 	// on which the broker binds the instance's listeners.
 	ListenAddr netip.Addr
+	// GuestAddr, when valid, is the address at which the instance reaches
+	// ListenAddr from inside its namespace (10.0.2.2 for a slirp4netns
+	// network with host loopback enabled). The environment URLs and the
+	// allowed endpoints use it. When unset they use ListenAddr.
+	GuestAddr netip.Addr
+	// LauncherConfines means the launcher installs the confinement rules
+	// itself, before the instance's code runs, from the attachment's Allow
+	// list (a rootless launcher reaches the namespace only through its own
+	// user namespace). NetNS may then be empty; the broker installs
+	// nothing and reports the attachment as enforced. A launcher that
+	// cannot confine the namespace must close the attachment and fail the
+	// launch.
+	LauncherConfines bool
 }
 
 // EgressAttachment is the result of Attach.
@@ -60,6 +73,9 @@ type EgressAttachment struct {
 	// broker. False in the standalone profile, where the variables are
 	// advisory.
 	Enforced bool
+	// Allow lists the endpoints, as the instance addresses them, that the
+	// confinement rules must leave reachable: the broker's listeners.
+	Allow []netip.AddrPort
 	// Close stops the instance's listeners and removes its rules. It is
 	// safe to call more than once.
 	Close func() error

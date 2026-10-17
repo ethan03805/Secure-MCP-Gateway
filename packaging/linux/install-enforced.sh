@@ -4,7 +4,8 @@
 # Run as root. It first checks every prerequisite and changes nothing if one
 # is missing. Then it creates, when absent, the CP-46 service identities and
 # their subordinate UID/GID ranges, the CP-46 directories with their owners
-# and modes, the nftables table `inet smcp` and the systemd units. Every step
+# and modes, the nftables table `inet smcp`, the AppArmor profile of smcpd
+# (when AppArmor is enabled) and the systemd units. Every step
 # prints "present", "created" or "updated"; a second run prints only
 # "present" lines and changes nothing. Keys, configuration, policy and the
 # journal are never touched.
@@ -63,6 +64,9 @@ need usermod "usermod"
 need systemctl "systemd (systemctl)"
 [ -d /run/systemd/system ] || missing+=("systemd as the running service manager")
 if [ ! -d /sys/kernel/security/apparmor ] && [ ! -e /sys/fs/selinux/enforce ]; then missing+=("AppArmor or SELinux"); fi
+if [ -d /sys/kernel/security/apparmor ] && ! command -v apparmor_parser >/dev/null 2>&1 && [ ! -x /sbin/apparmor_parser ]; then
+  missing+=("apparmor_parser (apparmor package)")
+fi
 if [ "${#missing[@]}" -gt 0 ]; then
   echo "install-enforced: prerequisites missing; nothing was changed:" >&2
   printf '  - %s\n' "${missing[@]}" >&2
@@ -145,7 +149,7 @@ ensure_dir /var/lib/smcp/home/smcp-core smcp-core "$group" 0700
 ensure_dir /var/log/smcp smcp-core "$group" 0750
 
 # --- Files ----------------------------------------------------------------
-changed_units=0 changed_nft=0
+changed_units=0 changed_nft=0 changed_aa=0
 ensure_file() { # source destination mode
   if [ -f "$2" ] && cmp -s "$1" "$2"; then
     say present "file $2"
@@ -154,7 +158,7 @@ ensure_file() { # source destination mode
     [ -f "$2" ] && verb=updated
     install -o root -g root -m "$3" "$1" "$2"
     say "$verb" "file $2"
-    case "$2" in *.service) changed_units=1 ;; *.nft) changed_nft=1 ;; esac
+    case "$2" in *.service) changed_units=1 ;; *.nft) changed_nft=1 ;; /etc/apparmor.d/*) changed_aa=1 ;; esac
   fi
 }
 ensure_file "$here/nftables/smcp.nft" /etc/smcp/smcp.nft 0644
@@ -176,6 +180,25 @@ elif [ "$changed_nft" = 1 ]; then
   say updated "nftables table inet smcp"
 else
   say present "nftables table inet smcp"
+fi
+
+# --- AppArmor profile of smcpd (FR-13.5) --------------------------------------
+# smcpd.service applies it with AppArmorProfile=-smcpd. On an SELinux host
+# the profile is skipped; smcpd runs in the unit's default domain.
+if [ -d /sys/kernel/security/apparmor ]; then
+  parser=$(command -v apparmor_parser || echo /sbin/apparmor_parser)
+  ensure_file "$here/apparmor/smcpd" /etc/apparmor.d/smcpd 0644
+  if ! grep -qx 'smcpd (enforce)' /sys/kernel/security/apparmor/profiles; then
+    "$parser" -r -W /etc/apparmor.d/smcpd
+    say created "AppArmor profile smcpd (enforce)"
+  elif [ "$changed_aa" = 1 ]; then
+    "$parser" -r -W /etc/apparmor.d/smcpd
+    say updated "AppArmor profile smcpd (enforce)"
+  else
+    say present "AppArmor profile smcpd (enforce)"
+  fi
+else
+  say skipped "AppArmor profile smcpd (AppArmor is not enabled)"
 fi
 
 # --- systemd ------------------------------------------------------------------

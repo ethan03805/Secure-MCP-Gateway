@@ -46,13 +46,16 @@ PrivateTmp=yes
 
 # Kernel and process hardening that rootless Podman tolerates.
 ProtectKernelModules=yes
-ProtectKernelLogs=yes
 ProtectClock=yes
-ProtectHostname=yes
 LockPersonality=yes
 RestrictRealtime=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 SystemCallArchitectures=native
+
+# Mandatory access control: the AppArmor profile packaging/linux/apparmor/
+# smcpd, loaded by install-enforced.sh. The leading "-" skips it on hosts
+# without AppArmor (SELinux hosts use the unit's default domain).
+AppArmorProfile=-smcpd
 
 # Not set, and why:
 #   NoNewPrivileges=yes     newuidmap/newgidmap are setuid helpers
@@ -61,6 +64,11 @@ SystemCallArchitectures=native
 #   RestrictNamespaces=yes  Podman creates user, mount, PID, IPC, UTS, net namespaces
 #   PrivateDevices=yes      Podman may need /dev/fuse and /dev/net/tun
 #   ProtectKernelTunables=  crun writes /proc/sys inside container namespaces
+#   ProtectKernelLogs=yes   it masks /proc/kmsg; with any mount over /proc the
+#                           kernel refuses a new proc mount in a user namespace
+#                           (crun: "mount proc to proc: Operation not permitted")
+#   ProtectHostname=yes     it makes /proc/sys/kernel/hostname read-only with a
+#                           mount over /proc: the same failure
 #   ProtectControlGroups=   containers' cgroups are created below this unit
 #   RestrictSUIDSGID=yes    image layers may carry set-ID bits
 #   SystemCallFilter=       Podman and crun use mount, unshare, setns, pivot_root

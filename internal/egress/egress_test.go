@@ -796,6 +796,51 @@ func TestAttachNetwork(t *testing.T) {
 	}
 }
 
+// TestAttachLauncherConfines: a rootless launcher confines the namespace
+// itself. The broker listens on the host address, advertises the guest
+// address in the environment and in Allow, installs no rules and reports
+// the attachment as enforced; the listeners serve on the host address.
+func TestAttachLauncherConfines(t *testing.T) {
+	reqtest.Partial(t, "SR-4.5-1")
+	fr := &fakeRules{}
+	h := newHarness(t, []Grant{{Server: "web", Host: "example.com", Ports: []int{443}, Methods: []string{"GET"}, EndpointEnv: "X_URL"}}, Limits{},
+		func(o *Options) { o.Rules = fr })
+	guest := netip.MustParseAddr("10.0.2.2")
+	att, err := h.b.Attach(context.Background(), pipeline.EgressRequest{Alias: "web",
+		Network: &pipeline.EgressNetwork{ListenAddr: netip.MustParseAddr("127.0.0.1"), GuestAddr: guest, LauncherConfines: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer att.Close()
+	if !att.Enforced || fr.netns != "" || len(att.Allow) != 2 {
+		t.Fatalf("attachment %+v, rules %+v", att, fr)
+	}
+	for _, ap := range att.Allow {
+		if ap.Addr() != guest || !strings.Contains(att.Env["HTTPS_PROXY"]+att.Env["X_URL"], ap.String()) {
+			t.Fatalf("allowed endpoint %s is not an advertised listener of %v", ap, att.Env)
+		}
+		// The listener is bound on the host address with the same port.
+		c, err := net.DialTimeout("tcp", netip.AddrPortFrom(netip.MustParseAddr("127.0.0.1"), ap.Port()).String(), time.Second)
+		if err != nil {
+			t.Fatalf("listener for %s: %v", ap, err)
+		}
+		c.Close()
+	}
+	var attached *audit.Event
+	for _, e := range h.ev.Events() {
+		if e.Outcome == "attached" {
+			attached = &e
+		}
+	}
+	if attached == nil || attached.Detail.(map[string]any)["confined_by"] != "launcher" {
+		t.Fatalf("attached evidence %+v", attached)
+	}
+	if _, err := h.b.Attach(context.Background(), pipeline.EgressRequest{Alias: "web",
+		Network: &pipeline.EgressNetwork{ListenAddr: netip.MustParseAddr("127.0.0.1")}}); err == nil {
+		t.Fatal("a sandbox network without a namespace was attached although the launcher does not confine it")
+	}
+}
+
 type captureLauncher struct {
 	spec pipeline.ServerSpec
 	att  pipeline.EgressAttacher

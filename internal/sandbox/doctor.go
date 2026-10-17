@@ -37,6 +37,9 @@ type Check struct {
 type DoctorOptions struct {
 	// Podman is the podman binary (default: PATH lookup).
 	Podman string
+	// CgroupManager is runtime.cgroup_manager; when set, `podman info`
+	// runs with it, so the delegation check sees what containers will get.
+	CgroupManager string
 	// Root prefixes every host file read (tests).
 	Root string
 	// GOOS and GOARCH override the platform (tests).
@@ -184,7 +187,11 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 		add("podman", "Podman", false, "not found", "apt-get install podman crun")
 		return out
 	}
-	raw, err := o.Run(ctx, pod, "info", "--format", "json")
+	infoArgs := []string{"info", "--format", "json"}
+	if o.CgroupManager != "" {
+		infoArgs = append([]string{"--cgroup-manager=" + o.CgroupManager}, infoArgs...)
+	}
+	raw, err := o.Run(ctx, pod, infoArgs...)
 	var info podmanInfo
 	if err == nil {
 		err = json.Unmarshal(raw, &info)

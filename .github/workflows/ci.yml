@@ -198,7 +198,7 @@ jobs:
   linux-integration:
     name: linux-integration
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -364,11 +364,16 @@ jobs:
             echo "::warning::hostile suite (standalone): a harness check failed; see build/hostile-standalone-test.json"
           fi
       - name: Enforced profile (rootless Podman sandbox)
+        env:
+          # Every Enforced row (HF-20, HF-21, HF-23, HF-24) must pass here.
+          SMCP_HOSTILE_REQUIRE_ENFORCED: "1"
         run: |
           if ! command -v podman >/dev/null 2>&1; then
             echo "podman not installed; enforced rows stay not asserted"
             exit 0
           fi
+          # Servers with network = "egress" (HF-24) run on slirp4netns.
+          command -v slirp4netns >/dev/null 2>&1 || sudo apt-get install -y -qq slirp4netns >/dev/null
           # Rootless Podman delegates cgroup controllers through the user's
           # systemd instance; a runner may have no user session (as in
           # scripts/ci-integration.sh).
@@ -380,7 +385,9 @@ jobs:
             podman system migrate >/dev/null 2>&1 || true
           fi
           if ! CGO_ENABLED=0 SMCP_HOSTILE_PROFILE=enforced go test -tags hostile -count=1 -json -run TestHostileFixtures ./internal/hostile/ > build/hostile-enforced-test.json; then
-            echo "::warning::hostile suite (enforced): a harness check failed; see build/hostile-enforced-test.json"
+            echo "::error::hostile suite (enforced): an Enforced row failed or a harness check failed; see build/hostile-enforced-test.json"
+            jq -r 'select(.Action == "output" and (.Output | test("Enforced row|FAIL|harness|gateway start"))) | .Output' build/hostile-enforced-test.json || true
+            exit 1
           fi
       - name: Summary
         if: always()

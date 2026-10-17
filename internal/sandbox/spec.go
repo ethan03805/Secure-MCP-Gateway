@@ -31,6 +31,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -135,12 +136,17 @@ type LaunchSpec struct {
 	Artifact   Artifact `json:"artifact"`
 	Argv       []string `json:"argv"`
 	EnvNames   []string `json:"env_names"`
-	Mounts     []Mount  `json:"mounts"`
-	Network    string   `json:"network"`
-	Workdir    string   `json:"workdir"`
-	Limits     Limits   `json:"limits"`
-	Profile    Profile  `json:"profile"`
-	Scope      string   `json:"scope"`
+	// EgressEnv holds the Egress Broker's variables (proxy and endpoint
+	// URLs). They are addresses, not secrets, and are passed on the Podman
+	// command line: proxy variables in the Podman process environment
+	// would configure Podman itself.
+	EgressEnv map[string]string `json:"egress_env,omitempty"`
+	Mounts    []Mount           `json:"mounts"`
+	Network   string            `json:"network"`
+	Workdir   string            `json:"workdir"`
+	Limits    Limits            `json:"limits"`
+	Profile   Profile           `json:"profile"`
+	Scope     string            `json:"scope"`
 }
 
 // Errors returned while building a launch specification.
@@ -385,13 +391,19 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		}
 	}
 	for k, v := range in.EgressEnv {
-		if ReservedEnv(k) {
+		if ReservedEnv(k) && !slices.Contains(egressProxyVars, k) {
 			return LaunchSpec{}, fmt.Errorf("egress endpoint variable %s is reserved", k)
 		}
 		if _, dup := env[k]; dup {
 			return LaunchSpec{}, fmt.Errorf("egress endpoint variable %s collides with a configured variable", k)
 		}
-		env[k] = v
+		if k == "" || strings.ContainsAny(k, "=\n\x00") || strings.ContainsAny(v, "\n\x00") {
+			return LaunchSpec{}, fmt.Errorf("egress endpoint variable %q has an invalid name or value", k)
+		}
+		if ls.EgressEnv == nil {
+			ls.EgressEnv = map[string]string{}
+		}
+		ls.EgressEnv[k] = v
 	}
 	for k := range env {
 		ls.EnvNames = append(ls.EnvNames, k)
@@ -404,6 +416,10 @@ func Build(in BuildInput) (LaunchSpec, error) {
 // the Podman process itself, which receives instance values in its own
 // environment.
 var reservedEnvPrefixes = []string{"CONTAINERS_", "PODMAN_", "BUILDAH_", "XDG_", "DBUS_", "DOCKER_", "LD_", "STORAGE_", "REGISTRY_", "CONTAINER_", "_CONTAINERS_", "NOTIFY_SOCKET", "TMPDIR", "SSL_CERT_", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy", "GODEBUG", "GOTRACEBACK"}
+
+// egressProxyVars are the reserved names the Egress Broker itself sets for
+// an instance; they reach the container on the Podman command line.
+var egressProxyVars = []string{"HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "NO_PROXY", "no_proxy"}
 
 // ReservedEnv reports whether name may not be passed to an instance.
 func ReservedEnv(name string) bool {
@@ -432,8 +448,15 @@ func Env(spec pipeline.ServerSpec, egressEnv map[string]string, names []string) 
 // PodmanArgs is the argument vector for `podman` that creates and attaches
 // to the instance. Flags precede the image (or --rootfs directory), which
 // precedes the server's own argument vector.
-func (s LaunchSpec) PodmanArgs() []string {
-	a := []string{"run", "--interactive", "--name", s.Name,
+func (s LaunchSpec) PodmanArgs() []string { return s.podmanArgs("run") }
+
+// CreateArgs is the argument vector for `podman create` of the instance,
+// used when the network namespace must be confined before the server
+// starts (egress instances): the same flags as PodmanArgs.
+func (s LaunchSpec) CreateArgs() []string { return s.podmanArgs("create") }
+
+func (s LaunchSpec) podmanArgs(verb string) []string {
+	a := []string{verb, "--interactive", "--name", s.Name,
 		"--label", LabelManaged + "=1",
 		"--label", LabelGateway + "=" + s.Gateway,
 		"--label", LabelAlias + "=" + s.Alias,
@@ -449,7 +472,6 @@ func (s LaunchSpec) PodmanArgs() []string {
 		"--pid=private", "--ipc=private", "--uts=private",
 		"--hostname=" + s.Name,
 		"--no-hosts",
-		"--passwd=false",
 		"--memory=" + strconv.FormatInt(s.Limits.MemoryBytes, 10),
 		"--memory-swap=" + strconv.FormatInt(s.Limits.MemoryBytes, 10),
 		"--cpus=" + strconv.FormatFloat(s.Limits.CPUs, 'f', -1, 64),
@@ -459,6 +481,11 @@ func (s LaunchSpec) PodmanArgs() []string {
 		"--tmpfs=" + WorkDir + ":rw,nosuid,nodev,size=" + strconv.FormatInt(s.Limits.TmpfsBytes, 10) + ",mode=1777",
 		"--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=" + strconv.FormatInt(s.Limits.TmpfsBytes, 10) + ",mode=1777",
 		"--workdir=" + s.Workdir,
+	}
+	if verb == "run" {
+		// Podman 4.9 has no --passwd flag on create; the Gateway-built
+		// root directory carries the passwd entries itself.
+		a = append(a, "--passwd=false")
 	}
 	if s.Profile.User != "" {
 		a = append(a, "--user="+s.Profile.User)
@@ -481,6 +508,12 @@ func (s LaunchSpec) PodmanArgs() []string {
 	}
 	for _, n := range s.EnvNames {
 		a = append(a, "--env="+n) // value taken from the Podman process environment
+	}
+	if len(s.EgressEnv) > 0 {
+		a = append(a, "--http-proxy=false")
+		for _, k := range slices.Sorted(maps.Keys(s.EgressEnv)) {
+			a = append(a, "--env="+k+"="+s.EgressEnv[k]) // broker addresses, not secrets
+		}
 	}
 	if s.Artifact.Image != "" {
 		a = append(a, s.Artifact.Image)

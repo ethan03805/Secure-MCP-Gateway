@@ -27,11 +27,11 @@ type API struct {
 // Register adds the routes to r.
 func (a *API) Register(r Router) {
 	if a.Doctor == nil {
-		pod := ""
+		pod, cgm := "", ""
 		if a.Launcher != nil {
-			pod = a.Launcher.podPath
+			pod, cgm = a.Launcher.podPath, a.Launcher.o.Runtime.CgroupManager
 		}
-		a.Doctor = func(ctx context.Context) []Check { return Doctor(ctx, DoctorOptions{Podman: pod}) }
+		a.Doctor = func(ctx context.Context) []Check { return Doctor(ctx, DoctorOptions{Podman: pod, CgroupManager: cgm}) }
 	}
 	if a.Actor == nil {
 		a.Actor = func(*http.Request) string { return "" }

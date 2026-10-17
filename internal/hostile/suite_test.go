@@ -61,10 +61,18 @@ var checks = map[string]rowCheck{
 // TestHostileFixtures runs every Appendix L row (FR-19.1) and writes the
 // results (FR-19.2). A row whose defense is missing is reported with
 // pass=false; it does not fail the test. Harness errors do.
+//
+// With SMCP_HOSTILE_REQUIRE_ENFORCED=1 (the CI hostile job) the enforced
+// profile must be available and every Enforced row must pass in it; the
+// test fails otherwise.
 func TestHostileFixtures(t *testing.T) {
 	profile := suiteProfile()
+	requireEnforced := profile == "enforced" && os.Getenv("SMCP_HOSTILE_REQUIRE_ENFORCED") == "1"
 	if profile == "enforced" {
 		if why := enforcedUnavailable(); why != "" {
+			if requireEnforced {
+				t.Fatal("enforced profile required but unavailable: " + why)
+			}
 			t.Skip("enforced profile unavailable: " + why)
 		}
 	}
@@ -90,6 +98,9 @@ func TestHostileFixtures(t *testing.T) {
 			}
 			res.Observed, res.Pass = observed, pass
 			t.Logf("%s pass=%v: %s", row.ID, pass, observed)
+			if requireEnforced && row.EnforcedOnly() && !pass {
+				t.Errorf("%s is an Enforced row and did not behave as expected in the enforced profile", row.ID)
+			}
 			if pass {
 				// A passing row exercises its requirements against one hostile
 				// behavior; none of them is proven in full by one row.
@@ -472,7 +483,7 @@ func memoryBlowUp(t *testing.T) (string, bool) {
 }
 
 func pathEscape(t *testing.T) (string, bool) {
-	base := t.TempDir()
+	base := mountBase(t)
 	root, outside := filepath.Join(base, "allowed"), filepath.Join(base, "outside")
 	for _, d := range []string{root, outside} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
@@ -516,6 +527,35 @@ func pathEscape(t *testing.T) (string, bool) {
 	return n.String(), argCheck
 }
 
+// mountBase returns a new directory for files a fixture mounts into its
+// sandbox at their own path. The sandbox reserves /tmp inside the
+// container, so in the enforced profile the directory is created below
+// SMCP_HOSTILE_MOUNT_DIR (default <repo>/build/hostile-mounts) instead of
+// the test's temporary directory.
+func mountBase(t *testing.T) string {
+	t.Helper()
+	if suiteProfile() != "enforced" {
+		return t.TempDir()
+	}
+	parent := os.Getenv("SMCP_HOSTILE_MOUNT_DIR")
+	if parent == "" {
+		parent = filepath.Join(outDir(), "hostile-mounts")
+	}
+	parent, err := filepath.Abs(parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(parent, 0o755); err != nil { // #nosec G301 -- test fixture directory
+		t.Fatal(err)
+	}
+	base, err := os.MkdirTemp(parent, "hf-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(base) })
+	return base
+}
+
 func networkEscape(t *testing.T) (string, bool) {
 	c := newTCPCanary(t)
 	g := mustStart(t, gwSpec{servers: []serverSpec{hostileServer("HF-23", "-canary-addr", c.addr())}})
@@ -532,6 +572,11 @@ func dnsEscape(t *testing.T) (string, bool) {
 	dns, tcp := newUDPCanary(t), newTCPCanary(t)
 	_, port, _ := strings.Cut(tcp.addr(), ":")
 	toml := fmt.Sprintf("\n[egress]\nenabled = true\n[[egress.grant]]\nserver = \"h\"\nhost = \"localhost\"\nports = [%s]\nmethods = [\"CONNECT-TLS\"]\n", port)
+	if suiteProfile() == "enforced" {
+		// The sandboxed instance is attached to the Egress Broker on a
+		// confined network; without this it has network "none".
+		toml += "\n[[runtime.server]]\nalias = \"h\"\nnetwork = \"egress\"\n"
+	}
 	g := mustStart(t, gwSpec{servers: []serverSpec{hostileServer("HF-24", "-canary-dns", dns.addr(), "-canary-addr", tcp.addr())}, toml: toml, upstream: "20s"})
 	cs, _ := g.client(nil)
 	o := g.call(cs, "h_resolve", map[string]any{}, nil)
