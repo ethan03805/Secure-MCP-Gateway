@@ -57,6 +57,15 @@ func (s *Service) Authenticate(tok string) (string, string, bool) {
 	return "approver:" + as.user, adminapi.RoleApprover, true
 }
 
+// Revoke implements adminapi.TokenRevoker: a browser sign-in keeps only
+// its cookie session.
+func (s *Service) Revoke(tok string) {
+	sum := sha256.Sum256([]byte(tok))
+	s.mu.Lock()
+	delete(s.tokens, sum)
+	s.mu.Unlock()
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

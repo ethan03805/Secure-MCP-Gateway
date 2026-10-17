@@ -4,7 +4,29 @@ Routes of the Management Console & Control API (E-24) that the console owns: ses
 
 The listener's rules apply to every route: loopback TLS, `Host` must name the admin listener, a foreign `Origin` or a cross-site `Sec-Fetch-Site` is refused with 403 `origin_refused`, and every POST must have `Content-Type: application/json` (bodies up to 64 KiB). Responses carry `Cache-Control: no-store`.
 
-Authentication is a bearer token in the `Authorization` header: the operator token (`<state>/keys/admin.token`) or an administrator session token from `POST /admin/v1/login`. The tokens of the other Appendix C roles come from `POST /api/v1/console/login` and `POST /api/v1/approvals/login` (below). Which role may use which route is the role matrix under [Roles](#roles). A missing or unknown token gets 401 `unauthenticated` (recorded as `ADMIN_AUTH_FAILED`); a token of a role the route does not admit gets 403 `role_refused` (recorded as `ADMIN_ROLE_REFUSED`).
+Authentication is a bearer token in the `Authorization` header (smcpctl and scripts) or a browser session cookie (the console; see [Browser sessions](#browser-sessions)). Bearer tokens are the operator token (`<state>/keys/admin.token`) or a sign-in token from `POST /admin/v1/login`; the tokens of the other Appendix C roles come from `POST /api/v1/console/login` and `POST /api/v1/approvals/login` (below). A request with an `Authorization` header is authenticated by it alone. Which role may use which route is the role matrix under [Roles](#roles). A missing or unknown token or session gets 401 `unauthenticated` (recorded as `ADMIN_AUTH_FAILED`); a token of a role the route does not admit gets 403 `role_refused` (recorded as `ADMIN_ROLE_REFUSED`).
+
+Every control API response carries an `ETag`: the control-state revision, which changes with every state-changing request (POST, PUT, PATCH, DELETE) that passes authentication and the role check, from any client.
+
+## Browser sessions
+
+The console signs in with the same login routes (`POST /admin/v1/login`, `/api/v1/console/login`, `/api/v1/approvals/login`) and the header `X-SMCP-Session: cookie` (SR-2.6-1, CP-29):
+
+- The sign-in token the route issues is revoked at once and not returned. The answer carries `session: "cookie"`, `actor`, `role`, `csrf_token`, `idle_timeout` (900), `expires_in` (28800) and `expires_at`, and sets the cookie `__Host-smcp-session` (`Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, no `Domain`, no `Max-Age`). The session ID is 256 random bits, held by the server as its SHA-256 digest. Evidence: `admin`/`session_started`/`BROWSER_SESSION_STARTED` after the route's own sign-in event.
+- Every sign-in issues a new session ID. A session cookie sent to a login route is destroyed before the sign-in, so an ID set before sign-in never becomes a signed-in session. A session's role is fixed; using another role takes a new sign-in and so a new ID.
+- The session ends 15 minutes after the last user request and 8 hours after sign-in. Requests with `X-SMCP-Background: 1` (refreshes the console makes on its own, such as live updates) do not count as user activity. Ending a session cancels its requests in flight, including open event streams.
+- `POST /admin/v1/session/logout` (with the CSRF token) ends the session at once and clears the cookie; response 204. A browser session that calls any `/logout` route is ended the same way.
+- `GET /api/v1/console/session` returns `session`, `csrf_token`, `idle_timeout` and `expires_at` for a browser session, so a reloaded page continues it.
+
+Every state-changing request of a browser session must carry (SR-8.9-1):
+
+| Header | Missing or wrong | Response |
+|---|---|---|
+| `X-CSRF-Token: <csrf_token>` | missing or wrong | 403 `csrf_invalid` (recorded as `auth_failure`/`CSRF_TOKEN_INVALID`) |
+| `If-Match: <ETag>` | missing | 428 `precondition_required` |
+| | names an older revision, or `*` | 412 `revision_stale`, with the current `ETag` |
+
+A matching `If-Match` advances the revision atomically, so of two concurrent requests with the same tag only one passes. The console sends the last `ETag` it received; after a 412 it shows that the Gateway state changed and the next attempt carries the new revision. Sign-out routes need the CSRF token but not `If-Match`. Bearer-token requests need neither, since a browser cannot attach a bearer token to a cross-site request.
 
 Errors have the form `{"error": {"code": "<code>", "message": "<text>"}}`.
 
@@ -285,7 +307,7 @@ Response 200: `{"token": "...", "expires_in": 1800, "role": "operator", "actor":
 
 ### POST /api/v1/console/logout
 
-Ends the caller's console token. Response 204.
+Ends the caller's console token, or the caller's browser session. Response 204.
 
 ### GET /api/v1/console/session
 

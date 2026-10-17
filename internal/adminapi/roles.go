@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 )
@@ -45,8 +46,15 @@ func (s *Server) HandleRoles(pattern string, h http.HandlerFunc, roles ...string
 // HandlePublic registers a route without bearer authentication, for an
 // element's own sign-in endpoint. The listener's host, origin and
 // content-type checks still apply.
+//
+// A POST route ending in /login is a sign-in route: with the header
+// "X-SMCP-Session: cookie" its successful answer becomes a browser session
+// (browser.go).
 func (s *Server) HandlePublic(pattern string, h http.HandlerFunc) {
 	s.record(pattern, nil, true)
+	if strings.HasPrefix(pattern, "POST ") && strings.HasSuffix(pattern, "/login") {
+		h = s.browserLogin(h)
+	}
 	s.mux.HandleFunc(pattern, h)
 }
 
@@ -89,6 +97,9 @@ func (s *Server) authenticatedRoles(pattern string, next http.HandlerFunc, roles
 				s.log.Error("evidence write failed", "err", err)
 			}
 			writeError(w, http.StatusForbidden, "role_refused", "this account's role does not permit this operation")
+			return
+		}
+		if !s.precondition(w, r) {
 			return
 		}
 		next(w, r)

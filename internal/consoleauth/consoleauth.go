@@ -16,6 +16,7 @@
 //	POST /api/v1/console/login    {username, password, role?} -> {token, expires_in, role, actor}
 //	POST /api/v1/console/logout
 //	GET  /api/v1/console/session  the caller's actor and role and the route permissions
+//	                              (and, for a browser session, its CSRF token)
 package consoleauth
 
 import (
@@ -102,6 +103,15 @@ func (s *Service) Authenticate(tok string) (string, string, bool) {
 		return "", "", false
 	}
 	return ss.role + ":" + ss.user, ss.role, true
+}
+
+// Revoke implements adminapi.TokenRevoker: a browser sign-in keeps only
+// its cookie session.
+func (s *Service) Revoke(tok string) {
+	sum := sha256.Sum256([]byte(tok))
+	s.mu.Lock()
+	delete(s.tokens, sum)
+	s.mu.Unlock()
 }
 
 // lookup returns the password hash and role of an account, "" when unknown.
@@ -193,13 +203,22 @@ func (s *Service) logout(w http.ResponseWriter, r *http.Request) {
 
 // session answers the caller's actor and role with the route permissions,
 // from which the console builds its navigation (FR-8.28).
+// A browser session (cookie) also gets its CSRF token and CP-29 limits, so
+// that a reloaded page can continue the session.
 func (s *Service) session(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{
+	out := map[string]any{
 		"actor":  adminapi.ActorOf(r),
 		"role":   adminapi.RoleOf(r),
 		"roles":  adminapi.Roles,
 		"routes": s.admin.Routes(),
-	})
+	}
+	if bs, ok := adminapi.BrowserSessionOf(r); ok {
+		out["session"] = "cookie"
+		out["csrf_token"] = bs.CSRFToken
+		out["idle_timeout"] = bs.IdleTimeout
+		out["expires_at"] = bs.ExpiresAt
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

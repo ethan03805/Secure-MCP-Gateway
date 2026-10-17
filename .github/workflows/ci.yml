@@ -223,11 +223,13 @@ jobs:
   # Management console (E-24): typecheck and build console/, check that the
   # committed console/dist (embedded into smcpd) matches the sources, audit
   # its npm dependencies and run the Playwright acceptance tests against a
-  # real smcpd. Not a required check.
+  # real smcpd on Chromium, Firefox and WebKit (FR-8.30), one fresh Gateway
+  # per browser. The requirement claims of the run (build/console-*-test.json,
+  # FR-8.34) go to the status job.
   console:
     name: console
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -257,14 +259,27 @@ jobs:
           fi
       - name: npm audit (high and critical, with the reviewed allowlist)
         run: scripts/npm-audit-gate.sh console
-      - name: Playwright browser
-        run: npx --no-install playwright install --with-deps chromium
+      - name: Playwright browsers
+        run: npx --no-install playwright install --with-deps chromium firefox webkit
         working-directory: console
-      - name: Acceptance tests against a running smcpd
+      - name: Build the Gateway binaries once for the three runs
+        run: |
+          mkdir -p build/e2e-bin
+          go build -o build/e2e-bin/ ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver ./scripts/itest-client
+      - name: Acceptance tests against a running smcpd (Chromium, Firefox, WebKit)
         env:
           CI: "1"
-        run: npx --no-install playwright test
+          SMCP_E2E_BIN: ${{ github.workspace }}/build/e2e-bin
+        run: npm run test:e2e
         working-directory: console
+      - name: Upload the requirement claims of the acceptance tests
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: console-results
+          path: build/console-*-test.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload the Playwright report
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -391,7 +406,7 @@ jobs:
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration, hostile]
+    needs: [srs, go, lint, site, security, linux-integration, hostile, console]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -415,13 +430,30 @@ jobs:
         with:
           name: hostile-results
           path: build
-      - name: Merge the hostile fixture results and their requirement claims (FR-19.2)
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: console-results
+          path: build
+      - name: Merge the hostile fixture and console acceptance results and their requirement claims (FR-19.2, FR-8.34)
         run: |
+          cp build/go-test.json build/all-test.json
+          merged=0
           if [ -s build/hostile.json ] && jq -e 'type == "array"' build/hostile.json >/dev/null; then
-            cat build/go-test.json build/hostile-*-test.json > build/all-test.json 2>/dev/null || cp build/go-test.json build/all-test.json
-            go run ./tools/reqreport -in build/all-test.json -coverprofile build/cover.out -hostile build/hostile.json -fail-on-failing=false
+            cat build/hostile-*-test.json >> build/all-test.json 2>/dev/null || true
+            merged=1
           else
+            rm -f build/hostile.json
             echo "no hostile results"
+          fi
+          if ls build/console-*-test.json >/dev/null 2>&1; then
+            cat build/console-*-test.json >> build/all-test.json
+            merged=1
+          else
+            echo "no console results"
+          fi
+          if [ "$merged" = 1 ]; then
+            go run ./tools/reqreport -in build/all-test.json -coverprofile build/cover.out -fail-on-failing=false
           fi
       - name: Merge the latest real-agent results (agents workflow, site-data/agents.json)
         run: |

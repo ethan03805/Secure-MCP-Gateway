@@ -1,5 +1,5 @@
 // Shared steps of the acceptance tests.
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Cookie, type Page } from "@playwright/test";
 import { info } from "./gateway";
 
 export const g = info();
@@ -11,24 +11,18 @@ export function claims(...ids: string[]) {
 
 export type Account = "administrator" | "approver" | "session_approver" | "operator" | "policy_author" | "auditor" | "researcher";
 
-const KEY = "smcp.console.credentials";
-const cached = new Map<Account, string>();
+const cached = new Map<Account, Cookie[]>();
 
 /**
  * Signs in and opens path. The first sign-in of each account goes through
- * the sign-in page; later ones reuse its token (the tab keeps it in
- * sessionStorage), which keeps the suite under the per-source sign-in rate
- * limit of the control API.
+ * the sign-in page; later ones reuse its session cookie (HttpOnly, so it is
+ * copied through the browser context, not the page), which keeps the suite
+ * under the per-source sign-in rate limit of the control API.
  */
 export async function signIn(page: Page, path = "/", as: Account = "administrator") {
   const saved = cached.get(as);
   if (saved) {
-    await page.addInitScript(
-      ([k, v]) => {
-        if (!sessionStorage.getItem(k)) sessionStorage.setItem(k, v);
-      },
-      [KEY, saved] as const,
-    );
+    await page.context().addCookies(saved);
     await page.goto(g.adminURL + path);
     const strip = page.getByTestId("status-strip");
     const form = page.getByRole("button", { name: "Sign in" });
@@ -37,8 +31,13 @@ export async function signIn(page: Page, path = "/", as: Account = "administrato
     cached.delete(as);
   }
   await uiSignIn(page, path, as);
-  const v = await page.evaluate((k) => sessionStorage.getItem(k), KEY);
-  if (v) cached.set(as, v);
+  const c = (await page.context().cookies(g.adminURL)).filter((x) => x.name === "__Host-smcp-session");
+  if (c.length) cached.set(as, c);
+}
+
+/** Forgets a cached session (after a test signed it out). */
+export function forget(as: Account) {
+  cached.delete(as);
 }
 
 async function uiSignIn(page: Page, path: string, as: Account) {

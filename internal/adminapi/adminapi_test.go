@@ -67,6 +67,7 @@ type fixture struct {
 	ctl      *fakeCtl
 	rec      *audit.Memory
 	operator string
+	server   *Server
 	now      time.Time
 }
 
@@ -93,6 +94,7 @@ func newFixture(t *testing.T, adminTOML string) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
+	f.server = s
 	f.operator, _ = keys.LoadAdminToken(dir)
 	f.srv.Config.Handler = s.Handler()
 	f.srv.StartTLS()
@@ -132,8 +134,7 @@ func (f *fixture) do(method, path, token string, body any, hdr map[string]string
 }
 
 func TestControlAPIAuthenticationAndCSRF(t *testing.T) {
-	// SR-2.6-1 asks for cookie sessions with SameSite=Strict for the console;
-	// the API uses bearer tokens, so only the API half is covered.
+	// The bearer-token half; browser sessions are browser_test.go.
 	reqtest.Partial(t, "SR-2.5-1")
 	hash, _ := keys.HashPassword("admin password 12")
 	f := newFixture(t, fmt.Sprintf("password_hash = %q", hash))

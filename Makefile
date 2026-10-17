@@ -98,8 +98,8 @@ console-check: console ## Fail when the committed console/dist differs from a fr
 	@out=$$(git status --porcelain -- console/dist); if [ -n "$$out" ]; then echo "console/dist is stale; commit the rebuilt files:"; echo "$$out"; exit 1; fi
 
 .PHONY: console-e2e
-console-e2e: console/node_modules ## Playwright acceptance tests of the console against a real smcpd
-	cd console && npx --no-install playwright install chromium && npx --no-install playwright test
+console-e2e: console/node_modules ## Playwright acceptance tests of the console on Chromium, Firefox and WebKit against a real smcpd
+	cd console && npx --no-install playwright install chromium firefox webkit && $(NPM) run test:e2e
 
 .PHONY: vuln
 vuln: ## govulncheck and npm audit gate

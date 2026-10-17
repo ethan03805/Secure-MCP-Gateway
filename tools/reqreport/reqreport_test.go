@@ -382,3 +382,39 @@ func TestLessID(t *testing.T) {
 		t.Fatalf("order %s", got)
 	}
 }
+
+// TestPlaywrightClaims parses the events console/e2e/reqreport.ts and
+// console/e2e/claims.mjs write for the console acceptance tests (FR-8.34):
+// the same `go test -json` shape, with test names that hold spaces and ">".
+func TestPlaywrightClaims(t *testing.T) {
+	reqtest.Partial(t, "FR-8.34")
+	const in = `{"Time":"2026-10-17T03:23:19.470Z","Action":"run","Package":"console/e2e/chromium","Test":"console.spec.ts > administrator signs in"}
+{"Time":"2026-10-17T03:23:20.162Z","Action":"output","Package":"console/e2e/chromium","Test":"console.spec.ts > administrator signs in","Output":"    PARTIAL: FR-8.3\n"}
+{"Time":"2026-10-17T03:23:20.162Z","Action":"output","Package":"console/e2e/chromium","Test":"console.spec.ts > administrator signs in","Output":"    PARTIAL: FR-8.28\n"}
+{"Time":"2026-10-17T03:23:20.162Z","Action":"pass","Package":"console/e2e/chromium","Test":"console.spec.ts > administrator signs in","Elapsed":0.69}
+{"Time":"2026-10-17T03:23:21.000Z","Action":"run","Package":"console/e2e/webkit","Test":"views.spec.ts > G-03 audit profile tuning"}
+{"Time":"2026-10-17T03:23:21.000Z","Action":"output","Package":"console/e2e/webkit","Test":"views.spec.ts > G-03 audit profile tuning","Output":"    PARTIAL: FR-8.5\n"}
+{"Time":"2026-10-17T03:23:21.000Z","Action":"fail","Package":"console/e2e/webkit","Test":"views.spec.ts > G-03 audit profile tuning","Elapsed":1}
+{"Time":"2026-10-17T03:23:22.000Z","Action":"output","Package":"console/e2e/browsers","Test":"TestConsoleViewsClaimTheirRequirements","Output":"    VERIFIES: FR-8.34\n"}
+{"Time":"2026-10-17T03:23:22.000Z","Action":"pass","Package":"console/e2e/browsers","Test":"TestConsoleViewsClaimTheirRequirements","Elapsed":0}
+{"Time":"2026-10-17T03:23:22.000Z","Action":"fail","Package":"console/e2e/webkit"}
+`
+	log, err := parseTestLog(strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	results := buildResults([]Requirement{{ID: "FR-8.3"}, {ID: "FR-8.5"}, {ID: "FR-8.28"}, {ID: "FR-8.34"}}, log, "github.com/ethan03805/secure-mcp-gateway")
+	status := map[string]string{}
+	for _, r := range results {
+		status[r.ID] = r.Status
+		if r.ID == "FR-8.3" && (len(r.Claims) != 1 || r.Claims[0].Test != "console/e2e/chromium.console.spec.ts > administrator signs in") {
+			t.Errorf("FR-8.3 claims %+v", r.Claims)
+		}
+	}
+	want := map[string]string{"FR-8.3": "partial", "FR-8.28": "partial", "FR-8.5": "failing", "FR-8.34": "verified"}
+	for id, s := range want {
+		if status[id] != s {
+			t.Errorf("%s: %s, want %s", id, status[id], s)
+		}
+	}
+}
