@@ -229,13 +229,8 @@ enforced_section() {
   emarker="smcp-enforced-$(date +%s)"
   printf '%s\n' "$emarker" > "$share/hello.txt"
   chmod 644 "$share/hello.txt"
-  if [ -f "$work/admin.pw" ]; then
-    "$bin/smcpctl" bootstrap --dir "$einst" --port 8543 --admin-port 8544 --refserver "$sbin/smcp-refserver" --sandbox "$share" \
-      --admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw"
-  else
-    SMCP_ADMIN_PASSWORD="$signin_password" "$bin/smcpctl" bootstrap --dir "$einst" --port 8543 --admin-port 8544 \
-      --refserver "$sbin/smcp-refserver" --sandbox "$share"
-  fi
+  "$bin/smcpctl" bootstrap --dir "$einst" --port 8543 --admin-port 8544 --refserver "$sbin/smcp-refserver" --sandbox "$share" \
+    --admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw"
   local ecfg="$einst/smcp.toml" cgm_line=""
   if [ -n "${SMCP_ENFORCED_CGROUP_MANAGER:-}" ]; then
     cgm_line="cgroup_manager = \"$SMCP_ENFORCED_CGROUP_MANAGER\""
@@ -315,7 +310,7 @@ EOF
 
   local eca="$einst/state/tls/ca.crt"
   ecall() { # tool, args, expected substring
-    "$bin/itest-client" -url "$epublic" -ca "$eca" -username "$signin_user" -call "$1" -args "$2" -expect "$3" \
+    "$bin/itest-client" -url "$epublic" -ca "$eca" -call "$1" -args "$2" -expect "$3" \
       || { cat "$elog" >&2; fail "enforced: $1 $2 (expected \"$3\")"; }
   }
   say "Enforced profile: the reference server works inside the sandbox"
