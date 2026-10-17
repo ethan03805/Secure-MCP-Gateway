@@ -153,6 +153,12 @@ func (p *requestProbe) FilterRequest(_ context.Context, call *pipeline.Call, arg
 	start := time.Now()
 	s := p.s
 	vals, digest := observe.ArgumentFeatures(args)
+	if call.TraceParent != "" { // FR-1.44
+		vals["trace_parent"] = call.TraceParent
+	}
+	if call.ClientInfo != "" { // FR-1.45: self-asserted, observation only
+		vals["harness_adapter_version"] = call.ClientInfo
+	}
 	pr := &observe.Probe{CorrelationID: call.CorrelationID, Time: s.now(), ServerID: call.Server, Template: call.Template, EndUser: call.EndUser,
 		DecisiveRules: call.DecisiveRules, Obligations: append([]string{}, call.Obligations.Filters...), ArgsDigest: digest, Values: vals}
 	if s.S.Scoring == "sync" {

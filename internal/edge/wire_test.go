@@ -12,6 +12,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
@@ -136,12 +137,12 @@ const pagedPolicy = `{
 // CP-19 tools (configured to 2 here) with an opaque nextCursor while tools
 // remain, and the pages form the complete catalog without duplicates.
 //
-// FR-1.24 is partial: a cursor the Gateway never issued is rejected with
-// -32602, but cursors are not bound to the session or policy revision (the
-// SDK's cursor encodes the last tool name; see SR-5.7-2).
+// FR-1.24 and SR-5.7-2: a random cursor, a cursor with one byte changed, a
+// cursor issued to another session and a cursor issued under a superseded
+// policy revision each get -32602; an issued cursor still works for its
+// own session and revision.
 func TestCatalogPagination(t *testing.T) {
-	reqtest.Verifies(t, "FR-1.23")
-	reqtest.Partial(t, "FR-1.24")
+	reqtest.Verifies(t, "FR-1.23", "FR-1.24", "SR-5.7-2")
 	h := newHarness(t, harnessOpts{backend: pagedBackend, policy: pagedPolicy, limits: "catalog_page_size = 2"})
 	_, tok := h.session("all")
 	seen := map[string]int{}
@@ -188,6 +189,43 @@ func TestCatalogPagination(t *testing.T) {
 	// A cursor the Gateway did not issue.
 	status, _, body := h.post(fmt.Sprintf(`{"jsonrpc":"2.0","id":99,"method":"tools/list","params":{"cursor":"not-a-cursor","_meta":{%s}}}`, wireMeta), wireHeaders(tok, "tools/list"))
 	wantError(t, "random cursor", status, body, 400, -32602)
+
+	list := func(tok, cursor string) (int, string) {
+		t.Helper()
+		status, _, body := h.post(fmt.Sprintf(`{"jsonrpc":"2.0","id":100,"method":"tools/list","params":{"cursor":%q,"_meta":{%s}}}`, cursor, wireMeta), wireHeaders(tok, "tools/list"))
+		return status, body
+	}
+	// A fresh first-page cursor of this session works.
+	_, _, body = h.post(fmt.Sprintf(`{"jsonrpc":"2.0","id":98,"method":"tools/list","params":{"_meta":{%s}}}`, wireMeta), wireHeaders(tok, "tools/list"))
+	issued, _ := decodeReply(t, body).Result["nextCursor"].(string)
+	if status, body := list(tok, issued); status != 200 || decodeReply(t, body).Error != nil {
+		t.Fatalf("issued cursor: %d %s", status, body)
+	}
+	// One byte changed, at the start, the middle and the end.
+	for _, i := range []int{0, len(issued) / 2, len(issued) - 1} {
+		b := []byte(issued)
+		if b[i] == 'A' {
+			b[i] = 'B'
+		} else {
+			b[i] = 'A'
+		}
+		status, body := list(tok, string(b))
+		wantError(t, fmt.Sprintf("cursor modified at %d", i), status, body, 400, -32602)
+	}
+	// The same cursor presented by another session.
+	_, other := h.session("all")
+	status, body = list(other, issued)
+	wantError(t, "cursor of another session", status, body, 400, -32602)
+	// The same cursor after a new policy revision is activated.
+	snap, err := policy.Compile([]byte(strings.Replace(pagedPolicy, `"r1"`, `"r2"`, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.gw.ActivatePolicy("test", snap); err != nil {
+		t.Fatal(err)
+	}
+	status, body = list(tok, issued)
+	wantError(t, "cursor of a superseded revision", status, body, 400, -32602)
 }
 
 // headerBackend has a tool whose input schema carries an x-mcp-header

@@ -190,6 +190,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, Obligations: dec.Obligations, DecisiveRules: dec.DecisiveRules,
 			InputSchema: ref.Tool.InputSchema, OutputSchema: ref.Tool.OutputSchema,
 			Channel: c.base.Channel, ClientID: c.base.ClientID, ClientAddress: c.base.ClientAddress}
+		call.TraceParent, call.ClientInfo = selfAsserted(req.Params.Meta) // FR-1.44, FR-1.45
 		c.call = call
 		c.prog = g.newProgress(ctx, req, call)
 		defer c.prog.stop()

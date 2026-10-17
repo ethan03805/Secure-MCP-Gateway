@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -38,6 +39,16 @@ func runBackend() {
 			for i := 1; i <= 2; i++ {
 				_ = req.Session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{ProgressToken: tok, Progress: float64(i), Total: 2, Message: fmt.Sprintf("step %d", i)})
 			}
+		}
+		// "show-meta" echoes the _meta keys the backend received
+		// (TestTraceContextObserved).
+		if a.Text == "show-meta" {
+			keys := []string{}
+			for k := range req.Params.Meta {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "meta:" + strings.Join(keys, ",")}}}, nil, nil
 		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "echo:" + a.Text}}}, nil, nil
 	})
