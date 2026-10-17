@@ -32,7 +32,9 @@ func checkPackagedBootstrap(t *testing.T, dir, raw string) {
 	if s.PackageSHA256 != refSum {
 		t.Fatal("package_sha256 is not the reference server's digest")
 	}
-	if regexp.MustCompile(`(?m)^[^#\n]*(\bcommand\s*=|npx|uvx|pip )`).MatchString(raw) {
+	// An installer name counts only as a word on its own, so a random
+	// password hash (base64, no spaces or quotes) cannot match it.
+	if regexp.MustCompile(`(?m)^[^#\n]*(\bcommand\s*=|(^|[\s"'\[])(npx|uvx|pip)([\s"',\]]|$))`).MatchString(raw) {
 		t.Fatalf("installer or command in the example:\n%s", raw)
 	}
 	// The digest names a content-addressed artifact in the state directory.
