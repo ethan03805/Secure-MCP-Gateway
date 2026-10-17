@@ -554,7 +554,14 @@ test("each role sees only its views and actions", async ({ page }) => {
 
 test("the OpenAPI document describes every route with its roles", async ({ request }) => {
   claims("FR-8.1");
-  const login = await request.post(g.adminURL + "/admin/v1/login", { data: { username: "admin", password: g.adminPassword }, headers: { Origin: g.adminURL } });
+  const post = () => request.post(g.adminURL + "/admin/v1/login", { data: { username: "admin", password: g.adminPassword }, headers: { Origin: g.adminURL } });
+  let login = await post();
+  if (login.status() === 429) {
+    // The suite signs in many times; wait out the per-source sign-in limit once.
+    await new Promise((r) => setTimeout(r, (Number(login.headers()["retry-after"]) || 5) * 1000 + 250));
+    login = await post();
+  }
+  expect(login.status(), await login.text()).toBe(200);
   const { token } = (await login.json()) as { token: string };
   const res = await request.get(g.adminURL + "/api/v1/openapi.json", { headers: { Authorization: `Bearer ${token}` } });
   expect(res.status()).toBe(200);
