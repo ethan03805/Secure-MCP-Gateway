@@ -35,8 +35,8 @@ func TestPasswordHash(t *testing.T) {
 }
 
 func TestEnsureKeys(t *testing.T) {
-	// FR-7.7 asks for separate client and server CAs and FR-7.8 for nine key
-	// purposes; only the server CA and the evidence key exist so far.
+	// FR-7.7 and FR-7.8 are verified by inspection
+	// (docs/verification/inspections.md); this covers the files Ensure makes.
 	reqtest.Partial(t, "FR-7.7", "FR-7.8")
 	dir := t.TempDir()
 	if err := Ensure(dir, "127.0.0.1"); err != nil {
