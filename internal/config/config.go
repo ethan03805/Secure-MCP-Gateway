@@ -44,6 +44,7 @@ type Config struct {
 	Egress        Egress        `toml:"egress" json:"egress"`
 	Filters       Filters       `toml:"filters" json:"filters"` // E-09, E-11 (filters.go)
 	Graph         Graph         `toml:"graph" json:"graph"`
+	Observation   Observation   `toml:"observation" json:"observation"`
 	// Secrets enables the Secret Vault and Broker (E-19, E-20) when present.
 	Secrets *Secrets `toml:"secrets" json:"secrets"`
 

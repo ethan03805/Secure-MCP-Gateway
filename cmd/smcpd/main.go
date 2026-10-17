@@ -14,6 +14,7 @@ import (
 	"syscall"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
+	"github.com/ethan03805/secure-mcp-gateway/internal/analytics"
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
@@ -78,6 +79,14 @@ func run(cfgPath, level string) error {
 	}
 	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate,
 		Observers: map[string]audit.Observer{"graph": mirror}}
+	obs, err := analytics.New(analytics.Options{Config: cfg, Log: log}) // SS-10, E-27
+	if err != nil {
+		return fmt.Errorf("observation: %w", err)
+	}
+	opts.ExtraFilters = obs.RegisterFilters
+	if o := obs.Observer(); o != nil {
+		opts.Observers["observation"] = o
+	}
 	if rt != nil {
 		opts.Launcher = rt
 		rt.Start(ctx)
@@ -94,6 +103,8 @@ func run(cfgPath, level string) error {
 	}
 	defer a.Close()
 	approvals.Start(ctx, a.Evidence, a.Admin, a.Gateway)
+	obs.Start(ctx, a.Evidence, a.Admin, func() uint64 { return a.Evidence.Dropped()["observation"] })
+	defer obs.Close()
 	if rt != nil {
 		rt.SetEvidence(a.Evidence)
 	}

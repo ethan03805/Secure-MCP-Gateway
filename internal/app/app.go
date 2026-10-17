@@ -45,7 +45,10 @@ type Options struct {
 	Secrets   pipeline.SecretBroker   // default NoSecrets
 	Approver  pipeline.Approver       // default RefuseApprover
 	Filters   *pipeline.Filters       // default NewFilters (schema-validate)
-	Approvals adminapi.Approvals      // default none
+	// ExtraFilters, when set, registers further filters on the inspection
+	// chain after the built-in E-09/E-11 filters (SS-10 observation probes).
+	ExtraFilters func(*pipeline.Filters) error
+	Approvals    adminapi.Approvals // default none
 	// Observers receive evidence after the journal accepts it (E-26, E-29).
 	Observers map[string]audit.Observer
 	// Host overrides host detection (tests).
