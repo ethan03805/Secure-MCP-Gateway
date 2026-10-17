@@ -33,6 +33,7 @@
 16. Appendix K — Client matrix
 17. Appendix L — Hostile backend fixture suite
 18. Appendix M — Acceptance scenarios and the enforced label
+19. Appendix N — Requirements deferred from release 1.0
 
 ## 1. Purpose, scope and intended use
 
@@ -98,8 +99,8 @@ A **platform profile** is always active; exactly one of the two applies to an in
 | Profile | Enables | Requirements |
 |---|---|---|
 | UDS Harness Profile | Unix-domain-socket harness transport | FR-1.47, FR-2.15, SR-2.8-3 |
-| MRTR Relay Profile | Relaying backend `InputRequiredResult` (elicitation, sampling, roots) | FR-5.25, SR-5.6-2 |
-| mTLS Harness Profile | Client-certificate authentication on the TLS harness listener, in addition to the bearer token | FR-2.14, SR-2.8-2 |
+| MRTR Relay Profile | Relaying backend `InputRequiredResult` (elicitation, sampling, roots). Deferred from release 1.0 (Appendix N); release 1.0 refuses such results with `-31010`. | FR-5.25 (deferred), SR-5.6-2 |
+| mTLS Harness Profile | Client-certificate authentication on the TLS harness listener, in addition to the bearer token. Deferred from release 1.0 (Appendix N). | FR-2.14, SR-2.8-2 (both deferred) |
 | Remote Access Profile | A second loopback listener reached only through an authenticated tunnel (Cloudflare Tunnel, Tailscale Funnel or a vendor MCP tunnel), operator-approved Dynamic Client Registration, remote rate limits and lockout, and the `smcp-connect` relay, for agents that run on a vendor's computer. It replaces the V1.1 Overlay Profile. | FR-16.1 to FR-16.12, SR-2.9-3, SR-2.11-2, SR-4.14-1, SR-4.14-2 |
 
 ### 1.6 Platform and distribution matrix
@@ -156,6 +157,10 @@ Each statement names its allocated element as the subject, for example *"The Ses
 ### 2.6 Verification claims
 
 A requirement is **verified** only when at least one passing automated test claims it in full and no claiming test fails, or when its Inspection, Analysis or Demonstration record is checked in under `docs/verification/` and passes. A test that exercises part of a requirement claims it as **partial**. The requirement report lists verified, partial, failing and unverified requirements separately (FR-12.10). Nothing in this document is a claim that a requirement is met.
+
+### 2.7 Deferred requirements
+
+A requirement record that carries a deferral rationale is **deferred from release 1.0**. It keeps its ID and text, and Appendix N lists it with the reason it is deferred and what release 1.0 does instead. A deferred requirement is not part of the requirement set of release 1.0: Appendices E to I, the requirement report (FR-12.10) and the release label (FR-19.3) leave it out. No requirement of release 1.0 has a deferred parent. Deferring a requirement, or restoring one, is a controlled change recorded in `CHANGELOG.md`.
 
 ## 3. Recommended technology stack (open source only)
 

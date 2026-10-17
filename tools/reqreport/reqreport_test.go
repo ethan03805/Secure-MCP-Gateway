@@ -106,6 +106,35 @@ func TestLoadRequirements(t *testing.T) {
 	}
 }
 
+// TestLoadRequirementsSkipsDeferred: a record with a DEFER: line (SRS
+// Section 2.7, Appendix N) is not part of the requirement set.
+func TestLoadRequirementsSkipsDeferred(t *testing.T) {
+	reqtest.Verifies(t, "FR-12.10")
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "req1.txt"), reqSource+`
+@FR-1.2 | Deferred listener
+P: FR-1
+S: The Gateway SHALL listen elsewhere.
+A: E-01; F-01
+V: Test | Check.
+SRC: ARCH
+R: Because.
+DEFER: Not in release 1.0.
+`)
+	reqs, err := loadRequirements(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range reqs {
+		if r.ID == "FR-1.2" {
+			t.Fatal("deferred requirement loaded")
+		}
+	}
+	if len(reqs) != 3 {
+		t.Fatalf("loaded %d requirements, want 3", len(reqs))
+	}
+}
+
 func TestLoadAndMergeElements(t *testing.T) {
 	reqtest.Verifies(t, "FR-12.10")
 	dir := t.TempDir()

@@ -10,6 +10,8 @@ Each entry is marked:
 
 Parent requirements whose verification is "Review the verification results of every child requirement" (FR-1, FR-2, FR-3, FR-4, FR-5, FR-7, FR-8, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-19) are verified automatically by `tools/reqreport` once all their children are; they are not listed below.
 
+Requirements deferred from release 1.0 (SRS Section 2.7, Appendix N) are not part of the requirement set and are not listed.
+
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
 ## E-01 Harness Interface Endpoint
@@ -22,7 +24,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-12.1 external: no release SBOM license check; needs a release artifact.
 - FR-12.2 unverified: no test runs the baseline functions with outbound Internet blocked.
 - FR-12.8 external: release provenance bundle (commit IDs, digests, recipes, lockfiles, SBOM, notices) not inspected; needs a release.
-- SR-2.8-2 missing: mTLS Harness Profile (client CA and client-certificate requirement on the harness listener).
 - SR-2.8-3 missing: UDS harness socket with mode 0660 and the `smcp-harness` group.
 - SR-4.14-1 missing: `smcpctl remote enable` installs no nftables rules in the Enforced profile.
 - SR-7.11-1 unverified: CP-06 header bounds and CP-07 body bound are applied by `net/http` and the SDK before parsing; there is no per-source connection limit or CP-09 unauthenticated-work limit on the MCP endpoint (missing), and no test sends slow bodies or connection floods.
@@ -101,7 +102,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-08 Access Enforcement Point
 
-- SR-2.12-1 missing: no manifest handle contracts or handle ownership tracking.
 - SR-3.12-1 missing: no `gateway-admin` manifest class exists, so such tools are not excluded from catalogs.
 - SR-5.7-2 missing: pagination cursors are the SDK's encoding of the last tool name, not HMAC-protected and not bound to session or policy revision (FR-1.24 is partial for the same reason).
 - SR-5.18-2 missing: presented tools drop every `icons` entry, including valid PNG or JPEG `data:` URIs up to 64 KiB, which the requirement keeps.
@@ -118,23 +118,13 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-1.43 unverified: the CP-13 client deadline is applied (`internal/edge/pipeline.go` `ClientDeadline`) and maps to `-31008`; no test sets a client deadline shorter than the upstream timeout.
 - FR-5.13 unverified: stdio framing is the SDK's newline-delimited transport behind `frameFilter`; no test asserts single-line UTF-8 messages.
 - FR-5.14 unverified: an invalid stdout line fails the call (Appendix L HF-18 passes in the hostile suite, which runs under a build tag and does not claim requirements in the report).
-- FR-5.16 missing: southbound sessions start with the SDK's `initialize`; no `server/discover` era probe.
-- FR-5.17 missing: no comparison of the probed era with the manifest era.
-- FR-5.18 missing: southbound requests use the SDK client defaults; no explicit 2026-07-28 `_meta` with empty client capabilities.
 - FR-5.19 unverified: the SDK client sends `initialize` and `notifications/initialized`; the requested version is the SDK's latest, not pinned to 2025-11-25, and capabilities are not empty (see SR-5.6-2).
 - FR-5.20 missing: legacy server-initiated requests are answered by the SDK client (for example `roots/list`) instead of `-32601` (Appendix L HF-26 fails).
 - FR-5.21 unverified: the complete paged `tools/list` is read at start (`internal/backend/backend.go`, `sess.Tools`); no test pages a backend catalog.
 - FR-5.23 missing: no explicit handling of absent or unrecognized `resultType` from backends.
 - FR-5.24 missing: an `InputRequiredResult` is not mapped to `-31010` (Appendix L HF-25 fails).
-- FR-5.25 missing: MRTR Relay Profile.
 - FR-5.26 missing: cancellation is not propagated southbound with `notifications/cancelled`.
-- FR-5.28 missing: no southbound Streamable HTTP client; only stdio instances are supported.
-- FR-5.29 missing: no southbound `Mcp-Param-*` mirroring (no HTTP transport).
-- FR-5.30 missing: no southbound SSE handling (no HTTP transport).
-- FR-5.31 missing: no southbound `subscriptions/listen`; `list_changed` from stdio backends is handled through the SDK notification handler only.
 - FR-5.32 missing: the northbound progress token is passed southbound unchanged instead of a Gateway-generated unique token.
-- SR-5.1-2 missing: the era is whatever the SDK negotiates, not taken from the manifest.
-- SR-5.3-2 missing: no era probe, so no modern-error classification.
 - SR-5.6-2 missing: the southbound client is built with nil `ClientOptions.Capabilities`, so the SDK declares its default `roots` capability; passing `&mcp.ClientCapabilities{}` in `internal/backend/backend.go` would remove it.
 - SR-7.2-1 missing: a lost response after dispatch is recorded as indeterminate with `-31009` for timeouts, but the side-effect class is not consulted and the slow-drip case fails (Appendix L HF-17).
 - SR-7.12-1 missing: northbound cancellation is not propagated southbound.
@@ -192,8 +182,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-22 Key & Trust Anchor Manager
 
-- FR-2.14 missing: no client CA and no CSR signing for framework-instance certificates.
-- FR-7.9 missing: private keys are files with owner-only modes; no TPM sealing or Keychain storage for them (the vault master key can use the Keychain).
 - FR-7.10 unverified: trust anchors are enrolled with `smcpctl trust` and `POST /api/v1/packages/trust` (G-10); no Demonstration record shows the fingerprint confirmation and the stored risk classes and expiry.
 - SR-2.2-1 missing: no per-instance credential issuance by E-22 with independent revocation (pre-registered OAuth clients are configuration entries).
 
@@ -233,13 +221,11 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-9.4 missing: no priority classes for queued writes.
 - FR-9.5 missing: observation records are not batched through the Data Access Service.
 - FR-9.6 missing: no P2 backpressure signal.
-- SR-4.3-1 missing: no Unix-socket peer credentials or per-element operation allowlist.
 - SR-6-3 missing: observation data served to the console is filtered by route role only, not by each field's sensitivity class.
 
 ## E-28 Data Lifecycle & Memory Manager
 
 - FR-9.12 missing: no memory manager or degradation order.
-- FR-9.13 missing: no hot and warm tiering of observation partitions.
 - FR-9.15 missing: no storage quotas, warnings or quota reporting to E-23.
 - FR-11.9 external: idle resident memory not measured.
 - FR-12.4 external: CP-46 directories, owners and modes have not been inspected on installed Enforced and Standalone hosts.

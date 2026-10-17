@@ -2,7 +2,7 @@
 
 ## Unreleased — SRS V1.2 draft, architecture V2.3 draft — 2026-10-16
 
-Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 558 requirements (385 FR in 19 roots, 173 SR) with no errors or warnings. No snapshot or tag is made; the release process will make one.
+Re-baseline so that the product, built exactly as specified, is a finished and shippable v1. The owner delegated specification decisions to the project team on 2026-10-16 and made the decisions listed first; the rest close the gaps found by a completeness review of V1.1 (cited as `REVIEW` in the SRS). The SRS build reports 543 requirements (375 FR in 19 roots, 168 SR) and 16 deferred requirements (Appendix N) with no errors or warnings. No snapshot or tag is made; the release process will make one.
 
 ### Linux Enforced profile hardening (E-15 to E-18, FR-13.5)
 
@@ -11,6 +11,13 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - smcpd.service under real systemd: `scripts/ci-systemd.sh`, called from the enforced section of `scripts/ci-integration.sh`, installs `packaging/linux`, bootstraps as `smcp-core`, starts the unit, checks health, makes a tool call that runs in a rootless Podman container, stops the unit and verifies the journal. With `cgroup_manager = "cgroupfs"` smcpd now enables the cpu, memory and pids controllers in its delegated service cgroup (systemd leaves them off below `DelegateSubgroup=`), and `runtime doctor` runs `podman info` with the configured cgroup manager.
 - AppArmor profile `packaging/linux/apparmor/smcpd`, installed and loaded in enforce mode by `install-enforced.sh` and applied by `smcpd.service` (`AppArmorProfile=-smcpd`); CI checks that smcpd runs as `smcpd (enforce)`. No profile is shipped for the server containers, and servers still run under `smcp-core` rather than CP-46's `smcp-srv`.
 - New guide: `docs/enforced-profile.md`.
+
+### Requirements deferred from release 1.0 (SRS Section 2.7, Appendix N)
+
+- New record field `DEFER:` in `srs_build/`: a deferred requirement keeps its ID and text, moves to the new Appendix N with the reason and what release 1.0 does instead, and leaves the requirement set, Appendices E to I and the requirement report (`tools/reqreport` skips it). A SEC MUST whose only SR children are deferred is shown as `Deferred` in Appendix E.
+- Deferred (16): the MRTR Relay Profile (FR-5.25); the southbound Streamable HTTP client (FR-5.28 to FR-5.31; the owner decided remote backends are out of scope for v1, and every packaged server is stdio); the modern-era southbound probe and requests (FR-5.16, FR-5.17, FR-5.18, SR-5.1-2, SR-5.3-2); the mTLS Harness Profile (FR-2.14, SR-2.8-2); Unix-socket peer authentication of Data Access Service callers (SR-4.3-1; the service is a library inside `smcpd`); manifest handle contracts (SR-2.12-1; the Appendix J schema defines none); TPM and Keychain sealing of private keys (FR-7.9); hot and warm storage tiers (FR-9.13).
+- New FR-5.40: an instance whose negotiated protocol version differs from its verified manifest's era is not used and the revision is suspended, so legacy behavior is never applied to a revision packaged as modern.
+- FR-5.26 now names the stdio cancellation signal only.
 
 ### Owner decisions applied
 

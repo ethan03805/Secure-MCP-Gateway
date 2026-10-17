@@ -405,6 +405,7 @@ A: E-01; F-01; X-01
 V: Test | Enable the profile; connect without a certificate and with a foreign certificate; confirm rejection during the handshake.
 SRC: SEC 2.8; ARCH §19 OD-2
 R: Optional transport-level framework authentication for harnesses that can present a client certificate.
+DEFER: Deferred with the mTLS Harness Profile (FR-2.14); release 1.0 authenticates harness requests with bearer access tokens.
 
 @SR-2.8-3 | UDS permissions
 P: SEC-2.8
@@ -501,6 +502,7 @@ A: E-08; E-11; F-20; F-27
 V: Test | Create a handle in session A and use it from session B and after expiry; confirm denial.
 SRC: SEC 2.12; MCP:server/tools §Stateful Tools
 R: Handles are names, not capabilities.
+DEFER: The release 1.0 manifest schema (Appendix J) has no handle contract, and none of the reference packages returns handles that a later call presents. Handle tracking is deferred until the manifest schema defines handle contracts.
 
 @SR-2.13-1 | Vault encryption
 P: SEC-2.13
@@ -737,6 +739,7 @@ A: E-26; F-72; I-07; I-30; I-33; I-34; I-35; I-06
 V: Test | Invoke a policy-write operation from the Observation Collector identity; confirm denial.
 SRC: SEC 4.3
 R: Application-level separation without Enterprise database roles.
+DEFER: In release 1.0 the Data Access Service is a library inside the `smcpd` process, called only by the graph mirror and the console routes of that process; no element reaches it across a process or socket boundary, so there is no peer to authenticate by socket credentials. Its operations are fixed by the reviewed template catalog and the control API role matrix (Appendix C). Peer authentication is deferred to a release that splits elements into separate processes.
 
 @SR-4.9-1 | Single MCP endpoint per locked-down client
 P: SEC-4.9
@@ -843,6 +846,7 @@ A: E-10; F-23
 V: Test | Probe a modern server whose manifest declares legacy; confirm suspension rather than legacy use.
 SRC: SEC 5.1; FR-5.17
 R: Curated protocol era.
+DEFER: Deferred with the era probe (FR-5.16). Release 1.0 uses legacy behavior toward every instance and refuses a revision whose manifest declares another era (FR-5.40), so legacy behavior is never used toward a revision whose manifest declares the modern era.
 
 @SR-5.2-1 | Header/body agreement
 P: SEC-5.2
@@ -875,6 +879,7 @@ A: E-10; F-23
 V: Test | Return `-32022` to a probe; confirm modern handling.
 SRC: SEC 5.3; MCP:basic/transports/stdio §Backward Compatibility
 R: Specification fallback rule.
+DEFER: Deferred with the era probe (FR-5.16): release 1.0 sends no era probe, so there is no probe error to classify.
 
 @SR-5.4-1 | Authorized discovery
 P: SEC-5.4

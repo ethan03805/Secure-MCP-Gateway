@@ -185,6 +185,7 @@ A: E-22; F-60; X-07; D-08
 V: Test | Start on a TPM host, on macOS and on a non-TPM Linux host with and without the passphrase option; confirm the protection method in each case and that key files copied to another host are unusable where sealing or encryption applies.
 SRC: ARCH §15 E-19/E-22; OWNER (platform profiles)
 R: Keys must not sit in plaintext on disk where the platform offers protection. An unattended service cannot wait for a passphrase at every start, so the passphrase is an option rather than the default.
+DEFER: Release 1.0 stores private keys in files with mode 0600 under the state directory, owned by the key-holding identity in the Enforced profile (SR-6.12-1); the vault master key can be held in the macOS Keychain. TPM sealing, Keychain storage of every private key and passphrase encryption are deferred: they need reference hardware and an unattended-start design that release 1.0 does not have.
 
 @FR-7.10 | Trust anchor enrollment
 P: FR-7
@@ -629,6 +630,7 @@ A: E-28; F-78; D-09; D-13
 V: Test | Age fixture partitions; confirm tier moves and query continuity.
 SRC: ARCH §4 E-28
 R: Bounded fast storage with retained history.
+DEFER: Release 1.0 writes observation partitions as compressed columnar files (Parquet through DuckDB) or JSON Lines from the start and deletes them at the end of their retention; there is one tier. A separate hot tier is deferred until measurements on reference hardware show that queries over 30 days need one.
 
 @FR-9.14 | Retention execution
 P: FR-9

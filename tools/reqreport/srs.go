@@ -21,6 +21,10 @@ type Requirement struct {
 	Parent   string   // the P: line ("" for "—" or a SEC parent)
 	Method   string   // verification method from the V: line (Test, Inspection, Analysis, Demonstration)
 	Verify   string   // verification statement from the V: line
+	// Deferred is set by a DEFER: line: the requirement is deferred from
+	// release 1.0 (SRS Section 2.7, Appendix N) and is not part of the
+	// requirement set the report covers.
+	Deferred bool
 }
 
 // Element returns the primary element: the first E-xx in the allocation.
@@ -39,7 +43,7 @@ var (
 // loadRequirements parses every req*.txt in dir. The record format is
 // documented in srs_build/README.md: "@ID | Title", then KEY: value lines,
 // ending at a blank line. "@DISP" lines are SEC dispositions, not
-// requirements.
+// requirements. Records with a DEFER: line are deferred and left out.
 func loadRequirements(dir string) ([]Requirement, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "req*.txt"))
 	if err != nil {
@@ -60,7 +64,7 @@ func loadRequirements(dir string) ([]Requirement, error) {
 		sc := bufio.NewScanner(f)
 		sc.Buffer(make([]byte, 1<<16), 1<<22)
 		flush := func() {
-			if cur != nil && !seen[cur.ID] {
+			if cur != nil && !cur.Deferred && !seen[cur.ID] {
 				seen[cur.ID] = true
 				out = append(out, *cur)
 			}
@@ -77,6 +81,8 @@ func loadRequirements(dir string) ([]Requirement, error) {
 				cur = &Requirement{ID: strings.TrimSpace(id), Title: strings.TrimSpace(title)}
 			case line == "":
 				flush()
+			case cur != nil && strings.HasPrefix(line, "DEFER: "):
+				cur.Deferred = true
 			case cur != nil && strings.HasPrefix(line, "P: "):
 				if p := strings.TrimSpace(line[3:]); idPattern.MatchString(p) {
 					cur.Parent = p

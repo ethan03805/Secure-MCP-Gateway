@@ -549,6 +549,7 @@ A: E-22; F-59; I-06
 V: Test | Enable the profile; submit a CSR through G-11; confirm the issued certificate chains to the client CA and names the principal ID.
 SRC: ARCH §4 E-22; ARCH §19 OD-2; Client-Compatibility-Brief §4.2
 R: Only Hermes can present a per-server client certificate. mTLS is a hardening option, not the baseline credential.
+DEFER: Release 1.0 ships without the mTLS Harness Profile. Harness requests are authenticated by bearer access tokens over TLS on a loopback listener, and per-instance credentials are OAuth clients managed in G-11. Client-certificate issuance and the client CA are deferred with the profile.
 
 @FR-2.15 | UDS peer mapping
 P: FR-2
