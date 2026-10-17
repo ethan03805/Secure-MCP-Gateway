@@ -223,7 +223,18 @@ type RouteInfo struct {
 	Refined bool `json:"refined,omitempty"`
 }
 
-func (s *Server) record(pattern string, roles []string, public bool) {
+// DescribeRoute returns the RouteInfo that registering pattern records:
+// public for HandlePublic, otherwise Handle (extra empty) or HandleRoles
+// with the extra roles, merged with the matrix. tools/openapi uses it to
+// describe the routes found in the sources without starting the Gateway.
+func DescribeRoute(pattern string, extra []string, public bool) RouteInfo {
+	if public {
+		return routeInfo(pattern, nil, true)
+	}
+	return routeInfo(pattern, mergeRoles(pattern, extra), false)
+}
+
+func routeInfo(pattern string, roles []string, public bool) RouteInfo {
 	method, path, ok := strings.Cut(pattern, " ")
 	if !ok {
 		method, path = "", pattern
@@ -233,6 +244,11 @@ func (s *Server) record(pattern string, roles []string, public bool) {
 		ri.Roles = append([]string{RoleAdministrator}, roles...)
 		_, ri.Refined = refine[pattern]
 	}
+	return ri
+}
+
+func (s *Server) record(pattern string, roles []string, public bool) {
+	ri := routeInfo(pattern, roles, public)
 	s.mu.Lock()
 	s.routes = append(s.routes, ri)
 	s.mu.Unlock()

@@ -15,7 +15,7 @@ The console serves the same functions in a browser at the control API address (d
 | Session Approver | `[[approver]]` | `smcp.toml` | Approve harness sign-ins in the browser; nothing on the control API |
 | Harness principal | `[[principal]]` with `[[client]]` registrations | `smcp.toml` | Open sessions and call the tools its template permits; no control-plane access |
 
-The roles follow SRS Appendix C. The Operator, Policy Author, Auditor and Researcher roles of Appendix C are not implemented; their functions are Administrator-only for now.
+The roles follow SRS Appendix C. Operator, Policy Author, Auditor and Researcher accounts are configured in `[[console.account]]` and sign in to the console and the control API; each route admits the roles of the Appendix C matrix (`internal/adminapi/rolematrix.go`, listed per operation in `GET /api/v1/openapi.json`). See [console.md](console.md).
 
 Add an Approver or Session Approver by hashing a password and adding the entry:
 

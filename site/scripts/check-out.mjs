@@ -87,7 +87,7 @@ for (const page of pages) {
 
 // 3. Status page structure.
 const status = fs.readFileSync(path.join(OUT, "status/index.html"), "utf8");
-for (const id of ["run", "implementation", "element-notes", "verification", "tests", "trends", "agents", "hostile"]) {
+for (const id of ["run", "implementation", "element-notes", "verification", "tests", "trends", "agents", "hostile", "console"]) {
   if (!status.includes(`id="${id}"`)) problems.push(`/status/: section #${id} is missing`);
 }
 const noteRows = (status.match(/<tr id="note-E-\d\d"/g) ?? []).length;

@@ -25,12 +25,11 @@ The latest CI figures (tests, coverage, requirement verification per element, re
 Known issues that affect first use:
 
 - An installation bootstrapped before the CA fix still has a local CA with IP name constraints, which the native Claude Code build and OpenCode (Bun runtime) reject. `smcpd` warns at startup; `smcpctl keys rotate ca` replaces the CA ([docs/agents-conformance.md](docs/agents-conformance.md)).
-- Sandboxed servers have no network: the Egress Broker does not yet attach to the rootless Podman launcher, so `network = "egress"` is refused in the Enforced profile.
 - The installer and Homebrew have no release to download until the first tag; build from source.
 
 ## Scope of v1
 
-- **Tools only.** The Gateway relays MCP tools. Resources and prompts are not supported; sampling, elicitation and roots are refused unless the MRTR Relay Profile is enabled.
+- **Tools only.** The Gateway relays MCP tools. Resources and prompts are not supported; sampling, elicitation and roots requests from servers are refused (`-32601`, or `-31010` for an `InputRequiredResult`), because the MRTR Relay Profile is not implemented.
 - **Local backends only.** Every backend is a local MCP server packaged and signed by the operator (`smcpctl package`). Remote (hosted) MCP servers cannot be used as backends in v1.
 - **Not mediated.** An agent's built-in shell, file, browser and connector tools do not use MCP and bypass the Gateway. See [docs/security-limitations.md](docs/security-limitations.md).
 
@@ -104,7 +103,7 @@ The confidential client this needs, approvals, emergency stop and journal verifi
 | [`FloorPlan.md`](FloorPlan.md) | What every path in the repository is for |
 | [`CHANGELOG.md`](CHANGELOG.md) | Baseline and implementation history with the reason for each change |
 
-The [project site](https://secure-mcp-gateway-pearl.vercel.app) renders the specification, the element and requirement status, the flows and every document under `docs/`.
+The [project site](https://secure-mcp-gateway-pearl.vercel.app) renders the specification, the element and requirement status, the console browser results, the real-agent results with per-agent notes, the control API reference generated from the Go sources, release verification steps, the flows and every document under `docs/`.
 
 The management console is served by `smcpd` on the admin listener (`https://127.0.0.1:8444`). Each Appendix C role signs in with its own account (Administrator, Operator, Policy Author, Auditor, Researcher, Approver, Session Approver) and sees only the views and actions its role allows; `GET /api/v1/openapi.json` describes every control API route ([docs/console.md](docs/console.md)).
 

@@ -324,7 +324,7 @@ Tool-call reason codes added: `APPROVAL_REQUIRED` (existing code, now also from 
 ## Limits of this release
 
 - Instrumented elements other than the edge's evidence events and the two probes do not yet emit observables (FR-10.1); per-stage, per-rule and per-filter spans with CPU time (FR-10.2) are not recorded.
-- The configuration table is the only Observation Policy; observation policies published through E-05, per-band escalation parameter sets, first-N-per-session capture, and the overhead budget are not implemented.
+- Observation Policies, Audit Profiles, Anomaly Response Policies and the memory budget are published as numbered revisions (`internal/obspolicy`, console G-03, G-04, G-06, G-08) and replace the `[observation]` settings at the next start of smcpd, not at once; they are not part of the signed policy document of E-05. Per-band escalation parameter sets, first-N-per-session capture and the overhead budget are not implemented.
 - The scorer uses one snapshot for all scopes; uncharacterized contexts are always treated as normal.
 - The Researcher reads aggregates, not raw records: pseudonymized S2 fields in record listings are not implemented, so the raw record route is closed to that role.
 - Storage tiering, quotas and the memory manager (E-28) are not implemented beyond retention and the DuckDB memory limit.

@@ -56,6 +56,7 @@ Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level p
 | `internal/hostile` | Hostile fixture catalog and server, and the suite (build tag `hostile`) that runs the Gateway against every Appendix L row and writes `build/hostile.{md,json}` | FR-19.1, FR-19.2; `make hostile` and the CI job `hostile` |
 | `console/` | Management console (E-24): React, TypeScript and Vite from hand-built components (`src/`), Playwright acceptance tests (`e2e/`), committed build `dist/` embedded into `smcpd` by `embed.go` | `make console` rebuilds `dist/`; `make console-e2e` runs Playwright |
 | `tools/reqreport/` | Reads `go test -json` output and the coverage profile and writes `build/reqreport.{json,md}` and `build/status.json` | FR-12.10; run by `make status` and CI |
+| `tools/openapi/` | Writes `site/data/openapi.json`, the control API's OpenAPI document with the roles of each route, from `internal/openapi` and the route registrations in the Go sources; its test fails when the committed file is stale | FR-8.1; `make openapi`, and the regenerate workflow on pull requests |
 | `spikes/` | Experiments that retire SRS §3.3 stack risks; each has its own `go.mod` and a `README.md` recording the result | Evidence for design decisions; not part of the Gateway build |
 
 ## Packaging and scripts
@@ -83,14 +84,14 @@ Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level p
 | `docs/operations/` | Health, logs, metrics, reload, keys, backup, upgrade and uninstall | Operations part of the operator guide |
 | `docs/runbooks/` | Emergency stop, revocation, policy rollback, key compromise, backup and restore, key rotation, upgrade rollback | FR-18.8 |
 | `docs/flows/` | Mermaid sequence diagrams of eleven flows (tool call, sign-in, approval hold, packaging, enforced sandbox launch, secret delivery, egress, remote access, cloud agent, emergency stop, journal verification), each with the current implementation's differences | Rendered by the site's Flows chapter |
-| `docs/verification/` | Verification record format | FR-19.4; no records yet |
+| `docs/verification/` | Verification record format, inspection records counted by `tools/reqreport`, and the gap list | FR-19.4 |
 | `docs/schemas/manifest.schema.json`, `docs/parameters.json` (with `parameters.go`), `docs/status/elements.json` | Manifest schema, Parameter Catalog (embedded in the binaries), element implementation state | Data files checked by `gen.py` |
 
 ## Site and reference material
 
 | Path | Contents | Access / purpose |
 |---|---|---|
-| `site/` | Static Next.js website (https://secure-mcp-gateway-pearl.vercel.app): specification, element and requirement status, flows, interfaces, clients and every document. Parses `ArchitectureV2.md`, `srs_build/req*.txt`, `MCP_Gateway_Security_SRS.md`, `docs/flows/`, every Markdown file under `docs/` (ordered by `docs/README.md`) and the root documents listed in `site/src/lib/content.ts` at build time; reads `status.json` and `history.json` from the `site-data` branch (falling back to `site/data/*.sample.json`). `test/` holds unit tests, `scripts/check-out.mjs` the page and link check of the export | `make site`; redeployed after document changes |
+| `site/` | Static Next.js website (https://secure-mcp-gateway-pearl.vercel.app): specification, element and requirement status, console browser results, flows, interfaces, real-agent results with per-agent notes (`docs/clients/matrix.json`), the control API reference (`site/data/openapi.json`), releases and their verification, and every document. Parses `ArchitectureV2.md`, `srs_build/req*.txt`, `MCP_Gateway_Security_SRS.md`, `docs/flows/`, every Markdown file under `docs/` (ordered by `docs/README.md`) and the root documents listed in `site/src/lib/content.ts` at build time; reads `status.json` and `history.json` from the `site-data` branch (falling back to `site/data/*.sample.json`) and the release list from the GitHub API. `test/` holds unit tests, `scripts/check-out.mjs` the page and link check of the export | `make site`; redeployed after document changes |
 | `mcp-spec/` | Unmodified copy of the MCP specification release 2026-07-28 (MDX, `schema.ts`/`schema.json`, examples, upstream license); `README.md` records source, commit and checksum | Read-only reference; add a new version subdirectory to update |
 | `versions/` | Immutable `MCP_Gateway_SRS_V1.md` snapshot and its validation evidence | Released snapshots only |
 | `archive/` | Original `Secure-MCP-Gateway-Architecture.md` and pre-split `architecture-pre-srs-v1-2026-10-04.md` | Historical reference, preserved byte for byte |

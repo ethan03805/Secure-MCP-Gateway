@@ -1,6 +1,6 @@
 # Gemini CLI
 
-Status: configuration generated and unit-tested; not run at a pinned version (matrix `not-run`). Labelled `gateway-available`.
+Status: configuration generated and unit-tested; not run at a pinned version (matrix `not-run`). The real-agent suite installs Gemini CLI in CI (0.64.0 on 2026-10-16) and records it `not-run`, because it needs `GEMINI_API_KEY` (the Vercel AI Gateway that serves the other clients' models does not serve the Gemini API) and no such key is configured. Labelled `gateway-available`.
 
 ## Connect
 

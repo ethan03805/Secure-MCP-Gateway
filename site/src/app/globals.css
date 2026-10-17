@@ -1239,6 +1239,64 @@ table.notes .note-text {
     --rail: 4.5rem;
   }
 }
+/* Control API, Install and Agents pages ------------------------------- */
+table th .pkgs,
+table td .pkgs {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+table.api .api-op {
+  white-space: nowrap;
+  font-weight: 400;
+}
+table.api .api-op code {
+  background: none;
+  padding: 0;
+}
+.api-method {
+  display: inline-block;
+  min-width: 3.2em;
+  font-family: var(--font-mono-stack);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.api-params {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+.api-public {
+  color: var(--ochre);
+}
+.api-refined {
+  color: var(--ink-3);
+}
+pre.cmd {
+  white-space: pre;
+  font-size: 0.95rem;
+}
+ol.steps {
+  padding-left: 1.4rem;
+}
+ol.steps > li {
+  margin-bottom: 0.8rem;
+}
+section.agent {
+  border-top: 1px solid var(--rule);
+  padding-top: 0.6rem;
+  margin-top: 1.4rem;
+}
+section.agent h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
 @media (max-width: 980px) {
   .sheet {
     padding-left: 0;
