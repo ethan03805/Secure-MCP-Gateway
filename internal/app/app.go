@@ -259,7 +259,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}); ok {
 		fps := a.Inspector.Fingerprints()
 		s.ShareFingerprints(func(ref string, version int, value []byte) {
-			fps.Register(fmt.Sprintf("%s@%d", ref, version), string(value))
+			fps.RegisterBytes(fmt.Sprintf("%s@%d", ref, version), value) // no string copy (SR-2.13-2)
 		})
 	}
 	// The secret broker's mandatory filters (E-20) join the chain after the
@@ -282,6 +282,15 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 	for alias, s := range a.Registry.Servers() {
 		o.Log.Info("server enabled", "alias", alias, "revision", s.Revision, "era", s.Era, "tools", len(s.Tools), "verified", s.Verified)
+		if s.Artifact != nil && s.Artifact.Digest != "" {
+			// SR-3.6-1: the content address of a command-configured
+			// server's files, which every relaunch must match.
+			if err = a.Evidence.Commit(audit.Event{Class: "server", Origin: "E-15", Outcome: "artifact_recorded", ServerRevision: s.Revision,
+				PolicyStatus: "not_evaluated", Detail: map[string]any{"alias": alias, "digest": s.Artifact.Digest, "files": s.Artifact.Files,
+					"pinned": s.Artifact.Pinned}}); err != nil {
+				return a, fmt.Errorf("journal: %w", err)
+			}
+		}
 	}
 	// FR-1.49: a revision whose tools cannot be presented is not enabled;
 	// the rest of the Gateway runs.

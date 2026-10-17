@@ -215,10 +215,19 @@ jobs:
           SMCP_ITEST_DIR: ${{ runner.temp }}/itest
           SMCP_REQUIRE_PREREQS: "1"
         run: scripts/ci-integration.sh
-      - name: Egress broker in a network namespace (direct egress blocked, brokered egress allowed)
+      - name: Egress broker and remote host rules in network namespaces (direct egress blocked, brokered egress allowed; SR-4.14-1)
         env:
           SMCP_ITEST_DIR: ${{ runner.temp }}/egress
+          SMCP_TEST_JSON: build/linux-integration-test.json
         run: scripts/ci-egress-netns.sh
+      - name: Upload the namespace test results (requirement claims)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-integration-results
+          path: build/linux-integration-test.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload the smcpd log
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -656,6 +665,11 @@ jobs:
         with:
           name: offline-results
           path: build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: linux-integration-results
+          path: build
       - name: Merge the hostile fixture, console acceptance and graph results and their requirement claims (FR-19.2, FR-8.34)
         run: |
           cp build/go-test.json build/all-test.json
@@ -683,7 +697,8 @@ jobs:
           fi
           # The perf measurements, the Enforced-profile acceptance run and the
           # offline acceptance run (FR-11, FR-19.3, FR-12.2).
-          for f in perf-test acceptance-enforced-test offline-test; do
+          # The root-only namespace test of the remote host rules (SR-4.14-1).
+          for f in perf-test acceptance-enforced-test offline-test linux-integration-test; do
             if [ -s "build/$f.json" ]; then
               cat "build/$f.json" >> build/all-test.json
               merged=1

@@ -83,12 +83,15 @@ func startRegistry(t *testing.T, in *Inspector) *backend.Registry {
 // TestImportMetadataScan covers SR-5.9-2 with the Appendix L fixtures
 // HF-01, HF-02, HF-10 to HF-12 and HF-15: each affected tool is withheld
 // from the registry with a metadata_blocked event naming the rule and
-// rule-set version, and the clean tool of the same server is registered.
-// The claim is partial: the suspended state is held by the inspector
-// rather than by an E-14 registry record, and E-13 signed-manifest import
-// does not exist yet (the scan wraps the live list).
+// rule-set version, the Local Server Registry records each as a suspended
+// tool of the server revision (shown by GET /api/v1/servers/{alias} and
+// smcpctl servers show), and the clean tool of the same server is
+// registered. The scan wraps whatever ManifestSource the Gateway uses (the
+// signed manifests of E-13 in smcpd, app.startInspection), so the same
+// path runs for a signed package import.
 func TestImportMetadataScan(t *testing.T) {
-	reqtest.Partial(t, "SR-5.9-2", "SR-1.8-2", "SR-1.8-3")
+	reqtest.Verifies(t, "SR-5.9-2")
+	reqtest.Partial(t, "SR-1.8-2", "SR-1.8-3")
 	rec := &memRec{}
 	in := newTestInspector(t, Options{Evidence: rec})
 	reg := startRegistry(t, in)
@@ -125,6 +128,19 @@ func TestImportMetadataScan(t *testing.T) {
 	}
 	if got := len(in.Suspended()); got != len(want) {
 		t.Fatalf("suspended %d tools, want %d", got, len(want))
+	}
+	// The registry holds them as suspended tools of the revision.
+	evil := reg.Servers()["evil"]
+	if evil == nil || len(evil.SuspendedTools) != len(want) {
+		t.Fatalf("registry suspended tools: %+v", evil)
+	}
+	for _, st := range evil.SuspendedTools {
+		if _, ok := want[st.Name]; !ok || st.ReasonCode != ReasonMetadataBlocked || st.Stage != "import" || len(st.Findings) == 0 {
+			t.Fatalf("registry record %+v", st)
+		}
+	}
+	if good := reg.Servers()["good"]; good == nil || len(good.SuspendedTools) != 0 {
+		t.Fatalf("clean server has suspended tools: %+v", good)
 	}
 	// The poisoned property description is located.
 	for _, s := range in.Suspended() {

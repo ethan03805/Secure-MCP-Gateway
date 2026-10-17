@@ -34,24 +34,25 @@ import (
 //   - restoring a backup taken before a principal was suspended re-applies
 //     the suspension from the current journal before service starts
 //     (SR-7.8-1 as its verification states);
-//   - a policy rollback leaves the suspension and a credential revocation
-//     in force (SR-7.9-1);
+//   - with the reference server's package revision suspended (the
+//     console's Suspend action), a policy rollback leaves the principal
+//     suspension, a credential revocation and the server suspension in
+//     force (SR-7.9-1);
 //   - an upgrade to a release whose smcpd never becomes healthy restores
 //     the previous binaries, which run with the journal intact, and the
 //     journal records upgrade_rolled_back (FR-13.8, unhealthy case); the
-//     application rollback leaves the suspension and the credential
-//     revocation in force (SR-7.9-1).
+//     application rollback leaves the principal suspension, the credential
+//     revocation and the server suspension in force (SR-7.9-1).
 //
 // Partial: SR-7.7-1 does not open the archive to list each component;
-// SR-7.8-1 does not rebuild a graph mirror (none configured); SR-7.9-1
-// does not suspend a server revision here (internal/e2e
-// TestPolicyRollbackKeepsRevocations covers it for a policy rollback);
-// FR-13.8 does not inject a failing migration.
+// SR-7.8-1 does not rebuild a graph mirror (none configured); FR-13.8
+// does not inject a failing migration.
 func TestAT19BackupRestoreRollback(t *testing.T) {
 	g := newGateway(t, options{limits: "principal_calls_per_minute = 1000000"})
 	g.start()
 	g.scenario("AT-19")
-	reqtest.Partial(t, "SR-7.7-1", "SR-7.8-1", "SR-7.9-1", "FR-13.8")
+	reqtest.Verifies(t, "SR-7.9-1")
+	reqtest.Partial(t, "SR-7.7-1", "SR-7.8-1", "FR-13.8")
 	pass := writeFile(t, t.TempDir(), "backup.pw", "acceptance backup passphrase\n", 0o600)
 
 	// Backup under load.
@@ -161,19 +162,90 @@ func TestAT19BackupRestoreRollback(t *testing.T) {
 	if code, out := g.api("POST", "/api/v1/credentials/"+revoked+"/revoke", map[string]any{"reason": "AT-19"}); code != 200 {
 		t.Fatalf("revoke: %d %v", code, out)
 	}
-	// SR-7.9-1: roll the policy back; the suspension and the revocation
-	// stay.
+	// SR-7.9-1: suspend the reference server's revision. From here on the
+	// principal check must not rely on a call (no tool is served), so it
+	// requires the sign-in itself to be refused.
+	id, rev := g.refRevision()
+	if code, out := g.api("POST", "/api/v1/packages/"+id+"/"+rev+"/disable", map[string]any{"reason": "AT-19"}); code != 200 {
+		t.Fatalf("suspend server revision: %d %v", code, out)
+	}
+	g.expectServerSuspended(id, rev, "after the suspension")
+	// Roll the policy back; the suspensions and the revocation stay.
 	g.mustCtl("policy", "rollback", "r1", "--as", "at19-rollback")
-	g.expectSuspended("after a policy rollback")
+	g.expectSignInRefused("after a policy rollback")
 	g.expectRevoked(revoked, "after a policy rollback")
+	g.expectServerSuspended(id, rev, "after a policy rollback")
 	g.stop()
 
 	// FR-13.8: an upgrade whose new smcpd never becomes healthy rolls back;
-	// SR-7.9-1: the previous version keeps both.
+	// SR-7.9-1: the previous version keeps all three.
 	upgradeRollback(t, g, pass, func() {
-		g.expectSuspended("after an application rollback")
+		g.expectSignInRefused("after an application rollback")
 		g.expectRevoked(revoked, "after an application rollback")
+		g.expectServerSuspended(id, rev, "after an application rollback")
 	})
+}
+
+// refRevision returns the package ID and revision the reference server
+// (alias ref) runs.
+func (g *gateway) refRevision() (string, string) {
+	g.t.Helper()
+	code, out := g.api("GET", "/api/v1/packages", nil)
+	servers, _ := out["servers"].([]any)
+	for _, s := range servers {
+		m, _ := s.(map[string]any)
+		if m["alias"] == "ref" {
+			id, _ := m["package"].(string)
+			rev, _ := m["revision"].(string)
+			if id != "" && rev != "" {
+				return id, rev
+			}
+		}
+	}
+	g.t.Fatalf("no package binding for ref: %d %v", code, out)
+	return "", ""
+}
+
+// expectServerSuspended requires that the reference server does not run
+// and that its package revision is still out of the enabled state.
+func (g *gateway) expectServerSuspended(id, rev, when string) {
+	g.t.Helper()
+	code, out := g.api("GET", "/api/v1/servers", nil)
+	servers, _ := out["servers"].([]any)
+	found := false
+	for _, s := range servers {
+		m, _ := s.(map[string]any)
+		if m["alias"] == "ref" {
+			found = true
+			if m["state"] == "running" || m["tool_count"] != float64(0) {
+				g.t.Fatalf("%s: the suspended server runs: %v", when, m)
+			}
+		}
+	}
+	if code != 200 || !found {
+		g.t.Fatalf("%s: servers: %d %v", when, code, out)
+	}
+	code, out = g.api("GET", "/api/v1/packages", nil)
+	revs, _ := out["revisions"].([]any)
+	for _, r := range revs {
+		m, _ := r.(map[string]any)
+		if m["server_id"] == id && m["revision"] == rev {
+			if m["state"] != "verified-disabled" {
+				g.t.Fatalf("%s: revision %s@%s is %v", when, id, rev, m["state"])
+			}
+			return
+		}
+	}
+	g.t.Fatalf("%s: revision %s@%s not listed: %d %v", when, id, rev, code, out)
+}
+
+// expectSignInRefused requires that the suspended principal
+// claude-code-local cannot sign in at all.
+func (g *gateway) expectSignInRefused(when string) {
+	g.t.Helper()
+	if _, err := g.signIn("", approverPassword); err == nil {
+		g.t.Fatalf("%s: the suspended principal signed in", when)
+	}
 }
 
 // expectRevoked requires that the control API lists the client credential

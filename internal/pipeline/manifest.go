@@ -22,6 +22,19 @@ type ToolSet struct {
 	Revision string
 	Verified bool
 	Source   string
+	// Withheld lists the tools of the revision that a source left out of
+	// Tools because a check blocked them (the import-time metadata scan,
+	// SR-5.9-2). The Local Server Registry records them as suspended.
+	Withheld []WithheldTool
+}
+
+// WithheldTool is a tool of a server revision registered as suspended
+// instead of presented.
+type WithheldTool struct {
+	Name       string    `json:"name"`
+	ReasonCode string    `json:"reason_code"`
+	Stage      string    `json:"stage"` // "import"
+	Findings   []Finding `json:"findings"`
 }
 
 // LiveLister returns the server's complete live tool list (FR-5.21).

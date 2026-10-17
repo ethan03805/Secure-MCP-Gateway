@@ -55,6 +55,7 @@ Control API (running Gateway; backup and keys also work offline):
   observe          observation status, anomalies, baselines, campaigns, exports
   admin redeem     set the administrator password with the one-use bootstrap token
   egress           Egress Broker status, grants and recent connections (smcpctl egress -h)
+  servers          Local Server Registry: list, show <alias>, suspended-tools
   runtime          sandboxed server instances and enforced-profile checks (smcpctl runtime help)
   secrets          secret vault: init (offline), list, show, set, rotate, rm, impact, resume, reload
   remote           Remote Access Profile: enable, disable, status, check (tunnels)
@@ -147,6 +148,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = runtimeCmd(args[1:], stdout)
 	case args[0] == "secrets":
 		err = secretsCmd(args[1:], stdout)
+	case args[0] == "servers":
+		err = serversCmd(args[1:], stdout)
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":
 		fmt.Fprint(stdout, usage)
 		return 0

@@ -73,6 +73,7 @@ func subcommands() map[string]string {
 		"remote":    remoteUsage,
 		"runtime":   runtimeUsage,
 		"secrets":   secretsUsage,
+		"servers":   serversUsage,
 		"package":   packageUsage,
 		"trust":     trustUsage,
 		"keys":      "status rotate",

@@ -51,7 +51,7 @@ func TestScanWorkbench(t *testing.T) {
 		t.Fatalf("clean: %+v", rep)
 	}
 
-	for _, bad := range []ScanRequest{{Stage: "metadata"}, {Stage: "request", Filters: []string{IDPIIDetect}}} {
+	for _, bad := range []ScanRequest{{Stage: "metadata"}, {Stage: "request", Filters: []string{IDDelimitUntrusted}}} {
 		if _, err := Scan(ctx, o, bad); err == nil {
 			t.Fatalf("accepted %+v", bad)
 		}

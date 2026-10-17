@@ -5801,12 +5801,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-2.13-2 |
 | Parent ID | SEC-2.13 — Encrypted secrets (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Secret Broker (E-20) **SHALL** hold decrypted secret values only in memory for the duration of a delivery and **SHALL** overwrite the buffers after use. |
+| Statement | The Secret Broker (E-20) **SHALL** hold decrypted secret values only in memory, **SHALL** overwrite every byte buffer it allocates for a decrypted value or for an encoding of one (the decrypted vault value after each delivery, the encoded forms built for leak fingerprints, the S1 header value when its grant ends), and **SHALL** make no copy of a value that cannot be overwritten other than the S4 environment string it hands to the launcher. |
 | Allocation | Elements: E-20 Secret Broker; Functions: F-50 |
 | Verification Method | Inspection |
-| Verification Statement | Review the delivery code path and a memory snapshot after delivery. |
-| Source | SEC 2.13 |
-| Rationale | Minimizes plaintext exposure. |
+| Verification Statement | Review the delivery code path for byte buffers holding a decrypted value or its encodings that are not overwritten after use, and for immutable copies other than the S4 environment string. |
+| Source | SEC 2.13; OWNER (release 1.0 narrowed to what the Go runtime allows) |
+| Rationale | Minimizes plaintext exposure. Narrowed in release 1.0 to what Go can guarantee: Go strings are immutable, so the S4 environment entry (`exec.Cmd.Env` takes strings, and the runtime copies it again when it starts the process), the header the Egress Broker (E-18) sets on each outbound S1 request (`net/http` header values are strings) and the age library's internal decryption buffers cannot be overwritten, and a memory snapshot cannot show that no stale copy exists because the garbage collector does not clear freed memory. The broker's own byte buffers are overwritten; Security Limitations lists the remaining copies. |
 
 #### SR-2.13-3 — Vault isolation
 
@@ -7264,6 +7264,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `ARGUMENTS_TOO_DEEP` | `-31001` | The arguments nest deeper than the `size-limit` depth bound | The request is nested too deeply. Simplify the arguments. |
 | `UNICODE_CONTROL` | `-31001` | An argument contains bidirectional, invisible or tag characters (`unicode-control`) | The request contains hidden or direction-changing characters. Remove them and try again. |
 | `SECRET_IN_ARGUMENTS` | `-31001` | An argument contains a known credential format or a registered secret (`secret-fingerprint`, SR-5.8-1) | The request appears to contain a password, key or token, so it was not sent. Remove the secret and try again. |
+| `DATA_CLASS_IN_ARGUMENTS` | `-31001` | An argument matches a data-class rule whose request action is block (`pii-detect` named by the decision, SR-5.8-1) | The request contains personal or classified data that this tool may not receive, so it was not sent. Remove it and try again. |
 | `PATH_INVALID` | `-31001` | A path argument uses an encoded separator, NUL, backslash traversal, home-relative or remote file form (`path-canonicalize`) | A file path in the request is not allowed in this form. Use a plain path. |
 | `PATH_OUTSIDE_ROOTS` | `-31001` | A path argument resolves outside the granted roots (`path-canonicalize`, SR-1.8-4) | A file path in the request is outside the folders this tool may use. |
 | `URL_INVALID` | `-31001` | A URL argument cannot be parsed or canonicalized (`url-canonicalize`) | A web address in the request is not valid. |
