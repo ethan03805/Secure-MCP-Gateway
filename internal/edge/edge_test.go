@@ -140,6 +140,10 @@ type harnessOpts struct {
 	manifests pipeline.ManifestSource
 	// toml is appended to the configuration (uds_test.go).
 	toml string
+	// evidence replaces the in-memory recorder as the Gateway's evidence
+	// (crash_test.go: a real journal on a fault-injecting file layer).
+	evidence    audit.Recorder
+	evidenceErr func() error
 }
 
 // limitsTOML is the harness's [limits] body: the defaults below, with any
@@ -211,8 +215,13 @@ command = "/inproc/t"
 	h.store = session.NewStore(cfg, h.decider.Snapshot)
 	oauth := session.NewOAuth(cfg, h.store, h.rec, authguard.New(authguard.Config{}))
 	prof, _ := profile.Resolve("auto", "in-process", false, profile.Host{OS: "darwin", Arch: "arm64"})
-	h.gw, err = New(Deps{Config: cfg, Store: h.store, OAuth: oauth, Decider: h.decider, Registry: reg, Evidence: h.rec,
-		EvidenceErr: func() error { h.evMu.Lock(); defer h.evMu.Unlock(); return h.evErr }, Log: diag.Discard(), Profile: prof,
+	var evidence audit.Recorder = h.rec
+	evidenceErr := func() error { h.evMu.Lock(); defer h.evMu.Unlock(); return h.evErr }
+	if o.evidence != nil {
+		evidence, evidenceErr = o.evidence, o.evidenceErr
+	}
+	h.gw, err = New(Deps{Config: cfg, Store: h.store, OAuth: oauth, Decider: h.decider, Registry: reg, Evidence: evidence,
+		EvidenceErr: evidenceErr, Log: diag.Discard(), Profile: prof,
 		Approver: o.approver, Filters: o.filters, Capabilities: h.caps, ConsoleURL: "https://127.0.0.1:8444", Screen: o.screen,
 		HealthGate: o.healthGate})
 	if err != nil {
@@ -274,9 +283,8 @@ func callErr(t *testing.T, cs *mcp.ClientSession, name string, args map[string]a
 
 func TestIntentCommittedBeforeCapability(t *testing.T) {
 	reqtest.Verifies(t, "FR-4.13")
-	// SR-6.2-1 asks for one database transaction with the graph links and
-	// export outbox; the journal commit is the owner-decided authority, so
-	// the claim is partial until E-26 exists.
+	// SR-6.2-1's kill points with a fault-injecting file layer are in
+	// TestIntentCrashConsistency (crash_test.go).
 	reqtest.Partial(t, "SR-6.2-1")
 	reqtest.Scenario(t, reqtest.Standalone, "AT-12") // journal flush fault before launch
 	h := newHarness(t, harnessOpts{})

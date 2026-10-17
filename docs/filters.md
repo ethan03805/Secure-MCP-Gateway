@@ -36,7 +36,7 @@ Filters run in the order shown. A mandatory filter runs on every call. Any other
 {"id": "web-read", "server": "web", "tools": ["fetch"], "filters": ["pii-detect", "delimit-untrusted"]}
 ```
 
-The same ID may name a request and a response filter (`size-limit`, `secret-fingerprint`, `unicode-control`); naming it in `filters` selects both.
+The same ID may name a request and a response filter (`size-limit`, `secret-fingerprint`, `unicode-control`, `pii-detect`); naming it in `filters` selects both.
 
 ### Request filters (FR-4.5)
 
@@ -46,6 +46,7 @@ The same ID may name a request and a response filter (`size-limit`, `secret-fing
 | 100 | `schema-validate` | always mandatory | Validates the arguments against the tool's input schema | `SCHEMA_INVALID` (`-32602`) |
 | 110 | `unicode-control` | mandatory | Applies the `unicode-control` rule set to every argument string | `UNICODE_CONTROL` |
 | 120 | `secret-fingerprint` | mandatory | Applies the `secret-formats` rule set and the registered secret fingerprints to every argument string (SR-5.8-1) | `SECRET_IN_ARGUMENTS` |
+| 125 | `pii-detect` | by obligation | Applies the `pii` data-class rule set to every argument string with each rule's request action (SR-5.8-1); the built-in rules tag | `DATA_CLASS_IN_ARGUMENTS` (a rule with request action `block`) |
 | 130 | `path-canonicalize` | mandatory | Canonicalizes path-typed arguments and checks them against the granted roots (SR-1.8-4) | `PATH_INVALID`, `PATH_OUTSIDE_ROOTS` |
 | 140 | `url-canonicalize` | mandatory | Canonicalizes URL-typed arguments and checks scheme, host and address (SR-1.8-5) | `URL_INVALID`, `URL_NOT_ALLOWED`, `URL_PRIVATE_ADDRESS` |
 | 150 | `injection-detect` | mandatory | Applies the `prompt-injection` rule set to every argument string; tag only | never blocks |

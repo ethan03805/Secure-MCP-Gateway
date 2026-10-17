@@ -155,7 +155,8 @@ Response 200:
 {"servers": [
   {"alias": "ref", "state": "running", "revision": "live-9ecfde7b49bac9b2", "era": "2026-07-28", "verified": false, "manifest_source": "live",
    "tool_count": 4, "command": "/usr/local/bin/smcp-refserver", "args": ["--root", "/home/me/smcp/sandbox"],
-   "env_keys": [], "secret_slots": [], "risk_classes": [], "launcher": "subprocess", "confined": false, "oversized_frames": 0}
+   "env_keys": [], "secret_slots": [], "risk_classes": [], "launcher": "subprocess", "confined": false, "oversized_frames": 0,
+   "suspended_tools": []}
 ]}
 ```
 
@@ -168,6 +169,7 @@ Response 200:
 | `env_keys`, `secret_slots` | Names of the `env` and `secret_env` entries; values are never returned |
 | `launcher`, `confined` | Launcher name and whether it confines the instance |
 | `oversized_frames` | Messages from the server dropped for exceeding the result bound |
+| `suspended_tools` | Tools of the revision that the Local Server Registry holds as suspended because the import-time metadata scan blocked them (SR-5.9-2): `name`, `reason_code` (`METADATA_BLOCKED`), `stage` (`import`) and the blocking `findings` (rule set, rule, rule-set version, location). They are never presented or callable. `smcpctl servers suspended-tools` lists them for every server. |
 
 ### GET /api/v1/servers/{alias}
 

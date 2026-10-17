@@ -177,6 +177,17 @@ func TestBootstrapAndControlCommands(t *testing.T) {
 	if out := mustCtl(t, "approvals", "--config", cfgPath); !strings.Contains(out, "no approvals") {
 		t.Fatal(out)
 	}
+	// The Local Server Registry: the reference server runs and the
+	// metadata scan suspended none of its tools (SR-5.9-2 listing).
+	if out := mustCtl(t, "servers", "list", "--config", cfgPath); !strings.Contains(out, `"alias": "ref"`) || !strings.Contains(out, `"suspended_tools": []`) {
+		t.Fatalf("servers list: %s", out)
+	}
+	if out := mustCtl(t, "servers", "show", "ref", "--config", cfgPath); !strings.Contains(out, `"public_name": "ref_echo"`) {
+		t.Fatalf("servers show: %s", out)
+	}
+	if out := mustCtl(t, "servers", "suspended-tools", "--config", cfgPath); !strings.Contains(out, "0 suspended tools") {
+		t.Fatalf("servers suspended-tools: %s", out)
+	}
 	stopDaemon(t, d)
 	out = mustCtl(t, "journal", "verify", "--config", cfgPath, "--strict")
 	if !strings.Contains(out, "journal OK") || !strings.Contains(out, "anchored at segment") {

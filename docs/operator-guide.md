@@ -98,6 +98,10 @@ smcpctl package list
 
 Then reference it from a `[[server]]` entry (`package = "<server id>"`) and restart `smcpd`; a revision enabled while the Gateway runs is launched at the next start. Suspend or withdraw a revision with `smcpctl package disable|retire <id>@<rev>`, or with a signed revocation (`smcpctl package revoke <id>@<rev> --key <file>`), which tears the instance down at once. The Gateway itself suspends a revision whose live tool list drifts from its manifest or whose artifact changed. Reference: [packaging-guide.md](packaging-guide.md); runbook: [runbooks/revocation.md](runbooks/revocation.md).
 
+A `[[server]]` entry may name a `command` instead of a package (unless `[packages] require_signed` is set). The command must be an absolute path and may not be a package runner or installer (`npx`, `uvx`, `pip`, ...; SR-3.6-1). At its first launch the Gateway records the SHA-256 of the command file and of every argument that names a file by absolute path (`artifact_recorded` in the journal), and refuses a relaunch after any of them changed, suspending the server instead. `command_sha256 = "<hex>"` pins the command file in the configuration, so a different file is refused even at the first launch. Modules an interpreter loads from its search path are not covered; package such servers.
+
+`smcpctl servers list|show <alias>` shows each server's registry state, and `smcpctl servers suspended-tools` lists the tools the import-time metadata scan suspended, with the blocking rules (SR-5.9-2).
+
 On the Enforced profile each instance runs in a rootless Podman sandbox: `smcpctl runtime status|instances|show <id>|kill <id>` ([sandbox.md](sandbox.md)). Network access goes only through the Egress Broker's grants: `smcpctl egress status|grants|connections` ([egress.md](egress.md)).
 
 ## Secrets

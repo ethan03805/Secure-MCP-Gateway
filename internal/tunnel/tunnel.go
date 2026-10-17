@@ -38,6 +38,10 @@ type State struct {
 	Port      int    `json:"port,omitempty"` // Funnel public port
 	PID       int    `json:"pid,omitempty"`  // cloudflared process
 	Target    string `json:"target"`
+	// HostRules is set when enable installed the nftables table
+	// HostRulesTable for HostRulePorts (SR-4.14-1); disable removes it.
+	HostRules     bool  `json:"host_rules,omitempty"`
+	HostRulePorts []int `json:"host_rule_ports,omitempty"`
 }
 
 // LoadState reads the tunnel state; a missing file is the zero State.

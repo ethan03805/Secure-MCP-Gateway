@@ -116,6 +116,17 @@ type Options struct {
 	// AnchorPath is the signed anchor file; default "<dir>.anchor" next to
 	// the journal directory.
 	AnchorPath string
+	// OpenSegment creates a new segment file (O_CREATE|O_EXCL, mode 0600).
+	// Nil uses the operating system; crash-consistency tests substitute a
+	// fault-injecting file layer (SR-6.2-1).
+	OpenSegment func(path string) (SegmentFile, error)
+}
+
+// SegmentFile is the open segment the journal appends to.
+type SegmentFile interface {
+	io.Writer
+	Sync() error
+	Close() error
 }
 
 func (o *Options) defaults(dir string) {
@@ -130,6 +141,11 @@ func (o *Options) defaults(dir string) {
 	}
 	if o.AnchorPath == "" {
 		o.AnchorPath = DefaultAnchorPath(dir)
+	}
+	if o.OpenSegment == nil {
+		o.OpenSegment = func(path string) (SegmentFile, error) {
+			return os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) //nolint:gosec // journal segment under the state directory
+		}
 	}
 }
 
@@ -156,7 +172,7 @@ type Journal struct {
 	fileMu    sync.RWMutex // read-held during fsync; write-held to close a segment file
 	syncMu    sync.Mutex   // serializes fsyncs so concurrent commits share one
 	seq       int          // number of the open segment
-	file      *os.File
+	file      SegmentFile
 	hasher    hash.Hash // running hash of the open segment's bytes so far
 	count     int       // events in the open segment
 	total     int64     // events in the whole journal
@@ -417,7 +433,7 @@ func segmentName(seq int) string { return fmt.Sprintf("segment-%06d.jsonl", seq)
 func (j *Journal) openSegment() error {
 	j.seq++
 	path := filepath.Join(j.dir, segmentName(j.seq))
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	f, err := j.opts.OpenSegment(path)
 	if err != nil {
 		return err
 	}

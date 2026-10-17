@@ -120,8 +120,8 @@ func TestRequestFilters(t *testing.T) {
 
 // TestSecretArgumentFilter is SR-5.8-1 for registered secrets: an argument
 // containing a registered secret's fragment is blocked before dispatch
-// (Appendix L HF-09). The effective data-class rules of SR-5.8-1 are not
-// built, so the claim is partial.
+// (Appendix L HF-09). The data-class half of SR-5.8-1 is in
+// TestOutboundArgumentFiltering.
 func TestSecretArgumentFilter(t *testing.T) {
 	reqtest.Partial(t, "SR-5.8-1", "FR-6.10")
 	in, f, _ := chain(t, Options{})
@@ -136,6 +136,69 @@ func TestSecretArgumentFilter(t *testing.T) {
 	}
 	if _, _, v := runReq(f, call, map[string]any{"q": "nothing to see"}); v != nil {
 		t.Fatalf("%+v", v)
+	}
+}
+
+// TestOutboundArgumentFiltering is SR-5.8-1: before dispatch the
+// secret-fingerprint filter blocks an argument that contains a registered
+// secret's fragment, at any nesting depth, and the effective data-class
+// rules (the pii rule set, selected by the call's pii-detect obligation)
+// are applied to every argument string with each rule's request action.
+// The built-in rules tag, so the call proceeds with findings; a rule-set
+// version whose rule blocks refuses the call with DATA_CLASS_IN_ARGUMENTS.
+// Without the obligation the data-class rules do not run.
+func TestOutboundArgumentFiltering(t *testing.T) {
+	reqtest.Verifies(t, "SR-5.8-1")
+	in, f, _ := chain(t, Options{})
+	secret := "s3cr3t-Value-0123456789-abcdef"
+	in.Fingerprints().Register("vault:db/password", secret)
+	nested := map[string]any{"type": "object", "properties": map[string]any{
+		"q":    map[string]any{"type": "string"},
+		"opts": map[string]any{"type": "object", "properties": map[string]any{"list": map[string]any{"type": "array", "items": map[string]any{"type": "string"}}}},
+	}}
+	for _, args := range []map[string]any{
+		{"q": "use " + secret[4:20]},
+		{"opts": map[string]any{"list": []any{"fine", "x" + secret[8:24] + "y"}}},
+	} {
+		if _, _, v := runReq(f, callWith(nested), args); v == nil || v.ReasonCode != ReasonSecretInArguments {
+			t.Fatalf("registered fragment in %v not blocked: %+v", args, v)
+		}
+	}
+
+	// Built-in data-class rules: tagged findings at every depth, the call
+	// is not blocked.
+	call := callWith(nested, IDPIIDetect)
+	if _, _, v := runReq(f, call, map[string]any{"q": "write to jane@example.com", "opts": map[string]any{"list": []any{"ok", "ssn 123-45-6789"}}}); v != nil {
+		t.Fatalf("tag-only data-class rules blocked: %+v", v)
+	}
+	run := ran(call, IDPIIDetect)
+	if run == nil || run.Stage != pipeline.StageRequest {
+		t.Fatalf("pii-detect did not run on the arguments: %+v", call.Inspection.Runs())
+	}
+	locs := map[string]bool{}
+	for _, fd := range run.Findings {
+		if fd.RuleSet != RuleSetPII || !fd.Tag {
+			t.Fatalf("finding %+v", fd)
+		}
+		locs[fd.Location] = true
+	}
+	if !locs["/q"] || !locs["/opts/list/1"] {
+		t.Fatalf("findings at %v", locs)
+	}
+	// Not named by the decision: the data-class rules do not run.
+	plain := callWith(nested)
+	runReq(f, plain, map[string]any{"q": "jane@example.com"})
+	if ran(plain, IDPIIDetect) != nil {
+		t.Fatal("pii-detect ran without the obligation")
+	}
+
+	// A rule-set version with a blocking data-class rule refuses the call.
+	dir := copyRules(t)
+	addVersion(t, dir, RuleSetPII, "2099.1.0", []*Rule{{ID: "project-code", Kind: "regex", Pattern: `\bPRJ-[0-9]{4}\b`, CaseSensitive: true, RequestAction: "block", ResponseAction: "redact"}})
+	_, g, _ := chain(t, Options{Config: config.Filters{RulesDir: dir, RuleVersions: map[string]string{RuleSetPII: "2099.1.0"}}})
+	_, _, v := runReq(g, callWith(nested, IDPIIDetect), map[string]any{"opts": map[string]any{"list": []any{"see PRJ-1234"}}})
+	if v == nil || v.ReasonCode != ReasonDataClass || strings.Contains(v.Finding, "PRJ-1234") {
+		t.Fatalf("blocking data-class rule: %+v", v)
 	}
 }
 

@@ -517,11 +517,11 @@ R: Encrypted at rest. Release 1.0 keeps the vault master key with the vault's ow
 
 @SR-2.13-2 | Plaintext lifetime
 P: SEC-2.13
-S: The Secret Broker (E-20) SHALL hold decrypted secret values only in memory for the duration of a delivery and SHALL overwrite the buffers after use.
+S: The Secret Broker (E-20) SHALL hold decrypted secret values only in memory, SHALL overwrite every byte buffer it allocates for a decrypted value or for an encoding of one (the decrypted vault value after each delivery, the encoded forms built for leak fingerprints, the S1 header value when its grant ends), and SHALL make no copy of a value that cannot be overwritten other than the S4 environment string it hands to the launcher.
 A: E-20; F-50
-V: Inspection | Review the delivery code path and a memory snapshot after delivery.
-SRC: SEC 2.13
-R: Minimizes plaintext exposure.
+V: Inspection | Review the delivery code path for byte buffers holding a decrypted value or its encodings that are not overwritten after use, and for immutable copies other than the S4 environment string.
+SRC: SEC 2.13; OWNER (release 1.0 narrowed to what the Go runtime allows)
+R: Minimizes plaintext exposure. Narrowed in release 1.0 to what Go can guarantee: Go strings are immutable, so the S4 environment entry (`exec.Cmd.Env` takes strings, and the runtime copies it again when it starts the process), the header the Egress Broker (E-18) sets on each outbound S1 request (`net/http` header values are strings) and the age library's internal decryption buffers cannot be overwritten, and a memory snapshot cannot show that no stale copy exists because the garbage collector does not clear freed memory. The broker's own byte buffers are overwritten; Security Limitations lists the remaining copies.
 
 @SR-2.13-3 | Vault isolation
 P: SEC-2.13
