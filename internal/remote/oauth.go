@@ -23,7 +23,6 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/authguard"
 	"github.com/ethan03805/secure-mcp-gateway/internal/channel"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
-	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
 
@@ -64,10 +63,19 @@ type oauthState struct {
 	codes   map[string]*authCode    // by SHA-256 of the code
 	devices map[string]*deviceGrant // by SHA-256 of the device code
 	users   map[string]string       // user code -> device key
+	// redeemed maps the SHA-256 of a redeemed code to the session it
+	// created, until the code would have expired, so that a second
+	// redemption revokes that session (OAuth 2.1 section 4.1.3).
+	redeemed map[string]redeemedCode
+}
+
+type redeemedCode struct {
+	sessionID string
+	expires   time.Time
 }
 
 func newOAuthState() *oauthState {
-	return &oauthState{codes: map[string]*authCode{}, devices: map[string]*deviceGrant{}, users: map[string]string{}}
+	return &oauthState{codes: map[string]*authCode{}, devices: map[string]*deviceGrant{}, users: map[string]string{}, redeemed: map[string]redeemedCode{}}
 }
 
 func (o *oauthState) prune(now time.Time) {
@@ -82,6 +90,11 @@ func (o *oauthState) prune(now time.Time) {
 		if now.After(d.expires) {
 			delete(o.devices, k)
 			delete(o.users, d.userCode)
+		}
+	}
+	for k, c := range o.redeemed {
+		if now.After(c.expires) {
+			delete(o.redeemed, k)
 		}
 	}
 }
@@ -149,7 +162,7 @@ func (s *Service) commit(ctx context.Context, e audit.Event) error {
 // source address; the CP-49 consecutive-failure count then locks both
 // (FR-16.6), and the lockout is itself recorded.
 func (s *Service) fail(r *http.Request, clientID, reason string) {
-	src := channel.From(r.Context()).ClientAddress
+	src := sourceKey(r)
 	account := "client:" + clientID
 	s.guard.Failure(src, account)
 	_ = s.commit(r.Context(), audit.Event{Class: "auth_failure", Origin: "E-03", Outcome: "deny", ReasonCode: reason, ClientID: clientID})
@@ -161,13 +174,43 @@ func (s *Service) fail(r *http.Request, clientID, reason string) {
 
 // locked reports a client ID or source under lockout.
 func (s *Service) locked(w http.ResponseWriter, r *http.Request, clientID string) bool {
-	d, err := s.guard.Check(channel.From(r.Context()).ClientAddress, "client:"+clientID)
+	d, err := s.guard.Check(sourceKey(r), "client:"+clientID)
 	if err == nil {
 		return false
 	}
 	authguard.RetryAfter(w, d)
 	oauthError(w, http.StatusTooManyRequests, "temporarily_unavailable", "too many failed attempts; locked for "+s.cfg.Remote.Limits.Lockout.String())
 	return true
+}
+
+// approverAccount is the lockout key of a Session Approver username on the
+// remote listener.
+func approverAccount(user string) string { return "approver:" + user }
+
+// approverLocked reports a sign-in refused because the client, the source
+// or the Session Approver username is locked. The username locks after
+// twice the client threshold, counted over every client and source, so
+// password guesses cannot be spread over several approved clients and
+// source addresses.
+func (s *Service) approverLocked(r *http.Request, clientID, user string) bool {
+	if _, err := s.guard.Check(sourceKey(r), "client:"+clientID); err != nil {
+		return true
+	}
+	_, err := s.approvers.Check(sourceKey(r), approverAccount(user))
+	return err != nil
+}
+
+// approverFailed records a failed Session Approver sign-in against the
+// client, the source and the username.
+func (s *Service) approverFailed(r *http.Request, clientID, user string) {
+	s.approvers.FailAccount(approverAccount(user))
+	s.fail(r, clientID, "APPROVER_SIGNIN_FAILED")
+	if _, err := s.approvers.Check(sourceKey(r), approverAccount(user)); errors.Is(err, authguard.ErrLocked) {
+		// The username is recorded only as a digest prefix: a failed
+		// sign-in may carry a password typed into the username field.
+		_ = s.commit(r.Context(), audit.Event{Class: "auth_failure", Origin: "E-03", Outcome: "locked", ReasonCode: "REMOTE_APPROVER_LOCKOUT", ClientID: clientID,
+			Detail: map[string]any{"username_sha256": sum(user)[:16], "lockout": s.cfg.Remote.Limits.Lockout.String(), "failures": 2 * s.cfg.Remote.Limits.LockoutFailures}})
+	}
 }
 
 // FR-16.3: protected-resource metadata naming the public URL.
@@ -268,6 +311,12 @@ func (s *Service) register(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, http.StatusBadRequest, "invalid_client_metadata", "token_endpoint_auth_method must be none, client_secret_basic or client_secret_post")
 		return
 	}
+	// Refuse before any costly work or evidence when no pending slot is
+	// free; reg.add checks again under its lock.
+	if s.reg.full() {
+		oauthError(w, http.StatusTooManyRequests, "temporarily_unavailable", "too many registrations are waiting for approval")
+		return
+	}
 	now := s.now()
 	g := &Registration{ClientID: "smcp-dcr-" + ids.New(), ClientName: boundText(body.ClientName, 128), RedirectURIs: body.RedirectURIs,
 		GrantTypes: body.GrantTypes, TokenEndpointAuthMethod: method, SoftwareID: boundText(body.SoftwareID, 128),
@@ -276,7 +325,14 @@ func (s *Service) register(w http.ResponseWriter, r *http.Request) {
 	secret := ""
 	if method != "none" {
 		secret = ids.Secret()
-		h, err := keys.HashPassword(secret)
+		// Argon2id takes 64 MiB per evaluation; the guard bounds how many
+		// run at once, as for sign-in, so unauthenticated registrations
+		// cannot exhaust memory.
+		h, err := s.guard.Hash(r.Context(), secret)
+		if errors.Is(err, authguard.ErrBusy) {
+			oauthError(w, http.StatusServiceUnavailable, "temporarily_unavailable", "registration capacity exhausted; retry shortly")
+			return
+		}
 		if err != nil {
 			oauthError(w, http.StatusInternalServerError, "server_error", "could not protect the client secret")
 			return
@@ -495,22 +551,23 @@ func (s *Service) authorizePOST(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if _, err := s.guard.Check(channel.From(r.Context()).ClientAddress, "client:"+c.id); err != nil {
+	user := r.PostForm.Get("username")
+	if s.approverLocked(r, c.id, user) {
 		s.renderSignin(w, r, http.StatusTooManyRequests, s.authorizeData(p, c, "Too many failed attempts. Sign-in is locked for "+s.cfg.Remote.Limits.Lockout.String()+"."))
 		return
 	}
-	user := r.PostForm.Get("username")
 	ok, err := s.verifyApprover(r.Context(), user, r.PostForm.Get("password"))
 	if err != nil {
 		s.renderSignin(w, r, http.StatusServiceUnavailable, s.authorizeData(p, c, "Sign-in is busy. Try again in a moment."))
 		return
 	}
 	if !ok {
-		s.fail(r, c.id, "APPROVER_SIGNIN_FAILED")
+		s.approverFailed(r, c.id, user)
 		s.renderSignin(w, r, http.StatusUnauthorized, s.authorizeData(p, c, "Sign-in failed."))
 		return
 	}
 	s.guard.Success("client:" + c.id)
+	s.approvers.Success(approverAccount(user))
 	claims, _ := session.ParseScopes(strings.Fields(p.Scope))
 	code := ids.Secret()
 	s.oauth.mu.Lock()
@@ -554,7 +611,18 @@ func (s *Service) token(w http.ResponseWriter, r *http.Request) {
 		key := sum(r.PostForm.Get("code"))
 		ac := s.oauth.codes[key]
 		delete(s.oauth.codes, key) // one use
+		reused, wasRedeemed := s.oauth.redeemed[key]
 		s.oauth.mu.Unlock()
+		if ac == nil && wasRedeemed && s.now().Before(reused.expires) {
+			// A second redemption means the code leaked: the session it
+			// created is no longer trusted.
+			ended := s.store.Terminate(reused.sessionID)
+			_ = s.commit(r.Context(), audit.Event{Class: "auth_failure", Origin: "E-03", SessionID: reused.sessionID, Outcome: "deny", ReasonCode: "AUTH_CODE_REUSE",
+				ClientID: c.id, Detail: map[string]any{"session_ended": ended}})
+			s.fail(r, c.id, "INVALID_GRANT")
+			oauthError(w, http.StatusBadRequest, "invalid_grant", "authorization code already used; the session it created has been revoked")
+			return
+		}
 		switch {
 		case ac == nil || s.now().After(ac.expires) || ac.clientID != c.id:
 			s.fail(r, c.id, "INVALID_GRANT")
@@ -573,7 +641,13 @@ func (s *Service) token(w http.ResponseWriter, r *http.Request) {
 			oauthError(w, http.StatusBadRequest, "invalid_target", "resource mismatch")
 			return
 		}
-		s.issue(w, r, c, ac.principal, ac.claims, ac.approver, "OAUTH_CODE")
+		if sess := s.issue(w, r, c, ac.principal, ac.claims, ac.approver, "OAUTH_CODE"); sess != nil {
+			s.oauth.mu.Lock()
+			if len(s.oauth.redeemed) < maxCodes {
+				s.oauth.redeemed[key] = redeemedCode{sessionID: sess.ID, expires: ac.expires}
+			}
+			s.oauth.mu.Unlock()
+		}
 	case grantRefresh:
 		sess, tok, err := s.store.Refresh(r.PostForm.Get("refresh_token"), c.id)
 		if errors.Is(err, session.ErrRefreshReuse) {
@@ -604,11 +678,12 @@ func (s *Service) token(w http.ResponseWriter, r *http.Request) {
 }
 
 // issue creates a remote session (FR-16.12) and returns its tokens. The
-// creation event is committed before any token leaves the Gateway.
-func (s *Service) issue(w http.ResponseWriter, r *http.Request, c rclient, principal string, claims session.Claims, approver, reason string) {
+// creation event is committed before any token leaves the Gateway. It
+// returns the session, or nil when it answered with an error.
+func (s *Service) issue(w http.ResponseWriter, r *http.Request, c rclient, principal string, claims session.Claims, approver, reason string) *session.Session {
 	if principal == "" {
 		oauthError(w, http.StatusBadRequest, "invalid_client", "client is not bound to a principal")
-		return
+		return nil
 	}
 	l := s.cfg.Remote.Limits
 	sess, tok, err := s.store.Create(session.CreateParams{PrincipalID: principal, ClientID: c.id, Claims: claims, ApprovedBy: approver,
@@ -627,17 +702,18 @@ func (s *Service) issue(w http.ResponseWriter, r *http.Request, c rclient, princ
 		default:
 			oauthError(w, http.StatusBadRequest, "invalid_grant", err.Error())
 		}
-		return
+		return nil
 	}
 	if err := s.commit(r.Context(), audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision,
 		Outcome: "created", ReasonCode: reason, PolicyStatus: "evaluated", ClientID: c.id,
 		Detail: map[string]string{"template": sess.Template, "approved_by": sess.ApprovedBy}}); err != nil {
 		s.store.Terminate(sess.ID)
 		oauthError(w, http.StatusServiceUnavailable, "temporarily_unavailable", "evidence journal unavailable")
-		return
+		return nil
 	}
 	s.guard.Success("client:" + c.id)
 	writeJSON(w, http.StatusOK, s.tokenResponse(sess, tok))
+	return sess
 }
 
 func (s *Service) tokenResponse(sess *session.Session, tok session.Tokens) map[string]any {
@@ -764,7 +840,8 @@ func (s *Service) devicePOST(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		account = "device-code"
 	}
-	if _, err := s.guard.Check(channel.From(r.Context()).ClientAddress, "client:"+account); err != nil {
+	user := r.PostForm.Get("username")
+	if s.approverLocked(r, account, user) {
 		s.renderSignin(w, r, http.StatusTooManyRequests, s.deviceData(code, nil, "Too many failed attempts. Try again later."))
 		return
 	}
@@ -773,17 +850,17 @@ func (s *Service) devicePOST(w http.ResponseWriter, r *http.Request) {
 		s.renderSignin(w, r, http.StatusBadRequest, s.deviceData(code, nil, "That code is unknown or expired."))
 		return
 	}
-	user := r.PostForm.Get("username")
 	good, err := s.verifyApprover(r.Context(), user, r.PostForm.Get("password"))
 	if err != nil {
 		s.renderSignin(w, r, http.StatusServiceUnavailable, s.deviceData(code, &d, "Sign-in is busy. Try again in a moment."))
 		return
 	}
 	if !good {
-		s.fail(r, d.clientID, "APPROVER_SIGNIN_FAILED")
+		s.approverFailed(r, d.clientID, user)
 		s.renderSignin(w, r, http.StatusUnauthorized, s.deviceData(code, &d, "Sign-in failed."))
 		return
 	}
+	s.approvers.Success(approverAccount(user))
 	decision := "approved"
 	if r.PostForm.Get("decision") == "deny" {
 		decision = "denied"
@@ -840,5 +917,5 @@ func (s *Service) devicePoll(w http.ResponseWriter, r *http.Request, c rclient) 
 	delete(s.oauth.devices, key)
 	delete(s.oauth.users, d.userCode)
 	s.oauth.mu.Unlock()
-	s.issue(w, r, c, g.principal, g.claims, g.approver, "DEVICE_CODE")
+	_ = s.issue(w, r, c, g.principal, g.claims, g.approver, "DEVICE_CODE")
 }

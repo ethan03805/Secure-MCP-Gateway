@@ -135,6 +135,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 			a = nil
 		}
 	}()
+	if err := keys.CheckPrivate(cfg.State.Dir); err != nil {
+		return a, err
+	}
 	evKey, err := keys.LoadEvidenceKey(cfg.State.Dir)
 	if err != nil {
 		return a, fmt.Errorf("evidence key (run `smcpctl bootstrap` first): %w", err)

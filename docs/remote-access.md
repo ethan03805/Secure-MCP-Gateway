@@ -134,8 +134,11 @@ Remote sessions last at most `remote.limits.session_max_lifetime` (2 h) and expi
 | More than `concurrency_per_client` requests of one client | HTTP 429, JSON-RPC `-31005`, `reasonCode` `REMOTE_CONCURRENCY` |
 | `tools/call` above `calls_per_minute` for one client | HTTP 429, JSON-RPC `-31005`, `reasonCode` `REMOTE_RATE_LIMITED`, `data.callsPerMinute`, `Retry-After` |
 | `lockout_failures` consecutive failed sign-ins, client authentications or invalid grants for a client ID or from a caller address | Both are locked for `lockout`: the sign-in page answers 429 and the token endpoint 429 `temporarily_unavailable`; a `REMOTE_LOCKOUT` event is recorded |
+| Twice `lockout_failures` failed sign-ins for one Session Approver username, counted over every client and caller address | The username is locked for `lockout` on the remote sign-in pages (429); a `REMOTE_APPROVER_LOCKOUT` event is recorded with a digest of the username. Local sign-in is not affected |
+| A registration while `max_pending_registrations` are pending | 429 `temporarily_unavailable`, before a client secret is hashed or an event written |
+| A second redemption of an authorization code | 400 `invalid_grant`; the session the first redemption created is ended and an `AUTH_CODE_REUSE` event is recorded |
 
-The caller address is whatever the tunnel connector reports. Tailscale Funnel and cloudflared set it; a tunnel that does not makes every caller share one address, so the per-address limits become global limits.
+The caller address is whatever the tunnel connector reports. Tailscale Funnel and cloudflared set it; a tunnel that does not makes every caller share one address, so the per-address limits become global limits. An IPv6 caller address counts as its /64 for limits and lockout. When 10,000 caller addresses are tracked at once, further new addresses share one limit until older entries expire.
 
 ## Evidence events
 
@@ -149,6 +152,8 @@ The caller address is whatever the tunnel connector reports. Tailscale Funnel an
 | `auth_failure` | `deny` | `DCR_PENDING` | A pending client tried to authorize or get a token |
 | `auth_failure` | `deny` | `CLIENT_AUTH_FAILED`, `CLIENT_NOT_APPROVED`, `APPROVER_SIGNIN_FAILED`, `INVALID_GRANT`, `DEVICE_CODE_UNKNOWN` | Counted failures |
 | `auth_failure` | `locked` | `REMOTE_LOCKOUT` | A client ID or caller address reached the failure limit |
+| `auth_failure` | `locked` | `REMOTE_APPROVER_LOCKOUT` | A Session Approver username reached twice the failure limit |
+| `auth_failure` | `deny` | `AUTH_CODE_REUSE` | An authorization code was redeemed a second time (detail: whether its session was ended) |
 | `device_authorization` | `approved`, `denied` | `DEVICE_APPROVED`, `DEVICE_DENIED` | A Session Approver decided a device code |
 | `session` | `created` | `OAUTH_CODE`, `DEVICE_CODE` | Remote session created |
 | `session` | `deny` | `REMOTE_TEMPLATE_REFUSED` | Requested template not in `remote.templates` |

@@ -97,16 +97,27 @@ func (r *registry) saveLocked() error {
 	return writeFileAtomic(r.path, b)
 }
 
-func (r *registry) add(g *Registration) error {
+// full reports that no further pending registration can be stored.
+func (r *registry) full() bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.pendingLocked() >= r.maxPending
+}
+
+func (r *registry) pendingLocked() int {
 	n := 0
 	for _, x := range r.regs {
 		if x.Status == StatusPending {
 			n++
 		}
 	}
-	if n >= r.maxPending {
+	return n
+}
+
+func (r *registry) add(g *Registration) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.pendingLocked() >= r.maxPending {
 		return errTooMany
 	}
 	r.regs[g.ClientID] = g

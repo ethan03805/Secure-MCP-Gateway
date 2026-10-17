@@ -82,7 +82,7 @@ func (s *Service) Handler() http.Handler {
 		org := channel.Origin{Channel: channel.Remote, ClientAddress: s.clientAddress(r)}
 		r = r.WithContext(channel.With(r.Context(), org))
 		if r.URL.Path != mcpPath {
-			if ok, d := s.lim.allowOAuth(org.ClientAddress); !ok { // FR-16.6
+			if ok, d := s.lim.allowOAuth(rateKey(org.ClientAddress)); !ok { // FR-16.6
 				authguard.RetryAfter(w, d)
 				oauthError(w, http.StatusTooManyRequests, "temporarily_unavailable", "rate limit exceeded")
 				return

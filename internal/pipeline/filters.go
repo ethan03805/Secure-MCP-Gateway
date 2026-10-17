@@ -363,6 +363,14 @@ const schemaCacheMax = 4096
 
 var errSchema = errors.New("schema")
 
+// errExternalRef refuses every $ref outside the schema document.
+var errExternalRef = errors.New("references outside the schema document are not loaded")
+
+// noExternalRefs is a jsonschema.URLLoader that loads nothing.
+type noExternalRefs struct{}
+
+func (noExternalRefs) Load(string) (any, error) { return nil, errExternalRef }
+
 func compileSchema(raw []byte) (*jsonschema.Schema, error) {
 	key := string(raw)
 	schemaCache.Lock()
@@ -376,6 +384,12 @@ func compileSchema(raw []byte) (*jsonschema.Schema, error) {
 		return nil, fmt.Errorf("%w not parseable", errSchema)
 	}
 	comp := jsonschema.NewCompiler()
+	// The schema comes from a backend server. The library's default loader
+	// resolves a $ref to file:// URLs (and relative names against the
+	// working directory), which would let a server make the Gateway open
+	// any local path, including FIFOs and devices. Only references inside
+	// the schema document and the built-in meta-schemas resolve.
+	comp.UseLoader(noExternalRefs{})
 	if err := comp.AddResource("tool.json", doc); err != nil {
 		return nil, fmt.Errorf("%w not loadable", errSchema)
 	}

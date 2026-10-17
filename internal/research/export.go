@@ -160,7 +160,9 @@ func columnType(p observe.Param) string {
 	return obsstore.Varchar
 }
 
-var safeName = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
+// safeName is an export ID or file name: no separators and no leading dot,
+// so neither "." nor ".." can name a directory outside the export.
+var safeName = regexp.MustCompile(`^[A-Za-z0-9_-][A-Za-z0-9._-]{0,127}$`)
 
 // Export extracts and writes a dataset. actor is recorded in the manifest.
 func (x *Exporter) Export(req Request, actor string) (Manifest, error) {
@@ -704,5 +706,7 @@ func (x *Exporter) Open(id, name string) (*os.File, error) {
 	if !safeName.MatchString(id) || !safeName.MatchString(name) {
 		return nil, os.ErrNotExist
 	}
-	return os.Open(filepath.Join(x.Dir, id, name))
+	// OpenInRoot also refuses a symbolic link that leads out of the
+	// export directory.
+	return os.OpenInRoot(x.Dir, filepath.Join(id, name))
 }

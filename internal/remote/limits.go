@@ -1,11 +1,14 @@
 package remote
 
 import (
+	"net/http"
+	"net/netip"
 	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/channel"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 )
 
@@ -31,6 +34,34 @@ type bucket struct {
 
 const maxTracked = 10000
 
+// overflowKey is the bucket shared by every key that arrives while the
+// table holds maxTracked recent keys. A caller who rotates source
+// addresses (an IPv6 prefix holds 2^64 of them) then shares one limit
+// instead of growing the table without bound.
+const overflowKey = "\x00overflow"
+
+// rateKey is the rate-limit and lockout key of a caller address: an IPv6
+// address counts as its /64, the smallest block a provider assigns to one
+// customer, so one caller cannot take a fresh limit per address. Other
+// values are used as they are.
+func rateKey(addr string) string {
+	a, err := netip.ParseAddr(addr)
+	if err != nil {
+		return addr
+	}
+	a = a.Unmap()
+	if a.Is6() {
+		p, err := a.Prefix(64)
+		if err == nil {
+			return p.String()
+		}
+	}
+	return a.String()
+}
+
+// sourceKey is rateKey of the request's tunnel-supplied caller address.
+func sourceKey(r *http.Request) string { return rateKey(channel.From(r.Context()).ClientAddress) }
+
 func newLimiters(cfg config.RemoteLimits, now func() time.Time) *limiters {
 	return &limiters{cfg: cfg, now: now, total: make(chan struct{}, cfg.ConcurrencyTotal),
 		oauth: map[string]*bucket{}, calls: map[string]*bucket{}, active: map[string]int{}}
@@ -45,6 +76,12 @@ func (l *limiters) allow(m map[string]*bucket, key string, r rate.Limit, burst i
 		if len(m) >= maxTracked {
 			l.pruneLocked(m, now)
 		}
+		if len(m) >= maxTracked {
+			key = overflowKey
+			b = m[key]
+		}
+	}
+	if b == nil {
 		b = &bucket{l: rate.NewLimiter(r, burst)}
 		m[key] = b
 	}

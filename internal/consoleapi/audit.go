@@ -23,6 +23,9 @@ const (
 	MaxExportEvents = 100000
 	streamKeepAlive = 15 * time.Second
 	streamBuffer    = 64
+	// maxStreams bounds concurrent evidence streams; each holds a
+	// goroutine and a buffer for as long as the client keeps it open.
+	maxStreams = 32
 )
 
 // eventFilter selects journal events. Every set field must match.
@@ -347,22 +350,31 @@ func (h *hub) publish(e audit.Event) {
 	}
 }
 
-func (h *hub) subscribe() (chan StreamEvent, func()) {
+func (h *hub) subscribe() (chan StreamEvent, func(), bool) {
 	ch := make(chan StreamEvent, streamBuffer)
 	h.mu.Lock()
+	if len(h.subs) >= maxStreams {
+		h.mu.Unlock()
+		return nil, nil, false
+	}
 	h.subs[ch] = struct{}{}
 	h.mu.Unlock()
 	return ch, func() {
 		h.mu.Lock()
 		delete(h.subs, ch)
 		h.mu.Unlock()
-	}
+	}, true
 }
 
 // streamEvents is a text/event-stream with one `audit` event per evidence
 // event the journal accepts (FR-8.23), and a keep-alive comment every 15 s.
 func (c *Console) streamEvents(w http.ResponseWriter, r *http.Request) {
-	ch, cancel := c.stream.subscribe()
+	ch, cancel, ok := c.stream.subscribe()
+	if !ok {
+		w.Header().Set("Retry-After", "15")
+		writeError(w, http.StatusServiceUnavailable, "too_many_streams", "too many evidence streams are open")
+		return
+	}
 	defer cancel()
 	rc := http.NewResponseController(w)
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -377,11 +389,17 @@ func (c *Console) streamEvents(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case e := <-ch:
+			if !adminapi.StillAuthenticated(r) { // signed out or expired
+				return
+			}
 			b, _ := json.Marshal(e)
 			if _, err := io.WriteString(w, "event: audit\ndata: "+string(b)+"\n\n"); err != nil || rc.Flush() != nil {
 				return
 			}
 		case <-t.C:
+			if !adminapi.StillAuthenticated(r) {
+				return
+			}
 			if _, err := io.WriteString(w, ": keep-alive\n\n"); err != nil || rc.Flush() != nil {
 				return
 			}

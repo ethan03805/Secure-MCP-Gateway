@@ -22,6 +22,10 @@ const SessionTTL = 30 * time.Minute
 // watchKeepAlive is the comment interval of the watch stream.
 const watchKeepAlive = 15 * time.Second
 
+// maxWatchStreams bounds concurrent watch streams; each holds a goroutine
+// for as long as the client keeps it open.
+const maxWatchStreams = 32
+
 type approverSession struct {
 	user    string
 	expires time.Time
@@ -214,6 +218,13 @@ func (s *Service) decision(approve bool) http.HandlerFunc {
 // watch streams notices as text/event-stream: first one "snapshot" event
 // with the pending approvals, then one "approval" event per notice.
 func (s *Service) watch(w http.ResponseWriter, r *http.Request) {
+	if s.streams.Add(1) > maxWatchStreams {
+		s.streams.Add(-1)
+		w.Header().Set("Retry-After", "15")
+		writeError(w, http.StatusServiceUnavailable, "too_many_streams", "too many approval watch streams are open")
+		return
+	}
+	defer s.streams.Add(-1)
 	ch, cancel := s.Watch()
 	defer cancel()
 	rc := http.NewResponseController(w)
@@ -236,10 +247,16 @@ func (s *Service) watch(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case n := <-ch:
+			if !adminapi.StillAuthenticated(r) { // signed out or expired
+				return
+			}
 			if !send("approval", n) {
 				return
 			}
 		case <-t.C:
+			if !adminapi.StillAuthenticated(r) {
+				return
+			}
 			if _, err := io.WriteString(w, ": keep-alive\n\n"); err != nil || rc.Flush() != nil {
 				return
 			}

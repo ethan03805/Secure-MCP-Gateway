@@ -29,6 +29,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
@@ -102,6 +103,8 @@ type Service struct {
 	rec      audit.Recorder
 	recs     map[string]*entry
 	watchers map[chan Notice]struct{}
+	// streams counts open watch streams of the control API (http.go).
+	streams  atomic.Int32
 	tokens   map[[32]byte]approverSession
 	notifyWG sync.WaitGroup
 }

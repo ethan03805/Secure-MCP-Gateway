@@ -50,7 +50,7 @@ var (
 		return []string{"-e", "display notification " + appleScriptString(b) + " with title " + appleScriptString(t)}
 	}}
 	terminalNotifier = commandNotifier{"terminal-notifier", func(t, b string) []string { return []string{"-title", t, "-message", b} }}
-	notifySend       = commandNotifier{"notify-send", func(t, b string) []string { return []string{"--app-name=smcpd", t, b} }}
+	notifySend       = commandNotifier{"notify-send", func(t, b string) []string { return []string{"--app-name=smcpd", "--", t, b} }}
 )
 
 // NewNotifier returns the notifier selected by the [approvals] notify key
