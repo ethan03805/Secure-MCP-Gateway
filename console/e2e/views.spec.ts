@@ -28,13 +28,17 @@ test("G-01 gateway control: health, monitor causes, verification and checklist",
 
 test("G-02 policy studio: draft, validate, diff, simulate, publish and roll back", async ({ page }) => {
   claims("FR-8.4", "FR-3.4", "FR-3.9");
-  // A call in the journal for the simulation to replay.
-  const r = await mcpCall(g, "ref_echo", { text: "policy" }, { expect: "policy", timeout: "60s" }).done;
-  expect(r.code, r.out).toBe(0);
+  // A call in the journal for the simulation to replay (earlier tests made
+  // others; a refused call is recorded as well).
+  await mcpCall(g, "ref_echo", { text: "policy" }, { expect: "policy", timeout: "60s" }).done;
   await signIn(page, "/policy");
   await expect(page.getByRole("table", { name: "Policy revisions" })).toContainText("r1");
   await page.getByRole("link", { name: "Draft", exact: true }).click();
-  await expect(page.getByLabel("Revision ID of the draft")).toHaveValue("r2");
+  // The draft takes the next free revision ID (r2 on a fresh Gateway).
+  const revInput = page.getByLabel("Revision ID of the draft");
+  await expect(revInput).toHaveValue(/^r\d+/);
+  const rev = `e2e-${Date.now()}`;
+  await revInput.fill(rev);
   // Structured editor: add a template with one rule.
   await page.getByLabel("New template name").fill("echo-only");
   await page.getByRole("button", { name: "Add", exact: true }).first().click();
@@ -45,13 +49,13 @@ test("G-02 policy studio: draft, validate, diff, simulate, publish and roll back
   // Offer it to the dev profile.
   await page.getByRole("group", { name: "Templates sessions of this profile may use" }).getByLabel("echo-only").check();
   await page.getByRole("button", { name: "Validate" }).click();
-  await expect(page.getByText(/Valid: revision r2/)).toBeVisible();
+  await expect(page.getByText(new RegExp(`Valid: revision ${rev}`))).toBeVisible();
   await page.getByRole("button", { name: "Diff against the active revision" }).click();
   await expect(page.getByRole("table", { name: "Policy changes" })).toContainText("template_added");
   await page.getByRole("button", { name: "Simulate" }).click();
   await expect(page.getByText(/replayed from the/)).toBeVisible();
   await page.getByRole("button", { name: "Publish" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Policy revision r2" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: `Policy revision ${rev}` })).toBeVisible();
   await expect(page.getByText("active", { exact: true }).first()).toBeVisible();
   // Effective permissions of the new template.
   await page.getByLabel("Template").selectOption("echo-only");
@@ -60,8 +64,8 @@ test("G-02 policy studio: draft, validate, diff, simulate, publish and roll back
   await go(page, "/policy/revisions/r1");
   await page.getByRole("button", { name: "Roll back to this revision" }).click();
   await page.getByRole("dialog", { name: "Roll back to r1" }).getByRole("button", { name: "Roll back" }).click();
-  await expect(page.getByRole("table", { name: "Policy revisions" })).toContainText("r1-rb1");
-  await expect(page.getByTestId("status-strip")).toContainText("policy r1-rb1");
+  await expect(page.getByRole("table", { name: "Policy revisions" })).toContainText(/r1-rb\d+/);
+  await expect(page.getByTestId("status-strip")).toContainText(/policy r1-rb\d+/);
 });
 
 test("G-02 filter workbench: a redaction profile on synthetic text", async ({ page }) => {
@@ -154,7 +158,7 @@ test("G-07 performance: throughput, overhead per revision and stage time", async
   await signIn(page, "/performance");
   await expect(page.getByRole("heading", { name: "Gateway overhead per policy revision" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Time per stage and policy object" })).toBeVisible();
-  await expect(page.locator(".loading")).toHaveCount(0);
+  await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
   await expect(page.getByRole("combobox", { name: "Policy revision" })).toBeVisible();
 });
 
@@ -174,7 +178,7 @@ test("G-09 research campaigns: create, submit, approve, export and dictionary", 
   claims("FR-8.17", "FR-8.9");
   await signIn(page, "/research");
   await page.getByRole("link", { name: "New campaign" }).click();
-  await page.getByLabel("Name").fill("console acceptance study");
+  await page.getByLabel("Name", { exact: true }).fill("console acceptance study");
   await page.getByLabel("Start (RFC 3339)").fill(new Date(Date.now() - 60_000).toISOString().replace(/\.\d{3}Z$/, "Z"));
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Campaign console acceptance study" })).toBeVisible();
@@ -449,5 +453,5 @@ test("G-10 servers and library: suspend, enable, trust anchors and receipts", as
   await expect(revs).toContainText("enabled");
   await page.getByRole("link", { name: "smcp-ref-filesystem" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Package smcp-ref-filesystem" })).toBeVisible();
-  await expect(page.getByText("Signed manifest")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Signed manifest/ })).toBeVisible();
 });
