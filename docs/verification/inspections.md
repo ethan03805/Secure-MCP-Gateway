@@ -244,3 +244,27 @@ Observations, by checklist rule:
 - Local assets: the console page loads scripts, styles and fonts only from the Gateway under a strict content security policy (`console/e2e/console.spec.ts:150`).
 
 Deviation: the four fixed-enumeration tables are not sortable. Sorting them would remove meaning, because their order is the order of the steps or bands.
+
+## FR-2.1 Principal registry
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-2.1 |
+| Commit | `e8b6606a426d0d209e1fa5a461cbdeb38fa7f85d` |
+| Profile and platform | Not profile-specific; darwin/arm64 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (gap implementation task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: ran `go test ./internal/principals -run TestRoutes -v`, which creates principal `agent` through `POST /api/v1/principals` (the G-11 route), issues it a credential through `POST /api/v1/principals/agent/credentials`, suspends and re-enables it, and lists it through `GET /api/v1/principals`. Then ran the same Directory calls the routes make (`AddPrincipal`, `Issue`, `SetSuspended`) in a scratch test and read the stored file `state/principals.json` and the listed view.
+
+Observations:
+
+- The stored principal record (`internal/principals/principals.go:70`) holds `id`, `framework`, `display_name` and `profile` (the Framework Profile ID), with `created_by` and `created_at`; the route fills them from the request (`internal/principals/http.go:142`).
+- Credentials are stored with a reference to their principal (`internal/principals/principals.go:80`, member `principal`), and the principal's view lists its credential references with client ID, redirect URIs and revocation state, never the secret hash (`internal/principals/principals.go:333`, `internal/principals/principals.go:359`).
+- The enabled state is the absence of an entry in the suspension map (`internal/principals/principals.go:102`); the view reports `enabled` and the suspension's actor, time and reason. Principals of the configuration file appear in the same view with `source: "file"` and their `enabled` value (`internal/principals/principals.go:386`).
+- The scratch run stored `{"id": "agent", "framework": "codex", "display_name": "Agent", "profile": "dev", ...}`, a credential with `"principal": "agent"`, and `"suspended": {"agent": {"by": "admin:admin", ...}}`; the view showed `"enabled": false` with the suspension and the credential.
+
+Deviation: none.
+

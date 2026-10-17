@@ -46,14 +46,12 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-03 Identity & Authentication Service
 
-- FR-2.1 unverified: principals created from the control API (`internal/principals`, G-11) have an enabled state and issued credentials, and file principals can be suspended; no test or record checks every attribute the requirement lists (display name, credential references, element bindings) on both kinds of principal.
 - FR-2.15 missing: UDS peer UID plus bearer key authentication.
 - SR-2.11-3 missing: Client ID Metadata Documents are never fetched; registered metadata-URL client IDs are accepted without a fetch, so the CP-52 allowlist and limits do not exist.
 - SR-2.11-5 unverified: `registration_endpoint` is advertised only with the Remote Access Profile enabled and `client_id_metadata_document_supported` is never advertised; no test covers both settings of both mechanisms (metadata documents cannot be enabled).
 
 ## E-04 Session Manager
 
-- FR-2.12 unverified: decisions use the active snapshot and session catalogs are rebuilt on activation; no test asserts the rebind happens before the session's next evaluated request.
 - FR-2.13 missing: no baseline context key is computed or stored at session creation from an Observation Policy.
 - FR-2.16 missing: sessions are in memory and do not survive a restart, so an unexpired session cannot be resumed with its refresh token after a restart.
 
@@ -66,8 +64,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - SR-1-1 missing: publication does not check grants against the manifest capability ceiling.
 - SR-3.13-1 missing: no high-risk class flags on profiles and templates; high-risk grants are not refused at publication.
 - SR-6.9-1 missing: retention and capture settings are not part of the policy document, so they are not validated at publication.
-- SR-7.3-1 unverified: signature and schema are validated at start and publication and a bad signature fails closed (`policy_signature`); no test covers a broken cross-reference after restart with the matching health cause.
-- SR-7.9-1 missing: no revocation epochs exist to carry forward on rollback; server suspensions are not part of a policy rollback.
+- SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; rolling back the application version is not exercised, and there are no revocation epochs.
 
 ## E-06 Policy Decision Service
 
@@ -82,9 +79,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-08 Access Enforcement Point
 
-- SR-3.12-1 missing: no `gateway-admin` manifest class exists, so such tools are not excluded from catalogs.
 - SR-5.7-2 missing: pagination cursors are the SDK's encoding of the last tool name, not HMAC-protected and not bound to session or policy revision (FR-1.24 is partial for the same reason).
-- SR-5.18-2 missing: presented tools drop every `icons` entry, including valid PNG or JPEG `data:` URIs up to 64 KiB, which the requirement keeps.
 
 ## E-09 Request Inspection Pipeline
 
@@ -92,9 +87,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-12 Enforcement Coordinator
 
-- FR-11.10 unverified: `Stop` takes the gate and every later launch authorization is refused; no test measures the 1 second bound under load.
 - SR-1.2-2 unverified (partial claim exists): a failed decision-intent commit refuses launch with `-31004` and `JOURNAL_UNAVAILABLE`; no test makes the journal directory unwritable during traffic or stops the graph database during traffic.
-- SR-2.4-1 unverified: session termination is visible to the next launch authorization immediately; principal and credential revocation do not exist (missing), and no test runs revocation under load against CP-16.
 - SR-4.1-1 external: distinct CP-46 service identities are prepared by `packaging/linux/install-enforced.sh`; running processes on an Enforced host have not been inspected.
 
 ## E-13 Library Trust Verifier
@@ -121,7 +114,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-21 Audit & Evidence Service
 
-- FR-7.3 unverified: `/api/v1/audit/events` filters and pages the journal; no test covers every listed filter and the 500-event page bound.
 - FR-7.6 missing: no Audit Profile alert rules, so no console alerts from them.
 - SR-6.4-1 missing: events carry decision, policy revision, server and tool revision IDs, but no decisive rule revision IDs (rules are not versioned objects) and no audit profile revision.
 - SR-6.5-1 missing: event origins are element IDs (`E-02`, `E-12`), not the `gateway`, `backend`, `broker`, `admin` labels.
@@ -136,7 +128,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-22 Key & Trust Anchor Manager
 
 - FR-7.10 unverified: trust anchors are enrolled with `smcpctl trust` and `POST /api/v1/packages/trust` (G-10); no Demonstration record shows the fingerprint confirmation and the stored risk classes and expiry.
-- SR-2.2-1 missing: no per-instance credential issuance by E-22 with independent revocation (pre-registered OAuth clients are configuration entries).
 
 ## E-24 Management Console & Control API
 

@@ -75,6 +75,20 @@ func mustHash(t *testing.T, pw string) string {
 	return h
 }
 
+// e2eLimits is the fixture's [limits] body: the defaults below, with any
+// key that extra sets taken from extra instead.
+func e2eLimits(extra string) string {
+	var out []string
+	for _, d := range []string{`upstream_timeout = "2s"`, `client_deadline = "3s"`, `result_bytes = 65536`, `tool_queue = 1`,
+		`tool_concurrency_total = 1`, `tool_concurrency_per_principal = 1`} {
+		key := strings.TrimSpace(strings.SplitN(d, "=", 2)[0])
+		if !strings.Contains(extra, key+" ") && !strings.Contains(extra, key+"=") {
+			out = append(out, d)
+		}
+	}
+	return strings.Join(append(out, extra), "\n")
+}
+
 func start(t *testing.T, extraLimits string) *fixture {
 	t.Helper()
 	dir := t.TempDir()
@@ -104,12 +118,6 @@ password_hash = %q
 [policy]
 file = %q
 [limits]
-upstream_timeout = "2s"
-client_deadline = "3s"
-result_bytes = 65536
-tool_queue = 1
-tool_concurrency_total = 1
-tool_concurrency_per_principal = 1
 %s
 [[principal]]
 id = "cc"
@@ -131,7 +139,7 @@ args = ["-test.run=NONE"]
 [server.env]
 SMCP_E2E_BACKEND = "1"
 `, port, port, adminPort, stateDir, mustHash(t, "admin password 12"), mustHash(t, approverPassword), filepath.Join(dir, "policy.json"),
-		extraLimits, clientID, mustHash(t, "helper-secret-123"), exe)
+		e2eLimits(extraLimits), clientID, mustHash(t, "helper-secret-123"), exe)
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	if err := os.WriteFile(cfgPath, []byte(toml), 0o600); err != nil {
 		t.Fatal(err)
@@ -258,6 +266,12 @@ func (f *fixture) admin(method, path, token string, body any) (int, map[string]a
 // metadata-URL client with a loopback redirect, signing in as the Session
 // Approver.
 func (f *fixture) oauthLogin(scope string) (access, refresh string, tokenBody map[string]any) {
+	f.t.Helper()
+	return f.oauthLoginClient(scope, clientID)
+}
+
+// oauthLoginClient is oauthLogin for another registered public client.
+func (f *fixture) oauthLoginClient(scope, clientID string) (access, refresh string, tokenBody map[string]any) {
 	t := f.t
 	t.Helper()
 	// Discovery (FR-2.17).

@@ -30,7 +30,7 @@ A package is a directory in the library (OD-7), written by `smcpctl package buil
 | `risk_class` | Yes | `low`, `moderate`, `high` (CP-44) | SR-3-1, SR-4-1, FR-14.8 |
 | `instance_scope` | Yes | Supported scopes | FR-5.10 |
 | `stateful` | No | Whether a handle contract applies | SR-3.14-1 |
-| `tools` | Yes | Per tool: `name`, `title`, `description`, `description_sha256`, `input_schema`, `output_schema`, `annotations`, `side_effect` and `source_trust` (CP-44), optional `risk_class` | FR-5.5, SR-3.7-1, SR-5.13-2 |
+| `tools` | Yes | Per tool: `name`, `title`, `description`, `description_sha256`, `input_schema`, `output_schema`, `annotations`, `side_effect` and `source_trust` (CP-44), optional `risk_class` and `class` (`standard` or `gateway-admin`) | FR-5.5, SR-3.7-1, SR-5.13-2, SR-3.12-1 |
 | `tools_list_sha256` | No | Digest of the canonical `tools/list` read at packaging | SR-3.8-1 |
 | `capabilities` | Yes | `filesystem` slots with mode, `egress` destinations with ports and methods, `spawns_processes`, `resources` | SR-1-1, SR-4.6-1, SR-4.5-2 |
 | `secrets` | No | Slots with purpose, destination and delivery modes | FR-6.5 |

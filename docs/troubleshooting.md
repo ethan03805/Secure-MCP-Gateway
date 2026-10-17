@@ -46,7 +46,7 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `RELEASE_REFUSED` | `-31003` | The session, policy or stop state changed while the tool ran | Repeat the request |
 | `FAIL_CLOSED` | `-31004` | A critical health check failed | Run `smcpctl health`; fix the listed cause (policy snapshot, journal, vault, clock, trust anchors, audit capacity) |
 | `EMERGENCY_STOP` | `-31004` | An emergency stop is in effect | An Administrator resumes with `smcpctl resume` or from G-01 |
-| `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | If health lists `policy_signature`, a file under `state/policy/` was altered: restore it from a backup and restart, or publish a valid revision with `smcpctl policy publish` |
+| `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | If health lists `policy_signature`, a file under `state/policy/` was altered: restore it from a backup and restart, or publish a valid revision with `smcpctl policy publish`. If it lists `policy_invalid`, the signed document fails the current schema or cross-reference checks: publish a corrected revision |
 | `JOURNAL_UNAVAILABLE` | `-31004`, `-31003` | The decision (`-31004`, the call did not run) or the outcome (`-31003`, the call ran and its result was withheld) could not be recorded in the evidence journal | Check disk space and permissions of the journal directory |
 | `POLICY_REVISION_CHANGED` | `-31004` | The policy changed between decision and launch | Repeat the request |
 | `CAPABILITY` | `-31004` | The one-use launch capability was missing or already used | Repeat the request; if it repeats, report the correlation ID |
@@ -79,7 +79,7 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `role_refused`, `not_pending`, `signin_failed`, `audit_unavailable` | Control API error codes | See `docs/api/approvals.md` |
 | `POLICY_PUBLISHED`, `POLICY_ROLLED_BACK`, `POLICY_IMPORTED`, `POLICY_ACTIVATED` | Journal admin events | A policy revision was stored or activated; see `docs/policy-reference.md` |
 | `POLICY_INVALID`, `POLICY_CONFLICT`, `POLICY_ACTIVATION_FAILED` | Journal admin events, control API | A publication was refused |
-| `POLICY_SIGNATURE` | Journal admin event, health cause `policy_signature` | The active policy revision did not verify at start; the Gateway is fail-closed |
+| `POLICY_SIGNATURE` | Journal admin event, health cause `policy_signature` or `policy_invalid` (detail `cause`) | The active policy revision did not verify at start, or verified but failed the schema or cross-reference checks; the Gateway is fail-closed |
 | `POLICY_SIMULATED` | Journal admin events | A policy simulation ran |
 | `SESSION_END` | Journal session events | A session ended (expiry, termination or revocation) |
 | `PROFILE_UNCONFINED` | Server enablement | A `high`-risk server cannot be enabled in the Standalone profile (SR-4-1) |

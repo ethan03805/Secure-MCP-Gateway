@@ -122,6 +122,9 @@ func (g *Gateway) syncCatalog(ss *sessionServer, snap *policy.Snapshot) {
 		if g.screen != nil && g.screen.Present(context.Background(), ref.Server.Alias, ref.Server.Revision, ref.Tool) != nil {
 			continue // FR-1.52: blocked by the active metadata rule set
 		}
+		if gatewayAdminTool(ref) {
+			continue // SR-3.12-1: never presented, whatever the policy grants
+		}
 		want[ref.Public] = true
 		t := &mcp.Tool{
 			Name:        ref.Public,
@@ -129,6 +132,7 @@ func (g *Gateway) syncCatalog(ss *sessionServer, snap *policy.Snapshot) {
 			Description: ref.Tool.Description,
 			InputSchema: stripHeaderAnnotations(ref.Tool.InputSchema),
 			Annotations: ref.Tool.Annotations,
+			Icons:       presentableIcons(ref.Tool.Icons), // SR-5.18-2
 		}
 		if ref.Tool.OutputSchema != nil {
 			t.OutputSchema = ref.Tool.OutputSchema

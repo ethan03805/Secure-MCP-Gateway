@@ -14,6 +14,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 )
 
 // manifestSchemaJSON is a copy of docs/schemas/manifest.schema.json
@@ -87,6 +89,9 @@ type Tool struct {
 	SideEffect        string          `json:"side_effect"`
 	SourceTrust       string          `json:"source_trust"`
 	RiskClass         string          `json:"risk_class,omitempty"`
+	// Class is "gateway-admin" for a tool that administers the Gateway;
+	// such a tool is never presented (SR-3.12-1). "" is standard.
+	Class string `json:"class,omitempty"`
 }
 
 // Capabilities is the capability ceiling.
@@ -508,6 +513,15 @@ func (m *Manifest) MCPTools() ([]*mcp.Tool, error) {
 		}
 		if t.InputSchema == nil {
 			t.InputSchema = map[string]any{"type": "object"}
+		}
+		// The manifest's classes reach the decision through the tool's
+		// metadata (SR-1.18-1, SR-5.13-2, SR-3.12-1); the edge reads them
+		// only from verified manifests.
+		if mt := m.Find(t.Name); mt != nil {
+			t.Meta = mcp.Meta{policy.MetaSideEffect: mt.SideEffect, policy.MetaSourceTrust: mt.SourceTrust}
+			if mt.Class != "" {
+				t.Meta[policy.MetaToolClass] = mt.Class
+			}
 		}
 		out = append(out, &t)
 	}

@@ -136,6 +136,8 @@ type harnessOpts struct {
 	// raw replaces the backend with a scripted stdio server
 	// (southbound_test.go).
 	raw func(ctx context.Context, in io.Reader, out io.Writer) error
+	// manifests replaces the live tool list (icons_test.go).
+	manifests pipeline.ManifestSource
 }
 
 // limitsTOML is the harness's [limits] body: the defaults below, with any
@@ -196,7 +198,7 @@ command = "/inproc/t"
 	}
 	reg, err := backend.Start(context.Background(), cfg.Servers, backend.Options{
 		Limits:   backend.Limits{PerPrincipal: 4, Total: 4, Queue: 4, UpstreamTimeout: cfg.Limits.UpstreamTimeout.Duration, ResultBytes: cfg.Limits.ResultBytes},
-		Launcher: launcher, Capabilities: h.caps, Log: diag.Discard(),
+		Launcher: launcher, Capabilities: h.caps, Log: diag.Discard(), Manifests: o.manifests,
 	})
 	if err != nil {
 		t.Fatal(err)
