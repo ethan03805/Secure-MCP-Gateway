@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T09:54:13Z",
-  "commit": "4de9e331d99aeb312634e1993f20de515b550dd2",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/4de9e331d99aeb312634e1993f20de515b550dd2",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39022327155",
+  "generatedAt": "2026-10-17T10:02:49Z",
+  "commit": "549bdf359571161d03389ae28776992a0f9c12ea",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/549bdf359571161d03389ae28776992a0f9c12ea",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39022896404",
   "tests": {
-    "total": 909,
-    "passed": 895,
+    "total": 910,
+    "passed": 896,
     "failed": 0,
     "skipped": 14,
-    "durationSec": 389.6,
+    "durationSec": 434.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -151,7 +151,7 @@
       },
       {
         "name": "internal/edge",
-        "passed": 49,
+        "passed": 50,
         "failed": 0,
         "skipped": 0
       },
@@ -462,7 +462,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.7
+        "pct": 92.4
       },
       {
         "name": "internal/egress",
@@ -602,7 +602,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 77.2
+        "pct": 75.6
       },
       {
         "name": "packaging/linux",
@@ -632,10 +632,10 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 266,
+    "verified": 267,
     "partial": 202,
     "failing": 0,
-    "unverified": 62,
+    "unverified": 61,
     "byElement": [
       {
         "element": "E-01",
@@ -649,7 +649,7 @@
         "element": "E-02",
         "name": "Protocol Mediator",
         "total": 43,
-        "verified": 27,
+        "verified": 28,
         "partial": 10,
         "failing": 0
       },
@@ -4139,8 +4139,10 @@
       {
         "id": "FR-18.7",
         "element": "E-02",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/edge.TestReasonCodesDocumented"
+        ]
       },
       {
         "id": "FR-18.8",
@@ -6256,7 +6258,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6291,7 +6293,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39043: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:43165: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
