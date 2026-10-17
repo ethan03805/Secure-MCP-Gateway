@@ -9,6 +9,9 @@
 //	net_connect  dials a TCP address ("blocked: ..." or "connected")
 //	write_file   creates a file ("blocked: ..." or "wrote")
 //	read_file    reads a file ("blocked: ..." or the content)
+//	file_sha256  reads a file and returns "sha256:<hex>" instead of the
+//	             content, so a secret file can be checked without the
+//	             leak filter withholding the result
 //	spawn        starts a copy of itself that sleeps (process creation)
 //	alloc        allocates and touches the given number of MiB
 //	identity     reports uid, gid and the uid_map of the process
@@ -18,6 +21,8 @@ package probe
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -102,6 +107,15 @@ func Server() *mcp.Server {
 				return blocked(err)
 			}
 			return text(string(b)), nil, nil
+		})
+	mcp.AddTool(s, &mcp.Tool{Name: "file_sha256", Description: "Read a file and return the SHA-256 of its content."},
+		func(_ context.Context, _ *mcp.CallToolRequest, a pathArgs) (*mcp.CallToolResult, any, error) {
+			b, err := os.ReadFile(a.Path)
+			if err != nil {
+				return blocked(err)
+			}
+			sum := sha256.Sum256(b)
+			return text("sha256:" + hex.EncodeToString(sum[:])), nil, nil
 		})
 	mcp.AddTool(s, &mcp.Tool{Name: "spawn", Description: "Start a child process that sleeps for 30 seconds."},
 		func(_ context.Context, _ *mcp.CallToolRequest, _ noArgs) (*mcp.CallToolResult, any, error) {

@@ -4,8 +4,10 @@
 # Run as root. It first checks every prerequisite and changes nothing if one
 # is missing. Then it creates, when absent, the CP-46 service identities and
 # their subordinate UID/GID ranges, the CP-46 directories with their owners
-# and modes, the nftables table `inet smcp`, the AppArmor profile of smcpd
-# (when AppArmor is enabled) and the systemd units. Every step
+# and modes, the nftables table `inet smcp`, the AppArmor profiles of smcpd
+# and of server processes (when AppArmor is enabled), the systemd units and
+# what smcpd needs to run servers as smcp-srv (setup-server-identity.sh:
+# lingering, sudoers rule, shared directory, unit drop-in). Every step
 # prints "present", "created" or "updated"; a second run prints only
 # "present" lines and changes nothing. Keys, configuration, policy and the
 # journal are never touched.
@@ -33,8 +35,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# Identities (CP-46). smcp-core runs smcpd and rootless Podman; smcp-srv
-# holds the range reserved for a separate server-runtime identity.
+# Identities (CP-46). smcp-core runs smcpd; smcp-srv, in its own group,
+# runs the server containers in its rootless Podman (runtime.run_as).
 group=smcp
 users=(smcp-core smcp-evidence smcp-keys smcp-vault smcp-data smcp-console smcp-srv)
 subid_users=(smcp-core smcp-srv)
@@ -62,6 +64,9 @@ need useradd "useradd"
 need groupadd "groupadd"
 need usermod "usermod"
 need systemctl "systemd (systemctl)"
+need loginctl "loginctl (systemd-logind)"
+need sudo "sudo"
+need visudo "visudo (sudo package)"
 [ -d /run/systemd/system ] || missing+=("systemd as the running service manager")
 if [ ! -d /sys/kernel/security/apparmor ] && [ ! -e /sys/fs/selinux/enforce ]; then missing+=("AppArmor or SELinux"); fi
 if [ -d /sys/kernel/security/apparmor ] && ! command -v apparmor_parser >/dev/null 2>&1 && [ ! -x /sbin/apparmor_parser ]; then
@@ -78,14 +83,17 @@ if [ "$check_only" = 1 ]; then
 fi
 
 # --- Service identities -----------------------------------------------------
-if getent group "$group" >/dev/null; then say present "group $group"; else groupadd --system "$group"; say created "group $group"; fi
+for g in "$group" smcp-srv; do
+  if getent group "$g" >/dev/null; then say present "group $g"; else groupadd --system "$g"; say created "group $g"; fi
+done
 for u in "${users[@]}"; do
   if id -u "$u" >/dev/null 2>&1; then
     say present "user $u"
   else
-    home=/nonexistent
+    home=/nonexistent ugroup=$group
     [ "$u" = smcp-core ] && home=/var/lib/smcp/home/smcp-core
-    useradd --system --gid "$group" --home-dir "$home" --no-create-home --shell /usr/sbin/nologin "$u"
+    [ "$u" = smcp-srv ] && home=/var/lib/smcp/home/smcp-srv ugroup=smcp-srv
+    useradd --system --gid "$ugroup" --home-dir "$home" --no-create-home --shell /usr/sbin/nologin "$u"
     say created "user $u"
   fi
 done
@@ -144,9 +152,13 @@ ensure_dir /var/lib/smcp/exports smcp-core "$group" 0750
 # The Gateway's state directory (state.dir) and smcp-core's home, which
 # holds rootless Podman's container storage.
 ensure_dir /var/lib/smcp/state smcp-core "$group" 0700
-ensure_dir /var/lib/smcp/home smcp-core "$group" 0700
+# Parent of the service homes: smcp-srv must reach its own home below it.
+ensure_dir /var/lib/smcp/home root root 0755
 ensure_dir /var/lib/smcp/home/smcp-core smcp-core "$group" 0700
 ensure_dir /var/log/smcp smcp-core "$group" 0750
+
+# --- Server identity (runtime.run_as = "smcp-srv") ---------------------------
+"$here/setup-server-identity.sh" "$(command -v podman)"
 
 # --- Files ----------------------------------------------------------------
 changed_units=0 changed_nft=0 changed_aa=0
@@ -182,24 +194,29 @@ else
   say present "nftables table inet smcp"
 fi
 
-# --- AppArmor profile of smcpd (FR-13.5) --------------------------------------
-# smcpd.service applies it with AppArmorProfile=-smcpd. On an SELinux host
-# the profile is skipped; smcpd runs in the unit's default domain.
-if [ -d /sys/kernel/security/apparmor ]; then
-  parser=$(command -v apparmor_parser || echo /sbin/apparmor_parser)
-  ensure_file "$here/apparmor/smcpd" /etc/apparmor.d/smcpd 0644
-  if ! grep -qx 'smcpd (enforce)' /sys/kernel/security/apparmor/profiles; then
-    "$parser" -r -W /etc/apparmor.d/smcpd
-    say created "AppArmor profile smcpd (enforce)"
-  elif [ "$changed_aa" = 1 ]; then
-    "$parser" -r -W /etc/apparmor.d/smcpd
-    say updated "AppArmor profile smcpd (enforce)"
+# --- AppArmor profiles (FR-13.5) ---------------------------------------------
+# smcpd.service applies smcpd with AppArmorProfile=-smcpd; smcp-server
+# attaches by path to server executables at /smcp/bin inside containers.
+# On an SELinux host the profiles are skipped; smcpd runs in the unit's
+# default domain.
+for prof in smcpd smcp-server; do
+  if [ -d /sys/kernel/security/apparmor ]; then
+    parser=$(command -v apparmor_parser || echo /sbin/apparmor_parser)
+    changed_aa=0
+    ensure_file "$here/apparmor/$prof" "/etc/apparmor.d/$prof" 0644
+    if ! grep -qx "$prof (enforce)" /sys/kernel/security/apparmor/profiles; then
+      "$parser" -r -W "/etc/apparmor.d/$prof"
+      say created "AppArmor profile $prof (enforce)"
+    elif [ "$changed_aa" = 1 ]; then
+      "$parser" -r -W "/etc/apparmor.d/$prof"
+      say updated "AppArmor profile $prof (enforce)"
+    else
+      say present "AppArmor profile $prof (enforce)"
+    fi
   else
-    say present "AppArmor profile smcpd (enforce)"
+    say skipped "AppArmor profile $prof (AppArmor is not enabled)"
   fi
-else
-  say skipped "AppArmor profile smcpd (AppArmor is not enabled)"
-fi
+done
 
 # --- systemd ------------------------------------------------------------------
 if [ "$changed_units" = 1 ]; then
@@ -230,7 +247,8 @@ Next steps (once):
        [state]   dir = "/var/lib/smcp/state"
        [profile] mode = "enforced"
        [runtime] sandbox = "podman"
-                 cgroup_manager = "cgroupfs"
+                 run_as = "smcp-srv"
+                 shared_dir = "/var/lib/smcp/srv"
   2. Check the host as smcp-core:
        sudo -u smcp-core XDG_RUNTIME_DIR=/run/smcp smcpctl runtime doctor
   3. Start:  systemctl start smcpd

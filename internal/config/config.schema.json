@@ -328,6 +328,9 @@
         "selinux_type": { "type": "string", "pattern": "^[a-z0-9_]{1,128}$" },
         "cgroup_manager": { "type": "string", "enum": ["systemd", "cgroupfs"] },
         "monitor_interval": { "$ref": "#/$defs/duration" },
+        "run_as": { "type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,31}$" },
+        "sudo": { "type": "string", "minLength": 1 },
+        "shared_dir": { "type": "string", "minLength": 1 },
         "server": {
           "type": "array",
           "items": {

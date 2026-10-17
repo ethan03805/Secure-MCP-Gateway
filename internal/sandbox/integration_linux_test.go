@@ -270,7 +270,7 @@ func TestIntegrationLeftoverContainersAreReaped(t *testing.T) {
 	ctx := context.Background()
 	name := "smcp-leftover-" + strings.ReplaceAll(h.l.GatewayID(), "-", "")[20:]
 	cmd := exec.Command(h.l.podPath, "create", "--label", LabelManaged+"=1", "--label", LabelGateway+"=old", "--name", name, "--rootfs", "/", "/bin/true") // #nosec G204 -- test
-	cmd.Env = h.l.podmanEnv(nil)
+	cmd.Env = h.l.run.env(nil)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Skipf("cannot create a test container: %v %s", err, out)
 	}

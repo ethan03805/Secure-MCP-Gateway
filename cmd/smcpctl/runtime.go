@@ -90,18 +90,18 @@ func runtimeDoctor(args []string, out io.Writer) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	cgm := ""
+	var do sandbox.DoctorOptions
 	if *cfgPath != "" {
 		cfg, err := config.Load(*cfgPath)
 		if err != nil {
 			return err
 		}
-		if *podman == "" {
-			*podman = cfg.Runtime.Podman
-		}
-		cgm = cfg.Runtime.CgroupManager
+		do = sandbox.DoctorOptionsFor(cfg.Runtime)
 	}
-	checks := sandbox.Doctor(context.Background(), sandbox.DoctorOptions{Podman: *podman, CgroupManager: cgm})
+	if *podman != "" {
+		do.Podman = *podman
+	}
+	checks := sandbox.Doctor(context.Background(), do)
 	failed := sandbox.Failed(checks)
 	if *asJSON {
 		printJSON(out, map[string]any{"ready": len(failed) == 0, "checks": checks})

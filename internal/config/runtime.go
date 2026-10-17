@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -33,6 +34,19 @@ type Runtime struct {
 	CgroupManager   string          `toml:"cgroup_manager" json:"cgroup_manager"`
 	MonitorInterval Duration        `toml:"monitor_interval" json:"monitor_interval"`
 	Servers         []RuntimeServer `toml:"server" json:"server"`
+
+	// RunAs is the CP-46 server-runtime identity (smcp-srv): when set, the
+	// Gateway runs every Podman command as this user through Sudo, so
+	// server containers belong to that user's rootless Podman and its
+	// subordinate ID range, not to the Gateway's own identity.
+	RunAs string `toml:"run_as" json:"run_as"`
+	// Sudo is the absolute path of sudo (default /usr/bin/sudo); used only
+	// with RunAs.
+	Sudo string `toml:"sudo" json:"sudo"`
+	// SharedDir is a directory the Gateway writes and RunAs can traverse
+	// and read; it holds the Gateway-built root directory of servers that
+	// run without an image. Required with RunAs.
+	SharedDir string `toml:"shared_dir" json:"shared_dir"`
 }
 
 // RuntimeServer holds the sandbox settings of one server, matched by alias.
@@ -154,6 +168,9 @@ func (r *Runtime) check(c *Config) error {
 	if r.Image != "" && !strings.Contains(r.Image, "@sha256:") {
 		return fmt.Errorf("runtime.image must be referenced by digest (name@sha256:...) (SR-3.6-1)")
 	}
+	if err := r.checkRunAs(c); err != nil {
+		return err
+	}
 	if r.MonitorInterval.Duration < 50*time.Millisecond || r.MonitorInterval.Duration > 10*time.Second {
 		return fmt.Errorf("runtime.monitor_interval must be between 50ms and 10s")
 	}
@@ -196,7 +213,45 @@ func (r *Runtime) check(c *Config) error {
 	return nil
 }
 
+var runAsName = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
+
+func (r *Runtime) checkRunAs(c *Config) error {
+	if r.RunAs == "" {
+		if r.Sudo != "" || r.SharedDir != "" {
+			return fmt.Errorf("runtime.sudo and runtime.shared_dir apply only with runtime.run_as")
+		}
+		return nil
+	}
+	if r.Sandbox != "podman" {
+		return fmt.Errorf(`runtime.run_as needs runtime.sandbox = "podman"`)
+	}
+	if !runAsName.MatchString(r.RunAs) {
+		return fmt.Errorf("runtime.run_as %q is not a valid user name", r.RunAs)
+	}
+	if r.CgroupManager == "cgroupfs" {
+		return fmt.Errorf(`runtime.run_as runs Podman under the server identity's systemd user manager: set cgroup_manager = "systemd" or leave it unset`)
+	}
+	if r.Sudo != "" && !filepath.IsAbs(r.Sudo) {
+		return fmt.Errorf("runtime.sudo must be an absolute path")
+	}
+	if r.SharedDir == "" {
+		return fmt.Errorf("runtime.run_as needs runtime.shared_dir, a directory that %s can read (for example /var/lib/smcp/srv)", r.RunAs)
+	}
+	if filepath.Clean(r.SharedDir) != r.SharedDir || strings.ContainsAny(r.SharedDir, ",=\n") {
+		return fmt.Errorf("runtime.shared_dir must be a clean absolute path without commas, equals signs or newlines")
+	}
+	if st := c.State.Dir; st != "" {
+		if rel, err := filepath.Rel(st, r.SharedDir); err == nil && (rel == "." || !strings.HasPrefix(rel, "..")) {
+			return fmt.Errorf("runtime.shared_dir must not be inside the state directory, which only the Gateway identity can traverse")
+		}
+	}
+	return nil
+}
+
 func (r *Runtime) resolvePaths(dir string) {
+	if r.SharedDir != "" && !filepath.IsAbs(r.SharedDir) {
+		r.SharedDir = filepath.Join(dir, r.SharedDir)
+	}
 	for i := range r.Servers {
 		for j := range r.Servers[i].Mounts {
 			m := &r.Servers[i].Mounts[j]

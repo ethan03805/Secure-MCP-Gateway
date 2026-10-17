@@ -52,7 +52,7 @@ type harness struct {
 	exe   string
 }
 
-func newHarness(t *testing.T, rt config.Runtime) *harness {
+func newHarness(t *testing.T, rt config.Runtime, adjust ...func(*Options)) *harness {
 	t.Helper()
 	exe, err := os.Executable()
 	if err != nil {
@@ -61,8 +61,12 @@ func newHarness(t *testing.T, rt config.Runtime) *harness {
 	dir := t.TempDir()
 	state := t.TempDir()
 	rt.Podman = exe
-	l, err := New(Options{Runtime: rt, StateDir: state, Log: quiet(), TerminateAfter: 300 * time.Millisecond,
-		CgroupRoot: filepath.Join(dir, "cgroup"), PodmanEnv: map[string]string{"SMCP_FAKE_PODMAN": "1", "SMCP_FAKE_DIR": dir}})
+	o := Options{Runtime: rt, StateDir: state, Log: quiet(), TerminateAfter: 300 * time.Millisecond,
+		CgroupRoot: filepath.Join(dir, "cgroup"), PodmanEnv: map[string]string{"SMCP_FAKE_PODMAN": "1", "SMCP_FAKE_DIR": dir}}
+	for _, f := range adjust {
+		f(&o)
+	}
+	l, err := New(o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,9 +249,11 @@ func TestSecretFilesReachTheSandbox(t *testing.T) {
 	if spec.Env["TOKEN_FILE"] != SecretDir+"/token" || spec.Env["DIR"] != SecretDir || spec.Env["OTHER"] != "/data/x" {
 		t.Fatalf("env %v", spec.Env)
 	}
-	// Mode 0600 files of the Gateway user: only keep-id can read them.
-	if _, err := Build(BuildInput{Runtime: rt, Server: config.RuntimeServer{Alias: "h", Image: img}, Spec: spec, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()}); err == nil || !strings.Contains(err.Error(), "keep-id") {
-		t.Fatalf("auto user namespace with secret files: %v", err)
+	// An auto user namespace gets the same mount; the launcher grants the
+	// instance's UID read access (TestSecretFilesForAnotherUID).
+	auto, err := Build(BuildInput{Runtime: rt, Server: config.RuntimeServer{Alias: "h", Image: img}, Spec: spec, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()})
+	if err != nil || !hasArg(auto.PodmanArgs(), "--mount=type=bind,src="+host+",dst="+SecretDir+",ro,bind-propagation=rprivate") {
+		t.Fatalf("auto user namespace with secret files: %v %v", err, auto.PodmanArgs())
 	}
 	ls, err := Build(BuildInput{Runtime: rt, Server: config.RuntimeServer{Alias: "h", Image: img, UserNS: "keep-id"}, Spec: spec, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()})
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,7 +15,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 )
+
+// ServerAppArmorProfile is the AppArmor profile of server processes,
+// packaging/linux/apparmor/smcp-server.
+const ServerAppArmorProfile = "smcp-server"
 
 // Check statuses.
 const (
@@ -55,6 +62,18 @@ type DoctorOptions struct {
 	// SubIDMin is the smallest acceptable subordinate ID range (default
 	// 65536, CP-46).
 	SubIDMin int
+	// RunAs and Sudo are runtime.run_as and runtime.sudo: the Podman
+	// checks then run as that identity through sudo, and the subordinate
+	// ID checks look at its ranges.
+	RunAs, Sudo string
+	// LookupUser resolves RunAs (tests; default user.Lookup).
+	LookupUser func(string) (*user.User, error)
+}
+
+// DoctorOptionsFor returns the options that check the host for the
+// [runtime] configuration rt.
+func DoctorOptionsFor(rt config.Runtime) DoctorOptions {
+	return DoctorOptions{Podman: rt.Podman, CgroupManager: rt.CgroupManager, RunAs: rt.RunAs, Sudo: rt.Sudo}
 }
 
 // podmanInfo is the subset of `podman info --format json` the doctor reads.
@@ -102,11 +121,27 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 			o.User = u.Username
 		}
 	}
+	var runAs *runAsUser
+	var runAsErr error
+	if o.RunAs != "" {
+		if runAs, runAsErr = lookupRunAs(o.RunAs, o.Sudo, o.LookupUser); runAsErr == nil {
+			o.User = runAs.Name
+		}
+	}
 	if o.Run == nil {
 		o.Run = func(ctx context.Context, name string, args ...string) ([]byte, error) {
 			ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
-			return exec.CommandContext(ctx, name, args...).Output() // #nosec G204 -- fixed diagnostic commands
+			cmd := exec.CommandContext(ctx, name, args...) // #nosec G204 -- fixed diagnostic commands
+			if runAs != nil {
+				cmd.Env, cmd.Dir = runner{runAs: runAs}.env(nil), "/"
+			}
+			out, err := cmd.Output()
+			var ee *exec.ExitError
+			if errors.As(err, &ee) && len(ee.Stderr) > 0 {
+				err = fmt.Errorf("%w: %s", err, bounded(ee.Stderr))
+			}
+			return out, err
 		}
 	}
 	if o.LookPath == nil {
@@ -139,6 +174,16 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 		"upgrade the kernel (Ubuntu 24.04 ships 6.8)")
 	add("rootless", "Gateway runs as a non-root user", *o.Euid != 0, "euid "+strconv.Itoa(*o.Euid),
 		"run smcpd as the smcp-core service identity, not root (packaging/linux/install-enforced.sh creates it)")
+	if o.RunAs != "" {
+		detail := ""
+		if runAs != nil {
+			detail = fmt.Sprintf("uid %d, sudo %s", runAs.UID, runAs.Sudo)
+		} else {
+			detail = runAsErr.Error()
+		}
+		add("run-as", "server identity "+o.RunAs+" (runtime.run_as)", runAsErr == nil && *o.Euid != 0, detail,
+			"create it with packaging/linux/install-enforced.sh, or remove runtime.run_as")
+	}
 	add("cgroup-v2", "cgroup v2 unified hierarchy", exists("/sys/fs/cgroup/cgroup.controllers"), "",
 		"boot with systemd.unified_cgroup_hierarchy=1")
 	userns := true
@@ -176,6 +221,16 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 		lsm = "selinux"
 	}
 	add("lsm", "AppArmor or SELinux", lsm != "", lsm, "enable AppArmor (Ubuntu, Debian) or SELinux (Fedora, RHEL)")
+	if lsm == "apparmor" {
+		// Rootless Podman cannot apply an AppArmor profile itself; the
+		// packaged server profile attaches by path (docs/sandbox.md).
+		c := Check{ID: "apparmor-server", Name: "AppArmor profile " + ServerAppArmorProfile + " loaded", Status: CheckPass}
+		if !appArmorEnforced(o.Root, ServerAppArmorProfile) {
+			c.Status, c.Detail = CheckWarn, "not loaded in enforce mode"
+			c.Remedy = "load packaging/linux/apparmor/" + ServerAppArmorProfile + " (install-enforced.sh does): apparmor_parser -r -W /etc/apparmor.d/" + ServerAppArmorProfile
+		}
+		out = append(out, c)
+	}
 
 	pod := o.Podman
 	if pod == "" {
@@ -191,12 +246,24 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 	if o.CgroupManager != "" {
 		infoArgs = append([]string{"--cgroup-manager=" + o.CgroupManager}, infoArgs...)
 	}
-	raw, err := o.Run(ctx, pod, infoArgs...)
+	name, argv := pod, infoArgs
+	if runAs != nil {
+		name, argv = runner{podman: pod, runAs: runAs}.argv(infoArgs)
+	}
+	raw, err := o.Run(ctx, name, argv...)
 	var info podmanInfo
 	if err == nil {
 		err = json.Unmarshal(raw, &info)
 	}
-	add("podman", "Podman responds (podman info)", err == nil, info.Version.Version, "run `podman info` as this user and fix what it reports")
+	remedy := "run `podman info` as this user and fix what it reports"
+	if runAs != nil {
+		remedy = fmt.Sprintf("run `sudo -n -E -u %s %s info` as this user: it needs the sudoers rule and the lingering user manager that install-enforced.sh sets up", runAs.Name, pod)
+	}
+	detail = info.Version.Version
+	if err != nil {
+		detail = err.Error()
+	}
+	add("podman", "Podman responds (podman info)", err == nil, detail, remedy)
 	if err != nil {
 		return out
 	}
@@ -214,6 +281,27 @@ func Doctor(ctx context.Context, o DoctorOptions) []Check {
 		strings.Join(h.CgroupControllers, ","), "systemd delegates them to user@.service by default; check /etc/systemd/system/user@.service.d (missing: "+strings.Join(missing, ",")+")")
 	add("seccomp", "seccomp available to Podman", h.Security.SeccompEnabled, "", "install a kernel with seccomp and the containers-common seccomp profile")
 	return out
+}
+
+// appArmorEnforced reports whether the AppArmor profile name is loaded in
+// enforce mode. The per-profile directories of apparmorfs are readable
+// without privilege; the profiles list, tried second, needs root.
+func appArmorEnforced(root, name string) bool {
+	dir := filepath.Join(root, "/sys/kernel/security/apparmor/policy/profiles")
+	if entries, err := os.ReadDir(dir); err == nil {
+		for _, e := range entries {
+			if !strings.HasPrefix(e.Name(), name+".") {
+				continue
+			}
+			n, _ := os.ReadFile(filepath.Join(dir, e.Name(), "name")) // #nosec G304 -- apparmorfs
+			m, _ := os.ReadFile(filepath.Join(dir, e.Name(), "mode")) // #nosec G304 -- apparmorfs
+			if strings.TrimSpace(string(n)) == name && strings.TrimSpace(string(m)) == "enforce" {
+				return true
+			}
+		}
+	}
+	b, err := os.ReadFile(filepath.Join(root, "/sys/kernel/security/apparmor/profiles")) // #nosec G304 -- fixed host path
+	return err == nil && slices.Contains(strings.Split(string(b), "\n"), name+" (enforce)")
 }
 
 // Failed returns the checks that did not pass (warnings excluded).

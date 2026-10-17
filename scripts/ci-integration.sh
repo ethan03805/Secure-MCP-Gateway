@@ -361,6 +361,12 @@ enforced_section() {
     if grep -q '^created\|^updated' "$work/install2.log"; then
       fail "second installer run changed the host"
     fi
+    if [ -d /sys/kernel/security/apparmor ]; then
+      say "Enforced profile: servers run confined by the AppArmor profile smcp-server"
+      (cd "$root" && CGO_ENABLED=0 SMCP_SANDBOX_IT=1 SMCP_SANDBOX_IT_STRICT=$strict SMCP_SANDBOX_IT_APPARMOR=1 \
+        SMCP_SANDBOX_IT_CGROUP_MANAGER="${SMCP_ENFORCED_CGROUP_MANAGER:-}" \
+        go test -count=1 -run 'IntegrationServerAppArmorProfile|IntegrationSecretFiles' -v ./internal/sandbox/) || fail "AppArmor server profile integration test"
+    fi
   else
     skip "enforced installer: set SMCP_RUN_INSTALLER=1 with passwordless sudo to exercise it"
   fi
