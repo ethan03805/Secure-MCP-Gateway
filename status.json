@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T09:02:20Z",
-  "commit": "d34f504fbedd3ed3d9296e511574824bbeeaa530",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d34f504fbedd3ed3d9296e511574824bbeeaa530",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39019093334",
+  "generatedAt": "2026-10-17T09:16:48Z",
+  "commit": "539797fb555a6259fef40041c68c8b6bd5ea46b9",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/539797fb555a6259fef40041c68c8b6bd5ea46b9",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39020022745",
   "tests": {
-    "total": 895,
-    "passed": 881,
-    "failed": 0,
+    "total": 896,
+    "passed": 879,
+    "failed": 3,
     "skipped": 14,
-    "durationSec": 444.9,
+    "durationSec": 409.5,
     "packages": [
       {
         "name": "console/e2e/browsers",
-        "passed": 2,
-        "failed": 0,
+        "passed": 1,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -25,8 +25,8 @@
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 37,
-        "failed": 0,
+        "passed": 35,
+        "failed": 2,
         "skipped": 0
       },
       {
@@ -289,7 +289,7 @@
       },
       {
         "name": "internal/remote",
-        "passed": 15,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       },
@@ -462,7 +462,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 92.6
+        "pct": 92.7
       },
       {
         "name": "internal/egress",
@@ -478,7 +478,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.7
+        "pct": 82.8
       },
       {
         "name": "internal/gwtest",
@@ -602,7 +602,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 77.2
+        "pct": 75.6
       },
       {
         "name": "packaging/linux",
@@ -631,11 +631,11 @@
     ]
   },
   "requirements": {
-    "total": 543,
+    "total": 530,
     "verified": 256,
-    "partial": 202,
-    "failing": 0,
-    "unverified": 85,
+    "partial": 201,
+    "failing": 2,
+    "unverified": 71,
     "byElement": [
       {
         "element": "E-01",
@@ -656,15 +656,15 @@
       {
         "element": "E-03",
         "name": "Identity & Authentication Service",
-        "total": 14,
-        "verified": 6,
+        "total": 13,
+        "verified": 7,
         "partial": 4,
         "failing": 0
       },
       {
         "element": "E-04",
         "name": "Session Manager",
-        "total": 19,
+        "total": 18,
         "verified": 10,
         "partial": 7,
         "failing": 0
@@ -672,7 +672,7 @@
       {
         "element": "E-05",
         "name": "Policy Administration Service",
-        "total": 22,
+        "total": 18,
         "verified": 6,
         "partial": 9,
         "failing": 0
@@ -680,7 +680,7 @@
       {
         "element": "E-06",
         "name": "Policy Decision Service",
-        "total": 23,
+        "total": 22,
         "verified": 11,
         "partial": 4,
         "failing": 0
@@ -752,7 +752,7 @@
       {
         "element": "E-15",
         "name": "Server Runtime Manager",
-        "total": 11,
+        "total": 9,
         "verified": 2,
         "partial": 7,
         "failing": 0
@@ -800,7 +800,7 @@
       {
         "element": "E-21",
         "name": "Audit & Evidence Service",
-        "total": 24,
+        "total": 21,
         "verified": 12,
         "partial": 5,
         "failing": 0
@@ -825,9 +825,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 21,
-        "partial": 40,
-        "failing": 0
+        "verified": 20,
+        "partial": 39,
+        "failing": 2
       },
       {
         "element": "E-25",
@@ -840,7 +840,7 @@
       {
         "element": "E-26",
         "name": "Data Access Service",
-        "total": 9,
+        "total": 8,
         "verified": 6,
         "partial": 1,
         "failing": 0
@@ -1444,12 +1444,6 @@
         "tests": []
       },
       {
-        "id": "FR-2.16",
-        "element": "E-04",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "FR-2.17",
         "element": "E-03",
         "status": "partial",
@@ -1536,12 +1530,6 @@
         ]
       },
       {
-        "id": "FR-3.3",
-        "element": "E-05",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "FR-3.4",
         "element": "E-05",
         "status": "verified",
@@ -1572,12 +1560,6 @@
         "tests": [
           "internal/policyadmin.TestPermissionsAndErrorMapping"
         ]
-      },
-      {
-        "id": "FR-3.7",
-        "element": "E-05",
-        "status": "unverified",
-        "tests": []
       },
       {
         "id": "FR-3.8",
@@ -2014,18 +1996,6 @@
         ]
       },
       {
-        "id": "FR-5.10",
-        "element": "E-15",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "FR-5.11",
-        "element": "E-15",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "FR-5.12",
         "element": "E-15",
         "status": "partial",
@@ -2408,12 +2378,6 @@
           "internal/consoleapi.TestJournalVerification",
           "internal/e2e.TestJournalAfterShutdown"
         ]
-      },
-      {
-        "id": "FR-7.6",
-        "element": "E-21",
-        "status": "unverified",
-        "tests": []
       },
       {
         "id": "FR-7.7",
@@ -2849,7 +2813,7 @@
       {
         "id": "FR-8.30",
         "element": "E-24",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "console/e2e/browsers.TestConsoleSuiteOnEveryBrowser"
         ]
@@ -2907,7 +2871,7 @@
       {
         "id": "FR-8.35",
         "element": "E-24",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
           "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
@@ -2953,12 +2917,6 @@
         "tests": [
           "internal/graph.TestCatalogOneTemplatePerOperation"
         ]
-      },
-      {
-        "id": "FR-9.4",
-        "element": "E-26",
-        "status": "unverified",
-        "tests": []
       },
       {
         "id": "FR-9.5",
@@ -4242,12 +4200,6 @@
         ]
       },
       {
-        "id": "SR-1-1",
-        "element": "E-05",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "SR-1.1-1",
         "element": "E-06",
         "status": "partial",
@@ -4317,12 +4269,6 @@
       },
       {
         "id": "SR-1.5-1",
-        "element": "E-06",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "SR-1.6-1",
         "element": "E-06",
         "status": "unverified",
         "tests": []
@@ -4709,12 +4655,6 @@
         ]
       },
       {
-        "id": "SR-2.11-3",
-        "element": "E-03",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "SR-2.11-4",
         "element": "E-04",
         "status": "verified",
@@ -4725,8 +4665,10 @@
       {
         "id": "SR-2.11-5",
         "element": "E-03",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "internal/remote.TestAuthorizationMetadataTruthful"
+        ]
       },
       {
         "id": "SR-2.13-1",
@@ -5400,30 +5342,12 @@
         ]
       },
       {
-        "id": "SR-6.6-1",
-        "element": "E-21",
-        "status": "unverified",
-        "tests": []
-      },
-      {
         "id": "SR-6.7-1",
         "element": "E-21",
         "status": "partial",
         "tests": [
           "internal/secrets.TestFingerprintsShortValueAndRedaction"
         ]
-      },
-      {
-        "id": "SR-6.8-1",
-        "element": "E-21",
-        "status": "unverified",
-        "tests": []
-      },
-      {
-        "id": "SR-6.9-1",
-        "element": "E-05",
-        "status": "unverified",
-        "tests": []
       },
       {
         "id": "SR-6.10-1",
@@ -6344,7 +6268,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35005: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:42311: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6400,6 +6324,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
