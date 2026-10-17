@@ -160,7 +160,7 @@ if "$bin/smcpctl" help 2>&1 | grep -q "keys rotate"; then
     fail "a backup without passphrase or recipient was written"
   fi
   "$bin/smcpctl" backup --config "$cfg" --passphrase-file "$work/backup.pw"
-  archive=$(ls -t "$inst"/backups/*.age | head -n1)
+  archive=$(ls -t "$inst"/backups/*.age | awk 'NR == 1')
   [ -f "$archive.sha256" ] || fail "no checksum file for $archive"
   # sed reads all of its input; head -n1 would close the pipe early and
   # pipefail would fail the script on smcpctl's SIGPIPE (exit 141).

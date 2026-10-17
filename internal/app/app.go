@@ -149,8 +149,22 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	for name, obs := range o.Observers {
 		a.Evidence.AddObserver(name, obs, 0)
 	}
+	// A secret broker writes its own evidence (FR-6.11) from the first
+	// launch on, before the edge exists.
+	if s, ok := o.Secrets.(interface{ AttachEvidence(audit.Recorder) }); ok {
+		s.AttachEvidence(a.Evidence)
+	}
 	if err = a.startInspection(cfg, &o); err != nil { // E-09, E-11, metadata scan (inspection.go)
 		return a, err
+	}
+	// The secret broker's mandatory filters (E-20) join the chain after the
+	// built-in filters are registered, so enabling [secrets] keeps E-09/E-11.
+	if s, ok := o.Secrets.(interface {
+		RegisterFilters(*pipeline.Filters) error
+	}); ok {
+		if err = s.RegisterFilters(o.Filters); err != nil {
+			return a, fmt.Errorf("secret filters: %w", err)
+		}
 	}
 
 	if o.Launcher == nil {
