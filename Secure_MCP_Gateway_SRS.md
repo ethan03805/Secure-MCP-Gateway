@@ -2244,12 +2244,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-6.5 |
 | Parent ID | FR-6 — Secret management |
-| Statement | The Policy Administration Service (E-05) **SHALL** bind a secret to a server only through a Secret Use Policy naming the manifest secret slot, permitted tools, destination, delivery mode, purpose, rate, time window and approval requirement. |
+| Statement | A secret **SHALL** be bound to a server only through a Secret Use Policy naming a declared secret slot, the permitted tools, destination, delivery mode, purpose, rate, time window and approval requirement, and the Policy Administration Service (E-05) **SHALL** show each binding in the effective permission report. |
 | Allocation | Elements: E-05 Policy Administration Service; Functions: F-10; Data stores: D-01 |
 | Verification Method | Test |
 | Verification Statement | Publish a Secret Use Policy for a declared slot; confirm the binding appears in the effective permission report. |
 | Source | ARCH §7.2 Secret Use Policy |
-| Rationale | Secret use is governed by policy. |
+| Rationale | Secret use is governed by policy. Release 1.0 declares secret slots in the Secret Use Policy document (or as `secret_env` entries of the server configuration); the secret slots of a signed manifest (Appendix J) are recorded with the package but not read by the Secret Broker. |
 
 #### FR-6.6 — Delivery mode S1
 
@@ -2296,12 +2296,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-6.9 |
 | Parent ID | FR-6 — Secret management |
-| Statement | The Secret Broker (E-20) **SHALL** deliver a secret through a launch environment variable only when the manifest declares no other mode and the Secret Use Policy carries an approved S4 waiver. |
+| Statement | The Secret Broker (E-20) **SHALL** deliver a secret through a launch environment variable only when the secret slot declares no other mode and the Secret Use Policy carries an approved S4 waiver. |
 | Allocation | Elements: E-20 Secret Broker, E-05 Policy Administration Service; Functions: F-50, F-10 |
 | Verification Method | Test |
 | Verification Statement | Attempt S4 with and without a waiver and with another supported mode; confirm only the waiver-without-alternative case is accepted. |
 | Source | ARCH §8.2 S4 |
-| Rationale | Environment delivery is the most exposing mode. |
+| Rationale | Environment delivery is the most exposing mode. Release 1.0 declares secret slots in the Secret Use Policy document (or as `secret_env` entries of the server configuration); the secret slots of a signed manifest (Appendix J) are recorded with the package but not read by the Secret Broker. |
 
 #### FR-6.10 — Leak fingerprints
 
@@ -6613,7 +6613,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-5.18-1 |
 | Parent ID | SEC-5.18 — Uninspected binary content (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The `content-type-gate` filter **SHALL** remove image, audio and binary embedded-resource content unless the Response Policy allowlists the MIME type, the magic bytes match and the size is within the policy bound. |
+| Statement | The `content-type-gate` filter **SHALL** remove image, audio and binary embedded-resource content unless the content-type allowlist of the configuration (`[filters.content_types]`) allows the MIME type, the magic bytes match and the size is within its bound. |
 | Allocation | Elements: E-11 Response Inspection Pipeline; Functions: F-27 |
 | Verification Method | Test |
 | Verification Statement | Return allowlisted, mismatched and oversize images; confirm the dispositions. |

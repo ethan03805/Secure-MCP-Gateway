@@ -122,6 +122,9 @@ type Options struct {
 	// ServerRiskClasses maps server aliases to their declared tool classes,
 	// for the high-risk check at publication (SR-3.13-1); nil skips it.
 	ServerRiskClasses func() map[string][]string
+	// SecretBindings returns the Secret Use Policy bindings of the given
+	// servers for the effective permission report (FR-6.5); nil omits them.
+	SecretBindings func(servers []string) any
 	// DefaultRate and Burst are the CP-11 values used in simulation.
 	DefaultRate int
 	Burst       int

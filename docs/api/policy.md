@@ -82,13 +82,16 @@ One revision with its canonical document (export, FR-3.8). `{id}` may be `active
 
 ## GET /api/v1/policy/revisions/{id}/permissions?template=T&principal=P
 
-Effective permission report (FR-3.6): every tool the template permits after deny rules, with its obligations. `principal` is echoed back and not otherwise used.
+Effective permission report (FR-3.6): every tool the template permits after deny rules, with its obligations. `principal` is echoed back and not otherwise used. When `[secrets]` is configured, `secret_bindings` lists the Secret Use Policy bindings of the servers the template grants (FR-6.5): slot, secret, mode, tools, destination, purpose, rate, time window and approval.
 
 ```json
 {
   "revision": "r2", "template": "ro", "principal": "",
   "permissions": [
     { "server": "fs", "tool": "read_file", "rule": "ro-fs", "approval": false, "side_effect": "read", "filters": ["path-canonicalize"] }
+  ],
+  "secret_bindings": [
+    { "id": "fs-token", "secret": "fs-token", "server": "fs", "slot": "token", "mode": "S2", "tools": ["read_file"], "purpose": "read the share", "slot_modes": ["S2"] }
   ]
 }
 ```

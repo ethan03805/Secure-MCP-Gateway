@@ -329,6 +329,18 @@ type Binding struct {
 	SlotModes []string `json:"slot_modes"`
 }
 
+// BindingsFor returns the bindings of the given servers (FR-6.5, the
+// effective permission report).
+func (u *UseSet) BindingsFor(servers []string) any {
+	out := []Binding{}
+	for _, b := range u.Bindings() {
+		if slices.Contains(servers, b.Server) {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
 // Bindings returns every binding, ordered by server and slot.
 func (u *UseSet) Bindings() []Binding {
 	out := make([]Binding, 0, len(u.bindings))
