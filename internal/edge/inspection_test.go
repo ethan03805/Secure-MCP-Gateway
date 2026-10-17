@@ -109,7 +109,7 @@ func injectionCorpus(t *testing.T) []corpusSample {
 // released with the same content and disposition as without the filters.
 func TestInjectionTagsEndToEnd(t *testing.T) {
 	reqtest.Verifies(t, "FR-4.17")
-	reqtest.Partial(t, "FR-4.7") // evidence events carry findings and duration; E-29 itself is not built
+	reqtest.Partial(t, "FR-4.7") // evidence side; the observation record is internal/e2e TestFilterFindingsReachObservation
 	h, _, rec := inspectionHarness(t, config.Filters{MandatoryRequest: []string{filters.IDInjectionDetect}, MandatoryResponse: []string{filters.IDInjectionMarker}})
 	_, tok := h.session("ro")
 	cs := h.client(tok)

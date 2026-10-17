@@ -15,13 +15,14 @@ Each call yields one record, assembled from the evidence events that share its c
 
 Both appear in the provenance `filters` list of a released result. A record is assembled when the call reaches its terminal event (delivered, denied, filtered, withheld, failed or indeterminate). A call with no terminal event within 10 minutes is dropped and counted as `unterminated`.
 
-The columns are the parameters of the Parameter Catalog, `docs/parameters.json` (catalog version 1.1.0). The store has one column per per-call parameter. This release computes the parameters below. The other catalog parameters stay null until the element that produces them exists (for example runtime parameters P-102 to P-107 need the Runtime Monitor, and filter findings P-140 to P-144 need the E-09/E-11 detectors).
+The columns are the parameters of the Parameter Catalog, `docs/parameters.json` (catalog version 1.1.0). The store has one column per per-call parameter. This release computes the parameters below. The other catalog parameters stay null until the element that produces them exists (for example runtime parameters P-102 to P-107 need the Runtime Monitor).
 
 | Group | Computed parameters |
 |---|---|
 | Identity and session | P-001 `principal_id`, P-003 `harness_adapter_version` (the request's `io.modelcontextprotocol/clientInfo` as `name/version`, self-asserted, FR-1.45), P-004 `session_id`, P-005 `session_template`, P-007 `calls_in_session`, P-008 `end_user_claim` (S2), P-009 `trace_parent` (a valid W3C `traceparent` from the request `_meta`, FR-1.44) |
 | Request shape | P-020 `mcp_method` (always `tools/call`), P-022 `server_revision`, P-023 `tool_name`, P-024 `request_bytes`, P-025 `argument_count`, P-026 `argument_max_depth`, P-027 `argument_string_lengths`, P-028 `argument_entropy`, P-029 `path_argument_count`, P-030 `url_argument_count` |
-| Request content | P-040 `argument_value_hashes` (S2), P-044 `unicode_control_count` |
+| Request content | P-040 `argument_value_hashes` (S2), P-043 `injection_detect_score`, P-044 `unicode_control_count` |
+| Filters | P-140 `filter_hits`, P-141 `redaction_count`, P-142 `secret_fingerprint_matches`, P-143 `injection_marker_score`, P-144 `pii_hits`, P-205 `t_request_filters`, P-209 `t_response_filters` |
 | Sequence and rate | P-060 `previous_tool`, P-061 `transition_surprise`, P-062 `inter_call_interval`, P-063 `calls_per_minute_session`, P-064 `calls_per_minute_principal`, P-065 `distinct_tools_in_session`, P-066 `repeated_identical_calls` |
 | Decision | P-080 `decision_outcome`, P-081 `decisive_rule_ids`, P-083 `obligations_applied`, P-084 `approval_state`, P-085 `anomaly_band`, P-086 `max_abs_z`, P-087 `baseline_snapshot_id` |
 | Runtime | P-101 `server_execution_time` |
@@ -39,6 +40,7 @@ Derivation notes, where this release differs from the catalog text:
 - P-080 is `permit`, `deny` (refused by the decision) or `not_evaluated` (refused before the decision, for example a session that ended).
 - P-160 is `released`, `withheld`, `blocked` (request filter), `refused`, `failed` or `indeterminate`.
 - P-101, P-162 and P-213 are computed from the evidence-event timestamps (wall clock, microsecond resolution), not from a monotonic clock. P-213 = P-162 − P-101 − P-206.
+- P-043, P-044 and P-140 to P-144 are the values of the `filter` evidence event of each inspection stage (FR-4.7). P-043 and P-143 are the highest score of the injection rule-set findings, P-140 the count of findings per filter ID. P-205 and P-209 hold each filter's time by filter ID and the stage `total`, in milliseconds.
 - P-206 runs from the Approval Service's `requested` event to the call's approval decision event; it is 0 when the call needed no approval.
 - P-061 is −ln p(tool | previous tool) from the Baseline Engine's current transition counts in the call's sequence context, with add-one smoothing (see [Baselines](#baselines)).
 - P-066 is the run length of consecutive calls in the session with the same tool and the same canonical argument digest, 1 for a call that does not repeat the previous one.

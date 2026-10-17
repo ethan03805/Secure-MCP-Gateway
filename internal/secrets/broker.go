@@ -439,9 +439,9 @@ func (b *Broker) deliverLaunch(ctx context.Context, inst *instance, bd *binding,
 	case ModeS4:
 		env, val = bd.slot.Env, string(op.Value)
 	case ModeS1:
-		d.grantID = ids.New()
+		d.grantID = ids.New() // d is not shared yet
 		e.grant = d.grantID
-		if err := b.bindHeader(ctx, bd, d, op.Value); err != nil {
+		if err := b.bindHeader(ctx, bd, d, d.grantID, op.Value); err != nil {
 			return nil, "", "", deny(ReasonDeliveryFailed, op.Ref, op.Version)
 		}
 	}
@@ -453,23 +453,42 @@ func (b *Broker) deliverLaunch(ctx context.Context, inst *instance, bd *binding,
 	return d, env, val, nil
 }
 
-func (b *Broker) bindHeader(ctx context.Context, bd *binding, d *delivery, value []byte) error {
+func (b *Broker) bindHeader(ctx context.Context, bd *binding, d *delivery, grant string, value []byte) error {
 	tmpl := bd.slot.HeaderTemplate
 	if tmpl == "" {
 		tmpl = "{secret}"
 	}
-	return b.injector.BindHeader(ctx, pipeline.HeaderGrant{GrantID: d.grantID, Server: bd.Server, Slot: bd.Slot, Destination: bd.Destination,
+	return b.injector.BindHeader(ctx, pipeline.HeaderGrant{GrantID: grant, Server: bd.Server, Slot: bd.Slot, Destination: bd.Destination,
 		Header: bd.slot.Header, Template: tmpl, SecretRef: d.ref, Version: d.version, Value: slices.Clone(value)})
 }
 
-// undo removes what one delivery left behind.
-func (b *Broker) undo(d *delivery) {
+// undo removes what one delivery left behind and returns the S1 grant it
+// withdrew ("" when none).
+func (b *Broker) undo(d *delivery) string {
 	if d.path != "" {
 		_ = scrubFile(d.path)
 	}
-	if d.grantID != "" && b.injector != nil {
-		b.injector.Withdraw(d.grantID)
+	g := b.takeGrant(d)
+	if g != "" && b.injector != nil {
+		b.injector.Withdraw(g)
 	}
+	return g
+}
+
+// takeGrant clears and returns a delivery's S1 grant ID under the broker
+// lock: an emergency stop and an instance teardown may withdraw at once.
+func (b *Broker) takeGrant(d *delivery) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	g := d.grantID
+	d.grantID = ""
+	return g
+}
+
+func (b *Broker) setGrant(d *delivery, g string) {
+	b.mu.Lock()
+	d.grantID = g
+	b.mu.Unlock()
 }
 
 // InstanceDir returns the directory holding the S2 and S3 files of the
@@ -499,8 +518,8 @@ func (b *Broker) Teardown(alias, reason string) {
 
 func (b *Broker) teardown(inst *instance, reason string) {
 	for _, d := range inst.delivered {
-		b.undo(d)
-		b.record(event{outcome: "withdrawn", reason: strings.ToUpper(reason), b: d.b, ref: d.ref, version: d.version, tool: "*", corr: inst.correlated, grant: d.grantID})
+		g := b.undo(d)
+		b.record(event{outcome: "withdrawn", reason: strings.ToUpper(reason), b: d.b, ref: d.ref, version: d.version, tool: "*", corr: inst.correlated, grant: g})
 	}
 	b.mu.Lock()
 	for _, p := range inst.s2 {
@@ -555,8 +574,8 @@ func (b *Broker) onRetire(ref string, version int) {
 // redeliver replaces one S1 or S3 delivery with the binding's deliverable
 // version, or withdraws it when none is.
 func (b *Broker) redeliver(inst *instance, d *delivery, policyRev, reason string) {
-	b.undo(d)
-	b.record(event{outcome: "withdrawn", reason: reason, b: d.b, ref: d.ref, version: d.version, tool: "*", corr: inst.correlated, grant: d.grantID})
+	g := b.undo(d)
+	b.record(event{outcome: "withdrawn", reason: reason, b: d.b, ref: d.ref, version: d.version, tool: "*", corr: inst.correlated, grant: g})
 	op, err := b.vault.open(d.b.Secret, d.b.Version)
 	if err != nil {
 		_ = b.commit(event{outcome: "denied", reason: reasonFor(err), b: d.b, ref: op.Ref, version: op.Version, tool: "*", corr: inst.correlated, decision: ids.New(), policyRev: policyRev})
@@ -576,9 +595,10 @@ func (b *Broker) redeliver(inst *instance, d *delivery, policyRev, reason string
 		if b.injector == nil {
 			return
 		}
-		d.grantID = ids.New()
-		e.grant = d.grantID
-		if err := b.bindHeader(context.Background(), d.b, d, op.Value); err != nil {
+		g := ids.New()
+		b.setGrant(d, g)
+		e.grant = g
+		if err := b.bindHeader(context.Background(), d.b, d, g, op.Value); err != nil {
 			b.log.Error("secret header rebind failed", "server", inst.alias, "slot", d.b.Slot, "err", err)
 			return
 		}
@@ -607,16 +627,21 @@ func (b *Broker) withdrawAll() {
 	b.mu.Lock()
 	b.stopped = true
 	var s1 []struct {
-		inst *instance
-		d    *delivery
+		inst  *instance
+		d     *delivery
+		grant string
 	}
 	for _, inst := range b.instances {
 		for _, d := range inst.delivered {
 			if d.b.Mode == ModeS1 && d.grantID != "" {
+				// Cleared under the lock: an instance teardown running at the
+				// same time must not withdraw the grant a second time.
 				s1 = append(s1, struct {
-					inst *instance
-					d    *delivery
-				}{inst, d})
+					inst  *instance
+					d     *delivery
+					grant string
+				}{inst, d, d.grantID})
+				d.grantID = ""
 			}
 		}
 	}
@@ -627,9 +652,10 @@ func (b *Broker) withdrawAll() {
 	}
 	b.mu.Unlock()
 	for _, t := range s1 {
-		b.undo(t.d)
-		b.record(event{outcome: "withdrawn", reason: ReasonStopped, b: t.d.b, ref: t.d.ref, version: t.d.version, tool: "*", corr: t.inst.correlated, grant: t.d.grantID})
-		t.d.grantID = ""
+		if b.injector != nil {
+			b.injector.Withdraw(t.grant)
+		}
+		b.record(event{outcome: "withdrawn", reason: ReasonStopped, b: t.d.b, ref: t.d.ref, version: t.d.version, tool: "*", corr: t.inst.correlated, grant: t.grant})
 	}
 	for _, cf := range files {
 		_ = scrubFile(cf.path)

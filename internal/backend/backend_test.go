@@ -36,7 +36,7 @@ func TestPublicName(t *testing.T) {
 }
 
 func TestCheckToolDefinition(t *testing.T) {
-	// The x-mcp-header clause of FR-5.22 is not implemented.
+	// Unit checks; the drift handling of every defect is TestToolDefinitionDriftHandling.
 	reqtest.Partial(t, "FR-5.22")
 	ok := &mcp.Tool{Name: "x", InputSchema: map[string]any{"type": "object", "properties": map[string]any{"file.path-1": map[string]any{"type": "string"}}}}
 	if err := CheckToolDefinition(ok); err != nil {
@@ -106,6 +106,16 @@ func testServer() *mcp.Server {
 	}
 	mcp.AddTool(s, &mcp.Tool{Name: "big"}, func(ctx context.Context, req *mcp.CallToolRequest, a bigArgs) (*mcp.CallToolResult, any, error) {
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: strings.Repeat("x", a.KiB*1024)}}}, nil, nil
+	})
+	type deepArgs struct {
+		Levels int `json:"levels"`
+	}
+	mcp.AddTool(s, &mcp.Tool{Name: "deep"}, func(ctx context.Context, req *mcp.CallToolRequest, a deepArgs) (*mcp.CallToolResult, any, error) {
+		v := map[string]any{}
+		for range a.Levels {
+			v = map[string]any{"a": v}
+		}
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "deep"}}, StructuredContent: v}, nil, nil
 	})
 	type sleepArgs struct {
 		MS int `json:"ms"`
@@ -182,7 +192,7 @@ func TestDispatcherRequiresCapability(t *testing.T) {
 }
 
 func TestResultBoundWhileReading(t *testing.T) {
-	// FR-4.10 also bounds nesting depth (CP-08), which is not enforced.
+	// The boundaries of FR-4.10 (size and depth) are TestResultBoundsAtTheLimit.
 	reqtest.Partial(t, "FR-4.10")
 	caps := pipeline.NewCapabilities(time.Minute)
 	r := startRegistry(t, Limits{PerPrincipal: 2, Total: 2, Queue: 2, ResultBytes: 16 << 10}, caps)

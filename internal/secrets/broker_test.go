@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -119,6 +120,7 @@ func fixtureServer(env map[string]string, seen *sync.Map) *mcp.Server {
 		select {
 		case <-time.After(time.Duration(a.MS) * time.Millisecond):
 		case <-ctx.Done():
+			holdCancelled.Add(1)
 		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: r}}}, nil, nil
 	})
@@ -566,6 +568,54 @@ func TestBrokerPerCallFileLifetime(t *testing.T) {
 			t.Fatalf("denied event fields: %+v", e)
 		}
 	}
+	h.assertNoValues()
+}
+
+// holdCancelled counts hold calls whose context the server saw cancelled.
+var holdCancelled atomic.Int32
+
+// TestEmergencyStopCancelsCallsAndWithdrawsGrants is SR-7.6-2: an
+// emergency stop with a call in flight (holding its S2 per-call secret
+// file) and an active S1 header grant cancels the call (the server sees
+// the cancellation and the harness gets the call refused with
+// EMERGENCY_STOP instead of a result) and withdraws both grants: the S2
+// file is removed and the S1 header grant leaves the Egress Broker.
+func TestEmergencyStopCancelsCallsAndWithdrawsGrants(t *testing.T) {
+	reqtest.Verifies(t, "SR-7.6-2")
+	h := newBrokerHarness(t)
+	cs := h.client()
+	p := h.launcher.envs[0]["CALL_KEY_FILE"]
+	if len(h.inj.active()) != 1 {
+		t.Fatalf("S1 grants before the stop: %v", h.inj.active())
+	}
+	before := holdCancelled.Load()
+	type result struct {
+		err  *jsonrpc.Error
+		data map[string]any
+		took time.Duration
+	}
+	done := make(chan result, 1)
+	start := time.Now()
+	go func() {
+		_, e, d := call(t, cs, "hold", map[string]any{"ms": 20000})
+		done <- result{e, d, time.Since(start)}
+	}()
+	waitFor(t, func() bool { _, err := os.Stat(p); return err == nil }, "S2 file during the call")
+	if err := h.gw.Stop("admin:alice", "drill"); err != nil {
+		t.Fatal(err)
+	}
+	var r result
+	select {
+	case r = <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the in-flight call was not cancelled")
+	}
+	if r.err == nil || r.data["reasonCode"] != "EMERGENCY_STOP" {
+		t.Fatalf("in-flight call after the stop: %v %v", r.err, r.data)
+	}
+	waitFor(t, func() bool { return holdCancelled.Load() > before }, "server-side cancellation")
+	waitFor(t, func() bool { _, err := os.Stat(p); return errors.Is(err, os.ErrNotExist) }, "S2 file removed")
+	waitFor(t, func() bool { return len(h.inj.active()) == 0 }, "S1 grant withdrawn")
 	h.assertNoValues()
 }
 
