@@ -24,6 +24,7 @@ type writer struct {
 	maxRows  int
 	interval time.Duration
 	ch       chan tableRow
+	syncCh   chan chan struct{}
 	log      *slog.Logger
 
 	mu        sync.Mutex
@@ -33,7 +34,23 @@ type writer struct {
 }
 
 func newWriter(s obsstore.Store, maxRows int, interval time.Duration, queue int, log *slog.Logger) *writer {
-	return &writer{store: s, maxRows: maxRows, interval: interval, ch: make(chan tableRow, queue), log: log, dropCount: map[string]uint64{}}
+	return &writer{store: s, maxRows: maxRows, interval: interval, ch: make(chan tableRow, queue), syncCh: make(chan chan struct{}),
+		log: log, dropCount: map[string]uint64{}}
+}
+
+// sync writes every row offered before the call, or returns when ctx ends
+// (the writer stopped or never ran).
+func (w *writer) sync(ctx context.Context) {
+	done := make(chan struct{})
+	select {
+	case w.syncCh <- done:
+	case <-ctx.Done():
+		return
+	}
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
 }
 
 func (w *writer) offer(table string, r obsstore.Row) {
@@ -104,6 +121,18 @@ func (w *writer) run(ctx context.Context) {
 			}
 		case <-t.C:
 			flush()
+		case done := <-w.syncCh:
+			// Rows offered before the request are queued; take them all.
+			for drained := false; !drained; {
+				select {
+				case tr := <-w.ch:
+					buf[tr.table] = append(buf[tr.table], tr.row)
+				default:
+					drained = true
+				}
+			}
+			flush()
+			close(done)
 		}
 	}
 }

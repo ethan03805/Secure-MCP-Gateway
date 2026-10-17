@@ -257,6 +257,11 @@ func startGateway(t *testing.T, sp gwSpec) (*gw, error) {
 			extra += fmt.Sprintf("cgroup_manager = %q\n", m)
 		}
 	}
+	if sp.secrets && suiteProfile() == "enforced" {
+		// The broker's secret files are mode 0600 of the Gateway user; only
+		// a keep-id user namespace can read them inside the sandbox.
+		extra += "\n[[runtime.server]]\nalias = \"h\"\nuserns = \"keep-id\"\n"
+	}
 	if sp.secrets {
 		extra += "\n[secrets]\nkey_source = \"passphrase\"\npassphrase_file = \"vault-pass\"\nuse_policy_file = \"secret-use.json\"\nruntime_dir = \"run\"\n"
 	}

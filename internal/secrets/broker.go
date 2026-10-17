@@ -440,6 +440,18 @@ func (b *Broker) undo(d *delivery) {
 	}
 }
 
+// InstanceDir returns the directory holding the S2 and S3 files of the
+// server's current instance, or "" when it has none. A confining launcher
+// makes it readable inside the sandbox (pipeline.ServerSpec.SecretDir).
+func (b *Broker) InstanceDir(alias string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if inst := b.instances[alias]; inst != nil {
+		return inst.dir
+	}
+	return ""
+}
+
 // Teardown withdraws every delivery of a server instance (FR-6.8: the S3
 // file is deleted at instance teardown). The launcher wrapper calls it when
 // the instance's process closes.

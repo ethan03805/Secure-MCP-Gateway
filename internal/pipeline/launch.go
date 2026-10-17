@@ -26,6 +26,11 @@ type ServerSpec struct {
 	Dir         string
 	RiskClasses []string
 	HighRisk    bool
+	// SecretDir is the host directory of the instance's secret files (S2,
+	// S3) whose paths appear in Env, or "". A launcher whose instances
+	// cannot see the host file system (the sandbox) makes it available
+	// read-only and rewrites those paths.
+	SecretDir string
 }
 
 // Process is a running server instance speaking newline-delimited JSON-RPC:

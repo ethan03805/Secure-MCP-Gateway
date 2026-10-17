@@ -61,32 +61,32 @@ Requirement claims: a passing row makes a partial claim (`reqtest.Partial`) on i
 
 ## Checks and current results
 
-Standalone profile on macOS arm64, 2026-10-16: 18 of 27 rows behave as expected. The Enforced profile has not been run outside CI.
+Standalone profile on macOS arm64, 2026-10-16: 23 of 27 rows behave as expected; the other four (HF-20, HF-21, HF-23, HF-24) are Enforced rows, which the Standalone profile reports as not asserted. The Enforced profile has not been run outside CI.
 
 | Row | Check | Standalone result |
 |---|---|---|
 | HF-01, HF-02 | Tool absent from the catalog, suspended at import with tool-metadata findings, `metadata_blocked` event, call refused as unknown tool, benign `echo` still presented | Pass |
 | HF-03 | Signed package; first call triggers `notifications/tools/list_changed` with a changed description and an added tool; the registry suspends the server (`MANIFEST_DRIFT`), neither tool appears in any catalog | Pass |
 | HF-04 to HF-06 | Result released with `prompt-injection` tags in provenance, P-143 recorded, session tainted; HF-05 in `structuredContent`, HF-06 as an `isError` result | Pass |
-| HF-07 | Progress notifications relayed and tagged | Fail: progress notifications are not relayed to the client at all (FR-1.39 relay missing) |
-| HF-08 | `-31003 SECRET_LEAK` for a result echoing the S3-delivered secret, value not released, grant suspended | Pass |
+| HF-07 | Progress notifications relayed with the northbound token, each passed through the response filters and carrying provenance with its tags | Pass. The canary text is tagged (`prompt-injection`), not removed, as in HF-04 |
+| HF-08 | `-31003 SECRET_LEAK` for a result echoing the S3-delivered secret, value not released, grant suspended | Pass. In the Enforced profile the S3 file used to stay on the host, so the fixture could not read it and the row failed with nothing to block; the sandbox now mounts the instance's secret directory read-only at `/smcp/secrets` (the server needs `userns = "keep-id"`, which the suite sets for this row) |
 | HF-09 | Registered secret and AWS-format key in arguments refused with `-31001 SECRET_IN_ARGUMENTS`, never dispatched; an ordinary note passes | Pass |
 | HF-10 to HF-12 | Remote `$ref`, depth 40, 1,500-member enum: tool suspended at import (`schema-bounds`); zero requests to the `$ref` canary | Pass |
 | HF-13 | Signed manifest with `additionalProperties: false`; live schema loosened with `patternProperties`: revision suspended at start for drift | Pass |
-| HF-14 | The row is the in-server form (`send.email` and `send_email`): Gateway start is refused with a reason naming both tools and FR-1.49. The suite also checks that the cross-server form cannot be configured, because an alias containing `_` is refused by configuration validation (CP-42) | Pass. The Gateway refuses to start rather than starting without the colliding server. |
+| HF-14 | The row is the in-server form (`send.email` and `send_email`): the Gateway starts, the revision is not enabled, the reason names both tools and FR-1.49, a `not_enabled` event (`SERVER_NOT_ENABLED`) is recorded, and sessions get an empty catalog. The suite also checks that the cross-server form cannot be configured, because an alias containing `_` is refused by configuration validation (CP-42) | Pass |
 | HF-15 | Description naming `good_send_email` of another server: suspended (`cross-server-shadowing`) | Pass |
 | HF-16 | 1 MiB result with `result_bytes = 64 KiB`: `-31003 RESULT_TOO_LARGE`, nothing partial released | Pass |
-| HF-17, HF-19 | `-31009 UPSTREAM_TIMEOUT` at the deadline and the instance restarted | Fail: the Gateway answers `-31008` with reason `UPSTREAM_TIMEOUT` (SRS Appendix B.2 lists `UPSTREAM_TIMEOUT` under `-31009`), and the instance is not restarted. After HF-17 the partial line blocks the instance, so the next call fails; after HF-19 the same instance keeps answering. |
+| HF-17, HF-19 | `-31009 UPSTREAM_TIMEOUT` at the deadline and the instance restarted | Pass. The next call waits for the new instance and reaches it |
 | HF-18 | `-31007`, instance terminated, refusal event recorded | Pass |
 | HF-20, HF-21 | PID or memory limit stops the fixture and the instance is killed | Not asserted (Enforced). Standalone: 64 of 64 children started, 256 MiB allocated, instance alive |
 | HF-22 | `../` and symlink paths refused with `-31001 PATH_OUTSIDE_ROOTS` before dispatch, a path inside the root allowed; in the enforced profile a server-side read through the symlink (an argument marked `x-smcp-type: text`) must also fail | Pass (argument check). Standalone: the server-side read through the symlink succeeds, as expected without a sandbox |
 | HF-23 | No connection reaches the loopback TCP canary | Not asserted (Enforced). Standalone: connected |
 | HF-24 | No DNS query reaches the loopback DNS canary; the Egress Broker refuses `CONNECT localhost:<canary port>` (a name that resolves to a loopback address) with a deny event | Not asserted (Enforced). Standalone: the query reached the canary; the broker refused with 403 and a deny event |
-| HF-25 | `-31010` for an `InputRequiredResult` | Fail: `-31007 BACKEND_ERROR` |
-| HF-26 | `roots/list` and `sampling/createMessage` from the server rejected; nothing relayed | Fail: `roots/list` is answered by the Gateway's SDK client (with its empty roots); `sampling/createMessage` is refused with `-31001`; nothing reaches the harness |
+| HF-25 | `-31010` for an `InputRequiredResult` | Pass: `-31010 INPUT_REQUIRED_UNSUPPORTED`; nothing reaches the harness |
+| HF-26 | `roots/list` and `sampling/createMessage` from the server rejected; nothing relayed | Pass: both answered with `-32601` (FR-5.20); nothing reaches the harness |
 | HF-27 | Bidirectional override and zero-width characters removed, `unicode-control` finding with rule-set version | Pass |
 
-The failing "Both" rows (HF-07, HF-17, HF-19, HF-25, HF-26) are defects in the Gateway, not in the fixtures.
+Every "Both" row passes in the Standalone profile. HF-07, HF-17, HF-19, HF-25 and HF-26 failed in the first run because of Gateway defects, fixed since: progress relay (FR-1.39), instance restart after a timeout, the `-31010` mapping (FR-5.24) and refusal of server-initiated requests (FR-5.20, SR-5.6-2).
 
 ## Adding or changing a row
 

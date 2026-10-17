@@ -207,6 +207,20 @@ func (s *Service) Start(ctx context.Context, rec audit.Recorder, admin *adminapi
 	}
 }
 
+// Sync waits until every observation offered before the call is assembled
+// and its rows are in the store (tests). It gives up after five seconds.
+func (s *Service) Sync() {
+	if s.Disabled() {
+		return
+	}
+	s.Collector.Sync()
+	if s.writer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s.writer.sync(ctx)
+	}
+}
+
 // Close drains the collector and the writer and saves state.
 func (s *Service) Close() {
 	if s.Disabled() {

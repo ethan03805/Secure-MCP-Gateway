@@ -4,7 +4,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 
 ## Scope of v1
 
-- The Gateway relays MCP **tools** only. Resources and prompts are not supported; sampling, elicitation and roots are refused unless the MRTR Relay Profile is enabled.
+- The Gateway relays MCP **tools** only. Resources and prompts are not supported; sampling, elicitation and roots requests from servers are refused (`-32601`, or `-31010` for an `InputRequiredResult`); the MRTR Relay Profile that would relay them is not implemented.
 - Backends are **local** MCP servers that the Gateway launches from signed packages. Remote (hosted) MCP servers cannot be used as backends in v1.
 - macOS runs the Standalone (unconfined) profile, labelled "not enforced". Server containment requires the Enforced profile on Linux.
 

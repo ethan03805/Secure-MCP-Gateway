@@ -57,7 +57,32 @@ const (
 const (
 	ServerBinDir = "/smcp/bin"
 	WorkDir      = "/work"
+	// SecretDir is where the instance's secret files (S2, S3) appear,
+	// read-only (pipeline.ServerSpec.SecretDir).
+	SecretDir = "/smcp/secrets"
 )
+
+// SecretPaths returns spec with every environment value that names a path
+// in spec.SecretDir rewritten to the same path under SecretDir, where Build
+// mounts that directory.
+func SecretPaths(spec pipeline.ServerSpec) pipeline.ServerSpec {
+	if spec.SecretDir == "" {
+		return spec
+	}
+	dir := filepath.Clean(spec.SecretDir)
+	env := make(map[string]string, len(spec.Env))
+	for k, v := range spec.Env {
+		switch {
+		case v == dir:
+			v = SecretDir
+		case strings.HasPrefix(v, dir+"/"):
+			v = SecretDir + v[len(dir):]
+		}
+		env[k] = v
+	}
+	spec.Env = env
+	return spec
+}
 
 // Mount is one bind mount of the launch specification.
 type Mount struct {
@@ -310,6 +335,21 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		ls.Artifact = Artifact{Command: in.Spec.Command, Digest: d, Rootfs: in.Rootfs}
 		ls.Mounts = append(ls.Mounts, Mount{Source: in.Spec.Command, Target: target})
 		ls.Argv = append([]string{target}, in.Spec.Args...)
+	}
+
+	if d := in.Spec.SecretDir; d != "" {
+		// The broker's per-instance directory: created by the Gateway for
+		// this instance only, so the state-directory overlap rule of
+		// CheckMountSource does not apply to it.
+		if !filepath.IsAbs(d) || filepath.Clean(d) != d || strings.ContainsAny(d, ",=\n") {
+			return LaunchSpec{}, fmt.Errorf("%w: secret directory %q must be a clean absolute path without commas, equals signs or newlines", ErrMountRefused, d)
+		}
+		// The files are mode 0600 and owned by the Gateway user, which only
+		// a keep-id user namespace maps into the container.
+		if ls.Profile.UserNS != "keep-id" {
+			return LaunchSpec{}, fmt.Errorf("runtime.server %q receives secret files (S2, S3), which only the Gateway user can read: set userns = \"keep-id\" for it", in.Spec.Alias)
+		}
+		ls.Mounts = append(ls.Mounts, Mount{Source: d, Target: SecretDir})
 	}
 
 	for _, m := range srv.Mounts {

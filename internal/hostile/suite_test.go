@@ -259,14 +259,25 @@ func collision(t *testing.T) (string, bool) {
 	_, cfgErr := config.Load(cfgPath)
 	n.add("alias containing \"_\" refused by configuration validation: %v", cfgErr != nil)
 	// In-server form: "send.email" and "send_email" share a public name.
-	_, err := startGateway(t, gwSpec{servers: []serverSpec{hostileServer("HF-14")}})
-	reason := ""
+	// FR-1.49 refuses to enable that revision; the Gateway itself runs.
+	g, err := startGateway(t, gwSpec{servers: []serverSpec{hostileServer("HF-14")}})
 	if err != nil {
-		reason = err.Error()
+		n.add("in-server collision: Gateway start failed: %v", err)
+		return n.String(), false
 	}
+	reason := g.app.Registry.Disabled()["h"]
+	enabled := g.app.Registry.Servers()["h"] != nil
 	namesBoth := strings.Contains(reason, "send.email") && strings.Contains(reason, "send_email") && strings.Contains(reason, "FR-1.49")
-	n.add("in-server collision refused: %v (the Gateway refuses to start; reason names both tools: %v)", err != nil, namesBoth)
-	return n.String(), cfgErr != nil && err != nil && namesBoth
+	ev, recorded := g.waitEvent(time.Second, func(e audit.Event) bool { return e.Outcome == "not_enabled" && e.ReasonCode == "SERVER_NOT_ENABLED" })
+	if recorded {
+		d, _ := ev.Detail.(map[string]any)
+		recorded = d["alias"] == "h"
+	}
+	cs, _ := g.client(nil)
+	cat := g.catalog(cs)
+	n.add("in-server collision: revision enabled: %v; reason names both tools: %v; not_enabled event: %v; Gateway serves sessions: %v (catalog %v)",
+		enabled, namesBoth, recorded, cs != nil, sortedKeys(cat))
+	return n.String(), cfgErr != nil && !enabled && namesBoth && recorded && len(cat) == 0
 }
 
 // injectionRow covers HF-04 to HF-06: the result is released with an

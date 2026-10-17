@@ -230,6 +230,47 @@ func TestBuildWithImageAndEgress(t *testing.T) {
 	}
 }
 
+// TestSecretFilesReachTheSandbox: the broker's S2/S3 files live in a host
+// directory the instance cannot otherwise see; Build mounts it read-only at
+// SecretDir and the file-path variables are rewritten to match (Appendix L
+// HF-08 in the enforced profile).
+func TestSecretFilesReachTheSandbox(t *testing.T) {
+	reqtest.Partial(t, "FR-6.8")
+	rt := testRuntime()
+	img := "registry.local/fs@sha256:" + strings.Repeat("a", 64)
+	host := filepath.Join(t.TempDir(), "h-123")
+	spec := SecretPaths(pipeline.ServerSpec{Alias: "h", Command: "/usr/local/bin/server", SecretDir: host,
+		Env: map[string]string{"TOKEN_FILE": host + "/token", "OTHER": "/data/x", "DIR": host}})
+	if spec.Env["TOKEN_FILE"] != SecretDir+"/token" || spec.Env["DIR"] != SecretDir || spec.Env["OTHER"] != "/data/x" {
+		t.Fatalf("env %v", spec.Env)
+	}
+	// Mode 0600 files of the Gateway user: only keep-id can read them.
+	if _, err := Build(BuildInput{Runtime: rt, Server: config.RuntimeServer{Alias: "h", Image: img}, Spec: spec, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()}); err == nil || !strings.Contains(err.Error(), "keep-id") {
+		t.Fatalf("auto user namespace with secret files: %v", err)
+	}
+	ls, err := Build(BuildInput{Runtime: rt, Server: config.RuntimeServer{Alias: "h", Image: img, UserNS: "keep-id"}, Spec: spec, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasArg(ls.PodmanArgs(), "--mount=type=bind,src="+host+",dst="+SecretDir+",ro,bind-propagation=rprivate") {
+		t.Fatalf("args %v", ls.PodmanArgs())
+	}
+	if v := Env(spec, nil, ls.EnvNames); v["TOKEN_FILE"] != SecretDir+"/token" {
+		t.Fatalf("instance value %v", v)
+	}
+	// No secret directory: no mount, values unchanged.
+	plain := SecretPaths(pipeline.ServerSpec{Alias: "h", Command: "/usr/local/bin/server", Env: map[string]string{"A": host}})
+	ls, err = Build(BuildInput{Runtime: rt, Server: config.RuntimeServer{Alias: "h", Image: img}, Spec: plain, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()})
+	if err != nil || plain.Env["A"] != host || slices.ContainsFunc(ls.Mounts, func(m Mount) bool { return m.Target == SecretDir }) {
+		t.Fatalf("plain: %v %v %v", err, plain.Env, ls.Mounts)
+	}
+	// A directory name that would break the mount option list is refused.
+	bad := pipeline.ServerSpec{Alias: "h", Command: "/usr/local/bin/server", SecretDir: "/run/a,b"}
+	if _, err := Build(BuildInput{Runtime: rt, Server: config.RuntimeServer{Alias: "h", Image: img, UserNS: "keep-id"}, Spec: bad, InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()}); !errors.Is(err, ErrMountRefused) {
+		t.Fatalf("comma in secret directory: %v", err)
+	}
+}
+
 func TestLaunchRefusesUnsafeInput(t *testing.T) {
 	reqtest.Partial(t, "SR-4.6-1", "SR-4.7-1", "SR-3.6-1")
 	rt := testRuntime()

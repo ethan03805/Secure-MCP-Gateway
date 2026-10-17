@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Held calls (FR-3.19). The MCP endpoint answers in JSON (FR-1.6), but a
@@ -198,21 +196,14 @@ func singleEventData(b []byte) ([]byte, bool) {
 // commits the held call to an event stream and sends a
 // notifications/progress message when the request carries a progress token,
 // or an SSE comment line otherwise (FR-3.19).
-func (g *Gateway) keepAlive(ctx context.Context, req *mcp.CallToolRequest) func(string) {
+//
+// The progress values continue in the call's progressRelay, so backend
+// progress relayed after the approval keeps increasing (FR-1.39).
+func (g *Gateway) keepAlive(ctx context.Context, prog *progressRelay) func(string) {
 	hw, _ := ctx.Value(ctxHeld).(*heldWriter)
-	tok := req.Params.GetProgressToken()
-	var mu sync.Mutex
-	n := 0.0
 	return func(msg string) {
 		streaming := hw != nil && hw.startStream()
-		if tok != nil && req.Session != nil {
-			mu.Lock()
-			n++
-			p := n
-			mu.Unlock()
-			if err := req.Session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{ProgressToken: tok, Progress: p, Message: msg}); err != nil {
-				g.log.Debug("progress keep-alive failed", "err", err)
-			}
+		if prog.keepAlive(msg) {
 			return
 		}
 		if streaming {

@@ -138,5 +138,6 @@ Every element E-01 to E-33 has code; none is complete. `docs/status/elements.jso
   the new catalog when its cache expires.
 - Session taint state, rate windows and quotas are in memory and end with
   the session or a restart, like sessions themselves.
-- FR-1.10 asks for HTTP 404 on unknown methods; the SDK answers HTTP 200
-  with `-32601`.
+- Unknown methods (FR-1.10) answer HTTP 404 with `-32601` in the
+  2026-07-28 era; a legacy-era session gets HTTP 200 with `-32601`,
+  because a legacy client reads 404 as an expired session.

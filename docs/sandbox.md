@@ -147,6 +147,8 @@ With `userns = "auto"` the instance runs under a subordinate UID, not the Gatewa
 
 The instance environment is the server's `env` and its resolved `secret_env`. `PATH` and `HOME` of the Gateway are not passed. Values travel in the Podman process environment and are named on the command line (`--env=NAME`), never written there. Names that would configure Podman itself are refused: those starting with `CONTAINERS_`, `PODMAN_`, `BUILDAH_`, `XDG_`, `DBUS_`, `DOCKER_`, `LD_`, `STORAGE_`, `REGISTRY_`, `CONTAINER_`, and `NOTIFY_SOCKET`, `TMPDIR`, `SSL_CERT_*`, the proxy variables, `GODEBUG` and `GOTRACEBACK`.
 
+Secret files (delivery modes S2 and S3, see [secrets.md](secrets.md)) are written by the Secret Broker into a per-instance directory on the host. The sandbox mounts that directory read-only at `/smcp/secrets` and rewrites the file-path variables to match. The files are mode 0600 and belong to the Gateway user, so a server that receives them needs `userns = "keep-id"`; with `"auto"` the launch is refused with a message saying so.
+
 ## The sandbox profile
 
 Every instance is started as:
@@ -178,7 +180,7 @@ The launch specification records: alias, instance ID, container name, the artifa
 
 - **Start.** The Gateway removes containers labelled `smcp.managed=1` that belong to an earlier Gateway process, then launches each configured server at startup. It waits until the container runs and its cgroup is known before the first MCP message, so the monitor sees the instance from the start.
 - **Shutdown (FR-5.27).** Close stdin, wait 5 seconds, `podman kill --signal TERM`, wait 5 seconds, `podman kill --signal KILL`, then `podman rm --force`. If the Gateway process dies, the attached Podman client is killed with it (parent-death signal), so the instance loses its stdin.
-- **Unexpected exit.** Recorded as `instance_exited` with reason `INSTANCE_EXITED_UNEXPECTEDLY` (or `MEMORY_LIMIT`). The instance is not restarted; the server's tools fail until the Gateway restarts.
+- **Unexpected exit.** Recorded as `instance_exited` with reason `INSTANCE_EXITED_UNEXPECTEDLY` (or `MEMORY_LIMIT`). The next call to the server fails and the instance is then relaunched; later calls reach the new instance. An instance that does not answer a call within `upstream_timeout` is also relaunched (the call ends with `-31009`). A relaunch that fails, or whose tool list differs from the enabled revision, suspends the server.
 
 ## Runtime Monitor
 

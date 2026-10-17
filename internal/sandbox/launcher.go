@@ -222,6 +222,7 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 		return nil, fmt.Errorf("runtime.server %q: %w", spec.Alias, ErrEgressUnsupported)
 	}
 	releaseEgress := func() {}
+	spec = SecretPaths(spec)
 	ls, err := Build(BuildInput{Runtime: l.o.Runtime, Server: srv, Spec: spec, Network: NetworkNone, InstanceID: id,
 		Gateway: l.gateway, Rootfs: l.rootfs, StateDir: l.o.StateDir})
 	if err != nil {
