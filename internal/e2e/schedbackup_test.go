@@ -1,14 +1,18 @@
 package e2e
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/backup"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
@@ -31,8 +35,22 @@ func TestScheduledAndOnDemandBackups(t *testing.T) {
 	}
 	f := startOps(t, fmt.Sprintf("[backup]\ninterval = \"1s\"\npassphrase_file = %q\n", pf), nil)
 	access, _, _ := f.oauthLogin("")
-	if err := f.echo(f.mcpClient(access), "x"); err != nil {
-		t.Fatal(err)
+	// A backup stops dispatch while it runs (SR-7.7-1), so a call that
+	// meets a scheduled backup is refused; between backups calls run.
+	served := false
+	var lastErr error
+	for deadline := time.Now().Add(20 * time.Second); !served && time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
+		hc := &http.Client{Transport: bearerRT{access, f.client.Transport}}
+		cs, err := mcp.NewClient(&mcp.Implementation{Name: "e2e-harness", Version: "1"}, nil).Connect(context.Background(),
+			&mcp.StreamableClientTransport{Endpoint: f.cfg.ResourceURI(), HTTPClient: hc}, nil)
+		if err == nil {
+			err = f.echo(cs, "x")
+			cs.Close()
+		}
+		served, lastErr = err == nil, err
+	}
+	if !served {
+		t.Fatalf("no call served between scheduled backups: %v", lastErr)
 	}
 	// A scheduled backup appears in the index.
 	var scheduled map[string]any

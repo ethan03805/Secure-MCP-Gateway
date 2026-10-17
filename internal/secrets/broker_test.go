@@ -117,6 +117,7 @@ func fixtureServer(env map[string]string, seen *sync.Map) *mcp.Server {
 	})
 	mcp.AddTool(s, &mcp.Tool{Name: "hold"}, func(ctx context.Context, _ *mcp.CallToolRequest, a args) (*mcp.CallToolResult, any, error) {
 		r := readFile("CALL_KEY_FILE", "")
+		holdStarted.Add(1)
 		select {
 		case <-time.After(time.Duration(a.MS) * time.Millisecond):
 		case <-ctx.Done():
@@ -571,8 +572,9 @@ func TestBrokerPerCallFileLifetime(t *testing.T) {
 	h.assertNoValues()
 }
 
-// holdCancelled counts hold calls whose context the server saw cancelled.
-var holdCancelled atomic.Int32
+// holdStarted counts hold calls the server began; holdCancelled counts
+// those whose context the server saw cancelled.
+var holdStarted, holdCancelled atomic.Int32
 
 // TestEmergencyStopCancelsCallsAndWithdrawsGrants is SR-7.6-2: an
 // emergency stop with a call in flight (holding its S2 per-call secret
@@ -588,7 +590,7 @@ func TestEmergencyStopCancelsCallsAndWithdrawsGrants(t *testing.T) {
 	if len(h.inj.active()) != 1 {
 		t.Fatalf("S1 grants before the stop: %v", h.inj.active())
 	}
-	before := holdCancelled.Load()
+	before, started := holdCancelled.Load(), holdStarted.Load()
 	type result struct {
 		err  *jsonrpc.Error
 		data map[string]any
@@ -601,6 +603,10 @@ func TestEmergencyStopCancelsCallsAndWithdrawsGrants(t *testing.T) {
 		done <- result{e, d, time.Since(start)}
 	}()
 	waitFor(t, func() bool { _, err := os.Stat(p); return err == nil }, "S2 file during the call")
+	// The S2 file is written before launch authorization; a stop before
+	// that point refuses the call without dispatching it (SR-7.6-1), so
+	// the stop waits until the server runs the call.
+	waitFor(t, func() bool { return holdStarted.Load() > started }, "the server running the call")
 	if err := h.gw.Stop("admin:alice", "drill"); err != nil {
 		t.Fatal(err)
 	}

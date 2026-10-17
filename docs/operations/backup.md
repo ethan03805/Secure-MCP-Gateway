@@ -11,7 +11,7 @@ Every archive is encrypted with [age](https://age-encryption.org): to a passphra
 
 When the Gateway runs, the backup is taken by the Gateway:
 
-1. Dispatch is stopped (an emergency stop with reason `backup`), and in-flight calls are given 30 s to finish; if they do not, the backup is abandoned with `BACKUP_DRAIN_TIMEOUT` and dispatch resumes.
+1. Dispatch is stopped (an emergency stop with reason `backup`), and in-flight calls are given 30 s to finish and return their results; new calls are refused meanwhile. If they do not finish, the backup is abandoned with `BACKUP_DRAIN_TIMEOUT` and dispatch resumes. An emergency stop made during the backup stays in force after it.
 2. The open journal segment is sealed, so every event up to the stop is signed in the archive.
 3. The archive is written to `[backup] dir` as `smcp-backup-<UTC time>.age`, its SHA-256 to `<archive>.sha256`, and the result to `<backup dir>/index.json`.
 4. A `BACKUP_WRITTEN` event with the path, checksum, size and components is committed, and dispatch resumes. If the Gateway was already in emergency stop before the backup, it stays stopped.
