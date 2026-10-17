@@ -22,6 +22,8 @@ Each instance gets its own listeners, so the broker knows which server sends eac
 
 Variables from the broker replace configured `[server.env]` variables of the same name.
 
+**S1 secret headers (FR-6.6).** The broker implements `pipeline.SecretHeaderInjector` for the Secret Broker (E-20). An S1 binding names a header, a template such as `Bearer {secret}` and a destination (`host` or `host:port`). The broker inserts the header on endpoint requests to that destination, where it originates the TLS itself, and replaces any value the instance sent for that header. It never inserts a header into forward-proxy requests (plain HTTP, or CONNECT tunnels it does not terminate), and it applies the header again on each redirect hop, so a redirect to another host loses it. A grant is withdrawn, and its value overwritten, at instance teardown, emergency stop and broker shutdown. `smcpd` connects the two brokers when `[egress] enabled = true` and `[secrets]` is configured.
+
 On every forwarded operation the broker removes `Cookie` from the request, `Set-Cookie` and `Set-Cookie2` from the response, the `Smcp-Egress-Auth` header, hop-by-hop headers and `Proxy-Authorization`. It keeps no cookie state and opens a new connection for each operation. Protocol upgrades (WebSocket) are refused. Cookies inside a CONNECT tunnel are encrypted and pass unchanged.
 
 ## Addresses
@@ -91,7 +93,7 @@ Each operation writes journal events of class `egress` and origin `E-18`:
 | `denied` | `deny` | The operation was refused before forwarding, or a redirect or address was refused |
 | `failed` | `terminated` | A forwarded operation was cut by a limit, a timeout or an upstream failure |
 
-The event detail holds the operation record: `id`, `time`, `instance`, `server`, `mode` (`connect`, `http` or `endpoint`), `method`, `host`, `port`, `path`, `sni`, `grant`, `resolved` (every address the name resolved to), `address` (the address dialed), `address_class`, `redirects`, `decision` (`allowed` or `denied`), `reason`, `detail`, `status`, `bytes_up`, `bytes_down` and `duration_ms`. Query strings, headers and bodies are not recorded.
+The event detail holds the operation record: `id`, `time`, `instance`, `server`, `mode` (`connect`, `http` or `endpoint`), `method`, `host`, `port`, `path`, `sni`, `grant`, `resolved` (every address the name resolved to), `address` (the address dialed), `address_class`, `redirects`, `decision` (`allowed` or `denied`), `reason`, `detail`, `status`, `bytes_up`, `bytes_down`, `duration_ms` and `injected_headers` (names of S1 headers the broker inserted). Query strings, header values and bodies are not recorded.
 
 ## Commands
 
@@ -135,7 +137,7 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 ## Not yet implemented
 
 - One-use egress capabilities in `Smcp-Egress-Auth` bound to correlation ID, decision ID, policy revision and destination (SR-5.16-1). The header is removed before forwarding, but not required or checked.
-- Credential injection for S1 secrets (FR-6.6) and the `secret-fingerprint` filter on outbound URLs, headers and bodies (SR-5.8-2).
+- The `secret-fingerprint` filter on outbound URLs, headers and bodies (SR-5.8-2).
 - Grants from policy decision obligations and limits from manifests and Runtime Profiles (FR-5.38 names three sources; the broker applies the configuration and the grant).
 - Endpoint variable names from signed manifests (FR-5.37); today they come from `endpoint_env` in the configuration.
 - Network attachment by the confining launcher (E-16). Rootless Podman needs the broker's listen address to be reachable from the container's namespace; the E-16 launcher chooses that address.

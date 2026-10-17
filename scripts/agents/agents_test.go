@@ -232,7 +232,12 @@ func TestDNSOnlyCA(t *testing.T) {
 
 func TestConfigAppendix(t *testing.T) {
 	s := configAppendix([]*client{claudeCode(), codex()})
-	for _, want := range []string{`notify = "off"`, `id = "agents-claude-code"`, `framework = "codex"`, `client_id = "smcp-agents-codex"`, `profile = "conformance"`} {
+	// bootstrap --notify off writes [approvals]; a second table would be a
+	// TOML error.
+	if strings.Contains(s, "[approvals]") {
+		t.Errorf("appendix repeats [approvals]:\n%s", s)
+	}
+	for _, want := range []string{`id = "agents-claude-code"`, `framework = "codex"`, `client_id = "smcp-agents-codex"`, `profile = "conformance"`} {
 		if !strings.Contains(s, want) {
 			t.Errorf("appendix lacks %s:\n%s", want, s)
 		}

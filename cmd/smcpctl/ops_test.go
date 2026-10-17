@@ -25,7 +25,7 @@ func instance(t *testing.T) (dir, cfg string) {
 	secrets := t.TempDir()
 	mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", writeFile(t, secrets, "a", "admin password 12\n"),
 		"--approver-password-file", writeFile(t, secrets, "b", "approver password 1\n"),
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	return dir, filepath.Join(dir, "smcp.toml")
 }
 

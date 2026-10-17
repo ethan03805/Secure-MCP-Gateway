@@ -80,6 +80,62 @@ alias = "ref"
 package = %[6]q
 package_sha256 = %[7]q
 slots = { root = %[8]q }
+
+# Elements enabled by this file. Every element below runs without other
+# software; smcpctl health lists the elements and their state
+# (info.elements).
+#
+# Always on, with no table needed: request and response inspection
+# (E-09/E-11, [filters]), the signed Policy Store (E-05), the package
+# library (E-13/E-14, [packages]), the Evidence Journal (E-21), the health
+# monitor (E-23), the management console at the admin URL (E-24) and
+# observation with anomaly scoring (SS-10, [observation]; the store is
+# DuckDB when the build has it, JSON Lines otherwise).
+
+# Approval Service (E-07). notify: auto, off, osascript, terminal-notifier,
+# notify-send or command (with notify_command).
+[approvals]
+notify = %[9]q
+
+# Prometheus metrics on loopback (E-23).
+[metrics]
+enabled = %[10]t
+address = %[11]q
+
+# Elements that need setup first, off by default:
+#
+# Encrypted evidence export (E-21) to storage off this machine:
+#   [evidence]
+#   export_dir = "/Volumes/backup/smcp-evidence"
+#
+# Egress Broker (E-18): servers reach the network only through per-instance
+# proxies with per-server grants. Advisory in the standalone profile.
+#   [egress]
+#   enabled = true
+#   [[egress.grant]]
+#   server = "ref"
+#   host = "api.example.com"
+#   methods = ["GET"]
+#
+# Secret Vault and Secret Broker (E-19/E-20): run "smcpctl secrets init",
+# write a Secret Use Policy, then add
+#   [secrets]
+#   use_policy_file = "secret-use.json"
+#
+# Enforced profile (E-15/E-16/E-17, Linux with rootless Podman): see
+# "smcpctl runtime doctor", then
+#   [profile]
+#   mode = "enforced"
+#   [runtime]
+#   sandbox = "podman"
+#
+# Graph mirror (SS-9, optional, needs a local Neo4j; never blocks calls):
+#   [graph]
+#   enabled = true
+#   uri = "bolt://127.0.0.1:7687"
+#   password_file = "neo4j.password"
+#
+# Remote Access Profile (E-33): "smcpctl remote enable" with a tunnel.
 `
 
 const examplePolicy = `{
@@ -132,6 +188,8 @@ func bootstrap(args []string, out io.Writer) error {
 	refserver := fs.String("refserver", "", "path of smcp-refserver (default: next to smcpctl, then PATH)")
 	port := fs.Int("port", 8443, "harness listener port on 127.0.0.1")
 	adminPort := fs.Int("admin-port", 8444, "control API listener port on 127.0.0.1")
+	metricsPort := fs.Int("metrics-port", -1, "metrics endpoint port on 127.0.0.1 (default admin port + 1; 0 turns metrics off)")
+	notify := fs.String("notify", "auto", "approval desktop notifications: auto, off, osascript, terminal-notifier or notify-send")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -200,7 +258,16 @@ func bootstrap(args []string, out io.Writer) error {
 		if err != nil {
 			return err
 		}
-		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", *adminPort), adminLine, approverHash, RefPackageID, refSHA, *sandbox)
+		mport := *metricsPort
+		if mport < 0 {
+			mport = *adminPort + 1
+		}
+		maddr := fmt.Sprintf("127.0.0.1:%d", mport)
+		if mport == 0 {
+			maddr = config.DefaultMetricsAddress
+		}
+		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", *adminPort), adminLine, approverHash, RefPackageID, refSHA, *sandbox,
+			*notify, mport != 0, maddr)
 		if err := os.WriteFile(cfgPath, []byte(body), 0o600); err != nil {
 			return err
 		}

@@ -96,6 +96,7 @@ type App struct {
 	Egress       *egress.Broker       // nil unless [egress] enabled = true
 	Policy       *policyadmin.Service // E-05: signed Policy Store, /api/v1/policy*
 	Inspector    *filters.Inspector
+	Filters      *pipeline.Filters // the inspection chains the edge runs (E-09, E-11 and registered filters)
 
 	log       *slog.Logger
 	janitor   time.Duration
@@ -141,6 +142,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if a.TLS, err = keys.RotateIfDue(cfg.State.Dir, time.Now(), listenerNames(cfg)...); err != nil {
 		return a, fmt.Errorf("tls certificates: %w", err)
 	}
+	if a.TLS.IPConstrained {
+		o.Log.Warn("server CA has iPAddress name constraints, which BoringSSL-based clients (native Claude Code, OpenCode) reject; replace it with `smcpctl keys rotate ca`")
+	}
 	if a.TLS.LeafRotated {
 		o.Log.Warn("listener certificate reissued", "not_after", a.TLS.LeafNotAfter)
 	}
@@ -181,6 +185,12 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		return a, fmt.Errorf("egress broker: %w", err)
 	}
 	o.Launcher = a.Egress.Wrap(o.Launcher)
+	// E-18 performs S1 header injection for the Secret Broker (E-20).
+	if s, ok := o.Secrets.(interface {
+		SetInjector(pipeline.SecretHeaderInjector)
+	}); ok && a.Egress != nil {
+		s.SetInjector(a.Egress)
+	}
 	host := profile.DetectHost()
 	if o.Host != nil {
 		host = *o.Host
@@ -212,6 +222,17 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	// signed manifests (SR-5.9-2 at import) rather than replacing them.
 	if err = a.startInspection(cfg, &o); err != nil { // E-09, E-11, metadata scan (inspection.go)
 		return a, err
+	}
+	a.Filters = o.Filters
+	// Delivered secret values join the inspector's registered fingerprints,
+	// so the secret-fingerprint filter detects them in arguments and results.
+	if s, ok := o.Secrets.(interface {
+		ShareFingerprints(func(ref string, version int, value []byte))
+	}); ok {
+		fps := a.Inspector.Fingerprints()
+		s.ShareFingerprints(func(ref string, version int, value []byte) {
+			fps.Register(fmt.Sprintf("%s@%d", ref, version), string(value))
+		})
 	}
 	// The secret broker's mandatory filters (E-20) join the chain after the
 	// built-in filters are registered, so enabling [secrets] keeps E-09/E-11.

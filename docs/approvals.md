@@ -133,6 +133,8 @@ Every state change is committed to the evidence journal before it takes effect. 
 | `expired` | `APPROVAL_EXPIRED` | as above plus `previous_state` |
 | `consumed` | `APPROVAL_CONSUMED` | as above plus `consumed_correlation_id`, `approver` |
 
+When the call arrived on the Remote Access listener, the record has `channel = "remote"`, `client_id` and `client_address`, and every approval event of it, including the decision and consumption, carries the same remote-origin fields as the call's own events (FR-16.8).
+
 Argument values are not written to the journal; only their digest is. If the journal cannot record a request or a decision, the request is refused (`APPROVAL_UNAVAILABLE`) or the decision fails (`audit_unavailable`) and nothing changes. Approver sign-ins are recorded as `APPROVER_SIGNIN` and failures as `APPROVER_SIGNIN_FAILED`.
 
 ## Limitations

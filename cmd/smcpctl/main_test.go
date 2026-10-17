@@ -138,7 +138,7 @@ func TestBootstrapAndControlCommands(t *testing.T) {
 		t.Fatalf("bootstrap without a password: %v %s", err, out)
 	}
 	out := mustCtl(t, "bootstrap", "--dir", dir, "--admin-password-file", adminPW, "--approver-password-file", approverPW,
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	if !strings.Contains(out, "wrote") || strings.Contains(out, "admin password 12") {
 		t.Fatalf("%s", out)
 	}
@@ -199,7 +199,7 @@ func TestBootstrapTokenFlow(t *testing.T) {
 	secrets := t.TempDir()
 	approverPW := writeFile(t, secrets, "approver", "approver password 1")
 	out := mustCtl(t, "bootstrap", "--dir", dir, "--bootstrap-token", "--approver-password-file", approverPW,
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t))
+		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", freePort(t), "--notify", "off")
 	var token string
 	lines := strings.Split(out, "\n")
 	for i, l := range lines {

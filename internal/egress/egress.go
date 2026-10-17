@@ -158,6 +158,8 @@ type Broker struct {
 	next      int
 	full      bool
 	closed    bool
+
+	headers headerSet // S1 header grants (inject.go)
 }
 
 type serverLimiter struct {
@@ -397,6 +399,12 @@ func (b *Broker) Close() error {
 		errs = append(errs, b.detach(in))
 	}
 	b.transport.CloseIdleConnections()
+	b.headers.mu.Lock()
+	for id, g := range b.headers.grants {
+		clear(g.value)
+		delete(b.headers.grants, id)
+	}
+	b.headers.mu.Unlock()
 	return errors.Join(errs...)
 }
 

@@ -31,6 +31,11 @@ const (
 	CauseUnconfined       = "unconfined"              // non-critical
 	CauseUnverified       = "unverified_manifests"    // non-critical
 	CauseObserverDropping = "observer_events_dropped" // non-critical
+	// CauseGraphUnavailable and CauseObservationUnavailable are reported by
+	// the graph mirror (E-26) and the Observation Store (E-27); neither
+	// ever gates enforcement.
+	CauseGraphUnavailable       = "graph_mirror_unavailable"      // non-critical
+	CauseObservationUnavailable = "observation_store_unavailable" // non-critical
 )
 
 // CP-27 and SR-7.10-1 thresholds.

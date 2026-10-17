@@ -389,34 +389,39 @@ func TestDesktopNotification(t *testing.T) {
 func TestMissingNotifierBinary(t *testing.T) {
 	reqtest.Partial(t, "FR-3.23")
 	dir := t.TempDir()
-	bin := filepath.Join(dir, "notifier.sh")
 	out := filepath.Join(dir, "notified.txt")
-	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf '%s\\n%s\\n' \"$1\" \"$2\" > "+out+"\n"), 0o700); err != nil {
+	exe, err := os.Executable()
+	if err != nil {
 		t.Fatal(err)
 	}
+	t.Setenv(notifierOutEnv, out)
 	var logs bytes.Buffer
 	var logMu sync.Mutex
 	log := slog.New(slog.NewTextHandler(lockedWriter{&logs, &logMu}, nil))
 	f := newFixture(t, func(cfg *config.Config, o *Options) {
-		cfg.Approvals.Notify, cfg.Approvals.NotifyCommand = "command", bin
+		cfg.Approvals.Notify, cfg.Approvals.NotifyCommand = "command", exe
 		o.Notifier, o.Log = nil, log
 	})
 	r := <-f.request(call("s1", "c1"), args(`{"v":"argument-value"}`), 0, nil)
-	f.svc.Close()
+	f.svc.Close() // waits for the notifier process
 	b, err := os.ReadFile(out)
 	if err != nil || !strings.Contains(string(b), r.res.ApprovalID) || strings.Contains(string(b), "argument-value") {
 		t.Fatalf("command notifier output %q %v", b, err)
 	}
-	// Remove the notifier: approvals still work and a warning is logged.
-	os.Remove(bin)
-	r = <-f.request(call("s1", "c2"), args(`{"v":2}`), 0, nil)
+	// A notifier program that does not exist: approvals still work and a
+	// warning is logged.
+	f2 := newFixture(t, func(cfg *config.Config, o *Options) {
+		cfg.Approvals.Notify, cfg.Approvals.NotifyCommand = "command", filepath.Join(dir, "no-such-notifier")
+		o.Notifier, o.Log = nil, log
+	})
+	r = <-f2.request(call("s1", "c2"), args(`{"v":2}`), 0, nil)
 	if r.err != nil || r.res.Outcome != pipeline.Pending {
 		t.Fatalf("%+v", r)
 	}
-	if err := f.svc.Decide(context.Background(), r.res.ApprovalID, true, "admin:admin", ""); err != nil {
+	if err := f2.svc.Decide(context.Background(), r.res.ApprovalID, true, "admin:admin", ""); err != nil {
 		t.Fatal(err)
 	}
-	f.svc.Close()
+	f2.svc.Close()
 	logMu.Lock()
 	defer logMu.Unlock()
 	if !strings.Contains(logs.String(), "desktop notification failed") {

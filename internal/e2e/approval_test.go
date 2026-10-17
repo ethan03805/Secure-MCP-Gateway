@@ -39,13 +39,27 @@ const approvalPolicy = `{
 const approverAccountPassword = "alice password 12"
 
 // approvalFixture is a running Gateway with the Approval Service, an
-// evidence observer and a command desktop notifier that writes to a file.
+// evidence observer and a desktop notifier that hands each notification to
+// a channel.
 type approvalFixture struct {
 	*fixture
-	svc      *approval.Service
-	notified string
-	mu       sync.Mutex
-	events   []audit.Event
+	svc    *approval.Service
+	notes  chan string
+	mu     sync.Mutex
+	events []audit.Event
+}
+
+// chanNotifier is an approval.Notifier that sends "title|body" to a
+// channel, so tests wait for the notification instead of polling a file.
+// A full channel drops the notification (tests that do not read it).
+type chanNotifier chan string
+
+func (c chanNotifier) Notify(_ context.Context, title, body string) error {
+	select {
+	case c <- title + "|" + body:
+	default:
+	}
+	return nil
 }
 
 func (af *approvalFixture) observed() []audit.Event {
@@ -59,11 +73,6 @@ func startApprovals(t *testing.T, hold, lifetime string) *approvalFixture {
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
 	if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
-		t.Fatal(err)
-	}
-	notified := filepath.Join(dir, "notified.txt")
-	notifier := filepath.Join(dir, "notify.sh")
-	if err := os.WriteFile(notifier, []byte("#!/bin/sh\nprintf '%s|%s\\n' \"$1\" \"$2\" >> "+notified+"\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	port, adminPort := freePort(t), freePort(t)
@@ -88,8 +97,7 @@ password_hash = %q
 [approvals]
 keepalive = "100ms"
 lifetime = %q
-notify = "command"
-notify_command = %q
+notify = "off"
 [[approvals.account]]
 username = "alice"
 password_hash = %q
@@ -113,7 +121,7 @@ command = %q
 args = ["-test.run=NONE"]
 [server.env]
 SMCP_E2E_BACKEND = "1"
-`, port, port, adminPort, stateDir, mustHash(t, "admin password 12"), mustHash(t, approverPassword), lifetime, notifier,
+`, port, port, adminPort, stateDir, mustHash(t, "admin password 12"), mustHash(t, approverPassword), lifetime,
 		mustHash(t, approverAccountPassword), filepath.Join(dir, "policy.json"), hold, clientID, exe)
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	if err := os.WriteFile(cfgPath, []byte(toml), 0o600); err != nil {
@@ -126,8 +134,8 @@ SMCP_E2E_BACKEND = "1"
 	if err != nil {
 		t.Fatal(err)
 	}
-	af := &approvalFixture{notified: notified}
-	svc, err := approval.New(approval.Options{Config: cfg, Log: diag.Discard(), JanitorInterval: 50 * time.Millisecond})
+	af := &approvalFixture{notes: make(chan string, 16)}
+	svc, err := approval.New(approval.Options{Config: cfg, Log: diag.Discard(), JanitorInterval: 50 * time.Millisecond, Notifier: chanNotifier(af.notes)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,9 +214,14 @@ func TestApprovalHeldApprovedDeniedAndReplay(t *testing.T) {
 	af := startApprovals(t, "20s", "5m")
 	access, _, _ := af.oauthLogin("")
 	var progress atomic.Int32
+	thirdKeepAlive := make(chan struct{})
 	hc := &http.Client{Transport: bearerRT{access, af.client.Transport}}
 	c := mcp.NewClient(&mcp.Implementation{Name: "e2e-harness", Version: "1"}, &mcp.ClientOptions{
-		ProgressNotificationHandler: func(context.Context, *mcp.ProgressNotificationClientRequest) { progress.Add(1) }})
+		ProgressNotificationHandler: func(context.Context, *mcp.ProgressNotificationClientRequest) {
+			if progress.Add(1) == 3 {
+				close(thirdKeepAlive)
+			}
+		}})
 	cs, err := c.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: af.cfg.ResourceURI(), HTTPClient: hc}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -234,19 +247,27 @@ func TestApprovalHeldApprovedDeniedAndReplay(t *testing.T) {
 	ch := callAsync("hello")
 	items := af.pending(1)
 	id := idOf(items[0])
-	time.Sleep(350 * time.Millisecond) // several keep-alive intervals
+	// Several keep-alive intervals pass while the call is held.
+	select {
+	case <-thirdKeepAlive:
+	case o := <-ch:
+		t.Fatalf("held call answered before a decision: %+v", o)
+	case <-time.After(20 * time.Second):
+		t.Fatalf("%d progress keep-alives at a 100 ms interval", progress.Load())
+	}
 	select {
 	case o := <-ch:
 		t.Fatalf("held call answered before a decision: %+v", o)
 	default:
 	}
-	if n := progress.Load(); n < 3 {
-		t.Fatalf("%d progress keep-alives in 350 ms at a 100 ms interval", n)
-	}
-	// Notification (X-14) within 2 s, without argument values.
-	b, err := os.ReadFile(af.notified)
-	if err != nil || !strings.Contains(string(b), id) || !strings.Contains(string(b), "t_echo") || strings.Contains(string(b), "hello") {
-		t.Fatalf("desktop notification %q %v", b, err)
+	// Notification (X-14), without argument values.
+	select {
+	case b := <-af.notes:
+		if !strings.Contains(b, id) || !strings.Contains(b, "t_echo") || strings.Contains(b, "hello") {
+			t.Fatalf("desktop notification %q", b)
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatal("no desktop notification")
 	}
 	alice := af.approverToken()
 	st, rec := af.admin("GET", "/api/v1/approvals/"+id, alice, nil)

@@ -72,7 +72,7 @@ func clientID(c *client) string    { return "smcp-agents-" + c.ID }
 // desktop notifications, and one principal and OAuth client per agent.
 func configAppendix(clients []*client) string {
 	var b strings.Builder
-	b.WriteString("\n# Added by scripts/agents (real-agent conformance suite).\n[approvals]\nnotify = \"off\"\n")
+	b.WriteString("\n# Added by scripts/agents (real-agent conformance suite).\n")
 	for _, c := range clients {
 		fmt.Fprintf(&b, "\n[[principal]]\nid = %q\nframework = %q\ndisplay_name = %q\nprofile = %q\n",
 			principalID(c), c.Framework, c.Name+" (conformance suite)", profileID)
@@ -131,6 +131,10 @@ func startGateway(ctx context.Context, root, work string, clients []*client, dns
 	if err != nil {
 		return nil, err
 	}
+	metricsPort, err := freePort()
+	if err != nil {
+		return nil, err
+	}
 	adminPW, approverPW := newPassword(), newPassword()
 	g.approverPassword = approverPW
 	adminFile, approverFile := filepath.Join(work, "admin.pw"), filepath.Join(work, "approver.pw")
@@ -142,7 +146,8 @@ func startGateway(ctx context.Context, root, work string, clients []*client, dns
 	}
 	logf("bootstrapping an instance in %s (harness port %d, control port %d)", g.dir, port, adminPort)
 	if out, err := g.ctl(ctx, "bootstrap", "--dir", g.dir, "--admin-password-file", adminFile,
-		"--approver-password-file", approverFile, "--port", fmt.Sprint(port), "--admin-port", fmt.Sprint(adminPort)); err != nil {
+		"--approver-password-file", approverFile, "--port", fmt.Sprint(port), "--admin-port", fmt.Sprint(adminPort),
+		"--metrics-port", fmt.Sprint(metricsPort), "--notify", "off"); err != nil {
 		return nil, fmt.Errorf("smcpctl bootstrap: %w\n%s", err, out)
 	}
 	g.cfg = filepath.Join(g.dir, "smcp.toml")

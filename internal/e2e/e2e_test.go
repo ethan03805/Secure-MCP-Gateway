@@ -458,8 +458,9 @@ func TestPolicyDecisionsAndErrorMapping(t *testing.T) {
 	if we.Code != -32602 || data["reasonCode"] != "SCHEMA_INVALID" {
 		t.Fatalf("%+v %v", we, data)
 	}
-	// Upstream timeout (2s configured; tool sleeps 5s).
-	if we, _ = callErr(t, cs, "t_slow", nil); we.Code != edge.CodeTimeout {
+	// Upstream timeout (2s configured; tool sleeps 5s): -31009 with reason
+	// UPSTREAM_TIMEOUT (Appendix B), since the backend may have acted.
+	if we, data = callErr(t, cs, "t_slow", nil); we.Code != edge.CodeIndeterminate || data["reasonCode"] != "UPSTREAM_TIMEOUT" {
 		t.Fatalf("%+v", we)
 	}
 	// Result size bound (64 KiB configured).

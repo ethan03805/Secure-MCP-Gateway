@@ -34,6 +34,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/authguard"
+	"github.com/ethan03805/secure-mcp-gateway/internal/channel"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
@@ -215,9 +216,11 @@ func event(r *Record, outcome, reason string, detail map[string]any) audit.Event
 	for k, v := range detail {
 		d[k] = v
 	}
-	return audit.Event{Class: "approval", Origin: "E-07", CorrelationID: r.CorrelationID, SessionID: r.SessionID, PrincipalID: r.PrincipalID,
+	ev := audit.Event{Class: "approval", Origin: "E-07", CorrelationID: r.CorrelationID, SessionID: r.SessionID, PrincipalID: r.PrincipalID,
 		DecisionID: r.DecisionID, PolicyRevision: r.PolicyRevision, ServerRevision: r.ServerRevision, ToolRevision: r.ToolRevision,
 		Outcome: outcome, ReasonCode: reason, PolicyStatus: "evaluated", Detail: d}
+	channel.Origin{Channel: r.Channel, ClientID: r.ClientID, ClientAddress: r.ClientAddress}.Apply(&ev) // FR-16.8
+	return ev
 }
 
 // broadcastLocked sends a notice to every watcher without blocking; a
@@ -289,6 +292,9 @@ func (s *Service) Request(ctx context.Context, req pipeline.ApprovalRequest) (pi
 		e = &entry{done: make(chan struct{}), r: Record{ID: id, State: StatePending, Binding: b, CreatedAt: now.UTC(), ExpiresAt: now.Add(s.lifetime).UTC(),
 			URL: s.URL(id), Template: req.Call.Template, ManifestSource: req.Call.ManifestSource, CorrelationID: req.Call.CorrelationID,
 			DecisionID: req.Call.DecisionID, DecisiveRules: append([]string{}, req.Call.DecisiveRules...), Arguments: canon}}
+		if org := channel.From(ctx); org.Channel == channel.Remote {
+			e.r.Channel, e.r.ClientID, e.r.ClientAddress = org.Channel, org.ClientID, org.ClientAddress
+		}
 		if err := s.store.put(&e.r); err != nil {
 			s.mu.Unlock()
 			return pipeline.ApprovalResult{}, fmt.Errorf("approval store: %w", err)

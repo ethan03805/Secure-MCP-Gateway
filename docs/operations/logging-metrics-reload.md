@@ -17,6 +17,8 @@ The backup archive does not include `log/`.
 
 With `[metrics] enabled = true`, `smcpd` serves the Prometheus text format at `http://127.0.0.1:9464/metrics` (`[metrics] address`). The address must be loopback; any other address is refused at configuration load and again when the listener binds, and the daemon does not start. The endpoint is plain HTTP without authentication, so any local user can read the counts; it exposes no tool arguments, results, principals or sessions.
 
+A configuration written by `smcpctl bootstrap` enables the endpoint on the admin port plus one (8445 with the default ports); `--metrics-port N` picks another port and `--metrics-port 0` writes `enabled = false`.
+
 | Metric | Type | Labels |
 |---|---|---|
 | `smcp_calls_total` | counter | `server_alias`, `tool` (public tool name), `outcome` (`delivered`, `denied`, `failed`, `indeterminate`, `withheld`, `blocked`), `reason_code` |

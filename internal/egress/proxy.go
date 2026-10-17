@@ -170,6 +170,7 @@ func (b *Broker) forward(w http.ResponseWriter, r *http.Request, rec *Record, ta
 	for hop := 0; ; hop++ {
 		st := &dialState{grant: g, rec: rec}
 		out = out.WithContext(context.WithValue(ctx, dialKey{}, st))
+		rec.Injected = b.applyHeaders(out, rec.Server, host, rec.Port, out.URL.Scheme) // S1 (inject.go)
 		resp, err = b.transport.RoundTrip(out)
 		if err != nil {
 			rf := asRefusal(err)

@@ -105,13 +105,13 @@ Without `-local`, Claude Code runs with a temporary `CLAUDE_CONFIG_DIR` and Code
 
 | Finding | Clients | Effect | Status |
 |---|---|---|---|
-| BoringSSL rejects iPAddress name constraints ("unsupported name constraint type"). CP-53 puts `IP 127.0.0.0/8` and `::1/128` constraints on the local CA. | Claude Code (native build, Bun runtime), OpenCode (Bun) | The client never connects to the Gateway, so its tools are missing and every scenario fails. With `-dns-only-ca` both clients pass. Hermes (Python/OpenSSL), Codex (Rust), Goose (Rust, Linux) and Node.js accept the CP-53 CA. | Open. Needs a CP-53 and E-22 decision, for example DNS-only constraints with the listener certificate also naming `localhost`. The suite's `detail` names the cause when it finds the error in the agent's logs. |
+| BoringSSL rejects iPAddress name constraints ("unsupported name constraint type"). CP-53 used to put `IP 127.0.0.0/8` and `::1/128` constraints on the local CA. | Claude Code (native build, Bun runtime), OpenCode (Bun) | The client never connected to the Gateway, so its tools were missing and every scenario failed. | Resolved: CP-53 now has dNSName constraints only, and the Claude Code driver passes without `-dns-only-ca` (2.1.302, local login, 2026-10-16). An installation whose CA predates the change still has the IP constraints; `smcpd` warns at startup until `smcpctl keys rotate ca` replaces it. The suite's `detail` still names the cause when it finds the error in the agent's logs. |
 | Goose on macOS verifies TLS only against the system keychain | Goose | The Gateway CA cannot be trusted without changing the keychain, which the suite does not do | Goose is `not-run` on macOS and runs in CI on Linux |
 | Claude Code refuses FR-1.50-marked tools in headless mode | Claude Code | The Gateway's approval hold cannot be exercised with `claude -p` | By design. See the section above. |
 
 ### The `-dns-only-ca` diagnostic
 
-`-dns-only-ca` replaces the instance's server CA and listener certificate before `smcpd` starts. The replacement CA's name constraints permit only DNS `localhost`, with no iPAddress subtrees. This deviates from CP-53, and the results are labelled `+dns-only-ca`. Use it only to confirm that the CA is the one thing keeping a client from connecting. Never publish its results as the client's status.
+`-dns-only-ca` replaces the instance's server CA and listener certificate before `smcpd` starts. The replacement CA's name constraints permit only DNS `localhost`, with no iPAddress subtrees. CP-53 CAs no longer carry iPAddress subtrees either, so the option now only narrows the DNS names; it is kept for diagnosing an older CA. The results are labelled `+dns-only-ca`. Use it only to confirm that the CA is the one thing keeping a client from connecting. Never publish its results as the client's status.
 
 ## Continuous integration
 

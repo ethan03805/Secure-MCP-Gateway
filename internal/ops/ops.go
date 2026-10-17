@@ -115,6 +115,9 @@ type Options struct {
 	// PendingApprovals reports the approval queue length for metrics; the
 	// Approval Service (E-07) supplies it. Nil reports 0.
 	PendingApprovals func() int
+	// Elements, when set, is reported as info.elements in the health
+	// status: the elements the daemon wired and their state (cmd/smcpd).
+	Elements func() any
 }
 
 // Runtime is the attached operations runtime.
@@ -229,6 +232,9 @@ func (r *Runtime) registerChecks() {
 			"emergency_stop": a.Gateway.Stopped(), "sessions": h.Sessions}
 		if h.PolicyRevision != "" {
 			info["policy_revision"] = h.PolicyRevision
+		}
+		if r.opts.Elements != nil {
+			info["elements"] = r.opts.Elements()
 		}
 		return info
 	})

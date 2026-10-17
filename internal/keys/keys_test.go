@@ -97,8 +97,12 @@ func TestCANameConstraintsAndLifetimes(t *testing.T) {
 		t.Fatal(err)
 	}
 	leaf, _ := loadCert(filepath.Join(dir, ServerCertFile))
-	if !caCert.PermittedDNSDomainsCritical || len(caCert.PermittedDNSDomains) == 0 || len(caCert.PermittedIPRanges) < 2 {
-		t.Fatalf("CA lacks name constraints: %v %v", caCert.PermittedDNSDomains, caCert.PermittedIPRanges)
+	if !caCert.PermittedDNSDomainsCritical || len(caCert.PermittedDNSDomains) == 0 {
+		t.Fatalf("CA lacks name constraints: %v", caCert.PermittedDNSDomains)
+	}
+	// No iPAddress subtrees: BoringSSL rejects them (CP-53).
+	if len(caCert.PermittedIPRanges) != 0 || len(caCert.ExcludedIPRanges) != 0 {
+		t.Fatalf("CA has iPAddress constraints: %v %v", caCert.PermittedIPRanges, caCert.ExcludedIPRanges)
 	}
 	if !caCert.MaxPathLenZero {
 		t.Fatal("CA may issue intermediates")

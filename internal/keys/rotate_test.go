@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -54,35 +53,28 @@ func TestCP53ServerCA(t *testing.T) {
 	if len(wantDNS) != 0 {
 		t.Fatalf("CA DNS constraints %v", ca.PermittedDNSDomains)
 	}
-	var have8, have6 bool
-	for _, r := range ca.PermittedIPRanges {
-		ones, bits := r.Mask.Size()
-		have8 = have8 || (r.IP.Equal(net.IPv4(127, 0, 0, 0)) && ones == 8 && bits == 32)
-		have6 = have6 || (r.IP.Equal(net.ParseIP("::1")) && ones == 128)
+	// CP-53: dNSName subtrees only. iPAddress subtrees make BoringSSL
+	// clients reject the chain ("unsupported name constraint type").
+	if len(ca.PermittedIPRanges) != 0 || len(ca.ExcludedIPRanges) != 0 {
+		t.Fatalf("CA IP constraints %v %v", ca.PermittedIPRanges, ca.ExcludedIPRanges)
 	}
-	if !have8 || !have6 {
-		t.Fatalf("CA IP constraints %v", ca.PermittedIPRanges)
+	// The listener certificate carries the loopback addresses and the
+	// listener IP literal, and verifies for them.
+	for _, n := range []string{"localhost", "gw.local", "127.0.0.1", "::1"} {
+		if _, err := leaf.Verify(x509.VerifyOptions{Roots: poolOf(t, ca), DNSName: n}); err != nil {
+			t.Fatalf("listener name %s: %v", n, err)
+		}
 	}
-	// 127.0.0.2 is inside 127.0.0.0/8: issued and verified.
+	if _, err := leaf.Verify(x509.VerifyOptions{Roots: poolOf(t, ca), DNSName: "10.0.0.1"}); err == nil {
+		t.Fatal("listener certificate covers an IP that is not a listener address")
+	}
 	key, err := loadECKey(filepath.Join(dir, CAKeyFile))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := issueLeaf(dir, ca, key, []string{"localhost"}, []net.IP{net.ParseIP("127.0.0.2")}); err != nil {
-		t.Fatal(err)
-	}
-	inside, _ := loadCert(filepath.Join(dir, ServerCertFile))
-	if _, err := inside.Verify(x509.VerifyOptions{Roots: poolOf(t, ca), DNSName: "127.0.0.2"}); err != nil {
-		t.Fatalf("name inside the constraints: %v", err)
-	}
-	// Names outside the constraints are refused at issuance.
-	for _, bad := range []struct {
-		dns []string
-		ips []net.IP
-	}{{[]string{"gateway.example.com"}, nil}, {nil, []net.IP{net.ParseIP("10.0.0.1")}}} {
-		if err := issueLeaf(dir, ca, key, bad.dns, bad.ips); !errors.Is(err, ErrOutsideConstraints) {
-			t.Fatalf("outside name %v %v: %v", bad.dns, bad.ips, err)
-		}
+	// DNS names outside the constraints are refused at issuance.
+	if err := issueLeaf(dir, ca, key, []string{"gateway.example.com"}, nil); !errors.Is(err, ErrOutsideConstraints) {
+		t.Fatalf("outside name: %v", err)
 	}
 	// RotateIfDue leaves an outside name out of the leaf and reports it.
 	st, err := RotateIfDue(dir, time.Now(), "127.0.0.1", "gateway.example.com")

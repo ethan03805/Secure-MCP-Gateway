@@ -40,6 +40,14 @@ func main() {
 	}
 }
 
+// notifyMode names the approval notifier for the elements report.
+func notifyMode(m string) string {
+	if m == "" {
+		return "auto"
+	}
+	return m
+}
+
 func run(cfgPath, level string) error {
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
@@ -83,12 +91,14 @@ func run(cfgPath, level string) error {
 	if err != nil {
 		return fmt.Errorf("graph: %w", err)
 	}
+	mon.Register("graph", mirror.HealthCheck()) // degraded, never fail-closed, while Neo4j is unreachable
 	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs,
 		Observers: map[string]audit.Observer{"graph": mirror}}
 	obs, err := analytics.New(analytics.Options{Config: cfg, Log: log}) // SS-10, E-27
 	if err != nil {
 		return fmt.Errorf("observation: %w", err)
 	}
+	mon.Register("observation", obs.HealthCheck()) // degraded while the Observation Store cannot be opened
 	opts.ExtraFilters = obs.RegisterFilters
 	if o := obs.Observer(); o != nil {
 		opts.Observers["observation"] = o
@@ -118,8 +128,24 @@ func run(cfgPath, level string) error {
 	if _, err := consoleapi.Attach(a, log); err != nil { // E-24 console and its routes
 		return fmt.Errorf("console: %w", err)
 	}
+	mirror.Register(a.Admin)
+	mirror.Start(ctx, a.Evidence)
+	defer mirror.Close()
+	sec.Attach(a.Admin, a.Registry)
+	go sec.Run(ctx, 0)
+	rs, err := remote.New(remote.Options{Config: cfg, Store: a.Store, Evidence: a.Evidence, Gateway: a.Gateway, Log: log}) // FR-16
+	if err != nil {
+		return fmt.Errorf("remote access: %w", err)
+	}
+	defer rs.Close()
+	rs.Register(a.Admin)
+	// Every component exists from here on: the elements report reads them.
+	w := &wiring{app: a, approvals: approvals, notify: notifyMode(cfg.Approvals.Notify), packages: pkgs, sandbox: rt, secrets: sec,
+		mirror: mirror, obs: obs, remote: rs, console: true}
 	// E-21/E-22/E-23: health monitor, metrics, export, keys, backup, reload.
-	opsrt, err := ops.Attach(ctx, a, ops.Options{ConfigPath: cfgPath, Log: log, LogLevel: lv, Monitor: mon})
+	opsrt, err := ops.Attach(ctx, a, ops.Options{ConfigPath: cfgPath, Log: log, LogLevel: lv, Monitor: mon,
+		PendingApprovals: func() int { return len(approvals.List(approval.StatePending)) },
+		Elements:         func() any { return w.elements() }})
 	if err != nil {
 		return err
 	}
@@ -134,17 +160,6 @@ func run(cfgPath, level string) error {
 			}
 		}
 	}()
-	mirror.Register(a.Admin)
-	mirror.Start(ctx, a.Evidence)
-	defer mirror.Close()
-	sec.Attach(a.Admin, a.Registry)
-	go sec.Run(ctx, 0)
-	rs, err := remote.New(remote.Options{Config: cfg, Store: a.Store, Evidence: a.Evidence, Gateway: a.Gateway, Log: log}) // FR-16
-	if err != nil {
-		return fmt.Errorf("remote access: %w", err)
-	}
-	defer rs.Close()
-	rs.Register(a.Admin)
 	if err := a.Listen(); err != nil {
 		return err
 	}
@@ -154,6 +169,9 @@ func run(cfgPath, level string) error {
 	revision := "none (fail-closed)"
 	if snap := a.Decider.Snapshot(); snap != nil {
 		revision = snap.Revision
+	}
+	for _, e := range w.elements() {
+		log.Info("element", "id", e.ID, "name", e.Name, "state", e.State, "detail", e.Detail)
 	}
 	log.Info("smcpd listening", "mcp", cfg.ResourceURI(), "admin", cfg.AdminURL(), "policy_revision", revision,
 		"profile", a.Profile.Profile, "release_label", a.Profile.Label, "diagnostic_log", cfg.Log.File)
