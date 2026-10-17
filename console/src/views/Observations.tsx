@@ -622,7 +622,7 @@ export function Observations(): ReactNode {
         <p>
           Each parameter is one measured property of a call, a session or the Gateway itself, with a unit and a sensitivity class: S0 and S1 are metadata, S2
           may identify people or content and is pseudonymized for researchers, S3 is payload and needs a separate grant. Start from a preset, adjust the
-          selection, check the cost preview, then publish it as the Observation Policy (it takes effect at the next start of smcpd) or use it for a research campaign. The list is built from the catalog the
+          selection, check the cost preview, then publish it as the Observation Policy (it takes effect at once; a change of baseline contexts at the next start of smcpd) or use it for a research campaign. The list is built from the catalog the
           Gateway serves, so new parameters appear here when the Gateway is upgraded.
         </p>
       </Help>

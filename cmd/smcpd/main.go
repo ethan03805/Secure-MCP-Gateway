@@ -175,6 +175,9 @@ func run(cfgPath, level string) error {
 		return fmt.Errorf("principal directory: %w", err)
 	}
 	cfg.SetDirectory(pdir)
+	// Objects published while smcpd runs apply to the running observation
+	// components at once (obs.Update); the rest wait for the next start.
+	objs.SetApplier(obs.Update)
 	(&obspolicy.Service{Store: objs, Evidence: a.Evidence}).Register(a.Admin)
 	(&principals.Service{Dir: pdir, Sessions: a.Store, Snapshot: a.Decider.Snapshot, Evidence: a.Evidence, Log: log}).Register(a.Admin)
 	mirror.Register(a.Admin)

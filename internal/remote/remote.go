@@ -41,6 +41,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/authguard"
 	"github.com/ethan03805/secure-mcp-gateway/internal/channel"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
 
@@ -127,7 +128,7 @@ func New(o Options) (*Service, error) {
 		return nil, err
 	}
 	var err error
-	if s.reg, err = loadRegistry(filepath.Join(s.dir, "clients.json"), o.Config.Remote.MaxPendingRegistrations); err != nil {
+	if s.reg, err = loadRegistry(filepath.Join(s.dir, "clients.json"), o.Config.Remote.MaxPendingRegistrations, o.Config.Remote.MaxPendingPerSource); err != nil {
 		return nil, err
 	}
 	if b, err := os.ReadFile(filepath.Join(s.dir, "state.json")); err == nil {
@@ -177,7 +178,7 @@ func (s *Service) janitor(ctx context.Context) {
 			s.approvers.Prune()
 			s.lim.prune()
 			s.oauth.prune(s.now())
-			s.reg.prunePending(s.now(), pendingMaxAge)
+			s.reg.prunePending(s.now(), s.cfg.Remote.PendingLifetime.Duration)
 		}
 	}
 }
@@ -336,7 +337,10 @@ func writeFileAtomic(path string, b []byte) error {
 // openLocked binds and serves the remote listener (SR-2.9-3: loopback
 // only, checked by config).
 func (s *Service) openLocked() error {
-	cert, err := tls.LoadX509KeyPair(s.cfg.Listener.TLSCert, s.cfg.Listener.TLSKey)
+	// RR-07: the certificate is re-read when its file changes, as on the
+	// harness and admin listeners, so listener certificate rotation applies
+	// to new remote connections without re-enabling the profile.
+	certs, err := keys.NewCertReloader(s.cfg.Listener.TLSCert, s.cfg.Listener.TLSKey)
 	if err != nil {
 		return err
 	}
@@ -347,7 +351,7 @@ func (s *Service) openLocked() error {
 	l := s.cfg.Remote.Limits
 	srv := &http.Server{
 		Handler:           s.Handler(),
-		TLSConfig:         &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13},
+		TLSConfig:         &tls.Config{GetCertificate: certs.GetCertificate, MinVersion: tls.VersionTLS13},
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		IdleTimeout:       60 * time.Second,

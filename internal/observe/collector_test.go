@@ -212,6 +212,47 @@ func TestDeterministicSampling(t *testing.T) {
 	}
 }
 
+// SetPolicy replaces the selection and sampling rate of a running
+// collector, concurrently with assembly (run with -race).
+func TestSetPolicyWhileRunning(t *testing.T) {
+	reqtest.Partial(t, "FR-10.6")
+	c, fa := newCollector(t, Options{SamplingRate: 0, Parameters: []string{"request_bytes"}})
+	call(c, "before", "s", "read", 0, `{"a":"b"}`)
+	c.Sync()
+	if n := len(fa.records()); n != 0 {
+		t.Fatalf("captured %d at rate 0", n)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := range 50 {
+			call(c, fmt.Sprintf("during-%d", i), "s", "read", time.Duration(i+1)*time.Second, `{}`)
+		}
+	}()
+	c.SetPolicy([]string{"argument_count"}, nil, 1)
+	<-done
+	call(c, "after", "s", "read", time.Hour, `{"a":"b"}`)
+	c.Sync()
+	var after *Record
+	for _, r := range fa.records() {
+		if r.CorrelationID == "after" {
+			after = r
+		}
+	}
+	if after == nil || after.Capture != "sampled" {
+		t.Fatalf("record after SetPolicy: %+v", after)
+	}
+	if _, ok := after.Values["argument_count"]; !ok {
+		t.Fatal("new selection not applied")
+	}
+	if _, ok := after.Values["request_bytes"]; ok {
+		t.Fatal("old selection still applied")
+	}
+	if !c.Selected("argument_count") || c.Selected("request_bytes") {
+		t.Fatal("Selected reports the old selection")
+	}
+}
+
 func TestCaptureEscalation(t *testing.T) {
 	reqtest.Partial(t, "FR-10.7")
 	fa := &fakeAnalyzer{band: func(r *Record) string {

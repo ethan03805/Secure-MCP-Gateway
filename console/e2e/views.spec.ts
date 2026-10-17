@@ -96,8 +96,9 @@ test("G-03 audit profile tuning: the floor is read-only and the profile publishe
   const form = page.getByRole("form", { name: "Publish the Audit Profile" });
   await form.getByLabel(/Reason for this revision/).fill("acceptance test");
   await form.getByRole("button", { name: "Publish the Audit Profile" }).click();
-  await expect(page.getByText(/Published Audit Profile revision \d+\. It takes effect at the next start/)).toBeVisible();
-  await expect(page.getByText(/Revision \d+ takes effect at the next start of smcpd/)).toBeVisible();
+  // The running Gateway applies the profile at once (no restart).
+  await expect(page.getByText(/Published Audit Profile revision \d+\. It applies at once/)).toBeVisible();
+  await expect(page.getByText(/Revision \d+ is not in force/)).toHaveCount(0);
 });
 
 test("G-04 observation workbench: grouped catalog search, presets, cost and preview", async ({ page }) => {

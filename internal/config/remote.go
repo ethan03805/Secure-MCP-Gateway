@@ -39,8 +39,15 @@ type Remote struct {
 	// Cf-Connecting-Ip). Its value is recorded as server-asserted.
 	ClientAddressHeader string `toml:"client_address_header" json:"client_address_header"`
 	// MaxPendingRegistrations bounds stored pending dynamic registrations.
-	MaxPendingRegistrations int          `toml:"max_pending_registrations" json:"max_pending_registrations"`
-	Limits                  RemoteLimits `toml:"limits" json:"limits"`
+	MaxPendingRegistrations int `toml:"max_pending_registrations" json:"max_pending_registrations"`
+	// MaxPendingPerSource bounds the pending registrations from one caller
+	// address (an IPv6 address counts as its /64), so one unauthenticated
+	// caller cannot take every pending slot (CP-49).
+	MaxPendingPerSource int `toml:"max_pending_per_source" json:"max_pending_per_source"`
+	// PendingLifetime is how long a pending registration is kept before it
+	// is dropped (CP-49).
+	PendingLifetime Duration     `toml:"pending_registration_lifetime" json:"pending_registration_lifetime"`
+	Limits          RemoteLimits `toml:"limits" json:"limits"`
 }
 
 // RemoteLimits are the CP-49 remote limits. A zero value takes the
@@ -72,6 +79,12 @@ func (r *Remote) applyDefaults(adminAddr string) {
 	}
 	if r.MaxPendingRegistrations == 0 {
 		r.MaxPendingRegistrations = 32
+	}
+	if r.MaxPendingPerSource == 0 {
+		r.MaxPendingPerSource = 4
+	}
+	if r.PendingLifetime.Duration == 0 {
+		r.PendingLifetime.Duration = 24 * time.Hour
 	}
 	l := &r.Limits
 	setInt := func(p *int, v int) {
@@ -138,6 +151,9 @@ func (c *Config) checkRemote() error {
 		if c.FindClient(id) == nil {
 			return fmt.Errorf("remote.clients names unknown client %q", id)
 		}
+	}
+	if r.PendingLifetime.Duration < time.Minute || r.PendingLifetime.Duration > 7*24*time.Hour {
+		return fmt.Errorf("remote.pending_registration_lifetime must be between 1m and 168h")
 	}
 	if slices.Contains(r.Templates, "") {
 		return fmt.Errorf("remote.templates has an empty entry")

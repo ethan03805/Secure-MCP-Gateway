@@ -165,6 +165,17 @@ func (s *Scorer) Snapshot() *baseline.Snapshot {
 	return nil
 }
 
+// SetThresholds replaces the band thresholds; scores computed after the
+// call use them (a published Observation Policy applies without a
+// restart).
+func (s *Scorer) SetThresholds(t Thresholds) error {
+	if err := t.Validate(); err != nil {
+		return err
+	}
+	s.thresholds.Store(&t)
+	return nil
+}
+
 // Thresholds returns the band thresholds.
 func (s *Scorer) Thresholds() Thresholds { return *s.thresholds.Load() }
 

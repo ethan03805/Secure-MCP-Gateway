@@ -39,7 +39,6 @@ const (
 	deviceInterval = 5 * time.Second
 	maxCodes       = 256
 	maxDevices     = 64
-	pendingMaxAge  = 7 * 24 * time.Hour
 	// MessagePending is the OAuth error description for a client whose
 	// dynamic registration has not been approved (FR-16.5).
 	MessagePending = "client registration is pending operator approval; ask the Gateway operator to run: smcpctl clients approve <client_id>"
@@ -259,6 +258,16 @@ func boundText(s string, n int) string {
 	return s
 }
 
+// registrationRefused answers a registration refused for a full pending
+// queue or a caller address over its pending quota.
+func registrationRefused(w http.ResponseWriter, err error) {
+	msg := "too many registrations are waiting for approval"
+	if errors.Is(err, errSourceQuota) {
+		msg = "too many registrations from this address are waiting for approval"
+	}
+	oauthError(w, http.StatusTooManyRequests, "temporarily_unavailable", msg)
+}
+
 // FR-16.5: RFC 7591 registration, stored as pending.
 func (s *Service) register(w http.ResponseWriter, r *http.Request) {
 	var body struct {
@@ -312,16 +321,18 @@ func (s *Service) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Refuse before any costly work or evidence when no pending slot is
-	// free; reg.add checks again under its lock.
-	if s.reg.full() {
-		oauthError(w, http.StatusTooManyRequests, "temporarily_unavailable", "too many registrations are waiting for approval")
+	// free, in total or for this caller address (RR-02); reg.add checks
+	// again under its lock.
+	source := channel.From(r.Context()).ClientAddress
+	if err := s.reg.full(source); err != nil {
+		registrationRefused(w, err)
 		return
 	}
 	now := s.now()
 	g := &Registration{ClientID: "smcp-dcr-" + ids.New(), ClientName: boundText(body.ClientName, 128), RedirectURIs: body.RedirectURIs,
 		GrantTypes: body.GrantTypes, TokenEndpointAuthMethod: method, SoftwareID: boundText(body.SoftwareID, 128),
 		SoftwareVersion: boundText(body.SoftwareVersion, 64), Status: StatusPending, RegisteredAt: now.UTC(),
-		SourceAddress: channel.From(r.Context()).ClientAddress}
+		SourceAddress: source}
 	secret := ""
 	if method != "none" {
 		secret = ids.Secret()
@@ -345,8 +356,8 @@ func (s *Service) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.reg.add(g); err != nil {
-		if errors.Is(err, errTooMany) {
-			oauthError(w, http.StatusTooManyRequests, "temporarily_unavailable", "too many registrations are waiting for approval")
+		if errors.Is(err, errTooMany) || errors.Is(err, errSourceQuota) {
+			registrationRefused(w, err)
 			return
 		}
 		oauthError(w, http.StatusInternalServerError, "server_error", "registration could not be stored")

@@ -44,25 +44,31 @@ func newTracker() *tracker {
 
 // add registers an activity and returns the function that marks it done.
 func (t *tracker) add(sessionID string, kind int, cancel func(error)) func() {
-	done, _ := t.addLimited(sessionID, kind, 0, cancel)
+	done, _ := t.addLimited(sessionID, kind, 0, 0, cancel)
 	return done
 }
 
-// addLimited registers an activity unless the session already has max
-// activities of that kind (max 0 means no limit). It reports false, and
-// registers nothing, when the limit is reached.
-func (t *tracker) addLimited(sessionID string, kind, max int, cancel func(error)) (func(), bool) {
+// addLimited registers an activity unless the session already has
+// perSession activities of that kind, or all sessions together have total
+// (0 means no limit). It reports false, and registers nothing, when a
+// limit is reached. The check and the registration happen under one lock.
+func (t *tracker) addLimited(sessionID string, kind, perSession, total int, cancel func(error)) (func(), bool) {
 	a := &activity{kind: kind, cancel: cancel, done: make(chan struct{})}
 	t.mu.Lock()
 	m := t.bySession[sessionID]
-	if max > 0 {
-		n := 0
-		for _, b := range m {
-			if b.kind == kind {
-				n++
+	if perSession > 0 || total > 0 {
+		mine, all := 0, 0
+		for sid, sm := range t.bySession {
+			for _, b := range sm {
+				if b.kind == kind {
+					all++
+					if sid == sessionID {
+						mine++
+					}
+				}
 			}
 		}
-		if n >= max {
+		if (perSession > 0 && mine >= perSession) || (total > 0 && all >= total) {
 			t.mu.Unlock()
 			return nil, false
 		}

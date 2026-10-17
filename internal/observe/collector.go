@@ -213,14 +213,44 @@ type Collector struct {
 	principal map[string][]time.Time
 	drops     map[string]uint64
 	early     map[string][]earlyProbe
-	params    map[string]bool
-	escalate  map[string]bool
+	sel       atomic.Pointer[selection] // replaced whole by SetPolicy
 
 	assembled atomic.Uint64
 	captured  atomic.Uint64
 	done      chan struct{}
 	inMu      sync.RWMutex // guards ch against send after close
 	closed    bool
+}
+
+// selection is the Observation Policy's capture selection: the selected
+// parameters (identifiers included), the escalation parameters and the
+// normal-band sampling rate. It is never modified after it is stored.
+type selection struct {
+	params   map[string]bool
+	escalate map[string]bool
+	rate     float64
+}
+
+func newSelection(parameters, escalation []string, rate float64) *selection {
+	s := &selection{params: map[string]bool{}, escalate: map[string]bool{}, rate: rate}
+	for _, p := range parameters {
+		s.params[p] = true
+	}
+	for _, p := range Identifiers {
+		s.params[p] = true
+	}
+	for _, p := range escalation {
+		s.escalate[p] = true
+	}
+	return s
+}
+
+// SetPolicy replaces the parameter selection, the escalation parameters
+// and the sampling rate. Records assembled after the call use the new
+// selection; a published Observation Policy or Audit Profile applies
+// without a restart.
+func (c *Collector) SetPolicy(parameters, escalation []string, rate float64) {
+	c.sel.Store(newSelection(parameters, escalation, rate))
 }
 
 // New returns a collector; Run must be started.
@@ -241,17 +271,9 @@ func New(o Options) *Collector {
 		o.Now = time.Now
 	}
 	c := &Collector{o: o, ch: make(chan item, o.Queue), pending: map[string]*pending{}, sessions: map[string]*sessionSeq{},
-		principal: map[string][]time.Time{}, drops: map[string]uint64{}, early: map[string][]earlyProbe{}, params: map[string]bool{}, escalate: map[string]bool{},
+		principal: map[string][]time.Time{}, drops: map[string]uint64{}, early: map[string][]earlyProbe{},
 		done: make(chan struct{})}
-	for _, p := range o.Parameters {
-		c.params[p] = true
-	}
-	for _, p := range Identifiers {
-		c.params[p] = true
-	}
-	for _, p := range o.Escalation {
-		c.escalate[p] = true
-	}
+	c.SetPolicy(o.Parameters, o.Escalation, o.SamplingRate)
 	return c
 }
 
@@ -736,9 +758,10 @@ func (c *Collector) capture(r *Record) {
 		band = r.Score.Band
 	}
 	h := SampleHash(r.CorrelationID)
+	cur := c.sel.Load()
 	inScope := c.o.InScope == nil || c.o.InScope(r)
 	stage := c.stage()
-	rate := c.o.SamplingRate
+	rate := cur.rate
 	if stage >= stageReducedSampling {
 		rate /= 10
 	}
@@ -747,10 +770,10 @@ func (c *Collector) capture(r *Record) {
 	case !inScope:
 	case c.escalates(band):
 		r.Capture = "escalated" // FR-10.7: full capture with the band's escalation parameters
-		for p := range c.params {
+		for p := range cur.params {
 			sel[p] = true
 		}
-		for p := range c.escalate {
+		for p := range cur.escalate {
 			sel[p] = true
 		}
 		for b, ps := range c.o.EscalationByBand {
@@ -763,10 +786,10 @@ func (c *Collector) capture(r *Record) {
 		sel["anomaly_band"], sel["max_abs_z"] = true, true // the reason for the escalation
 	case h < rate:
 		r.Capture = "sampled"
-		for p := range c.params {
+		for p := range cur.params {
 			sel[p] = true
 		}
-	case h < c.o.SamplingRate:
+	case h < cur.rate:
 		degraded = true // sampled at the normal rate, not at the reduced one
 	}
 	if c.o.Campaigns != nil && stage < stageCampaignsPaused {
@@ -873,12 +896,13 @@ func (c *Collector) expire() {
 }
 
 // Selected reports whether a parameter is in the policy selection.
-func (c *Collector) Selected(name string) bool { return c.params[name] }
+func (c *Collector) Selected(name string) bool { return c.sel.Load().params[name] }
 
 // SelectedParameters lists the policy selection (identifiers included).
 func (c *Collector) SelectedParameters() []string {
-	out := make([]string, 0, len(c.params))
-	for p := range c.params {
+	params := c.sel.Load().params
+	out := make([]string, 0, len(params))
+	for p := range params {
 		out = append(out, p)
 	}
 	slices.Sort(out)
