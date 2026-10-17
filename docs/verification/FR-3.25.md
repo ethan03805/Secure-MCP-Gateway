@@ -3,7 +3,7 @@
 | Field | Content |
 |---|---|
 | Requirement or scenario | FR-3.25 |
-| Commit | `12bb1fc4cf3ba600500304982ca8384538b3bfde` |
+| Commit | `1391541c07403092c5818faf132c97bfde4f4577` |
 | Profile and platform | Standalone; darwin/arm64 (macOS 26.6) |
 | Date | 2026-10-17 |
 | Executor | Claude Code agent (verification task) |
@@ -12,7 +12,7 @@
 
 ## Steps
 
-1. Ran `go run ./scripts/agents -approval-acceptance docs/verification/FR-3.25-transcript.md` with `AI_GATEWAY_API_KEY` set, at the commit above with a clean tree. The command builds `smcpd`, `smcpctl` and `smcp-refserver` from the tree, bootstraps a fresh instance on ephemeral ports with `approvals.notify = "off"`, sets `limits.approval_hold = "60s"`, and signs Claude Code in with the OAuth 2.1 code flow as principal `agents-claude-code` on template `conformance`, whose rule `conf-approve` requires approval for `ref_read_file` (`scripts/agents/gateway.go`).
+1. Ran `go run ./scripts/agents -approval-acceptance docs/verification/FR-3.25-transcript.md` with `AI_GATEWAY_API_KEY` set, at the commit above (a commit of `main`, checked out with a clean tree). The command builds `smcpd`, `smcpctl` and `smcp-refserver` from the tree, bootstraps a fresh instance on ephemeral ports with `approvals.notify = "off"`, sets `limits.approval_hold = "60s"`, and signs Claude Code in with the OAuth 2.1 code flow as principal `agents-claude-code` on template `conformance`, whose rule `conf-approve` requires approval for `ref_read_file` (`scripts/agents/gateway.go`).
 2. Claude Code 2.1.302, the version pinned in `docs/clients/matrix.json` (SRS Appendix K), ran four times over Streamable HTTP with only the Gateway's MCP tools (`--tools ""`), model `anthropic/claude-haiku-5.5` through the Vercel AI Gateway. Each time it was asked to call `ref_read_file` once on its own file in the sandbox. Claude Code asks before every call to a tool marked `anthropic/requiresUserInteraction` (FR-1.50); the driver answered that local prompt with allow through the SDK control protocol (`scripts/agents/streamjson.go`).
 3. While each call was held, the driver:
    - case 1: ran `console/e2e/approve-held.mjs`, which signs in to the console as the Administrator in headless Chromium (Playwright 1.64.1), waits for the call to appear in the live pending list of the Approvals view (G-13), opens it, enters a comment and presses "Approve this call";
@@ -34,11 +34,10 @@ The full transcript, with prompts, the tool call Claude Code sent, the decision 
 
 Journal verification after shutdown: `journal OK: 2 segments, 43 events, anchored at segment 2`.
 
-An earlier run on the same day, before commit `6fbb0f7`, failed case 4: Claude Code received only `approval required`, and in case 3 only `approval denied`. Claude Code shows a failed MCP tool call as the JSON-RPC `error.message` and does not show `error.data`, so the plain-language `data.message` and the `data.approvalUrl` of FR-1.51 never reached the person. Commit `6fbb0f7` appends `data.message` to `error.message` for approval errors (`internal/edge/pipeline.go`, `harnessVisible`); the run recorded here is after that change.
+The first run on the same day, before pull request #40, failed case 4: Claude Code received only `approval required`, and in case 3 only `approval denied`. Claude Code shows a failed MCP tool call as the JSON-RPC `error.message` and does not show `error.data`, so the plain-language `data.message` and the `data.approvalUrl` of FR-1.51 never reached the person. Pull request #40 appends `data.message` to `error.message` for approval errors (`harnessVisible` in `internal/edge/pipeline.go`); the run recorded here includes that change, as did a passing run on the pull request branch earlier the same day.
 
 ## Deviations
 
-- The commit above is on branch `test/verification-records` before it was rebased and squash-merged (pull request #40), so it is not an ancestor of `main`; the merged tree contains the same code.
-- The Gateway was built from the branch commit above, not from a release commit; no release of this project exists yet.
+- The Gateway was built from the `main` commit above, not from a release commit; no release of this project has been published yet.
 - The hold bound was set to 60 s instead of the CP-45 default of 120 s to keep the run short; CP-45 allows 0 s to 600 s and the behavior at the bound does not depend on its value.
 - The model was Claude Haiku 5.5 through the Vercel AI Gateway rather than a default Anthropic login. The model only chooses to call the tool; every outcome above is taken from the journal and from the tool result, not from the model's reply.

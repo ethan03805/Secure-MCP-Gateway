@@ -216,3 +216,31 @@ Observations:
 - `TestTransactionFunctionsHoldOnlyDatabaseWork` (`internal/graph/catalog_test.go:159`) parses `backend.go` and fails when a transaction function calls anything outside that set, so a later change to these two functions is caught.
 
 Deviation: none.
+
+## FR-8.35 Console visual rules
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-8.35 |
+| Commit | `1391541c07403092c5818faf132c97bfde4f4577` |
+| Profile and platform | Standalone; darwin/arm64, Chromium, Firefox and WebKit of Playwright 1.64.1 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (verification task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: inspected the 24 view paths of `console/e2e/style.spec.ts:12` (G-01 to G-14 and the Egress, Runtime, Remote access, library, draft, filter workbench, investigation graph and new-campaign pages) against each rule of the checklist in `docs/console-style.md:5`, in the light and the dark color scheme. The measurable rules were checked by `console/e2e/style.spec.ts:40`, which opens every disclosure of each view and reads the rendered page; the other rules were checked by reading the source and the rendered views.
+
+Observations, by checklist rule:
+
+- Lists are tables: every collection is rendered by `DataTable` (`console/src/ui.tsx:205`), a `<table>` with a header row whose sortable columns are buttons with `aria-sort`. The test found the nine G-04 parameter catalog tables without sortable headers; they were changed to `DataTable` before this record. Four tables list a fixed enumeration in a meaningful order rather than a collection of records (the G-01 first-run steps, the two G-06 band tables, the G-03 mandatory audit floor) and have no sort; the test names them as exemptions. No card grid exists.
+- One typeface family: text is IBM Plex Sans and IDs, digests and code are IBM Plex Mono (`console/src/styles.css:37`, `console/src/styles.css:38`), bundled from `@fontsource` (`console/package.json:13`). Every visible text node of every view uses one of the two faces at 12, 13, 14, 16 or 20 px.
+- No decoration: no element has a gradient background or a drop shadow; the one box shadow is an inset 3 px bar that marks a refused row next to its outcome text (`console/src/styles.css:573`). No emoji appear. The only glyph icons are the sort marks, which are `aria-hidden` next to the column label, and the state marks, which sit next to a text label.
+- Color carries state only: state is shown by `StateLabel` (`console/src/ui.tsx:85`), which always renders the state word next to its colored mark.
+- Density: every table row whose cells hold one line is at most 32 px high.
+- Text: no exclamation mark appears in headings, labels, buttons, table headers or paragraphs. Error states show the control API status, message and reason code (`console/src/ui.tsx:130`).
+- Hand-built components: the console's runtime dependencies are React, React DOM and the two font packages (`console/package.json:12`); there is no component kit.
+- Accessibility: see `FR-8.32.md` and `console/e2e/a11y.spec.ts:38`.
+- Local assets: the console page loads scripts, styles and fonts only from the Gateway under a strict content security policy (`console/e2e/console.spec.ts:150`).
+
+Deviation: the four fixed-enumeration tables are not sortable. Sorting them would remove meaning, because their order is the order of the steps or bands.
