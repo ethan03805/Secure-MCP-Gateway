@@ -271,6 +271,11 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Declared behavior from the manifest (FR-5.34): the launcher wrapper of the package library passes the signed manifest's `capabilities.spawns_processes` with the launch (`pipeline.ServerSpec.SpawnsProcesses`), and the sandbox allows process creation when the manifest or `allow_spawn` declares it; any other new process is an `UNDECLARED_PROCESS` deviation. `docs/sandbox.md`.
 - New tests verify FR-5.34, FR-4.15 (with synchronous scoring an abnormal request gets the approval obligation and is never dispatched, and an abnormal response is withheld after dispatch and never delivered) and FR-10.28 (with asynchronous scoring an abnormal call is released, scored after its delivered event, and its score carries no blocking action).
 
+### Partial claims sweep: secret-use evidence and package signing (E-13, E-20)
+
+- Secret-use denials name the secret (FR-6.11): a denial decided before the vault is opened (rate, window, purpose, approval, stop) now carries the secret reference and the version that would have been delivered, read from the vault's metadata; no value is read.
+- New tests verify FR-6.11 (every field on S2 deliveries and on denials, no value in evidence or the diagnostic log) and FR-14.6 (`smcpctl package sign` with a passphrase-protected key and the passphrase from a file or typed at a pseudo-terminal prompt, both signatures verified, keys and passphrases on the command line refused).
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |
