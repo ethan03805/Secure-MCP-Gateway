@@ -3,8 +3,8 @@
     "client": "Claude Code",
     "version": "2.1.302",
     "mode": "ai-gateway",
-    "result": "fail",
-    "detail": "failed: allowed (the agent made no call to ref_echo); denied (the agent made no call to ref_time_now); approval (the agent made no call to ref_read_file); ungranted (not proven: the agent made no successful call, so absence of calls shows nothing); diagnosis: the client's TLS stack (BoringSSL, as in the Bun runtime) rejects the iPAddress name constraints that CP-53 puts on the Gateway CA, so it never connects; rerun with -dns-only-ca to confirm; journal verify ok"
+    "result": "pass",
+    "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: client refused the call locally (honors the FR-1.50 requiresUserInteraction hint; headless mode cannot ask); Gateway hold not exercised); journal verify ok"
   },
   {
     "client": "Codex CLI",
@@ -24,8 +24,8 @@
     "client": "OpenCode",
     "version": "1.15.13",
     "mode": "ai-gateway",
-    "result": "fail",
-    "detail": "failed: allowed (the agent made no call to ref_echo); denied (the agent made no call to ref_time_now); approval (the agent made no call to ref_read_file); ungranted (not proven: the agent made no successful call, so absence of calls shows nothing); diagnosis: the client's TLS stack (BoringSSL, as in the Bun runtime) rejects the iPAddress name constraints that CP-53 puts on the Gateway CA, so it never connects; rerun with -dns-only-ca to confirm; journal verify ok"
+    "result": "pass",
+    "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
   },
   {
     "client": "Gemini CLI",
