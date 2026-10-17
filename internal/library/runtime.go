@@ -276,6 +276,9 @@ func (rt *Runtime) suspendBinding(b *Binding, cause error, detail map[string]any
 	return fmt.Errorf("%w: %w", pipeline.ErrServerSuspended, cause)
 }
 
+// FeedStale reports whether the revocation feed is stale (SR-3-4).
+func (rt *Runtime) FeedStale() (bool, string) { return rt.lib.FeedStale() }
+
 // Tools implements pipeline.ManifestSource: the verified manifest's
 // definitions after a drift check against the live list (FR-1.27,
 // SR-3.8-1). Servers that are not packages get the live list, unverified.
@@ -298,6 +301,15 @@ func (rt *Runtime) Tools(ctx context.Context, spec pipeline.ServerSpec, live pip
 	tools, err := b.manifest.MCPTools()
 	if err != nil {
 		return pipeline.ToolSet{}, err
+	}
+	// The manifest's classes, tightened by operator overrides (SR-3.11-1).
+	if cur, ok := rt.lib.Get(b.rev.ServerID, b.rev.Revision); ok {
+		applyClassification(tools, &cur, func(name string) (string, string, bool) {
+			if mt := b.manifest.Find(name); mt != nil {
+				return mt.SideEffect, mt.SourceTrust, true
+			}
+			return "", "", false
+		})
 	}
 	rt.mu.Lock()
 	b.Status = "running"

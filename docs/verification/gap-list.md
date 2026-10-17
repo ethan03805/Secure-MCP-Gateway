@@ -79,10 +79,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 - SR-5.7-2 missing: pagination cursors are the SDK's encoding of the last tool name, not HMAC-protected and not bound to session or policy revision (FR-1.24 is partial for the same reason).
 
-## E-09 Request Inspection Pipeline
-
-- SR-1.8-1 unverified: `schema-validate` blocks arguments that do not match the input schema with reason `SCHEMA_INVALID` (Appendix B's code; the requirement text says `SCHEMA`); validation is against the live tool schema unless a signed manifest is used, and no test pins the manifest source.
-
 ## E-12 Enforcement Coordinator
 
 - SR-1.2-2 unverified (partial claim exists): a failed decision-intent commit refuses launch with `-31004` and `JOURNAL_UNAVAILABLE`; no test makes the journal directory unwritable during traffic or stops the graph database during traffic.
@@ -91,11 +87,9 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-13 Library Trust Verifier
 
 - FR-18.6 external: `docs/packaging-guide.md` exists; nobody has followed it to package a non-reference server.
-- SR-3-4 missing: no revocation-feed staleness tracking, import blocking or alert.
 
 ## E-14 Local Server Registry
 
-- SR-3.11-1 missing: classification overrides do not exist.
 
 ## E-15 Server Runtime Manager
 
@@ -104,7 +98,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-18 Egress Broker
 
-- SR-5.8-2 missing: the Egress Broker does not run the `secret-fingerprint` filter over outbound URLs, headers and bodies.
 
 ## E-20 Secret Broker
 
@@ -139,7 +132,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-19.3 missing: no release-labelling step that checks AT-01 to AT-21 results.
 - FR-19.4 missing: no AT scenario is claimed by an automated test or a `docs/verification/AT-nn.md` record.
 - SR-3.3-1 unverified: React escapes text by default; no test renders HTML or script in manifests and SBOMs, and no 256 KiB per-page bound is enforced.
-- SR-7.5-1 unverified: `smcpctl bootstrap` writes a one-use bootstrap credential; no test covers the expired and used cases against the control API.
 - SR-7.5-2 unverified (partial claim exists): bootstrap, hash-password and admin redeem refuse arguments, standard input and files looser than 0600; the interactive prompt is not exercised (no terminal in tests), and there is no separate install command (installation runs bootstrap).
 
 ## E-25 Graph Database Engine

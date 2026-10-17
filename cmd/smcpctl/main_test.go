@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -190,6 +191,7 @@ func TestBootstrapAndControlCommands(t *testing.T) {
 }
 
 func TestBootstrapTokenFlow(t *testing.T) {
+	reqtest.Verifies(t, "SR-7.5-1")
 	dir := t.TempDir()
 	secrets := t.TempDir()
 	approverPW := writeFile(t, secrets, "approver", "approver password 1")
@@ -210,9 +212,40 @@ func TestBootstrapTokenFlow(t *testing.T) {
 		t.Fatal("token stored in clear")
 	}
 	cfgPath := filepath.Join(dir, "smcp.toml")
-	d := startDaemon(t, cfgPath)
+	// SR-7.5-1: the credential's hash is stored with mode 0600 and expires
+	// 24 hours after bootstrap.
+	if st, err := os.Stat(cfgPath); err != nil || st.Mode().Perm() != 0o600 {
+		t.Fatalf("configuration mode: %v", err)
+	}
+	m := regexp.MustCompile(`bootstrap_token_expires = "([^"]+)"`).FindStringSubmatch(string(raw))
+	if m == nil {
+		t.Fatal("no bootstrap_token_expires")
+	}
+	exp, err := time.Parse(time.RFC3339, m[1])
+	if err != nil || exp.Before(time.Now().Add(23*time.Hour+50*time.Minute)) || exp.After(time.Now().Add(24*time.Hour+time.Minute)) {
+		t.Fatalf("expiry %s", m[1])
+	}
 	tokFile := writeFile(t, secrets, "token", token)
 	pwFile := writeFile(t, secrets, "newpw", "a new admin password")
+	// An expired credential creates no Administrator.
+	expired := strings.Replace(string(raw), m[1], time.Now().Add(-time.Minute).UTC().Format(time.RFC3339), 1)
+	if err := os.WriteFile(cfgPath, []byte(expired), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	d := startDaemon(t, cfgPath)
+	if out, err := ctl(t, "", "admin", "redeem", "--config", cfgPath, "--token-file", tokFile, "--password-file", pwFile); err == nil {
+		t.Fatalf("expired token redeemed: %s", out)
+	}
+	stopDaemon(t, d)
+	if err := os.WriteFile(cfgPath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	d = startDaemon(t, cfgPath)
+	// Without the credential (a wrong token), nothing is created either.
+	wrongFile := writeFile(t, secrets, "wrong", strings.Repeat("A", len(token)))
+	if out, err := ctl(t, "", "admin", "redeem", "--config", cfgPath, "--token-file", wrongFile, "--password-file", pwFile); err == nil {
+		t.Fatalf("wrong token redeemed: %s", out)
+	}
 	if out := mustCtl(t, "admin", "redeem", "--config", cfgPath, "--token-file", tokFile, "--password-file", pwFile); !strings.Contains(out, "password set") {
 		t.Fatal(out)
 	}

@@ -32,6 +32,7 @@ An emergency stop (`smcpctl stop`) also makes the reported state `fail-closed`; 
 | `evidence_export_failed` | no | | The last evidence export attempt failed (see [backup.md](backup.md)) |
 | `storage_quota_journal`, `storage_quota_observation_store` | no | | The store uses 80% or more of its quota (`[evidence] quota_bytes`, CP-26 10 GiB; `[observation] storage_quota_bytes`, 10 GiB); measured every minute. Every report carries each store's level under `quotas` (FR-9.15) |
 | `observation_degraded` | no | | The observation path is degraded; the detail names the stage and the trigger (FR-9.12, see [observation.md](../observation.md#degradation)) |
+| `revocation_feed_stale` | no | | The package library's revocation feed has not been read successfully for more than 24 h (CP-34); new imports are refused until it can be (SR-3-4) |
 
 The graph mirror (when `[graph] enabled`) and the Observation Store register their own checks with `health.Monitor.Register`; they report `degraded`, never `fail-closed`. Not yet checked: vault availability (E-19) and the memory degradation stage (E-28).
 

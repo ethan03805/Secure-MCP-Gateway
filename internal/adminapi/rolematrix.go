@@ -173,11 +173,12 @@ var routeRoles = map[string][]string{
 	"POST /api/v1/backup":       operator,
 
 	// library (E-13, E-14)
-	"GET /api/v1/packages":                     opsRead,
-	"GET /api/v1/packages/receipts":            opsRead,
-	"POST /api/v1/packages/scan":               operator,
-	"GET /api/v1/packages/{id}/{rev}":          opsRead,
-	"POST /api/v1/packages/{id}/{rev}/disable": operator,
+	"GET /api/v1/packages":                            opsRead,
+	"GET /api/v1/packages/receipts":                   opsRead,
+	"POST /api/v1/packages/scan":                      operator,
+	"GET /api/v1/packages/{id}/{rev}":                 opsRead,
+	"POST /api/v1/packages/{id}/{rev}/disable":        operator,
+	"POST /api/v1/packages/{id}/{rev}/classification": operator,
 }
 
 // refine narrows a route's roles by the request: it returns false when the

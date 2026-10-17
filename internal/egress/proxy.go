@@ -158,8 +158,17 @@ func (b *Broker) forward(w http.ResponseWriter, r *http.Request, rec *Record, ta
 	out.Header.Del("Cookie") // SR-5.17-1
 	out.Header.Del(AuthHeader)
 	out.Close = true
-	if r.Body != nil && r.Body != http.NoBody {
-		out.Body = io.NopCloser(&meteredReader{r: r.Body, limit: lim.RequestBytes, n: &up, lim: sl.bytes, now: b.o.Now, tooLarge: ReasonRequestTooLarge})
+	// SR-5.8-2: the secret-fingerprint filter over URL, headers and body,
+	// before the S1 header is inserted.
+	if where, err := b.scanRequest(out, target, lim.RequestBytes); err != nil {
+		b.refuse(w, rec, ReasonBadRequest, "request body unreadable")
+		return
+	} else if where != "" {
+		b.refuse(w, rec, ReasonSecretDetected, "a registered secret appears in the request "+where)
+		return
+	}
+	if out.Body != nil && out.Body != http.NoBody {
+		out.Body = io.NopCloser(&meteredReader{r: out.Body, limit: lim.RequestBytes, n: &up, lim: sl.bytes, now: b.o.Now, tooLarge: ReasonRequestTooLarge})
 	}
 	if err := b.authorized(rec); err != nil {
 		rec.Decision = DecisionDenied

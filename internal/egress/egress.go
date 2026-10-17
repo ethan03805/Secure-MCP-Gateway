@@ -150,6 +150,7 @@ type Broker struct {
 	o         Options
 	limits    Limits
 	transport *http.Transport
+	scan      secretScan // registered secret fingerprints (SR-5.8-2)
 
 	mu        sync.Mutex
 	instances map[string]*instance

@@ -149,6 +149,13 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Purge with receipt (SR-6.15-1): `POST /api/v1/observations/purge` deletes observation data before a date after committing a deletion receipt (`DATA_PURGED`) that names every partition; without a recorded receipt nothing is deleted.
 - Meta-metrics (FR-10.9): P-244 `graph_memory` and P-247 `journal_signing_lag` are now sampled (`analytics.SetMetricSources`), so every sample carries P-240 to P-250.
 - New tests verify FR-4.1, FR-4.2 (one UUIDv7 correlation ID on the call's events, observation record and spans), FR-10.9, FR-10.29, SR-6.5-1 and SR-6.15-1.
+### Trust and egress controls: revocation feed, classification overrides, egress secret scan (E-09, E-13, E-14, E-18, E-24)
+
+- Revocation feed staleness (SR-3-4): the library records each successful read of its revocation feed; when the last one is more than 24 h old (CP-34), imports are refused with `REVOCATION_FEED_STALE`, an evidence alert is recorded once, and health shows `revocation_feed_stale` until the feed can be read again.
+- Classification overrides (SR-3.11-1): `POST /api/v1/packages/{id}/{rev}/classification` (Operator) tightens a tool's side-effect class, source trust or risk class; anything less restrictive than the signed manifest is refused with evidence. The presented tool carries the manifest's classes tightened by the override.
+- Egress secret scan (SR-5.8-2): the Egress Broker applies the registered secret fingerprints to the URL, headers and body of every brokered HTTP operation before it leaves and refuses a match with `EGRESS_SECRET_DETECTED`; only the S1 header the broker inserts is exempt.
+- SR-1.8-1 now names `SCHEMA_INVALID`, the reason code of Appendix B.
+- New tests verify SR-1.8-1, SR-3-4, SR-3.11-1, SR-5.8-2 and SR-7.5-1 (bootstrap credential: mode 0600, 24 h expiry, refused when wrong, expired or used).
 
 ### Owner decisions applied
 

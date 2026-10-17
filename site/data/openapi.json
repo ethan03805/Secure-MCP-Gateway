@@ -4232,6 +4232,70 @@
     ]
    }
   },
+  "/api/v1/packages/{id}/{rev}/classification": {
+   "post": {
+    "description": "Reference: docs/api/packages.md",
+    "operationId": "postPackagesIdRevClassification",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "rev",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Tighten a tool's side-effect class, source trust or risk class; loosening is refused (SR-3.11-1)",
+    "tags": [
+     "packages"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator"
+    ]
+   }
+  },
   "/api/v1/packages/{id}/{rev}/disable": {
    "post": {
     "description": "Reference: docs/api/packages.md",

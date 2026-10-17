@@ -230,6 +230,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		return a, err
 	}
 	a.Filters = o.Filters
+	if a.Egress != nil && a.Inspector != nil {
+		a.Egress.SetFingerprints(a.Inspector.Fingerprints()) // SR-5.8-2
+	}
 	// Delivered secret values join the inspector's registered fingerprints,
 	// so the secret-fingerprint filter detects them in arguments and results.
 	if s, ok := o.Secrets.(interface {

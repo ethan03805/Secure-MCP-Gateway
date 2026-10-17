@@ -171,6 +171,7 @@ var ops = []op{
 	{Pattern: "GET /api/v1/packages/{id}/{rev}", Tag: "packages", Summary: "One revision with its signed manifest and provenance", Doc: "packages.md"},
 	{Pattern: "POST /api/v1/packages/{id}/{rev}/enable", Tag: "packages", Summary: "Enable a revision, optionally under another alias", Doc: "packages.md"},
 	{Pattern: "POST /api/v1/packages/{id}/{rev}/disable", Tag: "packages", Summary: "Suspend a revision (verified-disabled)", Doc: "packages.md"},
+	{Pattern: "POST /api/v1/packages/{id}/{rev}/classification", Tag: "packages", Summary: "Tighten a tool's side-effect class, source trust or risk class; loosening is refused (SR-3.11-1)", Doc: "packages.md"},
 	{Pattern: "POST /api/v1/packages/trust", Tag: "packages", Summary: "Enroll a trust anchor (minisign public key scoped to risk classes)", Doc: "packages.md"},
 	{Pattern: "DELETE /api/v1/packages/trust/{name}", Tag: "packages", Summary: "Remove a trust anchor", Doc: "packages.md"},
 	{Pattern: "POST /api/v1/packages/{id}/{rev}/retire", Tag: "packages", Summary: "Retire a revision (final)", Doc: "packages.md"},

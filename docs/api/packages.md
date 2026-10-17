@@ -80,6 +80,12 @@ Request: `{}` or `{"reason": "maintenance"}`. Changes the revision to `verified-
 
 Response `200`: `{"revision": { … "state": "verified-disabled" … }}`.
 
+## POST /api/v1/packages/{id}/{revision}/classification
+
+Operator. Tightens one tool's classification (SR-3.11-1). Request: `{"tool": "write_file", "side_effect": "execute", "source_trust": "untrusted", "risk_class": "high"}`; every field but `tool` is optional. Each given value must be at least as restrictive as the signed manifest's (side effect read < write < external < execute; trusted < untrusted; risk low < moderate < high), otherwise the request is refused with 409 `CLASSIFICATION_LOOSENING_REFUSED` and an evidence event. The signed manifest is never changed; the override is stored with the revision, recorded as `CLASSIFICATION_OVERRIDDEN`, and applies the next time the revision's instance starts.
+
+Response `200`: `{"tool", "override", "overridden_tools", "restart_required": true}`.
+
 ## POST /api/v1/packages/{id}/{revision}/retire
 
 Request: `{}` or `{"reason": "replaced by 2026.9.1"}`. Changes the revision to `retired` (final), tears down a running instance, and deletes the cached artifact when no non-retired revision references it (FR-5.39).

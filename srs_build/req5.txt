@@ -110,7 +110,7 @@ R: Missing data cannot grant.
 
 @SR-1.8-1 | Argument schema validation
 P: SEC-1.8
-S: The Request Inspection Pipeline (E-09) SHALL validate tool arguments against the manifest `inputSchema` and SHALL block the call with reason `SCHEMA` on failure.
+S: The Request Inspection Pipeline (E-09) SHALL validate tool arguments against the manifest `inputSchema` and SHALL block the call with reason `SCHEMA_INVALID` (Appendix B) on failure.
 A: E-09; F-21
 V: Test | Send arguments violating type, required and additionalProperties constraints; confirm each is blocked.
 SRC: SEC 1.8; MCP:server/tools §Security Considerations

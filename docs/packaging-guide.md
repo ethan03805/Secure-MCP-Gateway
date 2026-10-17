@@ -201,6 +201,10 @@ writes `<library>/revocations/<id>@<revision>.json` and its signature. Any enrol
 | `KEY_ON_COMMAND_LINE` | sign, keygen, revoke | A secret key or passphrase was given as an argument |
 | `REVOCATION_INVALID` | scan | A revocation entry is malformed or unsigned |
 | `REVOKED` | import | The revision has been revoked |
+| `REVOCATION_FEED_STALE` | import, health | The revocation feed (`<library>/revocations` and the trust anchors) has not been read successfully for more than 24 h (CP-34); imports are refused and health shows `revocation_feed_stale` until it can be read (SR-3-4) |
+| `CLASSIFICATION_OVERRIDDEN` | classification | An operator tightened a tool's side-effect class, source trust or risk class (SR-3.11-1) |
+| `CLASSIFICATION_LOOSENING_REFUSED` | classification | The override would make a classification less restrictive than the signed manifest's |
+| `CLASSIFICATION_TOOL_UNKNOWN` | classification | The revision has no such tool |
 | `DOWNGRADE_REFUSED` | import | A higher revision of the server is installed |
 | `REVISION_CONFLICT` | import | The revision exists with a different package index |
 | `PROFILE_UNCONFINED` | enable, start | High risk class while instances run unconfined |
