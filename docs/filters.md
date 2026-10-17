@@ -177,7 +177,7 @@ The `secret-formats` set blocks (arguments) or redacts (results) AWS access keys
 
 Each rule set has a corpus in `internal/filters/testdata/corpus/<rule set>.jsonl`: one JSON object per line with `label` (`positive` or `negative`), `text` and `note`. Secret-shaped samples are split with the marker U+27E8 U+27E9, which the loader removes, so that repository secret scanners do not flag them.
 
-`go test ./internal/filters -run TestCorpusRates -v` measures every rule-set version in the index and prints one `CORPUS` line per version; the test fails when a rate exceeds the target recorded in the index. A sample counts as detected when the rule set produces any finding, including tags. For `tool-metadata` a sample is detected when the metadata scan (with `unicode-control`) blocks a tool whose description is the sample.
+`go test ./internal/filters -run TestCorpusRates -v` measures every rule-set version in the index and prints one `CORPUS` line per version; the test fails when a rate exceeds the target recorded in the index. In CI, `tools/reqreport` collects these lines into the `corpora` array of `status.json` (rule set, version, sample counts, measured rates, targets, and whether the measuring test passed), which the status job publishes on the `site-data` branch. A sample counts as detected when the rule set produces any finding, including tags. For `tool-metadata` a sample is detected when the metadata scan (with `unicode-control`) blocks a tool whose description is the sample.
 
 Measured on 2026-10-16:
 

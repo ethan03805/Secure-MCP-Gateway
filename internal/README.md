@@ -76,7 +76,10 @@ fail-closed check, decision (`policy.Decider`), request inspection
 (`pipeline.Filters.RunRequest`), approval (`pipeline.Approver`), launch
 authorization, dispatch (`backend.Registry.Call`), response inspection
 (`pipeline.Filters.RunResponse`), provenance, release authorization.
-Request and response scoring (E-31) are not stages yet.
+Request scoring and response scoring (E-31) are the `observe-request` and
+`observe-response` probes, which run after every other filter of their
+chain; response validation (size bound, output schema) opens the response
+chain (`e2e.TestStageOrder`).
 
 Evidence ordering: `requested`, `dispatched` and `completed` are appended;
 `authorized` (the decision intent) is committed with fsync before the
@@ -99,7 +102,13 @@ streams get comment keep-alives every 15 s when idle and end with an empty
 `resultType: "complete"` response when the Gateway ends them.
 
 Barrier: launch and release authorization hold `Gateway.gate` for reading;
-`Stop`, `Resume` and `ActivatePolicy` hold it for writing.
+`Stop`, `Resume`, `ActivatePolicy` and `Serialize` hold it for writing.
+`Serialize` runs revocations under the gate (SR-1.16-1): credential
+revocation and principal suspension (`principals.Service.Gate`) and the
+library's suspension or revocation of a running revision (`app.Start`).
+Launch authorization rechecks the policy revision, session, principal,
+credential (`config.CredentialRevoked`) and server revision under the gate
+(SR-1.17-1).
 
 ## Seams and who fills them
 

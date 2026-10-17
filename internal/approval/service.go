@@ -294,7 +294,8 @@ func (s *Service) Request(ctx context.Context, req pipeline.ApprovalRequest) (pi
 		id := ids.New()
 		e = &entry{done: make(chan struct{}), r: Record{ID: id, State: StatePending, Binding: b, CreatedAt: now.UTC(), ExpiresAt: now.Add(s.lifetime).UTC(),
 			URL: s.URL(id), Template: req.Call.Template, ManifestSource: req.Call.ManifestSource, CorrelationID: req.Call.CorrelationID,
-			DecisionID: req.Call.DecisionID, DecisiveRules: append([]string{}, req.Call.DecisiveRules...), Arguments: canon}}
+			DecisionID: req.Call.DecisionID, DecisiveRules: append([]string{}, req.Call.DecisiveRules...), Arguments: canon,
+			Anomaly: req.Call.Anomaly}}
 		if org := channel.From(ctx); org.Channel == channel.Remote {
 			e.r.Channel, e.r.ClientID, e.r.ClientAddress = org.Channel, org.ClientID, org.ClientAddress
 		}

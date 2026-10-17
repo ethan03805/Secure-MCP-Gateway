@@ -171,6 +171,15 @@ export interface ApprovalSummary {
   decided_at?: string;
 }
 
+/** Anomaly Scorer evidence of an approval an anomaly band required (FR-3.18). */
+export interface AnomalyEvidence {
+  band: string;
+  contributing_feature?: string;
+  z_score: number;
+  snapshot_id?: string;
+  context?: string;
+}
+
 export interface ApprovalRecord extends ApprovalSummary {
   tool: string;
   tool_revision: string;
@@ -181,7 +190,7 @@ export interface ApprovalRecord extends ApprovalSummary {
   correlation_id?: string;
   decision_id?: string;
   decisive_rules?: string[];
-  anomaly?: unknown;
+  anomaly?: AnomalyEvidence;
   arguments?: unknown;
   comment?: string;
   consumed_at?: string;

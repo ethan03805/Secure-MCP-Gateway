@@ -104,7 +104,7 @@ A slot is what a server declares it can receive. Until signed package manifests 
 | `session_purpose` | S2 only: deliver only when the session's purpose equals this text. |
 | `calls_per_minute` | S2 only: deliveries per minute for this policy. |
 | `not_before`, `not_after` | RFC 3339 times outside which nothing is delivered. |
-| `hours` | Daily window in the Gateway's local time (`HH:MM`); an end before the start spans midnight. |
+| `hours` | Daily window in the Gateway's local time: `start` and `end` as `HH:MM`; an end before the start spans midnight. |
 | `approval` | S2 only: deliver only for calls whose policy decision carries an approval obligation. |
 | `s4_waiver` | Required for S4: `approved_by`, `reason` and optional `expires`. |
 

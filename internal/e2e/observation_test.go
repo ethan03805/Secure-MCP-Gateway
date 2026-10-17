@@ -39,14 +39,14 @@ type obsFixture struct {
 // an extra [observation] table body.
 func startObservation(t *testing.T, observation string) *obsFixture {
 	t.Helper()
-	return startObservationOpts(t, observation, nil, nil, false)
+	return startObservationOpts(t, observation, nil, nil, false, nil)
 }
 
 // startObservationWith is startObservation with extra filters registered
 // before the observation probes and a tap on the call-path spans.
 func startObservationWith(t *testing.T, observation string, extra func(*pipeline.Filters) error, tap pipeline.SpanSink) *obsFixture {
 	t.Helper()
-	return startObservationOpts(t, observation, extra, tap, false)
+	return startObservationOpts(t, observation, extra, tap, false, nil)
 }
 
 // startObservationBuiltins is startObservation with the built-in E-09/E-11
@@ -54,10 +54,10 @@ func startObservationWith(t *testing.T, observation string, extra func(*pipeline
 // (app.Options.ExtraFilters).
 func startObservationBuiltins(t *testing.T, observation string) *obsFixture {
 	t.Helper()
-	return startObservationOpts(t, observation, nil, nil, true)
+	return startObservationOpts(t, observation, nil, nil, true, nil)
 }
 
-func startObservationOpts(t *testing.T, observation string, extra func(*pipeline.Filters) error, tap pipeline.SpanSink, builtins bool) *obsFixture {
+func startObservationOpts(t *testing.T, observation string, extra func(*pipeline.Filters) error, tap pipeline.SpanSink, builtins bool, approver pipeline.Approver) *obsFixture {
 	t.Helper()
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
@@ -133,7 +133,7 @@ SMCP_E2E_BACKEND = "1"
 		}
 		return obs.RegisterFilters(f)
 	}
-	ao := app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond}
+	ao := app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond, Approver: approver}
 	if builtins {
 		ao.ExtraFilters = register
 	} else {

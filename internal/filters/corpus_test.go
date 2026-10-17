@@ -105,11 +105,14 @@ func measure(t *testing.T, in *Inspector, rs *RuleSet) (CorpusRates, []string) {
 
 // TestCorpusRates measures the false-positive and false-negative rate of
 // every rule-set version in the index against its labelled corpus and
-// fails when a rate exceeds the target recorded in the index. The CORPUS
-// lines are the published result; the CI job that collects them into the
-// status data (FR-19.5 "publish") is not built, so the claim is partial.
+// fails when a rate exceeds the target recorded in the index, which is how
+// a rule change that raises a rate is reported. The CORPUS lines are the
+// published result: tools/reqreport collects them from the CI test run
+// into the "corpora" array of status.json, which the status job publishes
+// (FR-19.5; tools/reqreport TestCorpusRatesPublished).
 func TestCorpusRates(t *testing.T) {
-	reqtest.Partial(t, "FR-19.5", "FR-4.16")
+	reqtest.Verifies(t, "FR-19.5")
+	reqtest.Partial(t, "FR-4.16")
 	in := newTestInspector(t, Options{})
 	for _, rs := range in.Library().All() {
 		r, misses := measure(t, in, rs)

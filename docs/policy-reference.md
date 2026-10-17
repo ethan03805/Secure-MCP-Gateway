@@ -2,7 +2,19 @@
 
 This document describes the policy document, how the Gateway evaluates it, the signed Policy Store that holds published revisions, and the commands that manage them. It is the policy reference of SRS FR-18.5. The control API routes are in [api/policy.md](api/policy.md). The schema is `internal/policy/policy.schema.json` (schema version 1).
 
-Two of the nine policy object types of FR-3.1 exist: Framework Profiles and Session Allow Policy Templates.
+Release 1.0 has seven policy object types (FR-3.1). Each is kept by the element that evaluates it:
+
+| Object type | Element | Where it is kept | Fields |
+|---|---|---|---|
+| Framework Profile | E-05 | Signed policy document (`framework_profiles`) | [Framework Profile](#framework-profile) |
+| Session Allow Policy Template | E-05 | Signed policy document (`templates`) | [Template](#template), [Rule](#rule), [Predicates](#predicates) |
+| Secret Use Policy | E-20 | `[secrets] use_policy_file`, schema `internal/secrets/usepolicy.schema.json` | [secrets.md, Secret Use Policy](secrets.md#secret-use-policy) |
+| Audit Profile | E-24 | Published observation object `audit_profile` | [Audit Profile](#audit-profile) |
+| Observation Policy | E-24 | Published observation object `observation_policy` | [Observation Policy](#observation-policy) |
+| Anomaly Response Policy | E-24 | Published observation object `anomaly_response` | [Anomaly Response Policy](#anomaly-response-policy) |
+| Research Campaign | E-32 | Research Dataset Service campaign file | [Research Campaign](#research-campaign) |
+
+Response Policy and Runtime Profile objects are deferred (FR-3.26). The obligations a decision carries are listed under [Obligations](#obligations).
 
 ## Document
 
@@ -102,7 +114,84 @@ A server declares its tool classes in `[[server]] risk_classes`. Granting a serv
 
 A document is refused (`policy_invalid`) when it does not match the schema, has unknown keys, names an unknown template in a profile, has a `default_template` outside the profile's `templates`, repeats a rule ID in a template, has two permit rules of one template naming the same server and tool (SR-1.9-1; the error names both rules), puts obligations or classes on a deny rule, uses `"*"` in a permit rule, or has a template granting a server that no framework profile using the template permits through `servers` (SR-1-3; the error names the rule, the server and the profiles).
 
-Not checked yet: the capability ceiling of server manifests (SR-1-1), high-risk flags (SR-3.13), and any of the other seven object types.
+The capability ceiling check of SR-1-1 is deferred: release 1.0 grants name a server alias and tools only. The objects outside the document are validated by their own elements (below).
+
+## Objects outside the policy document
+
+### Audit Profile
+
+Published with `POST /api/v1/observations/audit-profile` (Policy Author); the latest revision is active ([api/observation.md](api/observation.md#observation-objects)). It sets capture and retention above the mandatory audit floor, which no object changes.
+
+```json
+{"retention": "720h", "escalation_parameters": ["request_bytes"]}
+```
+
+| Key | Required | Meaning |
+|---|---|---|
+| `retention` | yes | Observation retention, a Go duration of at least `24h`. |
+| `escalation_parameters` | no | Parameter Catalog IDs or names captured in addition for escalated calls. |
+
+### Observation Policy
+
+Published with `POST /api/v1/observations/observation-policy` (Policy Author).
+
+```json
+{"policy_id": "lab", "parameters": ["request_bytes", "end_to_end_latency"], "sampling_rate": 0.25,
+ "contexts": ["principal", "tool"], "bands": [2, 3, 5], "escalation": {"abnormal": ["argument_entropy"]},
+ "features": [{"parameter": "request_bytes", "kind": "numeric", "transform": "log1p", "robust": true, "sigma_floor": 0.5}],
+ "scope": {"principals": ["cc"], "frameworks": ["claude-code"], "templates": ["ro"], "servers": ["fs"], "tools": ["fs/read_file"]}}
+```
+
+| Key | Required | Meaning |
+|---|---|---|
+| `policy_id` | yes | Observation Policy ID (1 to 64 characters), recorded with every observation and in the `ObservationPolicy` obligation. |
+| `parameters` | yes | Parameter Catalog parameters the collector records (at least one; not periodic parameters). |
+| `sampling_rate` | yes | Fraction of calls recorded, above 0 and at most 1. |
+| `contexts` | yes | Baseline context keys (for example `principal`, `tool`); applies at the next start. |
+| `bands` | no | The three absolute z-score bounds of the `elevated`, `abnormal` and `critical` bands, ascending; empty keeps the configured bands. |
+| `escalation` | no | Map of band name to parameters captured in addition for calls in that band and every higher band. |
+| `features` | no | Baselined features, replacing the configured ones. Each has `parameter`, `kind` (`numeric` or `categorical`), `transform` (`none`, `log1p`, `box-cox(λ)`), `robust` (median and MAD statistics) and `sigma_floor` (smallest σ used for z). |
+| `scope` | no | Calls the policy observes: lists of `principals`, `frameworks` (framework types), `templates`, `servers` and `tools`; an empty list matches all. |
+
+### Anomaly Response Policy
+
+Published with `POST /api/v1/observations/anomaly-response` (Policy Author). Its actions are restrict-only: every band from `elevated` raises an alert.
+
+```json
+{"scoring": "sync", "escalate_capture_band": "abnormal", "uncharacterized": "escalate", "require_approval_band": "abnormal", "withhold_band": "critical"}
+```
+
+| Key | Required | Meaning |
+|---|---|---|
+| `scoring` | yes | `async`, `sync` or `off`. Approval and withholding need `sync`. |
+| `escalate_capture_band` | no | Lowest band whose calls get escalated capture (`off`, `elevated`, `abnormal`, `critical`; default `elevated`). |
+| `uncharacterized` | no | Action for a call whose context has no baseline: `record` (default), `escalate` or `approve`. |
+| `require_approval_band` | yes | Lowest band whose calls need approval, or `off`. |
+| `withhold_band` | yes | Lowest band whose results are withheld, or `off`. |
+
+The Observation Store memory budget (`memory_budget`, field `observation_memory_limit_bytes`) is published the same way by an Operator; it is a resource setting, not a policy object.
+
+### Research Campaign
+
+Created with `smcpctl observe campaign create --file spec.json` or `POST /api/v1/research/campaigns`, then submitted and approved before it captures anything ([observation.md](observation.md#research-campaigns-and-exports)).
+
+```json
+{"name": "latency study", "purpose": "compare read latency across servers",
+ "scope": {"principals": ["cc"], "servers": ["fs"], "tools": ["read_file"]},
+ "parameters": ["request_bytes", "end_to_end_latency"], "sampling": 1,
+ "start": "2026-11-01T00:00:00Z", "end": "2026-11-08T00:00:00Z", "quota_bytes": 50000000, "raw_export_grant": false}
+```
+
+| Key | Required | Meaning |
+|---|---|---|
+| `name` | yes | Campaign name (at most 128 characters). |
+| `purpose` | no | Declared research purpose, shown to the approver. |
+| `scope` | no | Calls captured: lists of `principals`, `servers` (aliases) and `tools`; an empty list matches all. |
+| `parameters` | yes | Parameter Catalog parameters captured. An S3 raw-payload parameter needs `raw_export_grant`. |
+| `sampling` | no | Fraction of in-scope calls captured, in (0, 1]; default 1. |
+| `start`, `end` | yes | RFC 3339 capture window; `end` after `start`. |
+| `quota_bytes` | yes | Storage quota; the campaign completes when it is reached. |
+| `raw_export_grant` | no | Grant for S3 raw-payload parameters. |
 
 ## Evaluation
 
@@ -126,6 +215,25 @@ The Policy Decision Service evaluates every `tools/call` against the in-memory s
 | Otherwise | permit | `PERMIT` | — |
 
 A permit carries the obligations (FR-3.12): approval (from the rule, an `approval` predicate, the approval floor, or session taint with reason `TAINT_APPROVAL`), the rate bound, the burst and the session quota that applied, the rule's request and response filters, and, from the objects outside the document, the effective Audit Profile revision, the Observation Policy, the Anomaly Response Policy revision, the size limit (`result_bytes`, CP-08), the timeout (`upstream_timeout`, CP-13), the server's egress grants and secret grants, and its runtime profile. A refusal consumes no rate window and no quota.
+
+### Obligations
+
+The decision record lists the obligations under `obligations` with these fields (FR-3.12). Several layers can set the same obligation; they combine restrict-only (SR-1.10-1): the union of filters, the smallest rate, burst, quota, size and time bounds, and approval when any layer requires it.
+
+| Obligation type | Field | Source |
+|---|---|---|
+| Request filters, response filters | `Filters` | The rule's `filters`; mandatory filters run in every case |
+| Approval | `Approval`, `ApprovalReason` | The rule's `approval`, an `approval` predicate, the approval floor, session taint (`TAINT_APPROVAL`) or an Anomaly Response Policy band |
+| Rate limit | `CallsPerMinute`, `Burst` | Smallest of rule, template, profile and CP-11 |
+| Session quota | `CallsPerSession` | Smallest `calls_per_session` of template and rule |
+| Audit profile | `AuditProfile` | Active Audit Profile revision |
+| Observation policy | `ObservationPolicy` | Active Observation Policy ID |
+| Anomaly response | `AnomalyResponse` | Active Anomaly Response Policy revision |
+| Size limit | `SizeLimit` | `[limits] result_bytes` (CP-08) |
+| Timeout | `Timeout` | `[limits] upstream_timeout` (CP-13) |
+| Egress grants | `EgressGrants` | The server's `[[egress.grant]]` destinations |
+| Secret grants | `SecretGrants` | The Secret Use Policy slots bound for the server |
+| Runtime profile | `RuntimeProfile` | The launcher and sandbox profile of the server's instance |
 
 ### Approval floor
 
@@ -228,4 +336,4 @@ All are `admin` events with origin `E-05`, except `POLICY_ACTIVATED`, which also
 
 ## Not implemented
 
-Draft workspaces (FR-3.3), the other seven object types (FR-3.1), argument predicates (SR-1.7-1), routes other than the server alias (SR-1.11-1), baseline obligations other than the anomaly approval, and manifest ceiling checks at publication.
+Draft workspaces (FR-3.3), Response Policy and Runtime Profile objects (FR-3.26), routes other than the server alias (SR-1.11-1) and manifest ceiling checks at publication (SR-1-1) are deferred from release 1.0 (SRS Appendix N).

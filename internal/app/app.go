@@ -291,9 +291,6 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 			return a, fmt.Errorf("journal: %w", err)
 		}
 	}
-	if o.Packages != nil {
-		o.Packages.Started(a.Registry.Suspend)
-	}
 
 	a.Decider = policy.NewDecider(snap, cfg.Limits.PrincipalCallsPerMin)
 	a.Decider.SetBurst(cfg.Limits.PrincipalCallBurst)
@@ -327,6 +324,15 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		return a, err
 	}
 	a.Policy.Bind(a.Gateway)
+	if o.Packages != nil {
+		// A revision the library suspends or revokes leaves the registry
+		// under the coordinator gate (SR-1.16-1).
+		o.Packages.Started(func(alias, reason string) bool {
+			var ok bool
+			a.Gateway.Serialize(func() { ok = a.Registry.Suspend(alias, reason) })
+			return ok
+		})
+	}
 	if a.Admin, err = adminapi.New(adminapi.Options{Config: cfg, Controller: a.Policy, Evidence: a.Evidence, Guard: guard, Approvals: o.Approvals, Log: o.Log}); err != nil {
 		return a, err
 	}
