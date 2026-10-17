@@ -32,26 +32,15 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-02 Protocol Mediator
 
-- FR-1.4 missing: a JSON array batch is refused with a plain-text 400 (no `-32600`), and a JSON-RPC response object is accepted with 202 instead of rejected.
-- FR-1.5 missing: an unknown notification is refused with a plain-text 400 instead of 202 with an empty body.
-- FR-1.6 missing: a `tools/call` carrying `progressToken` is answered with `application/json`; only held calls and `subscriptions/listen` use `text/event-stream`.
-- FR-1.7 missing: SSE responses do not set `X-Accel-Buffering: no`.
-- FR-1.16 missing (partial claim exists): a 2026-07-28 POST carrying `Last-Event-ID` is refused by the SDK with HTTP 400 instead of the header being ignored.
-- FR-1.18 missing (partial claim exists): 401 and 503 responses written before the body is parsed carry `"id": null`; malformed bodies get plain-text SDK errors.
 - FR-1.19 unverified: Gateway codes come from Appendix B (`internal/edge/edge.go`) and reserved codes come from the SDK; the verification also needs the conformance-suite log of FR-12.9, which does not exist.
-- FR-1.21 missing: no detection of a duplicate in-flight request ID within a session (the SDK runs stateless).
-- FR-1.22 missing: invalid UTF-8 inside a JSON string is accepted; truncated JSON gets a plain-text 400 instead of `-32700`.
 - FR-1.31 unverified: results are returned after response inspection with transformed `content`, `structuredContent` and `isError`; no test asserts all three members after a transforming filter.
-- FR-1.36 missing: no SSE comment keep-alive at the CP-20 interval on idle listen streams (keep-alives exist only for held calls).
-- FR-1.37 missing: a listen stream ended by session end or shutdown is closed without the empty `resultType: "complete"` response carrying the subscription ID.
-- FR-1.38 missing: `listen_streams_per_session` (CP-20) is parsed but not enforced; excess listen requests are not refused with `-31005`.
 - FR-1.44 missing: `traceparent` is neither recorded as an observation attribute nor stripped from southbound requests by explicit code.
 - FR-1.45 missing: `io.modelcontextprotocol/clientInfo` is not recorded as a self-asserted observation attribute.
 - FR-4.1 missing: no canonical request object with canonicalized arguments, argument digest and receipt time is built for every call; only the Approval Service computes a canonical argument digest.
 - FR-4.2 unverified: a UUIDv7 correlation ID is assigned in `mcpChain` and carried on evidence events; no test traces one call through audit, observation and span records (span records do not exist, FR-10.2).
 - FR-12.9 missing: no automated conformance suite over `mcp-spec/2026-07-28/schema/examples`.
 - FR-18.7 unverified: `docs/troubleshooting.md` exists; no build check fails when an emitted reason code is undocumented.
-- SR-5.2-2 missing (partial claim exists): header values with control characters are refused by `net/http` with a plain 400, not with `-32020`.
+- SR-5.2-2 missing (partial claim exists): header values with control characters are refused by `net/http` with a plain 400 before any Gateway handler runs, not with `-32020`; the edge cannot answer them without replacing the HTTP server.
 - SR-5.6-1 unverified (partial claim exists): rejection of resources, prompts, completion, logging and tasks methods and the tools-only capabilities are tested; no test or record shows that no server-initiated request reaches the harness.
 - SR-5.11-1 unverified: results are buffered (`heldWriter`) and released after release authorization; no test shows that no backend-derived byte reaches the harness earlier.
 
@@ -131,10 +120,9 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-12 Enforcement Coordinator
 
 - FR-11.10 unverified: `Stop` takes the gate and every later launch authorization is refused; no test measures the 1 second bound under load.
-- SR-1.2-2 missing: a failed decision-intent commit refuses the call with reason `AUDIT_UNAVAILABLE`, not `JOURNAL_UNAVAILABLE` (Appendix B); the graph-outage half is covered by the graph mirror being an observer.
+- SR-1.2-2 unverified (partial claim exists): a failed decision-intent commit refuses launch with `-31004` and `JOURNAL_UNAVAILABLE`; no test makes the journal directory unwritable during traffic or stops the graph database during traffic.
 - SR-2.4-1 unverified: session termination is visible to the next launch authorization immediately; principal and credential revocation do not exist (missing), and no test runs revocation under load against CP-16.
 - SR-4.1-1 external: distinct CP-46 service identities are prepared by `packaging/linux/install-enforced.sh`; running processes on an Enforced host have not been inspected.
-- SR-6.3-1 missing: a failed commit of the delivered event refuses with `-31004` (`AUDIT_UNAVAILABLE`), not the `-31003` the verification expects.
 
 ## E-13 Library Trust Verifier
 
@@ -194,10 +182,9 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-13.3 external: GoReleaser writes `Formula/smcp.rb` to `ethan03805/homebrew-tap` on release; no release has published it, and no CI job installs from the tap on macOS and Linux and compares digests.
 - FR-19.3 missing: no release-labelling step that checks AT-01 to AT-21 results.
 - FR-19.4 missing: no AT scenario is claimed by an automated test or a `docs/verification/AT-nn.md` record.
-- SR-2.7-1 missing: configuration accepts any `$argon2id$` verifier; one with parameters below CP-28 (64 MiB, t = 3, p = 1) is not refused.
 - SR-3.3-1 unverified: React escapes text by default; no test renders HTML or script in manifests and SBOMs, and no 256 KiB per-page bound is enforced.
 - SR-7.5-1 unverified: `smcpctl bootstrap` writes a one-use bootstrap credential; no test covers the expired and used cases against the control API.
-- SR-7.5-2 missing: password files are read without checking that their mode is 0600 or stricter, and `-` (standard input) is accepted.
+- SR-7.5-2 unverified (partial claim exists): bootstrap, hash-password and admin redeem refuse arguments, standard input and files looser than 0600; the interactive prompt is not exercised (no terminal in tests), and there is no separate install command (installation runs bootstrap).
 
 ## E-25 Graph Database Engine
 

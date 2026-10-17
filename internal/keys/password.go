@@ -41,6 +41,33 @@ func HashPassword(password string) (string, error) {
 		base64.RawStdEncoding.EncodeToString(salt), base64.RawStdEncoding.EncodeToString(key)), nil
 }
 
+// CheckVerifier refuses a configured Argon2id verifier whose parameters
+// are weaker than CP-28 (64 MiB, t = 3, p = 1) or above the verification
+// bounds (SR-2.7-1). An entry without a parameter field matches no
+// password (VerifyPassword) and is left to the schema's prefix check.
+func CheckVerifier(hash string) error {
+	parts := strings.Split(hash, "$")
+	if len(parts) < 4 || parts[1] != "argon2id" {
+		return nil
+	}
+	if parts[2] != "v=19" {
+		return fmt.Errorf("argon2id verifier has version %q, want v=19", parts[2])
+	}
+	var mem, t uint32
+	var p uint8
+	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &mem, &t, &p); err != nil {
+		return fmt.Errorf("argon2id verifier parameters %q do not parse", parts[3])
+	}
+	if mem < argonMemoryKiB || t < argonTime || p < argonThreads {
+		return fmt.Errorf("argon2id verifier parameters %s are weaker than m=%d,t=%d,p=%d (CP-28); hash the password again with smcpctl hash-password",
+			parts[3], argonMemoryKiB, argonTime, argonThreads)
+	}
+	if mem > maxMemoryKiB || t > maxTime || p > maxThreads {
+		return fmt.Errorf("argon2id verifier parameters %s exceed the verification bounds m=%d,t=%d,p=%d", parts[3], maxMemoryKiB, maxTime, maxThreads)
+	}
+	return nil
+}
+
 // VerifyPassword reports whether password matches the PHC-formatted hash.
 // Hashes with parameters above the built-in bounds never match.
 func VerifyPassword(hash, password string) bool {

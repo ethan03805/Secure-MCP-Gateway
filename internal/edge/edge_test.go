@@ -282,7 +282,7 @@ func TestIntentCommittedBeforeCapability(t *testing.T) {
 		return nil
 	}, nil)
 	we, data := callErr(t, cs, "t_echo", map[string]any{"text": "y"})
-	if we.Code != CodeGatewayFailClosed || data["reasonCode"] != ReasonAuditUnavailable {
+	if we.Code != CodeGatewayFailClosed || data["reasonCode"] != ReasonJournalUnavailable {
 		t.Fatalf("%+v %v", we, data)
 	}
 	if h.caps.Outstanding() != before {
@@ -302,17 +302,18 @@ func TestAuditFailureFailsClosed(t *testing.T) {
 		}
 		return nil
 	}, nil)
-	if we, data := callErr(t, cs, "t_echo", map[string]any{"text": "x"}); we.Code != CodeGatewayFailClosed || data["reasonCode"] != ReasonAuditUnavailable {
+	if we, data := callErr(t, cs, "t_echo", map[string]any{"text": "x"}); we.Code != CodeGatewayFailClosed || data["reasonCode"] != ReasonJournalUnavailable {
 		t.Fatalf("%+v %v", we, data)
 	}
-	// The delivered event cannot be written: the result is not released.
+	// The delivered event cannot be written: the result is withheld
+	// (SR-6.3-1, tested on the wire in TestReleaseCommitFailureWithholds).
 	h.rec.set(func(ev audit.Event) error {
 		if ev.Phase == audit.PhaseDelivered {
 			return errors.New("io error")
 		}
 		return nil
 	}, nil)
-	if we, data := callErr(t, cs, "t_echo", map[string]any{"text": "x"}); we.Code != CodeGatewayFailClosed || data["reasonCode"] != ReasonAuditUnavailable {
+	if we, data := callErr(t, cs, "t_echo", map[string]any{"text": "x"}); we.Code != CodeResponseWithheld || data["reasonCode"] != ReasonJournalUnavailable {
 		t.Fatalf("%+v %v", we, data)
 	}
 	// A sticky journal failure fails the whole endpoint closed.
@@ -328,7 +329,7 @@ func TestAuditFailureFailsClosed(t *testing.T) {
 	}
 	b, _ := io.ReadAll(r.Body)
 	r.Body.Close()
-	if r.StatusCode != 503 || !strings.Contains(string(b), ReasonAuditUnavailable) {
+	if r.StatusCode != 503 || !strings.Contains(string(b), ReasonJournalUnavailable) {
 		t.Fatalf("%d %s", r.StatusCode, b)
 	}
 	if hl := h.gw.Health(); hl.State != "fail-closed" {

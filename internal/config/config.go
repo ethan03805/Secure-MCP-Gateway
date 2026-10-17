@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
@@ -451,6 +453,31 @@ func (c *Config) applyDefaults(limitsSet map[string]bool) {
 	}
 }
 
+// checkVerifiers refuses password and client secret verifiers weaker than
+// CP-28 (SR-2.7-1).
+func (c *Config) checkVerifiers() error {
+	type entry struct{ key, hash string }
+	list := []entry{{"admin.password_hash", c.Admin.PasswordHash}}
+	for _, a := range c.Approvers {
+		list = append(list, entry{fmt.Sprintf("approver %q password_hash", a.Username), a.PasswordHash})
+	}
+	for _, a := range c.Approvals.Accounts {
+		list = append(list, entry{fmt.Sprintf("approvals.account %q password_hash", a.Username), a.PasswordHash})
+	}
+	for _, a := range c.Console.Accounts {
+		list = append(list, entry{fmt.Sprintf("console.account %q password_hash", a.Username), a.PasswordHash})
+	}
+	for _, cl := range c.Clients {
+		list = append(list, entry{fmt.Sprintf("client %q client_secret_hash", cl.ClientID), cl.ClientSecretHash})
+	}
+	for _, e := range list {
+		if err := keys.CheckVerifier(e.hash); err != nil {
+			return fmt.Errorf("%s: %w", e.key, err)
+		}
+	}
+	return nil
+}
+
 // check enforces cross-field rules the schema cannot express.
 func (c *Config) check() error {
 	for _, d := range []struct {
@@ -467,6 +494,9 @@ func (c *Config) check() error {
 	}
 	if c.Admin.PasswordHash == "" && c.Admin.BootstrapTokenSHA256 == "" {
 		return fmt.Errorf("admin needs password_hash or bootstrap_token_sha256")
+	}
+	if err := c.checkVerifiers(); err != nil {
+		return err
 	}
 	if c.Admin.BootstrapTokenExpires != "" {
 		if _, err := time.Parse(time.RFC3339, c.Admin.BootstrapTokenExpires); err != nil {

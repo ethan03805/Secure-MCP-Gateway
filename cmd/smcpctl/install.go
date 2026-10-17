@@ -60,8 +60,8 @@ func installCmd(args []string, out io.Writer) error {
 	noStart := fs.Bool("no-start", false, "write the service unit but do not load or start it, and skip the health check")
 	wait := fs.Duration("health-timeout", installHealthWait, "how long to wait for the started Gateway to answer")
 	o := bootstrapOpts{}
-	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (- for standard input) instead of a prompt")
-	fs.StringVar(&o.approverFile, "approver-password-file", "", "read the Session Approver password from this file instead of a prompt")
+	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (mode 0600 or stricter) instead of a prompt")
+	fs.StringVar(&o.approverFile, "approver-password-file", "", "read the Session Approver password from this file (mode 0600 or stricter) instead of a prompt")
 	fs.BoolVar(&o.useToken, "bootstrap-token", false, "set no administrator password now; print a one-use token for `smcpctl admin redeem`")
 	fs.StringVar(&o.sandbox, "sandbox", "", "directory the reference server may read")
 	fs.IntVar(&o.port, "port", 8443, "harness listener port on 127.0.0.1")

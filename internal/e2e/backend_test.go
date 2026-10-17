@@ -30,6 +30,13 @@ func runBackend() {
 		Text string `json:"text" jsonschema:"text to echo"`
 	}
 	mcp.AddTool(s, &mcp.Tool{Name: "echo", Description: "echo text"}, func(ctx context.Context, req *mcp.CallToolRequest, a echoArgs) (*mcp.CallToolResult, any, error) {
+		// With a progress token, two progress notifications precede the
+		// result (protocol_test.go).
+		if tok := req.Params.GetProgressToken(); tok != nil {
+			for i := 1; i <= 2; i++ {
+				_ = req.Session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{ProgressToken: tok, Progress: float64(i), Total: 2, Message: fmt.Sprintf("step %d", i)})
+			}
+		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "echo:" + a.Text}}}, nil, nil
 	})
 	mcp.AddTool(s, &mcp.Tool{Name: "dotted.name", Description: "name with a dot"}, func(ctx context.Context, req *mcp.CallToolRequest, a struct{}) (*mcp.CallToolResult, any, error) {

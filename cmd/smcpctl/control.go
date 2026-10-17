@@ -134,20 +134,23 @@ func stopCmd(args []string, out io.Writer) error {
 func redeem(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("admin redeem", flag.ContinueOnError)
 	cfgPath := fs.String("config", "smcp.toml", "configuration file")
-	tokenFile := fs.String("token-file", "", "read the bootstrap token from this file instead of a prompt")
-	pwFile := fs.String("password-file", "", "read the new administrator password from this file instead of a prompt")
+	tokenFile := fs.String("token-file", "", "read the bootstrap token from this file (mode 0600 or stricter) instead of a prompt")
+	pwFile := fs.String("password-file", "", "read the new administrator password from this file (mode 0600 or stricter) instead of a prompt")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if fs.NArg() > 0 {
+		return errPasswordArg
 	}
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
 		return err
 	}
-	tok, err := readSecret(*tokenFile, "Bootstrap token", false)
+	tok, err := readPassword(*tokenFile, "Bootstrap token", false)
 	if err != nil {
 		return err
 	}
-	pw, err := readSecret(*pwFile, "New administrator password", true)
+	pw, err := readPassword(*pwFile, "New administrator password", true)
 	if err != nil {
 		return err
 	}

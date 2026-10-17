@@ -15,15 +15,12 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-// TestLegacySessionHeadersIgnored is FR-1.16 in part: on 2026-07-28
-// requests an Mcp-Session-Id header changes nothing, and neither
-// Mcp-Session-Id nor Last-Event-ID appears in the response.
-//
-// Partial: a POST carrying Last-Event-ID is refused by the SDK with HTTP
-// 400 ("can't send Last-Event-ID for POST request") instead of being
-// ignored.
+// TestLegacySessionHeadersIgnored is FR-1.16: on 2026-07-28 requests
+// Mcp-Session-Id and Last-Event-ID headers change nothing (the edge drops
+// Last-Event-ID before the SDK, which would refuse it), and neither header
+// appears in the response.
 func TestLegacySessionHeadersIgnored(t *testing.T) {
-	reqtest.Partial(t, "FR-1.16")
+	reqtest.Verifies(t, "FR-1.16")
 	h := newHarness(t, harnessOpts{})
 	_, tok := h.session("ro")
 	for _, m := range []struct{ method, body, want string }{
@@ -37,6 +34,7 @@ func TestLegacySessionHeadersIgnored(t *testing.T) {
 			plain["Mcp-Name"], withLegacy["Mcp-Name"] = "t_echo", "t_echo"
 		}
 		withLegacy["Mcp-Session-Id"] = "legacy-session-that-does-not-exist"
+		withLegacy["Last-Event-ID"] = "stream-1_3"
 		s1, _, b1 := h.post(m.body, plain)
 		s2, hdr, b2 := h.post(m.body, withLegacy)
 		if s1 != 200 || s2 != 200 || !strings.Contains(b2, m.want) || decodeReply(t, b2).Error != nil {
@@ -249,9 +247,9 @@ func TestHeaderAnnotationsRemoved(t *testing.T) {
 // TestResponseIDEcho is FR-1.18 in part: results and errors echo string
 // and integer request IDs, and error codes are integers.
 //
-// Partial: responses written before the body is parsed (401 for a bad
-// token, 503 while fail-closed) carry "id": null, and SDK transport errors
-// for malformed bodies are plain text.
+// Partial: this covers method-level errors only; the transport,
+// authentication and fail-closed cases are in the end-to-end
+// TestEveryResponseEchoesID.
 func TestResponseIDEcho(t *testing.T) {
 	reqtest.Partial(t, "FR-1.18")
 	h := newHarness(t, harnessOpts{})

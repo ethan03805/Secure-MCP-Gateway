@@ -61,15 +61,16 @@ const (
 
 // Reason codes the edge produces itself.
 const (
-	ReasonAuditUnavailable = "AUDIT_UNAVAILABLE"
-	ReasonFailClosed       = "FAIL_CLOSED"
-	ReasonEmergencyStop    = "EMERGENCY_STOP"
-	ReasonCapability       = "CAPABILITY_INVALID"
-	ReasonSessionState     = "SESSION_STATE"
-	ReasonSessionEnded     = "SESSION_ENDED"
-	ReasonApprovalDenied   = "APPROVAL_DENIED"
-	ReasonApprovalNoSvc    = "APPROVAL_UNAVAILABLE"
-	ReasonRevisionChanged  = "POLICY_REVISION_CHANGED"
+	ReasonJournalUnavailable = "JOURNAL_UNAVAILABLE" // SR-1.2-2, Appendix B
+	ReasonFailClosed         = "FAIL_CLOSED"
+	ReasonEmergencyStop      = "EMERGENCY_STOP"
+	ReasonCapability         = "CAPABILITY_INVALID"
+	ReasonSessionState       = "SESSION_STATE"
+	ReasonSessionEnded       = "SESSION_ENDED"
+	ReasonApprovalDenied     = "APPROVAL_DENIED"
+	ReasonApprovalNoSvc      = "APPROVAL_UNAVAILABLE"
+	ReasonRevisionChanged    = "POLICY_REVISION_CHANGED"
+	ReasonListenLimit        = "LISTEN_LIMIT"
 )
 
 // Supported northbound protocol versions (CP-04).
@@ -148,6 +149,9 @@ type Gateway struct {
 	mu      sync.Mutex
 	servers map[string]*sessionServer
 	track   *tracker // in-flight requests, calls and listen streams per session
+	// listenInterval is the keep-alive interval of idle listen streams
+	// (CP-20); tests shorten it.
+	listenInterval time.Duration
 
 	// remoteMetadataURL returns the Remote Access listener's protected
 	// resource metadata URL for 401 responses there (FR-16.3).
@@ -210,7 +214,7 @@ func New(d Deps) (*Gateway, error) {
 	}
 	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
 		evidenceErr: d.EvidenceErr, healthGate: d.HealthGate, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, screen: d.Screen, caps: d.Capabilities,
-		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker()}
+		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker(), listenInterval: listenKeepAlive}
 	g.handler = mcp.NewStreamableHTTPHandler(g.serverFor, &mcp.StreamableHTTPOptions{
 		Stateless:           true,
 		JSONResponse:        true,                             // FR-1.6: JSON unless the request needs a stream
@@ -324,8 +328,16 @@ func (g *Gateway) Serve(ctx context.Context, ln net.Listener) error {
 	if err != nil {
 		return err
 	}
+	go func() {
+		<-ctx.Done()
+		g.EndListenStreams() // FR-1.37: before Shutdown waits for handlers
+	}()
 	return ServeTLS(ctx, ln, g.Handler(), tc, g.log)
 }
+
+// EndListenStreams ends every open listen stream, each with an empty
+// complete response (FR-1.37). It is called at shutdown.
+func (g *Gateway) EndListenStreams() { g.track.cancelKind(kindListen, errShutdown) }
 
 // RunJanitors prunes expired sessions, authorization codes and launch
 // capabilities until ctx ends.
@@ -427,7 +439,7 @@ func (g *Gateway) failClosed() string {
 	case g.decider.Snapshot() == nil:
 		return policy.ReasonNoSnapshot
 	case g.evidenceErr() != nil:
-		return ReasonAuditUnavailable
+		return ReasonJournalUnavailable
 	case len(g.healthGate()) > 0:
 		return ReasonFailClosed
 	}
@@ -528,7 +540,9 @@ func writeRPCError(w http.ResponseWriter, status int, e *jsonrpc.Error) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": nil, "error": e})
 }
 
-// mcpChain is the E-01/E-03 front of the MCP endpoint.
+// mcpChain is the E-01/E-03 front of the MCP endpoint. It reads and
+// classifies the body first (mediate.go) so that every response, including
+// 401 and 503, echoes the request ID (FR-1.18).
 func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost { // FR-1.3
@@ -537,8 +551,9 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			return
 		}
 		corr := ids.New() // FR-4.2
+		msg := readMessage(r, g.cfg.Limits.RequestBodyBytes)
 		if reason := g.failClosed(); reason != "" {
-			writeRPCError(w, http.StatusServiceUnavailable, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", reason, corr, "", nil))
+			writeRPCErrorID(w, http.StatusServiceUnavailable, msg.ID, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", reason, corr, "", nil))
 			return
 		}
 		org := channel.From(r.Context())
@@ -554,22 +569,46 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 				prm = g.remoteMetadataURL()
 			}
 			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s"`, prm))
-			writeRPCError(w, http.StatusUnauthorized, gatewayError(CodeSessionInvalid, "session invalid", "SESSION_INVALID", corr, "", nil))
+			writeRPCErrorID(w, http.StatusUnauthorized, msg.ID, gatewayError(CodeSessionInvalid, "session invalid", "SESSION_INVALID", corr, "", nil))
 			return
 		}
-		ctx, cancel := context.WithCancel(r.Context())
-		defer cancel()
-		kind := kindRequest
-		if r.Header.Get("Mcp-Method") == "subscriptions/listen" {
-			kind = kindListen
+		if msg.Err != nil { // FR-1.4, FR-1.22
+			writeRPCErrorID(w, msg.Status, msg.ID, msg.Err)
+			return
 		}
-		defer g.track.add(sess.ID, kind, cancel)()
+		if msg.Notification { // FR-1.5: accepted and discarded
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+		if msg.Version >= "2026-07-28" { // FR-1.16
+			r.Header.Del("Last-Event-ID")
+		}
+		ctx, cancel := context.WithCancelCause(r.Context())
+		defer cancel(nil)
+		if msg.Method == "subscriptions/listen" {
+			done, ok := g.track.addLimited(sess.ID, kindListen, g.cfg.Limits.ListenStreamsPerSess, cancel) // FR-1.38, CP-20
+			if !ok {
+				writeRPCErrorID(w, http.StatusOK, msg.ID, gatewayError(CodeRateLimited, "too many listen streams", ReasonListenLimit, corr, "",
+					map[string]any{"limit": g.cfg.Limits.ListenStreamsPerSess}))
+				return
+			}
+			defer done()
+		} else {
+			defer g.track.add(sess.ID, kindRequest, cancel)()
+		}
+		release, ok := g.track.claimID(sess.ID, string(msg.ID)) // FR-1.21
+		if !ok {
+			writeRPCErrorID(w, http.StatusBadRequest, msg.ID, &jsonrpc.Error{Code: codeInvalidRequest, Message: "invalid request: a request with this id is already in flight in this session"})
+			return
+		}
+		defer release()
 		if org.Channel == channel.Remote {
 			org.ClientID = sess.ClientID
 			ctx = channel.With(ctx, org)
 		}
 		ctx = context.WithValue(ctx, ctxSession, sess)
 		ctx = context.WithValue(ctx, ctxCorrelation, corr)
+		ctx = context.WithValue(ctx, ctxMessage, msg)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -577,7 +616,7 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 // trackCall registers a call's cancel function under its session so that
 // ending the session cancels it (FR-2.11). It returns the unregister func.
 func (g *Gateway) trackCall(sessionID string, cancel context.CancelFunc) func() {
-	return g.track.add(sessionID, kindCall, cancel)
+	return g.track.add(sessionID, kindCall, func(error) { cancel() })
 }
 
 // InFlight returns the number of tool calls in progress (tests and health).
@@ -617,6 +656,7 @@ func (g *Gateway) sessionEnded(s session.Session) {
 
 // Close releases resources.
 func (g *Gateway) Close() {
+	g.EndListenStreams()
 	g.mu.Lock()
 	servers := g.servers
 	g.servers = map[string]*sessionServer{}

@@ -79,7 +79,7 @@ Restart `smcpd` after changing accounts.
 
 ## Commands
 
-All commands take `--config <file>` (default `smcp.toml`). Without `--user` they use the local operator token from the state directory, which acts as the Administrator. With `--user <name>` they sign in as that Approver account and read the password from `--password-file <file>` (`-` for standard input) or a prompt.
+All commands take `--config <file>` (default `smcp.toml`). Without `--user` they use the local operator token from the state directory, which acts as the Administrator. With `--user <name>` they sign in as that Approver account and read the password from `--password-file <file>` (mode 0600 or stricter; `-` for standard input) or a prompt.
 
 | Command | What it does |
 |---|---|

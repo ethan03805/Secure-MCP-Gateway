@@ -7,7 +7,7 @@ smcpctl backup [--passphrase-file FILE | --recipient age1... [--recipient ...]] 
 smcpctl backup --list
 ```
 
-Every archive is encrypted with [age](https://age-encryption.org): to a passphrase (prompted, or read from `--passphrase-file`; `-` is standard input) or to one or more age X25519 recipients. There is no unencrypted mode; a backup without either is refused with `BACKUP_UNENCRYPTED_REFUSED`. A passphrase and recipients cannot be combined.
+Every archive is encrypted with [age](https://age-encryption.org): to a passphrase (prompted, or read from `--passphrase-file`, mode 0600 or stricter; `-` is standard input) or to one or more age X25519 recipients. There is no unencrypted mode; a backup without either is refused with `BACKUP_UNENCRYPTED_REFUSED`. A passphrase and recipients cannot be combined.
 
 When the Gateway runs, the backup is taken by the Gateway:
 

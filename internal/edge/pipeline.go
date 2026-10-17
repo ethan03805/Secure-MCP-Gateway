@@ -58,7 +58,7 @@ func (c *callRun) refuse(err *jsonrpc.Error, class string, phase audit.Phase, or
 
 func (c *callRun) auditFailure(err error) error {
 	c.g.log.Error("evidence write failed; refusing call", "err", err, "correlation", c.corr)
-	return gatewayError(CodeGatewayFailClosed, "gateway fail-closed: evidence unavailable", ReasonAuditUnavailable, c.corr, c.dec.ID, nil)
+	return gatewayError(CodeGatewayFailClosed, "gateway fail-closed: evidence unavailable", ReasonJournalUnavailable, c.corr, c.dec.ID, nil)
 }
 
 // toolHandler is the per-call enforcement pipeline (FR-4.3): authenticate
@@ -305,7 +305,7 @@ func (g *Gateway) authorizeLaunch(c *callRun, sessionID string, b pipeline.Bindi
 	case !g.store.IsActive(sessionID):
 		reason = ReasonSessionState
 	case g.evidenceErr() != nil:
-		reason = ReasonAuditUnavailable
+		reason = ReasonJournalUnavailable
 	case len(g.healthGate()) > 0: // E-23 critical cause (SR-6.11-1, SR-7.10-1)
 		reason = ReasonFailClosed
 	}
@@ -336,7 +336,10 @@ func (g *Gateway) authorizeRelease(c *callRun, sessionID string) error {
 			"call", audit.PhaseWithheld, "E-12", "withhold", reason, "evaluated")
 	}
 	if err := c.commit("call", audit.PhaseDelivered, "E-12", "release", "", "evaluated", nil); err != nil {
-		return c.auditFailure(err)
+		// SR-6.3-1: without a durable outcome record the result is withheld.
+		c.g.log.Error("evidence write failed; withholding result", "err", err, "correlation", c.corr)
+		return gatewayError(CodeResponseWithheld, "response withheld: evidence unavailable", ReasonJournalUnavailable, c.corr, c.dec.ID,
+			map[string]any{"message": "The tool ran, but the Gateway could not record its outcome, so the result was withheld. It may have completed the action; check before trying again. The operator can see the cause with `smcpctl health`."})
 	}
 	return nil
 }
