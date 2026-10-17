@@ -2310,6 +2310,54 @@
     ]
    }
   },
+  "/api/v1/decisions/{id}/explanation": {
+   "get": {
+    "description": "Reference: docs/api/policy.md",
+    "operationId": "getDecisionsIdExplanation",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Decision explanation: considered, applicable and decisive rule revisions, route, obligations and anomaly evidence (SR-1.19-1)",
+    "tags": [
+     "audit"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator",
+     "policy_author",
+     "auditor"
+    ]
+   }
+  },
   "/api/v1/egress": {
    "get": {
     "description": "Reference: docs/api/egress.md",
