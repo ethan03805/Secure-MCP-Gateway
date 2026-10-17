@@ -85,6 +85,14 @@ func run(cfgPath, level string) error {
 	if err != nil {
 		return err
 	}
+	// The configured listeners are bound before anything opens a port-0
+	// socket (the egress proxy of each server instance), which could
+	// otherwise be given one of the configured ports.
+	lns, err := app.BindListeners(cfg)
+	if err != nil {
+		return err
+	}
+	defer lns.Close()
 	if prep.EvidenceRotation != "" {
 		log.Warn("interrupted evidence-key rotation resolved", "action", prep.EvidenceRotation)
 	}
@@ -114,7 +122,7 @@ func run(cfgPath, level string) error {
 		}
 		return nil
 	}))
-	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs,
+	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs, Listeners: lns,
 		Observers: map[string]audit.Observer{"graph": mirror}}
 	// G-03, G-04, G-06, G-08: published observation objects overlay the
 	// [observation] table of the copy the analytics service reads.
@@ -209,7 +217,7 @@ func run(cfgPath, level string) error {
 	w := &wiring{app: a, approvals: approvals, notify: notifyMode(cfg.Approvals.Notify), packages: pkgs, sandbox: rt, secrets: sec,
 		mirror: mirror, obs: obs, remote: rs, console: true}
 	// E-21/E-22/E-23: health monitor, metrics, export, keys, backup, reload.
-	opsrt, err := ops.Attach(ctx, a, ops.Options{ConfigPath: cfgPath, Log: log, LogLevel: lv, Monitor: mon,
+	opsrt, err := ops.Attach(ctx, a, ops.Options{ConfigPath: cfgPath, Log: log, LogLevel: lv, Monitor: mon, MetricsListener: lns.Metrics,
 		PendingApprovals: func() int { return len(approvals.List(approval.StatePending)) },
 		Elements:         func() any { return w.elements() }})
 	if err != nil {

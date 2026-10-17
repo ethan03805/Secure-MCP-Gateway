@@ -519,9 +519,10 @@ func (s *Store) Active() []*Session {
 // Len returns the number of sessions held, active or ended (tests).
 func (s *Store) Len() int { s.mu.Lock(); defer s.mu.Unlock(); return len(s.sessions) }
 
-// Sweep expires active sessions past their deadlines and removes sessions
-// that ended more than EndedRetention ago, with their rotated-out refresh
-// verifiers.
+// Sweep expires active and suspended sessions past their deadlines and
+// removes sessions that ended more than EndedRetention ago, with their
+// rotated-out refresh verifiers. A suspended session has not ended and is
+// kept.
 func (s *Store) Sweep() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -532,7 +533,7 @@ func (s *Store) Sweep() {
 		}
 	}
 	for id, e := range s.sessions {
-		if e.State != StateActive && now.Sub(e.EndedAt) > EndedRetention {
+		if e.State != StateActive && e.State != StateSuspended && now.Sub(e.EndedAt) > EndedRetention {
 			for _, h := range e.usedRefresh {
 				delete(s.usedRefresh, h)
 			}

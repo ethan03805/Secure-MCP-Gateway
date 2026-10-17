@@ -237,7 +237,7 @@ func (r *Runtime) Backup(req BackupRequest, actor string) (backup.Result, error)
 	}
 	resume := func() {
 		if !wasStopped {
-			if err := g.Resume(actor); err != nil {
+			if err := g.ResumeDraining(actor); err != nil {
 				r.log.Error("dispatch not resumed after backup", "err", err)
 			}
 		}

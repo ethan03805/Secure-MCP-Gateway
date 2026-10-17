@@ -145,8 +145,12 @@ type Gateway struct {
 
 	gate    sync.RWMutex // launch/release barrier (see package comment)
 	stopped atomic.Bool  // FR-4.14 emergency stop
-	mux     *http.ServeMux
-	handler *mcp.StreamableHTTPHandler
+	// draining marks a stop entered by StopDraining (the backup of
+	// SR-7.7-1): calls in flight still release their results. An
+	// emergency Stop clears it.
+	draining atomic.Bool
+	mux      *http.ServeMux
+	handler  *mcp.StreamableHTTPHandler
 	// streamHandler answers tools/call requests as an event stream behind a
 	// heldWriter (stream.go) so held calls can carry keep-alives (FR-3.19).
 	streamHandler *mcp.StreamableHTTPHandler
@@ -414,13 +418,19 @@ func adminEvent(class, outcome, reason, actor string, detail map[string]any) aud
 // the error is still returned so the caller can report it.
 func (g *Gateway) Stop(actor, reason string) error { return g.stop(actor, reason, true) }
 
-// StopDraining enters the emergency-stop state like Stop but lets calls in
-// flight run to their end (their results are withheld at release). The
-// online backup uses it to drain dispatch before sealing the journal.
+// StopDraining stops dispatch like Stop but lets calls in flight run to
+// their end and release their results, so that they can drain (SR-7.7-1).
+// The online backup uses it before sealing the journal and lifts it with
+// ResumeDraining. An emergency Stop during the drain turns it into an
+// ordinary stop: results are withheld again and ResumeDraining does not
+// lift it.
 func (g *Gateway) StopDraining(actor, reason string) error { return g.stop(actor, reason, false) }
 
 func (g *Gateway) stop(actor, reason string, cancelCalls bool) error {
 	g.gate.Lock()
+	if cancelCalls || !g.stopped.Load() {
+		g.draining.Store(!cancelCalls)
+	}
 	g.stopped.Store(true)
 	g.gate.Unlock()
 	g.log.Warn("emergency stop", "actor", actor, "reason", reason)
@@ -447,7 +457,26 @@ func (g *Gateway) Resume(actor string) error {
 		return fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
 	}
 	g.stopped.Store(false)
+	g.draining.Store(false)
 	g.log.Warn("emergency stop lifted", "actor", actor)
+	return nil
+}
+
+// ResumeDraining lifts a stop entered by StopDraining. It does nothing
+// when the stop is no longer a drain, because an emergency Stop came in
+// meanwhile; that stop stays until an explicit Resume.
+func (g *Gateway) ResumeDraining(actor string) error {
+	g.gate.Lock()
+	defer g.gate.Unlock()
+	if !g.stopped.Load() || !g.draining.Load() {
+		return nil
+	}
+	if err := g.evidence.Commit(adminEvent("admin", "resumed", "EMERGENCY_RESUME", actor, nil)); err != nil {
+		return fmt.Errorf("%w: %w", ErrAuditUnavailable, err)
+	}
+	g.stopped.Store(false)
+	g.draining.Store(false)
+	g.log.Warn("drain stop lifted", "actor", actor)
 	return nil
 }
 
