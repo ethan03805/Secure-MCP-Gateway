@@ -142,6 +142,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if a.TLS, err = keys.RotateIfDue(cfg.State.Dir, time.Now(), listenerNames(cfg)...); err != nil {
 		return a, fmt.Errorf("tls certificates: %w", err)
 	}
+	if policy.BrokenBuild {
+		o.Log.Error("DELIBERATELY BROKEN BUILD (smcp_broken tag): rate limits and approval obligations are not enforced; for the FR-15.8 conformance check only")
+	}
 	if a.TLS.IPConstrained {
 		o.Log.Warn("server CA has iPAddress name constraints, which BoringSSL-based clients (native Claude Code, OpenCode) reject; replace it with `smcpctl keys rotate ca`")
 	}

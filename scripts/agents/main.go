@@ -42,7 +42,10 @@ type options struct {
 	// dnsOnlyCA reissues the instance CA without the CP-53 iPAddress name
 	// constraints (diagnostic for BoringSSL-based clients).
 	dnsOnlyCA bool
-	extra     []*client // test hook: clients outside the matrix (the reference client)
+	// brokenGateway runs the clients against a deliberately broken Gateway
+	// build (FR-15.8) and expects every client that runs to fail.
+	brokenGateway bool
+	extra         []*client // test hook: clients outside the matrix (the reference client)
 }
 
 func main() {
@@ -57,6 +60,7 @@ func main() {
 	flag.DurationVar(&o.timeout, "timeout", 4*time.Minute, "time limit for one agent prompt")
 	flag.IntVar(&o.maxTurns, "max-turns", 4, "agent turn limit per prompt, where the client supports one")
 	flag.BoolVar(&o.dnsOnlyCA, "dns-only-ca", false, "DIAGNOSTIC: reissue the instance CA with DNS-only name constraints (deviates from CP-53; labelled in the results)")
+	flag.BoolVar(&o.brokenGateway, "broken-gateway", false, "FR-15.8 broken-build check: build smcpd with -tags smcp_broken and exit 0 only if every client that runs reaches the Gateway and fails")
 	flag.Parse()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -65,6 +69,14 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "agents:", err)
 		os.Exit(2)
+	}
+	if o.brokenGateway {
+		if err := brokenVerdict(lastReports); err != nil {
+			fmt.Fprintln(os.Stderr, "agents: broken-build check FAILED:", err)
+			os.Exit(1)
+		}
+		fmt.Println("broken-build check passed: every client that ran turned to fail")
+		return
 	}
 	for _, r := range results {
 		if r.Result == resultFail {
@@ -158,6 +170,9 @@ func run(ctx context.Context, o options, stdout io.Writer) ([]agentResult, error
 		if o.dnsOnlyCA {
 			r.Mode += "+dns-only-ca"
 		}
+		if o.brokenGateway {
+			r.Mode += "+broken-gateway"
+		}
 		reports[i] = r
 		bin := ""
 		switch {
@@ -187,7 +202,7 @@ func run(ctx context.Context, o options, stdout io.Writer) ([]agentResult, error
 	}
 
 	if len(runnable) > 0 {
-		g, err := startGateway(ctx, root, work, runnable, o.dnsOnlyCA, logf)
+		g, err := startGateway(ctx, root, work, runnable, o.dnsOnlyCA, o.brokenGateway, logf)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +255,41 @@ func run(ctx context.Context, o options, stdout io.Writer) ([]agentResult, error
 		}
 	}
 	printSummary(stdout, reports)
+	lastReports = reports
 	return results, nil
+}
+
+// lastReports holds the per-scenario reports of the last run, for the
+// broken-build verdict.
+var lastReports []*clientReport
+
+// brokenVerdict decides the FR-15.8 broken-build check: at least one client
+// ran, and every client that ran reached the Gateway (its allowed call
+// passed, so the failure is not an outage or a missing tool) and failed.
+func brokenVerdict(reports []*clientReport) error {
+	ran := 0
+	for _, r := range reports {
+		if r.Result == resultNotRun {
+			continue
+		}
+		ran++
+		allowed := false
+		for _, s := range r.Scenarios {
+			if s.Scenario == scnAllowed && s.Result == resultPass {
+				allowed = true
+			}
+		}
+		switch {
+		case r.Result != resultFail:
+			return fmt.Errorf("%s passed against the broken Gateway: %s", r.Client, r.Detail)
+		case !allowed:
+			return fmt.Errorf("%s failed without reaching the Gateway, which proves nothing: %s", r.Client, r.Detail)
+		}
+	}
+	if ran == 0 {
+		return errors.New("no client ran")
+	}
+	return nil
 }
 
 func writeOut(path string, v any) error {

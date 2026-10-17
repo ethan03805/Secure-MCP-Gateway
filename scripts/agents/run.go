@@ -5,10 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
@@ -64,16 +66,22 @@ const (
 	scnUngranted = "ungranted"
 )
 
+// notResource is appended to every prompt. Codex CLI offers the model its
+// own list_mcp_resources and read_mcp_resource tools next to the server's
+// tools, and gpt-5.1-codex-mini sometimes answered "read a file from server
+// smcp" with read_mcp_resource instead of ref_read_file (CI, 2026-10-16).
+const notResource = " The Gateway's tools are MCP tools, not MCP resources: do not use resource tools such as list_mcp_resources or read_mcp_resource."
+
 func prompts(nonce string) map[string]scenario {
 	return map[string]scenario{
 		scnCatalog: {scnCatalog, "List the names of the tools the MCP server smcp gives you, in one line. If a tool named " +
-			publicName(toolUngranted) + " is among them, call it once with path \".\". Use no other tool."},
+			publicName(toolUngranted) + " is among them, call it once with path \".\". Use no other tool." + notResource},
 		scnAllowed: {scnAllowed, fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with text %q and reply with its result. Use no other tool.",
-			publicName(toolAllowed), nonce)},
+			publicName(toolAllowed), nonce) + notResource},
 		scnDenied: {scnDenied, fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with no arguments and reply with its result or error message. Do not retry. Use no other tool.",
-			publicName(toolLimited))},
-		scnApproval: {scnApproval, fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with path %q and reply with the file's contents. Do not retry. Use no other tool.",
-			publicName(toolApproval), helloFile)},
+			publicName(toolLimited)) + notResource},
+		scnApproval: {scnApproval, fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with path %q and reply with the file's contents. The call may take a while because a person must approve it first. Do not retry. Use no other tool.",
+			publicName(toolApproval), helloFile) + notResource},
 	}
 }
 
@@ -190,9 +198,13 @@ func runClient(ctx context.Context, c *client, e *runEnv, r *clientReport, appro
 	detail := ""
 	err = withEvents(e.g, func(evs []audit.Event) error {
 		evs = sessionEvents(evs, mark, sess.SessionID)
-		if c.LocalApprovalRefusal != "" && bytes.Contains(output, []byte(c.LocalApprovalRefusal)) {
-			detail = "client refused the call locally (honors the FR-1.50 requiresUserInteraction hint; headless mode cannot ask); Gateway hold not exercised"
-			return checkLocalRefusal(evs)
+		if c.localRefusal != nil && c.localRefusal(output) {
+			// The suite answers the client's permission request, so a local
+			// refusal means the client never asked; the hold went untested.
+			if err := checkLocalRefusal(evs); err != nil {
+				return err
+			}
+			return errors.New("the client refused the call itself (FR-1.50 requiresUserInteraction) instead of asking the suite; the Gateway hold was not exercised")
 		}
 		if err := checkApproval(evs, approvals); err != nil {
 			return err
@@ -271,7 +283,13 @@ func runAgentOutput(ctx context.Context, c *client, e *runEnv, s scenario, timeo
 		cmd.Stdin = nil
 		var buf bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &buf, &buf
-		if err := startAndWait(ctx, cmd); err != nil {
+		var err error
+		if c.session != nil {
+			err = startSession(ctx, cmd, c, &buf, s.Prompt)
+		} else {
+			err = startAndWait(ctx, cmd)
+		}
+		if err != nil {
 			var ee *exec.ExitError
 			switch {
 			case ctx.Err() != nil:
@@ -287,6 +305,50 @@ func runAgentOutput(ctx context.Context, c *client, e *runEnv, s scenario, timeo
 	out = redact(out, e.token, os.Getenv(aiKeyEnv))
 	_ = os.WriteFile(filepath.Join(e.dir, s.ID+".log"), out, 0o600)
 	return status, out
+}
+
+// startSession runs cmd with c.session talking to it over stdin and
+// stdout. Stderr and the session's copy of stdout go to buf.
+func startSession(ctx context.Context, cmd *exec.Cmd, c *client, buf *bytes.Buffer, prompt string) error {
+	out := &lockedWriter{w: buf}
+	cmd.Stdout, cmd.Stderr = nil, out
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	sess := make(chan error, 1)
+	go func() { sess <- c.session(stdin, stdout, out, prompt) }()
+	select {
+	case serr := <-sess:
+		if werr := cmd.Wait(); werr != nil {
+			return werr
+		}
+		return serr
+	case <-ctx.Done():
+		_ = cmd.Process.Kill()
+		<-sess
+		_ = cmd.Wait()
+		return ctx.Err()
+	}
+}
+
+// lockedWriter serializes writes from the session and the stderr copier.
+type lockedWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (l *lockedWriter) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.w.Write(p)
 }
 
 func startAndWait(ctx context.Context, cmd *exec.Cmd) error {

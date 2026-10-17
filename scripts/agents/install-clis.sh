@@ -50,10 +50,21 @@ if selected hermes; then
     "") branch="" ;;
     *) echo "Hermes Agent $v: no known release tag; installing the stable channel" >&2; branch="" ;;
   esac
-  say "Hermes Agent: ${branch:-stable channel}"
-  curl -fsSL https://hermes-agent.nousresearch.com/install.sh \
-    | bash -s -- --non-interactive ${branch:+--branch "$branch"} >/dev/null 2>&1 \
-    || failed+=("Hermes Agent")
+  # The installer at hermes-agent.nousresearch.com follows the main line and
+  # cannot install older tags (from mid-2026 it expects a `pm` module that
+  # v2026.6.19 lacks: "No module named 'pm'"), so a pinned tag is installed
+  # with the installer from that tag.
+  url=https://hermes-agent.nousresearch.com/install.sh
+  [ -z "$branch" ] || url="https://raw.githubusercontent.com/NousResearch/hermes-agent/$branch/scripts/install.sh"
+  say "Hermes Agent: ${branch:-stable channel} ($url)"
+  log=$(mktemp)
+  if ! curl -fsSL "$url" \
+    | bash -s -- --non-interactive --skip-setup --skip-browser ${branch:+--branch "$branch"} >"$log" 2>&1 \
+    || ! [ -x "$HOME/.local/bin/hermes" ]; then
+    tail -n 30 "$log" >&2
+    failed+=("Hermes Agent")
+  fi
+  rm -f "$log"
 fi
 
 for c in claude codex opencode gemini goose hermes; do

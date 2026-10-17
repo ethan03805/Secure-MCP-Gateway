@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,14 +55,17 @@ type client struct {
 	// NeedsKey names the environment variable that must be set for the
 	// model in AI Gateway mode ("" for none).
 	NeedsKey string
-	// LocalApprovalRefusal, when set, is the text in the client's output
-	// that shows it refused an approval-obligated call locally, before
-	// sending it, because headless mode cannot ask the person (FR-1.50).
-	LocalApprovalRefusal string
+	// localRefusal, when set, reports whether the client's output shows it
+	// refused the approval-obligated call itself, before sending it,
+	// because it had no way to ask the person (FR-1.50).
+	localRefusal func(output []byte) bool
 	// NotRunReason, when set, records the client as not-run without trying.
 	NotRunReason string
 	setup        func(c *client, e *runEnv) error
 	command      func(c *client, e *runEnv, prompt string) *exec.Cmd
+	// session, when set, drives a command whose prompt goes to stdin and
+	// whose stdout carries requests the suite must answer.
+	session func(stdin io.WriteCloser, stdout io.Reader, log io.Writer, prompt string) error
 	// run replaces setup/command for the in-process reference client.
 	run func(ctx context.Context, e *runEnv, s scenario) (string, error)
 }
@@ -113,11 +117,17 @@ func claudeCode() *client {
 		ID: "claude-code", Name: "Claude Code", Framework: "claude-code", Bins: []string{"claude"},
 		LocalLogin: true, NeedsKey: aiKeyEnv,
 		// Claude Code asks the person before every call to a tool marked
-		// anthropic/requiresUserInteraction (FR-1.50), even when allowed, and
-		// refuses such calls in headless mode ("MCP tool requires user
-		// interaction; not supported via --permission-prompt-tool"). The
-		// refusal is listed in the JSON result's permission_denials.
-		LocalApprovalRefusal: `"tool_name":"mcp__smcp__` + publicName(toolApproval) + `"`,
+		// anthropic/requiresUserInteraction (FR-1.50), even when allowed. A
+		// plain `claude -p` has nobody to ask and refuses such calls, and
+		// --permission-prompt-tool with an MCP tool is refused too. The SDK
+		// control protocol (stream-json with --permission-prompt-tool stdio)
+		// asks its host, so the suite runs Claude Code that way and answers
+		// each permission request as the person would. The refusal check
+		// stays for builds that refuse even there.
+		localRefusal: func(out []byte) bool { return deniedInResult(out, "mcp__smcp__"+publicName(toolApproval)) },
+		session: func(stdin io.WriteCloser, stdout io.Reader, log io.Writer, prompt string) error {
+			return streamJSONSession(stdin, stdout, log, prompt, "mcp__smcp__")
+		},
 		setup: func(c *client, e *runEnv) error {
 			// Streamable HTTP with a static bearer header; Claude Code expands
 			// ${VAR} in MCP configuration, so the token never touches disk.
@@ -140,12 +150,16 @@ func claudeCode() *client {
 					"ANTHROPIC_AUTH_TOKEN="+os.Getenv(aiKeyEnv),
 					"ANTHROPIC_API_KEY=")
 			}
-			cmd := exec.Command(e.bin, "-p", prompt,
+			// The prompt goes to stdin as a stream-json user message
+			// (streamJSONSession); permission requests come back on stdout.
+			cmd := exec.Command(e.bin, "-p",
+				"--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+				"--permission-prompt-tool", "stdio",
 				"--mcp-config", filepath.Join(e.dir, "mcp.json"), "--strict-mcp-config",
 				"--tools", "", // no built-in tools: only the Gateway's MCP tools
 				"--allowedTools", mcpToolNames("mcp__smcp__"),
 				"--max-turns", fmt.Sprint(e.maxTurns),
-				"--model", model, "--output-format", "json", "--no-session-persistence",
+				"--model", model, "--no-session-persistence",
 				"--debug-file", filepath.Join(e.dir, "claude-debug.txt"))
 			cmd.Env = baseEnv(e, env...)
 			return cmd
@@ -167,7 +181,9 @@ func codex() *client {
 			args := []string{"exec", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config", "--ignore-rules",
 				"-s", "read-only", "-C", e.dir}
 			if !e.local {
-				args = append(args, "-m", modelCodex)
+				// Without a model catalog entry for this ID Codex falls back to
+				// reasoning effort "none"; low makes its tool choice steadier.
+				args = append(args, "-m", modelCodex, "-c", `model_reasoning_effort="low"`)
 			} else if m := codexUserModel(); m != "" {
 				// A ChatGPT login offers its own model set, so local mode uses
 				// the model of the user's config.toml (the rest of that file is
