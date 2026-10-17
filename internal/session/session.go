@@ -146,8 +146,10 @@ var (
 // reuse detection) before the janitor removes it.
 const EndedRetention = 10 * time.Minute
 
-// Store is the session table (D-07, memory only, so every session is gone
-// after a restart as FR-2.16 requires).
+// Store is the session table (D-07). It is held in memory only, so every
+// session ends when the Gateway restarts and tokens issued before the
+// restart are refused; resumption after a restart (FR-2.16) is deferred
+// (SRS Appendix N).
 type Store struct {
 	cfg      *config.Config
 	snapshot func() *policy.Snapshot

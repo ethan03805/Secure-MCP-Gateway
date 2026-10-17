@@ -45,23 +45,16 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-03 Identity & Authentication Service
 
 - FR-2.15 missing: UDS peer UID plus bearer key authentication.
-- SR-2.11-3 missing: Client ID Metadata Documents are never fetched; registered metadata-URL client IDs are accepted without a fetch, so the CP-52 allowlist and limits do not exist.
-- SR-2.11-5 unverified: `registration_endpoint` is advertised only with the Remote Access Profile enabled and `client_id_metadata_document_supported` is never advertised; no test covers both settings of both mechanisms (metadata documents cannot be enabled).
 
 ## E-04 Session Manager
 
 - FR-2.13 missing: no baseline context key is computed or stored at session creation from an Observation Policy.
-- FR-2.16 missing: sessions are in memory and do not survive a restart, so an unexpired session cannot be resumed with its refresh token after a restart.
 
 ## E-05 Policy Administration Service
 
 - FR-3.1 missing: only Framework Profiles and Session Allow Policy Templates exist; Secret Use, Response, Audit Profile, Observation, Anomaly Response and Research Campaign policy objects are not part of the policy document.
-- FR-3.3 missing: no named draft workspace derived from a parent revision.
-- FR-3.7 missing: no cost estimate for a draft Observation Policy or Research Campaign from 7 days of call rates.
 - FR-18.5 partial: `internal/policy` `TestPolicyReferenceExamples` compiles every policy example in `docs/policy-reference.md` and checks that every schema field is described; object types, predicate operators and obligations that do not exist (FR-3.1, SR-1.7-1, FR-3.12) cannot be described.
-- SR-1-1 missing: publication does not check grants against the manifest capability ceiling.
 - SR-3.13-1 missing: no high-risk class flags on profiles and templates; high-risk grants are not refused at publication.
-- SR-6.9-1 missing: retention and capture settings are not part of the policy document, so they are not validated at publication.
 - SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; rolling back the application version is not exercised, and there are no revocation epochs.
 
 ## E-06 Policy Decision Service
@@ -69,7 +62,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-3.12 missing: obligations cover filters, approval, rate and quota only; audit profile, observation policy, size limit, timeout, egress grants, secret grants and runtime profile obligations are absent.
 - FR-11.2 external: no p95 decision latency measurement under the reference workload.
 - SR-1.5-1 missing: no principal enabled state or credential expiry or revocation in the decision; server revision enablement is checked at dispatch, not in the decision.
-- SR-1.6-1 missing: permits match server alias and tool name, not exact server and tool revision IDs or the MCP method.
 - SR-1.7-1 missing: no argument predicates (FR-3.6), so the predicate operator set does not exist.
 - SR-1.7-2 missing: no predicates, so missing-attribute handling does not exist.
 - SR-1.10-1 missing: one permit rule applies per tool; obligations of several applicable rules are not combined.
@@ -93,8 +85,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-15 Server Runtime Manager
 
-- FR-5.10 missing: instances are shared across sessions; per-call and per-session scopes do not exist.
-- FR-5.11 missing: no instance reuse by scope and no CP-38 idle teardown.
 
 ## E-18 Egress Broker
 
@@ -105,10 +95,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-21 Audit & Evidence Service
 
-- FR-7.6 missing: no Audit Profile alert rules, so no console alerts from them.
 - SR-6.4-1 missing: events carry decision, policy revision, server and tool revision IDs, but no decisive rule revision IDs (rules are not versioned objects) and no audit profile revision.
-- SR-6.6-1 missing: payload capture is directed by `[observation]` configuration, not by an evaluated Audit Profile, Observation Policy or Research Campaign.
-- SR-6.8-1 missing: captured payloads are not stored as age-encrypted blobs referenced from the graph.
 - SR-6.12-1 external: the evidence key and checkpoint directory permissions depend on the Enforced installation's identities; not exercised.
 - SR-6.18-1 missing: stderr, backend error messages and notifications are not recorded as `server_asserted` evidence.
 
@@ -141,7 +128,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-26 Data Access Service
 
-- FR-9.4 missing: no priority classes for queued writes.
 - SR-6-3 missing: observation data served to the console is filtered by route role only, not by each field's sensitivity class.
 
 ## E-28 Data Lifecycle & Memory Manager

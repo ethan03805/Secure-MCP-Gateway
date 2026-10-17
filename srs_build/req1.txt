@@ -566,6 +566,7 @@ A: E-04; F-08; F-09; D-07
 V: Test | Restart the Gateway with active sessions; confirm the old access tokens receive -31006, a refresh with the current refresh token resumes the same session ID, and a refresh after the maximum lifetime fails.
 SRC: ARCH §13 D-07; OWNER (sessions may survive restart via refresh tokens)
 R: Requiring a new browser sign-in after every restart or upgrade makes the product unusable; a rotated refresh token keeps the resume bound to the one client that holds it.
+DEFER: Release 1.0 ends every session when the Gateway restarts: sessions, their session-taint marks and their quota counters are held in memory, and resuming a session with a refresh token issued before the restart would reset its taint and quota. Every access and refresh token issued before a restart is refused, and the harness signs in again. Resumable sessions with persisted taint and quota state are deferred.
 
 @FR-2.17 | Authorization metadata
 P: FR-2

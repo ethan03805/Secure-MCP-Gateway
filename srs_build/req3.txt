@@ -161,6 +161,7 @@ A: E-21; F-53; I-06
 V: Test | Configure an alert on `withheld`; trigger it; confirm the console alert.
 SRC: ARCH §7.2 Audit Profile
 R: Operators need notification of significant events.
+DEFER: The release 1.0 Audit Profile sets retention and escalation parameters only; it has no alert rules. The console raises alerts for anomaly bands (G-06) and health causes, and the evidence stream with filters (FR-8.23) follows any event class live. Alert rules in the Audit Profile are deferred.
 
 @FR-7.7 | Local certificate authorities
 P: FR-7
@@ -558,6 +559,7 @@ A: E-26; F-73; I-33
 V: Test | Saturate the queue with P2 writes and submit a P1 write; confirm the P1 write commits first.
 SRC: ARCH §4 E-26
 R: Mandatory writes must not wait behind optional data.
+DEFER: In release 1.0 the Data Access Service writes only the evidence mirror, from one ordered stream: the journal (P0 and P1 records are committed to the journal before the call proceeds, independent of the graph), and observation data is written to the Observation Store, not through the Data Access Service. With one write class in the queue there is nothing to order; priority classes are deferred until a second writer shares the queue.
 
 @FR-9.5 | Observation batching
 P: FR-9
