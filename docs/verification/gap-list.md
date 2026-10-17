@@ -120,10 +120,8 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - SR-6.6-1 missing: payload capture is directed by `[observation]` configuration, not by an evaluated Audit Profile, Observation Policy or Research Campaign.
 - SR-6.8-1 missing: captured payloads are not stored as age-encrypted blobs referenced from the graph.
 - SR-6.12-1 external: the evidence key and checkpoint directory permissions depend on the Enforced installation's identities; not exercised.
-- SR-6.13-1 unverified: the journal is independent of the graph mirror, and the mirror catches up from the journal; no test stops the graph database during traffic and compares `policy_status` after recovery.
 - SR-6.15-1 missing: no purge operation and no deletion receipts.
 - SR-6.18-1 missing: stderr, backend error messages and notifications are not recorded as `server_asserted` evidence.
-- SR-6.20-1 unverified: the graph mirror projects `FOR_DECISION` links (`internal/graph/project.go`); no claiming test covers both a denied and a permitted call.
 
 ## E-22 Key & Trust Anchor Manager
 
@@ -150,7 +148,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-25 Graph Database Engine
 
-- FR-9.18 unverified: the migrations create the indexes; the claiming test needs a running Neo4j and does not run in `make status`.
 - FR-11.1 missing: no reference workload generator.
 - FR-12.5 missing: no declared start ordering of the per-element services (one `smcpd` process); systemd units exist for the Enforced profile only.
 
