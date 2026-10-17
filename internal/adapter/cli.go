@@ -83,6 +83,15 @@ func StdioMain(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "smcp-stdio:", err)
 		return 1
 	}
+	if creds.Gateway.Socket != "" { // UDS Harness Profile
+		ctx, cancel := signalContext()
+		defer cancel()
+		if err := RunUDS(ctx, creds.Gateway.Socket, creds.Gateway.UDSKey, stdin, stdout); err != nil {
+			fmt.Fprintln(stderr, "smcp-stdio:", err)
+			return 1
+		}
+		return 0
+	}
 	s, err := NewSession(creds)
 	if err != nil {
 		fmt.Fprintln(stderr, "smcp-stdio:", err)

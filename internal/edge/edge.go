@@ -146,6 +146,9 @@ type Gateway struct {
 	// streamHandler answers tools/call requests as an event stream behind a
 	// heldWriter (stream.go) so held calls can carry keep-alives (FR-3.19).
 	streamHandler *mcp.StreamableHTTPHandler
+	// udsHandler serves requests bridged from the UDS harness socket
+	// (uds.go): the MCP endpoint chain without host and origin checks.
+	udsHandler http.Handler
 
 	mu      sync.Mutex
 	servers map[string]*sessionServer
@@ -241,6 +244,7 @@ func New(d Deps) (*Gateway, error) {
 	g.mux = http.NewServeMux()
 	d.OAuth.Register(g.mux)
 	g.mux.Handle(d.Config.Listener.MCPPath, g.mcpChain(http.HandlerFunc(g.serveMCP)))
+	g.udsHandler = g.mcpChain(http.HandlerFunc(g.serveMCP))
 	g.mux.HandleFunc("GET /healthz", g.healthz)
 	d.Store.OnEnd(g.sessionEnded)
 	return g, nil

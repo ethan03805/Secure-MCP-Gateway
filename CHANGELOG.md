@@ -223,6 +223,12 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - The empty complete result that ends a listen stream now carries `_meta.io.modelcontextprotocol/serverInfo`. FR-1.14 and FR-1.15 are narrowed to 2026-07-28 results (the 2025-11-25 schema defines neither field) and verified on every baseline method.
 - New tests verify FR-1.31 (content, structuredContent and isError as a response filter left them) and FR-1.41 (closing the event stream of an in-flight call sends `notifications/cancelled` southbound within 1 second).
 
+### UDS Harness Profile (FR-1.1, FR-1.47, FR-2.15, SR-2.8-3)
+
+- New optional `[uds]` table: the Gateway listens on a Unix-domain socket (CP-02 default `/run/smcp/harness.sock`) created with mode 0660 and owned by the configured group (default `smcp-harness`). The socket carries newline-delimited JSON-RPC; the first message (`local.smcpgw/authenticate`) must carry the bearer key registered in `[[uds.peer]]` for the kernel-reported peer UID, otherwise `-31006` and the connection closes. Later messages go through the same chain as the TLS endpoint; `notifications/cancelled` cancels a request in flight, listen streams keep their `subscriptionId`, closing the socket ends the session (`internal/edge/uds.go`, `docs/harness.md`).
+- `smcp-stdio` uses the socket when the credential file names `[gateway] socket` and `uds_key`; the old HTTP-over-socket dialing of the adapters is removed.
+- New tests verify FR-1.1 (the process's listening sockets enumerated from the kernel are exactly the TLS, UDS and admin listeners), FR-1.47, FR-2.15 and SR-2.8-3.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

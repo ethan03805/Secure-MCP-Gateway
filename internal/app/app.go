@@ -114,6 +114,7 @@ type App struct {
 	packages  Packages
 	harnessLn net.Listener
 	adminLn   net.Listener
+	udsLn     net.Listener // UDS Harness Profile socket; nil unless [uds] enabled
 	closeOnce sync.Once
 }
 
@@ -346,6 +347,13 @@ func (a *App) Listen() error {
 		a.harnessLn.Close()
 		return err
 	}
+	if a.Config.UDS.Enabled { // CP-02 UDS harness listener (FR-1.1, FR-1.47)
+		if a.udsLn, err = a.Gateway.ListenUDS(); err != nil {
+			a.harnessLn.Close()
+			a.adminLn.Close()
+			return err
+		}
+	}
 	return nil
 }
 
@@ -358,13 +366,20 @@ func (a *App) Serve(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go a.Gateway.RunJanitors(ctx, a.janitor)
-	errc := make(chan error, 2)
+	n := 2
+	errc := make(chan error, 3)
 	go func() { errc <- a.Gateway.Serve(ctx, a.harnessLn) }()
 	go func() { errc <- a.Admin.Serve(ctx, a.adminLn) }()
-	err := <-errc
+	if a.udsLn != nil {
+		n++
+		go func() { errc <- a.Gateway.ServeUDS(ctx, a.udsLn) }()
+	}
+	errs := []error{<-errc}
 	cancel()
-	err2 := <-errc
-	return errors.Join(err, err2)
+	for i := 1; i < n; i++ {
+		errs = append(errs, <-errc)
+	}
+	return errors.Join(errs...)
 }
 
 // Close stops everything and seals the journal. It is safe to call more

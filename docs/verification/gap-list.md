@@ -18,14 +18,11 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-01 Harness Interface Endpoint
 
-- FR-1.1 missing: only the TLS listener exists; the optional CP-02 Unix-domain-socket listener is not implemented, and no test enumerates the listening sockets.
-- FR-1.47 missing: UDS Harness Profile (newline-delimited JSON-RPC over the CP-02 socket).
 - FR-1.48 missing: no X-01 or X-12 interface control document in the release.
 - FR-11.5 external: no p95 overhead measurement for 64 KiB results at eight concurrent calls on reference hardware.
 - FR-12.1 external: no release SBOM license check; needs a release artifact.
 - FR-12.2 unverified: no test runs the baseline functions with outbound Internet blocked.
 - FR-12.8 external: release provenance bundle (commit IDs, digests, recipes, lockfiles, SBOM, notices) not inspected; needs a release.
-- SR-2.8-3 missing: UDS harness socket with mode 0660 and the `smcp-harness` group.
 - SR-4.14-1 missing: `smcpctl remote enable` installs no nftables rules in the Enforced profile.
 - SR-7.11-1 unverified: CP-06 header bounds and CP-07 body bound are applied by `net/http` and the SDK before parsing; there is no per-source connection limit or CP-09 unauthenticated-work limit on the MCP endpoint (missing), and no test sends slow bodies or connection floods.
 
@@ -38,7 +35,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-03 Identity & Authentication Service
 
-- FR-2.15 missing: UDS peer UID plus bearer key authentication.
 
 ## E-04 Session Manager
 

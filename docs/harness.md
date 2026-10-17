@@ -88,3 +88,34 @@ Configuration locations read:
 | Gemini CLI | `~/.gemini/settings.json`, `./.gemini/settings.json`, system settings (`mcpServers`) |
 | Goose | `~/.config/goose/config.yaml` (`extensions`) |
 | Grok Build | not known; reported as a warning |
+
+## UDS Harness Profile
+
+A harness on the same host can reach the Gateway over a Unix-domain socket instead of TLS (CP-02, FR-1.47). The profile is off by default.
+
+```toml
+[uds]
+enabled = true
+path = "/run/smcp/harness.sock"   # CP-02 default
+group = "smcp-harness"            # socket owner group; the socket has mode 0660 (SR-2.8-3)
+
+[[uds.peer]]
+uid = 1000                        # local user ID of the harness process
+principal = "cc"                  # [[principal]] ID
+key_hash = "$argon2id$..."        # smcpctl hash-password of the bearer key
+template = "ro"                   # optional; the profile's default template otherwise
+```
+
+The Gateway process must be able to give the socket to the group (be a member of it, or run as root). Harness users join the group to connect.
+
+Protocol: newline-delimited JSON-RPC, one message per line, as the MCP stdio binding defines it. The first message must be
+
+```json
+{"jsonrpc":"2.0","id":0,"method":"local.smcpgw/authenticate","params":{"key":"<bearer key>"}}
+```
+
+The Gateway reads the peer's user ID from the kernel (`SO_PEERCRED` on Linux, `LOCAL_PEERCRED` on macOS). Only a registered user ID presenting the key registered for it gets a session (FR-2.15); anything else is answered `-31006` and the connection is closed, with an `auth_failure` event (`UDS_AUTH_REQUIRED`, `UDS_PEER_UNREGISTERED` or `UDS_KEY_INVALID`). The reply carries `sessionId`, `principal` and `template`. The session belongs to the `uds` listener and lasts as long as the connection.
+
+After that every message is served exactly as on the TLS endpoint, both protocol eras included: the Gateway derives `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name` from the message. Requests may be pipelined; each response, and each message of a listen stream (with its `subscriptionId` in `_meta`), is written as one line. `notifications/cancelled` for a request in flight cancels it (southbound too) and nothing more is written for it. Closing the socket cancels the requests in flight and ends the session.
+
+`smcp-stdio` uses the socket when its credential file names `[gateway] socket` and `uds_key` (`docs/adapters.md`).
