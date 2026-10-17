@@ -93,7 +93,7 @@ func Build(t testing.TB, dir string, s Spec) {
 		Server:        packaging.ServerInfo{ID: s.ID, Revision: s.Revision, Alias: s.Alias, Publisher: "test"},
 		Artifact:      packaging.ArtifactInfo{Type: "binary", Reference: "/fixture/" + s.ArtifactName, Version: s.Revision, SHA256: artSum, SizeBytes: int64(len(s.Artifact))},
 		Launch:        packaging.Launch{Runtime: "native", Argv: s.Argv},
-		Era:           "2026-07-28",
+		Era:           "2025-11-25",
 		RiskClass:     s.Risk,
 		InstanceScope: []string{"shared"},
 		Stateful:      s.Stateful,

@@ -57,9 +57,12 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Sign in again; the harness normally does this itself after a 401 |
 | `SESSION_STATE` | `-31006` | The session is suspended or terminated | Sign in again |
 | `BACKEND_ERROR` | `-31007` | The server returned a protocol error | `data.backendCode` is the server's code; check the server's stderr in the diagnostic log |
+| `BACKEND_OUTPUT_INVALID` | `-31007` | The server wrote a stdout line that is not one UTF-8 JSON-RPC message; the instance was replaced | Check the server's stderr in the diagnostic log; the server is misbehaving or prints logs to stdout |
 | `DISPATCH_FAILED` | `-31007` | The server could not be started or reached | Check the Servers view (G-10) and the diagnostic log |
+| `RESULT_INVALID` | `-31003` | The server's response was not a valid result (malformed `CallToolResult` or unknown `resultType`) and was withheld | Check the server version; the result never reached the harness |
 | `CLIENT_DEADLINE` | `-31008` | The call did not finish within the client deadline (CP-13) | Repeat with a smaller request, or raise the deadline |
 | `UPSTREAM_TIMEOUT` | `-31009` | The server stopped responding; it may have acted | Check whether the action happened before repeating it |
+| `INSTANCE_FAILED` | `-31009` | The server process ended while a write, external, execute or unclassified tool was running; it may have acted | Check whether the action happened before repeating it; the server was restarted |
 | `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The server returned an `InputRequiredResult` (elicitation, sampling or roots); the Gateway does not relay such requests | The MRTR Relay Profile is not implemented; use a tool that does not ask the client for input |
 | `SCHEMA_INVALID` | `-32602` | Arguments do not match the tool's input schema | `data.findings` lists the violations |
 

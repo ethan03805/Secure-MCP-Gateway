@@ -103,6 +103,18 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - FR-5.20: a server-initiated request inside a JSON-RPC batch line from a backend was passed to the SDK client, which answered `roots/list` itself. The frame filter now splits a batch line and screens each member as a single message (refuse with `-32601` except ping, route progress, convert an InputRequiredResult) and passes the remaining members one per line. The HF-26 fixture gained `legacy_all` and `legacy_batch` tools that send ping, `roots/list`, `sampling/createMessage` and `elicitation/create` one per line and in one batch; `TestServerInitiatedRequestsRefused` now verifies FR-5.20 and the hostile HF-26 row checks the batch case.
 - Test ports: `internal/testport` picks loopback ports below the operating system's ephemeral range and never hands out the same port twice in a process. `gwtest`, `e2e`, the hostile harness and the `smcpctl` tests use it, so a configured listener (for example the remote listener that `TestRemoteRequiresApprovedClientToken` enables after many connections) no longer collides with an outgoing connection's source port.
 
+### Southbound protocol and dispatch failures (E-10, E-11, E-15)
+
+- The southbound handshake is `initialize` with protocol version 2025-11-25 (FR-5.19); the SDK used to try `server/discover` with 2026-07-28 first. `smcpctl package build` probes the same way, so manifests record the era the Gateway negotiates; the `pkgtest` fixture manifests now declare 2025-11-25.
+- FR-5.40: a signed package whose manifest era differs from the negotiated version is not used; the revision is suspended with `MANIFEST_DRIFT` evidence naming both versions (`pipeline.ServerSpec.NegotiatedEra`).
+- A stdout line that is not one UTF-8 JSON-RPC 2.0 message ends the instance's connection; the call fails with `-31007 BACKEND_OUTPUT_INVALID` and the instance is replaced (FR-5.13, FR-5.14). Lines used to pass to the SDK client unchecked.
+- A result with an unrecognized `resultType`, or one that does not decode as a `CallToolResult`, is withheld with `-31003 RESULT_INVALID`; a missing `resultType` is `complete` (FR-5.23, SR-5.20-1).
+- An instance that ends after a call to a write, external, execute or unclassified tool was dispatched records the call as indeterminate with `-31009 INSTANCE_FAILED`; read-class calls keep `-31007 DISPATCH_FAILED`. The call is never sent again (SR-7.2-1).
+- Closing the response stream or connection of an in-flight `tools/call` now cancels the call (the SDK runs handlers on its own context, which did not end), and the dispatcher sends `notifications/cancelled` southbound (SR-7.12-1, FR-5.26).
+- New reason codes in Appendix B and `docs/troubleshooting.md`: `RESULT_INVALID`, `BACKEND_OUTPUT_INVALID`, `INSTANCE_FAILED`.
+- `pipeline.InProcessLauncher.Raw` runs scripted stdio servers in process for protocol tests.
+- New tests verify FR-1.43, FR-5.13, FR-5.14, FR-5.15, FR-5.19, FR-5.21, FR-5.23, FR-5.26, FR-5.32, FR-5.40, SR-5.20-1, SR-7.2-1 and SR-7.12-1.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

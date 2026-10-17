@@ -320,3 +320,32 @@ func TestPollingImportsAndRevokesWithTeardown(t *testing.T) {
 		t.Fatalf("scan on command: %+v", rep)
 	}
 }
+
+// TestEraMismatchSuspends: a signed manifest declaring the 2026-07-28 era
+// while the instance negotiates 2025-11-25 is not used, and the revision
+// is suspended with evidence (FR-5.40).
+func TestEraMismatchSuspends(t *testing.T) {
+	reqtest.Verifies(t, "FR-5.40")
+	e := newEnv(t)
+	dir := e.pkg(pkgtest.Spec{ID: "fx-id", Revision: "1", Tools: []*mcp.Tool{pkgtest.EchoTool(fixtureDesc)},
+		Edit: func(m *packaging.Manifest, _ *packaging.Provenance) { m.Era = "2026-07-28" }})
+	rc, err := e.lib.Import(dir, ImportOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.lib.Enable("fx-id", "1", EnableOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	r := &rtEnv{env: e, rt: NewRuntime(e.lib, RuntimeOptions{ScanInterval: time.Hour}), fx: &fixtureServer{desc: fixtureDesc}, sha: rc.ArtifactSHA256}
+	reg := r.start(t, []config.Server{{Alias: "fx", Package: "fx-id"}})
+	if reg.Servers()["fx"] != nil || reg.Resolve("fx_echo") != nil {
+		t.Fatal("a revision whose manifest era differs from the negotiated era was used")
+	}
+	rev, _ := r.lib.Get("fx-id", "1")
+	if rev.State != StateSuspended || !strings.Contains(rev.StateReason, "2025-11-25") || !strings.Contains(rev.StateReason, "2026-07-28") {
+		t.Fatalf("state %s (%s)", rev.State, rev.StateReason)
+	}
+	if !r.hasEvent(ReasonDrift) {
+		t.Fatal("no suspension evidence event")
+	}
+}

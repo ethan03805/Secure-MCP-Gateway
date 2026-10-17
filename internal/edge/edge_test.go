@@ -118,6 +118,7 @@ type harness struct {
 	rec     *recorder
 	caps    *pipeline.Capabilities
 	srv     *httptest.Server
+	reg     *backend.Registry
 	evErr   error
 	evMu    sync.Mutex
 }
@@ -132,6 +133,22 @@ type harnessOpts struct {
 	screen  pipeline.ToolScreen
 	// healthGate is passed as Deps.HealthGate (gate_test.go).
 	healthGate func() []string
+	// raw replaces the backend with a scripted stdio server
+	// (southbound_test.go).
+	raw func(ctx context.Context, in io.Reader, out io.Writer) error
+}
+
+// limitsTOML is the harness's [limits] body: the defaults below, with any
+// key that extra sets taken from extra instead.
+func limitsTOML(extra string) string {
+	out := []string{}
+	for _, d := range []string{`upstream_timeout = "2s"`, `client_deadline = "3s"`, `result_bytes = 65536`} {
+		key := strings.TrimSpace(strings.SplitN(d, "=", 2)[0])
+		if !strings.Contains(extra, key+" ") && !strings.Contains(extra, key+"=") {
+			out = append(out, d)
+		}
+	}
+	return strings.Join(append(out, extra), "\n")
 }
 
 func newHarness(t *testing.T, o harnessOpts) *harness {
@@ -147,9 +164,6 @@ public_url = "https://%s"
 username = "admin"
 password_hash = "$argon2id$v=19$m=65536,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 [limits]
-upstream_timeout = "2s"
-client_deadline = "3s"
-result_bytes = 65536
 %s
 [[principal]]
 id = "cc"
@@ -158,7 +172,7 @@ profile = "dev"
 [[server]]
 alias = "t"
 command = "/inproc/t"
-`, addr, addr, o.limits)
+`, addr, addr, limitsTOML(o.limits))
 	cfg, err := config.Parse([]byte(toml))
 	if err != nil {
 		t.Fatal(err)
@@ -176,13 +190,18 @@ command = "/inproc/t"
 		t.Fatal(err)
 	}
 	h.caps = pipeline.NewCapabilities(time.Minute)
+	launcher := pipeline.InProcessLauncher{Servers: map[string]func() *mcp.Server{"/inproc/t": o.backend}}
+	if o.raw != nil {
+		launcher = pipeline.InProcessLauncher{Raw: map[string]func(context.Context, io.Reader, io.Writer) error{"/inproc/t": o.raw}}
+	}
 	reg, err := backend.Start(context.Background(), cfg.Servers, backend.Options{
 		Limits:   backend.Limits{PerPrincipal: 4, Total: 4, Queue: 4, UpstreamTimeout: cfg.Limits.UpstreamTimeout.Duration, ResultBytes: cfg.Limits.ResultBytes},
-		Launcher: pipeline.InProcessLauncher{Servers: map[string]func() *mcp.Server{"/inproc/t": o.backend}}, Capabilities: h.caps, Log: diag.Discard(),
+		Launcher: launcher, Capabilities: h.caps, Log: diag.Discard(),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	h.reg = reg
 	h.decider = policy.NewDecider(snap, cfg.Limits.PrincipalCallsPerMin)
 	h.store = session.NewStore(cfg, h.decider.Snapshot)
 	oauth := session.NewOAuth(cfg, h.store, h.rec, authguard.New(authguard.Config{}))

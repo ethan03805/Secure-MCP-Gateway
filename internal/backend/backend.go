@@ -21,6 +21,15 @@
 // ErrInputRequired (FR-5.24), and progress is routed to the owning call in
 // line order (FR-1.39). No client capability is declared southbound
 // (SR-5.6-2). An instance that times out or fails is replaced (restart).
+// A line that is not one UTF-8 JSON-RPC 2.0 message ends the connection
+// (ErrInvalidOutput, FR-5.13, FR-5.14); a result with an unrecognized
+// resultType or that does not decode as a CallToolResult is ErrInvalidResult
+// (FR-5.23, SR-5.20-1); an instance that ends after dispatch is
+// ErrInstanceFailed and the call is not retried (SR-7.2-1).
+//
+// Era: the handshake is initialize with 2025-11-25 (FR-5.19); the
+// 2026-07-28 probe is deferred (SRS Appendix N). The negotiated version is
+// handed to the ManifestSource in ServerSpec.NegotiatedEra (FR-5.40).
 //
 // Not in this slice: signed packages (E-13 provides a verified
 // ManifestSource), sandboxing (E-16 provides a confined Launcher), runtime
@@ -44,6 +53,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -381,7 +391,11 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	client := mcp.NewClient(&mcp.Implementation{Name: "secure-mcp-gateway", Version: Version}, copts)
 	cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	sess, err := client.Connect(cctx, transport, nil)
+	// FR-5.19: release 1.0 speaks the 2025-11-25 era southbound, so the
+	// handshake is initialize with that version (the SDK would otherwise
+	// try the 2026-07-28 server/discover first; that probe is deferred,
+	// SRS Appendix N).
+	sess, err := client.Connect(cctx, transport, &mcp.ClientSessionOptions{ProtocolVersion: LegacyEra})
 	if err != nil {
 		proc.Close()
 		return nil, pipeline.ToolSet{}, "", fmt.Errorf("connect %s: %w (stderr: %s)", sc.Command, err, stderrForError(proc.Stderr(), secrets))
@@ -391,6 +405,9 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	if ir := sess.InitializeResult(); ir != nil && ir.ProtocolVersion != "" {
 		era = ir.ProtocolVersion
 	}
+	// FR-5.40: a verified ManifestSource compares the negotiated era with
+	// the manifest's.
+	spec.NegotiatedEra = era
 	// FR-5.21: the complete live tool list across all pages.
 	inst.live = func(ctx context.Context) ([]*mcp.Tool, error) {
 		var tools []*mcp.Tool
@@ -521,6 +538,9 @@ func (w *lineWriter) Close() error { return w.p.Close() }
 // and serverInfo. Set by the build.
 var Version = "0.0.0-dev"
 
+// LegacyEra is the protocol version of the southbound handshake (FR-5.19).
+const LegacyEra = "2025-11-25"
+
 // Resolve maps a public name to its backend tool.
 func (r *Registry) Resolve(public string) *ToolRef {
 	r.smu.RLock()
@@ -604,6 +624,17 @@ var (
 	// ErrInputRequired: the backend returned an InputRequiredResult and the
 	// MRTR Relay Profile is not available (FR-5.24, -31010).
 	ErrInputRequired = errors.New("backend requested client input")
+	// ErrInvalidOutput: the instance wrote a line that is not a single-line
+	// UTF-8 JSON-RPC message; the in-flight calls fail and the instance is
+	// replaced (FR-5.13, FR-5.14; -31007).
+	ErrInvalidOutput = errors.New("instance wrote an invalid stdout line")
+	// ErrInvalidResult: the response failed result validation, for example
+	// an unrecognized resultType or a malformed CallToolResult (FR-5.23,
+	// SR-5.20-1; -31003, withheld).
+	ErrInvalidResult = errors.New("backend result is invalid")
+	// ErrInstanceFailed: the instance ended after the call was dispatched,
+	// so the outcome is unknown; the call is not retried (SR-7.2-1).
+	ErrInstanceFailed = errors.New("instance failed after dispatch")
 )
 
 // CapabilityError wraps a refused launch capability.
@@ -703,8 +734,16 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 				return nil, ErrTooLarge
 			case we.Code == tooLargeCode && we.Message == inputRequiredMessage:
 				return nil, ErrInputRequired
+			case we.Code == tooLargeCode && we.Message == invalidResultMessage:
+				return nil, ErrInvalidResult
 			}
 			return nil, &BackendError{Code: we.Code}
+		}
+		if inst.filter.invalid.Load() {
+			// FR-5.14: an invalid stdout line ends the connection; the
+			// instance is terminated and replaced.
+			r.restart(s, inst, "invalid stdout line")
+			return nil, ErrInvalidOutput
 		}
 		if cctx.Err() != nil && ctx.Err() == nil {
 			// The instance may still be working on the call, or be stuck
@@ -712,10 +751,21 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 			r.restart(s, inst, "upstream timeout")
 			return nil, ErrTimeout
 		}
-		if ctx.Err() == nil && instanceGone(err) {
-			r.restart(s, inst, "instance failed")
+		if ctx.Err() != nil {
+			// Northbound cancellation or the client deadline: the SDK has
+			// sent notifications/cancelled for the request (FR-5.26).
+			return nil, err
 		}
-		return nil, err
+		if !instanceGone(err) && isDecodeError(err) {
+			// The response arrived but is not a CallToolResult the SDK can
+			// decode (SR-5.20-1); the instance keeps serving.
+			r.log.Warn("backend result rejected", "alias", s.Alias, "err", err)
+			return nil, ErrInvalidResult
+		}
+		// The connection ended (exit, EOF, closed pipe) after the call was
+		// sent: replace the instance; the call is not retried (SR-7.2-1).
+		r.restart(s, inst, "instance failed")
+		return nil, fmt.Errorf("%w: %w", ErrInstanceFailed, err)
 	}
 	// FR-4.10: the response was bounded while read; check the decoded size
 	// before inspection as well.
@@ -737,6 +787,14 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 func instanceGone(err error) bool {
 	return errors.Is(err, mcp.ErrConnectionClosed) || errors.Is(err, io.ErrClosedPipe) ||
 		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+// isDecodeError reports whether a CallTool error is the SDK failing to
+// decode the response as a CallToolResult.
+func isDecodeError(err error) bool {
+	var se *json.SyntaxError
+	var te *json.UnmarshalTypeError
+	return errors.As(err, &se) || errors.As(err, &te) || strings.Contains(err.Error(), "json: ")
 }
 
 // acquire takes a per-principal slot and a total slot, waiting in FIFO
@@ -888,6 +946,7 @@ const (
 	tooLargeCode         = jsonrpc.CodeInternalError
 	tooLargeMessage      = "local.smcpgw/result-too-large"
 	inputRequiredMessage = "local.smcpgw/input-required"
+	invalidResultMessage = "local.smcpgw/invalid-result"
 )
 
 // frameFilter reads newline-delimited JSON-RPC from the server and bounds
@@ -908,9 +967,13 @@ type frameFilter struct {
 	pending   []byte
 	oversized atomic.Uint64
 	refusedN  atomic.Uint64
-	reply     func([]byte) (int, error)
-	refused   func(method string)
-	progress  func(*mcp.ProgressNotificationParams)
+	// invalid is set when the server wrote a line that is not a
+	// single-line UTF-8 JSON-RPC message (FR-5.13, FR-5.14). The line is
+	// replaced by an error, which ends the connection.
+	invalid  atomic.Bool
+	reply    func([]byte) (int, error)
+	refused  func(method string)
+	progress func(*mcp.ProgressNotificationParams)
 }
 
 func newFrameFilter(r io.Reader, limit int) *frameFilter {
@@ -954,7 +1017,13 @@ func (f *frameFilter) next() ([]byte, error) {
 		switch {
 		case err == nil:
 			if !over {
-				return f.screen(buf), nil
+				out := f.screen(buf)
+				if f.invalid.Load() {
+					// FR-5.14: end the connection; the dispatcher fails the
+					// in-flight calls and replaces the instance.
+					return nil, errInvalidLine
+				}
+				return out, nil
 			}
 			return f.substitute(buf), nil
 		case errors.Is(err, bufio.ErrBufferFull):
@@ -968,26 +1037,30 @@ func (f *frameFilter) next() ([]byte, error) {
 	}
 }
 
-// screen applies the server-initiated request, progress and
-// InputRequiredResult rules to one complete line. A JSON-RPC batch line is
-// split and each member screened as its own message; the members that
-// survive are passed on one per line, so no request inside a batch reaches
-// the SDK client unscreened (FR-5.20). Lines that cannot be decoded pass
-// unchanged; the SDK client rejects them.
+// screen applies the server-initiated request, progress, InputRequiredResult
+// and resultType rules (FR-5.20, FR-5.24, FR-5.23) to one complete line,
+// after checking that it holds UTF-8 JSON-RPC 2.0 (FR-5.13, FR-5.14). A
+// JSON-RPC batch line is split and each member screened as its own message;
+// the members that survive are passed on one per line, so no request inside
+// a batch reaches the SDK client unscreened. A line that is not JSON-RPC
+// sets invalid, which ends the connection.
 func (f *frameFilter) screen(line []byte) []byte {
-	if !bytes.Contains(line, []byte(`"method"`)) && !bytes.Contains(line, []byte(`input_required`)) {
-		return line
+	body := bytes.TrimRight(line, "\r\n")
+	if len(bytes.TrimSpace(body)) == 0 {
+		return nil // an empty line carries no message
 	}
-	if t := bytes.TrimLeft(line, " \t\r\n"); len(t) > 0 && t[0] == '[' {
+	if t := bytes.TrimLeft(body, " \t"); t[0] == '[' {
 		var members []json.RawMessage
-		if json.Unmarshal(line, &members) != nil || len(members) == 0 {
-			return line
+		if !utf8.Valid(body) || json.Unmarshal(body, &members) != nil || len(members) == 0 {
+			f.invalid.Store(true)
+			return nil
 		}
 		var out []byte
 		for _, m := range members {
 			var c bytes.Buffer
 			if json.Compact(&c, m) != nil {
-				return line
+				f.invalid.Store(true)
+				return nil
 			}
 			c.WriteByte('\n')
 			out = append(out, f.screenOne(c.Bytes())...)
@@ -999,14 +1072,18 @@ func (f *frameFilter) screen(line []byte) []byte {
 
 // screenOne screens a line holding one JSON-RPC message.
 func (f *frameFilter) screenOne(line []byte) []byte {
+	body := bytes.TrimRight(line, "\r\n")
 	var m struct {
-		ID     json.RawMessage `json:"id"`
-		Method *string         `json:"method"`
-		Params json.RawMessage `json:"params"`
-		Result json.RawMessage `json:"result"`
+		JSONRPC string          `json:"jsonrpc"`
+		ID      json.RawMessage `json:"id"`
+		Method  *string         `json:"method"`
+		Params  json.RawMessage `json:"params"`
+		Result  json.RawMessage `json:"result"`
 	}
-	if json.Unmarshal(line, &m) != nil {
-		return line
+	// FR-5.13, FR-5.14: every line is one UTF-8 JSON-RPC 2.0 message.
+	if !utf8.Valid(body) || json.Unmarshal(body, &m) != nil || m.JSONRPC != "2.0" {
+		f.invalid.Store(true)
+		return nil
 	}
 	hasID := len(m.ID) > 0 && string(m.ID) != "null"
 	switch {
@@ -1028,14 +1105,27 @@ func (f *frameFilter) screenOne(line []byte) []byte {
 		return nil
 	case m.Method == nil && hasID && len(m.Result) > 0:
 		var res struct {
-			ResultType string `json:"resultType"`
+			ResultType *string `json:"resultType"`
 		}
-		if json.Unmarshal(m.Result, &res) == nil && res.ResultType == "input_required" {
+		if json.Unmarshal(m.Result, &res) != nil {
+			// Not an object: the SDK rejects it as a result (SR-5.20-1).
+			return line
+		}
+		switch {
+		case res.ResultType == nil || *res.ResultType == "complete":
+			// FR-5.23: no resultType is "complete".
+		case *res.ResultType == "input_required":
 			return []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":%s,"error":{"code":%d,"message":%q}}`+"\n", m.ID, tooLargeCode, inputRequiredMessage))
+		default:
+			// FR-5.23: an unrecognized resultType is an invalid result.
+			return []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":%s,"error":{"code":%d,"message":%q}}`+"\n", m.ID, tooLargeCode, invalidResultMessage))
 		}
 	}
 	return line
 }
+
+// errInvalidLine ends the instance's connection after an invalid line.
+var errInvalidLine = errors.New("instance wrote a line that is not a single-line UTF-8 JSON-RPC message")
 
 func (f *frameFilter) substitute(prefix []byte) []byte {
 	f.oversized.Add(1)

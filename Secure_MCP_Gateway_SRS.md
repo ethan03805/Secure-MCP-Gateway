@@ -7452,6 +7452,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `FILTER_BLOCKED` | `-31003` | A required response filter blocked the result | The tool's result was withheld by a Gateway content filter. The operator can see why in the audit record {correlationId}. |
 | `SECRET_LEAK` | `-31003` | A registered secret fingerprint matched the result | The tool's result was withheld because it appeared to contain a protected secret. |
 | `RESULT_TOO_LARGE` | `-31003` | The result exceeded the CP-08 bound | The tool's result was too large to inspect and was withheld. Narrow the request. |
+| `RESULT_INVALID` | `-31003` | The backend response failed envelope, request-ID or `CallToolResult` validation, or carried an unrecognized `resultType` (SR-5.20-1, FR-5.23) | The tool's server returned a result the Gateway could not validate, so it was withheld. |
 | `RELEASE_REFUSED` | `-31003` | The release recheck failed (session ended, policy changed or stop) | The result was withheld because the session or policy changed while the tool ran. Run the request again. |
 | `FAIL_CLOSED` | `-31004` | A critical dependency is unavailable | The Gateway is not accepting tool calls right now because a safety check failed. The operator can see the cause with `smcpctl health`. |
 | `EMERGENCY_STOP` | `-31004` | An emergency stop is in effect | The Gateway operator has stopped all tool calls. |
@@ -7466,8 +7467,10 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | `SESSION_STATE` | `-31006` | The session is suspended or terminated | Your Gateway session has ended. Sign in again. |
 | `BACKEND_ERROR` | `-31007` | The backend returned a protocol error | The tool's server reported an error. |
 | `DISPATCH_FAILED` | `-31007` | The backend could not be reached or started | The tool's server could not be started or reached. The operator can check it in the Servers view. |
+| `BACKEND_OUTPUT_INVALID` | `-31007` | The instance wrote a stdout line that is not a single-line UTF-8 JSON-RPC message; the instance is replaced (FR-5.14) | The tool's server sent data that is not valid MCP, so the call was stopped and the server restarted. |
 | `CLIENT_DEADLINE` | `-31008` | The CP-13 client deadline expired | The tool did not finish in time. |
 | `UPSTREAM_TIMEOUT` | `-31009` | The backend did not answer within CP-13; it may have acted | The tool's server stopped responding. It may have completed the action; check before trying again. |
+| `INSTANCE_FAILED` | `-31009` | The instance ended after a call to a tool of side-effect class `write`, `external` or `execute`, or an unclassified tool, was dispatched; it may have acted and is not retried (SR-7.2-1) | The tool's server stopped while running this call. It may have completed the action; check before trying again. |
 | `INPUT_REQUIRED_UNSUPPORTED` | `-31010` | The backend asked for client input without the MRTR profile | The tool asked for input that the Gateway does not relay. |
 | `SCHEMA_INVALID` | `-32602` | Arguments do not match the tool's input schema | The arguments do not match what this tool accepts. |
 

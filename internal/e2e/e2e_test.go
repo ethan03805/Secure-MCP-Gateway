@@ -37,7 +37,7 @@ const testPolicy = `{
   "revision": "r1",
   "framework_profiles": {"dev": {"templates": ["ro", "rw"], "default_template": "ro"}},
   "templates": {
-    "ro": {"rules": [{"id": "ro-t", "server": "t", "tools": ["echo", "dotted.name", "rpcerror", "slow", "big", "ghost"]},
+    "ro": {"rules": [{"id": "ro-t", "server": "t", "tools": ["echo", "dotted.name", "rpcerror", "slow", "big", "ghost", "noisy"]},
                      {"id": "ro-approve", "server": "t", "tools": ["write"], "approval": true}]},
     "rw": {"rules": [{"id": "rw-t", "server": "t", "tools": ["echo", "write"]}]}
   }
@@ -398,7 +398,7 @@ func TestOAuthSessionAndToolCall(t *testing.T) {
 			t.Errorf("%s carries an approval hint", tool.Name)
 		}
 	}
-	want := "t_big t_dotted_name t_echo t_rpcerror t_slow t_write"
+	want := "t_big t_dotted_name t_echo t_noisy t_rpcerror t_slow t_write"
 	if strings.Join(names, " ") != want {
 		t.Fatalf("catalog %q, want %q", strings.Join(names, " "), want)
 	}
@@ -721,7 +721,7 @@ func TestPolicyReloadThroughControlAPI(t *testing.T) {
 	reqtest.Verifies(t, "FR-3.10", "SR-5.7-1")
 	f := start(t, "")
 	access, _, _ := f.oauthLogin("")
-	if lt, err := f.mcpClient(access).ListTools(context.Background(), nil); err != nil || len(lt.Tools) != 6 {
+	if lt, err := f.mcpClient(access).ListTools(context.Background(), nil); err != nil || len(lt.Tools) != 7 {
 		t.Fatalf("%v %v", lt, err)
 	}
 	// An invalid document is refused and the active revision stays.
@@ -731,7 +731,7 @@ func TestPolicyReloadThroughControlAPI(t *testing.T) {
 	if st, _ := f.admin("POST", "/admin/v1/policy/reload", f.operator, map[string]any{}); st != 422 {
 		t.Fatalf("invalid policy: %d", st)
 	}
-	r2 := strings.Replace(strings.Replace(testPolicy, `"r1"`, `"r2"`, 1), `"echo", "dotted.name", "rpcerror", "slow", "big", "ghost"`, `"echo"`, 1)
+	r2 := strings.Replace(strings.Replace(testPolicy, `"r1"`, `"r2"`, 1), `"echo", "dotted.name", "rpcerror", "slow", "big", "ghost", "noisy"`, `"echo"`, 1)
 	if err := os.WriteFile(f.cfg.Policy.File, []byte(r2), 0o644); err != nil {
 		t.Fatal(err)
 	}

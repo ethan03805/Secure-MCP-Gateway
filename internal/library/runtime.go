@@ -287,6 +287,11 @@ func (rt *Runtime) Tools(ctx context.Context, spec pipeline.ServerSpec, live pip
 		}
 		return rt.live.Tools(ctx, spec, live)
 	}
+	// FR-5.40: the instance must speak the era the signed manifest declares.
+	if spec.NegotiatedEra != "" && b.manifest.Era != spec.NegotiatedEra {
+		return pipeline.ToolSet{}, rt.suspendBinding(b, errf(ReasonDrift, "the instance negotiated protocol version %s; the signed manifest declares era %s", spec.NegotiatedEra, b.manifest.Era),
+			map[string]any{"negotiated_era": spec.NegotiatedEra, "manifest_era": b.manifest.Era})
+	}
 	if err := rt.checkDrift(ctx, b, live); err != nil {
 		return pipeline.ToolSet{}, err
 	}

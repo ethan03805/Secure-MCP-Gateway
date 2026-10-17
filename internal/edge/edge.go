@@ -181,6 +181,10 @@ type ctxKey int
 const (
 	ctxSession ctxKey = iota
 	ctxCorrelation
+	// ctxRequest carries the HTTP request's context into handlers: the
+	// SDK runs handlers on its session context, which does not end when the
+	// harness closes the response stream (SR-7.12-1).
+	ctxRequest
 )
 
 // New builds the Gateway over already-started components.
@@ -607,6 +611,7 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			ctx = channel.With(ctx, org)
 		}
 		ctx = context.WithValue(ctx, ctxSession, sess)
+		ctx = context.WithValue(ctx, ctxRequest, r.Context())
 		ctx = context.WithValue(ctx, ctxCorrelation, corr)
 		ctx = context.WithValue(ctx, ctxMessage, msg)
 		next.ServeHTTP(w, r.WithContext(ctx))
