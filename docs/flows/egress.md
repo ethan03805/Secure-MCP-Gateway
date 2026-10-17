@@ -54,4 +54,4 @@ sequenceDiagram
 - In the standalone profile the proxy variables are advisory: a server that ignores them reaches the network directly.
 - Grants come from `[[egress.grant]]` in the configuration, not from policy decision obligations; endpoint variable names come from `endpoint_env`, not from signed manifests.
 - One-use capabilities (SR-5.16-1) are minted by the broker when the Tool Dispatcher sends a call (`pipeline.EgressIssuer`) and revoked when the call returns; with `[egress] require_capability = false` they are neither minted nor required.
-- Outbound requests are not scanned for secret fingerprints (SR-5.8-2).
+- A registered secret in the URL, a header or the body of a brokered HTTP request is refused with `EGRESS_SECRET_DETECTED` (SR-5.8-2); the bytes of a CONNECT tunnel are not scanned.

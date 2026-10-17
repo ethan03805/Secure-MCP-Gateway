@@ -156,8 +156,8 @@ See [api/graph.md](api/graph.md).
 
 - nftables rules that admit only the Data Server identity to the engine port, and outbound network denial for the engine (SR-4.2-1, SR-7.4-1, Linux Enforced profile).
 - Unix-socket peer-credential authentication of calling elements and a per-element operation allowlist (SR-4.3-1); the Data Access Service runs inside `smcpd`.
-- Write priority classes, observation batching and backpressure (FR-9.4 to FR-9.6), which concern the Observation Store (E-27) and Collector (E-29).
-- Page cache use is not measured (Community Edition exposes no page-cache JMX bean); only the configured size is reported. Memory budgets of the other components and the degradation order (FR-9.12) belong to the observation stack.
-- Health (`/admin/v1/health`) does not yet report `degraded` when the mirror is unavailable; use `smcpctl graph status`.
-- A graph dump in backups (FR-9.16) and rebuilding the mirror during restore (SR-7.8-1) belong to the backup work.
+- Write priority classes (FR-9.4) are deferred from release 1.0 (SRS Appendix N); observation batching and backpressure (FR-9.5, FR-9.6) are in the Observation Store and Collector ([observation.md](observation.md)).
+- Page cache use is not measured (Community Edition exposes no page-cache JMX bean); only the configured size is reported. Memory budgets of the other components and the degradation order (FR-9.12) are applied by the observation stack ([observation.md](observation.md)).
+- The mirror registers a health check that reports `degraded`, never `fail-closed`, when the engine is unavailable; `smcpctl graph status` shows the detail.
+- Backups do not include a graph dump, and restore does not rebuild the mirror (FR-9.16 and SR-7.8-1 are partly verified); run `smcpctl graph rebuild` after a restore, which replays the journal.
 - Mirroring the Policy Store and Server Registry contents (rule, route and package revisions) beyond the revision IDs carried by events.

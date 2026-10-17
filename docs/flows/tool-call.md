@@ -80,8 +80,8 @@ sequenceDiagram
 
 `internal/edge/pipeline.go` follows the same order (authenticate, session check, fail-closed check, decision, request inspection, approval, launch authorization, dispatch, response inspection, provenance, release authorization). Differences:
 
-- Request and response scoring (E-31) are not stages; scoring is asynchronous by default, with optional synchronous approval and withhold obligations ([../observation.md](../observation.md)).
-- No second decision after a transforming request filter (SR-5.12-1); decisions do not read arguments.
+- Request and response scoring (E-31) run as the last filters of the request and response chains; scoring is asynchronous by default, with optional synchronous approval and withhold obligations ([../observation.md](../observation.md)).
+- A request filter that transforms the arguments causes a second decision before launch, and the launch is bound to it (SR-5.12-1).
 - Progress notifications from backends are relayed with the northbound token after the response filters, at most 10 per second per request (CP-21), never after the response; the backend gets a Gateway-issued token.
 - Backend instances are shared across sessions (no per-session or per-call scope).
 - The graph mirror is fed asynchronously from the journal and is never consulted on the call path.

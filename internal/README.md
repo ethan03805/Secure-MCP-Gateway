@@ -57,6 +57,7 @@ keeps today's behavior, and test the default.
 | `testport` | tests, `scripts/agents` | Loopback ports below the ephemeral range for listener addresses written into test configurations, reserved across concurrent test processes. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
 | `acceptance` | FR-19.4, AT-01 to AT-21 | Acceptance scenarios as tests of the real binaries (bootstrap, CLI, control API, OAuth MCP client); `SMCP_ACCEPTANCE_PROFILE=enforced` runs them in the Enforced profile. See `docs/acceptance.md`. |
+| `conformance` | FR-12.9 | MCP conformance suite (tests only): a complete Gateway over a scripted stdio backend, driven with the `mcp-spec/2026-07-28/schema/examples` messages and validated against `schema.json`; `make conformance`. |
 | `perf` | FR-11 | Reference dataset and workload, FR-11 measurements against real smcpd (`cmd/smcp-workload`, CI job `perf`). |
 | `hostile` | FR-19.1, FR-19.2 | Hostile backend fixture server for every SRS Appendix L row (also `cmd/smcp-hostile`) and the suite (build tag `hostile`) that runs the Gateway against each fixture and writes `build/hostile.json`. See `docs/hostile-fixtures.md`. |
 | `egress` | E-18 | Egress Broker: per-instance forward proxy and destination endpoints, grants, pinned DNS, reserved-address refusal, limits, evidence, nftables confinement of sandbox namespaces, `/api/v1/egress` routes. See `docs/egress.md`. |
@@ -150,9 +151,9 @@ Every element E-01 to E-33 has code; none is complete. `docs/status/elements.jso
 - Anchor rollback: replacing the anchor with an older signed copy together
   with deleting later segments is not detectable locally; set
   `[evidence] export_dir` to storage off the machine (FR-7.14).
-- Configuration reload applies `log.level` and
-  `limits.principal_calls_per_minute` live; the other CP-50 reloadable keys
-  are reported as applied at restart.
+- Configuration reload applies `log.level`,
+  `limits.principal_calls_per_minute` and `limits.principal_call_burst`
+  live (CP-50); every other key is reported as `restart_required`.
 - Server CA rotation: during the overlap the listener presents the outgoing
   CA's certificate, so clients must import the bundle, not the new CA alone.
 - Per-source rate limits see the tunnel endpoint as the source under the

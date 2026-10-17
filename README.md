@@ -16,16 +16,16 @@ Licensed under the [Apache License 2.0](LICENSE). Security reports: [SECURITY.md
 
 ## Status
 
-**Every architecture element has code; none is complete, and no release has been published.** The specification baseline is SRS V1.2 with architecture V2.3. Each element's state and main gaps are in [`docs/status/elements.json`](docs/status/elements.json); the requirement report that CI builds from the tests (FR-12.10) lists which requirements are verified, partly verified or not yet verified, and the project site shows both. Produce the report locally with `make status` (writes `build/reqreport.md`).
+**Every architecture element has code and is wired into `smcpd`; none is complete. The published releases are the pre-releases v1.0.0-rc.1 and v1.0.0-rc.2; v1.0.0 is not tagged yet.** The specification baseline is SRS V1.2 with architecture V2.3. Each element's state and main gaps are in [`docs/status/elements.json`](docs/status/elements.json); the requirement report that CI builds from the tests (FR-12.10) lists which requirements are verified, partly verified or not yet verified, and the project site shows both. Produce the report locally with `make status` (writes `build/reqreport.md`).
 
-No build is labelled "enforced". A release is labelled "enforced" only when every acceptance scenario AT-01 to AT-21 passes on the Linux Enforced profile (FR-19.3). macOS always runs "not enforced".
+No build is labelled "enforced". A release is labelled "enforced" only when every acceptance scenario AT-01 to AT-21 passes on the Linux Enforced profile for the release commit (FR-19.3); the release workflow applies the label from the status data (`go run ./tools/reqreport label`). Every scenario has a claiming test in `internal/acceptance` or another suite ([docs/acceptance.md](docs/acceptance.md)); AT-07, AT-08, AT-11, AT-12 and AT-17 have no result in the Enforced profile yet, so the label is "not enforced". macOS always runs "not enforced".
 
-The latest CI figures (tests, coverage, requirement verification per element, real-agent results and hostile-fixture results) are on the project site's [Status page](https://secure-mcp-gateway-pearl.vercel.app/status/).
+The latest CI figures (tests, coverage, requirement verification per element, acceptance scenarios per profile, performance measurements, real-agent results, hostile-fixture results and filter corpus rates) are on the project site's [Status page](https://secure-mcp-gateway-pearl.vercel.app/status/). The CI runners are not reference hardware, so the FR-11 performance figures are partial claims.
 
 Known issues that affect first use:
 
 - An installation bootstrapped before the CA fix still has a local CA with IP name constraints, which the native Claude Code build and OpenCode (Bun runtime) reject. `smcpd` warns at startup; `smcpctl keys rotate ca` replaces the CA ([docs/agents-conformance.md](docs/agents-conformance.md)).
-- The installer and Homebrew have no release to download until the first tag; build from source.
+- Until v1.0.0 is tagged, `install.sh` needs `--version v1.0.0-rc.2` (GitHub's latest-release link skips pre-releases), and the Homebrew tap installs v1.0.0-rc.2.
 
 ## Scope of v1
 
@@ -45,11 +45,16 @@ Known issues that affect first use:
 ## Install
 
 ```sh
-# From a release (once one is published): verifies the SHA-256 checksum, installs to ~/.local/bin
-curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh
+# From a release: verifies the minisign signature of the checksum file (and the Sigstore bundle when
+# cosign is installed), then the archive's SHA-256; installs to ~/.local/bin
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version v1.0.0-rc.2
 
-# Homebrew (once the tap exists)
+# Homebrew
 brew install ethan03805/tap/smcp
+
+# Set up a per-user installation with a launchd agent or systemd user unit (Standalone),
+# or, as root on Linux, the Enforced profile
+smcpctl install
 
 # From source (Go, no Node.js needed)
 git clone https://github.com/ethan03805/Secure-MCP-Gateway.git && cd Secure-MCP-Gateway
@@ -57,7 +62,7 @@ go build -o build/bin/ ./cmd/...
 export PATH="$PWD/build/bin:$PATH"
 ```
 
-The binaries are `smcpd` (the Gateway), `smcpctl` (the command-line tool), `smcp-refserver` (reference server), and the harness adapters `smcp-stdio`, `smcp-session` and `smcp-connect`. Release signature verification, the Linux enforced host setup, upgrades and removal: [docs/install.md](docs/install.md).
+The binaries are `smcpd` (the Gateway), `smcpctl` (the command-line tool), `smcp-refserver` (reference server), the harness adapters `smcp-stdio`, `smcp-session` and `smcp-connect`, and `smcp-workload` (the FR-11 reference workload generator, in the release archives only). Release signature verification, the Linux enforced host setup, upgrades and removal: [docs/install.md](docs/install.md).
 
 ## Quick start
 
@@ -103,7 +108,7 @@ The confidential client this needs, approvals, emergency stop and journal verifi
 | [`FloorPlan.md`](FloorPlan.md) | What every path in the repository is for |
 | [`CHANGELOG.md`](CHANGELOG.md) | Baseline and implementation history with the reason for each change |
 
-The [project site](https://secure-mcp-gateway-pearl.vercel.app) renders the specification, the element and requirement status, the console browser results, the real-agent results with per-agent notes, the control API reference generated from the Go sources, release verification steps, the flows and every document under `docs/`.
+The [project site](https://secure-mcp-gateway-pearl.vercel.app) renders the specification, the element and requirement status, the acceptance scenarios per profile with the release label, the performance measurements, the console browser results, the hostile-fixture results, the real-agent results with per-agent notes, the control API reference generated from the Go sources, the published releases with their verification steps, the flows and every document under `docs/`.
 
 The management console is served by `smcpd` on the admin listener (`https://127.0.0.1:8444`). Each Appendix C role signs in with its own account (Administrator, Operator, Policy Author, Auditor, Researcher, Approver, Session Approver) and sees only the views and actions its role allows; `GET /api/v1/openapi.json` describes every control API route ([docs/console.md](docs/console.md)).
 
@@ -115,6 +120,8 @@ make check         # what the required CI jobs check: SRS build, go build, vet, 
 make status        # full tests with coverage; writes build/reqreport.{md,json} and build/status.json
 make integration   # bootstrap, run smcpd, drive an MCP client, rotate keys, back up, restore, upgrade
 make hostile       # the hostile backend fixtures of SRS Appendix L; writes build/hostile.{md,json}
+make conformance   # MCP conformance suite over the schema examples (FR-12.9); writes build/conformance.md
+go test ./internal/acceptance/   # acceptance scenarios against the real binaries (docs/acceptance.md)
 make console-e2e   # Playwright acceptance tests of the console against a real smcpd
 ```
 

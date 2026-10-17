@@ -2,7 +2,7 @@
 
 How to install, upgrade, roll back and remove the Secure MCP Gateway on each platform and profile (SRS FR-18.1). For a first run after installing, go to the [quick start](quickstart.md).
 
-**Release status.** No release has been published yet. Until the first tag (v1.0.0) exists, `install.sh` and Homebrew have nothing to download; build from source (below). The release workflow (`.github/workflows/release.yml`) is in place and the sections on release archives describe what it publishes; [release-checklist.md](release-checklist.md) is the release procedure.
+**Release status.** The published releases are the pre-releases v1.0.0-rc.1 and v1.0.0-rc.2; v1.0.0 is not tagged yet. GitHub's latest-release link skips pre-releases, so until v1.0.0 exists `install.sh` needs `--version v1.0.0-rc.2`. The Homebrew tap holds the v1.0.0-rc.2 formula (pushed to rehearse the tap, [verification/FR-13.3.md](verification/FR-13.3.md)); the release workflow replaces it with v1.0.0. Building from source (below) needs no release. The release workflow (`.github/workflows/release.yml`) is in place and the sections on release archives describe what it publishes; [release-checklist.md](release-checklist.md) is the release procedure.
 
 The short path on macOS or Linux, once a release exists:
 

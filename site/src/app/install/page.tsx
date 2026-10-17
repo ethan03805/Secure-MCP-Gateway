@@ -228,6 +228,14 @@ smcpctl install          # or: smcpctl bootstrap --dir ~/smcp`}</code>
           <Link href="/docs/install/">install guide</Link>; residual risks are in the{" "}
           <Link href="/docs/security-review-2026-10/">security review</Link>.
         </p>
+        <p>
+          The release pipeline was rehearsed with the pre-releases v1.0.0-rc.1 and v1.0.0-rc.2. For rc.2 the{" "}
+          <code>tap</code> workflow installed the formula from the Homebrew tap and the archive with{" "}
+          <code>install.sh</code> on macOS and Ubuntu runners and found every binary equal to the release archive (
+          <Link href="/docs/verification/fr-13-3/">supporting record</Link>); the SBOM in every archive is checked in
+          the <Link href="/docs/verification/inspections/">inspection records</Link>, and what the rehearsal showed is in
+          the <Link href="/docs/release-checklist/">release checklist</Link>.
+        </p>
       </Sec>
 
       <Sec no={`${CH.n}.4`} id="packages" title="Verify a server package">
