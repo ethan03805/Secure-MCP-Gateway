@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T00:44:39Z",
-  "commit": "44ba2ac6f881806e62c5b0a7d4d41ddb98271a9e",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/44ba2ac6f881806e62c5b0a7d4d41ddb98271a9e",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38987648339",
+  "generatedAt": "2026-10-17T00:53:41Z",
+  "commit": "8afd212c0eee6ba82537f7be6990cbc61387cfc0",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/8afd212c0eee6ba82537f7be6990cbc61387cfc0",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/38988327012",
   "tests": {
-    "total": 251,
-    "passed": 245,
-    "failed": 1,
+    "total": 260,
+    "passed": 255,
+    "failed": 0,
     "skipped": 5,
-    "durationSec": 71.6,
+    "durationSec": 72.4,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -60,6 +60,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/consoleapi",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/diag",
         "passed": 1,
         "failed": 0,
@@ -67,14 +73,14 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 18,
+        "passed": 19,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/edge",
-        "passed": 14,
-        "failed": 1,
+        "passed": 15,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -152,7 +158,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 77.3,
+    "totalPct": 77.9,
     "packages": [
       {
         "name": "cmd/smcp-refserver",
@@ -165,6 +171,10 @@
       {
         "name": "cmd/smcpd",
         "pct": 0
+      },
+      {
+        "name": "console",
+        "pct": 75
       },
       {
         "name": "internal/adminapi",
@@ -180,7 +190,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 82.2
+        "pct": 82.4
       },
       {
         "name": "internal/authguard",
@@ -188,11 +198,15 @@
       },
       {
         "name": "internal/backend",
-        "pct": 85.4
+        "pct": 85.6
       },
       {
         "name": "internal/config",
         "pct": 91.7
+      },
+      {
+        "name": "internal/consoleapi",
+        "pct": 89.9
       },
       {
         "name": "internal/diag",
@@ -200,7 +214,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90.4
+        "pct": 90.9
       },
       {
         "name": "internal/egress",
@@ -252,7 +266,7 @@
       },
       {
         "name": "internal/session",
-        "pct": 83.4
+        "pct": 83.6
       },
       {
         "name": "scripts/itest-client",
@@ -270,10 +284,10 @@
   },
   "requirements": {
     "total": 558,
-    "verified": 72,
-    "partial": 77,
-    "failing": 2,
-    "unverified": 407,
+    "verified": 73,
+    "partial": 86,
+    "failing": 0,
+    "unverified": 399,
     "byElement": [
       {
         "element": "E-01",
@@ -304,8 +318,8 @@
         "name": "Session Manager",
         "total": 19,
         "verified": 8,
-        "partial": 5,
-        "failing": 1
+        "partial": 6,
+        "failing": 0
       },
       {
         "element": "E-05",
@@ -367,9 +381,9 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 2,
+        "verified": 3,
         "partial": 2,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-13",
@@ -464,7 +478,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 0,
-        "partial": 5,
+        "partial": 13,
         "failing": 0
       },
       {
@@ -993,7 +1007,7 @@
       {
         "id": "FR-2.11",
         "element": "E-04",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/e2e.TestSubscriptionsListenEndsWithSession",
           "internal/edge.TestSessionEndCancelsInFlightCall"
@@ -1881,6 +1895,7 @@
           "internal/audit.TestCrashRecoveryTruncatedTail",
           "internal/audit.TestJournalChainAndVerify",
           "internal/audit.TestUnclosedMiddleSegmentRefused",
+          "internal/consoleapi.TestJournalVerification",
           "internal/e2e.TestJournalAfterShutdown"
         ]
       },
@@ -2055,14 +2070,20 @@
       {
         "id": "FR-8.18",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestServersAndCatalog"
+        ]
       },
       {
         "id": "FR-8.19",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestSessionsListInspectTerminate",
+          "internal/consoleapi.TestTerminateRefusedWhenJournalFails",
+          "internal/e2e.TestConsoleOnRunningGateway"
+        ]
       },
       {
         "id": "FR-8.20",
@@ -2079,14 +2100,18 @@
       {
         "id": "FR-8.22",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestAuditBrowserFiltersPagingAndDetail"
+        ]
       },
       {
         "id": "FR-8.23",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestEvidenceStream"
+        ]
       },
       {
         "id": "FR-8.24",
@@ -2103,8 +2128,11 @@
       {
         "id": "FR-8.26",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestStaticConsoleCSPAndDeepLinks",
+          "internal/e2e.TestConsoleOnRunningGateway"
+        ]
       },
       {
         "id": "FR-8.27",
@@ -2117,8 +2145,10 @@
       {
         "id": "FR-8.28",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestStaticConsoleCSPAndDeepLinks"
+        ]
       },
       {
         "id": "FR-8.29",
@@ -3359,7 +3389,7 @@
       {
         "id": "SR-1.17-2",
         "element": "E-12",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/edge.TestSessionEndCancelsInFlightCall"
         ]
@@ -3647,8 +3677,10 @@
       {
         "id": "SR-3.4-1",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestServersAndCatalog"
+        ]
       },
       {
         "id": "SR-3-5",
@@ -4205,8 +4237,11 @@
       {
         "id": "SR-6.17-1",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "internal/consoleapi.TestAuditExportNeutralisesFormulas",
+          "internal/consoleapi.TestStaticConsoleCSPAndDeepLinks"
+        ]
       },
       {
         "id": "SR-6.18-1",
@@ -4629,6 +4664,6 @@
   "hostile": [],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
