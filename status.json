@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T12:35:22Z",
-  "commit": "4ba218973fd4279d3e385cd4751285417a68103f",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/4ba218973fd4279d3e385cd4751285417a68103f",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39032374442",
+  "generatedAt": "2026-10-17T12:45:47Z",
+  "commit": "82f074827a0d1d1d5276a1b0f91fb0f9976a601a",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/82f074827a0d1d1d5276a1b0f91fb0f9976a601a",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39033206397",
   "tests": {
     "total": 992,
     "passed": 978,
     "failed": 0,
     "skipped": 14,
-    "durationSec": 452.3,
+    "durationSec": 400.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -424,7 +424,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 76.6
+        "pct": 76.7
       },
       {
         "name": "internal/anomaly",
@@ -480,11 +480,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 90
+        "pct": 90.4
       },
       {
         "name": "internal/egress",
-        "pct": 80.5
+        "pct": 80.4
       },
       {
         "name": "internal/filterapi",
@@ -496,7 +496,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 83.7
       },
       {
         "name": "internal/gwtest",
@@ -620,7 +620,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 77.2
+        "pct": 75.6
       },
       {
         "name": "packaging/linux",
@@ -650,8 +650,8 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 305,
-    "partial": 184,
+    "verified": 308,
+    "partial": 181,
     "failing": 0,
     "unverified": 41,
     "byElement": [
@@ -827,8 +827,8 @@
         "element": "E-22",
         "name": "Key & Trust Anchor Manager",
         "total": 8,
-        "verified": 4,
-        "partial": 4,
+        "verified": 5,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -843,8 +843,8 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 23,
-        "partial": 42,
+        "verified": 25,
+        "partial": 40,
         "failing": 0
       },
       {
@@ -2468,7 +2468,7 @@
       {
         "id": "FR-7.10",
         "element": "E-22",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
@@ -2476,7 +2476,8 @@
           "console/e2e/firefox.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
-          "internal/library.TestTrustAnchorRoutes"
+          "internal/library.TestTrustAnchorRoutes",
+          "docs/verification/inspections.md:301"
         ]
       },
       {
@@ -2741,7 +2742,7 @@
       {
         "id": "FR-8.18",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
@@ -2750,7 +2751,8 @@
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "internal/consoleapi.TestServersAndCatalog",
-          "internal/library.TestTrustAnchorRoutes"
+          "internal/library.TestTrustAnchorRoutes",
+          "docs/verification/inspections.md:324"
         ]
       },
       {
@@ -2829,11 +2831,12 @@
       {
         "id": "FR-8.25",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.help.spec.ts > every view, policy field and draft form field has inline help",
           "console/e2e/firefox.help.spec.ts > every view, policy field and draft form field has inline help",
-          "console/e2e/webkit.help.spec.ts > every view, policy field and draft form field has inline help"
+          "console/e2e/webkit.help.spec.ts > every view, policy field and draft form field has inline help",
+          "docs/verification/inspections.md:349"
         ]
       },
       {
@@ -6382,7 +6385,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6417,7 +6420,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35645: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45551: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
