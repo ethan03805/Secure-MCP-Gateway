@@ -105,6 +105,9 @@ type Deps struct {
 	// PolicyFault reports a Policy Store fault (for example
 	// "policy_signature") as a fail-closed health cause; nil means none.
 	PolicyFault func() string
+	// Screen re-checks tool metadata before presentation (FR-1.52); nil
+	// presents every tool.
+	Screen pipeline.ToolScreen
 }
 
 // Gateway wires the slice together.
@@ -120,6 +123,7 @@ type Gateway struct {
 	prof        profile.Report
 	approver    pipeline.Approver
 	filters     *pipeline.Filters
+	screen      pipeline.ToolScreen
 	caps        *pipeline.Capabilities
 	consoleURL  string
 	policyFault func() string
@@ -178,7 +182,7 @@ func New(d Deps) (*Gateway, error) {
 		d.Profile = profile.Report{Profile: profile.Standalone, Label: "not enforced", Reasons: []string{"profile not resolved"}}
 	}
 	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
-		evidenceErr: d.EvidenceErr, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, caps: d.Capabilities,
+		evidenceErr: d.EvidenceErr, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, screen: d.Screen, caps: d.Capabilities,
 		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker()}
 	g.handler = mcp.NewStreamableHTTPHandler(g.serverFor, &mcp.StreamableHTTPOptions{
 		Stateless:           true,

@@ -174,10 +174,15 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 			res.Meta = mcp.Meta{}
 		}
 		applied := append(append([]string{}, reqApplied...), respApplied...)
-		res.Meta[metaPrefix+"provenance"] = map[string]any{
+		prov := map[string]any{
 			"serverId": ref.Server.Alias, "serverRevision": ref.Server.Revision, "toolRevision": ref.Revision,
 			"decisionId": dec.ID, "filters": applied, "manifest": ref.Server.ManifestSource, "untrusted": true,
+			"disposition": call.Inspection.Disposition(), // FR-4.11
 		}
+		if tags := call.Inspection.Tags(); len(tags) > 0 { // FR-4.17
+			prov["tags"] = tags
+		}
+		res.Meta[metaPrefix+"provenance"] = prov
 
 		outcome := "ok"
 		if res.IsError {

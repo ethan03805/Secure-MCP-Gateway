@@ -42,4 +42,8 @@ type Call struct {
 	DecisiveRules  []string // rule IDs that decided the permit (FR-3.18)
 	InputSchema    any
 	OutputSchema   any
+	// Inspection collects the filter runs of this call across both chains
+	// (findings, tags, timing). RunRequest and RunResponse create it when
+	// nil; later stages read it through its methods.
+	Inspection *Inspection
 }

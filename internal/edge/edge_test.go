@@ -126,6 +126,10 @@ type harnessOpts struct {
 	approver pipeline.Approver
 	filters  *pipeline.Filters
 	limits   string
+	// backend, policy and screen replace the defaults (inspection_test.go).
+	backend func() *mcp.Server
+	policy  string
+	screen  pipeline.ToolScreen
 }
 
 func newHarness(t *testing.T, o harnessOpts) *harness {
@@ -158,14 +162,21 @@ command = "/inproc/t"
 		t.Fatal(err)
 	}
 	h.cfg = cfg
-	snap, err := policy.Compile([]byte(edgePolicy))
+	pol := edgePolicy
+	if o.policy != "" {
+		pol = o.policy
+	}
+	if o.backend == nil {
+		o.backend = testBackend
+	}
+	snap, err := policy.Compile([]byte(pol))
 	if err != nil {
 		t.Fatal(err)
 	}
 	h.caps = pipeline.NewCapabilities(time.Minute)
 	reg, err := backend.Start(context.Background(), cfg.Servers, backend.Options{
 		Limits:   backend.Limits{PerPrincipal: 4, Total: 4, Queue: 4, UpstreamTimeout: cfg.Limits.UpstreamTimeout.Duration, ResultBytes: cfg.Limits.ResultBytes},
-		Launcher: pipeline.InProcessLauncher{Servers: map[string]func() *mcp.Server{"/inproc/t": testBackend}}, Capabilities: h.caps, Log: diag.Discard(),
+		Launcher: pipeline.InProcessLauncher{Servers: map[string]func() *mcp.Server{"/inproc/t": o.backend}}, Capabilities: h.caps, Log: diag.Discard(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -176,7 +187,7 @@ command = "/inproc/t"
 	prof, _ := profile.Resolve("auto", "in-process", false, profile.Host{OS: "darwin", Arch: "arm64"})
 	h.gw, err = New(Deps{Config: cfg, Store: h.store, OAuth: oauth, Decider: h.decider, Registry: reg, Evidence: h.rec,
 		EvidenceErr: func() error { h.evMu.Lock(); defer h.evMu.Unlock(); return h.evErr }, Log: diag.Discard(), Profile: prof,
-		Approver: o.approver, Filters: o.filters, Capabilities: h.caps, ConsoleURL: "https://127.0.0.1:8444"})
+		Approver: o.approver, Filters: o.filters, Capabilities: h.caps, ConsoleURL: "https://127.0.0.1:8444", Screen: o.screen})
 	if err != nil {
 		t.Fatal(err)
 	}

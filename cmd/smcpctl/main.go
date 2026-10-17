@@ -28,6 +28,7 @@ Offline:
   config validate  validate the configuration and policy files
   journal verify   verify the evidence journal (hash chain, signatures, anchor)
   hash-password    print an Argon2id hash of a password (prompt or --password-file)
+  filters          list, export and test the inspection rule sets (rules, export, scan)
 
 Control API (running Gateway):
   health           show the Gateway's health
@@ -64,6 +65,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = verify(args[2:], stdout)
 	case args[0] == "hash-password":
 		err = hashPassword(args[1:], stdout)
+	case args[0] == "filters":
+		err = filtersCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "health":
 		err = control(args[1:], stdout, "GET", "/admin/v1/health", nil)
 	case args[0] == "stop":

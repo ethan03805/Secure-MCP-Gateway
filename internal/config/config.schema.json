@@ -211,6 +211,60 @@
         }
       }
     },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rules_dir": { "type": "string", "minLength": 1 },
+        "rule_versions": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } },
+        "deadline": { "$ref": "#/$defs/duration" },
+        "mandatory_request": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" } },
+        "mandatory_response": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" } },
+        "metadata_scan": { "type": "boolean" },
+        "size": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "argument_bytes": { "type": "integer", "minimum": 1 },
+            "argument_depth": { "type": "integer", "minimum": 1, "maximum": 256 },
+            "string_bytes": { "type": "integer", "minimum": 0 },
+            "result_depth": { "type": "integer", "minimum": 1, "maximum": 256 }
+          }
+        },
+        "paths": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "roots": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "server_roots": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 } } },
+            "argument_names": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "ignore_names": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "rewrite": { "type": "boolean" }
+          }
+        },
+        "urls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schemes": { "type": "array", "items": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*$" } },
+            "hosts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "deny_hosts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "allow_private": { "type": "boolean" },
+            "argument_names": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "ignore_names": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "rewrite": { "type": "boolean" }
+          }
+        },
+        "content_types": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$" } },
+            "max_bytes": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
     "server": {
       "type": "array",
       "items": {
