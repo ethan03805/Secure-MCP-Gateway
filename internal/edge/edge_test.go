@@ -346,7 +346,7 @@ func TestAuditFailureFailsClosed(t *testing.T) {
 		}
 		return nil
 	}, nil)
-	if we, data := callErr(t, cs, "t_echo", map[string]any{"text": "x"}); we.Code != CodeResponseWithheld || data["reasonCode"] != ReasonJournalUnavailable {
+	if we, data := callErr(t, cs, "t_echo", map[string]any{"text": "x"}); we.Code != CodeResponseWithheld || data["reasonCode"] != ReasonOutcomeUnrecorded || data["message"] != reasonMessages[ReasonOutcomeUnrecorded] {
 		t.Fatalf("%+v %v", we, data)
 	}
 	// A sticky journal failure fails the whole endpoint closed.

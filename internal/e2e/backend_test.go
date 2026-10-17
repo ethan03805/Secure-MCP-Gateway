@@ -20,6 +20,10 @@ import (
 // the test binary serves a small stdio server and exits. The Gateway under
 // test launches it as a subprocess, so the tests need no external server.
 func TestMain(m *testing.M) {
+	if os.Getenv("SMCP_E2E_BACKEND") == "reasons" {
+		runReasonsBackend()
+		return
+	}
 	if os.Getenv("SMCP_E2E_BACKEND") == "1" {
 		runBackend()
 		return

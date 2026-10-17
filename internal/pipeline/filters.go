@@ -279,7 +279,7 @@ func (f *Filters) RunResponse(ctx context.Context, call *Call, res *mcp.CallTool
 			res = v.Result
 		default:
 			if v.ReasonCode == "" {
-				v.ReasonCode = "FILTER_WITHHELD"
+				v.ReasonCode = "FILTER_BLOCKED"
 			}
 			run.Action, run.ReasonCode = Block, v.ReasonCode
 			runs = append(runs, run)

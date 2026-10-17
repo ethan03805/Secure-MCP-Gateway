@@ -76,7 +76,7 @@ func TestPreLaunchRecheck(t *testing.T) {
 				t.Error(err)
 			}
 		}, func() {}},
-		{"session suspended", ReasonSessionState, CodeGatewayFailClosed, func() { h.store.Suspend(sess.ID) }, func() { h.store.Resume(sess.ID) }},
+		{"session suspended", ReasonSessionState, CodeSessionInvalid, func() { h.store.Suspend(sess.ID) }, func() { h.store.Resume(sess.ID) }},
 		{"credential revoked", policy.ReasonCredentialInvalid, CodePolicyDenied, func() { dir.revoked.Store(true) }, func() { dir.revoked.Store(false) }},
 		{"principal suspended", policy.ReasonPrincipalDisabled, CodePolicyDenied, func() { dir.suspended.Store(true) }, func() { dir.suspended.Store(false) }},
 		{"server revision suspended", policy.ReasonRevisionNotEnabled, CodePolicyDenied, func() { h.reg.Suspend("t", "test suspension") }, func() {}},

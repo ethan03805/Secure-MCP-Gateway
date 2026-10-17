@@ -174,6 +174,7 @@ An export (`smcpctl observe export`) extracts the stored records within a campai
 |---|---|
 | `dataset.parquet`, `dataset.csv` or `dataset.jsonl` | The records. Parquet needs the DuckDB store backend. |
 | `behavior-model.graphml` | With `--format graphml`: the promoted (or given) snapshot as a graph of `BaselineContext` and `Tool` nodes, `COVERS` edges and `NEXT_TOOL` edges with transition counts |
+| `audit.graphml` | With `--format graphml --subgraph audit`: the records in scope as `Call` nodes (pseudonymized correlation ID, time, decision outcome) with pseudonymized `Session` and `Principal` nodes, `Tool` and `PolicyRevision` nodes, and `OPENED`, `MADE`, `INVOKED` and `DECIDED_UNDER` edges |
 | `dictionary.json` | One entry per column from the Parameter Catalog (ID, description, unit, data type, derivation, sensitivity, source element, whether pseudonymized) |
 | `manifest.json` | Dataset ID, time, actor, format, campaign, filters, catalog version, policy revisions and baseline snapshots seen in the rows, time range, row count, columns, pseudonymization, file checksums |
 | `SHA256SUMS` | SHA-256 of the data file, the dictionary and the manifest (`sha256sum -c` format) |
