@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"context"
 	"runtime"
 	"time"
 )
@@ -48,34 +49,74 @@ func (s StageSpan) Duration() time.Duration { return s.End.Sub(s.Start) }
 // the call's goroutine and must not block (E-29 queues them).
 type SpanSink func([]StageSpan)
 
-// cpuMeter measures the CPU time of the calling goroutine by locking it to
-// its OS thread and reading the thread's CPU clock. Lock before the work,
-// Read at stage boundaries, Unlock when done.
-type cpuMeter struct {
-	ok bool
+// cpuAccount measures the thread CPU time of one goroutine's work. The
+// goroutine is locked to its OS thread only while it runs: wait unlocks it
+// for a blocking wait, whose time is not counted, and locks it again
+// afterwards. A goroutine that blocks while locked to its thread can resume
+// only on that thread, so when every processor is busy its wake-up waits
+// for that thread to be scheduled; held across a whole call, the lock
+// added milliseconds to each wait and put observation over its FR-11.4
+// budget.
+type cpuAccount struct {
+	ok      bool          // the platform has a per-thread CPU clock
+	running bool          // a segment is open and the goroutine is locked
+	mark    time.Duration // thread CPU time at the start of the segment
+	total   time.Duration
 }
 
-func lockCPU() cpuMeter {
+// resume opens a segment: it locks the goroutine and reads the clock.
+func (a *cpuAccount) resume() {
 	runtime.LockOSThread()
-	_, ok := threadCPU()
-	return cpuMeter{ok: ok}
+	a.mark, a.ok = threadCPU()
+	a.running = true
 }
 
-func (m cpuMeter) read() time.Duration {
-	if !m.ok {
-		return 0
+// pause closes the open segment, if any, and unlocks the goroutine.
+func (a *cpuAccount) pause() {
+	if !a.running {
+		return
 	}
-	d, _ := threadCPU()
-	return d
+	if a.ok {
+		d, _ := threadCPU()
+		a.total += d - a.mark
+	}
+	a.running = false
+	runtime.UnlockOSThread()
 }
 
-func (m cpuMeter) unlock() { runtime.UnlockOSThread() }
+// wait runs fn outside the open segment (fn alone when none is open).
+func (a *cpuAccount) wait(fn func()) {
+	if !a.running {
+		fn()
+		return
+	}
+	a.pause()
+	defer a.resume()
+	fn()
+}
 
-// SpanTimer records the spans of one call on its goroutine. NewSpanTimer
-// locks the goroutine to its OS thread so that thread CPU time is the
-// call's own; Finish unlocks it and returns the spans.
+type cpuAccountKey struct{}
+
+// WaitUnmeasured runs fn, a wait for another goroutine, a process or the
+// network, from a filter run under the chain's CPU measurement: the
+// filter's goroutine is unlocked from its OS thread for the wait, and the
+// wait is not counted in the filter's CPU time. Outside a measured filter
+// run it just runs fn.
+func WaitUnmeasured(ctx context.Context, fn func()) {
+	if a, ok := ctx.Value(cpuAccountKey{}).(*cpuAccount); ok && a != nil {
+		a.wait(fn)
+		return
+	}
+	fn()
+}
+
+// SpanTimer records the spans of one call on its goroutine. Each stage
+// locks the goroutine to its OS thread so that the thread CPU time read at
+// its boundaries is the call's own; Wait leaves the lock off for the
+// stage's blocking waits.
 type SpanTimer struct {
-	m     cpuMeter
+	ok    bool
+	cur   *cpuAccount // the open stage's account
 	corr  string
 	spans []StageSpan
 	// PolicyRevision and Rule are set once the call is decided and are
@@ -84,15 +125,42 @@ type SpanTimer struct {
 }
 
 // NewSpanTimer starts recording the spans of the call corr.
-func NewSpanTimer(corr string) *SpanTimer { return &SpanTimer{m: lockCPU(), corr: corr} }
+func NewSpanTimer(corr string) *SpanTimer {
+	_, ok := threadCPU()
+	return &SpanTimer{ok: ok, corr: corr}
+}
 
-// Start begins a stage; the returned function ends it.
+// Start begins a stage; the returned function ends it. The stage's CPU
+// time is the thread CPU time of the call's goroutine in the stage outside
+// its waits (Wait); AddFilterRuns adds the CPU time of the stage's filters.
 func (t *SpanTimer) Start(stage string) func() {
-	start, cpu0 := time.Now(), t.m.read()
-	return func() {
-		t.spans = append(t.spans, StageSpan{Stage: stage, CorrelationID: t.corr, Start: start, End: time.Now(), CPU: t.m.read() - cpu0,
-			CPUMeasured: t.m.ok, PolicyRevision: t.PolicyRevision, Rule: t.Rule})
+	if t.cur != nil {
+		t.cur.pause() // a stage left open
 	}
+	a := &cpuAccount{}
+	t.cur = a
+	start := time.Now()
+	a.resume()
+	return func() {
+		a.pause()
+		if t.cur == a {
+			t.cur = nil
+		}
+		t.spans = append(t.spans, StageSpan{Stage: stage, CorrelationID: t.corr, Start: start, End: time.Now(), CPU: a.total,
+			CPUMeasured: t.ok, PolicyRevision: t.PolicyRevision, Rule: t.Rule})
+	}
+}
+
+// Wait runs fn, a wait of the open stage (for filter goroutines, the
+// server, the approver or the journal), with the goroutine unlocked from
+// its thread; the wait is not counted in the stage's CPU time. A nil timer
+// or a timer without an open stage just runs fn.
+func (t *SpanTimer) Wait(fn func()) {
+	if t == nil || t.cur == nil {
+		fn()
+		return
+	}
+	t.cur.wait(fn)
 }
 
 // Add records a span measured elsewhere (authentication before the call
@@ -112,7 +180,7 @@ func (t *SpanTimer) AddFilterRuns(runs []FilterRun) {
 	var cpu time.Duration
 	for _, r := range runs {
 		cpu += r.CPU
-		t.Add(StageSpan{Stage: SpanFilter, Start: r.Start, End: r.Start.Add(r.Duration), CPU: r.CPU, CPUMeasured: t.m.ok, Filter: r.Filter})
+		t.Add(StageSpan{Stage: SpanFilter, Start: r.Start, End: r.Start.Add(r.Duration), CPU: r.CPU, CPUMeasured: t.ok, Filter: r.Filter})
 	}
 	for i := len(t.spans) - 1; i >= 0; i-- {
 		if t.spans[i].Stage != SpanFilter {
@@ -122,19 +190,29 @@ func (t *SpanTimer) AddFilterRuns(runs []FilterRun) {
 	}
 }
 
-// Finish unlocks the goroutine and returns the spans in order of their
+// Finish ends a stage left open and returns the spans in order of their
 // start.
 func (t *SpanTimer) Finish() []StageSpan {
-	t.m.unlock()
+	if t.cur != nil {
+		t.cur.pause()
+		t.cur = nil
+	}
 	return t.spans
 }
 
 // MeasureCPU runs fn locked to its OS thread and returns the thread CPU
 // time it used (0, false where the platform has no per-thread clock).
 func MeasureCPU(fn func()) (time.Duration, bool) {
-	m := lockCPU()
-	defer m.unlock()
-	c0 := m.read()
-	fn()
-	return m.read() - c0, m.ok
+	return measureCPU(context.Background(), func(context.Context) { fn() })
+}
+
+// measureCPU is MeasureCPU for a function that may wait: fn receives a
+// context with which WaitUnmeasured unlocks it for its waits.
+func measureCPU(ctx context.Context, fn func(context.Context)) (time.Duration, bool) {
+	a := &cpuAccount{}
+	a.resume()
+	defer a.pause()
+	fn(context.WithValue(ctx, cpuAccountKey{}, a))
+	a.pause()
+	return a.total, a.ok
 }

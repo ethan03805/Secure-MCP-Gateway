@@ -196,7 +196,7 @@ func (f *Filters) RunRequest(ctx context.Context, call *Call, args json.RawMessa
 			continue
 		}
 		start := time.Now()
-		v, cpu, err := runBounded(ctx, func() (RequestVerdict, error) { return e.f.FilterRequest(ctx, call, args) })
+		v, cpu, err := runBounded(ctx, func(ctx context.Context) (RequestVerdict, error) { return e.f.FilterRequest(ctx, call, args) })
 		run := FilterRun{Stage: StageRequest, Filter: e.id, Version: versionOf(e.f), Action: v.Action, ReasonCode: v.ReasonCode, Findings: v.Findings, Duration: time.Since(start),
 			Start: start, CPU: cpu}
 		applied = append(applied, e.id)
@@ -250,7 +250,7 @@ func (f *Filters) RunResponse(ctx context.Context, call *Call, res *mcp.CallTool
 		}
 		start := time.Now()
 		cur := res
-		v, cpu, err := runBounded(ctx, func() (ResponseVerdict, error) { return e.f.FilterResponse(ctx, call, cur) })
+		v, cpu, err := runBounded(ctx, func(ctx context.Context) (ResponseVerdict, error) { return e.f.FilterResponse(ctx, call, cur) })
 		run := FilterRun{Stage: StageResponse, Filter: e.id, Version: versionOf(e.f), Action: v.Action, ReasonCode: v.ReasonCode, Findings: v.Findings, Duration: time.Since(start),
 			Start: start, CPU: cpu}
 		applied = append(applied, e.id)
@@ -310,7 +310,7 @@ func errText(err error) string {
 // slow or stuck filter cannot hold the call past the CP-14 deadline. A
 // panic is converted to an error. A filter that ignores ctx keeps running
 // until it returns; its result is discarded.
-func runBounded[V any](ctx context.Context, fn func() (V, error)) (V, time.Duration, error) {
+func runBounded[V any](ctx context.Context, fn func(context.Context) (V, error)) (V, time.Duration, error) {
 	type out struct {
 		v   V
 		cpu time.Duration
@@ -325,8 +325,9 @@ func runBounded[V any](ctx context.Context, fn func() (V, error)) (V, time.Durat
 			}
 			ch <- o
 		}()
-		// The filter's own CPU time (FR-10.2), measured on its thread.
-		o.cpu, _ = MeasureCPU(func() { o.v, o.err = fn() })
+		// The filter's own CPU time (FR-10.2), measured on its thread;
+		// a filter that waits does so through WaitUnmeasured.
+		o.cpu, _ = measureCPU(ctx, func(ctx context.Context) { o.v, o.err = fn(ctx) })
 	}()
 	select {
 	case o := <-ch:
@@ -351,8 +352,8 @@ func (SchemaValidate) ID() string { return "schema-validate" }
 const ReasonSchemaInvalid = "SCHEMA_INVALID"
 
 // FilterRequest implements RequestFilter.
-func (SchemaValidate) FilterRequest(_ context.Context, call *Call, args json.RawMessage) (RequestVerdict, error) {
-	if finding := ValidateArguments(call.InputSchema, args); finding != "" {
+func (SchemaValidate) FilterRequest(ctx context.Context, call *Call, args json.RawMessage) (RequestVerdict, error) {
+	if finding := ValidateArgumentsContext(ctx, call.InputSchema, args); finding != "" {
 		return RequestVerdict{Action: Block, ReasonCode: ReasonSchemaInvalid, Finding: finding}, nil
 	}
 	return RequestVerdict{Action: Pass}, nil
@@ -474,6 +475,15 @@ func schemaShape(raw []byte) string {
 // the CP-36 bounds, and a validation that runs longer than the CP-36 time
 // bound, are findings: the call is blocked.
 func ValidateArguments(schema any, args json.RawMessage) string {
+	return ValidateArgumentsContext(context.Background(), schema, args)
+}
+
+// ValidateArgumentsContext is ValidateArguments for a filter: ctx is the
+// filter's context, and the wait for the validator goroutine is made
+// through WaitUnmeasured so that the filter's goroutine is not held on its
+// OS thread while it waits (a held goroutine can miss the CP-36 bound on a
+// busy host and block a conforming call).
+func ValidateArgumentsContext(ctx context.Context, schema any, args json.RawMessage) string {
 	raw, err := json.Marshal(schema)
 	if err != nil {
 		return "schema not serializable"
@@ -497,26 +507,28 @@ func ValidateArguments(schema any, args json.RawMessage) string {
 	go func() { done <- compiled.Validate(inst) }()
 	timer := time.NewTimer(SchemaValidateTime)
 	defer timer.Stop()
-	select {
-	case err := <-done:
-		if err != nil {
-			msg := err.Error()
-			if i := strings.Index(msg, "\n"); i > 0 {
-				msg = msg[:i]
-			}
-			return msg
-		}
-		return ""
-	case <-timer.C:
+	var finding string
+	WaitUnmeasured(ctx, func() {
 		select {
-		case err := <-done: // finished as the timer fired
-			if err == nil {
-				return ""
+		case err := <-done:
+			if err != nil {
+				finding = err.Error()
+				if i := strings.Index(finding, "\n"); i > 0 {
+					finding = finding[:i]
+				}
 			}
-		default:
+		case <-timer.C:
+			select {
+			case err := <-done: // finished as the timer fired
+				if err == nil {
+					return
+				}
+			default:
+			}
+			finding = fmt.Sprintf("schema validation exceeded %s (CP-36)", SchemaValidateTime)
 		}
-		return fmt.Sprintf("schema validation exceeded %s (CP-36)", SchemaValidateTime)
-	}
+	})
+	return finding
 }
 
 type callContextKey struct{}

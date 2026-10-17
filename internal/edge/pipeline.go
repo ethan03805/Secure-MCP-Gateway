@@ -85,12 +85,20 @@ func (c *callRun) event(class string, phase audit.Phase, origin, outcome, reason
 	return e
 }
 
+// Evidence writes wait for the journal (its lock, and for a commit the
+// group fsync), so they are made outside the stage's CPU measurement.
 func (c *callRun) record(class string, phase audit.Phase, origin, outcome, reason, status string) error {
-	return c.g.evidence.Record(c.event(class, phase, origin, outcome, reason, status, nil))
+	ev := c.event(class, phase, origin, outcome, reason, status, nil)
+	var err error
+	c.spans.Wait(func() { err = c.g.evidence.Record(ev) })
+	return err
 }
 
 func (c *callRun) commit(class string, phase audit.Phase, origin, outcome, reason, status string, detail any) error {
-	return c.g.evidence.Commit(c.event(class, phase, origin, outcome, reason, status, detail))
+	ev := c.event(class, phase, origin, outcome, reason, status, detail)
+	var err error
+	c.spans.Wait(func() { err = c.g.evidence.Commit(ev) })
+	return err
 }
 
 // refuse commits a terminal refusal event and returns err. A refusal is the
@@ -252,7 +260,12 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		// Request inspection (E-09).
 		endInspect := c.stage(pipeline.SpanRequestInspection)
-		args, reqApplied, verdict := g.filters.RunRequest(ctx, call, req.Params.Arguments)
+		// The filters run on their own goroutines; their CPU time is
+		// added to the stage by filterSpans.
+		var args json.RawMessage
+		var reqApplied []string
+		var verdict *pipeline.RequestVerdict
+		c.spans.Wait(func() { args, reqApplied, verdict = g.filters.RunRequest(ctx, call, req.Params.Arguments) })
 		endInspect()
 		c.filterSpans(pipeline.StageRequest)
 		if verdict != nil && ctx.Err() != nil && !g.store.IsActive(sess.ID) {
@@ -294,7 +307,8 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		// Approval (E-07).
 		if dec.Obligations.Approval || call.RequireApproval {
 			endApproval := c.stage(pipeline.SpanApproval)
-			err := g.approve(ctx, c, call, args, req)
+			var err error
+			c.spans.Wait(func() { err = g.approve(ctx, c, call, args, req) })
 			endApproval()
 			if err != nil {
 				return nil, err
@@ -324,7 +338,8 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		if c.prog.enabled() { // FR-1.39
 			dispatch.Progress = c.prog.relay
 		}
-		res, err := g.reg.Call(cctx, dispatch)
+		var res *mcp.CallToolResult
+		c.spans.Wait(func() { res, err = g.reg.Call(cctx, dispatch) })
 		endDispatch()
 		c.prog.stop() // FR-1.40: no progress after the final response
 		if err != nil {
@@ -333,7 +348,9 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 
 		// Response inspection (E-11).
 		endRespInspect := c.stage(pipeline.SpanResponseInspection)
-		res, respApplied, rv := g.filters.RunResponse(ctx, call, res)
+		var respApplied []string
+		var rv *pipeline.ResponseVerdict
+		c.spans.Wait(func() { res, respApplied, rv = g.filters.RunResponse(ctx, call, res) })
 		endRespInspect()
 		c.filterSpans(pipeline.StageResponse)
 		if rv != nil {
