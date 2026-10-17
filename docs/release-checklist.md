@@ -22,6 +22,12 @@ untrusted comment: minisign public key 064FAC0C64ACCED0
 RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
 ```
 
+## Rehearsal results (2026-10-17)
+
+- `v1.0.0-rc.1` (main `200719d`): published on the first run; no SBOM inside the archives yet, `smcpd --version` unsupported, no formula pushed (pre-release).
+- `v1.0.0-rc.2` (main `4ba2189`, release run 39032406916): archives with `sbom.spdx.json`, every binary reports `1.0.0-rc.2`, minisign and cosign verify, `install.sh` installs on macOS arm64. With `SMCP_TAP_PRERELEASE=true` the formula was pushed (so `HOMEBREW_TAP_TOKEN` works) and the `tap` workflow passed on macOS and Ubuntu (run 39032895870). The variable was deleted afterwards; the tap holds the rc.2 formula until v1.0.0 replaces it.
+- `smcpctl upgrade` cannot upgrade from rc.1 to a later release: rc.1's `smcpctl` expects the old unsigned `SHA256SUMS` layout. Upgrades from rc.2 onward use the signed release files.
+
 ## Repository settings (once)
 
 - [ ] Secrets `MINISIGN_SECRET_KEY` (the minisign secret key file, both lines) and `MINISIGN_PASSWORD` exist: `gh secret list -R ethan03805/Secure-MCP-Gateway`. The release job fails when the key is missing.
