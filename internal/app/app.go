@@ -173,18 +173,6 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if s, ok := o.Secrets.(interface{ AttachEvidence(audit.Recorder) }); ok {
 		s.AttachEvidence(a.Evidence)
 	}
-	if err = a.startInspection(cfg, &o); err != nil { // E-09, E-11, metadata scan (inspection.go)
-		return a, err
-	}
-	// The secret broker's mandatory filters (E-20) join the chain after the
-	// built-in filters are registered, so enabling [secrets] keeps E-09/E-11.
-	if s, ok := o.Secrets.(interface {
-		RegisterFilters(*pipeline.Filters) error
-	}); ok {
-		if err = s.RegisterFilters(o.Filters); err != nil {
-			return a, fmt.Errorf("secret filters: %w", err)
-		}
-	}
 
 	if o.Launcher == nil {
 		o.Launcher = pipeline.SubprocessLauncher{}
@@ -218,6 +206,20 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 			if s.Package != "" {
 				return a, fmt.Errorf("server %q names package %q but package support is not configured", s.Alias, s.Package)
 			}
+		}
+	}
+	// After the package source is chosen, so the metadata scan wraps the
+	// signed manifests (SR-5.9-2 at import) rather than replacing them.
+	if err = a.startInspection(cfg, &o); err != nil { // E-09, E-11, metadata scan (inspection.go)
+		return a, err
+	}
+	// The secret broker's mandatory filters (E-20) join the chain after the
+	// built-in filters are registered, so enabling [secrets] keeps E-09/E-11.
+	if s, ok := o.Secrets.(interface {
+		RegisterFilters(*pipeline.Filters) error
+	}); ok {
+		if err = s.RegisterFilters(o.Filters); err != nil {
+			return a, fmt.Errorf("secret filters: %w", err)
 		}
 	}
 	a.Capabilities = pipeline.NewCapabilities(2 * cfg.Limits.ClientDeadline.Duration)
