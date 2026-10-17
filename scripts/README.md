@@ -9,6 +9,7 @@ directory inside the repository.
 | `merge-queue.sh` | merge-steward agent, maintainers | Rebase, regenerate, check, push and squash-merge ready PRs one at a time |
 | `ci-integration.sh` | CI job `linux-integration`, `make integration` | Bootstrap an instance, run smcpd, drive an MCP client, verify the journal, check Podman and nftables |
 | `itest-client/` | `ci-integration.sh` | Go MCP client: OAuth 2.1 with PKCE through the sign-in form, `tools/list`, `tools/call` |
+| `agents/` | workflow `agents` ("Real agents"), developers | Real-agent conformance suite: drives Claude Code, Codex CLI, Hermes, OpenCode, Gemini CLI and Goose against a fresh Gateway and judges each scenario from the journal; `install-clis.sh` installs the pinned CLIs, `publish.sh` puts `agents.json` on `site-data`. See `docs/agents-conformance.md` |
 | `publish-status.sh` | CI job `status` | Commit `status.json` and `history.json` to the orphan branch `site-data` |
 | `trigger-site-deploy.sh` | CI job `status` | Wait for the new `status.json` to be served, then call the Vercel deploy hook |
 | `auto-update-prs.sh` | workflow `auto-update` | Label auto-merge PRs that conflict with main `needs-rebase` (does not push) |

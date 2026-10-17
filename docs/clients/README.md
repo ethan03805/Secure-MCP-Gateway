@@ -19,6 +19,8 @@ export NODE_EXTRA_CA_CERTS=<state dir>/tls/ca.crt
 claude mcp add --transport http smcp https://127.0.0.1:8443/mcp
 ```
 
+Known issue (found by the real-agent suite, `docs/agents-conformance.md`): the native Claude Code build (Bun runtime, BoringSSL) rejects the iPAddress name constraints of the CP-53 local CA with "unsupported name constraint type" and does not connect. OpenCode is affected the same way. Codex CLI, Hermes and Goose on Linux are not.
+
 Claude Code discovers the OAuth metadata, opens a browser and receives a session token. Tools appear as `mcp__smcp__<alias>_<tool>`. Tools that require approval carry `anthropic/requiresUserInteraction`, so Claude Code also prompts locally.
 
 Lockdown (FR-15.2): a managed settings file that allows only the `smcp` server and denies Claude Code's `Read` and `Edit` tools on the Gateway's directories and the credential file.
