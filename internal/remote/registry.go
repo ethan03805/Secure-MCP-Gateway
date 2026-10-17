@@ -52,8 +52,9 @@ func (r Registration) View() map[string]any {
 
 // registry persists dynamic registrations in <state>/remote/clients.json.
 type registry struct {
-	path       string
-	maxPending int
+	path         string
+	maxPending   int
+	maxPerSource int
 
 	mu   sync.Mutex
 	regs map[string]*Registration
@@ -62,11 +63,18 @@ type registry struct {
 var (
 	errNotFound    = errors.New("registration not found")
 	errTooMany     = errors.New("too many pending registrations")
+	errSourceQuota = errors.New("too many pending registrations from this caller address")
 	errWrongStatus = errors.New("registration is not in a state that allows this")
 )
 
-func loadRegistry(path string, maxPending int) (*registry, error) {
-	r := &registry{path: path, maxPending: maxPending, regs: map[string]*Registration{}}
+// loadRegistry opens the registry. maxPerSource bounds the pending
+// registrations whose source address has the same rate key (IPv6 /64); a
+// value above maxPending (or zero) is treated as maxPending.
+func loadRegistry(path string, maxPending, maxPerSource int) (*registry, error) {
+	if maxPerSource <= 0 || maxPerSource > maxPending {
+		maxPerSource = maxPending
+	}
+	r := &registry{path: path, maxPending: maxPending, maxPerSource: maxPerSource, regs: map[string]*Registration{}}
 	b, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return r, nil
@@ -97,11 +105,29 @@ func (r *registry) saveLocked() error {
 	return writeFileAtomic(r.path, b)
 }
 
-// full reports that no further pending registration can be stored.
-func (r *registry) full() bool {
+// full reports why no further pending registration from source can be
+// stored: errTooMany when every pending slot is taken, errSourceQuota when
+// the source's quota is, or nil.
+func (r *registry) full(source string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.pendingLocked() >= r.maxPending
+	return r.fullLocked(source)
+}
+
+func (r *registry) fullLocked(source string) error {
+	if r.pendingLocked() >= r.maxPending {
+		return errTooMany
+	}
+	key, n := rateKey(source), 0
+	for _, x := range r.regs {
+		if x.Status == StatusPending && rateKey(x.SourceAddress) == key {
+			n++
+		}
+	}
+	if n >= r.maxPerSource {
+		return errSourceQuota
+	}
+	return nil
 }
 
 func (r *registry) pendingLocked() int {
@@ -117,8 +143,8 @@ func (r *registry) pendingLocked() int {
 func (r *registry) add(g *Registration) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.pendingLocked() >= r.maxPending {
-		return errTooMany
+	if err := r.fullLocked(g.SourceAddress); err != nil {
+		return err
 	}
 	r.regs[g.ClientID] = g
 	if err := r.saveLocked(); err != nil {

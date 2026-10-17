@@ -25,6 +25,42 @@ func TestRateKey(t *testing.T) {
 	}
 }
 
+// RR-02: pending registrations are dropped after the configured lifetime
+// (24 h by default, CP-49), and the per-source quota frees with them.
+func TestPendingLifetimeAndQuota(t *testing.T) {
+	parsed, err := config.Parse([]byte("[admin]\nusername = \"a\"\npassword_hash = \"$argon2id$v=19$m=65536,t=3,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := parsed.Remote; r.PendingLifetime.Duration != 24*time.Hour || r.MaxPendingPerSource != 4 || r.MaxPendingRegistrations != 32 {
+		t.Fatalf("defaults: %v %d %d", r.PendingLifetime.Duration, r.MaxPendingPerSource, r.MaxPendingRegistrations)
+	}
+	reg, err := loadRegistry(t.TempDir()+"/clients.json", 8, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t0 := time.Date(2026, 10, 17, 0, 0, 0, 0, time.UTC)
+	for i := range 2 {
+		if err := reg.add(&Registration{ClientID: fmt.Sprint("c", i), Status: StatusPending, RegisteredAt: t0, SourceAddress: "203.0.113.7"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := reg.full("203.0.113.7"); err != errSourceQuota {
+		t.Fatalf("full: %v", err)
+	}
+	if err := reg.full("203.0.113.8"); err != nil {
+		t.Fatalf("other source: %v", err)
+	}
+	reg.prunePending(t0.Add(23*time.Hour), 24*time.Hour)
+	if reg.countStatus(StatusPending) != 2 {
+		t.Fatal("pruned before the lifetime")
+	}
+	reg.prunePending(t0.Add(25*time.Hour), 24*time.Hour)
+	if reg.countStatus(StatusPending) != 0 || reg.full("203.0.113.7") != nil {
+		t.Fatal("not pruned after the lifetime")
+	}
+}
+
 // Rotating source keys cannot grow the OAuth limiter table without bound:
 // once maxTracked live keys are held, new keys share one overflow bucket.
 func TestLimiterTableBounded(t *testing.T) {

@@ -902,9 +902,13 @@ func syncDir(dir string) error {
 // are findings that do not break the chain but need an operator's
 // attention.
 type Report struct {
-	Segments      int
-	Events        int
-	Open          string   // name of a trailing unclosed segment, if any
+	Segments int
+	Events   int
+	Open     string // name of a trailing unclosed segment, if any
+	// OpenEvents counts the events in the trailing unclosed segment
+	// (included in Events). They are not signed yet, so the verifier
+	// cannot detect changes to them or their removal.
+	OpenEvents    int
 	TruncatedTail bool     // the trailing open segment ends in an incomplete or invalid line
 	Recovered     []string // segments sealed by crash recovery; events after the truncation point are lost
 	AnchorSegment int      // segment named by the anchor; 0 when no segment has closed yet
@@ -963,6 +967,9 @@ func Verify(dir string, pub ed25519.PublicKey) (Report, error) {
 // the segment it names or by that segment's next key.
 func VerifyWith(dir string, pub ed25519.PublicKey, vo VerifyOptions) (Report, error) {
 	var rep Report
+	if len(pub) != ed25519.PublicKeySize {
+		return rep, fmt.Errorf("trust root is not an Ed25519 public key (%d bytes)", len(pub))
+	}
 	rep.Keys = []string{hex.EncodeToString(pub)}
 	segKey := map[int][2]ed25519.PublicKey{} // segment -> {signing key, next key}
 	if vo.AnchorPath == "" {
@@ -1025,6 +1032,7 @@ func VerifyWith(dir string, pub ed25519.PublicKey, vo VerifyOptions) (Report, er
 					break
 				}
 				rep.Events++
+				rep.OpenEvents++
 			}
 			break
 		}

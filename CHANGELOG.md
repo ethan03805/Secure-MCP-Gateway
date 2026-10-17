@@ -82,6 +82,16 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - G-06 maps each band to alert only or to alert with capture escalation (`escalate_capture_band`, default `elevated` as before), and maps the uncharacterized state to record, escalate or approve (`uncharacterized_action`; approve needs synchronous scoring and adds an approval obligation). The Playwright tests set every control, publish it and read the stored object back. They now make full claims for FR-8.9, FR-8.10 and FR-8.14.
 - `console/e2e/style.spec.ts` checks the `docs/console-style.md` rules on every view in both schemes: sortable collections, the two Plex faces at the five sizes, no gradients, drop shadows, emoji or exclamation marks, and one-line rows of at most 32 px.
 
+### Security residuals (follow-up review, 2026-10-17)
+
+- Secret deliveries are withdrawn when a launch is refused outside the Secret Broker's launcher wrapper (the package artifact check, SR-3-2): the S1 header grant and S3 files of a suspended launch no longer stay behind (SR-14 in `docs/security-review-2026-10.md`).
+- RR-02 reduced: `[remote] max_pending_per_source` (default 4; IPv6 per /64) and `pending_registration_lifetime` (default 24 h, was a fixed 7 days), added to CP-49 in the SRS.
+- RR-07 fixed: the remote listener follows listener certificate rotation through `keys.CertReloader`.
+- Listen streams: in addition to the CP-20 `listen_streams_per_session` bound of FR-1.38, all sessions together hold at most 256 listen streams (`-31005`, `LISTEN_LIMIT`), and a listen-stream write or flush that a reader does not take within 10 s ends the stream (SR-15). An observation aggregate with no matching records answers `"rows": []` instead of `null`, which the G-09 campaign form maps over.
+- Evidence export: the exported anchor only moves forward and the exported trust root is write-once, so a rolled-back local anchor is refused at export (SR-16). `VerifyWith` refuses a trust root of the wrong length, and `smcpctl journal verify` reports the unsigned events of the open segment (SR-17).
+- Audit Profiles, Observation Policies and Anomaly Response Policies published from the console apply at once (`observe.Collector.SetPolicy`, `anomaly.Scorer.SetThresholds`, `analytics.Service.Update`); baseline contexts and the memory budget still wait for the next start and are reported in `restart_required`.
+- RR-05: device-code phishing guidance for Session Approvers in `docs/remote-access.md`.
+
 ### Linux Enforced profile hardening (E-15 to E-18, FR-13.5)
 
 - Sandboxed servers with `network = "egress"` now start instead of being refused. The launcher attaches the instance to the Egress Broker, creates the container on slirp4netns with host loopback, installs table `inet smcp_egress` in the container's network namespace through `podman unshare nsenter ... nft` before the server process starts (TCP to the instance's own broker listeners only), reads it back, then starts the container; any failure removes the container. `pipeline.EgressNetwork` gained `GuestAddr` and `LauncherConfines`, `pipeline.EgressAttachment` gained `Allow`. `TestIntegrationEgressBroker` (real Podman) and the enforced section of `scripts/ci-integration.sh` show direct egress blocked and brokered egress to a granted local HTTP server working. `docs/sandbox.md`, "Egress".

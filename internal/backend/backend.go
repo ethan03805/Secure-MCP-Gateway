@@ -362,6 +362,15 @@ func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error
 	return s, nil
 }
 
+// withdraw tears down the secret broker's launch-time deliveries for alias
+// when the launch did not produce a process. Teardown is idempotent, so a
+// broker wrapper that already tore down is unaffected.
+func (r *Registry) withdraw(alias, reason string) {
+	if t, ok := r.opts.Secrets.(interface{ Teardown(alias, reason string) }); ok {
+		t.Teardown(alias, reason)
+	}
+}
+
 // start launches one instance of s: secrets, launcher, MCP handshake and
 // the tool set from the ManifestSource.
 func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.ToolSet, string, error) {
@@ -373,6 +382,7 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	// SR-2.14-1: the instance environment is built from an allowlist, never
 	// inherited wholesale.
 	if spec.Env, err = pipeline.MergeEnv(pipeline.BaseEnv(), sc.Env, secrets); err != nil {
+		r.withdraw(sc.Alias, "launch_failed")
 		return nil, pipeline.ToolSet{}, "", err
 	}
 	if d, ok := r.opts.Secrets.(interface{ InstanceDir(alias string) string }); ok {
@@ -380,6 +390,11 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	}
 	proc, err := r.opts.Launcher.Launch(ctx, spec)
 	if err != nil {
+		// A launcher wrapper outside the secret broker's own wrapper (the
+		// package artifact check, SR-3-2) can refuse the launch before the
+		// broker's wrapper runs; the launch-time deliveries are withdrawn
+		// here so they do not outlive the refused instance (FR-6.8).
+		r.withdraw(sc.Alias, "launch_failed")
 		return nil, pipeline.ToolSet{}, "", fmt.Errorf("launch: %w", err)
 	}
 	limit := int(r.opts.Limits.ResultBytes) + envelopeBytes

@@ -111,11 +111,11 @@ func (s *Service) status(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"enabled": false})
 		return
 	}
-	out := map[string]any{"enabled": true, "policy_id": s.S.PolicyID, "catalog_version": s.Catalog.Version,
-		"scoring": s.S.Scoring, "require_approval_band": s.S.RequireApproval, "withhold_band": s.S.Withhold,
+	out := map[string]any{"enabled": true, "policy_id": s.cur().PolicyID, "catalog_version": s.Catalog.Version,
+		"scoring": s.cur().Scoring, "require_approval_band": s.cur().RequireApproval, "withhold_band": s.cur().Withhold,
 		"escalate_capture_band": s.S.EscalateCapture, "uncharacterized": s.S.Uncharacterized, "escalation_bands": s.S.EscalationByBand, "scope": s.S.Scope,
-		"sampling_rate": s.S.SamplingRate, "parameters": s.Collector.SelectedParameters(), "escalation_parameters": s.S.Escalation,
-		"retention": s.S.Retention.String(), "collector": s.Collector.Stats(), "drops": s.Drops(),
+		"sampling_rate": s.cur().SamplingRate, "parameters": s.Collector.SelectedParameters(), "escalation_parameters": s.cur().Escalation,
+		"retention": s.cur().Retention.String(), "collector": s.Collector.Stats(), "drops": s.Drops(),
 		"baseline": s.Baselines.LifecycleStatus(), "loaded_snapshot": s.Scorer.SnapshotID(), "thresholds": s.Scorer.Thresholds(),
 		"contexts": s.S.Baseline.Dimensions, "features": s.S.Baseline.Features, "duckdb_available": obsstore.DuckDBAvailable(),
 		"degradation": map[string]any{"stage": s.degrade.Stage(), "name": StageNames[s.degrade.Stage()], "reason": s.degrade.Reason(),
@@ -132,7 +132,7 @@ func (s *Service) status(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) parameters(w http.ResponseWriter, r *http.Request) {
 	esc := map[string]bool{}
-	for _, p := range s.S.Escalation {
+	for _, p := range s.cur().Escalation {
 		esc[p] = true
 	}
 	var out []map[string]any
@@ -342,6 +342,9 @@ func (s *Service) aggregate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_query", err.Error())
 		return
+	}
+	if res == nil {
+		res = []obsstore.AggRow{} // "rows": [] when nothing matched, never null
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"feature": aq.Feature, "group_by": aq.GroupBy, "bucket": q.Get("bucket"), "rows": res})
 }

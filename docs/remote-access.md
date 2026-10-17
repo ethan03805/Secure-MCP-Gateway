@@ -36,6 +36,8 @@ clients = ["grok-preregistered"]    # [[client]] IDs allowed to sign in remotely
 # public_url = "https://gw.example.ts.net"   # default public URL for enable requests
 # client_address_header = "X-Forwarded-For"  # header carrying the caller address
 # max_pending_registrations = 32
+# max_pending_per_source = 4         # pending registrations per caller address (IPv6: per /64)
+# pending_registration_lifetime = "24h"
 
 [remote.limits]                     # CP-49 defaults shown
 calls_per_minute = 30               # tools/call per client ID
@@ -60,7 +62,9 @@ session_idle_timeout = "15m"
 | `default_principal` | none | Principal an approved dynamic registration is bound to when the approval names none. |
 | `templates` | `[]` | Templates a remote session may use. The resolved template (requested, or the profile default) must be listed; an empty list refuses every remote session. |
 | `client_address_header` | `X-Forwarded-For` | For `X-Forwarded-For` the rightmost entry is used (the one the tunnel connector appended). Cloudflare also sets `Cf-Connecting-Ip`. |
-| `max_pending_registrations` | 32 | Further registrations are refused with 429 until some are approved, denied or expire (pending registrations are dropped after 7 days). |
+| `max_pending_registrations` | 32 | Further registrations are refused with 429 until some are approved, denied or expire. |
+| `max_pending_per_source` | 4 | Pending registrations one caller address may hold (an IPv6 address counts as its /64). Further registrations from that address get 429 until some are decided or expire, so one caller cannot take the whole queue. With a tunnel that does not report the caller address every caller shares one quota. |
+| `pending_registration_lifetime` | `24h` | A pending registration not approved or denied within this time is dropped (1m to 168h). |
 | `limits.*` | CP-49 | As above. A zero or absent key takes the default. |
 
 The SRS (FR-16.12) asks for templates to be marked `remote_allowed` in the Framework Profile; this release reads them from `remote.templates` instead, so the policy document is unchanged.
@@ -120,6 +124,19 @@ Pre-registered clients listed in `remote.clients` need no approval.
 - Browser-based agents use the authorization-code flow. The sign-in page warns that the request came through the tunnel and shows the client, principal, requested scope and the caller address the tunnel reported. A Session Approver (`[[approver]]`) signs in.
 - `smcp-connect` uses the device flow: it prints a URL and a code on standard error; open `https://<public name>/oauth/device`, enter the code, sign in as a Session Approver and choose Approve or Deny.
 
+### Device codes and phishing
+
+Anyone who knows the client ID of an approved client can start a device authorization on the public name and send the resulting code to a Session Approver, asking them to "confirm" it. If the approver enters that code and approves, the session belongs to whoever started the request. This is device-code phishing (RFC 8628 section 5.4); the Gateway cannot tell an approver's own request from one an attacker started for the same client.
+
+Rules for Session Approvers:
+
+- Approve only a code that you started yourself, a moment ago, by running `smcp-connect` or the cloud agent's own sign-in. A code that arrives by chat, e-mail, ticket or phone is not yours: choose Deny.
+- Before approving, compare the page with what you did: the client and its name (self-declared by the agent, so not proof on its own), the caller address the tunnel reported, and the time. A caller address you do not recognize, or a client you did not just start, means Deny.
+- The code is valid for 10 minutes (CP-41). If it has expired, start a new one rather than asking someone else for theirs.
+- If you approved a code you did not start, end the session at once: console Sessions view or `POST /api/v1/sessions/{id}/terminate`, then revoke the client (`smcpctl clients revoke <client_id>`) if it is a dynamic registration, and look for the `DEVICE_APPROVED` event and the session's calls in the journal.
+
+Operators reduce the exposure by approving dynamic registrations only for agents they run, revoking registrations that are no longer used, and keeping `remote.templates` to the narrowest templates the agents need, since a phished session gets that template's tools.
+
 Remote sessions last at most `remote.limits.session_max_lifetime` (2 h) and expire after `session_idle_timeout` (15 min) without use; the access token's `expires_in` is the idle timeout. Refresh tokens rotate as on the local listener.
 
 ## Limits and lockout
@@ -135,7 +152,7 @@ Remote sessions last at most `remote.limits.session_max_lifetime` (2 h) and expi
 | `tools/call` above `calls_per_minute` for one client | HTTP 429, JSON-RPC `-31005`, `reasonCode` `REMOTE_RATE_LIMITED`, `data.callsPerMinute`, `Retry-After` |
 | `lockout_failures` consecutive failed sign-ins, client authentications or invalid grants for a client ID or from a caller address | Both are locked for `lockout`: the sign-in page answers 429 and the token endpoint 429 `temporarily_unavailable`; a `REMOTE_LOCKOUT` event is recorded |
 | Twice `lockout_failures` failed sign-ins for one Session Approver username, counted over every client and caller address | The username is locked for `lockout` on the remote sign-in pages (429); a `REMOTE_APPROVER_LOCKOUT` event is recorded with a digest of the username. Local sign-in is not affected |
-| A registration while `max_pending_registrations` are pending | 429 `temporarily_unavailable`, before a client secret is hashed or an event written |
+| A registration while `max_pending_registrations` are pending, or while the caller address holds `max_pending_per_source` | 429 `temporarily_unavailable`, before a client secret is hashed or an event written |
 | A second redemption of an authorization code | 400 `invalid_grant`; the session the first redemption created is ended and an `AUTH_CODE_REUSE` event is recorded |
 
 The caller address is whatever the tunnel connector reports. Tailscale Funnel and cloudflared set it; a tunnel that does not makes every caller share one address, so the per-address limits become global limits. An IPv6 caller address counts as its /64 for limits and lockout. When 10,000 caller addresses are tracked at once, further new addresses share one limit until older entries expire.

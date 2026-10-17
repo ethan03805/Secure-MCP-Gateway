@@ -139,6 +139,8 @@
         "templates": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
         "client_address_header": { "type": "string", "pattern": "^[A-Za-z0-9-]{1,64}$" },
         "max_pending_registrations": { "type": "integer", "minimum": 1, "maximum": 1024 },
+        "max_pending_per_source": { "type": "integer", "minimum": 1, "maximum": 1024 },
+        "pending_registration_lifetime": { "$ref": "#/$defs/duration" },
         "limits": {
           "type": "object",
           "additionalProperties": false,

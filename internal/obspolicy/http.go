@@ -48,9 +48,20 @@ func writeError(w http.ResponseWriter, status int, code, msg string) {
 	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "message": msg}})
 }
 
+// applies says when a publication takes effect.
+func (s *Service) applies() string {
+	if live, _ := s.Store.Live(); live {
+		return "at once, except the settings an object lists in restart_required, which apply at the next start of smcpd"
+	}
+	return "at the next start of smcpd"
+}
+
 func (s *Service) status(w http.ResponseWriter, r *http.Request) {
 	objs, eff, err := s.Store.Status()
-	out := map[string]any{"objects": objs, "applies": "at the next start of smcpd"}
+	out := map[string]any{"objects": objs, "applies": s.applies()}
+	if _, aerr := s.Store.Live(); aerr != nil {
+		out["apply_error"] = aerr.Error()
+	}
 	if err != nil {
 		out["effective_error"] = err.Error()
 	} else {
@@ -107,7 +118,11 @@ func (s *Service) publish(kind string) http.HandlerFunc {
 		case err != nil:
 			writeError(w, http.StatusInternalServerError, "store_failed", err.Error())
 		default:
-			writeJSON(w, http.StatusCreated, map[string]any{"revision": rev, "applies": "at the next start of smcpd"})
+			out := map[string]any{"revision": rev, "applies": s.applies()}
+			if _, aerr := s.Store.Live(); aerr != nil {
+				out["apply_error"] = aerr.Error()
+			}
+			writeJSON(w, http.StatusCreated, out)
 		}
 	}
 }

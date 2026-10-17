@@ -590,13 +590,17 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 		ctx, cancel := context.WithCancelCause(r.Context())
 		defer cancel(nil)
 		if msg.Method == "subscriptions/listen" {
-			done, ok := g.track.addLimited(sess.ID, kindListen, g.cfg.Limits.ListenStreamsPerSess, cancel) // FR-1.38, CP-20
+			// Listen streams are long-lived: bounded per session (FR-1.38,
+			// CP-20) and in total, and a reader that stops taking data loses
+			// its stream (listenlimit.go).
+			done, ok := g.track.addLimited(sess.ID, kindListen, g.cfg.Limits.ListenStreamsPerSess, maxListenTotal, cancel)
 			if !ok {
 				writeRPCErrorID(w, http.StatusOK, msg.ID, gatewayError(CodeRateLimited, "too many listen streams", ReasonListenLimit, corr, "",
 					map[string]any{"limit": g.cfg.Limits.ListenStreamsPerSess}))
 				return
 			}
 			defer done()
+			w = newDeadlineWriter(w, cancel)
 		} else {
 			defer g.track.add(sess.ID, kindRequest, cancel)()
 		}

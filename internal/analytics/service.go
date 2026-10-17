@@ -17,9 +17,11 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
@@ -59,6 +61,8 @@ func scopeFilter(sc config.ObservationScope) func(*observe.Record) bool {
 
 // Service is the running analytics subsystem.
 type Service struct {
+	// S is the settings the service started with. The settings that can
+	// change while it runs (Update) are read through cur().
 	S         Settings
 	Catalog   *observe.Catalog
 	Store     obsstore.Store
@@ -74,6 +78,7 @@ type Service struct {
 	storeErr error
 	degrade  *degrader
 	sources  MetricSources // guarded by mu
+	live     atomic.Pointer[Settings]
 
 	mu        sync.Mutex
 	rec       audit.Recorder
@@ -148,6 +153,8 @@ func New(o Options) (*Service, error) {
 		return nil, err
 	}
 	s := &Service{S: st, Catalog: o.Catalog, log: o.Log, now: o.Now}
+	live := st
+	s.live.Store(&live)
 	if !st.Enabled {
 		return s, nil
 	}
@@ -179,6 +186,69 @@ func New(o Options) (*Service, error) {
 		InScope: scopeFilter(st.Scope), FrameworkOf: o.FrameworkOf,
 		SamplingRate: st.SamplingRate, Queue: st.Queue, Analyzer: (*analyzer)(s), Campaigns: s.Campaigns.Active, Now: o.Now})
 	return s, nil
+}
+
+// cur returns the settings in force: S with the changes Update applied.
+func (s *Service) cur() *Settings {
+	if l := s.live.Load(); l != nil {
+		return l
+	}
+	return &s.S
+}
+
+// Current returns a copy of the settings in force.
+func (s *Service) Current() Settings { return *s.cur() }
+
+// Update applies new observation settings while the service runs (the
+// observation objects published from the console, G-03, G-04, G-06). The
+// Observation Policy ID, parameter selection, sampling rate, escalation
+// parameters, retention, band thresholds, scoring mode and the approval
+// and withhold bands apply at once. Settings the running components were
+// built with are not changed; their names are returned and they apply at
+// the next start: "enabled", "baseline.contexts" and "memory_limit_bytes".
+// A configuration that does not resolve is refused and nothing changes.
+func (s *Service) Update(cfg *config.Config) (restart []string, err error) {
+	if s == nil {
+		return nil, nil
+	}
+	st, err := Resolve(cfg, s.Catalog)
+	if err != nil {
+		return nil, err
+	}
+	if st.Enabled != s.S.Enabled {
+		restart = append(restart, "enabled")
+	}
+	if s.Disabled() {
+		return restart, nil
+	}
+	if !slices.Equal(st.Baseline.Dimensions, s.S.Baseline.Dimensions) {
+		restart = append(restart, "baseline.contexts")
+	}
+	if st.MemoryLimit != s.S.MemoryLimit {
+		restart = append(restart, "memory_limit_bytes")
+	}
+	// The collector and the anomaly response were built with these.
+	if !slices.Equal(st.Baseline.Features, s.S.Baseline.Features) {
+		restart = append(restart, "baseline.features")
+	}
+	if st.EscalateCapture != s.S.EscalateCapture || st.Uncharacterized != s.S.Uncharacterized ||
+		!reflect.DeepEqual(st.EscalationByBand, s.S.EscalationByBand) {
+		restart = append(restart, "anomaly_response")
+	}
+	if !reflect.DeepEqual(st.Scope, s.S.Scope) {
+		restart = append(restart, "scope")
+	}
+	if err := s.Scorer.SetThresholds(st.Thresholds); err != nil {
+		return nil, err
+	}
+	next := *s.cur()
+	next.PolicyID, next.Parameters, next.Escalation, next.SamplingRate = st.PolicyID, st.Parameters, st.Escalation, st.SamplingRate
+	next.Retention, next.Thresholds = st.Retention, st.Thresholds
+	next.Scoring, next.RequireApproval, next.Withhold = st.Scoring, st.RequireApproval, st.Withhold
+	s.live.Store(&next)
+	s.Collector.SetPolicy(st.Parameters, st.Escalation, st.SamplingRate)
+	s.log.Info("observation settings updated", "policy_id", st.PolicyID, "scoring", st.Scoring, "restart_required", restart)
+	return restart, nil
 }
 
 // Observer returns the evidence observer to register in app.Options
@@ -306,7 +376,7 @@ func (s *Service) retain() {
 	if s.Store == nil {
 		return
 	}
-	removed, err := s.Store.Retain(s.now(), s.S.Retention)
+	removed, err := s.Store.Retain(s.now(), s.cur().Retention)
 	if err != nil {
 		s.log.Warn("observation retention failed", "err", err)
 		return
@@ -363,7 +433,7 @@ func (s *Service) writeRecord(r *observe.Record) {
 		s.Collector.Drop(observe.DropStoreError, 1)
 		return
 	}
-	row := obsstore.Row{"ts": r.Time, "correlation_id": r.CorrelationID, "capture": r.Capture, "observation_policy": s.S.PolicyID,
+	row := obsstore.Row{"ts": r.Time, "correlation_id": r.CorrelationID, "capture": r.Capture, "observation_policy": s.cur().PolicyID,
 		"catalog_version": s.Catalog.Version}
 	if r.Time.IsZero() {
 		row["ts"] = r.End
@@ -392,7 +462,7 @@ func (s *Service) writeRecord(r *observe.Record) {
 		}
 		s.writer.offer("spans", obsstore.Row{"ts": sp.Start, "correlation_id": r.CorrelationID, "stage": sp.Stage,
 			"duration_ms": float64(sp.End.Sub(sp.Start)) / float64(time.Millisecond), "monotonic": mono, "policy_revision": sp.PolicyObject,
-			"observation_policy": s.S.PolicyID, "principal_id": r.Str("principal_id"), "tool_name": r.Str("tool_name")})
+			"observation_policy": s.cur().PolicyID, "principal_id": r.Str("principal_id"), "tool_name": r.Str("tool_name")})
 	}
 }
 

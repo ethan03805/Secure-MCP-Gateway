@@ -49,7 +49,7 @@ const tone = (s: string): Tone => (s === "active" ? "ok" : s === "submitted" || 
 /** Values seen in stored observations for a column, for scope lists. */
 function useObserved(column: string): string[] {
   const res = useResource<{ rows: { group: Record<string, string> }[] }>(`/api/v1/observations/aggregate?feature=request_bytes&group_by=${column}&from=2160h`, { live: false });
-  return res.status === "ok" ? res.data.rows.map((r) => r.group[column] ?? "").filter(Boolean).sort() : [];
+  return res.status === "ok" ? (res.data.rows ?? []).map((r) => r.group[column] ?? "").filter(Boolean).sort() : [];
 }
 
 function iso(d: Date): string {
