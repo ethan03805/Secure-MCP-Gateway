@@ -175,7 +175,7 @@ func New(o Options) (*Service, error) {
 	if s.Campaigns, err = research.OpenCampaigns(filepath.Join(st.Dir, "research", "campaigns.json"), o.Catalog, o.Now); err != nil {
 		return nil, fmt.Errorf("research campaigns: %w", err)
 	}
-	s.Store, s.storeErr = obsstore.Open(obsstore.Options{Dir: filepath.Join(st.Dir, "store"), Backend: st.Store, Tables: Tables(o.Catalog), MemoryLimit: st.MemoryLimit})
+	s.Store, s.storeErr = openStore(obsstore.Options{Dir: filepath.Join(st.Dir, "store"), Backend: st.Store, Tables: Tables(o.Catalog), MemoryLimit: st.MemoryLimit})
 	if s.storeErr != nil {
 		o.Log.Error("observation store unavailable; observation records are counted and dropped", "err", s.storeErr)
 	} else {
@@ -190,6 +190,24 @@ func New(o Options) (*Service, error) {
 		SamplingRate: st.SamplingRate, Queue: st.Queue, Analyzer: (*analyzer)(s), Campaigns: s.Campaigns.Active, Now: o.Now,
 		SpanSink: s.writeSpans, CurrentPolicy: func() string { return s.cur().PolicyID }})
 	return s, nil
+}
+
+// openStore opens the Observation Store from a thread of lowered priority
+// (lowPriority), so that the worker threads DuckDB starts with the
+// database inherit it; the thread ends with the goroutine.
+func openStore(o obsstore.Options) (obsstore.Store, error) {
+	type opened struct {
+		st  obsstore.Store
+		err error
+	}
+	ch := make(chan opened, 1)
+	go func() {
+		lowPriority()
+		st, err := obsstore.Open(o)
+		ch <- opened{st, err}
+	}()
+	r := <-ch
+	return r.st, r.err
 }
 
 // cur returns the settings in force: S with the changes Update applied.
@@ -316,7 +334,7 @@ func (s *Service) Start(ctx context.Context, rec audit.Recorder, admin *adminapi
 	s.Baselines.SetRecorder(rec)
 	s.wg.Add(3)
 	go func() { defer s.wg.Done(); s.Collector.Run() }()
-	go func() { defer s.wg.Done(); s.Baselines.Run(ctx) }()
+	go func() { defer s.wg.Done(); lowPriority(); s.Baselines.Run(ctx) }()
 	go func() { defer s.wg.Done(); s.loop(ctx) }()
 	if s.writer != nil {
 		s.wg.Add(1)
