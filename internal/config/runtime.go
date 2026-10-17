@@ -110,6 +110,15 @@ func (r *Runtime) FindServer(alias string) RuntimeServer {
 	return RuntimeServer{Alias: alias}
 }
 
+// DefaultRuntime returns the [runtime] defaults of the Enforced profile
+// (the podman sandbox and the CP-24 budget), for tools that run a sandbox
+// without a configuration file.
+func DefaultRuntime() Runtime {
+	var r Runtime
+	r.applyDefaults("enforced")
+	return r
+}
+
 func (r *Runtime) applyDefaults(profileMode string) {
 	if r.Sandbox == "" {
 		r.Sandbox = "none"

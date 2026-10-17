@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,7 +22,9 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
+	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 )
 
 const packageUsage = `usage: smcpctl package <command> [flags]
@@ -166,6 +169,9 @@ func pkgBuild(args []string, out io.Writer) error {
 	podman := fs.String("podman", "", "absolute path of podman for OCI probes (default PATH)")
 	timeout := fs.Duration("timeout", 15*time.Minute, "overall time limit")
 	verbose := fs.Bool("v", false, "show fetch and dependency installation output")
+	cfgPath := fs.String("config", "", "configuration file whose profile and [runtime] table select the probe launcher (optional)")
+	sandboxMode := fs.String("sandbox", "", "probe launcher: podman (rootless sandbox, no network, only the throwaway slot directories mounted) or none (default: podman when --config selects the Enforced profile, else none)")
+	image := fs.String("image", "", "with --sandbox podman: image (name@sha256:...) that runs a node or python candidate")
 	if _, err := parseArgs(fs, args); err != nil {
 		return err
 	}
@@ -182,10 +188,16 @@ func pkgBuild(args []string, out io.Writer) error {
 	if *verbose {
 		logw = out
 	}
+	launcher, closeLauncher, err := probeLauncher(ctx, *cfgPath, *sandboxMode, *image, r.Server.Alias)
+	if err != nil {
+		return err
+	}
+	defer closeLauncher()
 	pkg, err := packaging.Build(ctx, r, *outDir, packaging.BuildOptions{
 		Fetcher: &packaging.Fetcher{NPMRegistry: *npmReg, PyPIIndex: *pypi},
 		Interp:  packaging.Interpreters{Node: *node, Python: *python, Podman: *podman},
 		Version: backend.Version, Python: *python, Log: logw,
+		Launcher: launcher,
 	})
 	if err != nil {
 		return err
@@ -194,6 +206,53 @@ func pkgBuild(args []string, out io.Writer) error {
 		pkg.Index.ServerID, pkg.Index.Revision, *outDir, pkg.Index.Artifact.SHA256, pkg.Manifest.Era, len(pkg.Manifest.Tools), toolNames(pkg.Manifest),
 		pkg.Provenance.Probe.Launcher, pkg.Provenance.Probe.Network, pkg.Provenance.Probe.EnvNames, *outDir)
 	return nil
+}
+
+// probeLauncher returns the launcher of the package build probe (FR-14.3,
+// SR-3.5-1): nil (an unconfined subprocess) or, in the Enforced profile, a
+// rootless Podman sandbox with no network whose only mounts are the
+// candidate and its empty throwaway slot directories. The sandbox's state
+// lives in a throwaway directory removed by the returned function.
+func probeLauncher(ctx context.Context, cfgPath, mode, image, alias string) (pipeline.Launcher, func(), error) {
+	rt := config.DefaultRuntime()
+	if cfgPath != "" {
+		cfg, err := config.Load(cfgPath)
+		if err != nil {
+			return nil, nil, err
+		}
+		if mode == "" && cfg.Profile.Mode == "enforced" {
+			mode = "podman"
+		}
+		if cfg.Runtime.Sandbox == "podman" {
+			rt = cfg.Runtime
+		}
+	}
+	switch mode {
+	case "", "none":
+		if image != "" {
+			return nil, nil, errors.New("--image needs --sandbox podman")
+		}
+		return nil, func() {}, nil
+	case "podman":
+	default:
+		return nil, nil, fmt.Errorf("--sandbox must be podman or none, not %q", mode)
+	}
+	if image != "" && !strings.Contains(image, "@sha256:") {
+		return nil, nil, errors.New("--image must be referenced by digest (name@sha256:...)")
+	}
+	rt.Sandbox = "podman"
+	rt.Servers = []config.RuntimeServer{{Alias: alias, Image: image, Network: "none", Scope: "shared"}}
+	state, cleanup, err := packaging.ThrowawayDir("smcp-probe-state-")
+	if err != nil {
+		return nil, nil, err
+	}
+	l, err := sandbox.New(sandbox.Options{Runtime: rt, StateDir: state, Log: slog.New(slog.DiscardHandler), GrantDeclaredSlots: true})
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	l.Start(ctx)
+	return l, func() { l.Close(); cleanup() }, nil
 }
 
 func toolNames(m *packaging.Manifest) string {

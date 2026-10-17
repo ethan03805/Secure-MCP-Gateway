@@ -35,6 +35,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -71,6 +72,11 @@ type urlArgs struct {
 }
 
 type noArgs struct{}
+
+type burnArgs struct {
+	Workers int `json:"workers" jsonschema:"busy goroutines (1 to 16)"`
+	MS      int `json:"ms" jsonschema:"wall-clock milliseconds to spin (1 to 10000)"`
+}
 
 func text(s string) *mcp.CallToolResult {
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: s}}}
@@ -173,6 +179,29 @@ func Server() *mcp.Server {
 			}
 			return text(fmt.Sprintf("allocated %d MiB", len(b)>>20)), nil, nil
 		})
+	mcp.AddTool(s, &mcp.Tool{Name: "burn", Description: "Spin busy goroutines for a wall-clock time; report the CPU time the process used."},
+		func(_ context.Context, _ *mcp.CallToolRequest, a burnArgs) (*mcp.CallToolResult, any, error) {
+			w, d := min(max(a.Workers, 1), 16), time.Duration(min(max(a.MS, 1), 10000))*time.Millisecond
+			before, start := cpuTime(), time.Now()
+			done := make(chan struct{})
+			for range w {
+				go func() {
+					x := 0
+					for {
+						select {
+						case <-done:
+							return
+						default:
+							x++
+						}
+					}
+				}()
+			}
+			time.Sleep(d)
+			close(done)
+			wall, used := time.Since(start), cpuTime()-before
+			return text(fmt.Sprintf("cpu_ms=%d wall_ms=%d", used.Milliseconds(), wall.Milliseconds())), nil, nil
+		})
 	mcp.AddTool(s, &mcp.Tool{Name: "http_get", Description: "Fetch a URL through the Egress Broker proxy (HTTP_PROXY)."},
 		func(ctx context.Context, r *mcp.CallToolRequest, a urlArgs) (*mcp.CallToolResult, any, error) {
 			tok := egressToken(r, a.URL)
@@ -232,4 +261,13 @@ func Main(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// cpuTime is the user and system CPU time the process has used.
+func cpuTime() time.Duration {
+	var ru syscall.Rusage
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
+		return 0
+	}
+	return time.Duration(ru.Utime.Nano() + ru.Stime.Nano())
 }

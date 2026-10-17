@@ -242,6 +242,28 @@ func (g *gateway) ctl(args ...string) (string, error) {
 	return out.String(), err
 }
 
+// sudoCtl runs smcpctl as root through passwordless sudo (sudo -n), with
+// the instance's configuration.
+func (g *gateway) sudoCtl(args ...string) (string, error) {
+	g.t.Helper()
+	args = append(args, "--config", g.cfg)
+	cmd := exec.Command("sudo", append([]string{"-n", filepath.Join(binDir, "smcpctl")}, args...)...)
+	cmd.Dir = g.dir
+	var out bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &out
+	err := cmd.Run()
+	return out.String(), err
+}
+
+func (g *gateway) mustSudoCtl(args ...string) string {
+	g.t.Helper()
+	out, err := g.sudoCtl(args...)
+	if err != nil {
+		g.t.Fatalf("sudo smcpctl %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+	return out
+}
+
 func (g *gateway) mustCtl(args ...string) string {
 	g.t.Helper()
 	out, err := g.ctl(args...)

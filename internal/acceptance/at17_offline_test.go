@@ -56,6 +56,10 @@ const at17Policy = `{
 // approval, policy publication, the console page, a backup and journal
 // verification.
 //
+// The offline job runs it twice: in the Standalone profile, and with
+// SMCP_ACCEPTANCE_PROFILE=enforced, where every server runs in rootless
+// Podman (the two packages on pinned node and python images).
+//
 // Elsewhere it skips: SMCP_ACCEPTANCE_OFFLINE=1 marks the offline run and
 // SMCP_REFPKG_DIR names the directory with pkg-filesystem, pkg-git and
 // reference-test.pub. Partial: FR-12.2 needs every baseline function, and
@@ -93,7 +97,7 @@ func TestAT17OfflineEngineeringWorkflow(t *testing.T) {
 		}
 	}
 
-	g := newGateway(t, options{extra: fmt.Sprintf(`
+	extra := fmt.Sprintf(`
 [[server]]
 alias = "fs"
 package = "mcp-filesystem"
@@ -107,7 +111,40 @@ slots = { repo = %q }
 [packages]
 node = %q
 python = %q
-`, files, repo, node, python)})
+`, files, repo, node, python)
+	if requestedProfile() == reqtest.Enforced {
+		// In the Enforced profile the node and python packages run in the
+		// sandbox on the interpreter of a digest-pinned image, pulled before
+		// the run (SMCP_AT17_NODE_IMAGE, SMCP_AT17_PYTHON_IMAGE). Each
+		// server is granted its slot directory; git runs with the host
+		// user's UID mapped (keep-id) so that git accepts the repository's
+		// ownership.
+		nodeImage, pyImage := os.Getenv("SMCP_AT17_NODE_IMAGE"), os.Getenv("SMCP_AT17_PYTHON_IMAGE")
+		if nodeImage == "" || pyImage == "" {
+			t.Fatal("the Enforced profile needs SMCP_AT17_NODE_IMAGE and SMCP_AT17_PYTHON_IMAGE (name@sha256:...)")
+		}
+		for _, d := range []string{data, files, repo} {
+			if err := os.Chmod(d, 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		extra += fmt.Sprintf(`
+[[runtime.server]]
+alias = "fs"
+image = %q
+[[runtime.server.mount]]
+source = %q
+
+[[runtime.server]]
+alias = "git"
+image = %q
+userns = "keep-id"
+allow_spawn = true
+[[runtime.server.mount]]
+source = %q
+`, nodeImage, files, pyImage, repo)
+	}
+	g := newGateway(t, options{extra: extra})
 	writeFile(t, g.sandbox, "notes.txt", "offline reference server\n", 0o644)
 	g.trustAdd(filepath.Join(refpkg, "reference-test.pub"), "reference-test", "--classes", "low,moderate", "--expires", "30d")
 	for _, p := range []string{"pkg-filesystem", "pkg-git"} {

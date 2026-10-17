@@ -216,6 +216,13 @@ func Build(ctx context.Context, r *Recipe, out string, o BuildOptions) (*Package
 		if err := os.Mkdir(d, 0o700); err != nil {
 			return nil, err
 		}
+		if o.Launcher != nil && o.Launcher.Confined() {
+			// A sandboxed probe runs under a subordinate UID; the empty
+			// slot directory must be searchable by it.
+			if err := os.Chmod(d, 0o755); err != nil { // #nosec G302 -- an empty throwaway directory
+				return nil, err
+			}
+		}
 		in.Slots[s.Slot] = d
 		if r.Probe != nil && slices.Contains(r.Probe.RepoInit, s.Slot) {
 			if err := runTool(ctx, d, minimalEnv(), o.Log, "git", "init", "-q", d); err != nil {

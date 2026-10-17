@@ -4,8 +4,15 @@
 // every other Appendix C role, enables the Secret Vault (passphrase key
 // source) and the Egress Broker, turns desktop notifications off, moves
 // the listeners to free ports and runs smcpd until teardown.
+//
+// With SMCP_E2E_PROFILE=enforced (Linux with rootless Podman, the CI job
+// console-enforced) the instance runs the Enforced profile: the reference
+// server, which must then be statically linked, runs in the sandbox. The
+// profile the Gateway reports is recorded in GatewayInfo.profile, and
+// start fails when the Enforced profile was asked for and not obtained.
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
+import { request } from "node:https";
 import { createServer } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +38,31 @@ export interface GatewayInfo {
   rolePassword: string;
   marker: string;
   pid: number;
+  /** The profile the running Gateway reports (health info.profile): "standalone" or "enforced". */
+  profile: string;
+}
+
+/** The profile the suite is asked to run in (SMCP_E2E_PROFILE). */
+export const requestedProfile = process.env.SMCP_E2E_PROFILE === "enforced" ? "enforced" : "standalone";
+
+// reportedProfile reads info.profile from the control API health report.
+function reportedProfile(adminURL: string, ca: string, token: string): Promise<string> {
+  return new Promise((ok, fail) => {
+    const req = request(`${adminURL}/api/v1/health/status`, { ca: readFileSync(ca), headers: { Authorization: `Bearer ${token}` } }, (res) => {
+      let body = "";
+      res.on("data", (d: Buffer) => (body += d.toString()));
+      res.on("end", () => {
+        try {
+          const p = (JSON.parse(body) as { info?: { profile?: string } }).info?.profile;
+          ok(p === "enforced" ? "enforced" : "standalone");
+        } catch (e) {
+          fail(e);
+        }
+      });
+    });
+    req.on("error", fail);
+    req.end();
+  });
 }
 
 export function info(): GatewayInfo {
@@ -107,10 +139,19 @@ export async function start(): Promise<GatewayInfo> {
   const roleHash = execFileSync(ctl, ["hash-password", "--password-file", secretFile("role.pw", rolePassword)], { encoding: "utf8" }).trim();
   const roleUsers: Record<string, string> = { operator: "olga", policy_author: "pat", auditor: "aud", researcher: "rita" };
   const vaultPw = secretFile("vault.pw", "console-e2e-vault-passphrase");
+  const sandboxDir = join(inst, "sandbox");
+  const enforced = requestedProfile === "enforced";
+  if (enforced) {
+    // Server instances run under subordinate UIDs: the instance and sandbox
+    // directories must be searchable by them.
+    for (const d of [work, inst, sandboxDir]) chmodSync(d, 0o755);
+  }
+  const cgroupManager = process.env.SMCP_ENFORCED_CGROUP_MANAGER;
   // Tables go before the arrays of tables so no key lands in the wrong table.
   appendFileSync(
     config,
     [
+      ...(enforced ? ["", "[profile]", 'mode = "enforced"', "", "[runtime]", 'sandbox = "podman"', ...(cgroupManager ? [`cgroup_manager = "${cgroupManager}"`] : [])] : []),
       ...(hasApprovals ? [] : ["", "[approvals]", 'notify = "off"']),
       // Every mcpCall signs in anew and leaves its session open, all as
       // the bootstrap principal; with Playwright's retry the suite opens
@@ -132,12 +173,14 @@ export async function start(): Promise<GatewayInfo> {
       'username = "alice"',
       `password_hash = "${hash}"`,
       ...Object.entries(roleUsers).flatMap(([role, user]) => ["", "[[console.account]]", `username = "${user}"`, `password_hash = "${roleHash}"`, `role = "${role}"`]),
+      ...(enforced ? ["", "[[runtime.server]]", 'alias = "ref"', "[[runtime.server.mount]]", `source = "${sandboxDir}"`] : []),
       "",
     ].join("\n"),
   );
   execFileSync(ctl, ["secrets", "init", "--config", config, "--passphrase-file", vaultPw], { stdio: "inherit" });
   const marker = `console-e2e-${Date.now()}`;
-  writeFileSync(join(inst, "sandbox", "hello.txt"), marker + "\n");
+  writeFileSync(join(sandboxDir, "hello.txt"), marker + "\n");
+  if (enforced) chmodSync(join(sandboxDir, "hello.txt"), 0o644);
   proc = spawn(join(bin, "smcpd"), ["--config", config], { stdio: ["ignore", "pipe", "pipe"], detached: false });
   const log: string[] = [];
   proc.stdout?.on("data", (d: Buffer) => log.push(d.toString()));
@@ -155,21 +198,25 @@ export async function start(): Promise<GatewayInfo> {
     rolePassword,
     marker,
     pid: proc.pid ?? 0,
+    profile: "",
   };
   for (let i = 0; i < 120; i++) {
     if (proc.exitCode !== null) throw new Error("smcpd exited during startup:\n" + log.join(""));
     try {
       execFileSync(ctl, ["health", "--config", config], { stdio: "ignore" });
-      writeFileSync(infoFile, JSON.stringify(g, null, 2));
-      writeFileSync(join(work, "smcpd.pid"), String(proc.pid));
-      proc.stdout?.removeAllListeners("data");
-      proc.stderr?.removeAllListeners("data");
-      proc.stdout?.resume();
-      proc.stderr?.resume();
-      return g;
     } catch {
       await new Promise((r) => setTimeout(r, 500));
+      continue;
     }
+    g.profile = await reportedProfile(g.adminURL, g.ca, readFileSync(join(inst, "state", "keys", "admin.token"), "utf8").trim());
+    if (g.profile !== requestedProfile) throw new Error(`SMCP_E2E_PROFILE=${requestedProfile} but the Gateway reports the ${g.profile} profile:\n` + log.join(""));
+    writeFileSync(infoFile, JSON.stringify(g, null, 2));
+    writeFileSync(join(work, "smcpd.pid"), String(proc.pid));
+    proc.stdout?.removeAllListeners("data");
+    proc.stderr?.removeAllListeners("data");
+    proc.stdout?.resume();
+    proc.stderr?.resume();
+    return g;
   }
   throw new Error("smcpd did not become healthy within 60 s:\n" + log.join(""));
 }

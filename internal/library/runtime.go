@@ -181,8 +181,13 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	rt.mu.Lock()
 	rt.bindings[sc.Alias] = &Binding{Alias: sc.Alias, Package: sc.Package, Revision: rev.Revision, Status: "starting", manifest: m, rev: rev}
 	rt.mu.Unlock()
+	roots := make([]config.SlotRoot, 0, len(spec.Roots))
+	for _, r := range spec.Roots {
+		roots = append(roots, config.SlotRoot{Slot: r.Slot, Path: r.Path, Write: r.Write})
+	}
 	return config.Server{Alias: sc.Alias, Command: spec.Command, Args: spec.Args, Env: spec.Env, SecretEnv: sc.SecretEnv, Dir: spec.Dir,
-		RiskClasses: sc.RiskClasses, Package: sc.Package, PackageSHA256: sc.PackageSHA256, Slots: sc.Slots}, nil
+		RiskClasses: sc.RiskClasses, Package: sc.Package, PackageSHA256: sc.PackageSHA256, Slots: sc.Slots,
+		Runtime: spec.Runtime, ArtifactRoot: spec.ArtifactRoot, Roots: roots}, nil
 }
 
 // Resolve returns the launch configuration of a packaged [[server]] entry

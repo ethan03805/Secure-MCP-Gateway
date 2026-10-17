@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -116,7 +117,19 @@ templates = ["read-only"]
 	reqtest.Partial(t, "FR-16.1", "FR-16.5", "SR-2.9-3", "SR-4.14-2")
 
 	public := g.tunnel(remoteAddr)
-	g.mustCtl("remote", "enable", "--provider", "manual", "--public-url", public)
+	if g.profile() == reqtest.Enforced && os.Geteuid() != 0 {
+		// In the Enforced profile remote enable installs the nftables host
+		// rules first (SR-4.14-1), which needs root: run it as an operator
+		// would, with sudo, and remove the rules again at the end.
+		g.mustSudoCtl("remote", "enable", "--provider", "manual", "--public-url", public)
+		t.Cleanup(func() {
+			if out, err := g.sudoCtl("remote", "disable"); err != nil {
+				t.Logf("remote disable: %v\n%s", err, out)
+			}
+		})
+	} else {
+		g.mustCtl("remote", "enable", "--provider", "manual", "--public-url", public)
+	}
 
 	// Loopback binding.
 	if ip := nonLoopback(); ip != "" {

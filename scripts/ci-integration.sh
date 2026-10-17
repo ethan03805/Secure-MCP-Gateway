@@ -26,6 +26,10 @@
 #   SMCP_ITEST_PORT       harness listener port (admin listener: port + 1,
 #                         metrics: port + 2); default the bootstrap defaults
 #                         8443, 8444 and 8445
+#   SMCP_ITEST_RESULTS    file that receives the `go test -json` events of
+#                         the Go tests run against real Podman (appended;
+#                         needs jq), so that tools/reqreport counts their
+#                         requirement claims; default: none, plain -v output
 #
 # Features that the current build does not provide are reported under
 # "Skipped" and do not fail the run.
@@ -43,6 +47,19 @@ pid=""
 say() { printf '==> %s\n' "$*"; }
 skip() { skipped+=("$1"); printf 'SKIP: %s\n' "$1"; }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+
+# go_test runs go test in the repository root with the given environment
+# assignments and arguments. With SMCP_ITEST_RESULTS set, the events are
+# appended to that file and their output printed as with -v.
+go_test() {
+  local envs=()
+  while [ $# -gt 0 ] && [[ $1 == *=* ]]; do envs+=("$1"); shift; done
+  if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
+    (cd "$root" && env "${envs[@]}" go test -json "$@") | tee -a "$SMCP_ITEST_RESULTS" | jq -rj 'select(.Action == "output") | .Output'
+  else
+    (cd "$root" && env "${envs[@]}" go test -v "$@")
+  fi
+}
 
 pidfile="$work/smcpd.pid"
 cleanup() {
@@ -371,9 +388,11 @@ enforced_section() {
   say "Enforced profile: Go integration tests against real Podman"
   local strict=0
   [ "$mode" = enforced ] && strict=1
-  (cd "$root" && CGO_ENABLED=0 SMCP_SANDBOX_IT=1 SMCP_SANDBOX_IT_STRICT=$strict \
+  go_test CGO_ENABLED=0 SMCP_SANDBOX_IT=1 SMCP_SANDBOX_IT_STRICT=$strict \
     SMCP_SANDBOX_IT_CGROUP_MANAGER="${SMCP_ENFORCED_CGROUP_MANAGER:-}" \
-    go test -count=1 -run Integration -v ./internal/sandbox/) || fail "sandbox integration tests"
+    -count=1 -run Integration ./internal/sandbox/ || fail "sandbox integration tests"
+  go_test SMCP_SANDBOX_IT=1 -count=1 -run '^TestIntegrationPackageBuildProbeSandbox$' ./cmd/smcpctl/ ||
+    fail "package build probe in the sandbox"
 
   if [ "${SMCP_RUN_INSTALLER:-${SMCP_REQUIRE_PREREQS:-0}}" = 1 ] && sudo -n true 2>/dev/null; then
     say "Enforced profile: packaging/linux/install-enforced.sh (twice; the second run changes nothing)"
@@ -384,9 +403,9 @@ enforced_section() {
     fi
     if [ -d /sys/kernel/security/apparmor ]; then
       say "Enforced profile: servers run confined by the AppArmor profile smcp-server"
-      (cd "$root" && CGO_ENABLED=0 SMCP_SANDBOX_IT=1 SMCP_SANDBOX_IT_STRICT=$strict SMCP_SANDBOX_IT_APPARMOR=1 \
+      go_test CGO_ENABLED=0 SMCP_SANDBOX_IT=1 SMCP_SANDBOX_IT_STRICT=$strict SMCP_SANDBOX_IT_APPARMOR=1 \
         SMCP_SANDBOX_IT_CGROUP_MANAGER="${SMCP_ENFORCED_CGROUP_MANAGER:-}" \
-        go test -count=1 -run 'IntegrationServerAppArmorProfile|IntegrationSecretFiles' -v ./internal/sandbox/) || fail "AppArmor server profile integration test"
+        -count=1 -run 'IntegrationServerAppArmorProfile|IntegrationSecretFiles' ./internal/sandbox/ || fail "AppArmor server profile integration test"
     fi
   else
     skip "enforced installer: set SMCP_RUN_INSTALLER=1 with passwordless sudo to exercise it"

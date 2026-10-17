@@ -16,9 +16,10 @@
 #   scripts/ci-egress-netns.sh
 #
 # Environment:
-#   SMCP_ITEST_DIR  work directory (default: a new temporary directory)
-#   SMCP_TEST_JSON  when set, the go test JSON events of the host-rules test
-#                   are written to this file (merged into the status data)
+#   SMCP_ITEST_DIR      work directory (default: a new temporary directory)
+#   SMCP_ITEST_RESULTS  file that receives the `go test -json` events of both
+#                       tests (appended), so that tools/reqreport counts their
+#                       claims; SMCP_TEST_JSON is an older name for it
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -29,6 +30,8 @@ fi
 work=${SMCP_ITEST_DIR:-$(mktemp -d "${TMPDIR:-/tmp}/smcp-egress.XXXXXX")}
 mkdir -p "$work"
 bin="$work/egress.test"
+results=${SMCP_ITEST_RESULTS:-${SMCP_TEST_JSON:-$work/netns-test.json}}
+mkdir -p "$(dirname "$results")"
 
 echo "==> Building the egress test binary"
 (cd "$root" && go test -c -o "$bin" ./internal/egress)
@@ -41,7 +44,9 @@ if command -v nft >/dev/null 2>&1; then nft --version; fi
 
 echo "==> Running TestNetnsEnforcement as root"
 (cd "$work" && "${sudo_cmd[@]}" env SMCP_EGRESS_NETNS_TEST=1 "$bin" \
-  -test.run '^TestNetnsEnforcement$' -test.v -test.count=1)
+  -test.run '^TestNetnsEnforcement$' -test.v=test2json -test.count=1) |
+  (cd "$root" && go tool test2json -t -p github.com/ethan03805/secure-mcp-gateway/internal/egress) |
+  tee -a "$results" | jq -rj 'select(.Action == "output") | .Output'
 
 echo "==> Building the tunnel test binary"
 tbin="$work/tunnel.test"
@@ -53,11 +58,7 @@ fi
 nft --version
 
 echo "==> Running TestHostRulesInNamespace as root (SR-4.14-1)"
-json=${SMCP_TEST_JSON:-$work/tunnel-test.json}
-mkdir -p "$(dirname "$json")"
-rc=0
 (cd "$work" && "${sudo_cmd[@]}" env SMCP_REMOTE_NFT_TEST=1 "$tbin" \
   -test.run '^TestHostRulesInNamespace$' -test.v=test2json -test.count=1) |
-  (cd "$root" && go tool test2json -t -p github.com/ethan03805/secure-mcp-gateway/internal/tunnel) > "$json" || rc=$?
-jq -r 'select(.Action == "output") | .Output' "$json" | tr -d '\r' || true
-exit "$rc"
+  (cd "$root" && go tool test2json -t -p github.com/ethan03805/secure-mcp-gateway/internal/tunnel) |
+  tee -a "$results" | jq -rj 'select(.Action == "output") | .Output'

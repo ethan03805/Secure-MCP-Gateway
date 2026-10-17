@@ -11,10 +11,17 @@
 // console job runs one browser per Playwright invocation, each against a
 // fresh Gateway; e2e/run-browsers.mjs then adds the cross-browser claims
 // (FR-8.30, FR-8.34) with e2e/claims.mjs.
+//
+// A run in the Enforced profile (SMCP_E2E_PROFILE=enforced) writes
+// build/console-<project>-enforced-test.json with Package
+// "console/e2e/<project>/enforced", so tools/reqreport keeps its results
+// apart from the Standalone run of the same tests.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FullResult, Reporter, TestCase, TestResult } from "@playwright/test/reporter";
-import { repoRoot } from "./gateway";
+import { repoRoot, requestedProfile } from "./gateway";
+
+const suffix = requestedProfile === "enforced" ? "enforced" : "";
 
 interface Ev {
   Time: string;
@@ -41,7 +48,7 @@ export default class ReqReporter implements Reporter {
     const byProject = new Map<string, Ev[]>();
     for (const { t, r } of this.last.values()) {
       const project = t.parent.project()?.name ?? "default";
-      const pkg = `console/e2e/${project}`;
+      const pkg = `console/e2e/${project}${suffix ? "/" + suffix : ""}`;
       const evs = byProject.get(project) ?? [];
       const name = t
         .titlePath()
@@ -68,8 +75,8 @@ export default class ReqReporter implements Reporter {
     mkdirSync(dir, { recursive: true });
     for (const [project, evs] of byProject) {
       const failed = evs.some((e) => e.Action === "fail");
-      evs.push({ Time: new Date().toISOString(), Action: failed ? "fail" : "pass", Package: `console/e2e/${project}` });
-      writeFileSync(join(dir, `console-${project}-test.json`), evs.map((e) => JSON.stringify(e)).join("\n") + "\n");
+      evs.push({ Time: new Date().toISOString(), Action: failed ? "fail" : "pass", Package: `console/e2e/${project}${suffix ? "/" + suffix : ""}` });
+      writeFileSync(join(dir, `console-${project}${suffix ? "-" + suffix : ""}-test.json`), evs.map((e) => JSON.stringify(e)).join("\n") + "\n");
     }
   }
 

@@ -25,11 +25,11 @@ jobs:
   release:
     name: release
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 110
     permissions:
       contents: write # create the release and upload assets
       id-token: write # cosign keyless signing through GitHub OIDC
-      actions: write # dispatch the tap workflow (FR-13.3)
+      actions: write # dispatch the tap workflow (FR-13.3); read the CI run of the tag
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,19 +109,37 @@ jobs:
           sums=$(ls build/dist/*_checksums.txt)
           minisign -V -P "$key" -m "$sums" -x "$sums.minisig"
       # FR-19.3: "enforced" only when every Appendix M scenario passed in the
-      # Enforced profile for this commit, per the status data the CI status
-      # job published (site-data/status.json); "not enforced" otherwise,
-      # including when that data is for another commit.
+      # Enforced profile for this commit; "not enforced" otherwise, including
+      # when the status data is for another commit. The status data is the
+      # document the CI status job published to site-data when it is for
+      # this commit, and otherwise the status-document artifact of the CI
+      # run that this tag push started (ci.yml runs the Enforced jobs on v*
+      # tags); the step waits up to 70 minutes for that run to complete.
       - name: Release label (FR-19.3)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p build
-          if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null && git show FETCH_HEAD:status.json > build/release-status.json 2>/dev/null; then
-            echo "status data for commit $(jq -r .commit build/release-status.json)"
+          echo '{}' > build/release-status.json
+          if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null && git show FETCH_HEAD:status.json > build/site-status.json 2>/dev/null &&
+             [ "$(jq -r .commit build/site-status.json)" = "$GITHUB_SHA" ]; then
+            cp build/site-status.json build/release-status.json
+            echo "the site-data status data is for this commit"
           else
-            echo '{}' > build/release-status.json
-            echo "::warning::no published status data; the release is labelled not enforced"
+            run=""
+            for _ in $(seq 1 140); do
+              run=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --event push --limit 20 \
+                --json databaseId,status,headBranch \
+                -q "[.[] | select(.headBranch == \"$GITHUB_REF_NAME\" and .status == \"completed\")][0].databaseId // empty" || true)
+              [ -n "$run" ] && break
+              sleep 30
+            done
+            if [ -n "$run" ] && gh run download "$run" -R "$GITHUB_REPOSITORY" -n status-document -D build/ci-status; then
+              cp build/ci-status/status.json build/release-status.json
+              echo "status data of CI run $run for commit $(jq -r .commit build/release-status.json)"
+            else
+              echo "::warning::no status data for this commit (CI run of the tag: ${run:-not completed}); the release is labelled not enforced"
+            fi
           fi
           go run ./tools/reqreport label -status build/release-status.json -commit "$GITHUB_SHA" -out build/release-label.md
           gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json body -q .body > build/release-notes.md
