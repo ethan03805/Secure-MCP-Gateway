@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T19:10:23Z",
-  "commit": "771cadc7fcb24d18f21215615cebcaf8f5e0d364",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/771cadc7fcb24d18f21215615cebcaf8f5e0d364",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39060379034",
+  "generatedAt": "2026-10-17T20:19:33Z",
+  "commit": "3aeaad535c0537f2a762a8ab9424f0d393a76876",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/3aeaad535c0537f2a762a8ab9424f0d393a76876",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39065120566",
   "tests": {
-    "total": 1207,
-    "passed": 1191,
+    "total": 1283,
+    "passed": 1264,
     "failed": 1,
-    "skipped": 15,
-    "durationSec": 699.5,
+    "skipped": 18,
+    "durationSec": 877,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -49,7 +49,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 49,
+        "passed": 51,
         "failed": 0,
         "skipped": 0
       },
@@ -73,8 +73,8 @@
       },
       {
         "name": "internal/acceptance/enforced",
-        "passed": 16,
-        "failed": 0,
+        "passed": 15,
+        "failed": 1,
         "skipped": 1
       },
       {
@@ -133,7 +133,7 @@
       },
       {
         "name": "internal/backend",
-        "passed": 33,
+        "passed": 35,
         "failed": 0,
         "skipped": 0
       },
@@ -187,9 +187,9 @@
       },
       {
         "name": "internal/edge",
-        "passed": 75,
+        "passed": 139,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "internal/egress",
@@ -205,7 +205,7 @@
       },
       {
         "name": "internal/filters",
-        "passed": 63,
+        "passed": 65,
         "failed": 0,
         "skipped": 0
       },
@@ -289,8 +289,8 @@
       },
       {
         "name": "internal/perf/run",
-        "passed": 4,
-        "failed": 1,
+        "passed": 5,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -367,7 +367,7 @@
       },
       {
         "name": "internal/secrets",
-        "passed": 28,
+        "passed": 29,
         "failed": 0,
         "skipped": 1
       },
@@ -382,6 +382,12 @@
         "passed": 2,
         "failed": 0,
         "skipped": 0
+      },
+      {
+        "name": "internal/tunnel",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 2
       },
       {
         "name": "packaging/linux",
@@ -472,7 +478,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 74.5
+        "pct": 74.4
       },
       {
         "name": "internal/approval",
@@ -480,7 +486,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 83.5
+        "pct": 83.9
       },
       {
         "name": "internal/authguard",
@@ -488,7 +494,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 91.9
+        "pct": 92
       },
       {
         "name": "internal/backup",
@@ -504,7 +510,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.6
+        "pct": 90.5
       },
       {
         "name": "internal/consoleapi",
@@ -520,11 +526,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.5
       },
       {
         "name": "internal/egress",
-        "pct": 82.5
+        "pct": 82.4
       },
       {
         "name": "internal/filterapi",
@@ -532,7 +538,7 @@
       },
       {
         "name": "internal/filters",
-        "pct": 88.9
+        "pct": 89.2
       },
       {
         "name": "internal/graph",
@@ -540,7 +546,7 @@
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.8
+        "pct": 80
       },
       {
         "name": "internal/harness",
@@ -604,7 +610,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 91.9
+        "pct": 91.6
       },
       {
         "name": "internal/policy",
@@ -652,7 +658,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.8
+        "pct": 79.5
       },
       {
         "name": "internal/session",
@@ -664,7 +670,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 75.6
+        "pct": 81.1
       },
       {
         "name": "packaging/linux",
@@ -694,18 +700,18 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 386,
-    "partial": 116,
-    "failing": 1,
-    "unverified": 26,
+    "verified": 390,
+    "partial": 111,
+    "failing": 4,
+    "unverified": 24,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 18,
-        "partial": 6,
-        "failing": 0
+        "verified": 17,
+        "partial": 5,
+        "failing": 3
       },
       {
         "element": "E-02",
@@ -719,9 +725,9 @@
         "element": "E-03",
         "name": "Identity & Authentication Service",
         "total": 13,
-        "verified": 13,
+        "verified": 12,
         "partial": 0,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-04",
@@ -735,8 +741,8 @@
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 18,
-        "verified": 16,
-        "partial": 1,
+        "verified": 17,
+        "partial": 0,
         "failing": 0
       },
       {
@@ -767,8 +773,8 @@
         "element": "E-09",
         "name": "Request Inspection Pipeline",
         "total": 16,
-        "verified": 15,
-        "partial": 1,
+        "verified": 16,
+        "partial": 0,
         "failing": 0
       },
       {
@@ -791,16 +797,16 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 13,
-        "partial": 1,
+        "verified": 14,
+        "partial": 0,
         "failing": 0
       },
       {
         "element": "E-13",
         "name": "Library Trust Verifier",
         "total": 25,
-        "verified": 17,
-        "partial": 6,
+        "verified": 18,
+        "partial": 5,
         "failing": 0
       },
       {
@@ -815,8 +821,8 @@
         "element": "E-15",
         "name": "Server Runtime Manager",
         "total": 9,
-        "verified": 5,
-        "partial": 4,
+        "verified": 6,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -855,7 +861,7 @@
         "element": "E-20",
         "name": "Secret Broker",
         "total": 7,
-        "verified": 2,
+        "verified": 3,
         "partial": 4,
         "failing": 0
       },
@@ -928,8 +934,8 @@
         "name": "Observation Collector",
         "total": 14,
         "verified": 7,
-        "partial": 6,
-        "failing": 1
+        "partial": 7,
+        "failing": 0
       },
       {
         "element": "E-30",
@@ -2417,6 +2423,7 @@
           "internal/sandbox.TestSecretFilesReachTheSandbox",
           "internal/secrets.TestBrokerLaunchDeliveryModes",
           "internal/secrets.TestDefaultRuntimeDirIsTmpfs",
+          "internal/secrets.TestDeliveryBuffersOverwritten",
           "internal/secrets.TestRefusedLaunchWithdrawsDeliveries",
           "internal/secrets.TestSecretFilesInheritSandboxReaders"
         ]
@@ -2436,6 +2443,7 @@
         "status": "partial",
         "tests": [
           "internal/app.TestSecretBrokerWiring",
+          "internal/filters.TestRegisterBytesForms",
           "internal/filters.TestRegisteredFingerprintsInResults",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-08",
@@ -3698,7 +3706,7 @@
       {
         "id": "FR-11.4",
         "element": "E-29",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/perf/run.TestPerfFR_11_4"
         ]
@@ -4240,7 +4248,7 @@
       {
         "id": "FR-16.1",
         "element": "E-01",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
@@ -4277,7 +4285,7 @@
       {
         "id": "FR-16.5",
         "element": "E-03",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestClientsApproveCLI",
           "console/e2e/chromium.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
@@ -5097,7 +5105,7 @@
       {
         "id": "SR-2.9-3",
         "element": "E-01",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
@@ -5161,8 +5169,10 @@
       {
         "id": "SR-2.13-2",
         "element": "E-20",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "docs/verification/inspections.md:523"
+        ]
       },
       {
         "id": "SR-2.13-3",
@@ -5283,9 +5293,11 @@
       {
         "id": "SR-3.6-1",
         "element": "E-15",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestBootstrapAndControlCommands",
+          "internal/backend.TestCommandServersContentAddressed",
+          "internal/backend.TestContentAddressChanged",
           "internal/library.TestRuntimeRefusals",
           "internal/packaging.TestLaunchVectorRules",
           "internal/pipeline.TestCheckLaunchSpec",
@@ -5518,13 +5530,18 @@
       {
         "id": "SR-4.14-1",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestHostRulesDecision",
+          "cmd/smcpctl.TestRemoteEnableInstallsHostRules",
+          "internal/tunnel.TestHostRulesInNamespace",
+          "internal/tunnel.TestHostRulesRuleset"
+        ]
       },
       {
         "id": "SR-4.14-2",
         "element": "E-01",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
@@ -5634,12 +5651,13 @@
       {
         "id": "SR-5.8-1",
         "element": "E-09",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestDaemonWiresEveryElement",
           "internal/acceptance.TestAT09RequestAndResponseFilters",
           "internal/acceptance/enforced.TestAT09RequestAndResponseFilters",
           "internal/acceptance/offline.TestAT09RequestAndResponseFilters",
+          "internal/filters.TestOutboundArgumentFiltering",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-09",
           "internal/secrets.TestBrokerLeakDetectionNorthbound"
@@ -5672,7 +5690,7 @@
       {
         "id": "SR-5.9-2",
         "element": "E-13",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/filters.TestImportMetadataScan",
           "internal/hostile.TestHostileFixtures/HF-01",
@@ -5859,9 +5877,10 @@
       {
         "id": "SR-6.2-1",
         "element": "E-12",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/edge.TestIntentCommittedBeforeCapability"
+          "internal/edge.TestIntentCommittedBeforeCapability",
+          "internal/edge.TestIntentCrashConsistency"
         ]
       },
       {
@@ -6126,7 +6145,7 @@
       {
         "id": "SR-7.9-1",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
@@ -6847,7 +6866,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6882,7 +6901,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:42705: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45489: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6999,17 +7018,18 @@
     }
   ],
   "acceptance": {
-    "commit": "771cadc7fcb24d18f21215615cebcaf8f5e0d364",
+    "commit": "3aeaad535c0537f2a762a8ab9424f0d393a76876",
     "label": "not enforced",
     "reasons": [
       "AT-07 Safe evidence display: no automated or recorded result in the Enforced profile",
       "AT-08 Worker containment: no automated or recorded result in the Enforced profile",
       "AT-11 Audit linkage: no automated or recorded result in the Enforced profile",
       "AT-12 Audit consistency: no automated or recorded result in the Enforced profile",
-      "AT-17 Offline engineering workflow: no automated or recorded result in the Enforced profile"
+      "AT-17 Offline engineering workflow: no automated or recorded result in the Enforced profile",
+      "AT-18 Remote access: failed in the Enforced profile"
     ],
     "total": 21,
-    "enforcedPassed": 16,
+    "enforcedPassed": 15,
     "standalonePassed": 20,
     "scenarios": [
       {
@@ -7542,7 +7562,7 @@
           "SR-4.14-1",
           "SR-4.14-2"
         ],
-        "enforced": "pass",
+        "enforced": "fail",
         "standalone": "pass",
         "tests": [
           {
@@ -7552,7 +7572,7 @@
           },
           {
             "test": "internal/acceptance/enforced.TestAT18RemoteAccess",
-            "result": "pass",
+            "result": "fail",
             "profile": "enforced"
           },
           {
@@ -7662,15 +7682,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "771cadc7fcb24d18f21215615cebcaf8f5e0d364",
-    "generatedAt": "2026-10-17T18:58:38Z",
+    "commit": "3aeaad535c0537f2a762a8ab9424f0d393a76876",
+    "generatedAt": "2026-10-17T20:04:39Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000005378"
+      "runner": "GitHub Actions 1000005478"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7687,7 +7707,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.02507,
+        "value": 0.041912,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7699,7 +7719,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 18.982882,
+        "value": 18.556085,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7711,18 +7731,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 1.5798742499999978,
+        "value": 0.81189,
         "budget": 1,
         "samples": 8000,
-        "pass": false,
-        "method": "p95 P-213 with observation enabled (16.215 ms, mean of 16.598, 15.993, 15.823, 16.447) minus disabled (14.635 ms, mean of 14.836, 14.176, 14.781, 14.749), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
+        "pass": true,
+        "method": "p95 P-213 with observation enabled (15.821 ms, mean of 15.853, 16.055, 15.934, 15.441) minus disabled (15.009 ms, mean of 14.825, 14.476, 14.988, 15.747), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 810.659962,
+        "value": 839.434403,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7734,7 +7754,7 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 99.765625,
+        "value": 99.89453125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
