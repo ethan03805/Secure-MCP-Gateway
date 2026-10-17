@@ -515,3 +515,32 @@ Observations:
 - The Podman argument vector printed with it carries the same values (`--read-only`, `--cap-drop=all`, `--network=none`, `--memory=536870912`, `--pids-limit=128`, the two `--mount` options).
 
 Deviation: none. The specification was generated without starting a container; the Linux integration test `TestIntegrationSandboxConfinesServer` inspects the effective configuration of a running one.
+
+## FR-14.5 Provenance statements of the reference packages
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-14.5 |
+| Commit | `1ff838b8305f73af5234cb2c61a4ad6fac353909` |
+| Profile and platform | Standalone; macOS 26.6.2, darwin/arm64, Node 22.23.1, Python 3.11.15 |
+| Date | 2026-10-17 |
+| Executor | Claude Code agent (verification records task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: built the four reference packages from their recipes with `SMCP_PYTHON=python3.11 scripts/build-reference-packages.sh <dir>` (19:07Z; build, test-key signature, import, enable and one tool call each, all `PASS`; journal `OK: 1 segments, 47 events`), then read each package's `provenance.json`, `manifest.json` and `index.json`, recomputed the SHA-256 of the artifact and of the provenance file, downloaded each source reference from its registry and recomputed its SHA-256, and read the license files and metadata in the sources.
+
+Observations:
+
+| Package | Source reference (kind, digest) | Licenses | Artifact digest in the statement | Recomputed |
+|---|---|---|---|---|
+| `mcp-filesystem@2026.8.31` | `registry-tarball` `https://registry.npmjs.org/@modelcontextprotocol/server-filesystem/-/server-filesystem-2026.8.31.tgz`, `a239da27...491b1a` | `Apache-2.0`, `MIT` | `a8d56c56...983fca` | artifact equal; source download equal |
+| `mcp-memory@2026.8.31` | `registry-tarball` `.../server-memory-2026.8.31.tgz`, `53a606a0...eb504c` | `Apache-2.0`, `MIT` | `6d2c786b...ddbca65` | artifact equal; source download equal |
+| `mcp-git@2026.8.18` | `sdist` `https://files.pythonhosted.org/.../mcp_server_git-2026.8.18.tar.gz`, `96894ca6...08f173f` | `MIT` | `c3d47d2a...12d9c86c` | artifact equal; source download equal |
+| `mcp-fetch@2026.8.18` | `sdist` `.../mcp_server_fetch-2026.8.18.tar.gz`, `da12533c...b7254` | `MIT` | `84e62b7d...640ab9a` | artifact equal; source download equal |
+
+- The statement is written by `smcpctl package build` with the source reference, the licenses and the artifact (`internal/packaging/build.go:255`); its SHA-256 is recorded in the manifest (`internal/packaging/build.go:265`) and in the index that the test key signs (`internal/packaging/build.go:289`). For each package the recomputed SHA-256 of `provenance.json` equals the manifest's `statement_sha256` and the index's `provenance.sha256` (for example memory `af5c2cb1db13b5c47b836a08e67055fe28927c33feff339299784dcb5aec3b5f`), so the signature over the index covers the binding.
+- Verification refuses a statement without a source reference, a 64-hex source digest or license identifiers (`internal/packaging/index.go:233`).
+- License identifiers: the git and fetch sdists contain an MIT `LICENSE` and `License: MIT` in `PKG-INFO`. The filesystem and memory npm tarballs contain no license file; their `package.json` says `SEE LICENSE IN LICENSE`, and the `LICENSE` of `github.com/modelcontextprotocol/servers` states a transition from MIT to Apache-2.0 with code under both. The recipes listed only `MIT`; commit `1ff838b` lists `Apache-2.0` and `MIT` with an operator note (`packaging/reference/filesystem/recipe.json:42`, `packaging/reference/memory/recipe.json:45`), and the packages above were built after that change.
+
+Deviation: the packages were built on a workstation, not by the `reference-packages` workflow of a release tag; the workflow's last successful run (39047692294, 2026-10-17, branch `test/partials-a`) produced statements of the same form, with `MIT` alone for filesystem and memory. The commit above is on branch `docs/verification-records` before it was squash-merged.
