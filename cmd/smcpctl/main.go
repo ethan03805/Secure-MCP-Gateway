@@ -32,6 +32,8 @@ Offline:
   trust            enroll, list and remove package signing keys (trust anchors)
   filters          list, export and test the inspection rule sets (rules, export, scan)
   restore          restore an encrypted backup (the Gateway must be stopped)
+  install          install as a service: --profile standalone (launchd or systemd
+                   user unit) or enforced (Linux, root); idempotent
   upgrade          install a new release with backup, health check and rollback
   uninstall        remove services and binaries, keep evidence (--purge removes all)
   version          print the version (and the running Gateway's label)
@@ -105,6 +107,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = versionCmd(args[1:], stdout)
 	case args[0] == "upgrade":
 		err = upgradeCmd(args[1:], stdout)
+	case args[0] == "install":
+		err = installCmd(args[1:], stdout)
 	case args[0] == "uninstall":
 		err = uninstallCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "stop":

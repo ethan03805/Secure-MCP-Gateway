@@ -31,8 +31,10 @@ Upgrading to a release older than the running one is not refused; use the backup
 smcpctl uninstall [--bin-dir DIR] [--stop-cmd CMD]
 ```
 
+Without `--config`, and with no `smcp.toml` in the working directory, it uses the configuration that `smcpctl install` wrote (`/etc/smcp/smcp.toml`, then the Standalone CP-46 path).
+
 1. Stops the Gateway (service unit or `--stop-cmd`) and waits until the control API stops answering.
-2. Removes the launchd plist or the systemd units (`smcpd.service`, `smcp-nftables.service`) and `/etc/smcp/smcp.nft`, the nftables table `inet smcp` (Linux, with `sudo -n` when not root), AppArmor profiles `/etc/apparmor.d/smcp-*` (Linux), and the binaries `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-connect` and their `.prev` copies in `--bin-dir`.
+2. Unloads the launchd agent or disables the systemd units, then removes the launchd plist or the systemd units (`smcpd.service`, `smcp-nftables.service`) and `/etc/smcp/smcp.nft`, the nftables table `inet smcp` (Linux, with `sudo -n` when not root), the AppArmor profiles `/etc/apparmor.d/smcpd` and `/etc/apparmor.d/smcp-*` (Linux), and the binaries `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-connect` and their `.prev` copies in `--bin-dir`.
 3. Keeps the evidence journal, the evidence public keys, the backup archives, the configuration and the state directory, and prints how to verify the kept journal later:
 
 ```
