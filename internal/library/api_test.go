@@ -29,6 +29,7 @@ func (nopCtl) ActivatePolicy(string, *policy.Snapshot) (bool, error) { return fa
 type apiFixture struct {
 	t     *testing.T
 	srv   *httptest.Server
+	api   *adminapi.Server
 	token string
 }
 
@@ -56,7 +57,7 @@ func newAPI(t *testing.T, r *rtEnv) *apiFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &apiFixture{t: t, srv: srv, token: tok}
+	return &apiFixture{t: t, srv: srv, api: s, token: tok}
 }
 
 func (f *apiFixture) do(method, path, token string, body any) (int, map[string]any) {

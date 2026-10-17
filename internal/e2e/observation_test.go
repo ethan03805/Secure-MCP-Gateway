@@ -39,12 +39,25 @@ type obsFixture struct {
 // an extra [observation] table body.
 func startObservation(t *testing.T, observation string) *obsFixture {
 	t.Helper()
-	return startObservationWith(t, observation, nil, nil)
+	return startObservationOpts(t, observation, nil, nil, false)
 }
 
 // startObservationWith is startObservation with extra filters registered
 // before the observation probes and a tap on the call-path spans.
 func startObservationWith(t *testing.T, observation string, extra func(*pipeline.Filters) error, tap pipeline.SpanSink) *obsFixture {
+	t.Helper()
+	return startObservationOpts(t, observation, extra, tap, false)
+}
+
+// startObservationBuiltins is startObservation with the built-in E-09/E-11
+// filters in the inspection chain too, as cmd/smcpd wires it
+// (app.Options.ExtraFilters).
+func startObservationBuiltins(t *testing.T, observation string) *obsFixture {
+	t.Helper()
+	return startObservationOpts(t, observation, nil, nil, true)
+}
+
+func startObservationOpts(t *testing.T, observation string, extra func(*pipeline.Filters) error, tap pipeline.SpanSink, builtins bool) *obsFixture {
 	t.Helper()
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
@@ -109,14 +122,22 @@ SMCP_E2E_BACKEND = "1"
 	if err != nil {
 		t.Fatal(err)
 	}
-	filters := pipeline.NewFilters()
-	if extra != nil {
-		if err := extra(filters); err != nil {
+	register := func(f *pipeline.Filters) error {
+		if extra != nil {
+			if err := extra(f); err != nil {
+				return err
+			}
+		}
+		return obs.RegisterFilters(f)
+	}
+	ao := app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond}
+	if builtins {
+		ao.ExtraFilters = register
+	} else {
+		ao.Filters = pipeline.NewFilters()
+		if err := register(ao.Filters); err != nil {
 			t.Fatal(err)
 		}
-	}
-	if err := obs.RegisterFilters(filters); err != nil {
-		t.Fatal(err)
 	}
 	of := &obsFixture{obs: obs}
 	spans := obs.SpanSink() // as cmd/smcpd wires it (FR-10.2)
@@ -125,9 +146,10 @@ SMCP_E2E_BACKEND = "1"
 		spans = func(sp []pipeline.StageSpan) { tap(sp); sink(sp) }
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	a, err := app.Start(ctx, cfg, app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond, Filters: filters, Spans: spans,
-		Observers: map[string]audit.Observer{"observation": obs.Observer(),
-			"test": audit.ObserverFunc(func(e audit.Event) { of.mu.Lock(); of.events = append(of.events, e); of.mu.Unlock() })}})
+	ao.Spans = spans
+	ao.Observers = map[string]audit.Observer{"observation": obs.Observer(),
+		"test": audit.ObserverFunc(func(e audit.Event) { of.mu.Lock(); of.events = append(of.events, e); of.mu.Unlock() })}
+	a, err := app.Start(ctx, cfg, ao)
 	if err != nil {
 		cancel()
 		t.Fatal(err)

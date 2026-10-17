@@ -212,9 +212,14 @@ func PublicName(alias, tool string) string {
 
 var propName = regexp.MustCompile(`^[A-Za-z0-9_.\-]{1,64}$`)
 
-// CheckToolDefinition applies the FR-5.22 drift rules to a live tool. The
-// x-mcp-header annotation rules are not checked yet.
+// CheckToolDefinition applies the FR-5.22 drift rules to a live tool: the
+// inputSchema is present and an object schema, every declared property
+// name is 1 to 64 characters of [A-Za-z0-9_.-], and every x-mcp-header
+// annotation meets the MCP constraints.
 func CheckToolDefinition(t *mcp.Tool) error {
+	if why, ok := t.Meta[metaExcluded].(string); ok {
+		return fmt.Errorf("invalid x-mcp-header annotation: %s", why)
+	}
 	if t.InputSchema == nil {
 		return errors.New("inputSchema is null")
 	}
@@ -223,16 +228,131 @@ func CheckToolDefinition(t *mcp.Tool) error {
 		return fmt.Errorf("inputSchema not serializable: %w", err)
 	}
 	var schema map[string]any
-	if err := json.Unmarshal(raw, &schema); err != nil {
+	if err := json.Unmarshal(raw, &schema); err != nil || schema == nil {
 		return errors.New("inputSchema is not an object")
 	}
-	if props, ok := schema["properties"].(map[string]any); ok {
-		for name := range props {
-			if !propName.MatchString(name) {
-				return fmt.Errorf("property name %q outside 1-64 characters of [A-Za-z0-9_.-]", name)
+	if ty, ok := schema["type"]; ok && ty != "object" {
+		return fmt.Errorf("inputSchema type is %v, not object", ty)
+	}
+	if p, ok := schema["properties"]; ok {
+		if _, isObj := p.(map[string]any); !isObj {
+			return errors.New("inputSchema properties is not an object")
+		}
+	}
+	headers := map[string]string{} // lower-case x-mcp-header value -> property path
+	return checkSchemaNode(schema, "", true, headers)
+}
+
+// metaExcluded marks a stand-in for a listed tool the SDK client excluded
+// (excludedTools); its value is the SDK's reason.
+const metaExcluded = "local.smcpgw/excludedByClient"
+
+// excludedTools is the slog handler of a backend's SDK client: it keeps
+// the "excluding tool from tools/list" records and discards the rest.
+type excludedTools struct {
+	mu    sync.Mutex
+	tools []*mcp.Tool
+}
+
+func (*excludedTools) Enabled(context.Context, slog.Level) bool { return true }
+func (h *excludedTools) WithAttrs([]slog.Attr) slog.Handler     { return h }
+func (h *excludedTools) WithGroup(string) slog.Handler          { return h }
+func (h *excludedTools) Handle(_ context.Context, r slog.Record) error {
+	if r.Message != "excluding tool from tools/list" {
+		return nil
+	}
+	name, why := "", ""
+	r.Attrs(func(a slog.Attr) bool {
+		switch a.Key {
+		case "tool":
+			name = a.Value.String()
+		case "error":
+			why = a.Value.String()
+		}
+		return true
+	})
+	h.mu.Lock()
+	h.tools = append(h.tools, &mcp.Tool{Name: name, Meta: mcp.Meta{metaExcluded: why}})
+	h.mu.Unlock()
+	return nil
+}
+
+// take returns the stand-ins recorded since the last call.
+func (h *excludedTools) take() []*mcp.Tool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	out := h.tools
+	h.tools = nil
+	return out
+}
+
+// tchar is the RFC 9110 field-name token syntax.
+var tchar = regexp.MustCompile("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
+
+// checkSchemaNode walks a schema: every declared property name must match
+// propName, and every x-mcp-header annotation must follow the MCP
+// constraints (non-empty token, case-insensitively unique, on an integer,
+// string or boolean property statically reachable through properties
+// keys only). static reports whether node is reached from the root through
+// properties keys only.
+func checkSchemaNode(node any, path string, static bool, headers map[string]string) error {
+	switch x := node.(type) {
+	case []any:
+		for _, e := range x {
+			if err := checkSchemaNode(e, path, false, headers); err != nil {
+				return err
+			}
+		}
+	case map[string]any:
+		if h, ok := x["x-mcp-header"]; ok {
+			if err := checkHeader(h, x["type"], path, static, headers); err != nil {
+				return err
+			}
+		}
+		for k, v := range x {
+			if k == "properties" {
+				props, ok := v.(map[string]any)
+				if !ok {
+					continue
+				}
+				for name, sub := range props {
+					if !propName.MatchString(name) {
+						return fmt.Errorf("property name %q outside 1-64 characters of [A-Za-z0-9_.-]", name)
+					}
+					if err := checkSchemaNode(sub, path+"/"+name, static, headers); err != nil {
+						return err
+					}
+				}
+				continue
+			}
+			if k == "x-mcp-header" || k == "enum" || k == "const" || k == "default" || k == "examples" {
+				continue // values, not subschemas
+			}
+			if err := checkSchemaNode(v, path, false, headers); err != nil {
+				return err
 			}
 		}
 	}
+	return nil
+}
+
+func checkHeader(h, typ any, path string, static bool, headers map[string]string) error {
+	name, ok := h.(string)
+	switch {
+	case !ok || name == "":
+		return fmt.Errorf("x-mcp-header at %q is empty or not a string", path)
+	case !tchar.MatchString(name):
+		return fmt.Errorf("x-mcp-header %q at %q is not an HTTP field-name token", name, path)
+	case !static || path == "":
+		return fmt.Errorf("x-mcp-header %q at %q is not on a property reachable through properties keys only", name, path)
+	case typ != "string" && typ != "integer" && typ != "boolean":
+		return fmt.Errorf("x-mcp-header %q at %q is on a property of type %v, not integer, string or boolean", name, path, typ)
+	}
+	key := strings.ToLower(name)
+	if prev, dup := headers[key]; dup {
+		return fmt.Errorf("x-mcp-header %q at %q repeats the one at %q", name, path, prev)
+	}
+	headers[key] = path
 	return nil
 }
 
@@ -414,10 +534,15 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 		inst.asserted = newAsserter(sc.Alias, fmt.Sprintf("%s#%d", sc.Alias, r.instSeq.Add(1)), proc, secrets, r.opts.Asserted)
 		ff.notified = inst.asserted.notification
 	}
+	excluded := &excludedTools{}
 	copts := &mcp.ClientOptions{
 		// SR-5.6-2: no sampling, elicitation or roots capability
 		// southbound (the SDK declares roots unless told otherwise).
 		Capabilities: &mcp.ClientCapabilities{},
+		// FR-5.22: the SDK drops a listed tool whose x-mcp-header
+		// annotations are invalid and only logs it; the log record is
+		// turned back into a tool that the drift check refuses.
+		Logger: slog.New(excluded),
 	}
 	if r.watcher != nil {
 		copts.ToolListChangedHandler = func(context.Context, *mcp.ToolListChangedRequest) {
@@ -448,6 +573,7 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	spec.NegotiatedEra = era
 	// FR-5.21: the complete live tool list across all pages.
 	inst.live = func(ctx context.Context) ([]*mcp.Tool, error) {
+		excluded.take()
 		var tools []*mcp.Tool
 		for t, err := range sess.Tools(ctx, nil) {
 			if err != nil {
@@ -455,7 +581,7 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 			}
 			tools = append(tools, t)
 		}
-		return tools, nil
+		return append(tools, excluded.take()...), nil
 	}
 	ts, err := r.opts.Manifests.Tools(cctx, spec, inst.live)
 	if err != nil {
@@ -818,10 +944,36 @@ func (r *Registry) Call(ctx context.Context, d Dispatch) (*mcp.CallToolResult, e
 	if err != nil {
 		return nil, err
 	}
-	if int64(len(raw)) > r.limits.ResultBytes {
+	if int64(len(raw)) > r.limits.ResultBytes || jsonDepth(raw) > ResultDepth {
 		return nil, ErrTooLarge
 	}
 	return res, nil
+}
+
+// ResultDepth is the CP-08 bound on the JSON nesting depth of a result
+// (the result object itself is depth 1).
+const ResultDepth = 32
+
+// jsonDepth returns the deepest object or array nesting of a JSON
+// document (a document that does not parse reports the depth reached).
+func jsonDepth(raw []byte) int {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	depth, deepest := 0, 0
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return deepest
+		}
+		if d, ok := tok.(json.Delim); ok {
+			switch d {
+			case '{', '[':
+				depth++
+				deepest = max(deepest, depth)
+			default:
+				depth--
+			}
+		}
+	}
 }
 
 // instanceGone reports whether a call error means the instance's transport

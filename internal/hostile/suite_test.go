@@ -629,12 +629,22 @@ func inputRequired(t *testing.T) (string, bool) {
 		return &mcp.ElicitResult{Action: "decline"}, nil
 	}})
 	o := g.call(cs, "h_ask", map[string]any{}, nil)
+	ev, recorded := g.waitEvent(2*time.Second, func(e audit.Event) bool {
+		return e.Phase == audit.PhaseFailed && e.ReasonCode == "INPUT_REQUIRED_UNSUPPORTED"
+	})
 	mu.Lock()
 	defer mu.Unlock()
 	var n note
 	n.add("call: %s", o)
 	n.add("elicitation requests relayed to the client: %d", elicited)
-	return n.String(), o.code == -31010 && elicited == 0
+	n.add("audit event: %v (%s %s %s)", recorded, ev.Class, ev.Phase, ev.ReasonCode)
+	pass := o.code == -31010 && elicited == 0 && recorded
+	if pass {
+		// The row performs the whole FR-5.24 verification: -31010 to the
+		// harness and an audit event, with nothing relayed northbound.
+		reqtest.Verifies(t, "FR-5.24")
+	}
+	return n.String(), pass
 }
 
 func serverRequests(t *testing.T) (string, bool) {

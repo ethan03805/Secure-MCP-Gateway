@@ -231,7 +231,7 @@ func (r *Runtime) Backup(req BackupRequest, actor string) (backup.Result, error)
 	}
 	wasStopped := g.Stopped()
 	if !wasStopped {
-		if err := g.Stop(actor, "backup"); err != nil {
+		if err := g.StopDraining(actor, "backup"); err != nil {
 			return backup.Result{}, err
 		}
 	}
