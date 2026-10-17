@@ -240,6 +240,10 @@ enforced_section() {
 # Every itest-client run signs in again and opens a session.
 [limits]
 sessions_per_principal = 32
+# The sandbox checks below make more than ten calls within ten seconds as
+# one principal; they test confinement, not the CP-11 burst (covered by the
+# policy unit tests), so the burst window is off here.
+principal_call_burst = 0
 
 [profile]
 mode = "$mode"
