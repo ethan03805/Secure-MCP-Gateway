@@ -518,7 +518,7 @@
       "dataType": "object",
       "sourceElement": "E-07",
       "capturePoint": "decision",
-      "derivation": "Approval record and hold duration",
+      "derivation": "Approval record and hold duration (hold bounded by CP-45 `limits.approval_hold`, default 120 s)",
       "sensitivity": "S0",
       "baselinable": true,
       "costClass": "C0"
@@ -981,7 +981,7 @@
     {
       "id": "P-206",
       "name": "t_approval_wait",
-      "description": "Time held for approval",
+      "description": "Time held for approval; at most the CP-45 hold bound (`limits.approval_hold`, default 120 s, 0 to 600 s)",
       "unit": "ms",
       "dataType": "number",
       "sourceElement": "E-07",

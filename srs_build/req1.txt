@@ -584,9 +584,9 @@ R: The client registration is the framework credential that every shipping clien
 
 @FR-2.19 | Authorization endpoint
 P: FR-2
-S: The Session Manager (E-04) SHALL implement the authorization-code grant at the authorization endpoint with PKCE `S256` required, a `resource` parameter equal to the CP-41 resource URI required, the `iss` parameter in every authorization response, and a sign-in by a person holding the Session Approver or Administrator role (F-63) that records the approving person on the resulting session.
+S: The Session Manager (E-04) SHALL implement the authorization-code grant at the authorization endpoint with PKCE `S256` required, a `resource` parameter equal to the CP-41 resource URI required, the `iss` parameter in every authorization response, and a sign-in by a person holding a Session Approver account (F-63), refusing the Administrator account, that records the approving person on the resulting session.
 A: E-04; E-24; F-06; F-63; X-01; X-04
-V: Test | Run the flow without PKCE, with a wrong `resource`, and correctly as a Session Approver; confirm the first two are refused, `iss` is present, the approver is recorded on the session, and an Auditor or Researcher account cannot complete the sign-in.
+V: Test | Run the flow without PKCE, with a wrong `resource`, and correctly as a Session Approver; confirm the first two are refused, `iss` is present, the approver is recorded on the session, and the Administrator, Auditor or Researcher account cannot complete the sign-in.
 SRC: MCP:basic/authorization; RFC 9207; RFC 8707; SEC 2.11; CP-41
 R: Claude Code's v2 runtime validates `iss`. PKCE and resource binding are what the MCP authorization specification requires.
 

@@ -29,7 +29,7 @@ Add a `[remote]` table to the configuration. It only says how the profile behave
 
 ```toml
 [remote]
-address = "127.0.0.1:8444"          # CP-48 loopback listener the tunnel forwards to
+# address = "127.0.0.1:8445"        # CP-48 loopback listener the tunnel forwards to (default: 8444, or 8445 when the admin listener uses 8444)
 default_principal = "cloud-agents"  # principal for approved dynamic registrations
 templates = ["remote-readonly"]     # templates remote sessions may use (FR-16.12)
 clients = ["grok-preregistered"]    # [[client]] IDs allowed to sign in remotely without registration

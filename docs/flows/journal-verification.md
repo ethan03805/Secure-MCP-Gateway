@@ -36,8 +36,8 @@ sequenceDiagram
   V-->>O: segments, events, open segment, or the first failure
 ```
 
-## Implementation as of commit a3193a5
+## Implementation
 
-`audit.Verify` in `internal/audit/audit.go` performs every step above except key transitions, which do not exist yet. A segment left unclosed by a crash is renamed aside when the journal reopens, so the chain continues from the last closed segment.
+`audit.Verify` in `internal/audit` and `smcpctl journal verify` perform every step above. Verification starts from `keys/evidence-genesis.pub` (or `--key`); a segment footer with `next_key` hands the chain to that key after its signature verifies under the outgoing key, and the segment must also hold the `key_rotated` event naming the same key. The anchor records the public key that signed it and must be signed by the key in force for the segment it names or by that segment's next key. A segment left unclosed by a crash is sealed in place and marked `recovered`; `--strict` treats recovered segments and a truncated tail as failures. See [../operations/keys.md](../operations/keys.md).
 
-Update with the operations work (E-21, E-22): key transitions exist. `smcpctl journal verify` starts from `keys/evidence-genesis.pub` (or `--key`); a footer with `next_key` hands the chain to that key after its signature verifies under the outgoing key, and the segment must also hold the `key_rotated` event naming the same key. The anchor records the public key that signed it and must be signed by the key in force for the segment it names or by that segment's next key. A segment left unclosed by a crash is sealed in place and marked `recovered`. See `docs/operations/keys.md`.
+Limit: replacing the anchor with an older signed copy together with deleting later segments is not detectable locally; set `[evidence] export_dir` to storage off the machine (FR-7.14).

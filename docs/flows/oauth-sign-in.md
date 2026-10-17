@@ -34,12 +34,11 @@ sequenceDiagram
   Note over H,E04: Refresh returns a new access token and a new refresh token and invalidates the old refresh token. Reuse of a rotated refresh token ends the session (SR-2.11-4).
 ```
 
-## Implementation as of commit a3193a5
+## Implementation
 
-`internal/session/oauth.go` implements steps 1–6 and 8–19 with these differences:
+`internal/session/oauth.go` implements the flow, with `internal/authguard` for rate limits and lockout. Differences from the diagram:
 
-- The sign-in page asks for the Administrator user name and password; there is no Session Approver role (FR-2.19, FR-2.23).
-- The metadata advertises `client_id_metadata_document_supported: true`, but only client IDs listed in the configuration are accepted and no metadata document is fetched (SR-2.11-5).
-- Refresh issues a new access token but does not rotate the refresh token (FR-2.22).
+- Only Session Approver accounts (`[[approver]]`) can complete the sign-in; the Administrator account is refused (FR-2.19, FR-2.23).
+- The metadata does not advertise `client_id_metadata_document_supported`; only client IDs listed in the configuration are accepted and no metadata document is fetched (SR-2.11-5, CP-52).
 - Sessions are in memory and do not survive a restart (FR-2.16).
-- No Dynamic Client Registration, lockout or Remote Access listener.
+- Dynamic Client Registration and the device grant exist only on the Remote Access listener (`internal/remote`, [../remote-access.md](../remote-access.md)).

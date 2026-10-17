@@ -76,14 +76,12 @@ sequenceDiagram
 | 27–30 | SR-1.17-2, SR-6.3-1 |
 | 31 | FR-4.12 |
 
-## Implementation as of commit a3193a5
+## Implementation
 
-The code in `internal/edge/edge.go` follows the same order with these differences:
+`internal/edge/pipeline.go` follows the same order (authenticate, session check, fail-closed check, decision, request inspection, approval, launch authorization, dispatch, response inspection, provenance, release authorization). Differences:
 
-- Approval: an approval-obligated call is answered at once with `-31002` (`APPROVAL_REQUIRED`); there is no Approval Service, hold or retry consumption.
-- Request filters: only `schema-validate`, which answers `-32602` with `SCHEMA_INVALID`.
-- Response filters: only the size bound in `internal/backend`; provenance is added with `untrusted: true`.
-- Journal: the `authorized` event is appended after the capability is issued, and the journal flushes only when a segment closes (`internal/audit`), so steps 19–21 and the flush in step 29 are not yet met.
-- Errors carry `reasonCode`, `correlationId` and `decisionId` but not `data.message`.
-- No session taint, anomaly scoring, observation or graph mirror.
-- Backend instances are shared across sessions.
+- Request and response scoring (E-31) are not stages; scoring is asynchronous by default, with optional synchronous approval and withhold obligations ([../observation.md](../observation.md)).
+- No second decision after a transforming request filter (SR-5.12-1); decisions do not read arguments.
+- Progress notifications from backends are not relayed or filtered.
+- Backend instances are shared across sessions (no per-session or per-call scope).
+- The graph mirror is fed asynchronously from the journal and is never consulted on the call path.

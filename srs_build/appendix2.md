@@ -87,7 +87,7 @@ The hostile fixture is an MCP server built into the test binary that behaves as 
 | HF-11 | Schema smuggling: deep nesting | Schema nested beyond the CP-36 depth | Tool definition refused at import | Both | SR-1.8-3 |
 | HF-12 | Schema smuggling: huge enum | Enum with more subschemas or members than CP-36 allows | Tool definition refused at import | Both | SR-1.8-3 |
 | HF-13 | Schema smuggling: `additionalProperties` games | Runtime schema loosens `additionalProperties` or adds `patternProperties` compared with the manifest | Drift suspension; arguments are validated against the packaged schema only | Both | SR-3.7-1, SR-3.8-1, SR-1.8-1 |
-| HF-14 | Public-name collision | A tool whose public name equals another server's public name | The colliding server is not enabled; the reason names both servers | Both | FR-1.49 |
+| HF-14 | Public-name collision | Two tools of one server whose names map to the same public name under FR-1.26 (for example `a.b` and `a_b`) | The revision is not enabled; the reason names both backend tool names | Both | FR-1.49 |
 | HF-15 | Cross-server shadowing | Descriptions that reference another server's public tool names or redefine their behavior | Blocking metadata rule matches; tool suspended | Both | SR-5.9-2 |
 | HF-16 | Oversized result | A result larger than CP-08 | Withheld with `-31003` `RESULT_TOO_LARGE`; nothing partial released | Both | SR-5.11-1, FR-4.10 |
 | HF-17 | Slow-drip response | Writes one byte per second | Call ends at the CP-13 deadline with `-31009` `UPSTREAM_TIMEOUT`; instance restarted | Both | FR-4.9, SR-7.2-1 |

@@ -34,6 +34,7 @@ class Smcp < Formula
   def install
     bin.install "smcpd", "smcpctl"
     bin.install "smcp-refserver" if File.exist?("smcp-refserver")
+    %w[smcp-stdio smcp-session smcp-connect].each { |f| bin.install f if File.exist?(f) }
   end
 
   def caveats

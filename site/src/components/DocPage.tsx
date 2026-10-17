@@ -23,7 +23,7 @@ export default async function DocPage({
   left?: ReactNode[];
   children?: ReactNode;
 }) {
-  const html = await renderMarkdown(md, { dropTitle: true });
+  const html = await renderMarkdown(md, { dropTitle: true, file });
   const entries = toc(md, tocDepth);
   const hasDiagrams = md.includes("```mermaid");
   return (
