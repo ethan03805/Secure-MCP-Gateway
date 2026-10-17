@@ -291,7 +291,7 @@ func (f delimitUntrusted) FilterResponse(_ context.Context, call *pipeline.Call,
 			continue
 		}
 		body := t.Text
-		if delimiterLine.MatchString(body) {
+		if strings.Contains(body, "<<<") && delimiterLine.MatchString(body) { // a delimiter line contains <<<
 			body = delimiterLine.ReplaceAllString(body, "")
 			findings = append(findings, pipeline.Finding{Filter: IDDelimitUntrusted, Rule: "forged-delimiter-removed", Location: "/content/" + strconv.Itoa(i) + "/text"})
 		}

@@ -27,7 +27,11 @@ func (rs *RuleSet) Scan(text string) []Match {
 		subject = normalizeText(text)
 	}
 	var out []Match
+	pf := &prefilterText{s: subject}
 	for _, r := range rs.Rules {
+		if r.re != nil && !pf.mayMatch(r.lits) {
+			continue // none of the literals the rule needs is in the text
+		}
 		out = append(out, r.scan(subject)...)
 	}
 	return out
@@ -69,6 +73,11 @@ func (r *Rule) scanCodepoints(s string) []Match {
 	var out []Match
 	prev := rune(-1)
 	for i := 0; i < len(s); {
+		if b := s[i]; b < utf8.RuneSelf && r.asciiFree {
+			prev = rune(b)
+			i++
+			continue
+		}
 		c, w := utf8.DecodeRuneInString(s[i:])
 		if !unicode.Is(r.ranges, c) {
 			prev = c
