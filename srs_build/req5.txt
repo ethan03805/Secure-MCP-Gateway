@@ -11,6 +11,7 @@ A: E-05; E-14; F-10; I-07
 V: Test | Publish grants exceeding each ceiling dimension; confirm each is rejected with the exceeded dimension named.
 SRC: ARCH §7.3; ARCH §7.1 layer 1
 R: The signed manifest bounds all authority.
+DEFER: Release 1.0 policy grants name a server alias and tools only; they carry no paths, egress destinations or secret slots, so a grant cannot exceed those dimensions of a manifest. A granted tool that the enabled server revision does not serve has no public name and is never presented or dispatched. Filesystem slots, egress grants and secret slots are bound in the configuration, not in the policy document. Publication-time checks of grants against the manifest ceiling are deferred with grants that carry those dimensions.
 
 @SR-1-2 | Layer intersection
 P: SEC-1
@@ -91,6 +92,7 @@ A: E-06; F-13
 V: Test | Change each dimension of a permitted request in turn; confirm each change results in deny.
 SRC: SEC 1.6
 R: No implicit widening.
+DEFER: Release 1.0 permit rules match the Framework Profile, the session template, the server alias, the tool name and the `tools/call` method (no other method reaches the decision). The exact revisions are fixed outside the rule: a server revision that is not enabled is never dispatched to, a relaunch with a different revision suspends the server, and every decision record carries the exact server and tool revision IDs. Rules that name revision IDs, which would need a policy publication for every server upgrade, are deferred.
 
 @SR-1.7-1 | Predicate operator set
 P: SEC-1.7
@@ -1189,6 +1191,7 @@ A: E-05; F-10
 V: Test | Publish conflicting retention and capture settings; confirm rejection.
 SRC: SEC 6.9
 R: Consistent retention.
+DEFER: Release 1.0 has one retention setting per store (the Audit Profile's `retention` and the `[evidence]` and `[observation]` settings) and no no-capture data classifications, because payload capture is deferred (SR-6.6-1). There are no competing minimum and maximum retentions or capture requirements to conflict. Retention validation is deferred with policy-directed capture.
 
 @SR-6.10-1 | Idempotent export
 P: SEC-6.10

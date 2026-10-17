@@ -54,9 +54,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 - FR-3.1 missing: only Framework Profiles and Session Allow Policy Templates exist; Secret Use, Response, Audit Profile, Observation, Anomaly Response and Research Campaign policy objects are not part of the policy document.
 - FR-18.5 partial: `internal/policy` `TestPolicyReferenceExamples` compiles every policy example in `docs/policy-reference.md` and checks that every schema field is described; object types, predicate operators and obligations that do not exist (FR-3.1, SR-1.7-1, FR-3.12) cannot be described.
-- SR-1-1 missing: publication does not check grants against the manifest capability ceiling.
 - SR-3.13-1 missing: no high-risk class flags on profiles and templates; high-risk grants are not refused at publication.
-- SR-6.9-1 missing: retention and capture settings are not part of the policy document, so they are not validated at publication.
 - SR-7.9-1 partial: `TestPolicyRollbackKeepsRevocations` shows a policy rollback leaves credential revocations, principal and server suspensions in effect; rolling back the application version is not exercised, and there are no revocation epochs.
 
 ## E-06 Policy Decision Service
@@ -64,7 +62,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-3.12 missing: obligations cover filters, approval, rate and quota only; audit profile, observation policy, size limit, timeout, egress grants, secret grants and runtime profile obligations are absent.
 - FR-11.2 external: no p95 decision latency measurement under the reference workload.
 - SR-1.5-1 missing: no principal enabled state or credential expiry or revocation in the decision; server revision enablement is checked at dispatch, not in the decision.
-- SR-1.6-1 missing: permits match server alias and tool name, not exact server and tool revision IDs or the MCP method.
 - SR-1.7-1 missing: no argument predicates (FR-3.6), so the predicate operator set does not exist.
 - SR-1.7-2 missing: no predicates, so missing-attribute handling does not exist.
 - SR-1.10-1 missing: one permit rule applies per tool; obligations of several applicable rules are not combined.
@@ -131,7 +128,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-26 Data Access Service
 
-- FR-9.4 missing: no priority classes for queued writes.
 - SR-6-3 missing: observation data served to the console is filtered by route role only, not by each field's sensitivity class.
 
 ## E-28 Data Lifecycle & Memory Manager

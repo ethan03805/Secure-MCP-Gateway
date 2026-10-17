@@ -3037,19 +3037,6 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | ARCH §4 E-26; SEC 1.13 |
 | Rationale | Fixed operations keep query cost and authority reviewable. |
 
-#### FR-9.4 — Write priority classes
-
-| Field | Value |
-|---|---|
-| ID | FR-9.4 |
-| Parent ID | FR-9 — Data Server |
-| Statement | The Data Access Service (E-26) **SHALL** order queued writes by the priority classes P0 policy and control, P1 mandatory audit, P2 observation and P3 research. |
-| Allocation | Elements: E-26 Data Access Service; Functions: F-73; Internal interfaces: I-33 |
-| Verification Method | Test |
-| Verification Statement | Saturate the queue with P2 writes and submit a P1 write; confirm the P1 write commits first. |
-| Source | ARCH §4 E-26 |
-| Rationale | Mandatory writes must not wait behind optional data. |
-
 #### FR-9.5 — Observation batching
 
 | Field | Value |
@@ -5065,19 +5052,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 
 ### SEC-1 Policy and routing authority
 
-#### SR-1-1 — Capability ceiling
-
-| Field | Value |
-|---|---|
-| ID | SR-1-1 |
-| Parent ID | SEC-1 — Graph policy and routing authority (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Policy Administration Service (E-05) **SHALL** reject publication of any grant whose tools, paths, egress destinations or secret slots exceed the capability ceiling of the referenced server revision's manifest. |
-| Allocation | Elements: E-05 Policy Administration Service, E-14 Local Server Registry; Functions: F-10; Internal interfaces: I-07 |
-| Verification Method | Test |
-| Verification Statement | Publish grants exceeding each ceiling dimension; confirm each is rejected with the exceeded dimension named. |
-| Source | ARCH §7.3; ARCH §7.1 layer 1 |
-| Rationale | The signed manifest bounds all authority. |
-
 #### SR-1-2 — Layer intersection
 
 | Field | Value |
@@ -5194,19 +5168,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Statement | Run one fixture per prerequisite failure; confirm deny with the matching reason code. |
 | Source | SEC 1.5; ARCH §4 E-14 |
 | Rationale | Prerequisites gate evaluation. |
-
-#### SR-1.6-1 — Exact match scope
-
-| Field | Value |
-|---|---|
-| ID | SR-1.6-1 |
-| Parent ID | SEC-1.6 — Exact scoped rules (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Policy Decision Service (E-06) **SHALL** match permits on principal or Framework Profile, session template, exact server revision ID, exact tool revision ID and MCP method. |
-| Allocation | Elements: E-06 Policy Decision Service; Functions: F-13 |
-| Verification Method | Test |
-| Verification Statement | Change each dimension of a permitted request in turn; confirm each change results in deny. |
-| Source | SEC 1.6 |
-| Rationale | No implicit widening. |
 
 #### SR-1.7-1 — Predicate operator set
 
@@ -6856,19 +6817,6 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 6.7 |
 | Rationale | No secrets at rest in evidence. |
 
-#### SR-6.9-1 — Retention validation
-
-| Field | Value |
-|---|---|
-| ID | SR-6.9-1 |
-| Parent ID | SEC-6.9 — Retention conflict (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Policy Administration Service (E-05) **SHALL** reject publication of retention settings whose greatest minimum exceeds the smallest maximum, or whose capture requirement contradicts a no-capture classification. |
-| Allocation | Elements: E-05 Policy Administration Service; Functions: F-10 |
-| Verification Method | Test |
-| Verification Statement | Publish conflicting retention and capture settings; confirm rejection. |
-| Source | SEC 6.9 |
-| Rationale | Consistent retention. |
-
 #### SR-6.10-1 — Idempotent export
 
 | Field | Value |
@@ -7430,13 +7378,13 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 
 | SEC ID | Title | Imperative | Coverage | Children / citing requirements |
 |---|---|---|---|---|
-| 1 | Graph policy and routing authority | MUST | Realized by SR | SR-1-1, SR-1-2, SR-1-3 |
+| 1 | Graph policy and routing authority | MUST | Realized by SR | SR-1-2, SR-1-3 |
 | 1.1 | Authoritative graph | MUST | Realized by SR | SR-1.1-1, SR-1.1-2 |
 | 1.2 | Graph outage | MUST | Realized by SR | SR-1.2-1, SR-1.2-2 |
 | 1.3 | Default denial | MUST | Realized by SR | SR-1.3-1 |
 | 1.4 | Deny precedence | MUST | Realized by SR | SR-1.4-1 |
 | 1.5 | Admission prerequisites | MUST | Realized by SR | SR-1.5-1 |
-| 1.6 | Exact scoped rules | MUST | Realized by SR | SR-1.6-1 |
+| 1.6 | Exact scoped rules | MUST | Deferred | SR-1.6-1 (Appendix N) |
 | 1.7 | Typed predicates | MUST | Realized by SR | SR-1.7-1, SR-1.7-2 |
 | 1.8 | Argument scope | MUST | Realized by SR | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5 |
 | 1.9 | Unambiguous permits | MUST | Realized by SR | SR-1.9-1 |
@@ -7526,7 +7474,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 6.6 | Policy-directed payload storage | MUST | Deferred | SR-6.6-1 (Appendix N) |
 | 6.7 | Secret removal | MUST | Realized by SR | SR-6.7-1 |
 | 6.8 | Payload encryption | MUST | Deferred | SR-6.8-1 (Appendix N) |
-| 6.9 | Retention conflict | MUST | Realized by SR | SR-6.9-1 |
+| 6.9 | Retention conflict | MUST | Deferred | SR-6.9-1 (Appendix N) |
 | 6.10 | Idempotent evidence export | MUST | Realized by SR | SR-6.10-1 |
 | 6.11 | Export lag boundary | MUST | Realized by SR | SR-6.11-1 |
 | 6.12 | Independent tamper evidence | MUST | Realized by SR | SR-6.12-1 |
@@ -7591,8 +7539,8 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-02 | Protocol Mediator | FR-1, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.28, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.42, FR-1.43, FR-1.44, FR-1.45, FR-1.46, FR-1.47, FR-1.48, FR-1.51, FR-3.14, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.1, FR-4.2, FR-5.24, FR-11.5, FR-12.9, FR-18.7, FR-18.9 | SR-2-1, SR-5.1-1, SR-5.2-1, SR-5.2-2, SR-5.3-1, SR-5.6-1, SR-5.11-1 |
 | E-03 | Identity & Authentication Service | FR-2, FR-2.1, FR-2.5, FR-2.6, FR-2.15, FR-2.17, FR-2.18, FR-2.23, FR-16, FR-16.3, FR-16.5, FR-16.6 | SR-2.1-1, SR-2.1-2, SR-2.1-3, SR-2.11-1, SR-2.11-2, SR-2.11-5, SR-4.14-2 |
 | E-04 | Session Manager | FR-1.48, FR-2, FR-2.2, FR-2.3, FR-2.4, FR-2.6, FR-2.7, FR-2.8, FR-2.9, FR-2.10, FR-2.11, FR-2.12, FR-2.13, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-16.12 | SR-2.1-2, SR-2.3-1, SR-2.11-4, SR-5.13-2 |
-| E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.4, FR-3.5, FR-3.6, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-9.17, FR-10.37, FR-18.5 | SR-1-1, SR-1-3, SR-1.1-1, SR-1.1-2, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-6.9-1, SR-7.3-1, SR-7.9-1 |
-| E-06 | Policy Decision Service | FR-3, FR-3.10, FR-3.11, FR-3.12, FR-3.13, FR-11, FR-11.2 | SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.6-1, SR-1.7-1, SR-1.7-2, SR-1.10-1, SR-1.11-1, SR-1.12-1, SR-1.12-2, SR-1.12-3, SR-1.15-1, SR-1.18-1, SR-1.19-1, SR-1.20-1, SR-3.10-1, SR-5.12-1, SR-5.13-2 |
+| E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.4, FR-3.5, FR-3.6, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-9.17, FR-10.37, FR-18.5 | SR-1-3, SR-1.1-1, SR-1.1-2, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-7.3-1, SR-7.9-1 |
+| E-06 | Policy Decision Service | FR-3, FR-3.10, FR-3.11, FR-3.12, FR-3.13, FR-11, FR-11.2 | SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.7-1, SR-1.7-2, SR-1.10-1, SR-1.11-1, SR-1.12-1, SR-1.12-2, SR-1.12-3, SR-1.15-1, SR-1.18-1, SR-1.19-1, SR-1.20-1, SR-3.10-1, SR-5.12-1, SR-5.13-2 |
 | E-07 | Approval Service | FR-3, FR-3.14, FR-3.15, FR-3.16, FR-3.17, FR-3.18, FR-3.19, FR-3.20, FR-3.21, FR-3.22, FR-3.23, FR-3.24, FR-3.25 | SR-1.18-2, SR-1.18-3 |
 | E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-1.50, FR-1.52, FR-4, FR-4.1, FR-4.3, FR-11.5 | SR-1.2-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
 | E-09 | Request Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
@@ -7600,7 +7548,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-11 | Response Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.12, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-2-1, SR-5.7-3, SR-5.9-1, SR-5.10-1, SR-5.13-1, SR-5.14-1, SR-5.18-1, SR-5.20-1, SR-5.20-2 |
 | E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8 | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-5.16-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1 |
 | E-13 | Library Trust Verifier | FR-5, FR-5.1, FR-5.2, FR-5.3, FR-5.4, FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.4, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.11, FR-14.12, FR-18.6 | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3.1-1, SR-3.2-1, SR-3.5-1, SR-5.9-2 |
-| E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.21, FR-5.22, FR-5.39, FR-5.40, FR-14, FR-14.9, FR-19.1, FR-19.5 | SR-1-1, SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
+| E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.21, FR-5.22, FR-5.39, FR-5.40, FR-14, FR-14.9, FR-19.1, FR-19.5 | SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2 |
 | E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1 | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1 |
 | E-16 | Execution Sandbox | FR-5, FR-12.3, FR-13.5, FR-19.1 | SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2 |
 | E-17 | Runtime Monitor | FR-5, FR-5.33, FR-5.34, FR-5.35 | — |
@@ -7612,7 +7560,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3 | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
 | E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.5, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4 | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
 | E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.5, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
-| E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.4, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
+| E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
 | E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11 | SR-4.2-2 |
 | E-28 | Data Lifecycle & Memory Manager | FR-9, FR-9.10, FR-9.11, FR-9.12, FR-9.14, FR-9.15, FR-9.16, FR-11, FR-11.9, FR-12, FR-12.4, FR-12.6, FR-12.7, FR-13, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8 | SR-6.14-1, SR-7.7-1, SR-7.8-1, SR-7.10-1 |
 | E-29 | Observation Collector | FR-1.44, FR-1.45, FR-10, FR-10.1, FR-10.2, FR-10.3, FR-10.4, FR-10.5, FR-10.6, FR-10.7, FR-10.8, FR-10.9, FR-10.10, FR-10.11, FR-10.37, FR-11, FR-11.4 | SR-6.7-1 |
@@ -7636,10 +7584,10 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-07 | Bind Allow policy to session | FR-2, FR-2.4, FR-2.6, FR-2.7, FR-2.12, FR-2.13, FR-2.20, FR-2.21, FR-16.12 |
 | F-08 | Maintain session state and expiry | FR-2, FR-2.2, FR-2.8, FR-2.9, FR-2.22, FR-2.16 (deferred) |
 | F-09 | Terminate or revoke session | FR-2, FR-2.2, FR-2.11, SR-2.11-4, FR-2.16 (deferred) |
-| F-10 | Validate policy revision | FR-3, FR-3.1, FR-3.2, FR-3.8, FR-6.5, FR-6.9, FR-8.4, FR-18.5, SR-1-1, SR-1-3, SR-1.9-1, SR-3.13-1, SR-6.9-1, SR-7.3-1, FR-3.3 (deferred) |
+| F-10 | Validate policy revision | FR-3, FR-3.1, FR-3.2, FR-3.8, FR-6.5, FR-6.9, FR-8.4, FR-18.5, SR-1-3, SR-1.9-1, SR-3.13-1, SR-7.3-1, FR-3.3 (deferred), SR-1-1 (deferred), SR-6.9-1 (deferred) |
 | F-11 | Simulate policy | FR-3, FR-3.5, FR-3.6, FR-8.4 |
 | F-12 | Publish/activate policy revision | FR-3, FR-3.4, FR-3.9, FR-8.4, SR-1.1-2, SR-1.14-1, SR-1.15-1, SR-7.9-1 |
-| F-13 | Evaluate access decision | FR-3, FR-3.10, FR-3.11, FR-11.2, SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.6-1, SR-1.7-1, SR-1.7-2, SR-1.11-1, SR-1.12-1, SR-1.12-3, SR-1.15-1, SR-1.20-1, SR-3.10-1 |
+| F-13 | Evaluate access decision | FR-3, FR-3.10, FR-3.11, FR-11.2, SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.7-1, SR-1.7-2, SR-1.11-1, SR-1.12-1, SR-1.12-3, SR-1.15-1, SR-1.20-1, SR-3.10-1, SR-1.6-1 (deferred) |
 | F-14 | Compute effective obligations | FR-3, FR-3.11, FR-3.12, FR-3.13, SR-1.10-1, SR-1.11-1, SR-1.12-2, SR-1.18-1, SR-5.13-2 |
 | F-15 | Evaluate secret-use decision | FR-3 |
 | F-16 | Explain decision | FR-3, SR-1.12-3, SR-1.19-1 |
@@ -7699,7 +7647,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-70 | Persist and index graph data | FR-9.1, FR-9.18 |
 | F-71 | Execute bounded graph queries and transactions | FR-9.18 |
 | F-72 | Authorize and execute typed data operations | FR-9.2, FR-9.3, SR-1.13-1, SR-1.13-2, SR-6-3, SR-7.1-1, SR-4.3-1 (deferred) |
-| F-73 | Batch and route writes | FR-9.4, FR-9.5, FR-11.6 |
+| F-73 | Batch and route writes | FR-9.5, FR-11.6, FR-9.4 (deferred) |
 | F-74 | Apply backpressure | FR-9.6 |
 | F-75 | Store observation and meta-metric records | FR-9.7, FR-9.8, FR-11.6 |
 | F-76 | Serve aggregate queries | FR-9.9, FR-11.8 |
@@ -7759,7 +7707,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-04 | FR-2.6, SR-2.1-2 |
 | I-05 | FR-2.6, FR-2.7, FR-2.12, FR-2.13, SR-1-2, SR-1.5-1 |
 | I-06 | FR-2.18, FR-3.1, FR-3.5, FR-3.6, FR-3.8, FR-3.9, FR-4.14, FR-5.6, FR-6.2, FR-6.12, FR-7.3, FR-7.10, FR-7.12, FR-8.1, FR-9.3, FR-10.19, FR-14.8, SR-1.19-1, FR-2.14 (deferred), FR-3.3 (deferred), FR-3.7 (deferred), FR-7.6 (deferred), SR-4.3-1 (deferred) |
-| I-07 | FR-1.27, FR-2.1, FR-3.1, FR-3.2, FR-3.10, FR-9.3, SR-1-1, SR-4.3-1 (deferred) |
+| I-07 | FR-1.27, FR-2.1, FR-3.1, FR-3.2, FR-3.10, FR-9.3, SR-1-1 (deferred), SR-4.3-1 (deferred) |
 | I-08 | FR-1.29, FR-1.50, FR-3.11, FR-3.12, FR-3.13, SR-1-2 |
 | I-09 | SR-5.12-1 |
 | I-10 | FR-3.14, FR-3.15, FR-3.20 |
@@ -7785,7 +7733,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-30 | FR-7.3, FR-9.3, SR-6.10-1, SR-4.3-1 (deferred) |
 | I-31 | FR-4.15, FR-10.7, FR-10.28, SR-1.12-2 |
 | I-32 | FR-7.11, FR-9.11, FR-9.12, FR-9.15 |
-| I-33 | FR-9.3, FR-9.4, FR-9.6, SR-4.3-1 (deferred) |
+| I-33 | FR-9.3, FR-9.6, FR-9.4 (deferred), SR-4.3-1 (deferred) |
 | I-34 | FR-9.3, FR-10.12, SR-4.3-1 (deferred) |
 | I-35 | FR-9.3, FR-10.32, FR-10.33, SR-4.3-1 (deferred) |
 | I-36 | FR-9.2, SR-1.13-1, SR-4.2-1 |
@@ -8051,7 +7999,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-9.1 | FR-9 | Inspection | E-25 | Graph data model |
 | FR-9.2 | FR-9 | Test | E-26 | Schema migrations |
 | FR-9.3 | FR-9 | Inspection | E-26 | Typed operation catalog |
-| FR-9.4 | FR-9 | Test | E-26 | Write priority classes |
 | FR-9.5 | FR-9 | Test | E-26 | Observation batching |
 | FR-9.6 | FR-9 | Test | E-26 | Backpressure |
 | FR-9.7 | FR-9 | Inspection | E-27 | Observation tables |
@@ -8205,7 +8152,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-19.3 | FR-19 | Inspection | E-24, E-23 | Enforced label gating |
 | FR-19.4 | FR-19 | Inspection | E-24 | Acceptance scenario records |
 | FR-19.5 | FR-19 | Test | E-09, E-11, E-14 | Labelled detection corpora |
-| SR-1-1 | SEC-1 | Test | E-05, E-14 | Capability ceiling |
 | SR-1-2 | SEC-1 | Test | E-06 | Layer intersection |
 | SR-1-3 | SEC-1 | Test | E-05 | Template within profile |
 | SR-1.1-1 | SEC-1.1 | Inspection | E-06, E-05 | Single policy source |
@@ -8215,7 +8161,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-1.3-1 | SEC-1.3 | Test | E-06 | Default deny |
 | SR-1.4-1 | SEC-1.4 | Test | E-06 | Deny precedence |
 | SR-1.5-1 | SEC-1.5 | Test | E-06 | Prerequisite checks |
-| SR-1.6-1 | SEC-1.6 | Test | E-06 | Exact match scope |
 | SR-1.7-1 | SEC-1.7 | Test | E-06 | Predicate operator set |
 | SR-1.7-2 | SEC-1.7 | Test | E-06 | Missing attribute denial |
 | SR-1.8-1 | SEC-1.8 | Test | E-09 | Argument schema validation |
@@ -8342,7 +8287,6 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-6.4-1 | SEC-6.4 | Inspection | E-21 | Exact links |
 | SR-6.5-1 | SEC-6.5 | Test | E-21 | Origin attribution |
 | SR-6.7-1 | SEC-6.7 | Test | E-21, E-29 | Secret scrubbing |
-| SR-6.9-1 | SEC-6.9 | Test | E-05 | Retention validation |
 | SR-6.10-1 | SEC-6.10 | Test | E-21, E-26 | Idempotent export |
 | SR-6.11-1 | SEC-6.11 | Test | E-12, E-21, E-23 | Export lag stop |
 | SR-6.12-1 | SEC-6.12 | Test | E-21, E-22 | Signing key custody |
@@ -8377,9 +8321,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 
 | Check | Result |
 |---|---|
-| Requirements | 534 total: 369 FR (19 roots), 165 SR |
-| Deferred from release 1.0 (Appendix N) | 25: FR-2.14, FR-2.16, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.9, FR-9.13, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1 |
-| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 410 |
+| Requirements | 530 total: 368 FR (19 roots), 162 SR |
+| Deferred from release 1.0 (Appendix N) | 29: FR-2.14, FR-2.16, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.9, FR-9.4, FR-9.13, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1 |
+| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 406 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
@@ -8767,6 +8711,20 @@ These records keep their IDs and text so that a later release can restore them u
 | Rationale | Keys must not sit in plaintext on disk where the platform offers protection. An unattended service cannot wait for a passphrase at every start, so the passphrase is an option rather than the default. |
 | Deferral | Release 1.0 stores private keys in files with mode 0600 under the state directory, owned by the key-holding identity in the Enforced profile (SR-6.12-1); the vault master key can be held in the macOS Keychain. TPM sealing, Keychain storage of every private key and passphrase encryption are deferred: they need reference hardware and an unattended-start design that release 1.0 does not have. |
 
+#### FR-9.4 — Write priority classes (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-9.4 |
+| Parent ID | FR-9 — Data Server |
+| Statement | The Data Access Service (E-26) **SHALL** order queued writes by the priority classes P0 policy and control, P1 mandatory audit, P2 observation and P3 research. |
+| Allocation | Elements: E-26 Data Access Service; Functions: F-73; Internal interfaces: I-33 |
+| Verification Method | Test |
+| Verification Statement | Saturate the queue with P2 writes and submit a P1 write; confirm the P1 write commits first. |
+| Source | ARCH §4 E-26 |
+| Rationale | Mandatory writes must not wait behind optional data. |
+| Deferral | In release 1.0 the Data Access Service writes only the evidence mirror, from one ordered stream: the journal (P0 and P1 records are committed to the journal before the call proceeds, independent of the graph), and observation data is written to the Observation Store, not through the Data Access Service. With one write class in the queue there is nothing to order; priority classes are deferred until a second writer shares the queue. |
+
 #### FR-9.13 — Storage tiering (deferred)
 
 | Field | Value |
@@ -8780,6 +8738,34 @@ These records keep their IDs and text so that a later release can restore them u
 | Source | ARCH §4 E-28 |
 | Rationale | Bounded fast storage with retained history. |
 | Deferral | Release 1.0 writes observation partitions as compressed columnar files (Parquet through DuckDB) or JSON Lines from the start and deletes them at the end of their retention; there is one tier. A separate hot tier is deferred until measurements on reference hardware show that queries over 30 days need one. |
+
+#### SR-1-1 — Capability ceiling (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-1-1 |
+| Parent ID | SEC-1 — Graph policy and routing authority (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Policy Administration Service (E-05) **SHALL** reject publication of any grant whose tools, paths, egress destinations or secret slots exceed the capability ceiling of the referenced server revision's manifest. |
+| Allocation | Elements: E-05 Policy Administration Service, E-14 Local Server Registry; Functions: F-10; Internal interfaces: I-07 |
+| Verification Method | Test |
+| Verification Statement | Publish grants exceeding each ceiling dimension; confirm each is rejected with the exceeded dimension named. |
+| Source | ARCH §7.3; ARCH §7.1 layer 1 |
+| Rationale | The signed manifest bounds all authority. |
+| Deferral | Release 1.0 policy grants name a server alias and tools only; they carry no paths, egress destinations or secret slots, so a grant cannot exceed those dimensions of a manifest. A granted tool that the enabled server revision does not serve has no public name and is never presented or dispatched. Filesystem slots, egress grants and secret slots are bound in the configuration, not in the policy document. Publication-time checks of grants against the manifest ceiling are deferred with grants that carry those dimensions. |
+
+#### SR-1.6-1 — Exact match scope (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-1.6-1 |
+| Parent ID | SEC-1.6 — Exact scoped rules (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Policy Decision Service (E-06) **SHALL** match permits on principal or Framework Profile, session template, exact server revision ID, exact tool revision ID and MCP method. |
+| Allocation | Elements: E-06 Policy Decision Service; Functions: F-13 |
+| Verification Method | Test |
+| Verification Statement | Change each dimension of a permitted request in turn; confirm each change results in deny. |
+| Source | SEC 1.6 |
+| Rationale | No implicit widening. |
+| Deferral | Release 1.0 permit rules match the Framework Profile, the session template, the server alias, the tool name and the `tools/call` method (no other method reaches the decision). The exact revisions are fixed outside the rule: a server revision that is not enabled is never dispatched to, a relaunch with a different revision suspends the server, and every decision record carries the exact server and tool revision IDs. Rules that name revision IDs, which would need a policy publication for every server upgrade, are deferred. |
 
 #### SR-2.8-2 — Mutual TLS (deferred)
 
@@ -8892,4 +8878,18 @@ These records keep their IDs and text so that a later release can restore them u
 | Source | SEC 6.8 |
 | Rationale | Encrypted payloads. |
 | Deferral | Deferred with payload capture (SR-6.6-1): release 1.0 stores no payloads, so there are no payload blobs to encrypt or reference from the graph. |
+
+#### SR-6.9-1 — Retention validation (deferred)
+
+| Field | Value |
+|---|---|
+| ID | SR-6.9-1 |
+| Parent ID | SEC-6.9 — Retention conflict (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Policy Administration Service (E-05) **SHALL** reject publication of retention settings whose greatest minimum exceeds the smallest maximum, or whose capture requirement contradicts a no-capture classification. |
+| Allocation | Elements: E-05 Policy Administration Service; Functions: F-10 |
+| Verification Method | Test |
+| Verification Statement | Publish conflicting retention and capture settings; confirm rejection. |
+| Source | SEC 6.9 |
+| Rationale | Consistent retention. |
+| Deferral | Release 1.0 has one retention setting per store (the Audit Profile's `retention` and the `[evidence]` and `[observation]` settings) and no no-capture data classifications, because payload capture is deferred (SR-6.6-1). There are no competing minimum and maximum retentions or capture requirements to conflict. Retention validation is deferred with policy-directed capture. |
 
