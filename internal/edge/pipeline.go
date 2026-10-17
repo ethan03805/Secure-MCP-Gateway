@@ -142,7 +142,7 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		}
 
 		// Approval (E-07).
-		if dec.Obligations.Approval {
+		if dec.Obligations.Approval || call.RequireApproval {
 			if err := g.approve(ctx, c, call, args, req); err != nil {
 				return nil, err
 			}

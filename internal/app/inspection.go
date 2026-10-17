@@ -54,6 +54,11 @@ func (a *App) startInspection(cfg *config.Config, o *Options) error {
 	} else {
 		insp.Observe(o.Filters)
 	}
+	if o.ExtraFilters != nil {
+		if err := o.ExtraFilters(o.Filters); err != nil {
+			return fmt.Errorf("filters: %w", err)
+		}
+	}
 	o.Manifests = insp.Manifests(o.Manifests)
 	a.Inspector = insp
 	return nil

@@ -21,7 +21,8 @@ import (
 )
 
 // Call is what every stage knows about one tools/call after the decision.
-// Stages must treat it as read-only.
+// Stages must treat it as read-only, except RequireApproval and
+// ApprovalReason.
 type Call struct {
 	CorrelationID  string
 	SessionID      string
@@ -46,4 +47,10 @@ type Call struct {
 	// (findings, tags, timing). RunRequest and RunResponse create it when
 	// nil; later stages read it through its methods.
 	Inspection *Inspection
+	// RequireApproval may be set by a request filter to require approval
+	// (E-07) although the decision did not. It can only add the obligation
+	// (restrict-only, SR-1.12-2); the Anomaly Scorer's synchronous
+	// obligation (E-31, FR-4.15) uses it. ApprovalReason names the cause.
+	RequireApproval bool
+	ApprovalReason  string
 }
