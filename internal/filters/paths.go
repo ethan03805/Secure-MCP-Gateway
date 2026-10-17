@@ -74,7 +74,7 @@ func (f *pathFilter) FilterRequest(_ context.Context, call *pipeline.Call, args 
 	if !ok {
 		return invalidArguments(), nil
 	}
-	roots := f.rootsFor(call.Server)
+	roots, granted := narrowRoots(f.rootsFor(call.Server), call.Project)
 	changed := false
 	var findings []pipeline.Finding
 	for _, ts := range typedSurfaces(call.InputSchema, v, f.kind) {
@@ -82,10 +82,13 @@ func (f *pathFilter) FilterRequest(_ context.Context, call *pipeline.Call, args 
 			continue
 		}
 		canon, rule := CanonicalPath(ts.get(), roots)
+		if !granted {
+			rule = "project-outside-roots" // FR-2.7: nothing is left to grant
+		}
 		if rule != "" {
 			fd := pipeline.Finding{Filter: IDPathCanonicalize, Rule: rule, Location: ts.loc}
 			reason := ReasonPathInvalid
-			if rule == "outside-roots" {
+			if rule == "outside-roots" || rule == "project-outside-roots" {
 				reason = ReasonPathOutsideRoots
 			}
 			return pipeline.RequestVerdict{Action: pipeline.Block, ReasonCode: reason, Finding: "path argument at " + ts.loc + ": " + pathRuleText[rule], Findings: []pipeline.Finding{fd}}, nil
@@ -109,14 +112,55 @@ func (f *pathFilter) FilterRequest(_ context.Context, call *pipeline.Call, args 
 	return pipeline.RequestVerdict{Action: pipeline.Transform, Arguments: raw, Findings: findings}, nil
 }
 
+// narrowRoots applies a session's project-root claim to the granted roots
+// (FR-2.7): the project root replaces every granted root that contains it,
+// and a granted root inside the project root is kept. With no granted roots
+// the project root becomes the only root. A project root that is relative,
+// does not resolve, or meets no granted root leaves nothing granted, and ok
+// is false so that every path argument is refused.
+func narrowRoots(roots []string, project string) ([]string, bool) {
+	if project == "" {
+		return roots, true
+	}
+	if !filepath.IsAbs(project) {
+		return nil, false
+	}
+	p, err := filepath.EvalSymlinks(filepath.Clean(project))
+	if err != nil {
+		return nil, false
+	}
+	if len(roots) == 0 {
+		return []string{p}, true
+	}
+	var out []string
+	for _, r := range roots {
+		switch {
+		case within(p, r):
+			if !slices.Contains(out, p) {
+				out = append(out, p)
+			}
+		case within(r, p):
+			out = append(out, r)
+		}
+	}
+	return out, len(out) > 0
+}
+
+// within reports whether path p is root or lies under it.
+func within(p, root string) bool {
+	rel, err := filepath.Rel(root, p)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 var pathRuleText = map[string]string{
-	"nul-byte":          "contains a NUL byte",
-	"encoded-separator": "contains a percent-encoded separator or dot",
-	"backslash-dots":    "contains a backslash traversal",
-	"home-relative":     "starts with ~ and would be expanded by the server",
-	"bad-file-url":      "is a file URL that cannot be parsed or names a host",
-	"outside-roots":     "resolves outside the granted roots",
-	"relative-no-root":  "is relative and escapes the working directory",
+	"nul-byte":              "contains a NUL byte",
+	"encoded-separator":     "contains a percent-encoded separator or dot",
+	"backslash-dots":        "contains a backslash traversal",
+	"home-relative":         "starts with ~ and would be expanded by the server",
+	"bad-file-url":          "is a file URL that cannot be parsed or names a host",
+	"outside-roots":         "resolves outside the granted roots",
+	"project-outside-roots": "cannot be used: the session's project root is not inside the granted roots",
+	"relative-no-root":      "is relative and escapes the working directory",
 }
 
 // CanonicalPath resolves p against roots: a relative path is joined to the

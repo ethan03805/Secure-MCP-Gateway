@@ -68,6 +68,10 @@ type rpcMessage struct {
 	// HTTP status; nil when the body is one well-formed message.
 	Err    *jsonrpc.Error
 	Status int
+	// Unread reports that the body could not be read to its end (the
+	// CP-07 body deadline passed or the client went away); the request is
+	// answered without authenticating it.
+	Unread bool
 }
 
 func messageFrom(ctx context.Context) rpcMessage {
@@ -89,7 +93,7 @@ func readMessage(r *http.Request, limit int64) rpcMessage {
 	case errors.As(err, &mbe):
 		return rpcMessage{Status: http.StatusRequestEntityTooLarge, Err: &jsonrpc.Error{Code: codeInvalidRequest, Message: fmt.Sprintf("request body exceeds %d bytes", mbe.Limit)}}
 	case err != nil:
-		return rpcMessage{Status: http.StatusBadRequest, Err: &jsonrpc.Error{Code: codeParseError, Message: "request body could not be read"}}
+		return rpcMessage{Status: http.StatusBadRequest, Err: &jsonrpc.Error{Code: codeParseError, Message: "request body could not be read"}, Unread: true}
 	case int64(len(body)) > limit:
 		return rpcMessage{Status: http.StatusRequestEntityTooLarge, Err: &jsonrpc.Error{Code: codeInvalidRequest, Message: fmt.Sprintf("request body exceeds %d bytes", limit)}}
 	}

@@ -163,6 +163,10 @@ type Gateway struct {
 
 	// cursorKey seals tools/list pagination cursors (cursor.go, SR-5.7-2).
 	cursorKey []byte
+	// bounds are the listener's pre-parse bounds and unauth the CP-09
+	// unauthenticated-work slots (bounds.go, SR-7.11-1).
+	bounds listenerBounds
+	unauth workLimit
 
 	// remoteMetadataURL returns the Remote Access listener's protected
 	// resource metadata URL for 401 responses there (FR-16.3).
@@ -233,7 +237,7 @@ func New(d Deps) (*Gateway, error) {
 	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
 		evidenceErr: d.EvidenceErr, healthGate: d.HealthGate, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, screen: d.Screen, caps: d.Capabilities,
 		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, spans: d.Spans, servers: map[string]*sessionServer{}, track: newTracker(), listenInterval: listenKeepAlive,
-		cursorKey: make([]byte, 32)}
+		cursorKey: make([]byte, 32), bounds: defaultBounds, unauth: newWorkLimit(defaultBounds.Unauthenticated)}
 	if _, err := rand.Read(g.cursorKey); err != nil {
 		return nil, fmt.Errorf("edge: cursor key: %w", err)
 	}
@@ -254,6 +258,7 @@ func New(d Deps) (*Gateway, error) {
 	g.udsHandler = g.mcpChain(http.HandlerFunc(g.serveMCP))
 	g.mux.HandleFunc("GET /healthz", g.healthz)
 	d.Store.OnEnd(g.sessionEnded)
+	d.Registry.OnSuspend(func(string) { g.dropUnresolved() }) // FR-1.35
 	return g, nil
 }
 
@@ -316,25 +321,27 @@ func CheckLoopback(addr string) error {
 // ServeTLS runs an HTTP server with the listener limits of CP-06 and CP-07
 // on ln until ctx ends.
 func ServeTLS(ctx context.Context, ln net.Listener, h http.Handler, tc *tls.Config, log *slog.Logger) error {
-	return serveTLS(ctx, ln, h, tc, log, false)
+	return serveTLS(ctx, ln, h, tc, log, false, defaultBounds)
 }
 
 // serveTLS is ServeTLS; with headerErrors the listener terminates TLS
 // itself and answers unparseable header blocks with -32020 (headerconn.go,
 // SR-5.2-2), serving HTTP/1.1 only.
-func serveTLS(ctx context.Context, ln net.Listener, h http.Handler, tc *tls.Config, log *slog.Logger, headerErrors bool) error {
+// It also closes connections beyond the CP-09 connection limit before TLS
+// (bounds.go).
+func serveTLS(ctx context.Context, ln net.Listener, h http.Handler, tc *tls.Config, log *slog.Logger, headerErrors bool, b listenerBounds) error {
 	srv := &http.Server{
 		Handler:           h,
 		TLSConfig:         tc,
-		ReadHeaderTimeout: 5 * time.Second,  // CP-06
-		ReadTimeout:       15 * time.Second, // CP-07
+		ReadHeaderTimeout: b.HeaderTimeout, // CP-06
+		ReadTimeout:       b.BodyTimeout,   // CP-07
 		IdleTimeout:       90 * time.Second,
-		MaxHeaderBytes:    16 << 10, // CP-06
+		MaxHeaderBytes:    b.HeaderBytes, // CP-06
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
 	errc := make(chan error, 1)
 	if headerErrors {
-		go func() { errc <- srv.Serve(newHeaderListener(ln, tc)) }()
+		go func() { errc <- srv.Serve(newHeaderListener(newConnLimitListener(ln, b.Connections), tc)) }()
 	} else {
 		go func() { errc <- srv.ServeTLS(ln, "", "") }()
 	}
@@ -366,7 +373,7 @@ func (g *Gateway) Serve(ctx context.Context, ln net.Listener) error {
 		<-ctx.Done()
 		g.EndListenStreams() // FR-1.37: before Shutdown waits for handlers
 	}()
-	return serveTLS(ctx, ln, g.Handler(), tc, g.log, true)
+	return serveTLS(ctx, ln, g.Handler(), tc, g.log, true, g.bounds)
 }
 
 // EndListenStreams ends every open listen stream, each with an empty
@@ -600,7 +607,21 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			return
 		}
 		corr := ids.New() // FR-4.2
+		// CP-09: reading the body and checking the token is unauthenticated
+		// work; beyond the limit the request is refused before its body is
+		// read (SR-7.11-1).
+		if !g.unauth.tryAcquire() {
+			writeRPCError(w, http.StatusTooManyRequests, gatewayError(CodeRateLimited, "too many unauthenticated requests", "QUEUE_FULL", corr, "",
+				map[string]any{"limit": cap(g.unauth)}))
+			return
+		}
+		endWork := sync.OnceFunc(g.unauth.release)
+		defer endWork()
 		msg := readMessage(r, g.cfg.Limits.RequestBodyBytes)
+		if msg.Unread {
+			writeRPCErrorID(w, msg.Status, nil, msg.Err)
+			return
+		}
 		if reason := g.failClosed(); reason != "" {
 			writeRPCErrorID(w, http.StatusServiceUnavailable, msg.ID, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", reason, corr, "", nil))
 			return
@@ -613,6 +634,7 @@ func (g *Gateway) mcpChain(next http.Handler) http.Handler {
 			sess, err = g.store.Authenticate(session.Bearer(r), org.Listener()) // FR-2.5, SR-2.1-3; FR-16.1 binds remote sessions to the remote listener
 		})
 		authSpan := pipeline.StageSpan{Stage: pipeline.SpanAuthenticate, Start: authStart, End: time.Now(), CPU: authCPU, CPUMeasured: authMeasured}
+		endWork()
 		if err != nil {
 			ev := audit.Event{Class: "auth_failure", Origin: "E-03", CorrelationID: corr, Outcome: "deny", ReasonCode: "SESSION_INVALID", PolicyStatus: "not_evaluated"}
 			org.Apply(&ev)

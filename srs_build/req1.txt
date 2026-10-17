@@ -488,11 +488,11 @@ R: Implements Allow-policy layers 2 and 3.
 
 @FR-2.7 | Claim narrowing
 P: FR-2
-S: The Session Manager (E-04) SHALL apply the project-root, purpose and end-user claims as narrowing parameters of the selected template.
+S: The Session Manager (E-04) SHALL apply the project-root claim as a narrowing parameter of the selected template, so that path arguments are confined to the project root within the granted roots, and SHALL record the purpose and end-user claims with the session and its creation evidence.
 A: E-04; F-07; I-05
 V: Test | Create a session with project root `/p/a` under a template allowing `/p`; confirm paths outside `/p/a` are denied.
 SRC: ARCH §7.1 layer 4
-R: Session context tailors the Allow policy.
+R: Session context tailors the Allow policy. The project root narrows what the template grants (the path roots of `path-canonicalize`); a project root outside every granted root leaves no path granted. Release 1.0 policy rules have no purpose or end-user predicates, so those claims do not narrow a template; they are recorded with the session, in its creation event and in the observation context key (FR-2.13), where policy authors and analytics can use them.
 
 @FR-2.8 | Session state model
 P: FR-2
@@ -520,11 +520,11 @@ R: Bounds per-principal resource use.
 
 @FR-2.11 | Session termination effects
 P: FR-2
-S: When a session terminates, expires or is revoked, the Session Manager (E-04) SHALL close its listen streams, cancel its in-flight calls, release its session-scoped server instances and request withdrawal of its secret grants.
+S: When a session terminates, expires or is revoked, the Session Manager (E-04) SHALL close its listen streams and cancel its in-flight calls.
 A: E-04; F-09; I-20
-V: Test | Terminate a session with an open stream, an in-flight call, a session-scoped instance and a grant; confirm each is released.
+V: Test | Terminate, expire and revoke sessions that each have an open listen stream and an in-flight call; confirm each stream is closed and each call is cancelled.
 SRC: ARCH §4 E-04; ARCH §18.7
-R: Prevents orphaned authority after session end.
+R: Prevents orphaned authority after session end. In release 1.0 server instances are shared per server revision, not owned by a session, and secret deliveries are bound to server instances and withdrawn at instance teardown (FR-6.8), so a session holds no instance or secret grant of its own to release.
 
 @FR-2.12 | Revision change handling
 P: FR-2
