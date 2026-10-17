@@ -119,6 +119,7 @@ type Limits struct {
 	ToolConcurrencyTotal   int      `toml:"tool_concurrency_total" json:"tool_concurrency_total"`                 // CP-10
 	ToolQueue              int      `toml:"tool_queue" json:"tool_queue"`                                         // CP-10
 	PrincipalCallsPerMin   int      `toml:"principal_calls_per_minute" json:"principal_calls_per_minute"`         // CP-11
+	PrincipalCallBurst     int      `toml:"principal_call_burst" json:"principal_call_burst"`                     // CP-11 burst
 	UpstreamTimeout        Duration `toml:"upstream_timeout" json:"upstream_timeout"`                             // CP-13
 	ClientDeadline         Duration `toml:"client_deadline" json:"client_deadline"`                               // CP-13
 	SessionMaxLifetime     Duration `toml:"session_max_lifetime" json:"session_max_lifetime"`                     // CP-18
@@ -146,6 +147,7 @@ var LimitDefaults = []LimitDefault{
 	{"tool_concurrency_total", 16, func(m *Limits) any { return &m.ToolConcurrencyTotal }},
 	{"tool_queue", 32, func(m *Limits) any { return &m.ToolQueue }},
 	{"principal_calls_per_minute", 60, func(m *Limits) any { return &m.PrincipalCallsPerMin }},
+	{"principal_call_burst", 10, func(m *Limits) any { return &m.PrincipalCallBurst }},
 	{"upstream_timeout", 45 * time.Second, func(m *Limits) any { return &m.UpstreamTimeout }},
 	{"client_deadline", 60 * time.Second, func(m *Limits) any { return &m.ClientDeadline }},
 	{"session_max_lifetime", 8 * time.Hour, func(m *Limits) any { return &m.SessionMaxLifetime }},

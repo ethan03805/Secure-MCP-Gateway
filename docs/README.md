@@ -23,7 +23,8 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Control API: runtime](api/runtime.md) | — | Written: `/api/v1/runtime*` routes |
 | Install guide (`install.md`) | FR-18.1 | To be written with the installer (FR-13) |
 | Operator guide (`operator-guide.md`) | FR-18.4 | To be written with the control API and console |
-| Policy reference (`policy-reference.md`) | FR-18.5 | To be written with the policy schema |
+| [Policy reference](policy-reference.md) | FR-18.5 | Written for Framework Profiles and Session Allow Policy Templates, the Policy Store and `smcpctl policy` |
+| [Control API: policy routes](api/policy.md) | FR-18.5 | Written |
 | Packaging guide (`packaging-guide.md`) | FR-18.6 | To be written with `smcpctl package` (FR-14) |
 | Runbooks (`runbooks/`) | FR-18.8 | To be written with each procedure |
 

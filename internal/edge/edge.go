@@ -102,6 +102,9 @@ type Deps struct {
 	Capabilities *pipeline.Capabilities
 	// ConsoleURL is the base URL approval deep links point at.
 	ConsoleURL string
+	// PolicyFault reports a Policy Store fault (for example
+	// "policy_signature") as a fail-closed health cause; nil means none.
+	PolicyFault func() string
 }
 
 // Gateway wires the slice together.
@@ -119,6 +122,7 @@ type Gateway struct {
 	filters     *pipeline.Filters
 	caps        *pipeline.Capabilities
 	consoleURL  string
+	policyFault func() string
 
 	gate    sync.RWMutex // launch/release barrier (see package comment)
 	stopped atomic.Bool  // FR-4.14 emergency stop
@@ -136,6 +140,8 @@ type Gateway struct {
 type sessionServer struct {
 	revision string
 	srv      *mcp.Server
+	sess     session.Session
+	catalog  *catalogSet
 }
 
 type ctxKey int
@@ -162,6 +168,9 @@ func New(d Deps) (*Gateway, error) {
 	if d.Filters == nil {
 		d.Filters = pipeline.NewFilters()
 	}
+	if d.PolicyFault == nil {
+		d.PolicyFault = func() string { return "" }
+	}
 	if d.Capabilities == nil {
 		return nil, errors.New("edge: the capability ledger shared with the dispatcher is required")
 	}
@@ -170,7 +179,7 @@ func New(d Deps) (*Gateway, error) {
 	}
 	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
 		evidenceErr: d.EvidenceErr, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, caps: d.Capabilities,
-		consoleURL: d.ConsoleURL, servers: map[string]*sessionServer{}, track: newTracker()}
+		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker()}
 	g.handler = mcp.NewStreamableHTTPHandler(g.serverFor, &mcp.StreamableHTTPOptions{
 		Stateless:           true,
 		JSONResponse:        true,                             // FR-1.6: JSON unless the request needs a stream
@@ -345,9 +354,18 @@ func (g *Gateway) Resume(actor string) error {
 func (g *Gateway) Stopped() bool { return g.stopped.Load() }
 
 // ActivatePolicy validates and activates a compiled snapshot under the
-// barrier (FR-3.10) and records the change. Session catalogs are rebuilt on
-// their next request.
+// barrier (FR-3.10) and records the change. After the swap, every cached
+// session catalog is brought to the new revision in place, which sends
+// notifications/tools/list_changed on the session's open listen streams.
 func (g *Gateway) ActivatePolicy(actor string, snap *policy.Snapshot) (bool, error) {
+	changed, err := g.activatePolicy(actor, snap)
+	if changed && err == nil {
+		g.syncCatalogs()
+	}
+	return changed, err
+}
+
+func (g *Gateway) activatePolicy(actor string, snap *policy.Snapshot) (bool, error) {
 	g.gate.Lock()
 	defer g.gate.Unlock()
 	prev := ""
@@ -414,6 +432,9 @@ func (g *Gateway) Health() Health {
 	}
 	if g.stopped.Load() {
 		h.State, h.Causes = "fail-closed", append(h.Causes, "emergency_stop")
+	}
+	if f := g.policyFault(); f != "" {
+		h.State, h.Causes = "fail-closed", append(h.Causes, f)
 	}
 	if snap := g.decider.Snapshot(); snap == nil {
 		h.State, h.Causes = "fail-closed", append(h.Causes, "no_decision_snapshot")
@@ -522,6 +543,7 @@ func (g *Gateway) sessionEnded(s session.Session) {
 	delete(g.servers, s.ID)
 	g.mu.Unlock()
 	cancelled := g.track.endSession(s.ID, sessionEndGrace)
+	g.decider.EndSession(s.ID) // taint and quota state end with the session
 	if ss != nil {
 		for ms := range ss.srv.Sessions() {
 			_ = ms.Close()

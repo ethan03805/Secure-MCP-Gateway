@@ -33,7 +33,9 @@ Control API (running Gateway):
   health           show the Gateway's health
   stop             emergency stop: refuse every tool call until resumed
   resume           leave emergency stop
-  policy reload    validate and activate the policy file
+  policy reload    publish the configured policy file through the Policy Store
+  policy ...       validate, diff, simulate, publish, rollback, history, show
+                   (smcpctl policy help)
   approvals        list, show, approve, deny or watch tool-call approvals
   admin redeem     set the administrator password with the one-use bootstrap token
   egress           Egress Broker status, grants and recent connections (smcpctl egress -h)
@@ -70,6 +72,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = control(args[1:], stdout, "POST", "/admin/v1/resume", map[string]any{})
 	case args[0] == "policy" && sub("reload"):
 		err = control(args[2:], stdout, "POST", "/admin/v1/policy/reload", map[string]any{})
+	case args[0] == "policy":
+		err = policyCmd(args[1:], stdout)
 	case args[0] == "approvals":
 		err = approvalsCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "admin" && sub("redeem"):

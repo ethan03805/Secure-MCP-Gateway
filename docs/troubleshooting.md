@@ -18,6 +18,8 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 |---|---|---|---|
 | `NO_PERMIT` | `-31001` | No rule of the session's template permits this tool | Grant the tool in the template, publish the policy, and start a new session |
 | `NO_TEMPLATE` | `-31001` | The session's template is not in the active policy | Sign in again; the session was created under a template that no longer exists |
+| `DENY_RULE` | `-31001` | A deny rule of the session's template covers the tool | Remove or narrow the deny rule and publish; `data.decisiveRules` names it |
+| `EVAL_BOUND` | `-31001` | The decision exceeded CP-12 (more than 256 candidate rules for the server, or 500 ms) | Split the template's rules for that server |
 | `APPROVAL_DENIED` | `-31001` | An approver denied the call | None; the decision is recorded with the approver's identity |
 | `TAINT_DENIED` | `-31001` | The session has read untrusted content and the template denies writing or external tools | Start a new session, or change the template's `taint_action` to `approve` |
 | `APPROVAL_REQUIRED` | `-31002` | The call needs a person's approval | Open `data.approvalUrl` or run `smcpctl approvals list`, approve, then repeat the same request |
@@ -31,11 +33,12 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `RELEASE_REFUSED` | `-31003` | The session, policy or stop state changed while the tool ran | Repeat the request |
 | `FAIL_CLOSED` | `-31004` | A critical health check failed | Run `smcpctl health`; fix the listed cause (policy snapshot, journal, vault, clock, trust anchors, audit capacity) |
 | `EMERGENCY_STOP` | `-31004` | An emergency stop is in effect | An Administrator resumes with `smcpctl resume` or from G-01 |
-| `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | Check the policy file's signature and schema with `smcpctl config validate` |
+| `NO_SNAPSHOT` | `-31004` | No verified policy revision is loaded | If health lists `policy_signature`, a file under `state/policy/` was altered: restore it from a backup and restart, or publish a valid revision with `smcpctl policy publish` |
 | `JOURNAL_UNAVAILABLE` | `-31004` | The decision could not be recorded in the evidence journal | Check disk space and permissions of the journal directory |
 | `POLICY_REVISION_CHANGED` | `-31004` | The policy changed between decision and launch | Repeat the request |
 | `CAPABILITY` | `-31004` | The one-use launch capability was missing or already used | Repeat the request; if it repeats, report the correlation ID |
-| `RATE_LIMITED` | `-31005` | A per-principal or per-template rate limit was reached | Wait; `data.callsPerMinute` shows the limit |
+| `RATE_LIMITED` | `-31005` | A rate or burst limit was reached (principal, session or session-tool window) | Wait; `data.callsPerMinute` and `data.burst` show the limits |
+| `QUOTA_EXHAUSTED` | `-31005` | The session used its `calls_per_session` quota | Start a new session, or raise the quota in the template or rule |
 | `QUEUE_FULL` | `-31005` | The dispatch queue is full | Wait, or raise the concurrency limits (CP-10) |
 | `SESSION_INVALID` | `-31006` | Missing, expired or unknown token | Sign in again; the harness normally does this itself after a 401 |
 | `SESSION_STATE` | `-31006` | The session is suspended or terminated | Sign in again |
@@ -57,6 +60,10 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `APPROVER_SIGNIN`, `APPROVER_SIGNIN_FAILED` | Journal events | Approver account sign-in on the control API |
 | `ADMIN_ROLE_REFUSED` | Journal `auth_failure` events | An authenticated account's role does not permit the control API route (control API 403 `role_refused`) |
 | `role_refused`, `not_pending`, `signin_failed`, `audit_unavailable` | Control API error codes | See `docs/api/approvals.md` |
+| `POLICY_PUBLISHED`, `POLICY_ROLLED_BACK`, `POLICY_IMPORTED`, `POLICY_ACTIVATED` | Journal admin events | A policy revision was stored or activated; see `docs/policy-reference.md` |
+| `POLICY_INVALID`, `POLICY_CONFLICT`, `POLICY_ACTIVATION_FAILED` | Journal admin events, control API | A publication was refused |
+| `POLICY_SIGNATURE` | Journal admin event, health cause `policy_signature` | The active policy revision did not verify at start; the Gateway is fail-closed |
+| `POLICY_SIMULATED` | Journal admin events | A policy simulation ran |
 | `SESSION_END` | Journal session events | A session ended (expiry, termination or revocation) |
 | `PROFILE_UNCONFINED` | Server enablement | A `high`-risk server cannot be enabled in the Standalone profile (SR-4-1) |
 | `REMOTE_BACKEND_UNSUPPORTED` | Package import | The manifest names a network endpoint; remote backends are out of scope (FR-14.4) |
