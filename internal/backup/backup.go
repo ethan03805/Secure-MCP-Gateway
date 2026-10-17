@@ -177,14 +177,15 @@ func components(files []FileEntry, optional map[string]string) []string {
 	var out []string
 	for _, c := range []struct{ name, prefix string }{
 		{"configuration", "config/"},
-		{"policy_store", "policy/"},
+		{"policy_store", "state/policy/"}, // the signed Policy Store (E-05)
+		{"policy_store", "policy/"},       // the configured policy file
 		{"evidence_journal", "state/journal/"},
 		{"key_material", "state/keys/"},
 		{"trust_anchors", "state/tls/"},
-		{"server_registry", "state/registry/"},
+		{"server_registry", "state/packages/registry.json"}, // the Local Server Registry (E-14)
 		{"vault", "state/vault/"},
 	} {
-		if has(c.prefix) {
+		if has(c.prefix) && !contains(out, c.name) {
 			out = append(out, c.name)
 		}
 	}

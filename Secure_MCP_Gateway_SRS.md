@@ -3998,10 +3998,10 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-12.12 |
 | Parent ID | FR-12 — Implementation constraints |
-| Statement | The Gateway release **SHALL** include the `smcp-session` command, which obtains or refreshes a session as the principal named by its CP-43 credential file through the token endpoint (FR-2.20) or the session API (FR-2.2), and prints a JSON object of request headers on standard output in the form consumed by the Claude Code `headersHelper` and Codex `http_headers_helper` hooks. |
+| Statement | The Gateway release **SHALL** include the `smcp-session` command, which obtains or refreshes a session as the principal named by its CP-43 credential file through the token endpoint (FR-2.20) or the session API (FR-2.2), and prints a JSON object of request headers on standard output in the form consumed by the Claude Code `headersHelper` hook, or, with `--env NAME`, the line `NAME=<Authorization value>` for clients that read a header value from an environment variable (Codex CLI `env_http_headers`, which at the Appendix K version has no header-helper hook). |
 | Allocation | Elements: E-33 Harness Adapter Kit; Functions: F-94; External interfaces: X-01, X-12 |
 | Verification Method | Demonstration |
-| Verification Statement | Configure Claude Code and Codex CLI with the helper; confirm each connects and lists tools through the Gateway. |
+| Verification Statement | Configure Claude Code with the helper as its `headersHelper`, and Codex CLI with an `env_http_headers` entry whose variable `smcp-session --env` set; confirm each connects and lists tools through the Gateway. |
 | Source | ARCH §4 E-33; Client-Compatibility-Brief §4.1 |
 | Rationale | Neither client can call a session API itself. Both can run a header helper. |
 

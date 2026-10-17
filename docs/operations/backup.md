@@ -35,7 +35,8 @@ recipients = ["age1..."]
 | `state/journal/`, `state/journal.anchor` | Evidence journal and its anchor |
 | `state/keys/` | Key material (evidence keys, operator token, installation ID, administrator password hash) |
 | `state/tls/` | Trust anchors: CA bundle, CA key, listener certificate |
-| `state/registry/`, `state/vault/`, `state/trust/` and any other state | Included when present (Server Registry, vault, curation trust anchors of later elements) |
+| `state/policy/` | The signed Policy Store (revisions and the signed control record) |
+| `state/packages/`, `state/library/`, `state/vault/`, `state/trust/` and any other state | Included when present (Local Server Registry `state/packages/registry.json` and the package store, vault, curation trust anchors) |
 | `config/<name>` | Configuration file |
 | `policy/<name>` | Active policy file (the Policy Store of this build) |
 | `optional/<name>/` | Each `--optional name=path` (for example an Observation Store copy or a graph dump) |

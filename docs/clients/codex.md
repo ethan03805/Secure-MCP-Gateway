@@ -22,7 +22,7 @@ args = []
 # END smcp
 ```
 
-`--helper` writes `url = "https://127.0.0.1:8443/mcp"` instead, for Codex's own OAuth (`codex mcp login smcp`); Codex must then trust the Gateway CA: the real-agent suite uses `CODEX_CA_CERTIFICATE` set to a PEM bundle of the system roots plus the Gateway CA (the public roots are needed for the model endpoint). The SRS also names Codex's `http_headers_helper` with `smcp-session`; that key is not yet confirmed and setup does not write it.
+`--helper` writes `url = "https://127.0.0.1:8443/mcp"` instead, for Codex's own OAuth (`codex mcp login smcp`); Codex must then trust the Gateway CA: the real-agent suite uses `CODEX_CA_CERTIFICATE` set to a PEM bundle of the system roots plus the Gateway CA (the public roots are needed for the model endpoint). Codex 0.142.2 has no `http_headers_helper`; with `--helper` it can instead send the header that `smcp-session --env SMCP_AUTHORIZATION` exports, through `env_http_headers = {Authorization = "SMCP_AUTHORIZATION"}` (docs/adapters.md). Setup does not write that entry.
 
 ## Lockdown
 

@@ -18,8 +18,9 @@ import (
 var HelperTimeout = 9 * time.Second
 
 // SessionMain is smcp-session (FR-12.12): print a JSON object of request
-// headers for the Claude Code headersHelper and Codex http_headers_helper
-// hooks. It never prints the token anywhere else.
+// headers for the Claude Code headersHelper hook, or with --env NAME the line
+// NAME=<Authorization value> (Codex env_http_headers, Hermes). It never
+// prints the token anywhere else.
 func SessionMain(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("smcp-session", flag.ContinueOnError)
 	fs.SetOutput(stderr)
