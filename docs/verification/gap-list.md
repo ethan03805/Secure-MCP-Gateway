@@ -198,11 +198,8 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 - FR-8.34 missing: `console/e2e/views.spec.ts` has a test per view, but `tools/reqreport` reads only `go test -json`, so Playwright tests cannot claim a view's requirement through the report.
 - FR-8.35 unverified: `docs/console-style.md` holds the checklist; no inspection record against every view.
 - FR-11.8 external: no 30-day reference dataset query latency measurement; the journal has no index (E-21 note).
-- FR-13.1 external: no GitHub Release has been inspected (four archives, checksum file, minisign signature).
-- FR-13.2 missing: `install.sh` verifies the archive's SHA-256 against the checksum file but does not verify a minisign signature over that file with an embedded release public key.
-- FR-13.3 missing: no Homebrew tap formula is published.
-- FR-13.4 missing: smcpctl has no install subcommand (first-time setup is `smcpctl bootstrap` plus `install.sh`), so the idempotent install with `present` and `created` step reports does not exist.
-- FR-13.6 missing: no install subcommand creates the Standalone directories, service unit and configuration as one step.
+- FR-13.1 external: no GitHub Release has been inspected; the release workflow signs the checksum file with minisign (key in `SECURITY.md`), but the SBOMs are separate release assets, not files inside each archive.
+- FR-13.3 external: GoReleaser writes `Formula/smcp.rb` to `ethan03805/homebrew-tap` on release; no release has published it, and no CI job installs from the tap on macOS and Linux and compares digests.
 - FR-19.3 missing: no release-labelling step that checks AT-01 to AT-21 results.
 - FR-19.4 missing: no AT scenario is claimed by an automated test or a `docs/verification/AT-nn.md` record.
 - SR-2.7-1 missing: configuration accepts any `$argon2id$` verifier; one with parameters below CP-28 (64 MiB, t = 3, p = 1) is not refused.
