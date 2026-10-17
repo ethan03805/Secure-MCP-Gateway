@@ -135,7 +135,9 @@ test("deep links open after sign-in; missing routes say not available", async ({
   await header.getByRole("button").click();
   await expect(header).toHaveAttribute("aria-sort", "descending");
 
-  await page.getByRole("link", { name: "Policy studio" }).click();
+  // Policy studio reads /api/v1/policy, which E-05 now serves; Audit profile
+  // tuning reads a route no element provides yet.
+  await page.getByRole("link", { name: "Audit profile tuning" }).click();
   await expect(page.getByText("Not available in this build")).toBeVisible();
   await page.getByRole("link", { name: "Sessions and principals" }).click();
   await expect(page.getByRole("table", { name: "Principals" })).toContainText("claude-code-local");
