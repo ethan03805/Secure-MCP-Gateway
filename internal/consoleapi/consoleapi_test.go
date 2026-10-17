@@ -263,8 +263,8 @@ func TestStaticConsoleCSPAndDeepLinks(t *testing.T) {
 }
 
 func TestSessionsListInspectTerminate(t *testing.T) {
-	// FR-8.19 also asks for principal and credential management and
-	// session suspension; this covers list, inspect and terminate.
+	// List, inspect and terminate; suspension is TestSessionSuspendAndResume
+	// and principals and credentials are internal/principals.
 	reqtest.Partial(t, "FR-8.19")
 	f := newFixture(t, nil)
 	s, _, err := f.store.Create(session.CreateParams{PrincipalID: "cc", ClientID: "c1", Claims: session.Claims{Template: "ro", Purpose: "review"}, ApprovedBy: "sam", Listener: "tls"})
@@ -317,6 +317,48 @@ func TestSessionsListInspectTerminate(t *testing.T) {
 	}
 	if strings.Contains(fmt.Sprint(out), "argon2") {
 		t.Fatal("password hash disclosed")
+	}
+}
+
+func TestSessionSuspendAndResume(t *testing.T) {
+	reqtest.Partial(t, "FR-8.19", "FR-2.8")
+	f := newFixture(t, nil)
+	s, tok, err := f.store.Create(session.CreateParams{PrincipalID: "cc", ClientID: "c1", Claims: session.Claims{Template: "ro"}, Listener: "tls"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := f.do("POST", "/api/v1/sessions/"+s.ID+"/resume", map[string]any{}); code != 409 {
+		t.Fatalf("resume of an active session: %d", code)
+	}
+	code, out := f.do("POST", "/api/v1/sessions/"+s.ID+"/suspend", map[string]any{"reason": "investigating"})
+	if code != 200 || out["state"] != session.StateSuspended {
+		t.Fatalf("suspend: %d %v", code, out)
+	}
+	if _, err := f.store.Authenticate(tok.Access, "tls"); err == nil {
+		t.Fatal("suspended session authenticated")
+	}
+	// Still listed, with its state.
+	code, out = f.do("GET", "/api/v1/sessions", nil)
+	list, _ := out["sessions"].([]any)
+	if code != 200 || len(list) != 1 || list[0].(map[string]any)["state"] != session.StateSuspended {
+		t.Fatalf("list: %d %v", code, out)
+	}
+	code, out = f.do("POST", "/api/v1/sessions/"+s.ID+"/resume", map[string]any{"reason": "cleared"})
+	if code != 200 || out["state"] != session.StateActive {
+		t.Fatalf("resume: %d %v", code, out)
+	}
+	if _, err := f.store.Authenticate(tok.Access, "tls"); err != nil {
+		t.Fatal("resumed session refused")
+	}
+	evs, _ := audit.ReadEvents(f.journal.Dir())
+	seen := map[string]bool{}
+	for _, e := range evs {
+		if e.SessionID == s.ID {
+			seen[e.ReasonCode] = true
+		}
+	}
+	if !seen["SESSION_SUSPENDED_BY_OPERATOR"] || !seen["SESSION_RESUMED_BY_OPERATOR"] {
+		t.Fatalf("suspend and resume not journaled: %v", seen)
 	}
 }
 

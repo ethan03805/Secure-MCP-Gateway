@@ -7,11 +7,12 @@
 // sensitivity masking. The selection is applied as the [observation]
 // parameters key or used for a research campaign. Routes:
 // /api/v1/observations/*.
+import { ObjectState, Publish, useObjects } from "./objects";
 import { useMemo, useState, type ReactNode } from "react";
 import { useResource } from "../data";
 import { usePerm } from "../perm";
 import { navigate } from "../router";
-import { DataTable, Done, Help, JsonBlock, KV, Loaded, Mono, PageHeader, Section, StateLabel, TextField, bytes, compact } from "../ui";
+import { CheckList, DataTable, Done, Help, JsonBlock, KV, Loaded, Mono, PageHeader, Section, StateLabel, TextField, bytes, compact } from "../ui";
 
 export interface Parameter {
   id: string;
@@ -140,8 +141,17 @@ function Preview({ selected, catalog }: { selected: string[]; catalog: Parameter
   );
 }
 
+/** Baseline context dimensions the Observation Policy may key on. */
+const contextDims = ["principal", "framework_type", "session_template", "end_user", "server", "server_revision", "tool", "hour", "weekday"];
+
 function Workbench({ catalog, version, status }: { catalog: Parameter[]; version: string; status?: ObsStatus }) {
   const perm = usePerm();
+  const objects = useObjects();
+  const [policyId, setPolicyId] = useState(status?.policy_id ?? "default");
+  const [sampling, setSampling] = useState(String(status?.sampling_rate ?? 0.1));
+  const [contexts, setContexts] = useState<string[]>(status?.contexts?.length ? status.contexts : ["principal", "tool"]);
+  const th = status?.thresholds ?? {};
+  const [bandsText, setBandsText] = useState<[string, string, string]>([String(th.elevated ?? 2), String(th.abnormal ?? 3), String(th.critical ?? 4)]);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>(() => catalog.filter((p) => p.selected).map((p) => p.name));
   const [presetName, setPresetName] = useState("");
@@ -271,12 +281,26 @@ function Workbench({ catalog, version, status }: { catalog: Parameter[]; version
         {shown && (
           <>
             <p className="small">
-              Put this in the <Mono>[observation]</Mono> table of smcp.toml and reload the configuration; the cost preview above is computed from the same selection.
+              The same selection as <Mono>[observation]</Mono> configuration for smcp.toml; the cost preview above is computed from it.
             </p>
             <JsonBlock value={`[observation]\nparameters = [${sel.map((s) => JSON.stringify(s)).join(", ")}]\n`} label="Configuration" />
           </>
         )}
       </Section>
+      <PolicyEditor
+        objects={objects}
+        policyId={policyId}
+        setPolicyId={setPolicyId}
+        sampling={sampling}
+        setSampling={setSampling}
+        contexts={contexts}
+        setContexts={setContexts}
+        bandsText={bandsText}
+        setBandsText={setBandsText}
+        selected={chosen.filter((x) => x.capture_point !== "periodic" && x.sensitivity !== "S3").map((x) => x.name)}
+        excluded={chosen.filter((x) => x.capture_point === "periodic" || x.sensitivity === "S3").length}
+        perRecord={perRecord}
+      />
       {perm.can("GET /api/v1/observations") && (
         <Section title="Live record preview">
           <p className="small">The 20 most recent stored records, limited to the selected parameters (first eight). S2 and S3 values are masked.</p>
@@ -284,6 +308,73 @@ function Workbench({ catalog, version, status }: { catalog: Parameter[]; version
         </Section>
       )}
     </>
+  );
+}
+
+/** The Observation Policy draft: sampling and baseline controls (FR-8.10) and publication after the cost preview (FR-8.11). */
+function PolicyEditor(p: {
+  objects: ReturnType<typeof useObjects>;
+  policyId: string;
+  setPolicyId: (v: string) => void;
+  sampling: string;
+  setSampling: (v: string) => void;
+  contexts: string[];
+  setContexts: (v: string[]) => void;
+  bandsText: [string, string, string];
+  setBandsText: (v: [string, string, string]) => void;
+  selected: string[];
+  excluded: number;
+  perRecord: number;
+}) {
+  const rate = Number(p.sampling);
+  const bands = p.bandsText.map(Number);
+  const rateOk = rate > 0 && rate <= 1;
+  const bandsOk = bands.every((n, i) => n > 0 && (i === 0 || n > bands[i - 1]!));
+  const ok = rateOk && bandsOk && p.selected.length > 0 && p.policyId.trim() !== "" && p.contexts.length > 0;
+  const labels = ["elevated", "abnormal", "critical"] as const;
+  return (
+    <Section title="Observation Policy: sampling and baseline">
+      {p.objects.status === "ok" && <ObjectState objects={p.objects.data} kind="observation_policy" label="Observation Policy" />}
+      <div className="rule-grid">
+        <TextField label="Observation Policy ID" value={p.policyId} onChange={p.setPolicyId} mono />
+        <TextField label="Normal-band sampling rate (0 to 1)" value={p.sampling} onChange={p.setSampling} type="number" />
+        {labels.map((b, i) => (
+          <TextField
+            key={b}
+            label={`${b} band from |z|`}
+            value={p.bandsText[i]!}
+            onChange={(v) => {
+              const next = [...p.bandsText] as [string, string, string];
+              next[i] = v;
+              p.setBandsText(next);
+            }}
+            type="number"
+          />
+        ))}
+      </div>
+      <CheckList legend="Baseline context dimensions" options={contextDims} value={p.contexts} onChange={p.setContexts} />
+      {!rateOk && (
+        <p className="notice notice-bad" role="alert">
+          The sampling rate must be above 0 and at most 1.
+        </p>
+      )}
+      {!bandsOk && (
+        <p className="notice notice-bad" role="alert">
+          Band bounds must be positive and increase from elevated to critical.
+        </p>
+      )}
+      <p className="small">
+        Publishing uses the parameter selection above ({p.selected.length} per-call parameters, about {p.perRecord} bytes per captured record at sampling rate {rateOk ? rate : "?"}).
+        {p.excluded > 0 && ` ${p.excluded} selected periodic meta-metrics or S3 payload parameters are not per-call capture and are left out; the meta-metrics are sampled on their own.`}
+      </p>
+      <Publish
+        route="/api/v1/observations/observation-policy"
+        label="Observation Policy"
+        body={{ policy_id: p.policyId.trim(), parameters: p.selected, sampling_rate: rate, contexts: p.contexts, bands }}
+        disabled={!ok}
+        onPublished={p.objects.reload}
+      />
+    </Section>
   );
 }
 
@@ -299,7 +390,7 @@ export function Observations(): ReactNode {
         <p>
           Each parameter is one measured property of a call, a session or the Gateway itself, with a unit and a sensitivity class: S0 and S1 are metadata, S2
           may identify people or content and is pseudonymized for researchers, S3 is payload and needs a separate grant. Start from a preset, adjust the
-          selection, check the cost preview, then apply it as the configuration shown or use it for a research campaign. The list is built from the catalog the
+          selection, check the cost preview, then publish it as the Observation Policy (it takes effect at the next start of smcpd) or use it for a research campaign. The list is built from the catalog the
           Gateway serves, so new parameters appear here when the Gateway is upgraded.
         </p>
       </Help>

@@ -43,6 +43,34 @@ export interface Principals {
   session_approvers: { username: string }[];
 }
 
+export interface PrincipalDirectory {
+  principals: {
+    id: string;
+    framework: string;
+    display_name?: string;
+    profile: string;
+    source: "file" | "console";
+    enabled: boolean;
+    suspension?: { by: string; at: string; reason?: string };
+    created_by?: string;
+    created_at?: string;
+    active_sessions: number;
+    suspended_sessions: number;
+    credentials: {
+      client_id: string;
+      source: "file" | "console";
+      confidential: boolean;
+      redirect_uris: string[];
+      created_by?: string;
+      created_at?: string;
+      revoked_by?: string;
+      revoked_at?: string;
+    }[];
+  }[];
+  frameworks: string[];
+  profiles: string[];
+}
+
 export interface ServerView {
   alias: string;
   state: string;

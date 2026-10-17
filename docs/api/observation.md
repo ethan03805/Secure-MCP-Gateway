@@ -109,6 +109,37 @@ Time per stage, policy revision and Observation Policy, ranked by total time (FR
            "count": 120, "mean": 10.1, "variance": 2.0, "min": 7, "max": 30, "quantiles": [9.8, 15, 28], "total_ms": 1212}]}
 ```
 
+## Observation objects
+
+The Audit Profile (G-03), the Observation Policy (G-04), the Anomaly Response Policy (G-06) and the Observation Store memory budget (G-08) are published as numbered, immutable revisions with a SHA-256 digest, actor, time and reason (`internal/obspolicy`, `<state>/observation-objects.json`, mode 0600). The last revision of each kind is active. A revision is validated by resolving the complete observation settings it would produce, exactly as the analytics service does at start, so an invalid combination (an unknown or periodic parameter, approval without synchronous scoring, unordered bands) is refused with 422 `invalid`.
+
+The observation components read their settings when smcpd starts: smcpd overlays the active revisions onto the `[observation]` table it gives to the analytics service. A revision published while smcpd runs takes effect at the next start; until then it is reported as `pending`. The mandatory audit floor is not part of any object.
+
+| Kind | Route | Body | Sets in `[observation]` | Who publishes |
+|---|---|---|---|---|
+| `audit_profile` | `POST /api/v1/observations/audit-profile` | `{"retention": "720h", "escalation_parameters": ["request_bytes"]}` | `retention` (at least 24h), `escalation_parameters` | Policy Author |
+| `observation_policy` | `POST /api/v1/observations/observation-policy` | `{"policy_id": "lab", "parameters": [...], "sampling_rate": 0.25, "contexts": ["principal", "tool"], "bands": [2, 3, 5]}` | `policy_id`, `parameters`, `sampling_rate`, `baseline.contexts`, `baseline.bands` | Policy Author |
+| `anomaly_response` | `POST /api/v1/observations/anomaly-response` | `{"scoring": "sync", "require_approval_band": "abnormal", "withhold_band": "critical"}` | `scoring`, `require_approval_band`, `withhold_band` | Policy Author |
+| `memory_budget` | `POST /api/v1/observations/memory-budget` | `{"observation_memory_limit_bytes": 402653184}` (64 MiB to 64 GiB) | `memory_limit_bytes` | Operator |
+
+Request: `{"body": {...}, "reason": "..."}`. Response 201: `{"revision": {"kind", "number", "digest", "body", "published_by", "published_at", "reason"}, "applies": "at the next start of smcpd"}`. The publication is committed to the journal first (`admin`/`publish_requested`/`OBSERVATION_OBJECT_PUBLISHED` with `detail.kind`); 503 `audit_unavailable` when it cannot be, and nothing is stored.
+
+### GET /api/v1/observations/objects
+
+```json
+{"objects": [{"kind": "audit_profile", "active": {"kind": "audit_profile", "number": 2, "digest": "sha256:…", "body": {"retention": "720h", "escalation_parameters": []},
+              "published_by": "policy_author:pat", "published_at": "2026-10-17T03:00:00Z", "reason": "shorter retention"}, "in_force": 1, "pending": true, "revisions": 2}, …],
+ "applies": "at the next start of smcpd",
+ "effective": {"policy_id": "lab", "parameters": [...], "escalation_parameters": [], "sampling_rate": 0.25, "retention": "720h0m0s", "scoring": "sync",
+               "require_approval_band": "abnormal", "withhold_band": "critical", "memory_limit_bytes": 402653184, "contexts": ["principal", "tool"], "bands": [2, 3, 5]}}
+```
+
+`in_force` is the revision applied at the last start (0: the `smcp.toml` settings). `effective` is the `[observation]` table the active revisions produce. Readable by the roles of the observation analytics routes.
+
+### GET /api/v1/observations/objects/{kind}
+
+The revisions of one kind, newest first: `{"kind": "audit_profile", "revisions": [...]}`. 404 `unknown_kind`.
+
 ## Baselines
 
 ### GET /api/v1/baselines

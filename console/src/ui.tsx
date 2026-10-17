@@ -111,6 +111,7 @@ export function toneOf(state: string): Tone {
     case "filtered":
     case "indeterminate":
     case "not_run":
+    case "suspended":
       return "warn";
     case "fail-closed":
     case "failed":

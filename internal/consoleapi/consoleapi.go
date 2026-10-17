@@ -49,8 +49,11 @@ import (
 // Sessions is what the session routes need; *session.Store implements it.
 type Sessions interface {
 	Active() []*session.Session
+	List() []*session.Session // active and suspended
 	Get(id string) *session.Session
 	Terminate(id string) bool
+	Suspend(id string) bool
+	Resume(id string) bool
 }
 
 // Servers is what the server and catalog routes need; *backend.Registry
@@ -144,6 +147,8 @@ func Register(d Deps) (*Console, error) {
 	a.Handle("GET /api/v1/sessions/principals", c.principals)
 	a.Handle("GET /api/v1/sessions/{id}", c.getSession)
 	a.Handle("POST /api/v1/sessions/{id}/terminate", c.terminateSession)
+	a.Handle("POST /api/v1/sessions/{id}/suspend", c.suspendSession(true))
+	a.Handle("POST /api/v1/sessions/{id}/resume", c.suspendSession(false))
 	a.Handle("GET /api/v1/servers", c.listServers)
 	a.Handle("GET /api/v1/servers/{alias}", c.getServer)
 	a.Handle("GET /api/v1/catalog", c.catalog)

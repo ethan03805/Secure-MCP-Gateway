@@ -61,7 +61,7 @@ One session in the same form. Ended sessions stay readable for 10 minutes after 
 
 ### POST /api/v1/sessions/{id}/terminate
 
-Ends an active session (FR-8.19): its calls in flight are cancelled, its access and refresh tokens stop working and its MCP sessions are closed (FR-2.11). The action is committed to the journal (`class` `admin`, `outcome` `terminate_requested`, `reason_code` `SESSION_TERMINATED_BY_OPERATOR`, `detail.actor`, `detail.reason`) before the session ends; the session end is recorded by E-04 as a `session` event with `reason_code` `TERMINATED`.
+Ends an active or suspended session (FR-8.19): its calls in flight are cancelled, its access and refresh tokens stop working and its MCP sessions are closed (FR-2.11). The action is committed to the journal (`class` `admin`, `outcome` `terminate_requested`, `reason_code` `SESSION_TERMINATED_BY_OPERATOR`, `detail.actor`, `detail.reason`) before the session ends; the session end is recorded by E-04 as a `session` event with `reason_code` `TERMINATED`.
 
 Request (`reason` optional, up to 1000 characters):
 
@@ -77,6 +77,48 @@ Response 200: the session, with `state` `terminated`.
 | 404 | `not_found` | No such session |
 | 409 | `not_active` | The session has already ended; the body also has `"state": "<current state>"` |
 | 503 | `audit_unavailable` | The action could not be recorded; the session was not ended |
+
+### POST /api/v1/sessions/{id}/suspend and /resume
+
+Suspends an active session or resumes a suspended one (FR-2.8, FR-8.19; Administrator and Operator). A suspended session's access and refresh tokens are refused (the harness gets 401 `SESSION_INVALID`) and its calls in flight are refused at the edge's next session check. It keeps its idle and maximum deadlines and its place in the principal's session count, expires as usual, and can be terminated. Resuming lets the harness continue with its current tokens unless the session expired meanwhile. `GET /api/v1/sessions` lists active and suspended sessions with their `state`.
+
+Request: `{"reason": "..."}` (optional, up to 1000 characters). Response 200: the session. Evidence before the change: `admin`/`suspend_requested`/`SESSION_SUSPENDED_BY_OPERATOR` or `admin`/`resume_requested`/`SESSION_RESUMED_BY_OPERATOR` with `detail.actor` and `detail.reason`. Errors: 400 `bad_request`, 404 `not_found`, 409 `wrong_state` (with `state`), 503 `audit_unavailable` (nothing changed).
+
+## Principals and credentials
+
+Principals and OAuth client credentials can be created from the control API in addition to `[[principal]]` and `[[client]]` in `smcp.toml` (`internal/principals`). They are kept in `<state>/principals.json` (mode 0600) and take effect at once: the OAuth authorization server, the session API and the remote profile find them like the file's principals and clients. File principals can be suspended here; their definitions are edited in `smcp.toml`. Every change is committed to the journal before it takes effect and refused with 503 `audit_unavailable` when it cannot be. Reads: Administrator, Operator, Auditor. Changes: Administrator.
+
+### GET /api/v1/principals
+
+```json
+{"principals": [{"id": "claude-code-local", "framework": "claude-code", "display_name": "Claude Code on this machine", "profile": "dev",
+                 "source": "file", "enabled": true, "active_sessions": 1, "suspended_sessions": 0,
+                 "credentials": [{"client_id": "https://claude.ai/api/mcp/oauth/client-metadata", "source": "file", "confidential": false, "redirect_uris": ["http://127.0.0.1:*/callback"]}]},
+                {"id": "lab-agent", "framework": "other", "profile": "dev", "source": "console", "enabled": false,
+                 "suspension": {"by": "admin:admin", "at": "2026-10-17T03:00:00Z", "reason": "investigating"}, "created_by": "admin:admin", "created_at": "2026-10-17T02:00:00Z",
+                 "active_sessions": 0, "suspended_sessions": 1,
+                 "credentials": [{"client_id": "smcp-client-1f2e3d4c5b6a7980", "source": "console", "confidential": true, "redirect_uris": ["https://lab.example/cb"],
+                                  "created_by": "admin:admin", "created_at": "2026-10-17T02:01:00Z"}]}],
+ "frameworks": ["claude-code", "codex", "..."], "profiles": ["dev"]}
+```
+
+`profiles` are the framework profiles of the active policy. Secret hashes are never returned.
+
+### POST /api/v1/principals
+
+Request: `{"id": "lab-agent", "framework": "other", "display_name": "Lab agent", "profile": "dev"}`. `id` matches `^[a-z0-9][a-z0-9._-]{0,63}$` and is not used by the file or the directory; `framework` is one of the configuration's framework types; `profile` is a framework profile of the active policy. Response 201: the principal. Evidence: `PRINCIPAL_CREATED`. Errors: 400 `invalid`, 409 `exists`.
+
+### POST /api/v1/principals/{id}/suspend and /enable
+
+Suspend refuses new sessions of the principal (`config.FindPrincipal` reports it disabled) and suspends its active sessions; the response lists them in `suspended_sessions`. Enable lets it sign in again; its suspended sessions stay suspended until resumed one by one. Request: `{"reason": "..."}`. Evidence: `PRINCIPAL_SUSPENDED`, `PRINCIPAL_ENABLED`. Errors: 404 `not_found`.
+
+### POST /api/v1/principals/{id}/credentials
+
+Issues an OAuth client bound to the principal (FR-2.18). Request: `{"redirect_uris": ["http://127.0.0.1:51234/callback"], "confidential": false}`: 1 to 10 absolute URLs without a fragment, `https` or loopback `http`. Response 201: `{"client_id": "smcp-client-…", "principal": "…", "redirect_uris": […], "confidential": true, "client_secret": "…"}`; `client_secret` (256 bits) is returned only here and stored as an Argon2id hash. Public clients use PKCE. Evidence: `CREDENTIAL_ISSUED`.
+
+### POST /api/v1/credentials/{client_id}/revoke
+
+Revokes an issued credential: the client can no longer authorize or refresh, and every session it opened is terminated (listed in `terminated_sessions`). Clients of `[[client]]` answer 409 `defined_in_file`. Request: `{"reason": "..."}`. Evidence: `CREDENTIAL_REVOKED`.
 
 ### GET /api/v1/sessions/principals
 

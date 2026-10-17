@@ -167,9 +167,10 @@ export function stop(): void {
 }
 
 /** Runs the test MCP client: OAuth sign-in as the Session Approver, then one tool call. */
-export function mcpCall(g: GatewayInfo, tool: string, args: object, opts: { scope?: string; expect?: string; timeout?: string } = {}) {
+export function mcpCall(g: GatewayInfo, tool: string, args: object, opts: { scope?: string; expect?: string; timeout?: string; clientID?: string } = {}) {
   const a = ["-url", g.publicURL, "-ca", g.ca, "-call", tool, "-args", JSON.stringify(args), "-timeout", opts.timeout ?? "150s"];
   if (opts.scope) a.push("-scope", opts.scope);
+  if (opts.clientID) a.push("-client-id", opts.clientID);
   if (opts.expect) a.push("-expect", opts.expect);
   const p = spawn(join(bin, "itest-client"), a, { env: { ...process.env, SMCP_SIGNIN_PASSWORD: g.sessionApproverPassword }, stdio: ["ignore", "pipe", "pipe"] });
   let out = "";

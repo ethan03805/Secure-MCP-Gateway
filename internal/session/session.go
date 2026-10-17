@@ -275,9 +275,10 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 }
 
 // checkLocked expires one session past its deadlines (FR-2.9) and reports
-// whether it is active.
+// whether it is active. A suspended session keeps its deadlines and is
+// expired by them like an active one, but is never reported active.
 func (s *Store) checkLocked(e *Session) bool {
-	if e.State != StateActive {
+	if e.State != StateActive && e.State != StateSuspended {
 		return false
 	}
 	now := s.now()
@@ -287,7 +288,7 @@ func (s *Store) checkLocked(e *Session) bool {
 	case now.After(e.IdleDeadline):
 		s.endLocked(e, StateExpired, EndIdle)
 	default:
-		return true
+		return e.State == StateActive
 	}
 	return false
 }
@@ -347,7 +348,7 @@ func (s *Store) Refresh(refresh, clientID string) (*Session, Tokens, error) {
 	defer s.mu.Unlock()
 	h := hash(refresh)
 	if sid, reused := s.usedRefresh[h]; reused {
-		if e := s.sessions[sid]; e != nil && e.State == StateActive {
+		if e := s.sessions[sid]; e != nil && (e.State == StateActive || e.State == StateSuspended) {
 			s.endLocked(e, StateTerminated, EndRefreshReuse)
 			return copyOf(e), Tokens{}, ErrRefreshReuse
 		}
@@ -389,16 +390,67 @@ func (s *Store) IsActive(id string) bool {
 	return e != nil && s.checkLocked(e)
 }
 
-// Terminate ends a session (FR-2.11 effects via OnEnd).
+// Terminate ends an active or suspended session (FR-2.11 effects via
+// OnEnd).
 func (s *Store) Terminate(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	e := s.sessions[id]
-	if e == nil || e.State != StateActive {
+	if e == nil || (e.State != StateActive && e.State != StateSuspended) {
 		return false
 	}
 	s.endLocked(e, StateTerminated, EndTerminated)
 	return true
+}
+
+// Suspend stops an active session from being used without ending it
+// (FR-2.8, FR-8.19): its access and refresh tokens are refused and the
+// edge refuses its calls in flight at the next session check, until Resume.
+// The session keeps its deadlines and its place in the principal's session
+// count, and expires as usual.
+func (s *Store) Suspend(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	e := s.sessions[id]
+	if e == nil || !s.checkLocked(e) {
+		return false
+	}
+	e.State = StateSuspended
+	return true
+}
+
+// Resume makes a suspended session active again, unless it expired
+// meanwhile.
+func (s *Store) Resume(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	e := s.sessions[id]
+	if e == nil || e.State != StateSuspended {
+		return false
+	}
+	s.checkLocked(e)
+	if e.State != StateSuspended {
+		return false
+	}
+	e.State = StateActive
+	return true
+}
+
+// List returns copies of the active and suspended sessions, newest first.
+func (s *Store) List() []*Session {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []*Session
+	for _, m := range s.active {
+		for _, e := range m {
+			s.checkLocked(e)
+			if e.State == StateActive || e.State == StateSuspended {
+				out = append(out, copyOf(e))
+			}
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
+	return out
 }
 
 // Active lists copies of the active sessions, newest first.
