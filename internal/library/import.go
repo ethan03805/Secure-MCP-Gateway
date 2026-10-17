@@ -61,7 +61,13 @@ func (l *Library) importLocked(dir string, o ImportOptions) (*Receipt, error) {
 		o.Actor = "operator"
 	}
 	rc := &Receipt{ReceiptVersion: 1, Time: l.now().UTC().Format(time.RFC3339Nano), Actor: o.Actor, PackageDir: dir, Checks: []string{}}
-	err := l.doImport(dir, o, rc)
+	var err error
+	// SR-3-4: no import while the revocation feed is stale.
+	if stale, why := l.feedStaleLocked(); stale {
+		err = errf(ReasonFeedStale, "%s", why)
+	} else {
+		err = l.doImport(dir, o, rc)
+	}
 	if err != nil {
 		rc.Result, rc.ReasonCode, rc.Error = "rejected", packaging.ReasonOf(err), err.Error()
 		if rc.ReasonCode == "" {
@@ -357,11 +363,7 @@ func (l *Library) markRejected(dir, sha string) {
 }
 
 func (l *Library) applyRevocations(actor string, rep *ScanReport) []string {
-	entries, err := os.ReadDir(filepath.Join(l.dir, packaging.RevocationsDir))
-	if err != nil {
-		return nil
-	}
-	anchors, err := packaging.LoadAnchors(l.stateDir)
+	entries, anchors, err := l.readFeed()
 	if err != nil {
 		rep.Errors = append(rep.Errors, err.Error())
 		return nil

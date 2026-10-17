@@ -129,6 +129,7 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 | `EGRESS_REDIRECT_REFUSED` | 403 | An endpoint was redirected to an ungranted, non-HTTPS or malformed target, or more than 3 times | Grant the redirect target, or call the final URL directly |
 | `EGRESS_PUBLIC_FETCH_PROFILE` | 403 | A public-fetch grant was used with a request body, an `Authorization` header or as plain HTTP through the proxy (CONNECT and methods other than GET are refused with `EGRESS_METHOD_REFUSED`) | Public-fetch is for anonymous HTTPS GET through its endpoint |
 | `EGRESS_EVIDENCE_UNAVAILABLE` | 503 | The journal refused the authorization event | See `smcpctl health`; the journal must be writable |
+| `EGRESS_SECRET_DETECTED` | 403 | A registered secret (a value the Secret Broker delivered) appears in the URL, a header or the body of a brokered HTTP request; only the header the broker inserts for S1 delivery is exempt (SR-5.8-2). The bytes of a CONNECT tunnel are TLS the broker does not terminate and are not scanned | Deliver the credential as S1 so the broker inserts it, instead of sending it from the server |
 
 ## Kernel test
 

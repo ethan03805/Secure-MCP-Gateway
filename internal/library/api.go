@@ -23,6 +23,7 @@ func (rt *Runtime) RegisterRoutes(s *adminapi.Server) {
 	s.Handle("POST /api/v1/packages/scan", rt.apiScan)
 	s.Handle("GET /api/v1/packages/{id}/{rev}", rt.apiGet)
 	s.Handle("POST /api/v1/packages/{id}/{rev}/enable", rt.apiEnable)
+	s.Handle("POST /api/v1/packages/{id}/{rev}/classification", rt.apiOverride)
 	s.Handle("POST /api/v1/packages/{id}/{rev}/disable", rt.apiState(StateVerifiedDisabled))
 	s.Handle("POST /api/v1/packages/{id}/{rev}/retire", rt.apiState(StateRetired))
 	rt.RegisterTrustRoutes(s)

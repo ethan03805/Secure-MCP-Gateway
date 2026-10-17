@@ -5318,7 +5318,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-1.8-1 |
 | Parent ID | SEC-1.8 — Argument scope (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Request Inspection Pipeline (E-09) **SHALL** validate tool arguments against the manifest `inputSchema` and **SHALL** block the call with reason `SCHEMA` on failure. |
+| Statement | The Request Inspection Pipeline (E-09) **SHALL** validate tool arguments against the manifest `inputSchema` and **SHALL** block the call with reason `SCHEMA_INVALID` (Appendix B) on failure. |
 | Allocation | Elements: E-09 Request Inspection Pipeline; Functions: F-21 |
 | Verification Method | Test |
 | Verification Statement | Send arguments violating type, required and additionalProperties constraints; confirm each is blocked. |

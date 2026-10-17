@@ -109,6 +109,9 @@ type Revision struct {
 	Expires          string    `json:"expires,omitempty"`
 	RecurationDue    string    `json:"recuration_due,omitempty"`
 	Tools            []string  `json:"tools"`
+	// Overrides are operator classifications that tighten the manifest's
+	// (SR-3.11-1), by tool name.
+	Overrides map[string]ToolOverride `json:"overrides,omitempty"`
 }
 
 // Key is "<server-id>@<revision>".
@@ -143,6 +146,12 @@ type Library struct {
 	doc      registryDoc
 	rec      audit.Recorder    // nil offline
 	rejected map[string]string // package dir -> rejected index digest
+	// feedReadAt is the last successful read of the revocation feed (from
+	// the library's opening when it was never read); feedAlerted records
+	// that the stale-feed alert was raised for the current stale period
+	// (SR-3-4).
+	feedReadAt  time.Time
+	feedAlerted bool
 }
 
 // Open loads the registry and takes the exclusive registry lock.
@@ -160,6 +169,7 @@ func Open(o Options) (*Library, error) {
 		o.Now = time.Now
 	}
 	l := &Library{stateDir: o.StateDir, dir: o.Dir, log: o.Log, now: o.Now}
+	l.feedReadAt = o.Now()
 	for _, d := range []string{l.path(), l.path("artifacts", "sha256"), l.path("unpacked"), l.path("revisions"), l.path("receipts"), l.path("evidence"), l.path("work"), l.dir} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			return nil, err

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/analytics"
@@ -96,7 +97,13 @@ func run(cfgPath, level string) error {
 	if err != nil {
 		return fmt.Errorf("graph: %w", err)
 	}
-	mon.Register("graph", mirror.HealthCheck()) // degraded, never fail-closed, while Neo4j is unreachable
+	mon.Register("graph", mirror.HealthCheck())                                                // degraded, never fail-closed, while Neo4j is unreachable
+	mon.Register("revocation_feed", health.Every(time.Minute, func(time.Time) []health.Cause { // SR-3-4
+		if stale, why := pkgs.FeedStale(); stale {
+			return []health.Cause{{Name: "revocation_feed_stale", Detail: why}}
+		}
+		return nil
+	}))
 	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs,
 		Observers: map[string]audit.Observer{"graph": mirror}}
 	// G-03, G-04, G-06, G-08: published observation objects overlay the
