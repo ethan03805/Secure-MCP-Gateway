@@ -80,12 +80,31 @@ func TestBackupUnderLoadComponents(t *testing.T) {
 	if stopAt < 0 || writtenAt < stopAt || resumeAt < writtenAt {
 		t.Fatalf("backup sequence: stop %d, written %d, resume %d", stopAt, writtenAt, resumeAt)
 	}
+	// A call whose launch was authorized before the stop is in flight: the
+	// drain lets it run, so its dispatched event may follow the stop event
+	// (the launch recheck and the stop are ordered by the coordinator's
+	// gate). No launch may be authorized after the stop, and every drained
+	// call must be dispatched before the archive is written.
+	authorizedAt := map[string]int{}
+	for i, e := range evs {
+		if e.str("class") == "decision" && e.str("phase") == "authorized" {
+			if _, ok := authorizedAt[e.str("correlation_id")]; !ok {
+				authorizedAt[e.str("correlation_id")] = i
+			}
+		}
+	}
 	dispatchedBefore, dispatchedAfter := 0, 0
 	for i, e := range evs {
+		if e.str("class") == "decision" && e.str("phase") == "authorized" && i > stopAt && i < resumeAt {
+			t.Fatalf("launch authorized during the backup (event %d between %d and %d)", i, stopAt, resumeAt)
+		}
 		if e.str("class") == "call" && e.str("phase") == "dispatched" {
 			switch {
 			case i > stopAt && i < resumeAt:
-				t.Fatalf("call dispatched during the backup (event %d between %d and %d)", i, stopAt, resumeAt)
+				a, ok := authorizedAt[e.str("correlation_id")]
+				if !ok || a > stopAt || i > writtenAt {
+					t.Fatalf("call dispatched during the backup (event %d between %d and %d, authorized at %d, archive written at %d)", i, stopAt, resumeAt, a, writtenAt)
+				}
 			case i < stopAt:
 				dispatchedBefore++
 			case i > resumeAt:
