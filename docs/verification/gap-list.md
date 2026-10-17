@@ -19,7 +19,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-01 Harness Interface Endpoint
 
 - FR-1.1 missing: only the TLS listener exists; the optional CP-02 Unix-domain-socket listener is not implemented, and no test enumerates the listening sockets.
-- FR-1.41 unverified: closing the SSE response of an in-flight request cancels the request context; no test measures that the dispatcher sees the cancellation within 1 second.
 - FR-1.47 missing: UDS Harness Profile (newline-delimited JSON-RPC over the CP-02 socket).
 - FR-1.48 missing: no X-01 or X-12 interface control document in the release.
 - FR-11.5 external: no p95 overhead measurement for 64 KiB results at eight concurrent calls on reference hardware.
@@ -33,9 +32,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 ## E-02 Protocol Mediator
 
 - FR-1.19 unverified: Gateway codes come from Appendix B (`internal/edge/edge.go`) and reserved codes come from the SDK; the verification also needs the conformance-suite log of FR-12.9, which does not exist.
-- FR-1.31 unverified: results are returned after response inspection with transformed `content`, `structuredContent` and `isError`; no test asserts all three members after a transforming filter.
-- FR-1.44 missing: `traceparent` is neither recorded as an observation attribute nor stripped from southbound requests by explicit code.
-- FR-1.45 missing: `io.modelcontextprotocol/clientInfo` is not recorded as a self-asserted observation attribute.
 - FR-12.9 missing: no automated conformance suite over `mcp-spec/2026-07-28/schema/examples`.
 - SR-5.2-2 missing (partial claim exists): header values with control characters are refused by `net/http` with a plain 400 before any Gateway handler runs, not with `-32020`; the edge cannot answer them without replacing the HTTP server.
 - SR-5.6-1 unverified (partial claim exists): rejection of resources, prompts, completion, logging and tasks methods and the tools-only capabilities are tested; no test or record shows that no server-initiated request reaches the harness.
@@ -59,7 +55,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-08 Access Enforcement Point
 
-- SR-5.7-2 missing: pagination cursors are the SDK's encoding of the last tool name, not HMAC-protected and not bound to session or policy revision (FR-1.24 is partial for the same reason).
 
 ## E-12 Enforcement Coordinator
 

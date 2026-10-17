@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Message mediation in front of the MCP SDK (E-02). The SDK's
@@ -359,7 +360,8 @@ func (l *listenWriter) finish(id json.RawMessage, complete bool) {
 		return
 	}
 	msg, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": id, "result": map[string]any{
-		"resultType": "complete", "_meta": map[string]any{"io.modelcontextprotocol/subscriptionId": id}}})
+		"resultType": "complete", "_meta": map[string]any{"io.modelcontextprotocol/subscriptionId": id, // FR-1.14
+			mcp.MetaKeyServerInfo: serverInfo}}}) // FR-1.15
 	_, _ = fmt.Fprintf(l.w, "data: %s\n\n", msg)
 	_ = http.NewResponseController(l.w).Flush()
 }

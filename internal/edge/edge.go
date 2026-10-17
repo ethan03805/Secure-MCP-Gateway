@@ -17,6 +17,7 @@ package edge
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -153,6 +154,9 @@ type Gateway struct {
 	// (CP-20); tests shorten it.
 	listenInterval time.Duration
 
+	// cursorKey seals tools/list pagination cursors (cursor.go, SR-5.7-2).
+	cursorKey []byte
+
 	// remoteMetadataURL returns the Remote Access listener's protected
 	// resource metadata URL for 401 responses there (FR-16.3).
 	remoteMetadataURL func() string
@@ -218,7 +222,11 @@ func New(d Deps) (*Gateway, error) {
 	}
 	g := &Gateway{cfg: d.Config, store: d.Store, oauth: d.OAuth, decider: d.Decider, reg: d.Registry, evidence: d.Evidence,
 		evidenceErr: d.EvidenceErr, healthGate: d.HealthGate, log: d.Log, prof: d.Profile, approver: d.Approver, filters: d.Filters, screen: d.Screen, caps: d.Capabilities,
-		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker(), listenInterval: listenKeepAlive}
+		consoleURL: d.ConsoleURL, policyFault: d.PolicyFault, servers: map[string]*sessionServer{}, track: newTracker(), listenInterval: listenKeepAlive,
+		cursorKey: make([]byte, 32)}
+	if _, err := rand.Read(g.cursorKey); err != nil {
+		return nil, fmt.Errorf("edge: cursor key: %w", err)
+	}
 	g.handler = mcp.NewStreamableHTTPHandler(g.serverFor, &mcp.StreamableHTTPOptions{
 		Stateless:           true,
 		JSONResponse:        true,                             // FR-1.6: JSON unless the request needs a stream

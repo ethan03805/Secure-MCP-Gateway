@@ -61,4 +61,11 @@ type Call struct {
 	Channel       string
 	ClientID      string
 	ClientAddress string
+	// Self-asserted request metadata: a valid W3C traceparent from the
+	// request _meta (FR-1.44) and the client's
+	// io.modelcontextprotocol/clientInfo as "name/version" (FR-1.45).
+	// They are observation attributes only: the decision request does not
+	// carry them, and nothing from the harness _meta is sent southbound.
+	TraceParent string
+	ClientInfo  string
 }

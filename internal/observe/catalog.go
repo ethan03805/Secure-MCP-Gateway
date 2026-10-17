@@ -137,7 +137,7 @@ var Identifiers = []string{"principal_id", "session_id", "server_revision", "too
 // instrumented element supplies it. See docs/observation.md.
 var Computed = []string{
 	"principal_id", "session_template", "calls_in_session", "end_user_claim",
-	"mcp_method", "server_revision", "tool_name",
+	"harness_adapter_version", "trace_parent", "mcp_method", "server_revision", "tool_name",
 	"request_bytes", "argument_count", "argument_max_depth", "argument_string_lengths", "argument_entropy",
 	"path_argument_count", "url_argument_count", "argument_value_hashes", "unicode_control_count",
 	"previous_tool", "transition_surprise", "inter_call_interval", "calls_per_minute_session",

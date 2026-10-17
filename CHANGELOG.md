@@ -216,6 +216,13 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - Session create responses (token endpoint, session API, Remote Access) now carry `observation_policy_id` instead of null.
 - A new test verifies FR-2.13 and FR-2.4.
 
+### Northbound: cursors, trace context, result members (SR-5.7-2, FR-1.24, FR-1.44, FR-1.45, FR-1.14, FR-1.15, FR-1.31, FR-1.41)
+
+- `tools/list` cursors are sealed with HMAC-SHA256 under a per-process key over the session ID, the catalog's policy revision and the SDK cursor (`internal/edge/cursor.go`). A modified cursor, a cursor of another session and a cursor of a superseded revision get `-32602`. `TestCatalogPagination` now verifies FR-1.24 and SR-5.7-2.
+- A valid W3C `traceparent` and the `io.modelcontextprotocol/clientInfo` of a `tools/call` request become observation attributes: new catalog parameter P-009 `trace_parent` and P-003 `harness_adapter_version` (`name/version`, self-asserted); catalog version 1.1.0. Neither reaches the decision request or the evidence, and the southbound request carries no harness `_meta`. New tests verify FR-1.44 and FR-1.45.
+- The empty complete result that ends a listen stream now carries `_meta.io.modelcontextprotocol/serverInfo`. FR-1.14 and FR-1.15 are narrowed to 2026-07-28 results (the 2025-11-25 schema defines neither field) and verified on every baseline method.
+- New tests verify FR-1.31 (content, structuredContent and isError as a response filter left them) and FR-1.41 (closing the event stream of an in-flight call sends `notifications/cancelled` southbound within 1 second).
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |
