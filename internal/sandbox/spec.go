@@ -264,11 +264,11 @@ type BuildInput struct {
 	// instance is attached to the Egress Broker.
 	Network string
 	// EgressEnv holds the Egress Broker's variables for the instance.
-	EgressEnv map[string]string
-	InstanceID  string
-	Gateway     string
-	Rootfs      string // Gateway-built root directory, used when no image is set
-	StateDir    string
+	EgressEnv  map[string]string
+	InstanceID string
+	Gateway    string
+	Rootfs     string // Gateway-built root directory, used when no image is set
+	StateDir   string
 }
 
 // Build derives the launch specification of one instance.

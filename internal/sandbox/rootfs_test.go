@@ -23,16 +23,16 @@ func TestPrepareRootfsIgnoresUmask(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := filepath.Join(t.TempDir(), "rootfs")
-	if err := PrepareRootfs(root, []Mount{{Source: src, Target: "/data/deep/dir"}, {Source: file, Target: SecretFileDir + "/TOKEN"}}); err != nil {
+	if err := PrepareRootfs(root, []Mount{{Source: src, Target: "/data/deep/dir"}, {Source: file, Target: "/data/file/TOKEN"}}); err != nil {
 		t.Fatal(err)
 	}
-	for _, d := range []string{".", "sys", "proc", "var", "var/tmp", "smcp", "smcp/bin", "data", "data/deep", "data/deep/dir", "run/smcp-secrets"} {
+	for _, d := range []string{".", "sys", "proc", "var", "var/tmp", "smcp", "smcp/bin", "data", "data/deep", "data/deep/dir", "data/file"} {
 		st, err := os.Stat(filepath.Join(root, d))
 		if err != nil || st.Mode().Perm() != 0o755 {
 			t.Errorf("%s: mode %v, %v", d, st.Mode(), err)
 		}
 	}
-	for _, f := range []string{"etc/passwd", "etc/group", "etc/hosts", "run/smcp-secrets/TOKEN"} {
+	for _, f := range []string{"etc/passwd", "etc/group", "etc/hosts", "data/file/TOKEN"} {
 		st, err := os.Stat(filepath.Join(root, f))
 		if err != nil || st.Mode().Perm() != 0o644 {
 			t.Errorf("%s: mode %v, %v", f, st.Mode(), err)
