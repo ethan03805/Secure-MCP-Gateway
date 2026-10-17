@@ -323,9 +323,9 @@ func TestResponseIDEcho(t *testing.T) {
 // prompts, completion, logging and task methods are rejected with -32601,
 // and neither era advertises a capability other than tools.
 //
-// Partial: the test cannot show the absence of server-initiated requests
-// (sampling, elicitation, roots) toward the harness; the edge has no code
-// path that sends them.
+// Partial here: the absence of server-initiated requests (sampling,
+// elicitation, roots) toward the harness is shown by the conformance suite
+// (internal/conformance), which verifies SR-5.6-1.
 func TestUnqualifiedFeaturesRejected(t *testing.T) {
 	reqtest.Partial(t, "SR-5.6-1")
 	h := newHarness(t, harnessOpts{})

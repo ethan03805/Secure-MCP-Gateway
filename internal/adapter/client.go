@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,8 +21,8 @@ import (
 var Version = "dev"
 
 // NewHTTPClient returns an HTTP client for the Gateway: TLS 1.3, trusting
-// only the configured Gateway CA when one is named, and dialing the UDS
-// listener when a socket is named.
+// only the configured Gateway CA when one is named. The UDS harness socket
+// does not speak HTTP; smcp-stdio uses RunUDS for it.
 func NewHTTPClient(g GatewaySection) (*http.Client, error) {
 	tc := &tls.Config{MinVersion: tls.VersionTLS13}
 	if g.CAFile != "" {
@@ -38,13 +37,6 @@ func NewHTTPClient(g GatewaySection) (*http.Client, error) {
 		tc.RootCAs = pool
 	}
 	tr := &http.Transport{TLSClientConfig: tc, MaxIdleConnsPerHost: 8, IdleConnTimeout: 60 * time.Second}
-	if g.Socket != "" {
-		sock := g.Socket
-		tr.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
-			var d net.Dialer
-			return d.DialContext(ctx, "unix", sock)
-		}
-	}
 	return &http.Client{Transport: tr, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, nil
 }
 

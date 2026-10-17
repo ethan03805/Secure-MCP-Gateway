@@ -146,6 +146,9 @@ type Gateway struct {
 	// streamHandler answers tools/call requests as an event stream behind a
 	// heldWriter (stream.go) so held calls can carry keep-alives (FR-3.19).
 	streamHandler *mcp.StreamableHTTPHandler
+	// udsHandler serves requests bridged from the UDS harness socket
+	// (uds.go): the MCP endpoint chain without host and origin checks.
+	udsHandler http.Handler
 
 	mu      sync.Mutex
 	servers map[string]*sessionServer
@@ -241,6 +244,7 @@ func New(d Deps) (*Gateway, error) {
 	g.mux = http.NewServeMux()
 	d.OAuth.Register(g.mux)
 	g.mux.Handle(d.Config.Listener.MCPPath, g.mcpChain(http.HandlerFunc(g.serveMCP)))
+	g.udsHandler = g.mcpChain(http.HandlerFunc(g.serveMCP))
 	g.mux.HandleFunc("GET /healthz", g.healthz)
 	d.Store.OnEnd(g.sessionEnded)
 	return g, nil
@@ -305,6 +309,13 @@ func CheckLoopback(addr string) error {
 // ServeTLS runs an HTTP server with the listener limits of CP-06 and CP-07
 // on ln until ctx ends.
 func ServeTLS(ctx context.Context, ln net.Listener, h http.Handler, tc *tls.Config, log *slog.Logger) error {
+	return serveTLS(ctx, ln, h, tc, log, false)
+}
+
+// serveTLS is ServeTLS; with headerErrors the listener terminates TLS
+// itself and answers unparseable header blocks with -32020 (headerconn.go,
+// SR-5.2-2), serving HTTP/1.1 only.
+func serveTLS(ctx context.Context, ln net.Listener, h http.Handler, tc *tls.Config, log *slog.Logger, headerErrors bool) error {
 	srv := &http.Server{
 		Handler:           h,
 		TLSConfig:         tc,
@@ -315,7 +326,11 @@ func ServeTLS(ctx context.Context, ln net.Listener, h http.Handler, tc *tls.Conf
 		ErrorLog:          slog.NewLogLogger(log.Handler(), slog.LevelWarn),
 	}
 	errc := make(chan error, 1)
-	go func() { errc <- srv.ServeTLS(ln, "", "") }()
+	if headerErrors {
+		go func() { errc <- srv.Serve(newHeaderListener(ln, tc)) }()
+	} else {
+		go func() { errc <- srv.ServeTLS(ln, "", "") }()
+	}
 	select {
 	case err := <-errc:
 		return err
@@ -344,7 +359,7 @@ func (g *Gateway) Serve(ctx context.Context, ln net.Listener) error {
 		<-ctx.Done()
 		g.EndListenStreams() // FR-1.37: before Shutdown waits for handlers
 	}()
-	return ServeTLS(ctx, ln, g.Handler(), tc, g.log)
+	return serveTLS(ctx, ln, g.Handler(), tc, g.log, true)
 }
 
 // EndListenStreams ends every open listen stream, each with an empty
