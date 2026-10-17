@@ -334,8 +334,22 @@ jobs:
           SMCP_NEO4J_USER: neo4j
           SMCP_NEO4J_PASSWORD: smcp-ci-graph-password
         run: |
-          go test -race -count=1 -p 1 -v ./internal/graph/... ./internal/e2e/ -run 'Neo4j|Graph'
-          go test -count=1 -v ./cmd/smcpctl/ -run 'Graph'
+          mkdir -p build
+          rc=0
+          go test -race -count=1 -p 1 -json ./internal/graph/... ./internal/e2e/ -run 'Neo4j|Graph' > build/graph-test.json || rc=$?
+          go test -count=1 -json ./cmd/smcpctl/ -run 'Graph' >> build/graph-test.json || rc=$?
+          jq -r 'select(.Action == "fail" and .Test != null) | "FAIL \(.Package) \(.Test)"' build/graph-test.json || true
+          exit "$rc"
+      # The status job merges these results, so the requirement claims of
+      # tests that need Neo4j (skipped in the go job) reach the report.
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: graph-results
+          path: build/graph-test.json
+          if-no-files-found: warn
+          retention-days: 14
 
   # Hostile backend fixture suite (SRS Appendix L, FR-19.1, FR-19.2): the
   # real Gateway against each misbehaving fixture, in the Standalone profile
@@ -419,7 +433,7 @@ jobs:
     if: >-
       always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration, hostile, console]
+    needs: [srs, go, lint, site, security, linux-integration, hostile, console, graph]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -448,7 +462,12 @@ jobs:
         with:
           name: console-results
           path: build
-      - name: Merge the hostile fixture and console acceptance results and their requirement claims (FR-19.2, FR-8.34)
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: graph-results
+          path: build
+      - name: Merge the hostile fixture, console acceptance and graph results and their requirement claims (FR-19.2, FR-8.34)
         run: |
           cp build/go-test.json build/all-test.json
           merged=0
@@ -464,6 +483,14 @@ jobs:
             merged=1
           else
             echo "no console results"
+          fi
+          # Neo4j-backed tests skip in the go job; their run in the graph job
+          # comes later in the file, so its result is the one counted.
+          if [ -s build/graph-test.json ]; then
+            cat build/graph-test.json >> build/all-test.json
+            merged=1
+          else
+            echo "no graph results"
           fi
           if [ "$merged" = 1 ]; then
             go run ./tools/reqreport -in build/all-test.json -coverprofile build/cover.out -fail-on-failing=false

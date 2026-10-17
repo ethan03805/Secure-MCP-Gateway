@@ -116,6 +116,10 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 - New reason codes in Appendix B and `docs/troubleshooting.md`: `RESULT_INVALID`, `BACKEND_OUTPUT_INVALID`, `INSTANCE_FAILED`.
 - `pipeline.InProcessLauncher.Raw` runs scripted stdio servers in process for protocol tests.
 - New tests verify FR-1.43, FR-5.13, FR-5.14, FR-5.15, FR-5.19, FR-5.21, FR-5.23, FR-5.26, FR-5.32, FR-5.40, SR-5.20-1, SR-7.2-1 and SR-7.12-1.
+### Graph mirror verification reaches the requirement report (E-21, E-25)
+
+- CI: the `graph` job writes `go test -json` to `build/graph-test.json` and uploads it as `graph-results`; the `status` job merges it after the `go` job's results, so the claims of tests that need Neo4j (skipped in the `go` job, for example `TestNeo4jSchemaMigrationAndIndexes` for FR-9.18 and `TestNeo4jInjectedTextIsNeverExecuted` for SR-1.13-1) are counted with the Neo4j run's result.
+- New tests over the graph projection verify SR-6.20-1 (every event with a decision, permitted or denied, has a `FOR_DECISION` link) and SR-6.13-1 (events recorded while the database is down reach the mirror after recovery with their original `policy_status`).
 
 ### Policy decisions: approval floor, profile ceiling, re-decision, explanations (E-05, E-06, E-07, E-09)
 
