@@ -190,6 +190,12 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 
 - Observation records, metrics and scores returned by the control API omit the fields the caller's role may not see by catalog sensitivity: S2 for every role but the Administrator, Policy Author and Auditor, S3 for every role. Aggregates over or grouped by such a field are refused with 403 `sensitivity_refused`; a Researcher's aggregates stay within S0 and S1. `adminapi.WithRole` lets handler tests set the caller's role. A new test verifies SR-6-3.
 
+### Session baseline context key (FR-2.13, FR-2.4)
+
+- A session records at creation the Observation Policy in force and its baseline context key: the policy's session-scoped context dimensions (`principal`, `framework_type`, `session_template`, `end_user`), in the policy's order, as `dimension=value` joined with `|`. The session creation event carries both (`observation_policy`, `context_key`) and the graph mirror stores them on the `Session` node. `app.Options.SessionContext` supplies them; smcpd passes the observation settings in force.
+- Session create responses (token endpoint, session API, Remote Access) now carry `observation_policy_id` instead of null.
+- A new test verifies FR-2.13 and FR-2.4.
+
 ### Owner decisions applied
 
 | Decision | Where | Rationale |

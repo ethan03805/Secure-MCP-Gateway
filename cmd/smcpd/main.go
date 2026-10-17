@@ -129,7 +129,8 @@ func run(cfgPath, level string) error {
 	mon.Register("observation", obs.HealthCheck()) // degraded while the Observation Store cannot be opened, or while observation is degraded (FR-9.12)
 	mon.AddQuota(obs.StorageQuota())               // FR-9.15
 	opts.ExtraFilters = obs.RegisterFilters
-	opts.ObservationContext = func() (string, string, string) { // FR-3.12 obligations
+	opts.SessionContext = func() (string, []string) { return obs.S.PolicyID, obs.S.Baseline.Dimensions } // FR-2.13
+	opts.ObservationContext = func() (string, string, string) {                                          // FR-3.12 obligations
 		return objs.InForce(obspolicy.KindAuditProfile), obs.S.PolicyID, objs.InForce(obspolicy.KindAnomalyResponse)
 	}
 	if o := obs.Observer(); o != nil {

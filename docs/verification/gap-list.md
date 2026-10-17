@@ -46,7 +46,6 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-04 Session Manager
 
-- FR-2.13 missing: no baseline context key is computed or stored at session creation from an Observation Policy.
 
 ## E-05 Policy Administration Service
 

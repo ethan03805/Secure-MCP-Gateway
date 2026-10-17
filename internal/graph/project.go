@@ -20,7 +20,7 @@ var mirrorLabels = []string{"AuditEvent", "Session", "Principal", "Invocation", 
 var labelProps = map[string]map[string]bool{
 	"AuditEvent": set("ts", "time", "class", "phase", "origin", "originLabel", "outcome", "reasonCode", "policyStatus", "correlationId",
 		"sessionId", "principalId", "decisionId", "serverRevision", "toolRevision", "policyRevision"),
-	"Session":        set("principalId", "state", "revisionId", "endReason"),
+	"Session":        set("principalId", "state", "revisionId", "endReason", "observationPolicyId", "contextKey"),
 	"Principal":      set(),
 	"Invocation":     set("sessionId", "principalId", "serverRevision", "toolRevision", "phase", "outcome", "reasonCode"),
 	"Decision":       set("ts", "outcome", "reasonCode", "revisionId", "correlationId", "sessionId"),
@@ -167,6 +167,14 @@ func (p *projection) add(ev audit.Event) {
 		sp := props("principalId", ev.PrincipalID)
 		if ev.Class == "session" {
 			sp = props("principalId", ev.PrincipalID, "state", ev.Outcome, "endReason", ev.ReasonCode, "revisionId", ev.PolicyRevision)
+			if d := detailMap(ev.Detail); ev.Outcome == "created" && d != nil {
+				// FR-2.13: the Observation Policy and baseline context key
+				// recorded at creation.
+				op, _ := d["observation_policy"].(string)
+				ck, _ := d["context_key"].(string)
+				sp = props("principalId", ev.PrincipalID, "state", ev.Outcome, "endReason", ev.ReasonCode, "revisionId", ev.PolicyRevision,
+					"observationPolicyId", op, "contextKey", ck)
+			}
 		}
 		node("Session", ev.SessionID, sp)
 		link("link.AuditEvent.IN_SESSION.Session", ev.EventID, ev.SessionID)
