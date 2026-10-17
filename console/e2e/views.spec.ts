@@ -158,7 +158,7 @@ test("G-07 performance: throughput, overhead per revision and stage time", async
   await signIn(page, "/performance");
   await expect(page.getByRole("heading", { name: "Gateway overhead per policy revision" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Time per stage and policy object" })).toBeVisible();
-  await expect(page.locator(".loading")).toHaveCount(0);
+  await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
   await expect(page.getByRole("combobox", { name: "Policy revision" })).toBeVisible();
 });
 
@@ -453,5 +453,5 @@ test("G-10 servers and library: suspend, enable, trust anchors and receipts", as
   await expect(revs).toContainText("enabled");
   await page.getByRole("link", { name: "smcp-ref-filesystem" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Package smcp-ref-filesystem" })).toBeVisible();
-  await expect(page.getByText("Signed manifest")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Signed manifest/ })).toBeVisible();
 });

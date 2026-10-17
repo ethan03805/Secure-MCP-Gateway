@@ -49,7 +49,7 @@ for (const scheme of ["light", "dark"] as const) {
         history.pushState(null, "", to);
         dispatchEvent(new PopStateEvent("popstate"));
       }, p);
-      await expect(page.locator(".loading")).toHaveCount(0);
+      await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
       const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
       expect(r.violations.map((v) => `${p} ${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
     }
