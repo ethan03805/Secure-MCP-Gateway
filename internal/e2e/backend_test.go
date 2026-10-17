@@ -52,6 +52,13 @@ func runBackend() {
 		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "echo:" + a.Text}}}, nil, nil
 	})
+	// southbound returns everything the server received from the Gateway
+	// for the call: the raw request parameters (name, arguments, _meta) and
+	// the process environment (SR-2.10-1).
+	mcp.AddTool(s, &mcp.Tool{Name: "southbound", Description: "reports what the server received"}, func(ctx context.Context, req *mcp.CallToolRequest, a map[string]any) (*mcp.CallToolResult, any, error) {
+		b, _ := json.Marshal(map[string]any{"params": req.Params, "env": os.Environ()})
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil, nil
+	})
 	mcp.AddTool(s, &mcp.Tool{Name: "dotted.name", Description: "name with a dot"}, func(ctx context.Context, req *mcp.CallToolRequest, a struct{}) (*mcp.CallToolResult, any, error) {
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "dotted"}}}, nil, nil
 	})

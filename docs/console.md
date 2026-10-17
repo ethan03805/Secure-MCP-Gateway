@@ -66,7 +66,7 @@ When this Gateway build does not serve a view's route, the view says **Not avail
 
 ### Emergency stop
 
-**Emergency stop** in the status bar opens a dialog that asks for a reason. **Stop the Gateway** refuses every tool call at once: no call is dispatched and no result of a call in flight is released (FR-4.14). The status bar then shows `emergency stop` and the Gateway health is `fail-closed` with cause `emergency_stop`. The stop is recorded with your account and the reason (`reason_code` `EMERGENCY_STOP`). **Resume** asks for confirmation and records `EMERGENCY_RESUME`. If the journal cannot record the stop, the Gateway still stops and the console shows the warning.
+**Emergency stop** in the status bar opens a dialog that asks for a reason. **Stop the Gateway** refuses every tool call at once: no call is dispatched, calls in flight are cancelled (the server is sent `notifications/cancelled` and the harness gets `-31003` with `EMERGENCY_STOP`), no result of a call in flight is released (FR-4.14, SR-7.6-2), and the Secret Broker withdraws its grants. The status bar then shows `emergency stop` and the Gateway health is `fail-closed` with cause `emergency_stop`. The stop is recorded with your account and the reason (`reason_code` `EMERGENCY_STOP`). **Resume** asks for confirmation and records `EMERGENCY_RESUME`. If the journal cannot record the stop, the Gateway still stops and the console shows the warning.
 
 ### Approving a held call
 

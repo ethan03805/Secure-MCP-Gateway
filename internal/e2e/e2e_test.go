@@ -463,8 +463,8 @@ func TestPolicyDecisionsAndErrorMapping(t *testing.T) {
 	reqtest.Verifies(t, "FR-1.20", "FR-1.32", "FR-4.9", "FR-4.14")
 	// FR-4.3: request and response scoring are not stages yet. FR-4.5: only
 	// schema-validate exists. SR-1.17-1: credential, server-revision and
-	// revocation-epoch rechecks are not implemented. SR-2.10-1: no test
-	// inspects the southbound request.
+	// revocation-epoch rechecks are not implemented. SR-2.10-1 is verified
+	// by TestSouthboundCarriesNoNorthboundCredentials.
 	reqtest.Partial(t, "FR-4.3", "FR-4.5", "SR-1.17-1", "SR-2.10-1")
 	f := start(t, "")
 	access, _, _ := f.oauthLogin("")

@@ -310,8 +310,12 @@ func TestMissingTreeRecreatedFromArtifact(t *testing.T) {
 }
 
 func TestPollingImportsAndRevokesWithTeardown(t *testing.T) {
-	reqtest.Verifies(t, "FR-5.3", "SR-3-3")
-	reqtest.Partial(t, "FR-14.12") // smcpctl package revoke is exercised in cmd/smcpctl
+	// FR-14.12: the entry is written by packaging.WriteRevocation, the
+	// writer of `smcpctl package revoke` (whose flags, key handling and
+	// offline scan are cmd/smcpctl TestPackageCommands); within the FR-5.3
+	// interval the enabled revision is revoked, its tools leave the
+	// catalog and its running instance stops.
+	reqtest.Verifies(t, "FR-5.3", "SR-3-3", "FR-14.12")
 	r := newRuntime(t, fixtureDesc)
 	reg := r.start(t, []config.Server{{Alias: "fx", Package: "fx-id"}})
 	if reg.Resolve("fx_echo") == nil {
@@ -334,6 +338,12 @@ func TestPollingImportsAndRevokesWithTeardown(t *testing.T) {
 	}
 	if rev, _ := r.lib.Get("fx-id", "1"); rev.State != StateRevoked {
 		t.Fatalf("state %s", rev.State)
+	}
+	// The running instance stopped (FR-14.12).
+	for _, b := range r.rt.Bindings() {
+		if b.Alias == "fx" && b.Status == "running" {
+			t.Fatalf("revoked revision still running: %+v", b)
+		}
 	}
 	// On command: another package is imported at once by Scan.
 	r.rt.Close() // stop polling

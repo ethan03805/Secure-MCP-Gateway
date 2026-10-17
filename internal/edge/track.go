@@ -17,8 +17,9 @@ const (
 // stream ended with one of them is closed with an empty complete response
 // (FR-1.37).
 var (
-	errSessionEnded = errors.New("session ended")
-	errShutdown     = errors.New("gateway shutting down")
+	errSessionEnded  = errors.New("session ended")
+	errShutdown      = errors.New("gateway shutting down")
+	errEmergencyStop = errors.New("emergency stop")
 )
 
 type activity struct {
