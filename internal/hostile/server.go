@@ -26,6 +26,7 @@ package hostile
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -172,29 +173,45 @@ func Serve(ctx context.Context, c Config, in io.Reader, out io.Writer) error {
 	sc := bufio.NewScanner(in)
 	sc.Buffer(make([]byte, 64<<10), 64<<20)
 	for sc.Scan() {
-		var m message
-		if err := json.Unmarshal(sc.Bytes(), &m); err != nil {
-			continue
-		}
-		switch {
-		case m.Method == "" && len(m.ID) > 0: // a response to a request of ours
-			s.pmu.Lock()
-			ch := s.pending[string(m.ID)]
-			delete(s.pending, string(m.ID))
-			s.pmu.Unlock()
-			if ch != nil {
-				ch <- m
+		var batch []message
+		if b := bytes.TrimSpace(sc.Bytes()); len(b) > 0 && b[0] == '[' {
+			if json.Unmarshal(b, &batch) != nil {
+				continue
 			}
-		case len(m.ID) > 0:
-			s.wg.Add(1)
-			go func() {
-				defer s.wg.Done()
-				s.handle(m)
-			}()
+		} else {
+			var m message
+			if json.Unmarshal(b, &m) != nil {
+				continue
+			}
+			batch = []message{m}
+		}
+		for _, m := range batch {
+			s.dispatch(m)
 		}
 	}
 	cancel()
 	return sc.Err()
+}
+
+// dispatch hands a response to the request waiting for it and runs a
+// request in its own goroutine.
+func (s *server) dispatch(m message) {
+	switch {
+	case m.Method == "" && len(m.ID) > 0: // a response to a request of ours
+		s.pmu.Lock()
+		ch := s.pending[string(m.ID)]
+		delete(s.pending, string(m.ID))
+		s.pmu.Unlock()
+		if ch != nil {
+			ch <- m
+		}
+	case len(m.ID) > 0:
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			s.handle(m)
+		}()
+	}
 }
 
 func (s *server) write(v any) {
@@ -229,13 +246,19 @@ func (s *server) notify(method string, params any) {
 	s.write(message{JSONRPC: "2.0", Method: method, Params: raw})
 }
 
-// request sends a server-initiated request and waits for its response.
-func (s *server) request(method string, params any, wait time.Duration) (message, error) {
-	id := json.RawMessage(fmt.Sprintf(`"hostile-%d"`, s.nextID.Add(1)))
+// expect registers a channel for the response to request id.
+func (s *server) expect(id json.RawMessage) chan message {
 	ch := make(chan message, 1)
 	s.pmu.Lock()
 	s.pending[string(id)] = ch
 	s.pmu.Unlock()
+	return ch
+}
+
+// request sends a server-initiated request and waits for its response.
+func (s *server) request(method string, params any, wait time.Duration) (message, error) {
+	id := json.RawMessage(fmt.Sprintf(`"hostile-%d"`, s.nextID.Add(1)))
+	ch := s.expect(id)
 	raw, _ := json.Marshal(params)
 	s.write(message{JSONRPC: "2.0", ID: id, Method: method, Params: raw})
 	select {

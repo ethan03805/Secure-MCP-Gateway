@@ -88,10 +88,12 @@ file = "policy.json"
 
 func heldCall(svc *approval.Service, text string) <-chan pipeline.ApprovalResult {
 	ch := make(chan pipeline.ApprovalResult, 1)
+	// The hold outlasts the CLI steps that decide the approval, each of
+	// which signs in (password hashing, slow under the race detector).
 	go func() {
 		c := pipeline.Call{CorrelationID: "corr-" + text, SessionID: "s1", PrincipalID: "cc", Server: "fs", Tool: "write", PublicName: "fs_write",
 			ServerRevision: "sr1", ToolRevision: "tr1", PolicyRevision: "r1", DecisiveRules: []string{"rule-w"}}
-		r, _ := svc.Request(context.Background(), pipeline.ApprovalRequest{Call: c, Arguments: json.RawMessage(`{"text":"` + text + `"}`), Hold: 20 * time.Second})
+		r, _ := svc.Request(context.Background(), pipeline.ApprovalRequest{Call: c, Arguments: json.RawMessage(`{"text":"` + text + `"}`), Hold: 2 * time.Minute})
 		ch <- r
 	}()
 	return ch
@@ -136,8 +138,16 @@ func TestApprovalsCLI(t *testing.T) {
 	go func() {
 		watchDone <- approvalsCmd([]string{"watch", "--config", cfgPath, "--user", "alice", "--password-file", alicePW, "--max-events", "1"}, strings.NewReader(""), watchOut)
 	}()
-	deadline := time.Now().Add(10 * time.Second)
+	// Signing in hashes the password, which is slow under the race
+	// detector on a loaded machine; the 2 s bound below starts once the
+	// watch is running.
+	deadline := time.Now().Add(60 * time.Second)
 	for !strings.Contains(watchOut.String(), "watching") {
+		select {
+		case err := <-watchDone:
+			t.Fatalf("watch ended before it started: %v %s", err, watchOut.String())
+		default:
+		}
 		if time.Now().After(deadline) {
 			t.Fatalf("watch did not start: %s", watchOut.String())
 		}

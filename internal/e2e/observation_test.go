@@ -171,7 +171,7 @@ sigma_floor = 0.05
 		t.Fatal("write was not refused")
 	}
 	of.waitAssembled(n + 1)
-	time.Sleep(100 * time.Millisecond) // writer flush interval
+	of.obs.Sync() // rows written to the store, instead of sleeping for the flush interval
 
 	code, st := of.admin("GET", "/api/v1/observations/status", of.operator, nil)
 	if code != 200 || st["enabled"] != true {
@@ -214,7 +214,7 @@ sigma_floor = 0.05
 		t.Fatal(err)
 	}
 	of.waitAssembled(n + 2)
-	time.Sleep(100 * time.Millisecond)
+	of.obs.Sync()
 	code, an := of.admin("GET", "/api/v1/anomalies", of.operator, nil)
 	if code != 200 || an["count"].(float64) < 1 {
 		t.Fatalf("anomalies %d %v", code, an)

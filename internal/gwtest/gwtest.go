@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -34,6 +33,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
 
 // Fixed credentials of the fixture.
@@ -80,12 +80,7 @@ type Gateway struct {
 // FreePort returns an unused loopback port.
 func FreePort(t testing.TB) int {
 	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
+	return testport.Free(t)
 }
 
 func mustHash(t testing.TB, pw string) string {
