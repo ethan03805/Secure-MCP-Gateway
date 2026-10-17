@@ -425,6 +425,13 @@ func (v *verifyingLauncher) Launch(ctx context.Context, spec pipeline.ServerSpec
 		if err := v.rt.verifyArtifact(b); err != nil {
 			return nil, v.rt.suspendBinding(b, err, map[string]any{"artifact_sha256": b.rev.ArtifactSHA256})
 		}
+		// FR-5.34: the manifest's declared behavior travels with the
+		// launch, so the Runtime Monitor evaluates process creation
+		// against it.
+		if b.manifest != nil {
+			spawns := b.manifest.Capabilities.SpawnsProcesses
+			spec.SpawnsProcesses = &spawns
+		}
 	}
 	return v.inner.Launch(ctx, spec)
 }

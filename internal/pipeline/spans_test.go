@@ -18,7 +18,9 @@ func TestSpanTimerMeasuresStagesAndCPU(t *testing.T) {
 	cpuClock := runtime.GOOS == "linux" || runtime.GOOS == "darwin"
 	st := NewSpanTimer("corr-1")
 	end := st.Start(SpanDecision)
-	burn(3 * time.Millisecond)
+	// Burn well past the 1ms CPU floor checked below: on a loaded runner the
+	// thread is not on a CPU for the whole wall-clock interval.
+	burn(10 * time.Millisecond)
 	end()
 	st.PolicyRevision, st.Rule = "r1", "r1/ro/a"
 	end = st.Start(SpanRequestInspection)
@@ -42,7 +44,8 @@ func TestSpanTimerMeasuresStagesAndCPU(t *testing.T) {
 	if insp.CPU < 4*time.Millisecond {
 		t.Fatalf("inspection CPU %v lacks the filter's 4ms", insp.CPU)
 	}
-	if cpu, ok := MeasureCPU(func() { burn(2 * time.Millisecond) }); ok != cpuClock || (ok && cpu < time.Millisecond) {
+	cpu, ok := MeasureCPU(func() { burn(10 * time.Millisecond) })
+	if ok != cpuClock || (ok && cpu < time.Millisecond) {
 		t.Fatalf("MeasureCPU %v %v", cpu, ok)
 	}
 }

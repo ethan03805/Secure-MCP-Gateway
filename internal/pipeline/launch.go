@@ -36,6 +36,11 @@ type ServerSpec struct {
 	// ManifestSource for the tool set, so a verified source can refuse an
 	// instance whose era differs from the manifest's (FR-5.40).
 	NegotiatedEra string
+	// SpawnsProcesses is the process-creation behavior the verified
+	// manifest declares (capabilities.spawns_processes), or nil when the
+	// server has no manifest. The Runtime Monitor treats a process created
+	// by an instance that does not declare it as a deviation (FR-5.34).
+	SpawnsProcesses *bool
 }
 
 // Process is a running server instance speaking newline-delimited JSON-RPC:
