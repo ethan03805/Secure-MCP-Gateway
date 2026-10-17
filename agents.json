@@ -10,8 +10,8 @@
     "client": "Codex CLI",
     "version": "0.142.2",
     "mode": "ai-gateway",
-    "result": "fail",
-    "detail": "failed: denied (the agent made no call to ref_time_now); journal verify ok"
+    "result": "pass",
+    "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
   },
   {
     "client": "Hermes Agent",
