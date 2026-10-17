@@ -59,7 +59,7 @@ func entropyReference(s string) float64 {
 // entropy of the definition for ASCII, non-ASCII, mixed and invalid UTF-8
 // text.
 func TestEntropyMatchesDefinition(t *testing.T) {
-	for _, s := range []string{"", "a", "aab", "0123456789abcdef", strings.Repeat("0123456789abcdef", 4096), "héllo wörld ✓✓✓", "x​z‮",
+	for _, s := range []string{"", "a", "aab", "0123456789abcdef", strings.Repeat("0123456789abcdef", 4096), "héllo wörld ✓✓✓", "x\u200bz\u202e",
 		"\xff\xfe\xfd ascii", strings.Repeat("日本語テキスト and ascii ", 300)} {
 		if got, want := Entropy(s), entropyReference(s); math.Abs(got-want) > 1e-9 {
 			t.Fatalf("Entropy(%.20q) = %v, want %v", s, got, want)
@@ -75,8 +75,8 @@ func TestResponseFeaturesURLsAndBytes(t *testing.T) {
 		referenceResult(),
 		{Content: []mcp.Content{&mcp.TextContent{Text: "a <https://x.example/a>, (http://y.example) and ftp://z.example/f."}}},
 		{Content: []mcp.Content{&mcp.TextContent{Text: "no scheme here: example.com/path ://bare"}}, IsError: true},
-		{Content: []mcp.Content{&mcp.TextContent{Text: "\"quoted <html> & escapes \""}}, StructuredContent: map[string]any{"k": "v"}},
-		{Content: []mcp.Content{&mcp.TextContent{Text: "ctl \x00\x01\x1f\b\f\n\r\t\x7f \\ bad \xff\xc3 sep   é ✓ 𝄞"}, &mcp.TextContent{Text: ""},
+		{Content: []mcp.Content{&mcp.TextContent{Text: "\"quoted <html> & escapes\u2028\""}}, StructuredContent: map[string]any{"k": "v"}},
+		{Content: []mcp.Content{&mcp.TextContent{Text: "ctl \x00\x01\x1f\b\f\n\r\t\x7f \\ bad \xff\xc3 sep \u2029 é ✓ 𝄞"}, &mcp.TextContent{Text: ""},
 			&mcp.ImageContent{Data: []byte{1, 2}, MIMEType: "image/png"}, &mcp.TextContent{Text: "second", Meta: mcp.Meta{"k": "<v>"}}}},
 	} {
 		v := ResponseFeatures(res, nil, false)
