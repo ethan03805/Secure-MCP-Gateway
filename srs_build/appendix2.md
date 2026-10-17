@@ -117,7 +117,7 @@ The acceptance scenarios of `MCP_Gateway_Security_SRS.md` Appendix B are mapped 
 | AT-07 Safe evidence display | Manifests, licenses and SBOMs rendered inert and bounded | SR-3.3-1, SR-6.17-1 | Automated (Playwright) |
 | AT-08 Worker containment | Path, symlink, host socket, privilege, network and DNS escapes fail | SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2; Appendix L HF-20 to HF-24 | Automated (Enforced) |
 | AT-09 Request and response filters | Secret, injection, malformed, binary and oversized content | SR-5.8-1, SR-5.9-1, SR-5.10-1, SR-5.11-1, SR-5.18-1; Appendix L HF-04 to HF-09, HF-16 | Automated |
-| AT-10 Web broker | One-use egress, reserved addresses, rebinding, redirects | SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.19-1 | Automated (Enforced) |
+| AT-10 Web broker | Grant scope, reserved addresses, rebinding, redirects | SR-4.5-2, SR-5.15-1, SR-5.15-2, SR-5.19-1 | Automated (Enforced) |
 | AT-11 Audit linkage | Exact links survive rename, update and removal; denied targets not shown as executing | SR-6.4-1, SR-6.5-1, SR-6.20-1 | Automated |
 | AT-12 Audit consistency | Journal flush faults, mirror replay and duplicate IDs | SR-6.2-1, SR-6.3-1, SR-6.10-1, SR-6.11-1 | Automated |
 | AT-13 Integrity, privacy, retention | Journal tamper detection, no raw secrets, retention conflicts, purge receipts | FR-7.5, SR-6.7-1, SR-6.9-1, SR-6.15-1 | Automated |

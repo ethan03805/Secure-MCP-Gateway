@@ -62,7 +62,10 @@ func newHarness(t *testing.T, rt config.Runtime, adjust ...func(*Options)) *harn
 	state := t.TempDir()
 	rt.Podman = exe
 	o := Options{Runtime: rt, StateDir: state, Log: quiet(), TerminateAfter: 300 * time.Millisecond,
-		CgroupRoot: filepath.Join(dir, "cgroup"), PodmanEnv: map[string]string{"SMCP_FAKE_PODMAN": "1", "SMCP_FAKE_DIR": dir}}
+		CgroupRoot: filepath.Join(dir, "cgroup"), PodmanEnv: map[string]string{"SMCP_FAKE_PODMAN": "1", "SMCP_FAKE_DIR": dir,
+			// The race detector's runtime sleeps 1 s at exit by default; a
+			// fake podman call would then take a second longer than podman.
+			"GORACE": "atexit_sleep_ms=0"}}
 	for _, f := range adjust {
 		f(&o)
 	}
@@ -529,8 +532,8 @@ func TestMonitorExecEventIsDeviation(t *testing.T) {
 }
 
 func TestUnexpectedExitIsRecorded(t *testing.T) {
-	// FR-5.12 also asks for restart on next use and suspension after three
-	// exits in five minutes; those belong to the registry and are not built.
+	// The exit evidence of FR-5.12; the restart and the suspension after
+	// three exits in five minutes are internal/backend TestCrashRestartAndSuspension.
 	reqtest.Partial(t, "FR-5.12")
 	h := newHarness(t, testRuntime())
 	p, err := h.l.Launch(context.Background(), h.spec("crash"))

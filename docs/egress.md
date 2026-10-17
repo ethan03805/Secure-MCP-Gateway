@@ -137,7 +137,7 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 
 ## Not yet implemented
 
-- One-use egress capabilities in `Smcp-Egress-Auth` bound to correlation ID, decision ID, policy revision and destination (SR-5.16-1). The header is removed before forwarding, but not required or checked.
+- One-use egress capabilities in `Smcp-Egress-Auth` (SR-5.16-1) are deferred from release 1.0 (SRS Appendix N): third-party servers do not send them. Each operation is authorized by the instance it comes from and its current grants (SR-4.5-2); the header is removed before forwarding.
 - The `secret-fingerprint` filter on outbound URLs, headers and bodies (SR-5.8-2).
 - Grants from policy decision obligations and limits from manifests and Runtime Profiles (FR-5.38 names three sources; the broker applies the configuration and the grant).
 - Endpoint variable names from signed manifests (FR-5.37); today they come from `endpoint_env` in the configuration.

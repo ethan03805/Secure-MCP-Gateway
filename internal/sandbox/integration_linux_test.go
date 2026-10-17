@@ -120,8 +120,16 @@ func mcpCall(name string, args map[string]any) *mcp.CallToolParams {
 	return &mcp.CallToolParams{Name: name, Arguments: args}
 }
 
+// TestIntegrationSandboxConfinesServer inspects a real instance and its
+// effective container configuration. It verifies SR-4.7-1 (all
+// capabilities dropped, no_new_privs, a seccomp filter with Podman's
+// default profile, a read-only root, no host PID, network or IPC
+// namespace, no devices, no host socket mounted) and SR-4.1-2 (two
+// concurrent instances map container root to different host UID ranges,
+// neither of them host root).
 func TestIntegrationSandboxConfinesServer(t *testing.T) {
-	reqtest.Partial(t, "SR-4.5-1", "SR-4.6-1", "SR-4.7-1", "SR-4.1-2", "FR-5.9", "FR-5.33")
+	reqtest.Verifies(t, "SR-4.7-1", "SR-4.1-2")
+	reqtest.Partial(t, "SR-4.5-1", "SR-4.6-1", "FR-5.9", "FR-5.33")
 	ro, rw := shareDir(t, 0o755), shareDir(t, 0o777)
 	if err := os.WriteFile(filepath.Join(ro, "granted.txt"), []byte("granted-content"), 0o644); err != nil { // #nosec G306 -- read by the instance
 		t.Fatal(err)
@@ -153,7 +161,8 @@ func TestIntegrationSandboxConfinesServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ln.Close()
-	for _, addr := range []string{"1.1.1.1:53", "8.8.8.8:443", ln.Addr().String(), "10.0.2.2:22"} {
+	// The Internet, LAN addresses and the host's loopback services.
+	for _, addr := range []string{"1.1.1.1:53", "8.8.8.8:443", "192.168.1.1:80", "172.16.0.1:5432", ln.Addr().String(), "10.0.2.2:22"} {
 		if got := callText(t, s, "net_connect", map[string]any{"address": addr}); !strings.HasPrefix(got, "blocked:") {
 			t.Errorf("connect %s: %s", addr, got)
 		}
@@ -287,7 +296,13 @@ func TestIntegrationLeftoverContainersAreReaped(t *testing.T) {
 // are refused by the nftables table in the container's namespace; a
 // proxied request to an ungranted destination is refused by the broker.
 func TestIntegrationEgressBroker(t *testing.T) {
-	reqtest.Partial(t, "SR-4.5-1", "FR-5.37", "SR-5.15-1")
+	// SR-4.5-1: from an instance in its network namespace, connections to
+	// the Internet, the LAN, host loopback services (the canary, as a local
+	// database would be) and the DNS forwarder fail; only the broker
+	// endpoint carries traffic. TestIntegrationSandboxConfinesServer checks
+	// the same for an instance without egress (network none).
+	reqtest.Verifies(t, "SR-4.5-1")
+	reqtest.Partial(t, "FR-5.37", "SR-5.15-1")
 	allowed := &http.Server{ReadHeaderTimeout: 5 * time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("egress-ok"))
 	})}
@@ -332,7 +347,11 @@ func TestIntegrationEgressBroker(t *testing.T) {
 	defer p.Close()
 	s := connect(t, p)
 
-	for _, addr := range []string{fmt.Sprintf("10.0.2.2:%d", aport), fmt.Sprintf("10.0.2.2:%d", cport), "10.0.2.3:53", "1.1.1.1:443", "10.0.2.2:22"} {
+	// The granted server itself, a host loopback service standing in for
+	// the database (the canary), the slirp4netns DNS forwarder, the
+	// Internet, LAN addresses and host SSH: only the broker is reachable.
+	for _, addr := range []string{fmt.Sprintf("10.0.2.2:%d", aport), fmt.Sprintf("10.0.2.2:%d", cport), "10.0.2.3:53", "1.1.1.1:443",
+		"192.168.1.1:80", "172.16.0.1:5432", "10.0.2.2:22"} {
 		if got := callText(t, s, "net_connect", map[string]any{"address": addr}); !strings.HasPrefix(got, "blocked:") {
 			t.Errorf("direct connect %s: %s", addr, got)
 		}
