@@ -1,6 +1,6 @@
 # MCP Servers — FloorPlan
 
-Updated: 2026-10-16 (SRS V1.2 and architecture V2.3 re-baseline; `docs/`, license and security policy added)
+Updated: 2026-10-16 (SRS V1.2 and architecture V2.3 re-baseline; `docs/`, license and security policy added; CI, release plumbing, hardened Go slice and data-driven site merged)
 
 Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level path. Paths are relative to the repository root.
 
@@ -19,16 +19,21 @@ Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level p
 | `architecture.md` | Architecture revision 2.0: problem-space analysis, Neo4j CE design, data flows, licenses, engineering server catalog, GUI and Hermes integration procedures | Background and rationale; superseded as an allocation baseline by `ArchitectureV2.md` |
 | `Skills.md` | Requirement-development skill (INCOSE GtWR plus project MUST/SHALL rules) | Use when creating or refining requirements |
 | `go.mod`, `go.sum` | Go module `github.com/ethan03805/secure-mcp-gateway` | Build with `go build ./...`; test with `go test ./...` |
-| `cmd/` | `smcpd` (the Gateway daemon) and `smcpctl` (bootstrap, config validate, journal verify, health, hash-password) | First vertical slice; see README |
-| `internal/` | Gateway packages by element: `edge` (E-01, E-02, E-08, E-12), `session` (E-03, E-04, OAuth 2.1), `policy` (E-05, E-06), `backend` (E-10, E-14, E-15), `audit` (E-21), `keys` (E-22), `config` (configuration schema), `ids`, `reqtest` (requirement tagging), `e2e` (end-to-end tests) | Implementation; each test declares the requirement IDs it verifies (FR-12.10) |
-| `tools/reqreport/` | Reads `go test -json` output and writes the requirement-to-test report that CI publishes | FR-12.10 |
+| `cmd/` | `smcpd` (the Gateway daemon), `smcpctl` (offline: bootstrap, config validate, journal verify, hash-password; control API: health, stop, resume, policy reload, approvals, admin redeem) and `smcp-refserver` (read-only reference MCP server used by the bootstrap example) | First vertical slice; see README |
+| `internal/` | Gateway packages by element: `edge` (E-01, E-02, E-08, E-12), `pipeline` (seams for later elements), `session` (E-03, E-04, OAuth 2.1), `authguard` (sign-in rate limits and lockout), `policy` (E-05, E-06), `backend` (E-10, E-14, E-15), `audit` (E-21), `keys` (E-22), `adminapi` (control API, E-24), `profile` (Standalone or Enforced), `app` (wiring), `config` (configuration schema), `diag` (diagnostic log), `ids`, `reqtest` (requirement tagging), `e2e` (end-to-end tests); `internal/README.md` maps packages to elements and seams | Implementation; each test declares the requirement IDs it verifies, fully or partly (FR-12.10) |
+| `tools/reqreport/` | Reads `go test -json` output and the coverage profile and writes `build/reqreport.{json,md}` and `build/status.json` (the website's status data) | FR-12.10 |
+| `scripts/` | CI and maintenance scripts: end-to-end integration run and its MCP test client (`itest-client/`), npm audit gate, status publishing to the `site-data` branch, site redeploy trigger, merge queue, PR auto-update, Homebrew formula rendering; see `scripts/README.md` | Run by CI and maintainers |
+| `Makefile` | Local entry points: `make check` runs what the required CI jobs check, `make status` builds the requirement report, `make integration` runs the end-to-end script | Developer and CI use |
+| `.golangci.yml` | golangci-lint v2 configuration; every exclusion states why it exists | Read by the `lint` CI job |
+| `.goreleaser.yaml`, `install.sh`, `packaging/homebrew/` | Release archives and checksums (signed with cosign by `release.yml`), the checksum-verifying installer, and the Homebrew formula template | Release only |
 | `spikes/` | Experiments that retire SRS §3.3 stack risks; each has its own `go.mod` and a `README.md` recording the result | Evidence for design decisions; not part of the Gateway build |
-| `site/` | Static Next.js website that renders the specification. Parses `ArchitectureV2.md`, `srs_build/req*.txt` and `MCP_Gateway_Security_SRS.md` at build time | Rebuild or redeploy after any document change |
+| `site/` | Static Next.js website that renders the specification and the implementation status. Parses `ArchitectureV2.md`, `srs_build/req*.txt`, `MCP_Gateway_Security_SRS.md` and `docs/flows/` at build time and reads `status.json` and `history.json` from the `site-data` branch (falling back to `site/data/*.sample.json`) | Rebuild or redeploy after any document change |
 | `vercel.json`, `.vercelignore` | Vercel deployment configuration for the site | Deployment only |
-| `.github/workflows/` | Continuous integration: SRS regeneration check, site build, Go build and tests with the requirement report | Runs on every push and pull request |
+| `.github/` | Workflows (`ci.yml` with the required jobs srs, go, lint, site, security and linux-integration plus the status publisher on main; `regenerate.yml`, `auto-update.yml`, `release.yml`), PR template, CODEOWNERS, Dependabot configuration and the reviewed npm audit allowlist | Runs on every push and pull request |
 | `mcp-spec/` | Unmodified copy of the MCP specification release 2026-07-28 (MDX, `schema.ts`/`schema.json`, examples, upstream license); `README.md` records source, commit and checksum | Read-only reference; add a new version subdirectory to update |
 | `versions/` | Immutable `MCP_Gateway_SRS_V1.md` snapshot and its validation evidence | Released snapshots only; releases add new ones |
 | `Secure-MCP-Gateway-Research-Brief.md` | Original September 21, 2026 research and recommendations | Preserved unchanged; historical claims need current validation |
 | `archive/` | Original `Secure-MCP-Gateway-Architecture.md` and pre-split `architecture-pre-srs-v1-2026-10-04.md` | Historical reference, preserved byte for byte |
 | `.gitignore` | Exclusions for local work, secrets, runtime state, build output and agent worktrees | Keep runtime and sensitive material out of history |
+| `.gitattributes` | Marks the generated SRS, `go.sum` files and `site/package-lock.json` as generated, merges `CHANGELOG.md` locally with both sides kept, and keeps LF endings in shell scripts | Diff and merge handling |
 | `.git/` | Git history and tags (`mcp-gateway-srs-v1` marks the SRS V1 baseline) | Remote `origin` = https://github.com/ethan03805/Secure-MCP-Gateway |

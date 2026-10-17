@@ -56,9 +56,40 @@ Re-baseline so that the product, built exactly as specified, is a finished and s
 
 - `internal/sandbox`: a confining `pipeline.Launcher` that runs each backend in rootless Podman with a read-only root, all capabilities dropped, no-new-privileges, Podman's default seccomp profile, a distinct user-namespace range per instance, network `none`, CP-24 cgroup limits, tmpfs `/work` and `/tmp`, and only the operator's mount grants (read-only unless granted write). Environment values reach Podman by name, never on its command line. `Confined()` is true, so a capable Linux host resolves to the enforced profile.
 - Runtime Monitor: cgroup sampling on an interval and on kernel change notifications, the Podman event stream, `process_created`, `deviation`, `limit_breach`, `instance_killed` and `instance_exited` evidence, and a kill on memory or PID limit breach.
-- `pipeline.EgressAttacher` with the default `NoEgress`: the seam through which the Egress Broker (E-18) gives an instance a network and endpoint variables.
+- The launcher implements `pipeline.EgressAware`; a sandboxed server that asks for egress is refused until rootless network-namespace attachment to the Egress Broker is built.
 - `[runtime]` configuration table and `[[runtime.server]]` entries; `smcpctl runtime doctor|spec|status|instances|show|kill`; control routes `/api/v1/runtime*`; `sandbox.Doctor` for `smcpctl doctor`; smcpd refuses to start in the enforced profile when a prerequisite is missing, naming each one.
 - `packaging/linux/`: idempotent `install-enforced.sh` (identities, subordinate IDs, CP-46 directories, nftables table `inet smcp`, systemd units) and `smcpd.service`. `scripts/ci-integration.sh` gains an enforced-profile run that proves a sandboxed probe server cannot open network sockets or write outside its mount. Documentation: `docs/sandbox.md`, `docs/api/runtime.md`.
+### Implementation decisions in the first slice
+
+Made while hardening the Go slice (PR #8). They interpret the SRS where the code had to choose; none removes a requirement.
+
+| Decision | Where | Rationale |
+|---|---|---|
+| Harness sign-in uses `[[approver]]` Session Approver accounts, and the Administrator account is refused at the authorization endpoint | `internal/session`, `smcp.toml` `[[approver]]`; FR-2.19, FR-2.23 | Follows the owner decision on approvals: the strongest credential is not used for daily sign-in. FR-2.19 still names the Administrator role as able to sign in; the code is stricter, and the SRS text is to be aligned. |
+| Policy rules can carry a `filters` list of filter IDs; mandatory filters always run, and an obligation naming an unregistered filter refuses the call | `internal/policy`, `internal/pipeline`; FR-4.5, FR-4.6 | Lets policy select optional request and response filters without code changes, and fails closed when a named filter is missing. |
+| `smcpctl policy reload` refuses a changed document that keeps the active revision ID | `internal/edge` `ActivatePolicy`; FR-3.10 | Catalogs and decisions are keyed by revision ID, so two documents under one ID would make evidence ambiguous. |
+| New configuration keys: `[admin_listener]`, `[profile]`, `[log]`, `[[approver]]`, `[admin] bootstrap_token_sha256` and `bootstrap_token_expires`, `[[server]] risk_classes` and `secret_env`, `limits.approval_hold` | `internal/config/config.schema.json` | Needed for the separate control API listener, the profile decision, the diagnostic log, bootstrap without a password on the command line, the SR-4-1 high-risk refusal in Standalone, the secret broker seam and approval hold. `approval_hold` (default 60 s) is not yet a controlled parameter in Appendix A. |
+| The fsynced journal commit of the `authorized` event is the SR-6.2-1 intent record; SR-6.2-1 stays Partial until the graph mirror (E-26) exists | `internal/edge`, `internal/audit` | Applies the owner decision that the journal is the evidence authority. The intent is on disk before the launch capability is issued. |
+| The local CA is name-constrained to loopback names with a 2-year lifetime; the listener certificate lasts 397 days and is reissued at startup within 30 days of expiry | `internal/keys`; SR-2.8-4, CP-53 | Adds the name constraints SR-2.8-4 requires. The lifetimes are still longer than CP-53 (CA 1 year, listener 90 days) and are to be shortened with certificate rotation (FR-17). |
+
+### CI, status data and site
+
+- Required CI jobs `srs`, `go`, `lint`, `site`, `security` and `linux-integration` (PR #5). `tools/reqreport` reports full and partial claims and every unverified requirement (FR-12.10), and merges `docs/status/elements.json` into `status.json`, which CI publishes to the `site-data` branch.
+- The website computes its figures at build time from the repository documents and `status.json` (PR #6).
+- The integration run bootstraps with password files, signs in as the Session Approver, calls the reference server's tools, and checks that `smcpctl stop` refuses calls and `smcpctl resume` restores them.
+- `site/package.json` overrides the postcss copy inside Next 15 to 8.5.28, which fixes GHSA-6g55-p6wh-862q and GHSA-r28c-9q8g-f849; their npm audit allowlist entries are removed.
+
+- E-07 Approval Service (`internal/approval`): persisted one-use approvals bound to session, principal, server, tool and route revisions, canonical argument digest and policy revision; hold mode up to `limits.approval_hold` with keep-alives (progress notifications or SSE comments); `-31001 APPROVAL_DENIED`, `-31002` with `approvalId`, `expiresAt`, `approvalUrl` and the Appendix B message; retry consumption; CP-17 expiry; evidence events for request, approve, deny, expire and consume; `/api/v1/approvals*` control API and `GET /smcp/v1/approvals/{id}` for the harness; `smcpctl approvals list|show|approve|deny|watch`; desktop notifier (`osascript`, `terminal-notifier`, `notify-send` or a command) with no argument values. Docs: `docs/approvals.md`, `docs/api/approvals.md`.
+- E-07: the default `limits.approval_hold` is now 120 s and values above 600 s are refused, matching CP-45 (the first slice used 60 s).
+- E-07: Approver accounts are a new `[[approvals.account]]` table. Session Approver accounts (`[[approver]]`) cannot decide tool-call approvals, following SRS Appendix C; ARCH E-24 says a Session Approver "may only approve harness sign-ins and tool-call approvals", which conflicts with Appendix C and should be corrected in the architecture.
+- E-02: every Gateway error now carries the Appendix B `data.message` (FR-1.51); a `tools/call` is answered as an event stream only while it is held, and as JSON otherwise.
+- E-24: control API role seam (`adminapi.Authenticator`, `HandleRoles`, `HandlePublic`); existing `Handle` routes are Administrator-only and refuse other roles with 403 `role_refused`.
+### Implementation: Egress Broker (E-18)
+
+- New package `internal/egress`: per-instance forward proxy (HTTP CONNECT without TLS interception, plain HTTP) and per-destination plain-HTTP endpoints with broker-originated TLS (FR-5.36); grants by host, port, method and SNI; broker-side DNS resolution with the dialed IP pinned to the validated address; refusal of loopback, private, link-local, CGNAT, multicast, reserved and cloud-metadata addresses for IPv4 and IPv6 unless the grant names the exact address; redirects re-validated, at most 3; request size, response size, duration, request-rate and byte-rate limits; Cookie, Set-Cookie and `Smcp-Egress-Auth` stripped; public-fetch method profile; an evidence record per operation.
+- nftables rules (github.com/google/nftables) installed in a sandbox network namespace so that only the broker's listeners are reachable; `scripts/ci-egress-netns.sh` proves it on a real kernel in the linux-integration job.
+- New seam `pipeline.EgressAttacher` (default `NoEgress`) and `pipeline.EgressAware` for the confining launcher; unconfined launchers are wrapped so instances get `HTTP_PROXY`/`HTTPS_PROXY`, documented as advisory in the standalone profile.
+- New `[egress]` configuration section and `[[egress.grant]]` tables, control API routes `GET /api/v1/egress`, `/api/v1/egress/grants`, `/api/v1/egress/connections`, and `smcpctl egress status|grants|connections`. Documentation in `docs/egress.md` and `docs/api/egress.md`.
 
 ## SRS V1.1 draft, architecture V2.2 draft — 2026-10-16
 

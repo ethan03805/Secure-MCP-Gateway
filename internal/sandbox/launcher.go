@@ -38,9 +38,7 @@ type Options struct {
 	// directory lives in <StateDir>/runtime/rootfs and mounts that overlap
 	// the state directory are refused.
 	StateDir string
-	// Egress attaches instances to the Egress Broker; default NoEgress.
-	Egress pipeline.EgressAttacher
-	Log    *slog.Logger
+	Log      *slog.Logger
 	// PodmanEnv adds variables to the Podman process environment (for
 	// example CONTAINERS_CONF). They are not passed to instances.
 	PodmanEnv map[string]string
@@ -67,6 +65,7 @@ type Launcher struct {
 	mon     *Monitor
 
 	mu        sync.Mutex
+	egress    pipeline.EgressAttacher // set by the Egress Broker (SetEgress)
 	instances map[string]*Instance
 	order     []string
 	closed    bool
@@ -81,9 +80,6 @@ var passEnv = []string{"PATH", "HOME", "USER", "LOGNAME", "XDG_RUNTIME_DIR", "XD
 func New(o Options) (*Launcher, error) {
 	if o.Log == nil {
 		o.Log = slog.Default()
-	}
-	if o.Egress == nil {
-		o.Egress = pipeline.NoEgress{}
 	}
 	if o.TerminateAfter <= 0 {
 		o.TerminateAfter = 5 * time.Second
@@ -121,6 +117,21 @@ func (l *Launcher) Name() string { return "podman" }
 
 // Confined implements pipeline.Launcher: instances run in the E-16 sandbox.
 func (l *Launcher) Confined() bool { return true }
+
+// SetEgress implements pipeline.EgressAware: the Egress Broker (E-18)
+// hands the launcher its attacher instead of wrapping it, because a
+// sandboxed instance must be attached through its own network namespace.
+func (l *Launcher) SetEgress(a pipeline.EgressAttacher) {
+	l.mu.Lock()
+	l.egress = a
+	l.mu.Unlock()
+}
+
+// ErrEgressUnsupported refuses a sandboxed server that asks for egress.
+// Attaching a rootless Podman network namespace to the Egress Broker is not
+// built yet; the instance would otherwise have no network or an unconfined
+// one, so the launch fails closed.
+var ErrEgressUnsupported = errors.New("egress for sandboxed servers is not available yet: remove network = \"egress\" or run the server without the sandbox")
 
 // GatewayID is the value of the smcp.gateway label on this Launcher's
 // containers.
@@ -201,21 +212,17 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 		srv.OnDeviation = "alert"
 	}
 	id := ids.New()
-	var egress pipeline.EgressAttachment
 	if srv.Network == "egress" {
-		var err error
-		if egress, err = l.o.Egress.Attach(ctx, spec, id); err != nil {
-			return nil, fmt.Errorf("egress attachment: %w", err)
+		l.mu.Lock()
+		broker := l.egress
+		l.mu.Unlock()
+		if broker == nil {
+			return nil, fmt.Errorf("runtime.server %q requests egress but no Egress Broker is enabled ([egress] enabled = true)", spec.Alias)
 		}
-	} else {
-		egress = pipeline.EgressAttachment{Network: pipeline.NetworkNone}
+		return nil, fmt.Errorf("runtime.server %q: %w", spec.Alias, ErrEgressUnsupported)
 	}
-	releaseEgress := func() {
-		if egress.Release != nil {
-			egress.Release()
-		}
-	}
-	ls, err := Build(BuildInput{Runtime: l.o.Runtime, Server: srv, Spec: spec, Egress: egress, InstanceID: id,
+	releaseEgress := func() {}
+	ls, err := Build(BuildInput{Runtime: l.o.Runtime, Server: srv, Spec: spec, Network: NetworkNone, InstanceID: id,
 		Gateway: l.gateway, Rootfs: l.rootfs, StateDir: l.o.StateDir})
 	if err != nil {
 		releaseEgress()
@@ -227,7 +234,7 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 			return nil, fmt.Errorf("prepare root directory: %w", err)
 		}
 	}
-	values := Env(spec, egress, ls.EnvNames)
+	values := Env(spec, nil, ls.EnvNames)
 	cmd := exec.Command(l.podPath, ls.PodmanArgs()...) // #nosec G204 -- argument vector, no shell (SR-4.8-1)
 	cmd.Env = l.podmanEnv(values)
 	setParentDeath(cmd)

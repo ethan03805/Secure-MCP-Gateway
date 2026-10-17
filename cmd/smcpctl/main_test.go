@@ -180,7 +180,7 @@ func TestBootstrapAndControlCommands(t *testing.T) {
 	if out := mustCtl(t, "policy", "reload", "--config", cfgPath); !strings.Contains(out, `"revision": "r2"`) {
 		t.Fatal(out)
 	}
-	if out := mustCtl(t, "approvals", "--config", cfgPath); !strings.Contains(out, `"service": "none"`) {
+	if out := mustCtl(t, "approvals", "--config", cfgPath); !strings.Contains(out, "no approvals") {
 		t.Fatal(out)
 	}
 	stopDaemon(t, d)

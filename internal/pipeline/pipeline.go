@@ -6,7 +6,6 @@
 //	RequestFilter   E-09 Request Inspection     default chain: schema-validate
 //	ResponseFilter  E-11 Response Inspection    default chain: empty
 //	Launcher        E-15/E-16 Runtime, Sandbox  default SubprocessLauncher (unconfined); internal/sandbox is the confining one
-//	EgressAttacher  E-18 Egress Broker          default NoEgress (network "none")
 //	ManifestSource  E-13/E-14 Trust, Registry   default LiveManifest (unverified)
 //	SecretBroker    E-20 Secret Broker          default NoSecrets
 //	Capabilities    E-12 -> E-10 launch caps    concrete one-use ledger
@@ -40,6 +39,7 @@ type Call struct {
 	DecisionID     string
 	PolicyRevision string
 	Obligations    policy.Obligations
+	DecisiveRules  []string // rule IDs that decided the permit (FR-3.18)
 	InputSchema    any
 	OutputSchema   any
 }

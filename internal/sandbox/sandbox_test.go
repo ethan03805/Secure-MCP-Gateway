@@ -165,9 +165,9 @@ func TestPodmanArgsCarryTheSandboxProfile(t *testing.T) {
 	exe, _ := os.Executable()
 	ro, rw := t.TempDir(), t.TempDir()
 	rt := testRuntime()
-	srv := config.RuntimeServer{Alias: "fs", Mounts: []config.RuntimeMount{{Source: ro}, {Source: rw, Target: "/data", Write: true}}}
+	srv := config.RuntimeServer{Alias: "fs", Mounts: []config.RuntimeMount{{Source: ro, Target: "/ro"}, {Source: rw, Target: "/data", Write: true}}}
 	ls, err := Build(BuildInput{Runtime: rt, Server: srv, Spec: pipeline.ServerSpec{Alias: "fs", Command: exe, Args: []string{"--root", "/data"},
-		Env: map[string]string{"TOKEN": "s3cret-value", "PATH": "/usr/bin"}}, Egress: pipeline.EgressAttachment{Network: "none"},
+		Env: map[string]string{"TOKEN": "s3cret-value", "PATH": "/usr/bin"}}, Network: NetworkNone,
 		InstanceID: "0192-abcd-ef01-2345", Gateway: "gw", Rootfs: "/state/runtime/rootfs", StateDir: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
@@ -176,7 +176,7 @@ func TestPodmanArgsCarryTheSandboxProfile(t *testing.T) {
 	for _, want := range []string{"run", "--interactive", "--read-only", "--cap-drop=all", "--security-opt=no-new-privileges",
 		"--userns=auto:size=2048", "--network=none", "--pid=private", "--ipc=private", "--uts=private", "--pull=never",
 		"--memory=536870912", "--memory-swap=536870912", "--cpus=1", "--pids-limit=128", "--user=1000:1000", "--no-hosts",
-		"--mount=type=bind,src=" + ro + ",dst=" + ro + ",ro,bind-propagation=rprivate",
+		"--mount=type=bind,src=" + ro + ",dst=/ro,ro,bind-propagation=rprivate",
 		"--mount=type=bind,src=" + rw + ",dst=/data,rw,bind-propagation=rprivate",
 		"--mount=type=bind,src=" + exe + ",dst=/smcp/bin/" + filepath.Base(exe) + ",ro,bind-propagation=rprivate",
 		"--env=TOKEN", "--rootfs"} {
@@ -210,7 +210,7 @@ func TestBuildWithImageAndEgress(t *testing.T) {
 	img := "registry.local/fs@sha256:" + strings.Repeat("a", 64)
 	srv := config.RuntimeServer{Alias: "web", Image: img, Network: "egress", UserNS: "keep-id"}
 	ls, err := Build(BuildInput{Runtime: rt, Server: srv, Spec: pipeline.ServerSpec{Alias: "web", Command: "/usr/local/bin/server"},
-		Egress:     pipeline.EgressAttachment{Network: "smcp-egress-web", Env: map[string]string{"FETCH_BASE_URL": "http://10.89.0.1:8080"}},
+		Network: "smcp-egress-web", EgressEnv: map[string]string{"FETCH_BASE_URL": "http://10.89.0.1:8080"},
 		InstanceID: "i", Gateway: "gw", StateDir: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
@@ -225,7 +225,7 @@ func TestBuildWithImageAndEgress(t *testing.T) {
 	// A network the server did not ask for is refused.
 	srv.Network = "none"
 	if _, err := Build(BuildInput{Runtime: rt, Server: srv, Spec: pipeline.ServerSpec{Alias: "web", Command: "/usr/local/bin/server"},
-		Egress: pipeline.EgressAttachment{Network: "bridge"}, StateDir: t.TempDir()}); err == nil {
+		Network: "bridge", StateDir: t.TempDir()}); err == nil {
 		t.Fatal("unrequested network accepted")
 	}
 }
@@ -564,45 +564,38 @@ func TestReapRemovesOtherGatewaysContainers(t *testing.T) {
 	}
 }
 
-type recordingEgress struct {
-	released int
-	spec     pipeline.ServerSpec
+type recordingEgress struct{ calls int }
+
+func (r *recordingEgress) Attach(context.Context, pipeline.EgressRequest) (*pipeline.EgressAttachment, error) {
+	r.calls++
+	return &pipeline.EgressAttachment{Env: map[string]string{"HTTPS_PROXY": "http://127.0.0.1:1"}, Close: func() error { return nil }}, nil
 }
 
-func (r *recordingEgress) Attach(_ context.Context, spec pipeline.ServerSpec, _ string) (pipeline.EgressAttachment, error) {
-	r.spec = spec
-	return pipeline.EgressAttachment{Network: "smcp-egress", Env: map[string]string{"FETCH_URL": "http://10.0.0.1:1"}, Release: func() { r.released++ }}, nil
-}
-
-func TestEgressAttacherIsAskedOnlyWhenGranted(t *testing.T) {
-	reqtest.Partial(t, "FR-5.37", "SR-4.5-1")
+func TestEgressRequestFailsClosed(t *testing.T) {
+	// The broker hands the launcher its attacher (EgressAware) rather than
+	// wrapping it. Attaching a sandbox namespace is not built, so a server
+	// that asks for egress is refused; servers without it keep network none.
+	reqtest.Partial(t, "SR-4.5-1")
+	var _ pipeline.EgressAware = (*Launcher)(nil)
 	rt := testRuntime()
 	rt.Servers = []config.RuntimeServer{{Alias: "web", Network: "egress"}}
 	h := newHarness(t, rt)
+	if _, err := h.l.Launch(context.Background(), h.spec("web")); err == nil || !strings.Contains(err.Error(), "no Egress Broker is enabled") {
+		t.Fatalf("egress without a broker: %v", err)
+	}
 	eg := &recordingEgress{}
-	h.l.o.Egress = eg
-	p, err := h.l.Launch(context.Background(), h.spec("web"))
+	h.l.SetEgress(eg)
+	if _, err := h.l.Launch(context.Background(), h.spec("web")); !errors.Is(err, ErrEgressUnsupported) {
+		t.Fatalf("egress with a broker: %v", err)
+	}
+	p, err := h.l.Launch(context.Background(), h.spec("plain"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer p.Close()
 	connect(t, p)
-	name := h.l.Instances()[0].Container
-	r := h.run(name)
-	if !hasArg(r.Argv, "--network=smcp-egress") || !r.EnvSet["FETCH_URL"] {
-		t.Fatalf("run %+v", r)
-	}
-	p.Close()
-	if eg.released != 1 {
-		t.Fatalf("released %d", eg.released)
-	}
-	p2, err := h.l.Launch(context.Background(), h.spec("plain"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer p2.Close()
-	connect(t, p2)
-	if r := h.run(h.l.Instances()[1].Container); !hasArg(r.Argv, "--network=none") || eg.spec.Alias != "web" {
-		t.Fatalf("server without egress grant: %v", r.Argv)
+	if r := h.run(h.l.Instances()[0].Container); !hasArg(r.Argv, "--network=none") || eg.calls != 0 || len(h.l.Instances()) != 1 {
+		t.Fatalf("server without egress: %v (attach calls %d)", r.Argv, eg.calls)
 	}
 }
 

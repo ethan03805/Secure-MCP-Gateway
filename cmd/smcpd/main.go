@@ -15,6 +15,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
+	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
@@ -50,7 +51,12 @@ func run(cfgPath, level string) error {
 	if err != nil {
 		return err
 	}
-	opts := app.Options{Log: log}
+	approvals, err := approval.New(approval.Options{Config: cfg, Log: log}) // E-07
+	if err != nil {
+		return fmt.Errorf("approvals: %w", err)
+	}
+	defer approvals.Close()
+	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals}
 	if rt != nil {
 		opts.Launcher = rt
 		rt.Start(ctx)
@@ -61,6 +67,7 @@ func run(cfgPath, level string) error {
 		return err
 	}
 	defer a.Close()
+	approvals.Start(ctx, a.Evidence, a.Admin, a.Gateway)
 	if rt != nil {
 		rt.SetEvidence(a.Evidence)
 	}

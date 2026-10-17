@@ -130,7 +130,7 @@ write = false              # read-only unless true
 |---|---|---|
 | `image` | `[runtime] image` | Image for this server, by digest. The `[[server]] command` is then a path inside the image |
 | `memory_bytes`, `cpus`, `pids` | `[runtime]` values | Resource limits for this server |
-| `network` | `"none"` | `"egress"` asks the Egress Broker (`pipeline.EgressAttacher`) for a network and endpoint variables. Until an Egress Broker is installed the default attacher returns network `none` |
+| `network` | `"none"` | `"none"`: loopback only. `"egress"` is refused at launch for now: attaching a rootless Podman network namespace to the Egress Broker is not built (see "Limits") |
 | `scope` | `"shared"` | Instance scope (FR-5.10). Only `"shared"` (one instance per server) is implemented; `"session"` and `"call"` are refused at load |
 | `userns` | `"auto"` | `"auto"` gives each instance its own range of subordinate UIDs. `"keep-id"` maps the Gateway user into the container so that writable grants on directories the Gateway user owns work; instances of that server then share one mapping |
 | `allow_spawn` | `false` | Declares that the server may start processes. When false, every process besides the first is a deviation |
@@ -145,7 +145,7 @@ With `userns = "auto"` the instance runs under a subordinate UID, not the Gatewa
 
 ### Environment
 
-The instance environment is the server's `env`, its resolved `secret_env` and any egress endpoint variables. `PATH` and `HOME` of the Gateway are not passed. Values travel in the Podman process environment and are named on the command line (`--env=NAME`), never written there. Names that would configure Podman itself are refused: those starting with `CONTAINERS_`, `PODMAN_`, `BUILDAH_`, `XDG_`, `DBUS_`, `DOCKER_`, `LD_`, `STORAGE_`, `REGISTRY_`, `CONTAINER_`, and `NOTIFY_SOCKET`, `TMPDIR`, `SSL_CERT_*`, the proxy variables, `GODEBUG` and `GOTRACEBACK`.
+The instance environment is the server's `env` and its resolved `secret_env`. `PATH` and `HOME` of the Gateway are not passed. Values travel in the Podman process environment and are named on the command line (`--env=NAME`), never written there. Names that would configure Podman itself are refused: those starting with `CONTAINERS_`, `PODMAN_`, `BUILDAH_`, `XDG_`, `DBUS_`, `DOCKER_`, `LD_`, `STORAGE_`, `REGISTRY_`, `CONTAINER_`, and `NOTIFY_SOCKET`, `TMPDIR`, `SSL_CERT_*`, the proxy variables, `GODEBUG` and `GOTRACEBACK`.
 
 ## The sandbox profile
 
@@ -233,7 +233,8 @@ The control routes are documented in [api/runtime.md](api/runtime.md).
 | `mount refused: ...` | A mount grant broke a rule in "Mount grants" |
 | `server artifact unavailable: <path> is not a regular file` | The server command does not exist (no image configured) |
 | `environment variable X is reserved: it would configure Podman itself` | A reserved name in `env` or `secret_env` |
-| `egress broker attached network "..." but runtime.server "..." does not request egress` | The Egress Broker returned a network for a server without `network = "egress"` |
+| `runtime.server "x" requests egress but no Egress Broker is enabled ([egress] enabled = true)` | `network = "egress"` without `[egress] enabled = true` |
+| `runtime.server "x": egress for sandboxed servers is not available yet: ...` | `network = "egress"` with the broker enabled; see "Limits" |
 | `runtime.server "x": scope "session" is not supported yet` | Only shared instances exist |
 | `runtime.image must be referenced by digest` | An image without `@sha256:` (SR-3.6-1) |
 
@@ -248,6 +249,7 @@ Errors that Podman reports when it starts a container appear in the server's std
 
 ## Limits of this implementation
 
+- Sandboxed servers cannot use the Egress Broker (E-18) yet. The launcher implements `pipeline.EgressAware`, so the broker hands it its attacher instead of wrapping it, but creating a network namespace for a rootless container that reaches the broker's listeners and letting the broker install its nftables rules in it (which needs privileges in the container's user namespace) is not built. A server with `network = "egress"` is refused rather than started without a network or with an unconfined one.
 - Instance scope is shared (one instance per server, started with the Gateway). Per-session and per-call instances (FR-5.10), reuse and idle teardown (FR-5.11), and restart or revision suspension after crashes (FR-5.12) need the registry to acquire instances per call; they are not built.
 - Containment actions `suspend-revision` and `suspend-session` (FR-5.35) are not built; `alert` and `kill-instance` are.
 - Declared behavior rules come from `[[runtime.server]]` (`allow_spawn`, `on_deviation`), not yet from signed manifests (E-13).

@@ -34,8 +34,9 @@ Control API (running Gateway):
   stop             emergency stop: refuse every tool call until resumed
   resume           leave emergency stop
   policy reload    validate and activate the policy file
-  approvals        list pending approvals
+  approvals        list, show, approve, deny or watch tool-call approvals
   admin redeem     set the administrator password with the one-use bootstrap token
+  egress           Egress Broker status, grants and recent connections (smcpctl egress -h)
   runtime          sandboxed server instances and enforced-profile checks (smcpctl runtime help)
 
 Every command takes --config <file> (default smcp.toml).
@@ -70,9 +71,11 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case args[0] == "policy" && sub("reload"):
 		err = control(args[2:], stdout, "POST", "/admin/v1/policy/reload", map[string]any{})
 	case args[0] == "approvals":
-		err = control(args[1:], stdout, "GET", "/admin/v1/approvals", nil)
+		err = approvalsCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "admin" && sub("redeem"):
 		err = redeem(args[2:], stdout)
+	case args[0] == "egress":
+		err = egressCmd(args[1:], stdout)
 	case args[0] == "runtime":
 		err = runtimeCmd(args[1:], stdout)
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":

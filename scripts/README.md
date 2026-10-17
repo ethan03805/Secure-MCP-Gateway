@@ -11,7 +11,7 @@ directory inside the repository.
 | `itest-client/` | `ci-integration.sh` | Go MCP client: OAuth 2.1 with PKCE through the sign-in form, `tools/list`, `tools/call` |
 | `publish-status.sh` | CI job `status` | Commit `status.json` and `history.json` to the orphan branch `site-data` |
 | `trigger-site-deploy.sh` | CI job `status` | Wait for the new `status.json` to be served, then call the Vercel deploy hook |
-| `auto-update-prs.sh` | workflow `auto-update` | Update auto-merge PRs to the latest main; label conflicts `needs-rebase` |
+| `auto-update-prs.sh` | workflow `auto-update` | Label auto-merge PRs that conflict with main `needs-rebase` (does not push) |
 | `npm-audit-gate.sh` | CI job `security`, `make vuln` | `npm audit` at high severity with the reviewed allowlist in `.github/npm-audit-allowlist.json` |
 | `render-brew-formula.sh` | release maintainers | Render `packaging/homebrew/smcp.rb.tmpl` for a release |
 
@@ -67,19 +67,27 @@ Requirements: `git`, `gh` (authenticated with push access), `jq`,
   rebases keep both sides' entries.
 - The `regenerate` workflow regenerates the SRS and runs `go mod tidy` on
   same-repository PRs and pushes the result to the PR branch.
-- The `auto-update` workflow updates PRs that have auto-merge enabled after
-  every push to main, and labels conflicting PRs `needs-rebase`.
+- The `auto-update` workflow checks PRs that have auto-merge enabled after
+  every push to main and labels conflicting PRs `needs-rebase`. It does not
+  push: a CI run started by a `github-actions[bot]` push waits for approval
+  and blocks the merge. Update branches with `gh pr update-branch <n>
+  --rebase` (a user token) or `merge-queue.sh`.
+- For the same reason, commit regenerated files yourself. When the
+  `regenerate` workflow has to push a fix, re-run the held CI run with
+  `gh run rerun <id>` or push any commit to the branch.
 
 ## Integration run
 
 `ci-integration.sh` uses the built binaries the way an operator would:
-`smcpctl bootstrap` in a temporary directory, `smcpd --config`, a full OAuth
-sign-in and MCP session from `itest-client`, `smcpctl journal verify` after a
-clean stop. On Linux it also checks `podman --version` and
+`smcpctl bootstrap` in a temporary directory with password files, `smcpd
+--config`, a full OAuth sign-in as the Session Approver and MCP session from
+`itest-client` against the bundled `smcp-refserver`, `smcpctl stop` (the next
+call must be refused) and `smcpctl resume`, and `smcpctl journal verify` after
+a clean stop. On Linux it also checks `podman --version` and
 `sudo nft list ruleset`; set `SMCP_REQUIRE_PREREQS=1` to make missing
-prerequisites fail the run. Features not in the current build (for example
-the admin commands and the enforced profile) are listed under "Skipped" at the
-end instead of failing.
+prerequisites fail the run. Features not in the current build (backup,
+restore and the enforced profile) are listed under "Skipped" at the end
+instead of failing.
 
 ```
 make integration

@@ -141,16 +141,16 @@ func runtimeSpec(args []string, out io.Writer) error {
 			env[k] = ""
 		}
 		srv := cfg.Runtime.FindServer(s.Alias)
-		egress := pipeline.EgressAttachment{Network: pipeline.NetworkNone}
+		network := sandbox.NetworkNone
 		if srv.Network == "egress" {
-			egress.Network = "<egress broker network>"
+			network = "<egress broker network>"
 		}
 		if srv.Scope == "" {
 			srv.Scope = "shared"
 		}
 		ls, err := sandbox.Build(sandbox.BuildInput{Runtime: cfg.Runtime, Server: srv,
-			Spec:   pipeline.ServerSpec{Alias: s.Alias, Command: s.Command, Args: s.Args, Env: env, Dir: s.Dir, RiskClasses: s.RiskClasses, HighRisk: s.HighRisk()},
-			Egress: egress, InstanceID: "<instance-id>", Gateway: "<gateway-id>",
+			Spec:    pipeline.ServerSpec{Alias: s.Alias, Command: s.Command, Args: s.Args, Env: env, Dir: s.Dir, RiskClasses: s.RiskClasses, HighRisk: s.HighRisk()},
+			Network: network, InstanceID: "<instance-id>", Gateway: "<gateway-id>",
 			Rootfs: filepath.Join(cfg.State.Dir, "runtime", "rootfs"), StateDir: cfg.State.Dir})
 		if err != nil {
 			return fmt.Errorf("server %q: %w", s.Alias, err)

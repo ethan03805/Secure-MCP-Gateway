@@ -22,6 +22,9 @@ Every Gateway error returned to a harness carries a JSON-RPC `code`, `data.reaso
 | `TAINT_DENIED` | `-31001` | The session has read untrusted content and the template denies writing or external tools | Start a new session, or change the template's `taint_action` to `approve` |
 | `APPROVAL_REQUIRED` | `-31002` | The call needs a person's approval | Open `data.approvalUrl` or run `smcpctl approvals list`, approve, then repeat the same request |
 | `TAINT_APPROVAL` | `-31002` | Approval required because the session has read untrusted content | As `APPROVAL_REQUIRED` |
+| `APPROVAL_EXPIRED` | `-31002` | The approval expired (CP-17) while the call was held | Repeat the request to ask for a new approval; decide within `approvals.lifetime` |
+| `APPROVAL_CONSUMED` | `-31002` | An identical concurrent call used the one-use approval first | Repeat the request |
+| `APPROVAL_UNAVAILABLE` | `-31002` | The approval service could not take the request (for example, the journal could not record it) | `smcpctl health`; check the journal directory and the diagnostic log |
 | `FILTER_BLOCKED` | `-31003` | A required response filter blocked the result | Look up the correlation ID; the filter finding names the rule and rule-set version |
 | `SECRET_LEAK` | `-31003` | The result appeared to contain a registered secret | Review the server; the secret grant is suspended until you re-enable it |
 | `RESULT_TOO_LARGE` | `-31003` | The result exceeded the size bound (CP-08) | Narrow the request, or raise the bound if the result is legitimate |
@@ -50,6 +53,10 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | Reason code | Where | Meaning |
 |---|---|---|
 | `PERMIT` | Journal decision events | The decision permitted the call |
+| `APPROVAL_REQUESTED`, `APPROVAL_GRANTED`, `APPROVAL_DENIED`, `APPROVAL_EXPIRED`, `APPROVAL_CONSUMED` | Journal `approval` events (E-07) | Lifecycle of a tool-call approval; see `docs/approvals.md` |
+| `APPROVER_SIGNIN`, `APPROVER_SIGNIN_FAILED` | Journal events | Approver account sign-in on the control API |
+| `ADMIN_ROLE_REFUSED` | Journal `auth_failure` events | An authenticated account's role does not permit the control API route (control API 403 `role_refused`) |
+| `role_refused`, `not_pending`, `signin_failed`, `audit_unavailable` | Control API error codes | See `docs/api/approvals.md` |
 | `SESSION_END` | Journal session events | A session ended (expiry, termination or revocation) |
 | `PROFILE_UNCONFINED` | Server enablement | A `high`-risk server cannot be enabled in the Standalone profile (SR-4-1) |
 | `REMOTE_BACKEND_UNSUPPORTED` | Package import | The manifest names a network endpoint; remote backends are out of scope (FR-14.4) |

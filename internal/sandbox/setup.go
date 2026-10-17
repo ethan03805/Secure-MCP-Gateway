@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
-	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
 
 // ErrPrerequisites is wrapped by FromConfig when the host lacks an
@@ -18,8 +17,7 @@ var ErrPrerequisites = errors.New("enforced-profile prerequisites missing")
 
 // SetupOptions adjust FromConfig.
 type SetupOptions struct {
-	Log    *slog.Logger
-	Egress pipeline.EgressAttacher
+	Log *slog.Logger
 	// Doctor replaces the prerequisite check (tests).
 	Doctor func(ctx context.Context) []Check
 }
@@ -64,5 +62,5 @@ func FromConfig(ctx context.Context, cfg *config.Config, o SetupOptions) (*Launc
 	if len(refuse) > 0 {
 		return nil, fmt.Errorf("%w: %s; run `smcpctl runtime doctor` for remedies", ErrPrerequisites, strings.Join(refuse, "; "))
 	}
-	return New(Options{Runtime: cfg.Runtime, StateDir: cfg.State.Dir, Egress: o.Egress, Log: o.Log})
+	return New(Options{Runtime: cfg.Runtime, StateDir: cfg.State.Dir, Log: o.Log})
 }

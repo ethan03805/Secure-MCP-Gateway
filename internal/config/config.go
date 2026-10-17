@@ -32,6 +32,7 @@ type Config struct {
 	State         State         `toml:"state" json:"state"`
 	Admin         Admin         `toml:"admin" json:"admin"`
 	Approvers     []Approver    `toml:"approver" json:"approver"`
+	Approvals     Approvals     `toml:"approvals" json:"approvals"`
 	Policy        Policy        `toml:"policy" json:"policy"`
 	Limits        Limits        `toml:"limits" json:"limits"`
 	Profile       Profile       `toml:"profile" json:"profile"`
@@ -40,6 +41,7 @@ type Config struct {
 	Clients       []Client      `toml:"client" json:"client"`
 	Servers       []Server      `toml:"server" json:"server"`
 	Runtime       Runtime       `toml:"runtime" json:"runtime"` // E-15, E-16, E-17 (runtime.go)
+	Egress        Egress        `toml:"egress" json:"egress"`
 
 	// Dir is the directory of the configuration file; set by Load.
 	Dir string `toml:"-" json:"-"`
@@ -152,7 +154,7 @@ var LimitDefaults = []LimitDefault{
 	{"catalog_ttl_ms", 60000, func(m *Limits) any { return &m.CatalogTTLMs }},
 	{"catalog_page_size", 100, func(m *Limits) any { return &m.CatalogPageSize }},
 	{"listen_streams_per_session", 2, func(m *Limits) any { return &m.ListenStreamsPerSess }},
-	{"approval_hold", 60 * time.Second, func(m *Limits) any { return &m.ApprovalHold }},
+	{"approval_hold", 120 * time.Second, func(m *Limits) any { return &m.ApprovalHold }},
 }
 
 // Principal is a framework instance record (FR-2.1).
@@ -256,6 +258,7 @@ func Parse(raw []byte) (*Config, error) {
 		return nil, fmt.Errorf("decode: %w", err)
 	}
 	cfg.applyDefaults(presentKeys(generic, "limits"))
+	cfg.Egress.applyDefaults(presentKeys(generic, "egress"))
 	if err := cfg.check(); err != nil {
 		return nil, err
 	}
@@ -374,8 +377,8 @@ func (c *Config) check() error {
 			return fmt.Errorf("limits.%s must be a positive duration", d.key)
 		}
 	}
-	if c.Limits.ApprovalHold.Duration < 0 {
-		return fmt.Errorf("limits.approval_hold must not be negative")
+	if c.Limits.ApprovalHold.Duration < 0 || c.Limits.ApprovalHold.Duration > 600*time.Second {
+		return fmt.Errorf("limits.approval_hold must be between 0s and 600s (CP-45)")
 	}
 	if c.Admin.PasswordHash == "" && c.Admin.BootstrapTokenSHA256 == "" {
 		return fmt.Errorf("admin needs password_hash or bootstrap_token_sha256")
@@ -430,7 +433,7 @@ func (c *Config) check() error {
 			}
 		}
 	}
-	return nil
+	return c.Egress.check(aliases)
 }
 
 func sameHostPort(a, b string) bool {

@@ -44,6 +44,11 @@ sequenceDiagram
 
 The `-31002` message tells the person in plain words to open the approval URL, approve, and run the same request again (Appendix B, Table B.2).
 
-## Implementation as of commit a3193a5
+## Implementation
 
-Not implemented. `internal/edge/edge.go` answers an approval-obligated call immediately with `-31002` and reason code `APPROVAL_REQUIRED`, without an approval record, hold, notification or retry path. The `anthropic/requiresUserInteraction` hint (FR-1.50) is set on such tools.
+Implemented by `internal/approval` (E-07) with the edge changes in `internal/edge/stream.go`; see [../approvals.md](../approvals.md) and [../api/approvals.md](../api/approvals.md). Differences from the diagram:
+
+- The console's Approvals view (G-13) is another element; the service provides `/api/v1/approvals` and the watch stream it reads.
+- The keep-alive is sent once when the call is held and then every interval. A `tools/call` is answered as an event stream only once it is held; other calls stay JSON.
+- Anomaly-band and session-taint obligations do not reach the service yet (E-31 scoring and taint tracking are not built), so only policy-rule approvals occur.
+- The real-harness run of FR-3.25 has not been recorded.

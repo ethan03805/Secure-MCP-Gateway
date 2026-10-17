@@ -41,6 +41,10 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
 
+// NetworkNone is the container network of an instance without egress: a
+// loopback interface only (SR-4.5-1).
+const NetworkNone = "none"
+
 // Label keys set on every container the Gateway creates.
 const (
 	LabelManaged  = "smcp.managed"
@@ -222,10 +226,14 @@ func imageDigest(image string) string {
 
 // BuildInput is what Build needs besides the server specification.
 type BuildInput struct {
-	Runtime    config.Runtime
-	Server     config.RuntimeServer
-	Spec       pipeline.ServerSpec
-	Egress     pipeline.EgressAttachment
+	Runtime config.Runtime
+	Server  config.RuntimeServer
+	Spec    pipeline.ServerSpec
+	// Network is the container network: NetworkNone unless the
+	// instance is attached to the Egress Broker.
+	Network string
+	// EgressEnv holds the Egress Broker's variables for the instance.
+	EgressEnv  map[string]string
 	InstanceID string
 	Gateway    string
 	Rootfs     string // Gateway-built root directory, used when no image is set
@@ -243,7 +251,7 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		InstanceID: in.InstanceID,
 		Name:       "smcp-" + in.Spec.Alias + "-" + shortID(in.InstanceID),
 		Gateway:    in.Gateway,
-		Network:    in.Egress.Network,
+		Network:    in.Network,
 		Workdir:    WorkDir,
 		Scope:      srv.Scope,
 		Limits: Limits{
@@ -266,9 +274,9 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		ls.Profile.OnDeviation = "alert"
 	}
 	if ls.Network == "" {
-		ls.Network = pipeline.NetworkNone
+		ls.Network = NetworkNone
 	}
-	if srv.Network != "egress" && ls.Network != pipeline.NetworkNone {
+	if srv.Network != "egress" && ls.Network != NetworkNone {
 		return LaunchSpec{}, fmt.Errorf("egress broker attached network %q but runtime.server %q does not request egress", ls.Network, srv.Alias)
 	}
 	switch srv.UserNS {
@@ -324,7 +332,7 @@ func Build(in BuildInput) (LaunchSpec, error) {
 		}
 	}
 
-	env := make(map[string]string, len(in.Spec.Env)+len(in.Egress.Env))
+	env := make(map[string]string, len(in.Spec.Env)+len(in.EgressEnv))
 	for k, v := range in.Spec.Env {
 		env[k] = v
 	}
@@ -336,7 +344,7 @@ func Build(in BuildInput) (LaunchSpec, error) {
 			return LaunchSpec{}, fmt.Errorf("environment variable %s is reserved: it would configure Podman itself", k)
 		}
 	}
-	for k, v := range in.Egress.Env {
+	for k, v := range in.EgressEnv {
 		if ReservedEnv(k) {
 			return LaunchSpec{}, fmt.Errorf("egress endpoint variable %s is reserved", k)
 		}
@@ -369,10 +377,10 @@ func ReservedEnv(name string) bool {
 
 // Env returns the values for the spec's environment names from the same
 // sources Build used. The values go to the Podman process environment.
-func Env(spec pipeline.ServerSpec, egress pipeline.EgressAttachment, names []string) map[string]string {
+func Env(spec pipeline.ServerSpec, egressEnv map[string]string, names []string) map[string]string {
 	out := make(map[string]string, len(names))
 	for _, n := range names {
-		if v, ok := egress.Env[n]; ok {
+		if v, ok := egressEnv[n]; ok {
 			out[n] = v
 		} else if v, ok := spec.Env[n]; ok {
 			out[n] = v

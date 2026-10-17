@@ -43,8 +43,9 @@ type RuntimeServer struct {
 	MemoryBytes int64   `toml:"memory_bytes" json:"memory_bytes"`
 	CPUs        float64 `toml:"cpus" json:"cpus"`
 	Pids        int     `toml:"pids" json:"pids"`
-	// Network is "none" (default) or "egress": ask the Egress Broker
-	// (pipeline.EgressAttacher) for the instance's network.
+	// Network is "none" (default, loopback only) or "egress" (attach the
+	// instance to the Egress Broker; refused by the sandbox until that
+	// attachment is built).
 	Network string `toml:"network" json:"network"`
 	// Scope is the instance scope (FR-5.10). Only "shared" is implemented.
 	Scope string `toml:"scope" json:"scope"`

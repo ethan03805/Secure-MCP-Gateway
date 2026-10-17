@@ -24,13 +24,15 @@ keeps today's behavior, and test the default.
 | `policy` | E-05 (part), E-06 | Schema-validated policy document, compiled snapshot, decisions, rate windows, filter obligations, `Replace` for hot swap. |
 | `audit` | E-21 | Signed hash-chained journal with group-committed fsync, crash recovery, external anchor, verifier; `Fanout` with non-blocking observers; `Memory` for tests. |
 | `keys` | E-22 (part) | Name-constrained local server CA, listener certificate and rotation, evidence key, operator token, Argon2id. |
-| `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload, approvals placeholder. |
+| `adminapi` | E-24 (base) | Control API on the loopback admin listener: login, bootstrap redemption, health, stop, resume, policy reload; role seam (`AddAuthenticator`, `HandleRoles`, `HandlePublic`, `ActorOf`, `RoleOf`). |
+| `approval` | E-07 | Approval Service: persisted one-use approvals bound per SR-1.18-2, hold mode, CP-17 expiry, `/api/v1/approvals*`, Approver accounts, watch stream, desktop notifier, harness status route. Wired in `cmd/smcpd`. |
 | `profile` | E-23 (part), E-16 | Standalone versus enforced profile decision. |
 | `config` | all | TOML configuration validated against `config.schema.json`; Appendix A defaults by key presence. |
 | `diag` | all | Diagnostic logger (slog). Not evidence; never logs secrets, tokens or arguments. |
 | `ids` | all | UUIDv7 identifiers and 256-bit secrets. |
 | `reqtest` | FR-12.10 | `Verifies` and `Partial` requirement claims in tests. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
+| `egress` | E-18 | Egress Broker: per-instance forward proxy and destination endpoints, grants, pinned DNS, reserved-address refusal, limits, evidence, nftables confinement of sandbox namespaces, `/api/v1/egress` routes. See `docs/egress.md`. |
 
 ## Call pipeline (FR-4.3)
 
@@ -55,17 +57,19 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 
 | Seam | Interface | Default | Element and future work |
 |---|---|---|---|
-| Approval | `pipeline.Approver` (`Request(ctx, ApprovalRequest) (ApprovalResult, error)`), `adminapi.Approvals` | `RefuseApprover`: immediate `-31002` with retry text and console link | E-07 agent: hold mode up to `limits.approval_hold` with progress keep-alives, `smcpctl approvals`, console (G-13), desktop notification. |
+| Approval | `pipeline.Approver` (`Request(ctx, ApprovalRequest) (ApprovalResult, error)`), `adminapi.Approvals` | `RefuseApprover`: immediate `-31002` with retry text and console link | Filled by `internal/approval` in `cmd/smcpd`. Anomaly (E-31) and taint obligations still need to reach it; the console (G-13) reads `/api/v1/approvals`. |
+| Harness routes | `edge.Gateway.HandleSession(pattern, SessionHandler)` | none | Routes on the harness listener for an authenticated session (E-07 uses `/smcp/v1/approvals/{id}`). |
+| Control API roles | `adminapi.Authenticator`, `Server.HandleRoles(pattern, h, roles...)` | `Handle` routes are Administrator-only | An element that owns accounts of another Appendix C role registers an Authenticator; its tokens reach only `HandleRoles` routes naming the role. |
 | Request filters | `pipeline.RequestFilter`, registered with `Filters.RegisterRequest(f, Registration{Order, Mandatory})` | `schema-validate` (mandatory, order 100) | E-09 agent: `path-canonicalize`, `url-canonicalize`, `size-limit`, `secret-fingerprint`, `injection-detect`, `unicode-control`. Non-mandatory filters run when a policy rule names them in `filters`. |
 | Response filters | `pipeline.ResponseFilter`, `Filters.RegisterResponse` | none | E-11 agent. A filter error or an unknown obligation ID refuses the call. |
 | Launch | `pipeline.Launcher` (`Launch(ctx, ServerSpec) (Process, error)`, `Confined()`) | `SubprocessLauncher` (unconfined); `InProcessLauncher` for tests | `internal/sandbox.Launcher` (E-15, E-16, E-17): rootless Podman, selected by `[runtime] sandbox = "podman"` in `cmd/smcpd`; see docs/sandbox.md. |
-| Egress attachment | `pipeline.EgressAttacher` (`Attach(ctx, ServerSpec, instanceID) (EgressAttachment, error)`) | `NoEgress`: network `none`, no endpoint variables | E-18 agent: return the broker's network and endpoint variables for servers with `network = "egress"`; pass it as `sandbox.SetupOptions.Egress`. |
 | Manifests | `pipeline.ManifestSource` (`Tools(ctx, spec, live) (ToolSet, error)`) | `LiveManifest`: live `tools/list`, `Verified: false` | E-13/E-14 agent: signed package manifests (minisign), drift check against the live list, `smcpctl package build|sign|verify`. Health reports `unverified_manifests` until then. |
 | Secrets | `pipeline.SecretBroker` (`Resolve(ctx, SecretRequest)`) | `NoSecrets`: a server with `secret_env` does not start | E-19/E-20 agent: vault and broker; record each secret use as evidence. |
 | Evidence observers | `audit.Observer`, registered through `app.Options.Observers` | none | E-29 collector, E-26 graph mirror, E-27 store. Observers get events after the journal accepted them, on their own goroutine with a bounded queue; a full queue drops and counts (`Fanout.Dropped`). They can never block or fail a call. |
 | Control API routes | `adminapi.Server.Handle(pattern, handler)` | health, stop, resume, policy reload, approvals placeholder, login, bootstrap | E-24 agent: console backend routes; the same bearer authentication, origin and JSON content-type rules apply. |
 | Launch capability | `pipeline.Capabilities` (issue) and `pipeline.CapabilityChecker` (consume) | one-use ledger shared by edge and backend | Bound to correlation ID, decision ID, policy revision and public tool name (FR-4.13). |
 | Profile | `profile.Resolve(mode, launcher, confined, host)` | standalone on macOS or without a confining launcher | E-16 agent supplies the confining launcher; `[profile] mode = "enforced"` refuses to start without one. |
+| Egress | `pipeline.EgressAttacher` (`Attach(ctx, EgressRequest) (*EgressAttachment, error)`), `pipeline.EgressAware` (`SetEgress`) | `NoEgress`; with `[egress] enabled` the broker wraps unconfined launchers (advisory proxy variables) | E-16 agent: implement `EgressAware`, call `Attach` with the instance's `EgressNetwork` (network namespace path and a listen address reachable from it) before the server code runs, add `Env` to the instance, `Close` after exit. A failed `Attach` must fail the launch. |
 
 ## Elements not yet started
 
@@ -80,9 +84,11 @@ evidence observers and must not gate enforcement.
   of envelope). When the request ID of an oversized response is not within
   the retained prefix, the response is dropped and the call ends at the
   upstream timeout as indeterminate. Nesting depth is not bounded.
-- Approval keep-alives: the MCP endpoint answers in JSON mode, so progress
-  notifications sent while a call is held may not reach the harness. The
-  E-07 agent needs to answer held calls as an event stream.
+- Held calls: a `tools/call` is served by an event-stream SDK handler
+  behind a buffering writer (`edge/stream.go`) and re-encoded as JSON when
+  it is never held. A tools/call response that carries more than one event
+  without being held (for example backend notifications) is sent as an
+  event stream.
 - Anchor rollback: replacing the anchor with an older signed copy together
   with deleting later segments is not detectable locally; export the anchor
   off the machine (FR-7.14).
