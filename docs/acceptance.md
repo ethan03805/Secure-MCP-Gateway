@@ -53,11 +53,11 @@ Run the suite locally with `go test ./internal/acceptance/` (about 100 seconds; 
 |---|---|---|
 | FR-11.2 | p95 latency of 100,000 decisions against the compiled reference policy, as the caller sees it | 10 ms |
 | FR-11.4 | p95 P-213 with observation enabled minus disabled, same workload on eight fresh instances (enabled, disabled, disabled, enabled, then the mirror; mean p95 per condition) | 1 ms |
-| FR-11.5 | p95 P-213 for 64 KiB results with synchronous scoring (journal timestamps: requested to dispatched plus completed to delivered) | 50 ms |
+| FR-11.5 | p95 P-213 for 64 KiB results with synchronous scoring (journal timestamps: the request's receipt, `received_at` of the requested event, to the delivered event, minus server execution from the dispatched event to the backend's response, `responded_at` of the completed event) | 50 ms |
 | FR-11.8 | p95 of the console's audit queries over the 30-day, 100,000-event journal, 100 repetitions | 2 s |
 | FR-11.9 | resident memory of an idle `smcpd` 10 minutes after start | 4 GiB |
 
-The CI job `perf` runs on pushes to main and on demand; the status job publishes `perf.json` as the `performance` member of the status data and merges `perf-test.json`, where each measurement within its budget is a partial claim of its requirement and each one over budget is a failing test. CI runners are not the recorded reference hardware, so these measurements never fully verify an FR-11 requirement.
+The CI job `perf` runs on pushes to main and on demand; the status job publishes `perf.json` as the `performance` member of the status data and merges `perf-test.json`, where each measurement within its budget is a partial claim of its requirement and each one over budget is a failing test. CI runners are not the recorded reference hardware, so these measurements never fully verify an FR-11 requirement. Until 2026-10-17 the harness took server execution to end at the completed event, which the edge writes after response inspection, so P-213 left response inspection out (about 35 ms of rule scanning for a 64 KiB result before the literal prefilter of `docs/filters.md`); the completed event now carries `responded_at`, and FR-11.4, FR-11.5 and AT-20 count response inspection.
 
 ## Stage timing spans (FR-10.2, FR-10.11)
 
