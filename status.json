@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T05:54:02Z",
-  "commit": "abcd07bf7c41aedf5a1580c70cee623be7c2c113",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/abcd07bf7c41aedf5a1580c70cee623be7c2c113",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39007564386",
+  "generatedAt": "2026-10-17T06:06:39Z",
+  "commit": "e8b6606a426d0d209e1fa5a461cbdeb38fa7f85d",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/e8b6606a426d0d209e1fa5a461cbdeb38fa7f85d",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39008324831",
   "tests": {
-    "total": 782,
-    "passed": 767,
-    "failed": 0,
-    "skipped": 15,
-    "durationSec": 328.1,
+    "total": 790,
+    "passed": 772,
+    "failed": 1,
+    "skipped": 17,
+    "durationSec": 280,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -19,13 +19,13 @@
       },
       {
         "name": "console/e2e/chromium",
-        "passed": 33,
+        "passed": 35,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 33,
+        "passed": 35,
         "failed": 0,
         "skipped": 0
       },
@@ -33,7 +33,7 @@
         "name": "console/e2e/webkit",
         "passed": 33,
         "failed": 0,
-        "skipped": 0
+        "skipped": 2
       },
       {
         "name": "cmd/smcp-hostile",
@@ -49,8 +49,8 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 40,
-        "failed": 0,
+        "passed": 39,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -319,7 +319,7 @@
       },
       {
         "name": "scripts/agents",
-        "passed": 22,
+        "passed": 24,
         "failed": 0,
         "skipped": 0
       },
@@ -338,7 +338,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75.3,
+    "totalPct": 75,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -382,7 +382,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 69.2
+        "pct": 69.3
       },
       {
         "name": "internal/anomaly",
@@ -442,7 +442,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 80.8
+        "pct": 81.4
       },
       {
         "name": "internal/filterapi",
@@ -578,7 +578,7 @@
       },
       {
         "name": "scripts/agents",
-        "pct": 73.9
+        "pct": 66.2
       },
       {
         "name": "scripts/itest-client",
@@ -590,15 +590,15 @@
       },
       {
         "name": "tools/reqreport",
-        "pct": 83
+        "pct": 83.1
       }
     ]
   },
   "requirements": {
     "total": 543,
-    "verified": 183,
-    "partial": 215,
-    "failing": 0,
+    "verified": 185,
+    "partial": 210,
+    "failing": 3,
     "unverified": 145,
     "byElement": [
       {
@@ -653,8 +653,8 @@
         "element": "E-07",
         "name": "Approval Service",
         "total": 13,
-        "verified": 5,
-        "partial": 7,
+        "verified": 6,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -782,16 +782,16 @@
         "name": "Health & Safety Monitor",
         "total": 13,
         "verified": 5,
-        "partial": 7,
-        "failing": 0
+        "partial": 5,
+        "failing": 2
       },
       {
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 12,
-        "partial": 45,
-        "failing": 0
+        "partial": 44,
+        "failing": 1
       },
       {
         "element": "E-25",
@@ -805,8 +805,8 @@
         "element": "E-26",
         "name": "Data Access Service",
         "total": 9,
-        "verified": 1,
-        "partial": 4,
+        "verified": 2,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -1682,11 +1682,12 @@
       {
         "id": "FR-3.25",
         "element": "E-07",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.console.spec.ts > an administrator approves a held call in the Approvals view",
           "console/e2e/firefox.console.spec.ts > an administrator approves a held call in the Approvals view",
-          "console/e2e/webkit.console.spec.ts > an administrator approves a held call in the Approvals view"
+          "console/e2e/webkit.console.spec.ts > an administrator approves a held call in the Approvals view",
+          "docs/verification/FR-3.25.md:5"
         ]
       },
       {
@@ -2765,8 +2766,12 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "console/e2e/chromium.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
+          "console/e2e/chromium.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/chromium.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (dark)",
           "console/e2e/chromium.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (light)",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/firefox.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (dark)",
           "console/e2e/firefox.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (light)",
           "console/e2e/webkit.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (dark)",
@@ -2778,7 +2783,11 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "console/e2e/chromium.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
+          "console/e2e/chromium.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/chromium.console.spec.ts > emergency stop refuses calls and resume restores them",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
+          "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/firefox.console.spec.ts > emergency stop refuses calls and resume restores them",
           "console/e2e/webkit.console.spec.ts > emergency stop refuses calls and resume restores them"
         ]
@@ -3376,7 +3385,7 @@
       {
         "id": "FR-12.7",
         "element": "E-24",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestGraphCLI",
           "cmd/smcpctl.TestOfflineOpsCommands",
@@ -3528,7 +3537,7 @@
       {
         "id": "FR-13.10",
         "element": "E-23",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestOnlineOpsCommands",
           "console/e2e/chromium.console.spec.ts > administrator signs in, sees enforcement state and signs out",
@@ -3977,7 +3986,7 @@
       {
         "id": "FR-17.9",
         "element": "E-23",
-        "status": "partial",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestOnlineOpsCommands",
           "internal/config.TestDiffAndReloadableKeys",
@@ -5333,9 +5342,10 @@
       {
         "id": "SR-7.1-1",
         "element": "E-26",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/graph.TestTransactionFunctionsHoldOnlyDatabaseWork"
+          "internal/graph.TestTransactionFunctionsHoldOnlyDatabaseWork",
+          "docs/verification/inspections.md:200"
         ]
       },
       {
@@ -6083,7 +6093,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6094,7 +6104,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6129,7 +6139,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36503: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45257: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6185,6 +6195,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   }
 }
