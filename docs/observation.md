@@ -340,9 +340,9 @@ Tool-call reason codes added: `APPROVAL_REQUIRED` (existing code, now also from 
 
 ## Limits of this release
 
-- Instrumented elements other than the edge's evidence events and the two probes do not yet emit observables (FR-10.1); per-stage, per-rule and per-filter spans with CPU time (FR-10.2) are not recorded.
-- Observation Policies, Audit Profiles, Anomaly Response Policies and the memory budget are published as numbered revisions (`internal/obspolicy`, console G-03, G-04, G-06, G-08) and replace the `[observation]` settings at the next start of smcpd, not at once; they are not part of the signed policy document of E-05. Per-band escalation parameters are part of the Observation Policy; first-N-per-session capture and the overhead budget are not implemented.
-- The scorer uses one snapshot for all scopes; uncharacterized contexts are always treated as normal.
+- Every tool call emits a span per pipeline stage and per filter run with monotonic time and thread CPU time (FR-10.2, `spans` table; [acceptance.md](acceptance.md)). Instrumented elements other than the edge's evidence events, the spans and the two probes do not emit observables (FR-10.1 is partly verified).
+- Observation Policies, Audit Profiles, Anomaly Response Policies and the memory budget are published as numbered revisions (`internal/obspolicy`, console G-03, G-04, G-06, G-08) and apply to the running analytics service when published; baseline contexts and the memory budget, which the running components were built with, apply at the next start of smcpd. They are not part of the signed policy document of E-05. Per-band escalation parameters are part of the Observation Policy; first-N-per-session capture and the overhead budget are not implemented.
+- The scorer uses one snapshot for all scopes; the Anomaly Response Policy maps the uncharacterized state to record, escalate or approve (`uncharacterized_action`).
 - The Researcher reads aggregates, not raw records: pseudonymized S2 fields in record listings are not implemented, so the raw record route is closed to that role.
-- Storage tiering, quotas and the memory manager (E-28) are not implemented beyond retention and the DuckDB memory limit.
+- Storage quotas (FR-9.15, health warning at 80%) and the degradation stages under memory or queue pressure (FR-9.12) are implemented; storage tiering (FR-9.13) is deferred from release 1.0 (SRS Appendix N).
 - The per-dataset key is kept by E-32 in the key directory, not issued by a separate key manager service.

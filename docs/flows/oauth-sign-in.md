@@ -39,6 +39,6 @@ sequenceDiagram
 `internal/session/oauth.go` implements the flow, with `internal/authguard` for rate limits and lockout. Differences from the diagram:
 
 - Only Session Approver accounts (`[[approver]]`) can complete the sign-in; the Administrator account is refused (FR-2.19, FR-2.23).
-- The metadata does not advertise `client_id_metadata_document_supported`; only client IDs listed in the configuration are accepted and no metadata document is fetched (SR-2.11-5, CP-52).
-- Sessions are in memory and do not survive a restart (FR-2.16).
+- A Client ID Metadata Document is fetched only for a URL on the CP-52 allowlist (`[[client_metadata]]`: 5 s, 64 KiB, same-host redirects, public addresses only, cached 24 h) and bound to its principal; other metadata URLs are refused without a fetch, and the metadata does not advertise `client_id_metadata_document_supported` (FR-2.18, SR-2.11-5).
+- Sessions are in memory and end when the Gateway restarts (session survival across restarts, FR-2.16, is deferred from release 1.0).
 - Dynamic Client Registration and the device grant exist only on the Remote Access listener (`internal/remote`, [../remote-access.md](../remote-access.md)).

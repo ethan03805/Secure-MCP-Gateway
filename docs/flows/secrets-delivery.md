@@ -54,6 +54,6 @@ sequenceDiagram
 
 - Secret Use Policies are read from their own file, not from the signed policy document, and slots are declared in that file until signed manifests declare them.
 - The S2 file is written at request inspection, which runs before an approval hold, so it exists while a held call waits. It is deleted when the call's context ends, whatever the outcome, with a safety timer as a backstop.
-- S1 headers are inserted only on Egress Broker endpoint requests, never on forward-proxy tunnels. Sandboxed servers cannot use the Egress Broker yet, so S1 works only in the standalone profile today.
+- S1 headers are inserted only on Egress Broker endpoint requests, never on forward-proxy tunnels; sandboxed servers with `network = "egress"` reach the endpoints through the broker as unconfined ones do.
 - Launch-time deliveries are not withdrawn when a session ends, because instances are not session-scoped.
-- Delivered values are scanned in arguments and results only; outbound egress bodies and headers are not scanned (SR-5.8-2).
+- Delivered values are scanned in arguments, results and brokered outbound HTTP requests (`EGRESS_SECRET_DETECTED`, SR-5.8-2); CONNECT tunnels are not scanned.

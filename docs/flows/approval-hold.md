@@ -50,5 +50,5 @@ Implemented by `internal/approval` (E-07) with the edge changes in `internal/edg
 
 - The console's Approvals view (G-13) belongs to E-24; it reads `/api/v1/approvals` and the watch stream this service provides.
 - The keep-alive is sent once when the call is held and then every interval. A `tools/call` is answered as an event stream only once it is held; other calls stay JSON.
-- Anomaly-band obligations (off by default, `require_approval_band`) and session-taint obligations (`TAINT_APPROVAL`) reach the service like policy-rule approvals, but the anomaly evidence is not shown to the Approver (FR-3.18).
-- The real-harness run of FR-3.25 has not been recorded.
+- Anomaly-band obligations (off by default, `require_approval_band`) and session-taint obligations (`TAINT_APPROVAL`) reach the service like policy-rule approvals, and an anomaly-band approval carries the band, the contributing feature, its z-score, the baseline snapshot and the context, which G-13 shows (FR-3.18).
+- The real-harness run of FR-3.25 is recorded in [../verification/FR-3.25.md](../verification/FR-3.25.md).

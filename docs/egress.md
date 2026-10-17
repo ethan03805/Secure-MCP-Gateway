@@ -169,7 +169,6 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 
 ## Not yet implemented
 
-- The `secret-fingerprint` filter on outbound URLs, headers and bodies (SR-5.8-2).
 - Grants from policy decision obligations and limits from manifests and Runtime Profiles (FR-5.38 names three sources; the broker applies the configuration and the grant).
 - Endpoint variable names from signed manifests (FR-5.37); today they come from `endpoint_env` in the configuration.
 - Egress observables for the Observation Collector (E-29) beyond the journal events.

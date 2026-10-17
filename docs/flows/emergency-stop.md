@@ -39,7 +39,7 @@ The CP-16 propagation bound and FR-11.10 stop latency apply.
 
 `smcpctl stop --reason <text>`, the console's Stop button and `POST /admin/v1/stop` call `Gateway.Stop` in `internal/edge`, which sets the stop state under the coordinator's gate and commits an `admin` event with outcome `stopped`, the actor and the reason. While stopped, every MCP request (including `initialize`) and every launch and release authorization is refused with `-31004` `EMERGENCY_STOP`, and health is `fail-closed`. The Secret Broker (`internal/secrets`) observes the stop event and withdraws S1 grants and S2 files. `smcpctl resume` (Administrator) commits `resumed` and clears the state. Differences from the diagram:
 
-- In-flight calls are not cancelled; a call that passed release authorization before the stop completes.
+- Calls in flight are cancelled (the dispatcher sends `notifications/cancelled` southbound) and their results are withheld; the `stopped` event counts them in `calls_cancelled` (SR-7.6-2). The drain stop that an online backup uses instead lets calls in flight finish and release their results (SR-7.7-1).
 - Server instances are not torn down; use `smcpctl runtime kill` or disable the package (see the [runbook](../runbooks/emergency-stop.md)).
 - Sessions are not ended.
 - Operator accounts (`[[console.account]]` with `role = "operator"`) and the Administrator can stop; only the Administrator can resume.

@@ -138,8 +138,9 @@ After changing anything under `console/src`, run `make console` and commit `cons
 ## Not built yet
 
 - Server aliases can be set only when a revision is enabled.
-- Published Audit Profiles, Observation Policies and Anomaly Response Policies take effect at once. A change of baseline contexts and the memory budget take effect at the next start of smcpd, because the baseline engine and the Observation Store are built with them; the object is shown as pending until then. The G-04 scope builder (FR-8.9) and per-feature statistics options are not part of the Observation Policy; the Anomaly Response Policy cannot choose alert-only over escalated capture. The graph memory budget is edited in `[graph]`.
+- Published Audit Profiles, Observation Policies and Anomaly Response Policies take effect at once. A change of baseline contexts and the memory budget take effect at the next start of smcpd, because the baseline engine and the Observation Store are built with them; the object is shown as pending until then. The graph memory budget is edited in `[graph]`.
 - The investigation graph needs the graph mirror (`[graph] enabled`, Neo4j); without it the event view shows the journal's phases only. The z-score timeline needs a promoted baseline with characterized contexts.
 - The Researcher's pseudonymized view of S2 fields is not implemented; the raw record route is closed to the Researcher instead. S3 payload grants are not implemented.
 - The journal browser reads the journal files on every request; it has no index, so large journals are slow to page (FR-11.8).
 - Browser coverage is Playwright's engines (one version each), not the two latest releases of each browser that FR-8.30 names.
+- Keyboard-only flows (`e2e/keyboard.spec.ts`) cover the actions of every view except G-10 server suspend and enable (opened and cancelled, because suspending stops the reference server for the rest of the suite), G-08 key rotation and graph rebuild, G-01 health acknowledgement, Runtime instance kill and journal export downloads.

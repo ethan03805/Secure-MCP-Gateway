@@ -22,13 +22,15 @@ Updated on 2026-10-17 by the egress-capability work: SR-5.16-1 is restored from 
 
 Updated on 2026-10-17 by the perf work: FR-11.4 is within its budget in the CI job `perf` (partial claim, no longer missing). The perf harness now takes P-213 from the request's receipt to delivery minus server execution to the backend's response; before, it ended server execution at the completed event, which follows response inspection, and so left response inspection out of FR-11.4 and FR-11.5.
 
+Checked on 2026-10-17 against the status data of main `ee2e851` (386 verified, 117 partial, 26 unverified, none failing); every unverified requirement other than a parent is listed below, together with partly verified requirements whose missing part is external (reference hardware, a release, a person) needs a record rather than a test, or is a single named case (SR-7.9-1).
+
 Requirements reported as **partial** are not listed one by one. Their claiming tests state, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests of each.
 
 ## E-01 Harness Interface Endpoint
 
-- FR-11.5 external: the CI job `perf` measures p95 P-213 (request receipt to delivery minus server execution to the backend's response) for 64 KiB results at eight concurrent calls with synchronous scoring (partial claim, `cmd/smcp-workload`; 17.4 ms and 19.0 ms on 4-CPU runners); no measurement on recorded reference hardware. AT-20 in the go job checks only the time before dispatch and after the completed event.
-- FR-12.1 external: no release SBOM license check; needs a release artifact.
-- FR-12.8 external: release provenance bundle (commit IDs, digests, recipes, lockfiles, SBOM, notices) not inspected; needs a release.
+- FR-11.5 external: the CI job `perf` measures p95 P-213 (request receipt to delivery minus server execution to the backend's response) for 64 KiB results at eight concurrent calls with synchronous scoring (partial claim, `cmd/smcp-workload`; 17.4 ms and 19.0 ms on 4-CPU runners, 27.1 ms in the run of main `ee2e851`); no measurement on recorded reference hardware. AT-20 in the go job checks only the time before dispatch and after the completed event.
+- FR-12.1 external: every archive of v1.0.0-rc.2 carries `sbom.spdx.json` (FR-13.1 inspection), but no record inspects its license fields; the v1.0.0 SBOM needs the same inspection.
+- FR-12.8 external: the v1.0.0-rc.2 release carries archives, the signed checksum file, the Sigstore bundle and an SBOM per archive; no record inspects the bundle for commit IDs, build recipes, lockfiles and license notices.
 - SR-4.14-1 missing: `smcpctl remote enable` installs no nftables rules in the Enforced profile.
 
 ## E-02 Protocol Mediator
@@ -104,7 +106,7 @@ Requirements reported as **partial** are not listed one by one. Their claiming t
 
 ## E-29 Observation Collector
 
-- FR-11.4 external: the CI job `perf` compares p95 P-213 with observation enabled and disabled over eight fresh instances in a balanced order (partial claim; -0.04 ms and -0.02 ms in two runs on 4-CPU runners, enabled 10.27 ms and disabled 10.28 ms in the second, after the capture path changes of 2026-10-17; the runners' processor model varies between runs); no measurement on recorded reference hardware.
+- FR-11.4 external: the CI job `perf` compares p95 P-213 with observation enabled and disabled over eight fresh instances in a balanced order (partial claim; -0.04 ms and -0.02 ms in two runs on 4-CPU runners, enabled 10.27 ms and disabled 10.28 ms in the second, after the capture path changes of 2026-10-17; 0.42 ms in the run of main `ee2e851`; the runners' processor model varies between runs); no measurement on recorded reference hardware.
 
 ## E-31 Anomaly Scorer
 

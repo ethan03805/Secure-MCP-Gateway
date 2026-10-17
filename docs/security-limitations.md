@@ -65,7 +65,18 @@ A package signature shows who packaged a server and that it has not changed sinc
 - Only MCP tools are relayed. Resources and prompts are refused (SR-5.6-1); sampling, elicitation and roots requests from servers are refused (`-32601`, or `-31010` for an `InputRequiredResult`); the MRTR Relay Profile that would relay them is not implemented.
 - Windows is not supported.
 
-### 12. Trusted computing base
+### 12. Known gaps in release 1.0
+
+These are requirements the release does not meet in full; [verification/gap-list.md](verification/gap-list.md) tracks them.
+
+- **Remote Access host rules (SR-4.14-1):** `smcpctl remote enable` installs no nftables rules in the Enforced profile; the remote listener binds loopback and relies on the tunnel client to reach it.
+- **Secret copies in memory (SR-2.13-2):** delivery buffers are wiped where they are byte slices, but S4 environment delivery and string conversions keep copies in the Gateway's memory that cannot be overwritten.
+- **Egress capabilities in the Standalone profile (security review RR-09):** one-use egress capabilities are in the server's memory, so another process of the same user can use them while the call runs; a server configured with `[egress] require_capability = false` is authorized by instance and grant only.
+- **Unpackaged servers (RR-10):** egress grants are checked against a manifest only for packaged servers; set `[packages] require_signed = true` to refuse unpackaged ones.
+- **Session state:** sessions, taint, rate windows and quotas are kept in memory; a restart ends every session (FR-2.16), so harnesses sign in again.
+- **Performance:** the FR-11 budgets have been measured on CI runners only, not on recorded reference hardware.
+
+### 13. Trusted computing base
 
 The host operating system, its administrator, the Gateway binaries and the trust-anchor store are trusted (ARCH A-4). A person with administrator access to the host can change or disable every control and can delete evidence that has not been exported.
 
