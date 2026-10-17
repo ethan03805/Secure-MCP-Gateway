@@ -31,11 +31,11 @@ R: Templates cannot widen profile authority.
 
 @SR-1.1-1 | Single policy source
 P: SEC-1.1
-S: The Policy Decision Service (E-06) SHALL derive permit, deny, route, filter, audit and observation rules only from the active policy revision held by the Policy Administration Service (E-05) in the Policy Store (D-01), compiled into the in-memory decision snapshot.
+S: The Policy Decision Service (E-06) SHALL derive permit, deny and route rules and the optional filters a rule requires only from the active policy revision held by the Policy Administration Service (E-05) in the Policy Store (D-01), compiled into the in-memory decision snapshot.
 A: E-06; E-05; F-13; D-01
 V: Inspection | Inspect the evaluator's inputs and configuration loading; confirm that no other file, environment variable, API or the graph mirror supplies rules, and that editing the graph mirror changes no decision.
 SRC: SEC 1.1; ARCH §4 E-06; ARCH §2.2 A-9; OWNER (policy authority is the signed revision held by E-05)
-R: One authoritative source. SEC 1.1 names the graph; the owner moved the authority to the signed revision so that enforcement does not depend on a database service (CHANGELOG V1.2).
+R: One authoritative source. SEC 1.1 names the graph; the owner moved the authority to the signed revision so that enforcement does not depend on a database service (CHANGELOG V1.2). Release 1.0 keeps the audit and observation settings in the published Audit Profile and Observation Policy objects and the mandatory filters in the `[filters]` configuration (FR-3.1, FR-3.26); the decision carries the audit and observation objects in force as obligations (FR-3.12) and evaluates no rule from them.
 
 @SR-1.1-2 | Signed policy revisions
 P: SEC-1.1
@@ -160,11 +160,11 @@ R: Unambiguous grants.
 
 @SR-1.10-1 | Obligation precedence
 P: SEC-1.10
-S: The Policy Decision Service (E-06) SHALL combine applicable obligations as the union of required filters, the smallest size, rate, time and resource bounds, the most restrictive approval, and the Appendix F retention and capture rules.
+S: The Policy Decision Service (E-06) SHALL combine the obligations that apply to a permitted call (from the permit rule, its template and Framework Profile, the CP-11 limits, the approval floor and session taint) as the union of required filters, the smallest rate, burst and session-quota bounds, and the most restrictive approval.
 A: E-06; F-14
-V: Test | Evaluate a request matched by rules with differing obligations; confirm the combined result.
+V: Test | Evaluate requests whose permit rule, template, profile and configured limits carry differing obligations, with and without the approval floor and session taint; confirm the combined result.
 SRC: SEC 1.10; SEC Appendix F
-R: Conservative combination.
+R: Conservative combination. Release 1.0 refuses overlapping permit rules at publication (SR-1.9-1), so a call has one permit rule and the layers above it; the size, time and resource bounds (CP-08, CP-13, CP-24) and the retention and capture settings (the Audit Profile and Observation Policy in force) have one source each and are carried into the decision unchanged (FR-3.12), so there is nothing to combine for them. The anomaly approval of FR-4.15 is added by the Anomaly Scorer after the decision and can only add the obligation.
 
 @SR-1.11-1 | Single route
 P: SEC-1.11
@@ -234,17 +234,17 @@ R: No partial policy.
 P: SEC-1.16
 S: The Enforcement Coordinator (E-12) SHALL serialize policy activation, revocation, emergency stop, launch authorization and release authorization through one gate.
 A: E-12; F-29; F-30; F-31; F-32
-V: Test | Race publication against launches with fault injection; confirm every launch is ordered entirely before or after the activation.
+V: Test | Race publication, emergency stop and revocation against launches held inside launch authorization; confirm every launch is ordered entirely before or after each of them.
 SRC: SEC 1.16; SEC Appendix F (coordinator ordering)
-R: Closes policy races.
+R: Closes policy races. A revocation in release 1.0 is a credential revocation, a principal suspension or a server revision suspension or revocation; each changes its records under the gate.
 
 @SR-1.17-1 | Pre-launch recheck
 P: SEC-1.17
-S: Under the gate, the Enforcement Coordinator (E-12) SHALL recheck the policy revision, session state, credential state, server revision state and revocation epochs before issuing a launch capability.
+S: Under the gate, the Enforcement Coordinator (E-12) SHALL recheck the policy revision, session state, principal state, credential state and server revision state before issuing a launch capability.
 A: E-12; F-29
-V: Test | Revoke the credential between decision and launch; confirm launch refusal.
+V: Test | Between decision and launch, activate a new policy revision, suspend the session, revoke the credential, suspend the principal and suspend the server revision, one per call; confirm each launch is refused.
 SRC: SEC 1.17
-R: Decisions can become stale before launch.
+R: Decisions can become stale before launch. Release 1.0 keeps no revocation epochs: each revocation is a state record (a revoked credential, a suspended principal, an ended or suspended session, a suspended or revoked server revision) changed under the gate (SR-1.16-1) and read by this recheck, which gives the same ordering.
 
 @SR-1.17-2 | Pre-release recheck
 P: SEC-1.17
@@ -1373,7 +1373,7 @@ R: Restores must not resurrect revoked authority.
 
 @SR-7.9-1 | Rollback preserves revocations
 P: SEC-7.9
-S: The Policy Administration Service (E-05) SHALL carry forward current revocation epochs and server suspensions when rolling back policy or application versions.
+S: The Policy Administration Service (E-05) SHALL carry forward current credential revocations, principal suspensions and server suspensions when rolling back policy or application versions.
 A: E-05; E-12; F-12; F-32
 V: Test | Revoke, then roll back policy; confirm the revocation remains effective.
 SRC: SEC 7.9

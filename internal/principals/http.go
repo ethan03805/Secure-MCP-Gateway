@@ -34,6 +34,19 @@ type Service struct {
 	// EndSessions ends the console sessions of an actor; Register
 	// defaults it to the control API's browser sessions.
 	EndSessions func(actor string) int
+	// Gate runs a revocation (the directory change and the end of the
+	// sessions it affects) under the Enforcement Coordinator's gate
+	// (SR-1.16-1, edge.Gateway.Serialize); nil runs it directly.
+	Gate func(func())
+}
+
+// serialize runs fn under Gate.
+func (s *Service) serialize(fn func()) {
+	if s.Gate == nil {
+		fn()
+		return
+	}
+	s.Gate(fn)
 }
 
 // Register adds the routes to the control API. Reads are open to the
@@ -183,17 +196,21 @@ func (s *Service) suspension(suspend bool) http.HandlerFunc {
 		if !s.commit(w, r, outcome, reason, id, map[string]any{"reason": body.Reason}) {
 			return
 		}
-		if err := s.Dir.SetSuspended(id, suspend, adminapi.ActorOf(r), body.Reason); err != nil {
-			mutationError(w, err)
-			return
-		}
+		var err error
 		suspended := []string{}
-		if suspend {
+		s.serialize(func() {
+			if err = s.Dir.SetSuspended(id, suspend, adminapi.ActorOf(r), body.Reason); err != nil || !suspend {
+				return
+			}
 			for _, se := range s.Sessions.List() {
 				if se.PrincipalID == id && se.State == session.StateActive && s.Sessions.Suspend(se.ID) {
 					suspended = append(suspended, se.ID)
 				}
 			}
+		})
+		if err != nil {
+			mutationError(w, err)
+			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"id": id, "enabled": !suspend, "suspended_sessions": suspended})
 	}
@@ -250,15 +267,21 @@ func (s *Service) revoke(w http.ResponseWriter, r *http.Request) {
 	if !s.commit(w, r, "credential_revoke_requested", "CREDENTIAL_REVOKED", c.Principal, map[string]any{"client_id": id, "reason": body.Reason}) {
 		return
 	}
-	if _, err := s.Dir.Revoke(id, adminapi.ActorOf(r)); err != nil {
+	var err error
+	ended := []string{}
+	s.serialize(func() {
+		if _, err = s.Dir.Revoke(id, adminapi.ActorOf(r)); err != nil {
+			return
+		}
+		for _, se := range s.Sessions.List() {
+			if se.ClientID == id && s.Sessions.Terminate(se.ID) {
+				ended = append(ended, se.ID)
+			}
+		}
+	})
+	if err != nil {
 		mutationError(w, err)
 		return
-	}
-	ended := []string{}
-	for _, se := range s.Sessions.List() {
-		if se.ClientID == id && s.Sessions.Terminate(se.ID) {
-			ended = append(ended, se.ID)
-		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"client_id": id, "revoked": true, "terminated_sessions": ended})
 }

@@ -50,6 +50,14 @@ func runBackend() {
 			sort.Strings(keys)
 			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "meta:" + strings.Join(keys, ",")}}}, nil, nil
 		}
+		// SMCP_E2E_CALL_LOG names a file that gets one line per call the
+		// backend received (TestJournalUnwritableDuringTraffic).
+		if p := os.Getenv("SMCP_E2E_CALL_LOG"); p != "" {
+			if f, err := os.OpenFile(p, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil {
+				fmt.Fprintln(f, a.Text)
+				f.Close()
+			}
+		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "echo:" + a.Text}}}, nil, nil
 	})
 	// southbound returns everything the server received from the Gateway

@@ -311,6 +311,19 @@ func (d *Directory) Issue(principal string, redirectURIs []string, confidential 
 
 // Revoke revokes an issued credential. Clients of the file cannot be
 // revoked here.
+// CredentialRevoked reports whether clientID is a credential of the
+// directory that was revoked (SR-1.17-1).
+func (d *Directory) CredentialRevoked(clientID string) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, c := range d.st.Credentials {
+		if c.ClientID == clientID {
+			return c.RevokedAt != nil
+		}
+	}
+	return false
+}
+
 func (d *Directory) Revoke(clientID, actor string) (Credential, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()

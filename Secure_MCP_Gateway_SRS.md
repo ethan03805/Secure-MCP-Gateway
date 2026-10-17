@@ -586,9 +586,9 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Statement | The Access Enforcement Point (E-08) **SHALL** build each presented tool definition (`title`, `description`, `inputSchema`, `outputSchema`, `annotations`) from the verified manifest of the enabled server revision. |
 | Allocation | Elements: E-08 Access Enforcement Point, E-14 Local Server Registry; Functions: F-19; External interfaces: X-01; Internal interfaces: I-07 |
 | Verification Method | Test |
-| Verification Statement | Change a backend's live tool description without changing the manifest; confirm the presented description still matches the manifest. |
+| Verification Statement | Compare a packaged server's presented tool definitions with its verified manifest; then change the backend's live tool description without changing the manifest; confirm the changed description is never presented (the drift check of SR-3.8-1 suspends the revision and withdraws its tools). |
 | Source | ARCH §6.3; SEC 3.7 |
-| Rationale | Presented definitions must be the curated, signed definitions. |
+| Rationale | Presented definitions must be the curated, signed definitions. A changed live description is drift, so the revision is suspended (SR-3.8-1) rather than presented with the manifest's description; either way the live text never reaches the harness. |
 
 #### FR-1.28 — x-mcp-header removal
 
@@ -1868,9 +1868,9 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Statement | The Local Server Registry (E-14) **SHALL** keep each server revision in one of the states `verified-disabled`, `enabled`, `suspended`, `revoked` or `retired`. |
 | Allocation | Elements: E-14 Local Server Registry; Functions: F-36; Data stores: D-02 |
 | Verification Method | Test |
-| Verification Statement | Drive a revision through each transition from G-10; confirm the state and that only `enabled` revisions appear in catalogs. |
+| Verification Statement | Drive a revision through each transition (enable, disable and retire through the G-10 control API routes, suspension by drift, revocation by a signed revocation entry applied by a library scan); confirm the state and that only `enabled` revisions appear in catalogs. |
 | Source | ARCH §4 E-14; SEC 8.1 |
-| Rationale | Verified does not mean enabled. |
+| Rationale | Verified does not mean enabled. Suspension and revocation are not operator buttons in release 1.0: the Gateway suspends a revision on drift, tampering or repeated crashes, and a signed revocation entry revokes it, so the test reaches those states the way they occur. |
 
 #### FR-5.8 — Expiry suspension
 
@@ -4249,12 +4249,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-14.3 |
 | Parent ID | FR-14 — Operator self-curation |
-| Statement | The `smcpctl package build` command **SHALL** start the artifact once in a throwaway working directory with no secrets, the environment allowlist of the manifest and, in the Enforced profile, no network, read its tool list through the era probe of FR-5.16, and **SHALL** write a manifest conforming to Appendix J containing the tools, their schemas, description digests and era, and the operator-supplied risk class, side-effect classes, `source_trust`, capability ceiling and secret slots. |
+| Statement | The `smcpctl package build` command **SHALL** start the artifact once in a throwaway working directory with no secrets, the environment allowlist of the manifest and, in the Enforced profile, no network, read its tool list through the legacy handshake of FR-5.19 and `tools/list`, and **SHALL** write a manifest conforming to Appendix J containing the tools, their schemas, description digests and era, and the operator-supplied risk class, side-effect classes, `source_trust`, capability ceiling and secret slots. |
 | Allocation | Elements: E-13 Library Trust Verifier; Functions: F-96, F-34; External interfaces: X-02 |
 | Verification Method | Test |
 | Verification Statement | Package each reference server; validate each manifest against `docs/schemas/manifest.schema.json`; confirm the tools equal the live `tools/list` and that no secret or network access was available to the packaging run in the Enforced profile. |
 | Source | OWNER (generate the manifest from a live tools/list at packaging time); SEC 3.5; SEC 3.7 |
-| Rationale | The manifest records exactly what the operator reviewed; the throwaway run is the quarantine probe. |
+| Rationale | The manifest records exactly what the operator reviewed; the throwaway run is the quarantine probe. The era probe of FR-5.16 is deferred, so release 1.0 probes with the 2025-11-25 `initialize` handshake and records that era in the manifest. |
 
 #### FR-14.4 — Local servers only
 
@@ -5071,12 +5071,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-1.1-1 |
 | Parent ID | SEC-1.1 — Authoritative graph (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Policy Decision Service (E-06) **SHALL** derive permit, deny, route, filter, audit and observation rules only from the active policy revision held by the Policy Administration Service (E-05) in the Policy Store (D-01), compiled into the in-memory decision snapshot. |
+| Statement | The Policy Decision Service (E-06) **SHALL** derive permit, deny and route rules and the optional filters a rule requires only from the active policy revision held by the Policy Administration Service (E-05) in the Policy Store (D-01), compiled into the in-memory decision snapshot. |
 | Allocation | Elements: E-06 Policy Decision Service, E-05 Policy Administration Service; Functions: F-13; Data stores: D-01 |
 | Verification Method | Inspection |
 | Verification Statement | Inspect the evaluator's inputs and configuration loading; confirm that no other file, environment variable, API or the graph mirror supplies rules, and that editing the graph mirror changes no decision. |
 | Source | SEC 1.1; ARCH §4 E-06; ARCH §2.2 A-9; OWNER (policy authority is the signed revision held by E-05) |
-| Rationale | One authoritative source. SEC 1.1 names the graph; the owner moved the authority to the signed revision so that enforcement does not depend on a database service (CHANGELOG V1.2). |
+| Rationale | One authoritative source. SEC 1.1 names the graph; the owner moved the authority to the signed revision so that enforcement does not depend on a database service (CHANGELOG V1.2). Release 1.0 keeps the audit and observation settings in the published Audit Profile and Observation Policy objects and the mandatory filters in the `[filters]` configuration (FR-3.1, FR-3.26); the decision carries the audit and observation objects in force as obligations (FR-3.12) and evaluates no rule from them. |
 
 #### SR-1.1-2 — Signed policy revisions
 
@@ -5266,12 +5266,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-1.10-1 |
 | Parent ID | SEC-1.10 — Obligation combination (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Policy Decision Service (E-06) **SHALL** combine applicable obligations as the union of required filters, the smallest size, rate, time and resource bounds, the most restrictive approval, and the Appendix F retention and capture rules. |
+| Statement | The Policy Decision Service (E-06) **SHALL** combine the obligations that apply to a permitted call (from the permit rule, its template and Framework Profile, the CP-11 limits, the approval floor and session taint) as the union of required filters, the smallest rate, burst and session-quota bounds, and the most restrictive approval. |
 | Allocation | Elements: E-06 Policy Decision Service; Functions: F-14 |
 | Verification Method | Test |
-| Verification Statement | Evaluate a request matched by rules with differing obligations; confirm the combined result. |
+| Verification Statement | Evaluate requests whose permit rule, template, profile and configured limits carry differing obligations, with and without the approval floor and session taint; confirm the combined result. |
 | Source | SEC 1.10; SEC Appendix F |
-| Rationale | Conservative combination. |
+| Rationale | Conservative combination. Release 1.0 refuses overlapping permit rules at publication (SR-1.9-1), so a call has one permit rule and the layers above it; the size, time and resource bounds (CP-08, CP-13, CP-24) and the retention and capture settings (the Audit Profile and Observation Policy in force) have one source each and are carried into the decision unchanged (FR-3.12), so there is nothing to combine for them. The anomaly approval of FR-4.15 is added by the Anomaly Scorer after the decision and can only add the obligation. |
 
 #### SR-1.11-1 — Single route
 
@@ -5386,9 +5386,9 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Statement | The Enforcement Coordinator (E-12) **SHALL** serialize policy activation, revocation, emergency stop, launch authorization and release authorization through one gate. |
 | Allocation | Elements: E-12 Enforcement Coordinator; Functions: F-29, F-30, F-31, F-32 |
 | Verification Method | Test |
-| Verification Statement | Race publication against launches with fault injection; confirm every launch is ordered entirely before or after the activation. |
+| Verification Statement | Race publication, emergency stop and revocation against launches held inside launch authorization; confirm every launch is ordered entirely before or after each of them. |
 | Source | SEC 1.16; SEC Appendix F (coordinator ordering) |
-| Rationale | Closes policy races. |
+| Rationale | Closes policy races. A revocation in release 1.0 is a credential revocation, a principal suspension or a server revision suspension or revocation; each changes its records under the gate. |
 
 #### SR-1.17-1 — Pre-launch recheck
 
@@ -5396,12 +5396,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-1.17-1 |
 | Parent ID | SEC-1.17 — Pre-dispatch and release checks (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | Under the gate, the Enforcement Coordinator (E-12) **SHALL** recheck the policy revision, session state, credential state, server revision state and revocation epochs before issuing a launch capability. |
+| Statement | Under the gate, the Enforcement Coordinator (E-12) **SHALL** recheck the policy revision, session state, principal state, credential state and server revision state before issuing a launch capability. |
 | Allocation | Elements: E-12 Enforcement Coordinator; Functions: F-29 |
 | Verification Method | Test |
-| Verification Statement | Revoke the credential between decision and launch; confirm launch refusal. |
+| Verification Statement | Between decision and launch, activate a new policy revision, suspend the session, revoke the credential, suspend the principal and suspend the server revision, one per call; confirm each launch is refused. |
 | Source | SEC 1.17 |
-| Rationale | Decisions can become stale before launch. |
+| Rationale | Decisions can become stale before launch. Release 1.0 keeps no revocation epochs: each revocation is a state record (a revoked credential, a suspended principal, an ended or suspended session, a suspended or revoked server revision) changed under the gate (SR-1.16-1) and read by this recheck, which gives the same ordering. |
 
 #### SR-1.17-2 — Pre-release recheck
 
@@ -7098,7 +7098,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-7.9-1 |
 | Parent ID | SEC-7.9 — Safe rollback (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Policy Administration Service (E-05) **SHALL** carry forward current revocation epochs and server suspensions when rolling back policy or application versions. |
+| Statement | The Policy Administration Service (E-05) **SHALL** carry forward current credential revocations, principal suspensions and server suspensions when rolling back policy or application versions. |
 | Allocation | Elements: E-05 Policy Administration Service, E-12 Enforcement Coordinator; Functions: F-12, F-32 |
 | Verification Method | Test |
 | Verification Statement | Revoke, then roll back policy; confirm the revocation remains effective. |

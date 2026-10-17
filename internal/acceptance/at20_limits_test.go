@@ -89,7 +89,8 @@ func TestAT20LimitsAndLoad(t *testing.T) {
 	}
 	g.start()
 	g.scenario("AT-20")
-	reqtest.Partial(t, "SR-7.10-1", "SR-7.11-1", "FR-11.2", "FR-11.5")
+	reqtest.Verifies(t, "SR-7.10-1")
+	reqtest.Partial(t, "SR-7.11-1", "FR-11.2", "FR-11.5")
 
 	tok := g.token("")
 	hdr := wireHeaders("tools/call", "ref_echo")

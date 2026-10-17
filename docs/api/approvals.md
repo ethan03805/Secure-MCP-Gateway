@@ -29,6 +29,7 @@ Records use these fields:
 | `template`, `manifest_source`, `correlation_id`, `decision_id` | string | Context of the requesting call |
 | `decisive_rules` | array of string | Policy rules that decided the permit |
 | `arguments` | object | Canonical arguments (record detail only) |
+| `anomaly` | object | When an anomaly band required the approval (FR-3.18): `band`, `contributing_feature`, `z_score`, `snapshot_id`, `context` (record detail only) |
 | `decided_by`, `decided_at`, `comment` | string | Decision (FR-3.17) |
 | `consumed_at`, `consumed_correlation_id` | string | Consumption |
 

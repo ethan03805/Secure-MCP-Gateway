@@ -136,8 +136,9 @@ func TestReleaseCommitFailureWithholds(t *testing.T) {
 // commit of the decision intent refuses launch with -31004 and
 // JOURNAL_UNAVAILABLE, and nothing is dispatched.
 //
-// Partial: the unwritable journal directory case and the graph database
-// outage during traffic are not run.
+// The unwritable journal directory and the graph database outage during
+// traffic are run against the real journal by
+// e2e.TestJournalUnwritableDuringTraffic.
 func TestIntentCommitFailureJournalUnavailable(t *testing.T) {
 	reqtest.Partial(t, "SR-1.2-2")
 	h := newHarness(t, harnessOpts{})

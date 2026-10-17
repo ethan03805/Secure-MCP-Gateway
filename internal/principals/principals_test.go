@@ -174,7 +174,15 @@ func TestRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg.SetDirectory(d)
-	(&Service{Dir: d, Sessions: store, Snapshot: func() *policy.Snapshot { return snap }, Evidence: mem}).Register(admin)
+	// Gate stands for edge.Gateway.Serialize: it records which directory
+	// changes ran inside it (SR-1.16-1).
+	var gated []string
+	gate := func(fn func()) {
+		before := fmt.Sprint(d.List())
+		fn()
+		gated = append(gated, before+" -> "+fmt.Sprint(d.List()))
+	}
+	(&Service{Dir: d, Sessions: store, Snapshot: func() *policy.Snapshot { return snap }, Evidence: mem, Gate: gate}).Register(admin)
 	srv.Config.Handler = admin.Handler()
 	srv.StartTLS()
 	defer srv.Close()
@@ -233,6 +241,20 @@ func TestRoutes(t *testing.T) {
 	code, out = do("POST", "/api/v1/credentials/"+clientID+"/revoke", map[string]any{"reason": "rotated"})
 	if code != 200 || len(out["terminated_sessions"].([]any)) != 1 || store.Get(sess.ID).State != session.StateTerminated || cfg.FindClient(clientID) != nil {
 		t.Fatalf("revoke: %d %v", code, out)
+	}
+	// Suspend, enable and revoke each changed the directory inside the
+	// gate, and the revoked credential is reported to the launch recheck
+	// (SR-1.17-1).
+	if len(gated) != 3 {
+		t.Fatalf("%d revocations through the gate: %v", len(gated), gated)
+	}
+	for _, g := range gated {
+		if before, after, _ := strings.Cut(g, " -> "); before == after {
+			t.Fatalf("a gated revocation changed nothing inside the gate: %s", g)
+		}
+	}
+	if !cfg.CredentialRevoked(clientID) || cfg.CredentialRevoked("c1") {
+		t.Fatal("credential revocation state")
 	}
 	seen := map[string]bool{}
 	for _, e := range mem.Events() {
