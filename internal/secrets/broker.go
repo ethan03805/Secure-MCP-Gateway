@@ -243,6 +243,20 @@ type event struct {
 func (b *Broker) auditEvent(e event) audit.Event {
 	if e.b != nil {
 		e.server, e.slot, e.mode, e.secret = e.b.Server, e.b.Slot, e.b.Mode, e.b.Secret
+		// FR-6.11: a denial before the vault was opened still names the
+		// secret reference and the version that would have been delivered
+		// (from the vault's metadata; no value is read).
+		if e.ref == "" && b.vault != nil {
+			if m, err := b.vault.Get(e.b.Secret); err == nil {
+				e.ref = m.Ref
+				if e.version == 0 {
+					e.version = e.b.Version
+					if e.version == 0 {
+						e.version = m.CurrentVersion
+					}
+				}
+			}
+		}
 	}
 	d := map[string]any{"secret": e.secret, "secret_ref": e.ref, "version": e.version, "slot": e.slot, "mode": e.mode, "server": e.server, "tool": e.tool}
 	if e.b != nil {
