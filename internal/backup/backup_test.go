@@ -68,6 +68,12 @@ func TestEncryptedArchives(t *testing.T) {
 	// registry directories of later elements are not covered.
 	reqtest.Partial(t, "FR-9.16")
 	dir, state, cfg, pol := install(t, audit.Event{Class: "admin", Origin: "E-24", Outcome: "x"})
+	// Package library: the content-addressed artifact is state; the unpacked
+	// tree and work directories are derived and left out.
+	for _, f := range []string{"packages/artifacts/sha256/ab", "packages/unpacked/ab/server", "packages/work/fx/cache"} {
+		_ = os.MkdirAll(filepath.Join(state, filepath.Dir(f)), 0o700)
+		_ = os.WriteFile(filepath.Join(state, f), []byte("x"), 0o755)
+	}
 	opt := filepath.Join(dir, "obs")
 	_ = os.MkdirAll(opt, 0o700)
 	_ = os.WriteFile(filepath.Join(opt, "day.parquet"), []byte("observations"), 0o600)
@@ -91,10 +97,18 @@ func TestEncryptedArchives(t *testing.T) {
 			t.Errorf("manifest lacks %s: %v", c, res.Manifest.Components)
 		}
 	}
+	artifact := false
 	for _, f := range res.Manifest.Files {
 		if strings.HasPrefix(f.Path, "state/log/") {
 			t.Errorf("diagnostic log archived: %s", f.Path)
 		}
+		if strings.HasPrefix(f.Path, "state/packages/unpacked/") || strings.HasPrefix(f.Path, "state/packages/work/") {
+			t.Errorf("derived package directory archived: %s", f.Path)
+		}
+		artifact = artifact || f.Path == "state/packages/artifacts/sha256/ab"
+	}
+	if !artifact {
+		t.Error("package artifact not archived")
 	}
 	raw, _ := os.ReadFile(res.Path)
 	if !strings.HasPrefix(string(raw), "age-encryption.org/v1") || strings.Contains(string(raw), "BEGIN EC PRIVATE KEY") || strings.Contains(string(raw), "revision") {

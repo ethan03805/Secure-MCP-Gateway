@@ -149,6 +149,9 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	if m.HighestRisk() == "high" && !l.Confined() {
 		return sc, errf(ReasonProfile, "package %s has risk class high and the launcher %s is unconfined (SR-4-1)", sc.Package, l.Name())
 	}
+	if err := rt.lib.ensureTree(rev); err != nil {
+		return sc, err
+	}
 	work := rt.lib.path("work", sc.Alias)
 	if err := os.MkdirAll(work, 0o700); err != nil {
 		return sc, err

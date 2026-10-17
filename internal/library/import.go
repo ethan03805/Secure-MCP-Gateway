@@ -202,28 +202,64 @@ func (l *Library) store(p *packaging.Package) (string, error) {
 	if _, err := os.Stat(tree); err == nil {
 		return packaging.TreeDigest(tree)
 	}
-	tmp := tree + ".tmp"
-	packaging.MakeWritable(tmp)
-	_ = os.RemoveAll(tmp)
-	switch p.Manifest.Artifact.Type {
-	case "binary":
-		if err := os.Mkdir(tmp, 0o755); err != nil {
-			return "", err
-		}
-		if err := packaging.CopyFile(dst, filepath.Join(tmp, filepath.Base(p.Index.Artifact.Path)), 0o555); err != nil {
-			return "", err
-		}
-	default:
-		if err := packaging.ExtractTarGz(dst, tmp, ""); err != nil {
-			packaging.MakeWritable(tmp)
-			os.RemoveAll(tmp)
-			return "", fmt.Errorf("unpack artifact: %w", err)
-		}
-	}
-	if err := os.Rename(tmp, tree); err != nil {
+	if err := l.unpack(sum, p.Manifest.Artifact.Type, filepath.Base(p.Index.Artifact.Path)); err != nil {
 		return "", err
 	}
 	return packaging.TreeDigest(tree)
+}
+
+// unpack writes the unpacked tree of a stored archive or binary artifact.
+func (l *Library) unpack(sum, typ, binName string) error {
+	tree := l.TreePath(sum)
+	tmp := tree + ".tmp"
+	packaging.MakeWritable(tmp)
+	_ = os.RemoveAll(tmp)
+	switch typ {
+	case "binary":
+		if err := os.Mkdir(tmp, 0o755); err != nil {
+			return err
+		}
+		if err := packaging.CopyFile(l.ArtifactPath(sum), filepath.Join(tmp, binName), 0o555); err != nil {
+			return err
+		}
+	default:
+		if err := packaging.ExtractTarGz(l.ArtifactPath(sum), tmp, ""); err != nil {
+			packaging.MakeWritable(tmp)
+			os.RemoveAll(tmp)
+			return fmt.Errorf("unpack artifact: %w", err)
+		}
+	}
+	return os.Rename(tmp, tree)
+}
+
+// ensureTree re-creates a missing unpacked tree from the content-addressed
+// artifact after checking its digest. The tree is a cache of the artifact
+// (backups leave it out); the launch check still compares it with the tree
+// digest recorded at import (SR-3-2), so an altered tree is still refused.
+func (l *Library) ensureTree(rev Revision) error {
+	if rev.ArtifactType == "oci" || rev.TreeSHA256 == "" {
+		return nil
+	}
+	if _, err := os.Stat(l.TreePath(rev.ArtifactSHA256)); !errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	sum, _, err := packaging.FileSHA256(l.ArtifactPath(rev.ArtifactSHA256))
+	if err != nil {
+		return errf(ReasonTampered, "artifact %s unreadable: %v", rev.ArtifactSHA256, err)
+	}
+	if sum != rev.ArtifactSHA256 {
+		return errf(ReasonTampered, "artifact digest is %s, the signed manifest names %s", sum, rev.ArtifactSHA256)
+	}
+	raw, err := os.ReadFile(filepath.Join(l.revisionDir(rev.ServerID, rev.Revision), packaging.IndexFile))
+	if err != nil {
+		return err
+	}
+	var ix packaging.Index
+	if err := json.Unmarshal(raw, &ix); err != nil {
+		return fmt.Errorf("revision index: %w", err)
+	}
+	l.log.Info("re-creating the unpacked artifact tree from the stored artifact", "revision", rev.Key())
+	return l.unpack(rev.ArtifactSHA256, rev.ArtifactType, filepath.Base(ix.Artifact.Path))
 }
 
 // ScanReport summarizes one library scan (FR-5.3).

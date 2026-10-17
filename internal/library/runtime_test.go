@@ -240,6 +240,45 @@ func TestArtifactReverifiedAtLaunch(t *testing.T) {
 	}
 }
 
+// The unpacked tree is a cache of the content-addressed artifact: a
+// restored backup leaves it out, and it is re-created from the verified
+// artifact. With the artifact itself altered nothing is re-created.
+func TestMissingTreeRecreatedFromArtifact(t *testing.T) {
+	reqtest.Partial(t, "SR-3-2")
+	r := newRuntime(t, fixtureDesc)
+	packaging.MakeWritable(r.lib.TreePath(r.sha))
+	if err := os.RemoveAll(r.lib.TreePath(r.sha)); err != nil {
+		t.Fatal(err)
+	}
+	reg := r.start(t, []config.Server{{Alias: "fx", Package: "fx-id"}})
+	if s := reg.Servers()["fx"]; s == nil || !s.Verified {
+		t.Fatalf("server not started from the re-created tree: %+v", s)
+	}
+	if rev, _ := r.lib.Get("fx-id", "1"); rev.State != StateEnabled {
+		t.Fatalf("state %s (%s)", rev.State, rev.StateReason)
+	}
+
+	r = newRuntime(t, fixtureDesc)
+	packaging.MakeWritable(r.lib.TreePath(r.sha))
+	if err := os.RemoveAll(r.lib.TreePath(r.sha)); err != nil {
+		t.Fatal(err)
+	}
+	os.Chmod(r.lib.ArtifactPath(r.sha), 0o644)
+	if err := os.WriteFile(r.lib.ArtifactPath(r.sha), []byte("swapped"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reg = r.start(t, []config.Server{{Alias: "fx", Package: "fx-id"}})
+	if reg.Servers()["fx"] != nil {
+		t.Fatal("altered artifact launched")
+	}
+	if bs := r.rt.Bindings(); len(bs) != 1 || bs[0].Status != "not_started" || bs[0].ReasonCode != ReasonTampered {
+		t.Fatalf("bindings %+v", bs)
+	}
+	if _, err := os.Stat(r.lib.TreePath(r.sha)); !os.IsNotExist(err) {
+		t.Fatal("a tree was unpacked from an altered artifact")
+	}
+}
+
 func TestPollingImportsAndRevokesWithTeardown(t *testing.T) {
 	reqtest.Verifies(t, "FR-5.3", "SR-3-3")
 	reqtest.Partial(t, "FR-14.12") // smcpctl package revoke is exercised in cmd/smcpctl

@@ -130,6 +130,12 @@ type Spec struct {
 // backups never contain backups.
 var excluded = map[string]bool{"log": true, "backups": true}
 
+// excludedDirs are derived state directories left out of a backup: the
+// package library's unpacked artifact trees and per-server work
+// directories are re-created from the content-addressed artifacts
+// (internal/library), and a tar entry cannot keep their executable bits.
+var excludedDirs = map[string]bool{"packages/unpacked": true, "packages/work": true}
+
 // FileEntry is one archived file.
 type FileEntry struct {
 	Path   string `json:"path"`
@@ -243,7 +249,7 @@ func Write(w io.Writer, s Spec) (Manifest, error) {
 			return nil
 		}
 		top := strings.SplitN(filepath.ToSlash(rel), "/", 2)[0]
-		if excluded[top] || strings.Contains(filepath.Base(p), ".tmp-") || strings.HasPrefix(filepath.Base(p), ".health-probe-") {
+		if excluded[top] || (d.IsDir() && excludedDirs[filepath.ToSlash(rel)]) || strings.Contains(filepath.Base(p), ".tmp-") || strings.HasPrefix(filepath.Base(p), ".health-probe-") {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}
