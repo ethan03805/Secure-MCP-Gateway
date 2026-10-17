@@ -18,7 +18,7 @@ import (
 // delivered, denied (refused before dispatch: the tool needs an approval
 // and no approver is attached), filtered (a request filter blocked
 // the arguments), failed (the backend answered with an error), withheld
-// (the result was too large to release) and indeterminate (the backend did
+// (the result exceeded the 64 KiB result bound) and indeterminate (the backend did
 // not answer within the upstream timeout, so it may have acted). Together
 // the sequences use every phase: requested, denied, authorized, dispatched,
 // completed, failed, indeterminate, filtered, delivered and withheld.
@@ -37,7 +37,7 @@ func TestCallPhasesForEachOutcome(t *testing.T) {
 		{"denied", "t_write", map[string]any{}, "requested,denied"},
 		{"filtered", "t_echo", map[string]any{"text": "key=" + "AKIA" + "IOSFODNN7EXAMPLE"}, "requested,filtered"},
 		{"failed", "t_rpcerror", map[string]any{}, "requested,authorized,dispatched,failed"},
-		{"withheld", "t_big", map[string]any{"kib": 9000}, "requested,authorized,dispatched,withheld"},
+		{"withheld", "t_big", map[string]any{"kib": 128}, "requested,authorized,dispatched,withheld"},
 		{"indeterminate", "t_slow", map[string]any{}, "requested,authorized,dispatched,indeterminate"},
 	}
 	for _, c := range cases {
