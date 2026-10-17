@@ -54,7 +54,7 @@ keeps today's behavior, and test the default.
 | `tunnel` | E-33 | Tailscale Funnel and Cloudflare quick tunnel drivers and the public-name check (`smcpctl remote`). |
 | `channel` | FR-16.8 | Request origin (local or remote) carried in the context and applied to evidence events. |
 | `gwtest` | tests | Starts a full Gateway with an in-process backend and a fake tunnel for tests. |
-| `testport` | tests | Loopback ports below the ephemeral range for listener addresses written into test configurations. |
+| `testport` | tests, `scripts/agents` | Loopback ports below the ephemeral range for listener addresses written into test configurations, reserved across concurrent test processes. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
 | `acceptance` | FR-19.4, AT-01 to AT-21 | Acceptance scenarios as tests of the real binaries (bootstrap, CLI, control API, OAuth MCP client); `SMCP_ACCEPTANCE_PROFILE=enforced` runs them in the Enforced profile. See `docs/acceptance.md`. |
 | `perf` | FR-11 | Reference dataset and workload, FR-11 measurements against real smcpd (`cmd/smcp-workload`, CI job `perf`). |

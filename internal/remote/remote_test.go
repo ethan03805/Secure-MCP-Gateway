@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -453,7 +454,16 @@ func TestDeviceGrant(t *testing.T) {
 	reqtest.Partial(t, "FR-16.9")
 	// Partial: the device authorization grant smcp-connect uses; the relay
 	// itself is tested in internal/adapter.
-	e := newEnv(t, "")
+	// The remote service's clock stands still unless the test moves it, so
+	// the poll-interval rule does not depend on how long a poll takes
+	// (client authentication hashes a secret, slow under -race).
+	var mu sync.Mutex
+	clock := time.Now()
+	now := func() time.Time { mu.Lock(); defer mu.Unlock(); return clock }
+	advance := func(d time.Duration) { mu.Lock(); clock = clock.Add(d); mu.Unlock() }
+	callerAddr.Store("203.0.113.7")
+	g := gwtest.StartWithRemoteClock(t, remoteTable, now)
+	e := &env{Gateway: g, public: g.Tunnel(func() string { return callerAddr.Load().(string) })}
 	e.enable()
 	resp, da := e.postForm(e.public+"/oauth/device_authorization", url.Values{"scope": {"smcp:template:remote"}}, gwtest.PreClientID, gwtest.PreSecret)
 	if resp.StatusCode != 200 || da["user_code"] == nil || da["verification_uri"] != e.public+"/oauth/device" {
@@ -465,6 +475,10 @@ func TestDeviceGrant(t *testing.T) {
 	}
 	if r, b := e.postForm(e.public+"/oauth/token", poll, gwtest.PreClientID, gwtest.PreSecret); b["error"] != "slow_down" {
 		t.Fatalf("fast poll %d %v", r.StatusCode, b)
+	}
+	advance(6 * time.Second) // past the 5 s interval: polling is allowed again
+	if r, b := e.postForm(e.public+"/oauth/token", poll, gwtest.PreClientID, gwtest.PreSecret); r.StatusCode != 400 || b["error"] != "authorization_pending" {
+		t.Fatalf("poll after the interval %d %v", r.StatusCode, b)
 	}
 	page, body := e.get(e.public + "/oauth/device?user_code=" + url.QueryEscape(da["user_code"].(string)))
 	if page.StatusCode != 200 || !bytes.Contains(body, []byte(gwtest.PreClientID)) {

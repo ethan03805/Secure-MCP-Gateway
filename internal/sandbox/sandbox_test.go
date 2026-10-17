@@ -467,6 +467,22 @@ func TestMonitorKillsOnPidsBreach(t *testing.T) {
 	eventually(t, 3*time.Second, "evidence", func() bool { return findEvent(h.mem.Events(), "limit_breach", ReasonPidsLimit) != nil })
 }
 
+// A pids limit hit before the monitor's first sample (a fork bomb at
+// startup) is a breach: the counters of the instance's fresh cgroup start
+// at zero, so the first sample is not taken as the baseline.
+func TestMonitorKillsOnPidsBreachBeforeFirstSample(t *testing.T) {
+	reqtest.Partial(t, "FR-5.35", "SR-4.7-2")
+	h := newHarness(t, testRuntime(), func(o *Options) { o.PodmanEnv["SMCP_FAKE_PIDS_MAX"] = "1" })
+	p, err := h.l.Launch(context.Background(), h.spec("pids"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	name := h.l.Instances()[0].Container
+	eventually(t, 3*time.Second, "kill", func() bool { return strings.Contains(h.kills(name), "KILL") })
+	eventually(t, 3*time.Second, "evidence", func() bool { return findEvent(h.mem.Events(), "limit_breach", ReasonPidsLimit) != nil })
+}
+
 func TestMonitorUndeclaredProcessAlertsOrKills(t *testing.T) {
 	reqtest.Partial(t, "FR-5.33", "FR-5.34", "FR-5.35")
 	for _, rule := range []string{ActionAlert, ActionKill} {

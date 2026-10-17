@@ -276,6 +276,9 @@ func fakeRunCmd(dir string, args []string) int {
 		"memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\n", "pids.events": "max 0\n",
 		"cpu.stat": "usage_usec 1234\nuser_usec 1000\nsystem_usec 234\n", "cgroup.procs": strconv.Itoa(pid) + "\n",
 	}
+	if v := os.Getenv("SMCP_FAKE_PIDS_MAX"); v != "" { // the pids limit was hit before the first sample
+		files["pids.events"] = "max " + v + "\n"
+	}
 	for f, v := range files {
 		_ = os.WriteFile(filepath.Join(cg, f), []byte(v), 0o600)
 	}

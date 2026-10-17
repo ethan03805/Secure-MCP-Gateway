@@ -144,6 +144,8 @@ type Engine struct {
 	cfg Config
 	now func() time.Time
 
+	saveMu sync.Mutex // serializes SaveState writes
+
 	mu       sync.Mutex
 	contexts map[string]*contextState
 	seq      map[string]*sequenceState

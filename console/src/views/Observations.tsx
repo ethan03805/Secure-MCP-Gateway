@@ -131,20 +131,38 @@ function Preview({ selected, catalog }: { selected: string[]; catalog: Parameter
         ) : (
           <DataTable
             caption="Recent records with the selected parameters"
-            rows={d.rows.slice(-20).map((r, i) => ({ r, i }))}
+            rows={(d.rows ?? []).slice(-20).map((r, i) => ({ r, i }))}
             rowKey={(x) => String(x.i)}
             empty="No record is stored yet. Records appear after tool calls when observation is enabled."
-            columns={cols.map((c) => ({
-              key: c,
-              label: c,
-              render: (x: { r: Record<string, unknown> }) => {
-                const v = x.r[c];
-                if (masked.has(byName.get(c)!.sensitivity)) return <span className="muted">masked ({byName.get(c)!.sensitivity})</span>;
-                if (v === null || v === undefined) return <span className="muted">null</span>;
-                const s = typeof v === "string" ? v : JSON.stringify(v);
-                return <Mono>{s.length > 40 ? s.slice(0, 39) + "…" : s}</Mono>;
+            initialSort="ts"
+            initialDir="desc"
+            columns={[
+              // The record time is always shown and sortable, whatever the
+              // selection (masked parameters do not sort).
+              {
+                key: "ts",
+                label: "Time",
+                sort: (x: { r: Record<string, unknown> }) => String(x.r.ts ?? ""),
+                render: (x: { r: Record<string, unknown> }) => <Mono>{String(x.r.ts ?? "")}</Mono>,
               },
-            }))}
+              ...cols.map((c) => ({
+                key: c,
+                label: c,
+                sort: masked.has(byName.get(c)!.sensitivity)
+                  ? undefined
+                  : (x: { r: Record<string, unknown> }) => {
+                      const v = x.r[c];
+                      return typeof v === "number" ? v : v === null || v === undefined ? "" : typeof v === "string" ? v : JSON.stringify(v);
+                    },
+                render: (x: { r: Record<string, unknown> }) => {
+                  const v = x.r[c];
+                  if (masked.has(byName.get(c)!.sensitivity)) return <span className="muted">masked ({byName.get(c)!.sensitivity})</span>;
+                  if (v === null || v === undefined) return <span className="muted">null</span>;
+                  const s = typeof v === "string" ? v : JSON.stringify(v);
+                  return <Mono>{s.length > 40 ? s.slice(0, 39) + "…" : s}</Mono>;
+                },
+              })),
+            ]}
           />
         )
       }

@@ -37,15 +37,30 @@ export function info(): GatewayInfo {
   return JSON.parse(readFileSync(infoFile, "utf8")) as GatewayInfo;
 }
 
-function freePort(): Promise<number> {
-  return new Promise((ok, fail) => {
+// Ports handed out by freePort in this run.
+const issued = new Set<number>();
+
+function bindable(port: number): Promise<boolean> {
+  return new Promise((ok) => {
     const s = createServer();
-    s.once("error", fail);
-    s.listen(0, "127.0.0.1", () => {
-      const a = s.address();
-      s.close(() => (typeof a === "object" && a ? ok(a.port) : fail(new Error("no port"))));
-    });
+    s.once("error", () => ok(false));
+    s.listen(port, "127.0.0.1", () => s.close(() => ok(true)));
   });
+}
+
+// freePort returns a bindable loopback port below the ephemeral range
+// (20000-32767) for a listener written into the configuration. A port from
+// listen(0) is in the ephemeral range, where smcpd's own port-0 listeners
+// (the egress proxy) can take it before the configured listener binds it,
+// which made smcpd exit at startup with "address already in use".
+async function freePort(): Promise<number> {
+  for (let i = 0; i < 500; i++) {
+    const p = 20000 + Math.floor(Math.random() * 12768);
+    if (issued.has(p)) continue;
+    issued.add(p);
+    if (await bindable(p)) return p;
+  }
+  throw new Error("no free loopback port below the ephemeral range");
 }
 
 function secretFile(name: string, value: string): string {

@@ -2,16 +2,19 @@
 // a listener address into a configuration before the listener opens.
 //
 // A port taken from a "127.0.0.1:0" listener and released is in the
-// operating system's ephemeral range, which outgoing connections also draw
-// their source ports from. Under load (go test ./... runs packages in
-// parallel, each making many connections), such a port is often in use as
-// a source port by the time the configured listener binds it, and the bind
-// fails with "address already in use". Free picks a random port below the
-// ephemeral range instead, checks that it can be bound, and never returns
-// the same port twice in one process.
+// operating system's ephemeral range, which outgoing connections and
+// listeners on port 0 also draw from. Under load (go test ./... runs
+// packages in parallel, each making many connections), such a port is often
+// in use by the time the configured listener binds it, and the bind fails
+// with "address already in use". Free picks a random port below the
+// ephemeral range instead and checks that it can be bound. It never returns
+// the same port twice in one process, and on Unix it reserves the port for
+// the life of the process with a lock on one byte of a shared file, so two
+// test processes running at once never hand out the same port either.
 package testport
 
 import (
+	"errors"
 	"math/rand/v2"
 	"net"
 	"os"
@@ -34,37 +37,44 @@ var (
 )
 
 // Free returns a loopback port that was bindable when checked and that no
-// earlier call in this process returned.
+// earlier call in this process, or in another process using this package
+// at the same time, returned.
 func Free(t testing.TB) int {
 	t.Helper()
+	p, err := Port()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// Port is Free for programs that are not tests (the agent conformance
+// runner): it returns an error instead of failing a test.
+func Port() (int, error) {
 	top := high
 	if l := ephemeralLow(); l > low+1000 && l < top {
 		top = l
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	for range 200 {
+	for range 500 {
 		p := low + rand.IntN(top-low) // #nosec G404 -- test port choice, not security relevant
 		if issued[p] {
 			continue
 		}
+		if !reserve(p) {
+			issued[p] = true // held by another process; do not try it again
+			continue
+		}
+		issued[p] = true
 		l, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(p)))
 		if err != nil {
 			continue
 		}
 		_ = l.Close()
-		issued[p] = true
-		return p
+		return p, nil
 	}
-	// Fall back to the kernel's choice.
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	p := l.Addr().(*net.TCPAddr).Port
-	issued[p] = true
-	return p
+	return 0, errors.New("testport: no free loopback port below the ephemeral range")
 }
 
 // ephemeralLow returns the low end of the Linux ephemeral port range, or 0.
