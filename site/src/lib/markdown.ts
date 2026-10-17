@@ -6,7 +6,10 @@ import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
 import GithubSlugger from "github-slugger";
+import path from "node:path";
+import { DOCS } from "./content";
 import { parseDiagram, withAutonumber, type ParsedDiagram } from "./diagram";
+import { REPO_URL } from "./site";
 
 export type TocEntry = { depth: number; text: string; id: string };
 
@@ -95,7 +98,42 @@ export function toc(md: string, maxDepth = 2): TocEntry[] {
   return out;
 }
 
-export async function renderMarkdown(md: string, opts: { dropTitle?: boolean; steps?: boolean } = {}): Promise<string> {
+type HastNode = { type: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[] };
+
+/**
+ * Map a link written relative to a repository file onto the site: a document
+ * the site renders goes to its page, anything else to the file on GitHub.
+ * Absolute URLs, in-page anchors and site paths are left alone.
+ */
+export function resolveRepoLink(href: string, fromFile: string): string {
+  if (!href || href.startsWith("#") || href.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(href)) return href;
+  const hashAt = href.indexOf("#");
+  const target = hashAt >= 0 ? href.slice(0, hashAt) : href;
+  const hash = hashAt >= 0 ? href.slice(hashAt) : "";
+  const repoPath = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), target));
+  if (repoPath.startsWith("..")) return href;
+  const doc = DOCS.find((d) => d.file === repoPath);
+  if (doc) return `/docs/${doc.slug}/${hash}`;
+  return `${REPO_URL}/blob/main/${repoPath.replace(/\/$/, "")}${hash}`;
+}
+
+/** rehype plugin: rewrite relative links with resolveRepoLink. */
+function rehypeRepoLinks(fromFile: string) {
+  return () => (tree: HastNode) => {
+    const walk = (n: HastNode) => {
+      if (n.type === "element" && n.tagName === "a" && typeof n.properties?.href === "string") {
+        n.properties.href = resolveRepoLink(n.properties.href, fromFile);
+      }
+      n.children?.forEach(walk);
+    };
+    walk(tree);
+  };
+}
+
+export async function renderMarkdown(
+  md: string,
+  opts: { dropTitle?: boolean; steps?: boolean; file?: string } = {},
+): Promise<string> {
   let src = md;
   if (opts.dropTitle) src = src.replace(/^# .*\n/, "");
   src = liftMermaid(src, opts.steps ?? false);
@@ -105,6 +143,7 @@ export async function renderMarkdown(md: string, opts: { dropTitle?: boolean; st
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeSlug)
+    .use(rehypeRepoLinks(opts.file ?? "README.md"))
     .use(rehypeStringify)
     .process(src);
   return String(file);

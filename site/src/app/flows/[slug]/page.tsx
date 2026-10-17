@@ -24,7 +24,7 @@ export default async function FlowPage({ params }: { params: Promise<{ slug: str
   const idx = flows.findIndex((x) => x.slug === slug);
   const f = flows[idx];
   if (!f) notFound();
-  const html = await renderMarkdown(f.markdown, { dropTitle: true, steps: true });
+  const html = await renderMarkdown(f.markdown, { dropTitle: true, steps: true, file: f.file });
   const steps = f.diagrams.reduce((a, d) => a + d.steps.length, 0);
   const prev = flows[idx - 1];
   const next = flows[idx + 1];

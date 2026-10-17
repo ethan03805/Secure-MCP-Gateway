@@ -1,6 +1,6 @@
 # Documentation
 
-User and operator documentation for the Secure MCP Gateway, and the data files that the SRS references. The documentation set is specified by SRS FR-18; the table shows which documents exist today.
+User and operator documentation for the Secure MCP Gateway, and the data files that the SRS references. The documentation set is specified by SRS FR-18.
 
 ## Scope of v1
 
@@ -8,37 +8,76 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 - Backends are **local** MCP servers that the Gateway launches from signed packages. Remote (hosted) MCP servers cannot be used as backends in v1.
 - macOS runs the Standalone (unconfined) profile, labelled "not enforced". Server containment requires the Enforced profile on Linux.
 
-## Documents
+## Start here
 
-| Document | Requirement | Status |
+| Document | For |
+|---|---|
+| [Install guide](install.md) | install.sh, Homebrew, building from source, the Linux enforced host, upgrade, rollback, uninstall (FR-18.1) |
+| [Quick start](quickstart.md) | Bootstrap, start, connect Claude Code or Codex, make a call, approve a held call, verify the journal |
+| [Operator guide](operator-guide.md) | Day-2 operation: accounts and roles, approvals, sessions, policy publication, packages, secrets, emergency stop, backups, keys, reload, logs and metrics, upgrade, remote access (FR-18.4) |
+| [Security Limitations](security-limitations.md) | What the Gateway does not protect against (FR-18.2) |
+| [Troubleshooting and reason codes](troubleshooting.md) | Every Appendix B error code and reason code with the next action (FR-18.7) |
+
+## Reference
+
+| Document | Requirement | Contents |
 |---|---|---|
-| [Security Limitations](security-limitations.md) | FR-18.2 | Written |
-| [Troubleshooting and reason codes](troubleshooting.md) | FR-18.7 | Written |
-| [Client quick starts](clients/README.md) | FR-18.3 | Written per client; no client run at a pinned version yet |
-| [Harness adapters](adapters.md): `smcp-session`, `smcp-stdio`, `smcp-connect` | FR-12.12, FR-12.13, FR-16.9 | Written |
-| [Client setup, lockdown and doctor](harness.md) | FR-15.1 to FR-15.7 | Written |
-| [Remote Access Profile](remote-access.md) and [remote control API](api/remote.md) | FR-16 | Written |
-| [Console visual rules](console-style.md) | FR-8.35 | Written |
-| [Tool-call approvals](approvals.md) and [approvals control API](api/approvals.md) | FR-3.14 to FR-3.24, FR-18.4 (part) | Written |
-| [Request and response filters](filters.md) | FR-4.4 to FR-4.18, SR-5.9-2, FR-1.52 | Written |
-| [Management console](console.md) and [console control API](api/console.md) | FR-8.1 to FR-8.35 (part), FR-18.4 (part) | Written for the views built so far |
-| [Graph mirror](graph.md) and [graph control API](api/graph.md) | FR-9.1 to FR-9.3, FR-9.18 (E-25, E-26, E-28 graph part) | Written |
-| [Real-agent conformance suite](agents-conformance.md) | FR-15.8, FR-15.10 (part) | Written; `scripts/agents` and the "Real agents" workflow |
-| [Secrets: vault and broker](secrets.md), [control API](api/secrets.md) | FR-6, FR-18.4 (part) | Written for E-19 and E-20 |
-| [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Format defined; no records yet |
-| [Flows](flows/) | — | Sequence diagrams of the main flows, each with the current implementation's differences |
-| [Server sandbox](sandbox.md) | FR-12.3, FR-13.5, SR-4.5-1 to SR-4.7-2 | Written: enforced-profile prerequisites, Linux installer, `[runtime]` configuration, sandbox profile, Runtime Monitor evidence, `smcpctl runtime` |
-| [Control API: runtime](api/runtime.md) | — | Written: `/api/v1/runtime*` routes |
-| Install guide (`install.md`) | FR-18.1 | To be written with the installer (FR-13) |
-| Operator guide (`operator-guide.md`) | FR-18.4 | To be written with the control API and console; the operations part (health, logs, metrics, keys, backups, reload, upgrade) is in [operations/](operations/README.md) |
-| [Policy reference](policy-reference.md) | FR-18.5 | Written for Framework Profiles and Session Allow Policy Templates, the Policy Store and `smcpctl policy` |
-| [Control API: policy routes](api/policy.md) | FR-18.5 | Written |
-| [Control API: operations routes](api/ops.md) | FR-18.4 | Written |
-| [Packaging guide](packaging-guide.md) | FR-18.6 | Written |
-| [Control API: packages](api/packages.md) | — | Written |
-| Runbooks (`runbooks/`) | FR-18.8 | [Backup and restore](runbooks/backup-restore.md), [key rotation](runbooks/key-rotation.md) and [upgrade rollback](runbooks/upgrade-rollback.md) written, without execution records yet; emergency stop and revocation to be written |
+| [Policy reference](policy-reference.md) | FR-18.5 | Policy document, evaluation, taint, rates and quotas, the Policy Store, `smcpctl policy` |
+| [Packaging guide](packaging-guide.md) | FR-18.6 | Recipes, build, sign, verify, trust anchors, import, enable, revoke; worked example with the reference servers |
+| [Tool-call approvals](approvals.md) | FR-3.14 to FR-3.24 | Hold mode, who can decide, `smcpctl approvals`, notifications |
+| [Request and response filters](filters.md) | FR-4.4 to FR-4.18, FR-1.52 | Every filter, rule sets and measured rates, `smcpctl filters` |
+| [Secrets: vault and broker](secrets.md) | FR-6 | Vault, Secret Use Policy, delivery modes S1 to S4, leak detection |
+| [Server sandbox](sandbox.md) | FR-12.3, FR-13.5, SR-4.5-1 to SR-4.7-2 | Enforced-profile prerequisites, Linux installer, `[runtime]`, sandbox profile, Runtime Monitor, `smcpctl runtime` |
+| [Egress Broker](egress.md) | E-18 | Grants, DNS and address checks, limits, evidence, `smcpctl egress` |
+| [Management console](console.md), [console visual rules](console-style.md) | FR-8 | Views, sign-in, roles |
+| [Graph mirror](graph.md) | FR-9.1 to FR-9.3, FR-9.18 | Neo4j mirror, catch-up and rebuild, canned queries, `smcpctl graph` |
+| [Observation and analytics](observation.md) | FR-10, FR-11 | Collector, store, baselines, anomaly scoring, research exports, `smcpctl observe` |
+| [Operations](operations/README.md) | FR-7.11 to FR-7.14, FR-13.7 to FR-13.13, FR-17 | Health, logs, metrics, reload, keys, backup, upgrade, uninstall |
+| [Remote Access Profile](remote-access.md) | FR-16 | Tunnel, remote listener, registrations, device sign-in, limits |
+| [Harness adapters](adapters.md) | FR-12.12, FR-12.13, FR-16.9 | `smcp-session`, `smcp-stdio`, `smcp-connect`, the credential file |
+| [Client setup, lockdown and doctor](harness.md) | FR-15.1 to FR-15.7 | `smcpctl clients setup`, `lockdown`, `doctor` |
+| [Real-agent conformance suite](agents-conformance.md) | FR-15.8, FR-15.10 | `scripts/agents`, the "Real agents" workflow, known client findings |
+| [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format; no records yet |
+
+## Client quick starts (FR-18.3)
+
+[clients/README.md](clients/README.md) is the index. One page per client of SRS Appendix K: [Claude Code](clients/claude-code.md), [Codex CLI](clients/codex.md), [Hermes](clients/hermes.md), [OpenCode](clients/opencode.md), [Gemini CLI](clients/gemini-cli.md), [Goose](clients/goose.md), [Grok Build](clients/grok-build.md), and [cloud agents](clients/cloud-agents.md) through the Remote Access Profile. Each covers connection, sign-in, CA trust, lockdown and `smcpctl doctor`. Results at pinned versions are in [clients/matrix.json](clients/matrix.json).
+
+## Runbooks (FR-18.8)
+
+| Runbook | Use when |
+|---|---|
+| [Emergency stop](runbooks/emergency-stop.md) | Tool execution must stop now |
+| [Package revocation](runbooks/revocation.md) | A server revision or its signing key must be withdrawn |
+| [Policy rollback](runbooks/policy-rollback.md) | A published policy is wrong, or the Gateway starts fail-closed with `policy_signature` |
+| [Key compromise](runbooks/key-compromise.md) | A key, token, password or secret may be exposed |
+| [Backup and restore](runbooks/backup-restore.md) | Taking a backup or restoring one |
+| [Key rotation](runbooks/key-rotation.md) | Scheduled rotation of the listener certificate, CA or evidence key |
+| [Upgrade rollback](runbooks/upgrade-rollback.md) | Upgrading, or an upgrade rolled back |
+
+FR-18.8 asks for a recorded execution of each runbook against the release commit. None is recorded yet; `scripts/ci-integration.sh` runs the backup, restore, rotation and upgrade steps on every pull request.
+
+## Control API
+
+Routes are on the loopback admin listener (default `https://127.0.0.1:8444`), authenticated with the operator token or a sign-in token.
+
+| Document | Routes |
+|---|---|
+| [api/approvals.md](api/approvals.md) | `/api/v1/approvals*` |
+| [api/policy.md](api/policy.md) | `/api/v1/policy*` |
+| [api/packages.md](api/packages.md) | `/api/v1/packages*` |
+| [api/secrets.md](api/secrets.md) | `/api/v1/secrets*` |
+| [api/runtime.md](api/runtime.md) | `/api/v1/runtime*` |
+| [api/egress.md](api/egress.md) | `/api/v1/egress*` |
+| [api/console.md](api/console.md) | `/api/v1/sessions*`, `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/audit/*` |
+| [api/ops.md](api/ops.md) | `/api/v1/health/*`, `/api/v1/keys*`, `/api/v1/backup*`, `/api/v1/config/reload` |
+| [api/graph.md](api/graph.md) | `/api/v1/graph*` |
+| [api/observation.md](api/observation.md) | `/api/v1/observations*`, `/api/v1/baselines*`, `/api/v1/anomalies*`, `/api/v1/research*` |
+| [api/remote.md](api/remote.md) | `/api/v1/remote*`, `/api/v1/clients*` |
 
 ## Flows
+
+Sequence diagrams of the main flows, each with the differences of the current implementation.
 
 | Flow | File |
 |---|---|
@@ -55,8 +94,8 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | File | Contents | Used by |
 |---|---|---|
 | [schemas/manifest.schema.json](schemas/manifest.schema.json) | JSON Schema of the server package manifest (SRS Appendix J) | E-13 import, `smcpctl package` |
-| [parameters.json](parameters.json) | Parameter Catalog: every observation parameter of ARCH §10.3 with its attributes (FR-10.37) | E-29, G-04, research export |
-| [status/elements.json](status/elements.json) | Implementation state of each element E-01 to E-33: `implemented`, `partial` or `not-started` | CI status data, project site |
-| [clients/matrix.json](clients/matrix.json) | Client matrix with pinned versions and latest results (FR-15.10) | Client matrix job, quick starts |
+| [parameters.json](parameters.json) | Parameter Catalog: every observation parameter of ARCH §10.3 with its attributes (FR-10.37); embedded in the binaries by `parameters.go` | E-29, E-27, E-32, G-04 |
+| [status/elements.json](status/elements.json) | Implementation state of each element E-01 to E-33: `implemented`, `partial` or `not-started`, with the packages and main gaps | CI status data, project site |
+| [clients/matrix.json](clients/matrix.json) | Client matrix with pinned versions and latest results (FR-15.10) | Real agents workflow, quick starts |
 
 The SRS build (`srs_build/gen.py`) checks `parameters.json`, `schemas/manifest.schema.json` and `status/elements.json`. Update `status/elements.json` in the same pull request that changes an element's implementation state.

@@ -1165,10 +1165,10 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-2.19 |
 | Parent ID | FR-2 — Identity and sessions |
-| Statement | The Session Manager (E-04) **SHALL** implement the authorization-code grant at the authorization endpoint with PKCE `S256` required, a `resource` parameter equal to the CP-41 resource URI required, the `iss` parameter in every authorization response, and a sign-in by a person holding the Session Approver or Administrator role (F-63) that records the approving person on the resulting session. |
+| Statement | The Session Manager (E-04) **SHALL** implement the authorization-code grant at the authorization endpoint with PKCE `S256` required, a `resource` parameter equal to the CP-41 resource URI required, the `iss` parameter in every authorization response, and a sign-in by a person holding a Session Approver account (F-63), refusing the Administrator account, that records the approving person on the resulting session. |
 | Allocation | Elements: E-04 Session Manager, E-24 Management Console & Control API; Functions: F-06, F-63; External interfaces: X-01, X-04 |
 | Verification Method | Test |
-| Verification Statement | Run the flow without PKCE, with a wrong `resource`, and correctly as a Session Approver; confirm the first two are refused, `iss` is present, the approver is recorded on the session, and an Auditor or Researcher account cannot complete the sign-in. |
+| Verification Statement | Run the flow without PKCE, with a wrong `resource`, and correctly as a Session Approver; confirm the first two are refused, `iss` is present, the approver is recorded on the session, and the Administrator, Auditor or Researcher account cannot complete the sign-in. |
 | Source | MCP:basic/authorization; RFC 9207; RFC 8707; SEC 2.11; CP-41 |
 | Rationale | Claude Code's v2 runtime validates `iss`. PKCE and resource binding are what the MCP authorization specification requires. |
 
@@ -7539,7 +7539,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 |---|---|---|---|
 | CP-01 | Northbound MCP endpoint path | `/mcp` | New |
 | CP-02 | Harness listeners | TLS: `127.0.0.1:8443`; UDS (profile): `/run/smcp/harness.sock` | New |
-| CP-03 | Admin listener | `127.0.0.1:9443` (TLS) | New |
+| CP-03 | Admin listener | `127.0.0.1:8444` (TLS; `[admin_listener] address`) | New |
 | CP-04 | Northbound supported protocol versions | `["2026-07-28", "2025-11-25"]`, both served in the baseline | SEC 5.1 |
 | CP-05 | Southbound protocol eras | Modern `2026-07-28`; legacy `2025-11-25` | SEC 5.1 |
 | CP-06 | Header limit / header deadline | 16 KiB / 5 s | SEC |
@@ -7581,10 +7581,10 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-42 | Public tool names | `<alias>_<tool>`; alias `[a-z0-9]{1,16}`; tool part `[A-Za-z0-9_]`; whole name ≤ 64 characters | New |
 | CP-43 | Adapter credential file | `$XDG_CONFIG_HOME/smcp/credentials.toml` (default `~/.config/smcp/`), mode 0600; refresh at 50% of access-token lifetime | New |
 | CP-44 | Manifest classes | Risk class `low`, `moderate` or `high`; `high` = general SQL, code or shell execution, CAD scripting, browser automation, or process spawning beyond the declared argument vector (SEC 3.13). Side-effect class per tool: `read`, `write`, `external`, `execute`. `source_trust` per tool: `trusted` (content originates from the operator's own data) or `untrusted` (content from the Internet, third parties or other agents) | New |
-| CP-45 | Approval hold | Hold bound 120 s (configurable 0 to 600 s; 0 disables hold); keep-alive interval 10 s; approval URL `https://127.0.0.1:9443/approvals/<approvalId>` | New |
+| CP-45 | Approval hold | Hold bound 120 s (`[limits] approval_hold`, configurable 0 to 600 s; 0 disables hold); keep-alive interval 10 s (`[approvals] keepalive`); approval URL `https://<CP-03 admin listener>/approvals/<approvalId>`, or `[approvals] console_url` followed by `/approvals/<approvalId>` when set | New |
 | CP-46 | Directories and service identities | **Enforced:** configuration `/etc/smcp` (root:smcp, 0750); state `/var/lib/smcp` with `policy/`, `registry/`, `artifacts/` (owner `smcp-core`, 0700), `journal/` (owner `smcp-evidence`, 0700), `keys/` (owner `smcp-keys`, 0700), `vault/` (owner `smcp-vault`, 0700), `exports/` (owner `smcp-core`, 0750); runtime `/run/smcp` (0750); logs `/var/log/smcp` (0750). Identities `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, and `smcp-srv` with a subordinate range of 65,536 UIDs and GIDs for rootless Podman. **Standalone macOS:** `~/Library/Application Support/smcp-gateway/` with `config/` and `state/`, logs `~/Library/Logs/smcp-gateway/`, all 0700. **Standalone Linux:** configuration `$XDG_CONFIG_HOME/smcp-gateway` (default `~/.config/smcp-gateway`), state `$XDG_STATE_HOME/smcp-gateway` (default `~/.local/state/smcp-gateway`) including `log/`, runtime `$XDG_RUNTIME_DIR/smcp-gateway`, all 0700 | New |
 | CP-47 | Upgrade bounds | Health wait after start 60 s; migration time limit 120 s | New |
-| CP-48 | Remote listener | `127.0.0.1:8444` (TLS, Remote Access Profile only); public name set by the operator | New |
+| CP-48 | Remote listener | The first of `127.0.0.1:8444` and `127.0.0.1:8445` that the CP-03 admin listener does not use (`127.0.0.1:8445` with the default admin listener; `[remote] address` overrides); TLS, Remote Access Profile only; public name set by the operator | New |
 | CP-49 | Remote limits | Calls 30/min per client ID, burst 5; OAuth endpoints 10 req/s per source address, burst 20; lockout after 5 consecutive failed sign-ins or token requests, for 15 min; body 256 KiB; headers 8 KiB; concurrency 4 per client, 16 total; remote session maximum lifetime 2 h, idle timeout 15 min | New |
 | CP-50 | Diagnostic log and reload | Rotate at 10 MiB, keep 5 files. Reloadable keys: `limits.*`, `server[].enabled`, `client[]`, `log.level`, `remote.limits.*`, `notify.*`. Restart required: listener addresses, `state.dir`, `profile` | New |
 | CP-51 | Metrics endpoint | `127.0.0.1:9464`, path `/metrics`; disabled by default | New |
@@ -7671,7 +7671,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | Publish / roll back policy | ✓ | — | ✓ | — | — | — | — |
 | Approve research campaign | ✓ | — | ✓ | — | — | — | — |
 | Decide tool-call approvals | ✓ | — | — | ✓ | — | — | — |
-| Approve harness sign-in (OAuth authorization) | ✓ | — | — | — | ✓ | — | — |
+| Approve harness sign-in (OAuth authorization) | — | — | — | — | ✓ | — | — |
 | Approve dynamic client registrations (Remote Access) | ✓ | — | — | — | ✓ | — | — |
 | Enable / suspend / retire servers; aliases | ✓ | Suspend only | — | — | — | — | — |
 | Enroll trust anchors | ✓ | — | — | — | — | — | — |
@@ -7688,7 +7688,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | Dataset export | ✓ | — | — | — | — | — | ✓ (approved campaigns) |
 | Purge | ✓ | — | — | — | — | — | — |
 
-One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver. Harness principals have no control-plane role (SR-2.5-1).
+One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver accounts. Each role is a separate account with its own password: the Administrator account itself cannot complete a harness sign-in (FR-2.19, FR-2.23), so the Administrator password is never typed into a harness sign-in page. Harness principals have no control-plane role (SR-2.5-1).
 
 ## Appendix D — Graph data model (mirror)
 
@@ -8715,7 +8715,7 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 | Security SHALL items without citing FR | None |
 | Barren functional roots (no children) | None |
 | Parameter Catalog (`docs/parameters.json`) | 92 parameters; all 92 ARCH §10.3 IDs present |
-| Implementation status (`docs/status/elements.json`) | not-started 16, partial 17 |
+| Implementation status (`docs/status/elements.json`) | partial 33 |
 | Elements without an allocated requirement | None |
 | Functions without an allocated requirement | None |
 | External interfaces without an allocated requirement | None |
@@ -8823,7 +8823,7 @@ The hostile fixture is an MCP server built into the test binary that behaves as 
 | HF-11 | Schema smuggling: deep nesting | Schema nested beyond the CP-36 depth | Tool definition refused at import | Both | SR-1.8-3 |
 | HF-12 | Schema smuggling: huge enum | Enum with more subschemas or members than CP-36 allows | Tool definition refused at import | Both | SR-1.8-3 |
 | HF-13 | Schema smuggling: `additionalProperties` games | Runtime schema loosens `additionalProperties` or adds `patternProperties` compared with the manifest | Drift suspension; arguments are validated against the packaged schema only | Both | SR-3.7-1, SR-3.8-1, SR-1.8-1 |
-| HF-14 | Public-name collision | A tool whose public name equals another server's public name | The colliding server is not enabled; the reason names both servers | Both | FR-1.49 |
+| HF-14 | Public-name collision | Two tools of one server whose names map to the same public name under FR-1.26 (for example `a.b` and `a_b`) | The revision is not enabled; the reason names both backend tool names | Both | FR-1.49 |
 | HF-15 | Cross-server shadowing | Descriptions that reference another server's public tool names or redefine their behavior | Blocking metadata rule matches; tool suspended | Both | SR-5.9-2 |
 | HF-16 | Oversized result | A result larger than CP-08 | Withheld with `-31003` `RESULT_TOO_LARGE`; nothing partial released | Both | SR-5.11-1, FR-4.10 |
 | HF-17 | Slow-drip response | Writes one byte per second | Call ends at the CP-13 deadline with `-31009` `UPSTREAM_TIMEOUT`; instance restarted | Both | FR-4.9, SR-7.2-1 |

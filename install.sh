@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install smcpd and smcpctl from a GitHub release of Secure MCP Gateway.
+# Install the Secure MCP Gateway binaries from a GitHub release.
 #
 #   curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh
 #   sh install.sh --version v0.1.0 --dir "$HOME/.local/bin"
@@ -27,7 +27,8 @@ usage() {
 usage: install.sh [--version <tag>] [--dir <path>] [--repo <owner/name>]
 
 Downloads a Secure MCP Gateway release for this OS and architecture,
-verifies its SHA-256 checksum and installs smcpd and smcpctl.
+verifies its SHA-256 checksum and installs smcpd, smcpctl, smcp-refserver
+and the harness adapters smcp-stdio, smcp-session and smcp-connect.
 
   --version <tag>   release tag to install (default: latest release)
   --dir <path>      installation directory (default: $HOME/.local/bin)
@@ -123,14 +124,14 @@ tar -xzf "$TMP/$ARCHIVE" -C "$TMP/x"
 if ! mkdir -p "$DIR" 2>/dev/null || [ ! -w "$DIR" ]; then
   say "$DIR is not writable by $(id -un)."
   say "Either choose a directory you own (--dir \"\$HOME/.local/bin\"), or install as root after reviewing the files:"
-  say "  sudo install -m 0755 $TMP/x/smcpd $TMP/x/smcpctl $DIR/"
+  say "  sudo install -m 0755 $TMP/x/smcp* $DIR/"
   trap - EXIT INT TERM
   say "(the extracted files are kept in $TMP/x for that command)"
   exit 1
 fi
 
 installed=""
-for b in smcpd smcpctl smcp-refserver; do
+for b in smcpd smcpctl smcp-refserver smcp-stdio smcp-session smcp-connect; do
   if [ -f "$TMP/x/$b" ]; then
     cp "$TMP/x/$b" "$DIR/$b.tmp.$$"
     chmod 0755 "$DIR/$b.tmp.$$"

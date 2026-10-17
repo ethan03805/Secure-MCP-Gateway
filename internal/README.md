@@ -51,6 +51,13 @@ keeps today's behavior, and test the default.
 | `gwtest` | tests | Starts a full Gateway with an in-process backend and a fake tunnel for tests. |
 | `e2e` | all | End-to-end tests over TLS with the test binary as a stdio backend. |
 | `egress` | E-18 | Egress Broker: per-instance forward proxy and destination endpoints, grants, pinned DNS, reserved-address refusal, limits, evidence, nftables confinement of sandbox namespaces, `/api/v1/egress` routes. See `docs/egress.md`. |
+| `sandbox` | E-15, E-16, E-17 | Rootless Podman launcher (`sandbox.Launcher`, `Confined() == true`), launch specification, Runtime Monitor (cgroup sampling, inotify, `podman events`), FR-5.27 shutdown, `sandbox.Doctor` prerequisite checks, `/api/v1/runtime*`. Selected by `[runtime] sandbox = "podman"`; see `docs/sandbox.md`. |
+| `observe` | E-29 | Observation Collector: an audit observer plus the mandatory `observe-request` and `observe-response` probes; one record per call with the computed Parameter Catalog parameters, sampling, capture escalation, drop counts, meta-metrics. |
+| `obsstore` | E-27 | Observation Store: day-partitioned write-once tables; DuckDB with Parquet (cgo) or JSON Lines (no cgo); aggregate queries; retention. |
+| `baseline` | E-30 | Behavior Baseline Engine: Welford and t-digest statistics, transforms, sealed snapshots, drift, promotion and rollback. |
+| `anomaly` | E-31 | Anomaly Scorer: snapshot load, z and robust z, CP-30 bands, asynchronous alerts and optional synchronous obligations. |
+| `research` | E-32 | Research Dataset Service: campaigns, pseudonymized exports (Parquet, CSV, JSON Lines, GraphML) with dictionary, manifest and checksums. |
+| `analytics` | E-27, E-29 to E-32 (wiring) | Builds SS-10 from `[observation]`, registers the probes and observer, and serves `/api/v1/observations*`, `/api/v1/baselines*`, `/api/v1/anomalies*`, `/api/v1/research*`; see `docs/observation.md`. |
 
 ## Call pipeline (FR-4.3)
 
@@ -92,11 +99,9 @@ Barrier: launch and release authorization hold `Gateway.gate` for reading;
 | Profile | `profile.Resolve(mode, launcher, confined, host)` | standalone on macOS or without a confining launcher | E-16 agent supplies the confining launcher; `[profile] mode = "enforced"` refuses to start without one. |
 | Egress | `pipeline.EgressAttacher` (`Attach(ctx, EgressRequest) (*EgressAttachment, error)`), `pipeline.EgressAware` (`SetEgress`) | `NoEgress`; with `[egress] enabled` the broker wraps unconfined launchers (advisory proxy variables) | E-16 agent: implement `EgressAware`, call `Attach` with the instance's `EgressNetwork` (network namespace path and a listen address reachable from it) before the server code runs, add `Env` to the instance, `Close` after exit. A failed `Attach` must fail the launch. |
 
-## Elements not yet started
+## Element status
 
-E-17 Runtime Monitor, E-18 Egress Broker, E-25 to E-28
-Data Server, E-29 to E-32 Observation and Analytics. E-17 and E-18 attach to the confining launcher; E-25 to E-29 attach as
-evidence observers and must not gate enforcement.
+Every element E-01 to E-33 has code; none is complete. `docs/status/elements.json` records each element's state and its main gaps, and the requirement report (`make status`, `build/reqreport.md`) lists which requirements tests verify, partly verify or leave unverified. The Data Server (E-25 to E-28) and SS-10 (E-29 to E-32) attach as evidence observers and must not gate enforcement.
 
 ## Residual gaps in what exists
 

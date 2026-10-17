@@ -6,7 +6,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 |---|---|---|---|
 | CP-01 | Northbound MCP endpoint path | `/mcp` | New |
 | CP-02 | Harness listeners | TLS: `127.0.0.1:8443`; UDS (profile): `/run/smcp/harness.sock` | New |
-| CP-03 | Admin listener | `127.0.0.1:9443` (TLS) | New |
+| CP-03 | Admin listener | `127.0.0.1:8444` (TLS; `[admin_listener] address`) | New |
 | CP-04 | Northbound supported protocol versions | `["2026-07-28", "2025-11-25"]`, both served in the baseline | SEC 5.1 |
 | CP-05 | Southbound protocol eras | Modern `2026-07-28`; legacy `2025-11-25` | SEC 5.1 |
 | CP-06 | Header limit / header deadline | 16 KiB / 5 s | SEC |
@@ -48,10 +48,10 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-42 | Public tool names | `<alias>_<tool>`; alias `[a-z0-9]{1,16}`; tool part `[A-Za-z0-9_]`; whole name ≤ 64 characters | New |
 | CP-43 | Adapter credential file | `$XDG_CONFIG_HOME/smcp/credentials.toml` (default `~/.config/smcp/`), mode 0600; refresh at 50% of access-token lifetime | New |
 | CP-44 | Manifest classes | Risk class `low`, `moderate` or `high`; `high` = general SQL, code or shell execution, CAD scripting, browser automation, or process spawning beyond the declared argument vector (SEC 3.13). Side-effect class per tool: `read`, `write`, `external`, `execute`. `source_trust` per tool: `trusted` (content originates from the operator's own data) or `untrusted` (content from the Internet, third parties or other agents) | New |
-| CP-45 | Approval hold | Hold bound 120 s (configurable 0 to 600 s; 0 disables hold); keep-alive interval 10 s; approval URL `https://127.0.0.1:9443/approvals/<approvalId>` | New |
+| CP-45 | Approval hold | Hold bound 120 s (`[limits] approval_hold`, configurable 0 to 600 s; 0 disables hold); keep-alive interval 10 s (`[approvals] keepalive`); approval URL `https://<CP-03 admin listener>/approvals/<approvalId>`, or `[approvals] console_url` followed by `/approvals/<approvalId>` when set | New |
 | CP-46 | Directories and service identities | **Enforced:** configuration `/etc/smcp` (root:smcp, 0750); state `/var/lib/smcp` with `policy/`, `registry/`, `artifacts/` (owner `smcp-core`, 0700), `journal/` (owner `smcp-evidence`, 0700), `keys/` (owner `smcp-keys`, 0700), `vault/` (owner `smcp-vault`, 0700), `exports/` (owner `smcp-core`, 0750); runtime `/run/smcp` (0750); logs `/var/log/smcp` (0750). Identities `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, and `smcp-srv` with a subordinate range of 65,536 UIDs and GIDs for rootless Podman. **Standalone macOS:** `~/Library/Application Support/smcp-gateway/` with `config/` and `state/`, logs `~/Library/Logs/smcp-gateway/`, all 0700. **Standalone Linux:** configuration `$XDG_CONFIG_HOME/smcp-gateway` (default `~/.config/smcp-gateway`), state `$XDG_STATE_HOME/smcp-gateway` (default `~/.local/state/smcp-gateway`) including `log/`, runtime `$XDG_RUNTIME_DIR/smcp-gateway`, all 0700 | New |
 | CP-47 | Upgrade bounds | Health wait after start 60 s; migration time limit 120 s | New |
-| CP-48 | Remote listener | `127.0.0.1:8444` (TLS, Remote Access Profile only); public name set by the operator | New |
+| CP-48 | Remote listener | The first of `127.0.0.1:8444` and `127.0.0.1:8445` that the CP-03 admin listener does not use (`127.0.0.1:8445` with the default admin listener; `[remote] address` overrides); TLS, Remote Access Profile only; public name set by the operator | New |
 | CP-49 | Remote limits | Calls 30/min per client ID, burst 5; OAuth endpoints 10 req/s per source address, burst 20; lockout after 5 consecutive failed sign-ins or token requests, for 15 min; body 256 KiB; headers 8 KiB; concurrency 4 per client, 16 total; remote session maximum lifetime 2 h, idle timeout 15 min | New |
 | CP-50 | Diagnostic log and reload | Rotate at 10 MiB, keep 5 files. Reloadable keys: `limits.*`, `server[].enabled`, `client[]`, `log.level`, `remote.limits.*`, `notify.*`. Restart required: listener addresses, `state.dir`, `profile` | New |
 | CP-51 | Metrics endpoint | `127.0.0.1:9464`, path `/metrics`; disabled by default | New |
@@ -138,7 +138,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | Publish / roll back policy | ✓ | — | ✓ | — | — | — | — |
 | Approve research campaign | ✓ | — | ✓ | — | — | — | — |
 | Decide tool-call approvals | ✓ | — | — | ✓ | — | — | — |
-| Approve harness sign-in (OAuth authorization) | ✓ | — | — | — | ✓ | — | — |
+| Approve harness sign-in (OAuth authorization) | — | — | — | — | ✓ | — | — |
 | Approve dynamic client registrations (Remote Access) | ✓ | — | — | — | ✓ | — | — |
 | Enable / suspend / retire servers; aliases | ✓ | Suspend only | — | — | — | — | — |
 | Enroll trust anchors | ✓ | — | — | — | — | — | — |
@@ -155,7 +155,7 @@ Standard codes used: `-32700`, `-32600`, `-32601`, `-32602`, `-32603`, `-32020` 
 | Dataset export | ✓ | — | — | — | — | — | ✓ (approved campaigns) |
 | Purge | ✓ | — | — | — | — | — | — |
 
-One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver. Harness principals have no control-plane role (SR-2.5-1).
+One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver accounts. Each role is a separate account with its own password: the Administrator account itself cannot complete a harness sign-in (FR-2.19, FR-2.23), so the Administrator password is never typed into a harness sign-in page. Harness principals have no control-plane role (SR-2.5-1).
 
 ## Appendix D — Graph data model (mirror)
 
