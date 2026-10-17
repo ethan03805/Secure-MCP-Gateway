@@ -152,7 +152,8 @@ ensure_dir /var/lib/smcp/exports smcp-core "$group" 0750
 # The Gateway's state directory (state.dir) and smcp-core's home, which
 # holds rootless Podman's container storage.
 ensure_dir /var/lib/smcp/state smcp-core "$group" 0700
-ensure_dir /var/lib/smcp/home smcp-core "$group" 0700
+# Parent of the service homes: smcp-srv must reach its own home below it.
+ensure_dir /var/lib/smcp/home root root 0755
 ensure_dir /var/lib/smcp/home/smcp-core smcp-core "$group" 0700
 ensure_dir /var/log/smcp smcp-core "$group" 0750
 
