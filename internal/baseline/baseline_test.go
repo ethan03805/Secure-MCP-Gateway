@@ -374,15 +374,33 @@ func TestSnapshotTriggersAndImmutability(t *testing.T) {
 	loader := &memLoader{}
 	m, mem := newManager(t, dir, ManagerOptions{Records: 100, Interval: 50 * time.Millisecond, Loader: loader}, cfg)
 
-	// Record count.
+	built := func() int {
+		n := 0
+		for _, ev := range mem.Events() {
+			if ev.Outcome == "snapshot_built" {
+				n++
+			}
+		}
+		return n
+	}
+	// Record count. The build runs in the background; Wait returns when its
+	// snapshot is stored and its event recorded.
 	feed(m, 100, 10, 1, 1)
-	waitFor(t, func() bool { l, _ := m.Store().List(); return len(l) == 1 })
-	// Interval.
-	ctx, cancel := contextWithCancel()
-	go m.Run(ctx)
+	m.Wait()
+	if l, _ := m.Store().List(); len(l) != 1 || built() != 1 {
+		t.Fatalf("after the record-count build: %d snapshots, %d events", len(l), built())
+	}
+	// Interval. Run is stopped, and has returned (it saves the state on
+	// the way out), before the next step.
+	// The records are learned before Run starts, so that one tick builds
+	// them all.
 	feed(m, 10, 10, 1, 2)
-	waitFor(t, func() bool { l, _ := m.Store().List(); return len(l) == 2 })
+	ctx, cancel := contextWithCancel()
+	runDone := make(chan struct{})
+	go func() { defer close(runDone); m.Run(ctx) }()
+	waitFor(t, func() bool { return built() == 2 })
 	cancel()
+	<-runDone
 	// Operator command.
 	res, err := m.BuildSnapshot("operator", "admin:test")
 	if err != nil {
@@ -419,14 +437,9 @@ func TestSnapshotTriggersAndImmutability(t *testing.T) {
 	if err := m.Store().Save(snap); err == nil {
 		t.Fatal("snapshot overwritten")
 	}
-	built := 0
-	for _, ev := range mem.Events() {
-		if ev.Outcome == "snapshot_built" {
-			built++
-		}
-	}
-	if built != 3 {
-		t.Fatalf("%d snapshot_built events", built)
+	m.Wait()
+	if n := built(); n != 3 {
+		t.Fatalf("%d snapshot_built events", n)
 	}
 }
 

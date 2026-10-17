@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
 
 // Policy of the conformance run. One template grants three reference-server
@@ -100,14 +100,12 @@ type gateway struct {
 	hc                    *http.Client
 }
 
-func freePort() (int, error) {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
-}
+// freePort returns a loopback port below the ephemeral range for a
+// listener written into the configuration. A port from a "127.0.0.1:0"
+// listener is in the ephemeral range, where smcpd's own port-0 listeners
+// (the egress proxy) and outgoing connections can take it before the
+// configured listener binds it.
+func freePort() (int, error) { return testport.Port() }
 
 func newPassword() string { return "agents-" + randomString(18) }
 

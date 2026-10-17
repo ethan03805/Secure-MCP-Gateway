@@ -86,8 +86,11 @@ password_hash = %q
 [policy]
 file = %q
 [limits]
-upstream_timeout = "2s"
-client_deadline = "3s"
+# No observation test exercises the timeouts. The backend is this test
+# binary (built with -race in CI), so a call can stall past a 2 s bound on
+# a loaded machine; the bounds are generous.
+upstream_timeout = "30s"
+client_deadline = "35s"
 principal_calls_per_minute = 100000
 [[principal]]
 id = "cc"

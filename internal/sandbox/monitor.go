@@ -177,8 +177,11 @@ func (m *Monitor) sampleOnce(in *Instance, failures *int) {
 func (m *Monitor) evaluate(in *Instance, s Sample) {
 	in.mu.Lock()
 	if !in.baseSet {
-		// Counters before the first sample (normally zero) are the baseline.
-		in.base, in.baseSet = s, true
+		// Every instance runs in a container cgroup of its own, created
+		// with the container, so its event counters start at zero and the
+		// baseline stays zero: a breach between the start and the first
+		// sample (a fork bomb at startup) is a breach, not the baseline.
+		in.baseSet = true
 		if in.seen == nil {
 			in.seen = map[int]bool{}
 		}

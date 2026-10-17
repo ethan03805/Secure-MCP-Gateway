@@ -42,6 +42,12 @@ type stateJSON struct {
 
 // SaveState writes the candidate statistics to path (0600, atomic).
 func (e *Engine) SaveState(path string) error {
+	// Saves run from the build goroutine, the interval loop and Close.
+	// They are serialized (the state taken last is written last) and each
+	// writes its own temporary file, so a rename never moves another
+	// save's partly written file into place.
+	e.saveMu.Lock()
+	defer e.saveMu.Unlock()
 	e.mu.Lock()
 	st := stateJSON{Version: 1, Config: e.cfg, Contexts: map[string]*contextJSON{}, Seq: map[string]map[string]map[string]int64{},
 		Flagged: map[string]time.Time{}, Learned: e.learned, Excluded: copyCounts(e.excluded), From: e.from, To: e.to}
@@ -77,11 +83,22 @@ func (e *Engine) SaveState(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
+	f, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	tmp := f.Name()
+	_, err = f.Write(raw)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
+		_ = os.Remove(tmp)
+	}
+	return err
 }
 
 // LoadState restores candidate statistics saved by SaveState. A state file

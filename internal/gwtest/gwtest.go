@@ -112,6 +112,15 @@ func Backend() *mcp.Server {
 // address.
 func Start(t *testing.T, remoteTOML string) *Gateway {
 	t.Helper()
+	return StartWithRemoteClock(t, remoteTOML, nil)
+}
+
+// StartWithRemoteClock is Start with the clock of the remote access
+// service replaced (nil: the real clock), for tests of its time rules
+// (device-code poll interval) that must not depend on how fast the test
+// machine is.
+func StartWithRemoteClock(t *testing.T, remoteTOML string, now func() time.Time) *Gateway {
+	t.Helper()
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
 	if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
@@ -185,7 +194,7 @@ command = "/gwtest/backend"
 		t.Fatal(err)
 	}
 	g.App = a
-	if g.Remote, err = remote.New(remote.Options{Config: cfg, Store: a.Store, Evidence: a.Evidence, Gateway: a.Gateway, Log: diag.Discard()}); err != nil {
+	if g.Remote, err = remote.New(remote.Options{Config: cfg, Store: a.Store, Evidence: a.Evidence, Gateway: a.Gateway, Log: diag.Discard(), Now: now}); err != nil {
 		cancel()
 		a.Close()
 		t.Fatal(err)

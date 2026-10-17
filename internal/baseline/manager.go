@@ -36,6 +36,9 @@ type Manager struct {
 	store *SnapshotStore
 	o     ManagerOptions
 
+	buildMu sync.Mutex     // one build at a time, whatever its trigger
+	bg      sync.WaitGroup // record-count builds running in the background
+
 	mu          sync.Mutex
 	rec         audit.Recorder
 	sinceBuild  int64
@@ -131,7 +134,9 @@ func (m *Manager) Learn(s Sample, info LearnInfo) (bool, string) {
 	}
 	m.mu.Unlock()
 	if due {
+		m.bg.Add(1)
 		go func() {
+			defer m.bg.Done()
 			if _, err := m.BuildSnapshot("records", "E-30"); err != nil {
 				m.o.Log.Error("baseline snapshot build failed", "err", err)
 			}
@@ -185,6 +190,8 @@ type BuildResult struct {
 // BuildSnapshot freezes, seals and stores a snapshot, reports its drift and
 // promotes it automatically when the automatic limits allow.
 func (m *Manager) BuildSnapshot(trigger, actor string) (BuildResult, error) {
+	m.buildMu.Lock()
+	defer m.buildMu.Unlock()
 	defer func() {
 		m.mu.Lock()
 		m.building = false
@@ -322,5 +329,12 @@ func (m *Manager) LifecycleStatus() ManagerStatus {
 	return st
 }
 
-// Close saves the candidate state.
-func (m *Manager) Close() error { return m.SaveState(m.statePath()) }
+// Wait returns when the record-count builds started so far have finished
+// (snapshot stored and its snapshot_built event recorded).
+func (m *Manager) Wait() { m.bg.Wait() }
+
+// Close waits for background builds, then saves the candidate state.
+func (m *Manager) Close() error {
+	m.Wait()
+	return m.SaveState(m.statePath())
+}
