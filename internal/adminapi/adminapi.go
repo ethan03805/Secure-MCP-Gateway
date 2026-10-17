@@ -108,8 +108,10 @@ type Server struct {
 	operator  [32]byte
 	mux       *http.ServeMux
 
-	rev      atomic.Uint64 // control-state revision (browser.go)
+	rev      atomic.Uint64 // control-state sequence (revision.go)
 	revEpoch string
+	revMu    sync.Mutex
+	changed  map[string]uint64 // object key -> sequence of its last change (revision.go)
 
 	mu       sync.Mutex
 	sessions map[[32]byte]adminSession
@@ -146,7 +148,7 @@ func New(o Options) (*Server, error) {
 	}
 	s := &Server{cfg: o.Config, ctl: o.Controller, rec: o.Evidence, guard: o.Guard, approvals: o.Approvals, log: o.Log, now: o.Now,
 		operator: sha256.Sum256([]byte(tok)), mux: http.NewServeMux(), sessions: map[[32]byte]adminSession{}, browser: map[[32]byte]*browserSession{},
-		revEpoch: ids.Secret()[:8]}
+		revEpoch: ids.Secret()[:8], changed: map[string]uint64{}}
 	s.HandlePublic("POST /admin/v1/login", s.login)
 	s.HandlePublic("POST /admin/v1/bootstrap", s.bootstrap)
 	s.HandlePublic("POST /admin/v1/session/logout", s.browserLogout)

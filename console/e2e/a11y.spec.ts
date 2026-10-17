@@ -63,12 +63,12 @@ for (const scheme of ["light", "dark"] as const) {
 // control must show an outline or ring whose color has at least 3:1
 // contrast against the background behind it (WCAG 1.4.11), and no element
 // may carry a positive tabindex (which would break DOM focus order, WCAG
-// 2.4.3). WebKit is skipped: it moves Tab only between form controls unless
-// the macOS keyboard setting is changed, so links are not reachable by Tab
-// there by design.
+// 2.4.3). WebKit moves Tab only between form controls unless the macOS
+// "keyboard navigation" setting is on; Option+Tab moves through every
+// control, as that setting does, so the WebKit run presses Alt+Tab.
 for (const scheme of ["light", "dark"] as const) {
   test(`every control of each view is reached by Tab with a visible, contrasting focus indicator (${scheme})`, async ({ page, browserName }) => {
-    test.skip(browserName === "webkit", "WebKit tabs only between form controls by default");
+    const tab = browserName === "webkit" ? "Alt+Tab" : "Tab";
     test.setTimeout(900_000);
     test.info().annotations.push({ type: "requirement-partial", description: "FR-8.32" }, { type: "requirement-partial", description: "FR-8.33" });
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
@@ -112,7 +112,7 @@ for (const scheme of ["light", "dark"] as const) {
       if (positive.length) problems.push(`${p}: positive tabindex on ${positive.join(", ")}`);
       const seen = new Set<string>();
       for (let i = 0; i < count + 1 && seen.size < count; i++) {
-        await page.keyboard.press("Tab");
+        await page.keyboard.press(tab);
         const f = await page.evaluate(() => {
           const el = document.activeElement as HTMLElement | null;
           if (!el || el === document.body) return null;

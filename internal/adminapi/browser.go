@@ -22,24 +22,21 @@ package adminapi
 //     the session immediately.
 //   - Every state-changing request (POST, PUT, PATCH, DELETE) of a browser
 //     session must carry the session's CSRF token in X-CSRF-Token and an
-//     If-Match precondition naming the current control-state revision.
+//     If-Match precondition naming a revision at which the session read the
+//     object it changes.
 //
-// The control-state revision is an entity tag sent as ETag on every control
-// API response. It changes with every state-changing request that passes
-// authentication and the role check, from any client. A browser mutation
-// whose If-Match names an older revision is refused with 412 and the current
-// ETag, so a console that has not seen another actor's change re-reads
-// before it writes. Sign-out routes are exempt from If-Match (they change no
-// Gateway state) but not from the CSRF token.
+// Revisions are per object (revision.go): a browser mutation is refused
+// with 412 only when its own object changed after the revision it names, so
+// a change to an unrelated object does not force a re-read. Sign-out routes
+// are exempt from If-Match (they change no Gateway state) but not from the
+// CSRF token.
 
 import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -106,25 +103,6 @@ func isMutation(method string) bool {
 }
 
 func isLogout(path string) bool { return strings.HasSuffix(path, "/logout") }
-
-// Revision returns the current control-state revision as an entity tag.
-func (s *Server) Revision() string {
-	return `"` + s.revEpoch + "-" + strconv.FormatUint(s.rev.Load(), 10) + `"`
-}
-
-// matchRevision reports whether an If-Match value names the current
-// revision, and advances the revision when it does (compare and swap, so
-// that of two concurrent mutations with the same tag only one passes).
-func (s *Server) matchRevision(ifMatch string) bool {
-	cur := s.rev.Load()
-	want := `"` + s.revEpoch + "-" + strconv.FormatUint(cur, 10) + `"`
-	for _, t := range strings.Split(ifMatch, ",") {
-		if strings.TrimSpace(t) == want {
-			return s.rev.CompareAndSwap(cur, cur+1)
-		}
-	}
-	return false
-}
 
 // tokenActor resolves a bearer token: the operator token, an administrator
 // session token or a registered authenticator's token.
@@ -423,34 +401,4 @@ func (s *Server) browserActor(w http.ResponseWriter, r *http.Request) (actor, ro
 		clearSessionCookie(w)
 	}
 	return bs.actor, bs.role, r.WithContext(ctx), func() { stop(); cancel() }, true
-}
-
-// precondition applies SR-8.9-1's If-Match to browser mutations and moves
-// the revision forward for every other mutation. It answers and returns
-// false when the request must not proceed.
-func (s *Server) precondition(w http.ResponseWriter, r *http.Request) bool {
-	if !isMutation(r.Method) {
-		return true
-	}
-	if isLogout(r.URL.Path) {
-		return true
-	}
-	if _, browser := BrowserSessionOf(r); !browser {
-		s.rev.Add(1)
-		w.Header().Set("ETag", s.Revision())
-		return true
-	}
-	im := r.Header.Get("If-Match")
-	switch {
-	case im == "":
-		w.Header().Set("ETag", s.Revision())
-		writeError(w, http.StatusPreconditionRequired, "precondition_required", "browser requests that change state must send If-Match with the current ETag")
-		return false
-	case !s.matchRevision(im):
-		w.Header().Set("ETag", s.Revision())
-		writeError(w, http.StatusPreconditionFailed, "revision_stale", fmt.Sprintf("the Gateway state changed since revision %s; reload and retry", im))
-		return false
-	}
-	w.Header().Set("ETag", s.Revision())
-	return true
 }

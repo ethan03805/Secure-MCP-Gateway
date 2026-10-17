@@ -12,12 +12,13 @@
 // anchor enrollment with the fingerprint confirmation (FR-7.10) and
 // removal; Escape closes a dialog and returns focus (no keyboard trap).
 import AxeBuilder from "@axe-core/playwright";
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { bin, work } from "./gateway";
-import { claims, forget, g } from "./helpers";
+import { bin, mcpCall, work } from "./gateway";
+import { claims, forget, g, mock, signIn } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -237,4 +238,546 @@ test("console actions complete with the keyboard alone and every intermediate st
   await axe(page, "signed out");
   forget("administrator");
   console.log(`keyboard flows (${browserName}): ${states} states passed axe`);
+});
+
+// The remaining actions of the acceptance tests, view by view, with
+// keyboard events only and axe on every intermediate state. These tests
+// reuse the session cookie the helpers cache (the keyboard sign-in is the
+// first test's); every action after it is a key press.
+
+/** Focuses a text field by Tab, clears it and types the new value. */
+async function typeInto(page: Page, field: Locator, text: string, check = true) {
+  await tabTo(page, field);
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.press("Backspace");
+  if (text) await page.keyboard.type(text);
+  if (check) await expect(field).toHaveValue(text);
+}
+
+/** Chooses an option of a focused select by typing its label (type-ahead works on every engine). */
+async function choose(page: Page, select: Locator, label: string, value: string) {
+  await tabTo(page, select);
+  await page.keyboard.type(label);
+  await expect(select).toHaveValue(value);
+  // A pause ends the type-ahead run, so the next select starts afresh.
+  await page.waitForTimeout(1100);
+}
+
+/** Presses Space on a checkbox reached by Tab until it has the wanted state. */
+async function setCheck(page: Page, box: Locator, on = true) {
+  await tabTo(page, box);
+  if ((await box.isChecked()) !== on) await page.keyboard.press("Space");
+  if (on) await expect(box).toBeChecked();
+  else await expect(box).not.toBeChecked();
+}
+
+/** Activates a control reached by Tab with Enter. */
+async function activate(page: Page, control: Locator) {
+  await tabTo(page, control);
+  await page.keyboard.press("Enter");
+}
+
+async function startIn(page: Page, browserName: string, view: string, heading: string | RegExp) {
+  tabKey = browserName === "webkit" ? "Alt+Tab" : "Tab";
+  states = 0;
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await signIn(page, "/");
+  await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
+  await navTo(page, view, heading);
+}
+
+test("G-04 observation workbench with the keyboard: search, presets, scope, bands, features and publish", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.6", "FR-8.8", "FR-8.11");
+  test.setTimeout(600_000);
+  await startIn(page, browserName, "Observation workbench", "Observation workbench");
+  await axe(page, "G-04 loaded");
+  await typeInto(page, page.getByLabel(/Search parameters/), "latency");
+  await expect(page.getByRole("checkbox", { name: "Capture end_to_end_latency" })).toBeVisible();
+  await axe(page, "G-04 searched");
+  await setCheck(page, page.getByRole("checkbox", { name: "Capture end_to_end_latency" }));
+  await typeInto(page, page.getByLabel(/Search parameters/), "");
+  await activate(page, page.getByRole("button", { name: "Performance profiling" }));
+  await expect(page.getByText(/Applied preset Performance profiling/)).toBeVisible();
+  await axe(page, "G-04 preset applied");
+  const preset = `kbd preset ${browserName}`;
+  await typeInto(page, page.getByLabel("Save the selection as a preset"), preset);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: `${preset} (saved)` })).toBeVisible();
+  await axe(page, "G-04 preset saved");
+  await activate(page, page.getByRole("button", { name: "Show the configuration for this selection" }));
+  await expect(page.getByText(/parameters = \[/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Live record preview" })).toBeVisible();
+  await axe(page, "G-04 configuration and preview shown");
+  await typeInto(page, page.getByLabel("Normal-band sampling rate (0 to 1)"), "0.5");
+  await typeInto(page, page.getByLabel("critical band from |z|"), "6");
+  await setCheck(page, page.getByRole("checkbox", { name: "server", exact: true }));
+  const principals = page.getByRole("group", { name: "Principals" }).getByRole("checkbox");
+  await setCheck(page, principals.first());
+  await setCheck(page, page.getByRole("group", { name: "Tools" }).getByRole("checkbox", { name: "ref/echo", exact: true }));
+  await axe(page, "G-04 scope chosen");
+  await activate(page, page.locator("summary", { hasText: "Escalation parameters per band" }));
+  const escRow = page.getByRole("table", { name: "Escalation parameters per band" }).getByRole("row").nth(1);
+  const escParam = (await escRow.getByRole("cell").first().innerText()).trim();
+  await setCheck(page, escRow.getByRole("checkbox", { name: `${escParam} abnormal` }));
+  await activate(page, page.locator("summary", { hasText: "Baselined features and statistics" }));
+  await choose(page, page.getByLabel("request_bytes transform"), "none", "none");
+  await setCheck(page, page.getByRole("checkbox", { name: "request_bytes robust statistics" }));
+  await typeInto(page, page.getByLabel("request_bytes sigma floor"), "0.75");
+  await axe(page, "G-04 bands and features set");
+  const form = page.getByRole("form", { name: "Publish the Observation Policy" });
+  await activate(page, form.getByRole("button", { name: "Publish the Observation Policy" }));
+  await expect(page.getByText(/Published Observation Policy revision \d+/)).toBeVisible();
+  await axe(page, "G-04 published");
+  const revs = await page.evaluate(() => fetch("/api/v1/observations/objects/observation_policy").then((r) => r.json()));
+  const body = (revs.revisions ?? revs)[0].body;
+  expect(body.sampling_rate).toBe(0.5);
+  expect(body.bands).toEqual([2, 3, 6]);
+  expect(body.escalation).toEqual({ abnormal: [escParam] });
+  expect(body.features.find((f: { parameter: string }) => f.parameter === "request_bytes")).toMatchObject({ transform: "none", robust: true, sigma_floor: 0.75 });
+  console.log(`G-04 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-05 behavior analytics with the keyboard: build, promote and drill down", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.13");
+  test.setTimeout(300_000);
+  await startIn(page, browserName, "Behavior analytics", "Behavior analytics");
+  await axe(page, "G-05 loaded");
+  await activate(page, page.getByRole("button", { name: "Build a snapshot now" }));
+  await expect(page.getByText(/Built snapshot/)).toBeVisible();
+  await axe(page, "G-05 snapshot built");
+  await activate(page, page.getByRole("table", { name: "Baseline snapshots" }).getByRole("button", { name: "Promote" }).first());
+  await expect(page.getByText(/is promoted/)).toBeVisible();
+  await axe(page, "G-05 promoted");
+  // Scored anomalies need a characterized baseline; a fixture stands in.
+  await mock(page, "**/api/v1/anomalies?**", {
+    count: 1,
+    rows: [{ ts: new Date(Date.now() - 30_000).toISOString(), correlation_id: "corr-kbd", snapshot_id: "s", context: "principal=cc|tool=read_file", combined: 6.2, contributing_feature: "request_bytes", band: "critical", actions: '["alert"]', mode: "async" }],
+  });
+  await navTo(page, "Gateway control", "Gateway control");
+  await navTo(page, "Behavior analytics", "Behavior analytics");
+  await expect(page.getByRole("table", { name: "Abnormal events" })).toContainText("critical");
+  await axe(page, "G-05 abnormal events");
+  await activate(page, page.getByRole("button", { name: /^critical 6.20/ }));
+  await expect(page).toHaveURL(/\/audit\?correlation_id=corr-kbd/);
+  await axe(page, "G-05 drilled down");
+  console.log(`G-05 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-09 research campaigns with the keyboard: create, submit, approve and export", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.17");
+  test.setTimeout(600_000);
+  await startIn(page, browserName, "Research campaigns", "Research campaigns");
+  await axe(page, "G-09 loaded");
+  await activate(page, page.getByRole("link", { name: "New campaign" }));
+  const name = `kbd campaign ${browserName}`;
+  await typeInto(page, page.getByLabel("Name", { exact: true }), name);
+  await typeInto(page, page.getByLabel("Start (RFC 3339)"), new Date(Date.now() - 60_000).toISOString().replace(/\.\d{3}Z$/, "Z"));
+  await axe(page, "G-09 draft filled");
+  await activate(page, page.getByRole("button", { name: "Create draft campaign" }));
+  await expect(page.getByRole("heading", { level: 1, name: `Campaign ${name}` })).toBeVisible();
+  await axe(page, "G-09 draft created");
+  await activate(page, page.getByRole("button", { name: "Submit for approval" }));
+  await expect(page.getByText("The campaign is now submitted.")).toBeVisible();
+  await axe(page, "G-09 submitted");
+  await activate(page, page.getByRole("button", { name: "Approve" }));
+  await expect(page.getByText(/The campaign is now (approved|active)\./)).toBeVisible();
+  await axe(page, "G-09 approved");
+  // The campaign becomes active once its start has passed; the list link reopens it.
+  await expect(async () => {
+    await navTo(page, "Research campaigns", "Research campaigns");
+    await activate(page, page.getByRole("link", { name, exact: true }).first());
+    await expect(page.getByRole("definition").filter({ hasText: /^active$/ })).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 90_000 });
+  await choose(page, page.getByLabel("Format"), "JSON", "jsonl");
+  await activate(page, page.getByRole("button", { name: "Export", exact: true }));
+  await expect(page.getByRole("table", { name: "Export files" })).toContainText("dictionary.json");
+  await expect(page.getByRole("table", { name: "Data dictionary" })).toBeVisible();
+  await axe(page, "G-09 exported");
+  console.log(`G-09 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-12 secrets with the keyboard: create, rotate and revoke", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.20");
+  test.setTimeout(300_000);
+  await startIn(page, browserName, "Secrets", "Secrets");
+  await axe(page, "G-12 loaded");
+  const name = `kbd-${browserName}`;
+  await activate(page, page.locator("summary", { hasText: "Create a secret" }));
+  const form = page.getByRole("form", { name: "Create a secret" });
+  await typeInto(page, form.getByLabel("Name"), name);
+  await choose(page, form.getByLabel("Type"), "token", "token");
+  await tabTo(page, form.getByLabel(/^Value/));
+  await page.keyboard.type("kbd-secret-value-1234567890");
+  await axe(page, "G-12 create form filled");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(`Created ${name} as version 1.`)).toBeVisible();
+  await axe(page, "G-12 created");
+  await activate(page, page.getByRole("table", { name: "Secrets" }).getByRole("link", { name }));
+  await expect(page.getByRole("heading", { level: 1, name: `Secret ${name}` })).toBeVisible();
+  await activate(page, page.getByRole("button", { name: "Rotate" }));
+  const rot = page.getByRole("dialog", { name: `Rotate ${name}` });
+  await expect(rot).toBeVisible();
+  await tabTo(page, rot.getByLabel("New value (write-only)"));
+  await page.keyboard.type("kbd-rotated-value-0987654321");
+  await axe(page, "G-12 rotate dialog filled");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Rotated to version 2.")).toBeVisible();
+  await axe(page, "G-12 rotated");
+  await activate(page, page.getByRole("button", { name: "Revoke" }));
+  const rev = page.getByRole("dialog", { name: `Revoke ${name}` });
+  await expect(rev).toBeVisible();
+  await axe(page, "G-12 revoke dialog");
+  await activate(page, rev.getByRole("button", { name: `Revoke ${name}` }));
+  await expect(page.getByRole("heading", { level: 1, name: "Secrets" })).toBeVisible();
+  await expect(page.getByRole("table", { name: "Secrets" }).or(page.getByText(/No secret is stored/))).not.toContainText(name);
+  await axe(page, "G-12 revoked");
+  const text = await page.locator("body").innerText();
+  expect(text).not.toContain("kbd-secret-value");
+  expect(text).not.toContain("kbd-rotated-value");
+  console.log(`G-12 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-13 approvals with the keyboard: approve one held call and deny another", async ({ page, browserName, request }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.21");
+  test.setTimeout(300_000);
+  await startIn(page, browserName, "Approvals", "Approvals");
+  await axe(page, "G-13 loaded");
+  // The harness sessions this test opens are terminated at the end, so the
+  // rest of the suite stays under the per-principal session limit.
+  const login = await request.post(g.adminURL + "/admin/v1/login", { data: { username: "admin", password: g.adminPassword }, headers: { Origin: g.adminURL } });
+  const auth = { Authorization: `Bearer ${((await login.json()) as { token: string }).token}`, Origin: g.adminURL };
+  const sessionIDs = async () =>
+    ((await (await request.get(g.adminURL + "/api/v1/sessions", { headers: auth })).json()) as { sessions: { id: string; state: string }[] }).sessions
+      .filter((x) => x.state === "active")
+      .map((x) => x.id);
+  const before = new Set(await sessionIDs());
+  for (const decision of ["approve", "deny"] as const) {
+    const call = mcpCall(g, "ref_read_file", { path: "hello.txt" }, { scope: "smcp:template:approval-demo", expect: g.marker, timeout: "90s" });
+    try {
+      const row = page.getByRole("table", { name: "Approvals: pending" }).getByRole("link", { name: "ref_read_file" });
+      await expect(row).toBeVisible({ timeout: 60_000 });
+      await axe(page, `G-13 pending (${decision})`);
+      await activate(page, row.first());
+      await expect(page.getByRole("heading", { level: 1, name: "Approval" })).toBeVisible();
+      await tabTo(page, page.getByLabel(/Comment/));
+      await page.keyboard.type(`keyboard ${decision}`);
+      await axe(page, `G-13 approval open (${decision})`);
+      await activate(page, page.getByRole("button", { name: decision === "approve" ? "Approve this call" : "Deny this call" }));
+      await expect(page.getByRole("status").filter({ hasText: decision === "approve" ? "Approved." : "Denied." })).toBeVisible();
+      await axe(page, `G-13 decided (${decision})`);
+      const r = await call.done;
+      if (decision === "approve") expect(r.code, r.out).toBe(0);
+      else expect(r.code).not.toBe(0);
+    } finally {
+      call.kill();
+    }
+    await navTo(page, "Approvals", "Approvals");
+  }
+  // The state tabs are links.
+  await activate(page, page.getByRole("navigation", { name: "Approval states" }).getByRole("link", { name: "consumed", exact: true }));
+  await expect(page.getByRole("table", { name: "Approvals: consumed" })).toContainText("ref_read_file");
+  await axe(page, "G-13 consumed list");
+  for (const id of (await sessionIDs()).filter((x) => !before.has(x))) {
+    const t = await request.post(g.adminURL + `/api/v1/sessions/${id}/terminate`, { data: { reason: "keyboard test cleanup" }, headers: auth });
+    expect(t.ok(), await t.text()).toBe(true);
+  }
+  console.log(`G-13 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.3", "FR-8.18");
+  test.setTimeout(300_000);
+  await startIn(page, browserName, "Gateway control", "Gateway control");
+  await activate(page, page.getByRole("button", { name: "Verify the journal now" }));
+  await expect(page.getByRole("definition").filter({ hasText: /^verified$/ })).toBeVisible();
+  await axe(page, "G-01 journal verified");
+  // Before the G-02 test publishes and rolls back: the policy file's revision is still the active one.
+  await activate(page, page.getByRole("button", { name: "Reload policy" }));
+  await expect(page.getByRole("status").filter({ hasText: /revision/ })).toBeVisible();
+  await axe(page, "G-01 policy reloaded");
+  await navTo(page, "Servers and library", "Servers and library");
+  await activate(page, page.getByRole("table", { name: "Servers" }).getByRole("link", { name: "ref", exact: true }));
+  const tools = page.getByRole("table", { name: "Tools of ref" });
+  await expect(tools).toBeVisible();
+  await activate(page, tools.getByRole("button", { name: "Show" }).first());
+  await expect(page.getByText(/^Input schema of /)).toBeVisible();
+  await axe(page, "G-10 input schema shown");
+  console.log(`G-01/G-10 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-02 policy studio with the keyboard: structured draft, simulate, publish, permissions and roll back", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.4");
+  test.setTimeout(600_000);
+  // The simulation replays calls in the journal (the G-13 test made some).
+  await startIn(page, browserName, "Policy studio", /Policy studio/);
+  await axe(page, "G-02 loaded");
+  await activate(page, page.getByRole("link", { name: "Draft", exact: true }));
+  const rev = `kbd-${browserName}-${Date.now() % 100000}`;
+  await typeInto(page, page.getByLabel("Revision ID of the draft"), rev);
+  await typeInto(page, page.getByLabel("New template name"), "kbd-echo");
+  await page.keyboard.press("Enter");
+  await activate(page, page.getByRole("button", { name: "Add a rule to kbd-echo" }));
+  const rule = page.getByRole("group", { name: "Rule rule-1" });
+  await typeInto(page, rule.getByLabel("Tools (space separated)"), "echo");
+  // The group is named after the rule ID, so the check uses the new name.
+  await typeInto(page, rule.getByLabel("Rule ID"), "kbd-echo-rule", false);
+  await expect(page.getByRole("group", { name: "Rule kbd-echo-rule" }).getByLabel("Rule ID")).toHaveValue("kbd-echo-rule");
+  await setCheck(page, page.getByRole("group", { name: "Templates sessions of this profile may use" }).getByLabel("kbd-echo"));
+  await axe(page, "G-02 draft edited");
+  await activate(page, page.getByRole("button", { name: "Validate", exact: true }));
+  await expect(page.getByText(new RegExp(`Valid: revision ${rev}`))).toBeVisible();
+  await activate(page, page.getByRole("button", { name: "Diff against the active revision" }));
+  await expect(page.getByRole("table", { name: "Policy changes" })).toContainText("template_added");
+  await activate(page, page.getByRole("button", { name: "Simulate" }));
+  await expect(page.getByText(/replayed from the/)).toBeVisible();
+  await axe(page, "G-02 validated, diffed and simulated");
+  await activate(page, page.getByRole("button", { name: "Publish", exact: true }));
+  await expect(page.getByRole("heading", { level: 1, name: `Policy revision ${rev}` })).toBeVisible();
+  await axe(page, "G-02 published");
+  await choose(page, page.getByLabel("Template"), "kbd-echo", "kbd-echo");
+  await expect(page.getByRole("table", { name: "Effective permissions of kbd-echo" })).toContainText("ref/echo");
+  await axe(page, "G-02 effective permissions");
+  await navTo(page, "Policy studio", /Policy studio/);
+  await activate(page, page.getByRole("table", { name: "Policy revisions" }).getByRole("link", { name: "r1", exact: true }));
+  await expect(page.getByRole("heading", { level: 1, name: "Policy revision r1" })).toBeVisible();
+  await activate(page, page.getByRole("button", { name: "Roll back to this revision" }));
+  const dialog = page.getByRole("dialog", { name: "Roll back to r1" });
+  await expect(dialog).toBeVisible();
+  await axe(page, "G-02 roll back dialog");
+  await activate(page, dialog.getByRole("button", { name: "Roll back" }));
+  await expect(page.getByRole("table", { name: "Policy revisions" })).toContainText(/r1-rb\d+/);
+  await axe(page, "G-02 rolled back");
+  console.log(`G-02 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-02 filter workbench, G-03 and G-06 with the keyboard: run filters and publish both profiles", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.27", "FR-8.5", "FR-8.14");
+  test.setTimeout(600_000);
+  await startIn(page, browserName, "Policy studio", /Policy studio/);
+  await activate(page, page.getByRole("link", { name: /Filter workbench/ }));
+  await expect(page.getByRole("table", { name: "Rule sets" })).toContainText("pii");
+  const filters = page.getByRole("group", { name: "Filters to run" });
+  for (const id of ["size-limit", "output-schema", "content-type-gate", "secret-fingerprint", "unicode-control", "injection-marker", "delimit-untrusted"]) await setCheck(page, filters.getByLabel(id), false);
+  await typeInto(page, page.getByLabel("Result text"), "Write to jane@example.com about it.");
+  await axe(page, "filters set");
+  await activate(page, page.getByRole("button", { name: "Run filters" }));
+  await expect(page.getByRole("table", { name: "Filter runs" })).toContainText("pii-detect");
+  await axe(page, "filters run");
+
+  await navTo(page, "Audit profile tuning", "Audit profile tuning");
+  await axe(page, "G-03 loaded");
+  await typeInto(page, page.getByLabel(/Observation retention/), "744h");
+  const ap = page.getByRole("form", { name: "Publish the Audit Profile" });
+  await typeInto(page, ap.getByLabel(/Reason for this revision/), "keyboard test");
+  await activate(page, ap.getByRole("button", { name: "Publish the Audit Profile" }));
+  await expect(page.getByText(/Published Audit Profile revision \d+\. It applies at once/)).toBeVisible();
+  await axe(page, "G-03 published");
+
+  await navTo(page, "Anomaly response", "Anomaly response");
+  await axe(page, "G-06 loaded");
+  await choose(page, page.getByLabel("elevated action"), "Record and alert", "alert");
+  await choose(page, page.getByLabel("abnormal action"), "Alert and escalate", "escalate");
+  await choose(page, page.getByLabel("critical action"), "Escalate and require", "approve");
+  await expect(page.getByText(/require_approval_band = "critical"/)).toBeVisible();
+  await axe(page, "G-06 bands chosen");
+  await activate(page, page.getByRole("form", { name: "Publish the Anomaly Response Policy" }).getByRole("button", { name: "Publish the Anomaly Response Policy" }));
+  await expect(page.getByText(/Published Anomaly Response Policy revision \d+/)).toBeVisible();
+  await axe(page, "G-06 published");
+  console.log(`G-02/G-03/G-06 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.15", "FR-8.16", "FR-8.22");
+  test.setTimeout(600_000);
+  await startIn(page, browserName, "Performance", "Performance");
+  await axe(page, "G-07 loaded");
+  const revSelect = page.getByRole("combobox", { name: "Policy revision" });
+  const firstRev = await revSelect.locator("option").nth(1).getAttribute("value");
+  if (firstRev) {
+    await choose(page, revSelect, firstRev, firstRev);
+    await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
+    await axe(page, "G-07 one revision");
+  }
+
+  await navTo(page, "Data server and memory", "Data server and memory");
+  await axe(page, "G-08 loaded");
+  await typeInto(page, page.getByLabel(/Observation Store memory budget \(MiB\)/), "320");
+  await activate(page, page.getByRole("form", { name: "Publish the memory budget" }).getByRole("button", { name: "Publish the memory budget" }));
+  await expect(page.getByText(/Published memory budget revision \d+/)).toBeVisible();
+  await axe(page, "G-08 budget published");
+  await tabTo(page, page.getByLabel("Passphrase"));
+  await page.keyboard.type("keyboard backup passphrase");
+  await activate(page, page.getByRole("button", { name: "Take a backup now" }));
+  await expect(page.getByText(/Backup written/)).toBeVisible({ timeout: 60_000 });
+  await axe(page, "G-08 backup taken");
+
+  await navTo(page, "Audit investigation", "Audit investigation");
+  await axe(page, "G-14 loaded");
+  await typeInto(page, page.getByLabel("Class"), "call");
+  await activate(page, page.getByRole("button", { name: "Apply filter" }));
+  const table = page.getByRole("table", { name: "Journal events" });
+  await expect(table).toContainText("call");
+  await axe(page, "G-14 filtered");
+  await activate(page, table.getByRole("link").first());
+  await expect(page.getByRole("heading", { level: 1, name: "Evidence event" })).toBeVisible();
+  await axe(page, "G-14 event open");
+  console.log(`G-07/G-08/G-14 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.19", "FR-16.5");
+  test.setTimeout(600_000);
+  await startIn(page, browserName, "Sessions and principals", "Sessions and principals");
+  const id = `kbd-g11-${browserName}-${Date.now() % 100000}`;
+  const add = page.getByRole("form", { name: "Add a principal" });
+  await typeInto(page, add.getByLabel("Principal ID"), id);
+  await typeInto(page, add.getByLabel("Display name"), "Keyboard agent");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(`Created principal ${id}.`)).toBeVisible();
+  const issue = page.getByRole("form", { name: "Issue a credential" });
+  await choose(page, issue.getByLabel("Principal"), id, id);
+  await activate(page, issue.getByRole("button", { name: "Issue credential" }));
+  const issued = issue.getByRole("status");
+  await expect(issued).toContainText("Issued client");
+  const clientID = ((await issued.locator(".mono").first().textContent()) ?? "").trim();
+  expect(clientID).toMatch(/^smcp-client-/);
+  await axe(page, "G-11 credential issued");
+  const r = await mcpCall(g, "ref_read_file", { path: "hello.txt" }, { expect: g.marker, clientID }).done;
+  expect(r.code, r.out).toBe(0);
+  const row = page.getByRole("table", { name: "Sessions" }).getByRole("row").filter({ hasText: clientID });
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await activate(page, row.getByRole("link").first());
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
+  await axe(page, "G-11 session open");
+  await activate(page, page.getByRole("button", { name: "Suspend session" }));
+  const sus = page.getByRole("dialog", { name: "Suspend this session" });
+  await expect(sus).toBeVisible();
+  await axe(page, "G-11 session suspend dialog");
+  await activate(page, sus.getByRole("button", { name: "Suspend session" }));
+  await expect(page.getByRole("definition").filter({ hasText: /^suspended$/ })).toBeVisible();
+  await activate(page, page.getByRole("button", { name: "Resume session" }));
+  await activate(page, page.getByRole("dialog", { name: "Resume this session" }).getByRole("button", { name: "Resume session" }));
+  await expect(page.getByRole("definition").filter({ hasText: /^active$/ })).toBeVisible();
+  await activate(page, page.getByRole("button", { name: "Terminate session" }));
+  const term = page.getByRole("dialog", { name: "Terminate this session" });
+  await typeInto(page, term.getByLabel(/Reason/), "keyboard test");
+  await axe(page, "G-11 terminate dialog filled");
+  await activate(page, term.getByRole("button", { name: "Terminate session" }));
+  await expect(page.getByRole("definition").filter({ hasText: /^terminated$/ })).toBeVisible();
+  await axe(page, "G-11 session terminated");
+  await navTo(page, "Sessions and principals", "Sessions and principals");
+  await activate(page, page.getByRole("button", { name: `Revoke ${clientID}` }));
+  const rv = page.getByRole("dialog", { name: `Revoke credential ${clientID}` });
+  await expect(rv).toBeVisible();
+  await activate(page, rv.getByRole("button", { name: "Revoke credential" }));
+  await expect(page.getByText(`Revoked credential ${clientID}.`)).toBeVisible();
+  await axe(page, "G-11 credential revoked");
+
+  // Remote access: enable and disable.
+  await navTo(page, "Remote access", "Remote access");
+  await axe(page, "G-11 remote loaded");
+  await typeInto(page, page.getByLabel(/Public URL/), "https://gateway.example.ts.net");
+  await activate(page, page.getByRole("button", { name: "Enable remote access" }));
+  await expect(page.getByText("enabled: reachable from outside this machine")).toBeVisible();
+  await axe(page, "G-11 remote enabled");
+  await activate(page, page.getByRole("button", { name: "Disable", exact: true }));
+  await expect(page.getByRole("definition").filter({ hasText: /^disabled$/ })).toBeVisible();
+  // A pending registration needs a client on the tunnel; a fixture stands in.
+  const pending = { client_id: "smcp-dcr-kbd", client_name: "Keyboard agent", status: "pending", registration: "dynamic", redirect_uris: ["https://agent.example/cb"], registered_at: new Date().toISOString(), source_address: "203.0.113.7" };
+  await mock(page, "**/api/v1/clients", { clients: [pending] });
+  let approved: unknown = null;
+  await page.route("**/api/v1/clients/smcp-dcr-kbd/approve", async (rt) => {
+    approved = rt.request().postDataJSON();
+    await rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...pending, status: "approved", principal: "claude-code-local" }) });
+  });
+  await navTo(page, "Gateway control", "Gateway control");
+  await navTo(page, "Remote access", "Remote access");
+  await activate(page, page.getByRole("table", { name: "Client registrations" }).getByRole("button", { name: "Approve" }));
+  const dialog = page.getByRole("dialog", { name: "Approve Keyboard agent" });
+  await expect(dialog).toBeVisible();
+  await choose(page, dialog.getByRole("combobox", { name: "Principal" }), "claude-code-local", "claude-code-local");
+  await axe(page, "G-11 registration approve dialog");
+  await activate(page, dialog.getByRole("button", { name: "Approve" }));
+  await expect(page.getByText("Keyboard agent is approved and bound to claude-code-local.")).toBeVisible();
+  expect(approved).toEqual({ principal: "claude-code-local" });
+  await axe(page, "G-11 registration approved");
+  console.log(`G-11 keyboard (${browserName}): ${states} states passed axe`);
+});
+
+test("G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter", async ({ page, browserName }) => {
+  claims("FR-8.33", "FR-8.32", "FR-8.18");
+  test.setTimeout(600_000);
+  // A second, signed revision of the reference server for the retire action.
+  const ctl = join(bin, "smcpctl");
+  const prefix = join(work, `kbd-rev-${browserName}-${Date.now()}`);
+  execFileSync(ctl, ["package", "keygen", "--out", prefix, "--unencrypted"]);
+  const refserver = join(bin, "smcp-refserver");
+  const sha = createHash("sha256").update(readFileSync(refserver)).digest("hex");
+  const rev = "98.0.0-kbd";
+  const recipe = {
+    recipe_version: 1,
+    server: { id: "smcp-ref-filesystem", alias: "ref", publisher: "Secure MCP Gateway project", description: "Second revision of the reference server for the keyboard retire test.", revision: rev },
+    artifact: { type: "binary", reference: refserver, version: rev, sha256: sha },
+    launch: { runtime: "native", argv: ["smcp-refserver", "--root", "{root}"] },
+    risk_class: "low",
+    instance_scope: ["shared"],
+    tools: { default: { side_effect: "read", source_trust: "trusted" }, expect: ["echo", "time_now", "list_files", "read_file"] },
+    capabilities: { filesystem: [{ slot: "root", mode: "ro", argv_placeholder: "{root}" }], egress: [] },
+    licenses: ["Apache-2.0"],
+    operator_note: "Keyboard acceptance test package.",
+    source: { kind: "archive", uri: "file://" + refserver, sha256: sha },
+  };
+  writeFileSync(prefix + "-recipe.json", JSON.stringify(recipe));
+  execFileSync(ctl, ["package", "build", "--recipe", prefix + "-recipe.json", "--out", prefix + "-pkg"]);
+  execFileSync(ctl, ["package", "sign", prefix + "-pkg", "--key", prefix + ".key"]);
+
+  await startIn(page, browserName, "Servers and library", "Servers and library");
+  await activate(page, page.getByRole("link", { name: "Library and trust anchors" }));
+  await expect(page.getByRole("heading", { level: 1, name: "Library and trust anchors" })).toBeVisible();
+  // Enroll the publisher key with the keyboard, then install through the running Gateway.
+  await activate(page, page.locator("summary", { hasText: "Enroll a trust anchor" }));
+  const ef = page.getByRole("form", { name: "Enroll a trust anchor" });
+  await typeInto(page, ef.getByLabel("Anchor name"), "kbd-rev");
+  await page.keyboard.press("Tab");
+  await page.keyboard.type(readFileSync(prefix + ".pub", "utf8").trim());
+  await activate(page, ef.getByRole("button", { name: "Show fingerprint" }));
+  await setCheck(page, ef.getByLabel("The key ID matches the publisher's"));
+  await activate(page, ef.getByRole("button", { name: "Enroll anchor" }));
+  await expect(page.getByRole("table", { name: "Trust anchors" })).toContainText("kbd-rev");
+  execFileSync(ctl, ["package", "install", prefix + "-pkg", "--config", g.config]);
+  await navTo(page, "Servers and library", "Servers and library");
+  await activate(page, page.getByRole("link", { name: "Library and trust anchors" }));
+  const revs = page.getByRole("table", { name: "Package revisions" });
+  const second = revs.getByRole("row").filter({ hasText: rev });
+  await expect(second).toContainText("verified-disabled", { timeout: 20_000 });
+  await axe(page, "G-10 second revision installed");
+  await activate(page, second.getByRole("button", { name: `Retire smcp-ref-filesystem ${rev}` }));
+  const dialog = page.getByRole("dialog", { name: `Retire smcp-ref-filesystem ${rev}` });
+  await typeInto(page, dialog.getByLabel("Reason (optional, recorded)"), "keyboard test revision");
+  await axe(page, "G-10 retire dialog filled");
+  await activate(page, dialog.getByRole("button", { name: "Retire" }));
+  await expect(page.getByText(`Retired smcp-ref-filesystem ${rev}. This cannot be undone.`)).toBeVisible();
+  await expect(second).toContainText("retired");
+  await axe(page, "G-10 retired");
+  // Suspending the running server would stop it for the rest of the suite
+  // (enable needs a restart): the dialog opens and Escape cancels it.
+  await activate(page, revs.getByRole("button", { name: "Suspend" }));
+  const sd = page.getByRole("dialog", { name: /Suspend smcp-ref-filesystem/ });
+  await expect(sd).toBeVisible();
+  await axe(page, "G-10 suspend dialog");
+  await page.keyboard.press("Escape");
+  await expect(sd).toBeHidden();
+  await expect(revs.getByRole("row").filter({ hasText: "enabled" })).toHaveCount(1);
+  await activate(page, page.getByRole("button", { name: "Remove kbd-rev" }));
+  await expect(page.getByRole("table", { name: "Trust anchors" })).not.toContainText("kbd-rev");
+  await activate(page, revs.getByRole("row").filter({ hasText: "enabled" }).getByRole("link", { name: "smcp-ref-filesystem" }));
+  await expect(page.getByRole("heading", { level: 1, name: "Package smcp-ref-filesystem" })).toBeVisible();
+  await axe(page, "G-10 package detail");
+
+  await navTo(page, "Egress", "Egress");
+  await choose(page, page.getByLabel("Decision"), "denied", "denied");
+  await activate(page, page.getByRole("button", { name: "Apply filter" }));
+  await expect(page.getByText(/No egress operation matches/)).toBeVisible();
+  await axe(page, "Egress filtered");
+  console.log(`G-10/Egress keyboard (${browserName}): ${states} states passed axe`);
 });

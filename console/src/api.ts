@@ -2,7 +2,13 @@
 // (SR-2.6-1): the session ID is an HttpOnly, Secure, SameSite=Strict cookie
 // that script cannot read, and no bearer token reaches the page. Every
 // state-changing request sends the session's CSRF token and an If-Match
-// precondition with the last ETag the control API answered (SR-8.9-1).
+// precondition (SR-8.9-1). Revisions are per object on the server: a
+// mutation is refused only when its own object changed after the tag it
+// names. The console keeps the ETag of its latest answer for each resource
+// collection (the first path segment below /api/v1/ or /admin/v1/) and
+// sends the one of the collection it changes, so a change elsewhere never
+// forces a re-read and a change to the same collection by someone else
+// since the view read it is reported.
 
 export type Role = "administrator" | "operator" | "policy_author" | "approver" | "session_approver" | "auditor" | "researcher";
 
@@ -68,8 +74,15 @@ export class ApiError extends Error {
 
 let current: Credentials | null = null;
 let onUnauthorized: (() => void) | null = null;
-/** The control-state revision of the last answer (SR-8.9-1). */
+/** The ETag of the latest answer per resource collection, and overall (SR-8.9-1). */
+const revisions = new Map<string, string>();
 let revision = "";
+
+/** The resource collection of a control API path ("principals" for /api/v1/principals/x/suspend). */
+export function collectionOf(path: string): string {
+  const m = /^\/(?:api|admin)\/v1\/([^/?#]+)/.exec(path);
+  return m ? m[1]! : "";
+}
 
 export function setCredentials(c: Credentials | null): void {
   current = c;
@@ -93,21 +106,35 @@ export interface RequestOptions {
   headers?: Record<string, string>;
 }
 
-function headers(method: string, json: boolean, o: RequestOptions = {}): Headers {
+function headers(method: string, json: boolean, o: RequestOptions = {}, path = ""): Headers {
   const h = new Headers({ Accept: "application/json" });
   if (json) h.set("Content-Type", "application/json");
   if (o.background) h.set("X-SMCP-Background", "1");
   if (current && isMutation(method)) {
     h.set("X-CSRF-Token", current.csrf);
-    if (revision) h.set("If-Match", revision);
+    const tag = revisions.get(collectionOf(path)) || revision;
+    if (tag) h.set("If-Match", tag);
   }
   for (const [k, v] of Object.entries(o.headers ?? {})) h.set(k, v);
   return h;
 }
 
-function noteRevision(res: Response): void {
+/** Whether tag names a later point than old: a higher sequence of the same smcpd start, or another start. */
+function newer(tag: string, old: string | undefined): boolean {
+  const a = /^"(.*)-(\d+)"$/.exec(tag);
+  const b = old ? /^"(.*)-(\d+)"$/.exec(old) : null;
+  if (!a || !b || a[1] !== b[1]) return true;
+  return Number(a[2]) >= Number(b[2]);
+}
+
+function noteRevision(res: Response, path: string): void {
   const tag = res.headers.get("ETag");
-  if (tag) revision = tag;
+  if (!tag) return;
+  // A slow read that answers after a later change must not replace the
+  // later tag (its view is older).
+  if (newer(tag, revision)) revision = tag;
+  const c = collectionOf(path);
+  if (c && newer(tag, revisions.get(c))) revisions.set(c, tag);
 }
 
 /** Restores the browser session of this tab after a reload; null when there is none. */
@@ -145,7 +172,7 @@ export async function request<T>(method: "GET" | "POST" | "DELETE", path: string
   try {
     res = await fetch(path, {
       method,
-      headers: headers(method, method === "POST", o),
+      headers: headers(method, method === "POST", o, path),
       body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
       credentials: "same-origin",
       cache: "no-store",
@@ -155,7 +182,7 @@ export async function request<T>(method: "GET" | "POST" | "DELETE", path: string
     if ((err as Error).name === "AbortError") throw err;
     throw new ApiError(0, "network", "The Gateway did not answer. Check that smcpd is running and that this page is open at the admin listener address.");
   }
-  noteRevision(res);
+  noteRevision(res, path);
   const parsed = await parse(res);
   if (!res.ok) {
     const e = toError(res, parsed);
@@ -178,7 +205,7 @@ export async function signIn(path: string, body: Record<string, string>): Promis
 /** Fetches a GET route as text (for files the console shows, not saves). */
 export async function getText(path: string): Promise<string> {
   const res = await fetch(path, { headers: headers("GET", false), credentials: "same-origin", cache: "no-store" });
-  noteRevision(res);
+  noteRevision(res, path);
   const text = await res.text();
   if (!res.ok) {
     let body: unknown = text;

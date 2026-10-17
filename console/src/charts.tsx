@@ -320,7 +320,8 @@ export function ScoreTimeline({ title, dots, thresholds, onOpen }: { title: stri
         {title} <span className="muted">(combined z-score; circle elevated, diamond abnormal, triangle critical)</span>
       </figcaption>
       <div className="chart-plot">
-        <svg width={width} height={height} role="img" aria-labelledby={id}>
+        {/* A group, not an image: its dots are buttons (an image may not contain controls). */}
+        <svg width={width} height={height} role="group" aria-labelledby={id}>
           {yt.map((t) => (
             <g key={t}>
               <line x1={m.l} x2={width - m.r} y1={sy(t)} y2={sy(t)} className="grid" />
