@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T06:06:39Z",
-  "commit": "e8b6606a426d0d209e1fa5a461cbdeb38fa7f85d",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/e8b6606a426d0d209e1fa5a461cbdeb38fa7f85d",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39008324831",
+  "generatedAt": "2026-10-17T06:16:59Z",
+  "commit": "1391541c07403092c5818faf132c97bfde4f4577",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1391541c07403092c5818faf132c97bfde4f4577",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39008843002",
   "tests": {
-    "total": 790,
-    "passed": 772,
-    "failed": 1,
+    "total": 800,
+    "passed": 783,
+    "failed": 0,
     "skipped": 17,
-    "durationSec": 280,
+    "durationSec": 414.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -19,19 +19,19 @@
       },
       {
         "name": "console/e2e/chromium",
-        "passed": 35,
+        "passed": 37,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 35,
+        "passed": 37,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "console/e2e/webkit",
-        "passed": 33,
+        "passed": 35,
         "failed": 0,
         "skipped": 2
       },
@@ -49,8 +49,8 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 39,
-        "failed": 1,
+        "passed": 40,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -67,7 +67,7 @@
       },
       {
         "name": "internal/analytics",
-        "passed": 5,
+        "passed": 7,
         "failed": 0,
         "skipped": 0
       },
@@ -217,13 +217,13 @@
       },
       {
         "name": "internal/observe",
-        "passed": 10,
+        "passed": 11,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/obspolicy",
-        "passed": 2,
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
@@ -338,7 +338,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75,
+    "totalPct": 75.1,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -382,7 +382,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 69.3
+        "pct": 70.8
       },
       {
         "name": "internal/anomaly",
@@ -422,7 +422,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.2
+        "pct": 90.4
       },
       {
         "name": "internal/consoleapi",
@@ -442,7 +442,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 81.4
+        "pct": 80.8
       },
       {
         "name": "internal/filterapi",
@@ -454,7 +454,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 82.8
+        "pct": 82.6
       },
       {
         "name": "internal/gwtest",
@@ -490,11 +490,11 @@
       },
       {
         "name": "internal/observe",
-        "pct": 88.3
+        "pct": 88.7
       },
       {
         "name": "internal/obspolicy",
-        "pct": 85.3
+        "pct": 87
       },
       {
         "name": "internal/obsstore",
@@ -570,7 +570,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 77.2
+        "pct": 75.6
       },
       {
         "name": "packaging/linux",
@@ -596,10 +596,10 @@
   },
   "requirements": {
     "total": 543,
-    "verified": 185,
-    "partial": 210,
-    "failing": 3,
-    "unverified": 145,
+    "verified": 188,
+    "partial": 211,
+    "failing": 0,
+    "unverified": 144,
     "byElement": [
       {
         "element": "E-01",
@@ -782,16 +782,16 @@
         "name": "Health & Safety Monitor",
         "total": 13,
         "verified": 5,
-        "partial": 5,
-        "failing": 2
+        "partial": 7,
+        "failing": 0
       },
       {
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 12,
-        "partial": 44,
-        "failing": 1
+        "verified": 15,
+        "partial": 43,
+        "failing": 0
       },
       {
         "element": "E-25",
@@ -2499,18 +2499,29 @@
       {
         "id": "FR-8.9",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/chromium.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/firefox.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
-          "console/e2e/webkit.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary"
+          "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/webkit.views.spec.ts > G-09 research campaigns: create, submit, approve, export and dictionary",
+          "internal/analytics.TestObservationScope",
+          "internal/observe.TestAnomalyResponseEscalation",
+          "internal/obspolicy.TestBandActionsAndEscalationObjects"
         ]
       },
       {
         "id": "FR-8.10",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "internal/observe.TestAnomalyResponseEscalation",
+          "internal/obspolicy.TestBandActionsAndEscalationObjects",
           "internal/obspolicy.TestPublishAndApply"
         ]
       },
@@ -2547,11 +2558,14 @@
       {
         "id": "FR-8.14",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
           "console/e2e/firefox.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
           "console/e2e/webkit.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
+          "internal/analytics.TestAnomalyResponseActions",
+          "internal/observe.TestAnomalyResponseEscalation",
+          "internal/obspolicy.TestBandActionsAndEscalationObjects",
           "internal/obspolicy.TestPublishAndApply",
           "internal/obspolicy.TestRoutes"
         ]
@@ -2804,8 +2818,15 @@
       {
         "id": "FR-8.35",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (dark)",
+          "console/e2e/chromium.style.spec.ts > every view follows the console visual rules (light)",
+          "console/e2e/firefox.style.spec.ts > every view follows the console visual rules (dark)",
+          "console/e2e/firefox.style.spec.ts > every view follows the console visual rules (light)",
+          "console/e2e/webkit.style.spec.ts > every view follows the console visual rules (dark)",
+          "console/e2e/webkit.style.spec.ts > every view follows the console visual rules (light)"
+        ]
       },
       {
         "id": "FR-9",
@@ -3014,6 +3035,7 @@
         "element": "E-29",
         "status": "partial",
         "tests": [
+          "internal/observe.TestAnomalyResponseEscalation",
           "internal/observe.TestCaptureEscalation"
         ]
       },
@@ -3385,7 +3407,7 @@
       {
         "id": "FR-12.7",
         "element": "E-24",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestGraphCLI",
           "cmd/smcpctl.TestOfflineOpsCommands",
@@ -3537,7 +3559,7 @@
       {
         "id": "FR-13.10",
         "element": "E-23",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestOnlineOpsCommands",
           "console/e2e/chromium.console.spec.ts > administrator signs in, sees enforcement state and signs out",
@@ -3986,7 +4008,7 @@
       {
         "id": "FR-17.9",
         "element": "E-23",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestOnlineOpsCommands",
           "internal/config.TestDiffAndReloadableKeys",
@@ -6093,7 +6115,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6139,7 +6161,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45257: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33433: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -6195,6 +6217,6 @@
   ],
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   }
 }
