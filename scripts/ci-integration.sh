@@ -461,10 +461,11 @@ EOF
   cat > "$einst/policy.json" <<'EOF'
 {
   "revision": "r1",
-  "framework_profiles": { "dev": { "templates": ["sandbox"], "default_template": "sandbox" } },
+  "framework_profiles": { "dev": { "templates": ["sandbox"], "default_template": "sandbox", "high_risk": ["code-execution"] } },
   "templates": {
     "sandbox": {
       "description": "Reference server and the hostile sandbox probe",
+      "high_risk": ["code-execution"],
       "rules": [
         { "id": "ref", "server": "ref", "tools": ["echo", "time_now", "list_files", "read_file"] },
         { "id": "probe", "server": "probe", "tools": ["echo", "net_connect", "write_file", "read_file", "identity"] },
