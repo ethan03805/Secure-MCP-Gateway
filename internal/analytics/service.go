@@ -362,6 +362,10 @@ func (s *Service) Close() {
 	}
 }
 
+// retainInterval is how often retention runs: at start and then hourly,
+// well within FR-9.14's once a day.
+var retainInterval = time.Hour
+
 // loop runs the meta-metrics sampler (FR-10.9), the campaign clock
 // (FR-10.31) and retention (daily, FR-9.14 for D-09/D-13).
 func (s *Service) loop(ctx context.Context) {
@@ -369,7 +373,7 @@ func (s *Service) loop(ctx context.Context) {
 	defer mt.Stop()
 	ct := time.NewTicker(time.Second)
 	defer ct.Stop()
-	rt := time.NewTicker(time.Hour)
+	rt := time.NewTicker(retainInterval)
 	defer rt.Stop()
 	s.retain()
 	for {
@@ -408,6 +412,17 @@ func (s *Service) retain() {
 	}
 	if len(removed) > 0 {
 		s.audit(audit.Event{Class: "observation", Origin: "E-27", Outcome: "retention", Detail: map[string]any{"removed": removed}})
+	}
+	if s.Exporter == nil {
+		return
+	}
+	// Exported research datasets follow the same retention (FR-9.14).
+	datasets, err := s.Exporter.Retain(s.now(), s.cur().Retention)
+	if err != nil {
+		s.log.Warn("research dataset retention failed", "err", err)
+	}
+	if len(datasets) > 0 {
+		s.audit(audit.Event{Class: "research", Origin: "E-28", Outcome: "retention", Detail: map[string]any{"removed_datasets": datasets}})
 	}
 }
 

@@ -710,3 +710,43 @@ func (x *Exporter) Open(id, name string) (*os.File, error) {
 	// export directory.
 	return os.OpenInRoot(x.Dir, filepath.Join(id, name))
 }
+
+// Retain deletes every exported dataset created before now-keep, with its
+// pseudonymization key, and returns the removed dataset IDs (FR-9.14:
+// research data follows the Observation Policy's retention). keep <= 0
+// keeps everything. A directory without a readable manifest is left alone.
+func (x *Exporter) Retain(now time.Time, keep time.Duration) ([]string, error) {
+	if keep <= 0 || x.Dir == "" {
+		return nil, nil
+	}
+	entries, err := os.ReadDir(x.Dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	cutoff := now.Add(-keep)
+	var removed []string
+	var errs []error
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		m, err := x.Manifest(e.Name())
+		if err != nil || m.CreatedAt.IsZero() || !m.CreatedAt.Before(cutoff) {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(x.Dir, e.Name())); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if x.KeyDir != "" {
+			if err := os.Remove(filepath.Join(x.KeyDir, e.Name()+".key")); err != nil && !errors.Is(err, os.ErrNotExist) {
+				errs = append(errs, err)
+			}
+		}
+		removed = append(removed, e.Name())
+	}
+	return removed, errors.Join(errs...)
+}
