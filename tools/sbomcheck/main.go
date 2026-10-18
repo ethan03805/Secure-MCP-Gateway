@@ -14,12 +14,12 @@
 // Identifiers that are not licenses of the component, or license-less
 // packages whose license was established by reading their files, are
 // accepted only through a reviewed entry in the review file
-// (packaging/license-review.json): the package name, the identifier (or
+// (packaging/sbom-review.json): the package name, the identifier (or
 // "license" for a package without a license value) and the reason. Each
 // review applies to that package only, so a new component or a new
 // unrecognized license file fails the check until someone reviews it.
 //
-//	go run ./tools/sbomcheck -review packaging/license-review.json build/dist/*.sbom.json sbom.spdx.json
+//	go run ./tools/sbomcheck -review packaging/sbom-review.json build/dist/*.sbom.json sbom.spdx.json
 //
 // The exit status is 1 when any package is refused and 2 when an input
 // cannot be read.
@@ -110,7 +110,7 @@ func main() {
 
 func run(args []string, out io.Writer) (int, error) {
 	fs := flag.NewFlagSet("sbomcheck", flag.ContinueOnError)
-	reviewPath := fs.String("review", "packaging/license-review.json", "reviewed exceptions")
+	reviewPath := fs.String("review", "packaging/sbom-review.json", "reviewed exceptions")
 	if err := fs.Parse(args); err != nil {
 		return 2, err
 	}

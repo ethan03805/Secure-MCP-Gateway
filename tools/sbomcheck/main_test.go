@@ -10,7 +10,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-const reviewPath = "../../packaging/license-review.json"
+const reviewPath = "../../packaging/sbom-review.json"
 
 func TestExpressions(t *testing.T) {
 	reviewed := map[string]bool{"licenseref-x": true}
