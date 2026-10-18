@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T06:13:08Z",
-  "commit": "27a546365a7f77d80ab5c627492625fa8b14473d",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/27a546365a7f77d80ab5c627492625fa8b14473d",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39101838972",
+  "generatedAt": "2026-10-18T06:46:40Z",
+  "commit": "b06c52575520f6d62f95b5f3313b93e4ca436ef6",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/b06c52575520f6d62f95b5f3313b93e4ca436ef6",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39103166149",
   "tests": {
-    "total": 1370,
-    "passed": 1357,
+    "total": 1378,
+    "passed": 1365,
     "failed": 0,
     "skipped": 13,
-    "durationSec": 1407.3,
+    "durationSec": 1787.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -109,7 +109,7 @@
       },
       {
         "name": "internal/analytics",
-        "passed": 21,
+        "passed": 23,
         "failed": 0,
         "skipped": 0
       },
@@ -193,7 +193,7 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 65,
+        "passed": 66,
         "failed": 0,
         "skipped": 0
       },
@@ -223,7 +223,7 @@
       },
       {
         "name": "internal/graph",
-        "passed": 25,
+        "passed": 26,
         "failed": 0,
         "skipped": 0
       },
@@ -235,7 +235,7 @@
       },
       {
         "name": "internal/health",
-        "passed": 6,
+        "passed": 7,
         "failed": 0,
         "skipped": 0
       },
@@ -325,13 +325,13 @@
       },
       {
         "name": "internal/policyadmin",
-        "passed": 16,
+        "passed": 17,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/policystore",
-        "passed": 4,
+        "passed": 5,
         "failed": 0,
         "skipped": 0
       },
@@ -385,7 +385,7 @@
       },
       {
         "name": "internal/secrets",
-        "passed": 29,
+        "passed": 30,
         "failed": 0,
         "skipped": 1
       },
@@ -452,7 +452,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76,
+    "totalPct": 76.1,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -500,7 +500,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 79.3
+        "pct": 80.1
       },
       {
         "name": "internal/anomaly",
@@ -512,7 +512,7 @@
       },
       {
         "name": "internal/approval",
-        "pct": 85.3
+        "pct": 85.5
       },
       {
         "name": "internal/audit",
@@ -556,11 +556,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.5
       },
       {
         "name": "internal/egress",
-        "pct": 82.3
+        "pct": 82.4
       },
       {
         "name": "internal/filterapi",
@@ -572,7 +572,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 84.1
       },
       {
         "name": "internal/gwtest",
@@ -584,7 +584,7 @@
       },
       {
         "name": "internal/health",
-        "pct": 94.9
+        "pct": 96.3
       },
       {
         "name": "internal/hostile",
@@ -624,7 +624,7 @@
       },
       {
         "name": "internal/ops",
-        "pct": 72.5
+        "pct": 72.7
       },
       {
         "name": "internal/packaging",
@@ -648,11 +648,11 @@
       },
       {
         "name": "internal/policyadmin",
-        "pct": 84.6
+        "pct": 84.8
       },
       {
         "name": "internal/policystore",
-        "pct": 83.3
+        "pct": 84.8
       },
       {
         "name": "internal/posixacl",
@@ -676,7 +676,7 @@
       },
       {
         "name": "internal/research",
-        "pct": 83
+        "pct": 82.8
       },
       {
         "name": "internal/sandbox",
@@ -688,7 +688,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.8
+        "pct": 79.6
       },
       {
         "name": "internal/session",
@@ -696,7 +696,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 82.5
+        "pct": 77.5
       },
       {
         "name": "internal/tunnel",
@@ -738,10 +738,10 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 419,
-    "partial": 92,
+    "verified": 421,
+    "partial": 91,
     "failing": 0,
-    "unverified": 18,
+    "unverified": 17,
     "byElement": [
       {
         "element": "E-01",
@@ -907,7 +907,7 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 21,
-        "verified": 15,
+        "verified": 16,
         "partial": 4,
         "failing": 0
       },
@@ -923,8 +923,8 @@
         "element": "E-23",
         "name": "Health & Safety Monitor",
         "total": 13,
-        "verified": 11,
-        "partial": 1,
+        "verified": 12,
+        "partial": 0,
         "failing": 0
       },
       {
@@ -2538,8 +2538,10 @@
       {
         "id": "FR-7",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "analysis: all 12 child requirements verified"
+        ]
       },
       {
         "id": "FR-7.1",
@@ -2632,12 +2634,19 @@
       {
         "id": "FR-7.11",
         "element": "E-23",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/analytics.TestObservationStoreReachability",
+          "internal/e2e.TestHealthFaultEachDependency",
           "internal/e2e.TestOpsMetricsAndHealthGate",
+          "internal/graph.TestIdleMirrorDetectsUnreachableDatabase",
           "internal/health.TestChecks",
           "internal/health.TestEveryCachesAndPanicIsCritical",
-          "internal/health.TestRunEvaluatesWithinTwoSeconds"
+          "internal/health.TestPolicyCurrencyAndVaultChecks",
+          "internal/health.TestRunEvaluatesWithinTwoSeconds",
+          "internal/policyadmin.TestCheckCurrency",
+          "internal/policystore.TestCheckActive",
+          "internal/secrets.TestVaultCheck"
         ]
       },
       {
@@ -7032,7 +7041,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7043,7 +7052,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7078,7 +7087,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40525: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44351: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7195,7 +7204,7 @@
     }
   ],
   "acceptance": {
-    "commit": "27a546365a7f77d80ab5c627492625fa8b14473d",
+    "commit": "b06c52575520f6d62f95b5f3313b93e4ca436ef6",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -7887,15 +7896,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "27a546365a7f77d80ab5c627492625fa8b14473d",
-    "generatedAt": "2026-10-18T05:50:50Z",
+    "commit": "b06c52575520f6d62f95b5f3313b93e4ca436ef6",
+    "generatedAt": "2026-10-18T06:14:16Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000006312"
+      "runner": "GitHub Actions 1000006453"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7912,7 +7921,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.029174,
+        "value": 0.010035,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7924,7 +7933,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 18.14978,
+        "value": 12.803805,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7936,18 +7945,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.9003086249999992,
+        "value": 0.13059962499999944,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (11.187 ms, mean of 11.289, 10.931, 11.027, 10.922, 10.724, 11.878, 11.096, 11.625) minus disabled (10.286 ms, mean of 10.126, 10.061, 10.624, 10.118, 10.062, 10.381, 10.411, 10.508), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (6.246 ms, mean of 6.152, 5.734, 5.648, 6.234, 6.528, 6.811, 6.588, 6.276) minus disabled (6.116 ms, mean of 6.901, 5.637, 5.626, 6.070, 5.940, 6.152, 6.447, 6.154), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 806.608801,
+        "value": 450.517959,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7959,11 +7968,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 102.0234375,
+        "value": 108.19140625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 11m31s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 10m0s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
