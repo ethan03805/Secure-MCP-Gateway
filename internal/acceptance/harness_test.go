@@ -321,8 +321,8 @@ func (g *gateway) start() {
 	}
 }
 
-// tryStart starts smcpd and reports whether it became healthy within d.
-func (g *gateway) tryStart(d time.Duration) error {
+// launch starts smcpd without waiting for it.
+func (g *gateway) launch() error {
 	g.t.Helper()
 	cmd := exec.Command(filepath.Join(binDir, "smcpd"), "--config", g.cfg)
 	cmd.Dir = g.dir
@@ -335,6 +335,16 @@ func (g *gateway) tryStart(d time.Duration) error {
 	go func() { _ = cmd.Wait(); close(exited) }()
 	g.cmd, g.logs, g.exited = cmd, logs, exited
 	g.t.Cleanup(func() { g.kill() })
+	return nil
+}
+
+// tryStart starts smcpd and reports whether it became healthy within d.
+func (g *gateway) tryStart(d time.Duration) error {
+	g.t.Helper()
+	if err := g.launch(); err != nil {
+		return err
+	}
+	cmd, exited := g.cmd, g.exited
 	deadline := time.Now().Add(d)
 	for {
 		if _, err := g.ctl("health"); err == nil {
@@ -640,6 +650,16 @@ func (g *gateway) mustCall(cs *mcp.ClientSession, name string, args map[string]a
 // mcpPost sends one raw JSON-RPC POST to the MCP endpoint.
 func (g *gateway) mcpPost(token, body string, header map[string]string) (*http.Response, string) {
 	g.t.Helper()
+	resp, raw, err := g.tryMCPPost(token, body, header)
+	if err != nil {
+		g.t.Fatalf("POST /mcp: %v", err)
+	}
+	return resp, raw
+}
+
+// tryMCPPost is mcpPost returning the transport error.
+func (g *gateway) tryMCPPost(token, body string, header map[string]string) (*http.Response, string, error) {
+	g.t.Helper()
 	req, err := http.NewRequest("POST", g.publicURL+"/mcp", strings.NewReader(body))
 	if err != nil {
 		g.t.Fatal(err)
@@ -659,11 +679,11 @@ func (g *gateway) mcpPost(token, body string, header map[string]string) (*http.R
 	}
 	resp, err := g.httpClient().Do(req)
 	if err != nil {
-		g.t.Fatalf("POST /mcp: %v", err)
+		return nil, "", err
 	}
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	resp.Body.Close()
-	return resp, string(raw)
+	return resp, string(raw), nil
 }
 
 // event is one Evidence Journal event.
