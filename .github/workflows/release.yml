@@ -112,13 +112,13 @@ jobs:
           grep -q "^| Source commit | \`$GITHUB_SHA\` |" "$x/PROVENANCE.md" || { echo "::error::PROVENANCE.md does not name commit $GITHUB_SHA"; exit 1; }
       # FR-12.1: every package of the SBOM in the archives and of the
       # per-archive SBOMs has an OSI-approved or public-domain license, or a
-      # reviewed exception in packaging/license-review.json.
+      # reviewed exception in packaging/sbom-review.json.
       - name: Check the SBOM licenses (FR-12.1)
         run: |
           set -o pipefail
           x=$(mktemp -d)
           tar -xzf "build/dist/smcp_${GITHUB_REF_NAME#v}_linux_amd64.tar.gz" -C "$x" sbom.spdx.json
-          go run ./tools/sbomcheck -review packaging/license-review.json "$x/sbom.spdx.json" build/dist/*.sbom.json | tee -a "$GITHUB_STEP_SUMMARY"
+          go run ./tools/sbomcheck -review packaging/sbom-review.json "$x/sbom.spdx.json" build/dist/*.sbom.json | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Check the minisign signature against SECURITY.md
         run: |
           rm -f "$MINISIGN_KEY_FILE"
