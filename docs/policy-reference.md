@@ -87,6 +87,7 @@ A session whose template is no longer listed by its principal's profile in the a
 | `side_effect` | no | `read`, `write`, `external` or `execute` (CP-44). Combined with the verified manifest's class; the more restrictive one applies. |
 | `source_trust` | no | `trusted` or `untrusted` (CP-44). Combined with the manifest's value; `untrusted` wins. |
 | `filters` | no | Optional request and response filter IDs that must run on calls this rule permits. Mandatory filters always run. |
+| `egress_limits` | no | Bounds on each outbound operation a server instance makes through the Egress Broker while serving a call this rule permits (FR-5.38): `request_bytes`, `response_bytes` and `timeout_ms` (at least one; each at least 1, `timeout_ms` at most 3,600,000). The broker applies the smallest of these, the limits the server's manifest declares for the destination and the `[egress]` limits and grant. The obligation reaches the broker with the call's one-use egress capabilities; with `[egress] require_capability = false` the tightest obligation of the calls the instance is serving applies (`docs/egress.md`). |
 | `when` | no | Argument predicates of a permit rule (at most 32): the rule applies only when every one holds; see Predicates. A deny rule takes none. |
 
 ### Predicates
@@ -231,7 +232,7 @@ The decision record lists the obligations under `obligations` with these fields 
 | Anomaly response | `AnomalyResponse` | Active Anomaly Response Policy revision |
 | Size limit | `SizeLimit` | `[limits] result_bytes` (CP-08) |
 | Timeout | `Timeout` | `[limits] upstream_timeout` (CP-13) |
-| Egress grants | `EgressGrants` | The server's `[[egress.grant]]` destinations |
+| Egress grants | `EgressGrants`, `EgressLimits` | The server's `[[egress.grant]]` destinations; the rule's `egress_limits` (`request_bytes`, `response_bytes`, `timeout_ms`), which the Egress Broker combines with the manifest's and the configuration's limits, the smallest applying (FR-5.38) |
 | Secret grants | `SecretGrants` | The Secret Use Policy slots bound for the server |
 | Runtime profile | `RuntimeProfile` | The launcher and sandbox profile of the server's instance |
 

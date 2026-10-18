@@ -18,6 +18,7 @@
 - FR-8.2 verified: `internal/acceptance.TestRoleMatrixEveryOperation` signs in one account of each Appendix C role on a running `smcpd`, performs every control API operation of the OpenAPI document (127 operations, 924 requests) as every role and compares the admitted roles with the matrix; it also checks that the Operator's observation records lack S2 fields and that only the Session Approver completes a harness sign-in. SRS Appendix C gains a note on the routes the matrix does not name.
 - Role matrix: resuming a suspended session (`POST /api/v1/sessions/{id}/resume`) and acknowledging a latched integrity cause (`POST /api/v1/health/ack`) are now Administrator-only; the Operator keeps suspend and terminate (Appendix C, FR-7.13).
 - FR-3.24 verified: `cmd/smcpctl.TestApprovalsCLI` now also refuses an Auditor account (CLI sign-in and the Auditor's console token on every approval route) and checks the approver identity in the E-07 evidence events.
+- FR-5.38: the Egress Broker bounds each outbound operation's request size, response size and duration by the smallest of the Runtime Profile (the `[egress]` limits and the grant), the manifest (new optional `request_bytes`, `response_bytes` and `timeout_ms` of `capabilities.egress` rules, `docs/schemas/manifest.schema.json`) and the decision obligation (new optional `egress_limits` of policy permit rules, carried with the call's egress capabilities). Operation records carry the bounds applied (`bounds`). `EvaluatorVersion` is 5.
 
 ## v1.0.0 — 2026-10-18
 

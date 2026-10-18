@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -216,6 +217,17 @@ func (rt *Runtime) binding(alias string) *Binding {
 		return nil
 	}
 	return b
+}
+
+// EgressRules returns the egress capabilities of the verified manifest of
+// a packaged server alias, with the limits they declare (FR-5.38); nil
+// for an alias without one.
+func (rt *Runtime) EgressRules(alias string) []packaging.EgressRule {
+	b := rt.binding(alias)
+	if b == nil {
+		return nil
+	}
+	return slices.Clone(b.manifest.Capabilities.Egress)
 }
 
 // Bindings returns the packaged server bindings.

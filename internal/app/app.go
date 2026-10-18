@@ -29,6 +29,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/egress"
 	"github.com/ethan03805/secure-mcp-gateway/internal/filters"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
+	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policyadmin"
@@ -235,6 +236,11 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		}
 		if o.Manifests == nil {
 			o.Manifests = o.Packages
+		}
+		if er, ok := o.Packages.(interface {
+			EgressRules(alias string) []packaging.EgressRule
+		}); ok && a.Egress != nil {
+			a.Egress.SetManifestLimits(manifestLimits(er.EgressRules)) // FR-5.38
 		}
 	} else {
 		for _, s := range servers {

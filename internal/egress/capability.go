@@ -64,6 +64,9 @@ func grantKey(g Grant) string {
 // issue mints the tokens of one call to in: CapabilityTokens per current
 // grant of its server alias.
 func (b *Broker) issue(in *instance, bnd pipeline.Binding) (*pipeline.EgressAuth, func()) {
+	if !b.o.RequireCapability {
+		return nil, b.track(in, bnd.Egress)
+	}
 	gs := b.o.Grants.Grants(in.alias)
 	if len(gs) == 0 {
 		return nil, func() {}
@@ -122,6 +125,9 @@ func (b *Broker) revoke(call uint64) {
 // grant g, and copies its binding into the record.
 func (b *Broker) consume(rec *Record, g Grant, h http.Header) error {
 	if !b.o.RequireCapability {
+		// The operation is not bound to one call: the tightest obligation
+		// of the calls in progress applies (FR-5.38).
+		rec.obligation = b.inProgress(rec.Instance)
 		return nil
 	}
 	vals := h.Values(AuthHeader)
@@ -144,6 +150,7 @@ func (b *Broker) consume(rec *Record, g Grant, h http.Header) error {
 		return refused(ReasonCapabilityInvalid, "the capability is unknown, expired or revoked (its call has ended)")
 	}
 	rec.CorrelationID, rec.DecisionID, rec.PolicyRevision = e.binding.CorrelationID, e.binding.DecisionID, e.binding.PolicyRevision
+	rec.obligation = e.binding.Egress // FR-5.38
 	if e.used {
 		rec.Capability = CapabilityReplayed
 		return refused(ReasonCapabilityReplayed, "the capability was already used")

@@ -146,7 +146,7 @@ func (b *Broker) forward(w http.ResponseWriter, r *http.Request, rec *Record, ta
 			return
 		}
 	}
-	lim := b.limits.effective(g)
+	lim := b.opLimits(rec, g, host, port)
 	if r.ContentLength > lim.RequestBytes {
 		b.refuse(w, rec, ReasonRequestTooLarge, "request body larger than the limit")
 		return
@@ -291,7 +291,7 @@ func (b *Broker) serveConnect(in *instance, w http.ResponseWriter, r *http.Reque
 		b.refuse(w, rec, rf.reason, rf.detail)
 		return
 	}
-	lim := b.limits.effective(g)
+	lim := b.opLimits(rec, g, host, port)
 	deadline := b.o.Now().Add(lim.OperationTimeout)
 	ctx, cancel := context.WithDeadline(r.Context(), deadline)
 	defer cancel()

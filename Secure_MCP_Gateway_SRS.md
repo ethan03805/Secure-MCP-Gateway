@@ -2143,7 +2143,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Method | Test |
 | Verification Statement | Exceed each bound with a fixture; confirm termination and an event. |
 | Source | SEC Appendix F (resource limits) |
-| Rationale | Bounded egress resource use. |
+| Rationale | Bounded egress resource use. Release 1.x reads the Runtime Profile from the `[egress]` limits and grant of the configuration (FR-3.26), the manifest limits from the optional `request_bytes`, `response_bytes` and `timeout_ms` of its egress rules (Appendix J), and the decision obligation from the optional `egress_limits` of the permit rule, which travels with the call's egress capabilities. |
 
 #### FR-5.39 — Artifact cache
 
@@ -8409,7 +8409,7 @@ A package is a directory in the library (OD-7), written by `smcpctl package buil
 | `stateful` | No | Whether a handle contract applies | SR-3.14-1 |
 | `tools` | Yes | Per tool: `name`, `title`, `description`, `description_sha256`, `input_schema`, `output_schema`, `annotations`, `side_effect` and `source_trust` (CP-44), optional `risk_class` and `class` (`standard` or `gateway-admin`) | FR-5.5, SR-3.7-1, SR-5.13-2, SR-3.12-1 |
 | `tools_list_sha256` | No | Digest of the canonical `tools/list` read at packaging | SR-3.8-1 |
-| `capabilities` | Yes | `filesystem` slots with mode, `egress` destinations with ports and methods, `spawns_processes`, `resources` | SR-1-1, SR-4.6-1, SR-4.5-2 |
+| `capabilities` | Yes | `filesystem` slots with mode, `egress` destinations with ports, methods and optional request size, response size and duration limits, `spawns_processes`, `resources` | SR-1-1, SR-4.6-1, SR-4.5-2, FR-5.38 |
 | `secrets` | No | Slots with purpose, destination and delivery modes | FR-6.5 |
 | `behavior_hints` | No | Declared-behavior rules and expected ranges | FR-5.34 |
 | `provenance` | Yes | Source kind, URI and digest, SPDX licenses, provenance statement digest | SR-3.1-1, SR-3.2-1 |
