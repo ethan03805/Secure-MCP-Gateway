@@ -139,6 +139,13 @@ func listenerNames(cfg *config.Config) []string {
 	return names
 }
 
+// ErrJournal wraps the Start error when the Evidence Journal cannot be
+// opened for writing. Nothing that Start was given has been used yet, so
+// the caller may retry Start; smcpd answers harness requests with -31004
+// until the journal is writable and then retries (FR-9.17,
+// edge.ServeFailClosed).
+var ErrJournal = errors.New("journal")
+
 // Start builds every component. On error everything started so far is
 // closed.
 func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err error) {
@@ -189,7 +196,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 		o.Log.Error("active policy revision does not verify; refusing every call until a valid revision is published", "err", policyErr)
 	}
 	if a.Journal, err = audit.Open(filepath.Join(cfg.State.Dir, "journal"), evKey, audit.Options{}); err != nil {
-		return a, fmt.Errorf("journal: %w", err)
+		return a, fmt.Errorf("%w: %w", ErrJournal, err)
 	}
 	for _, r := range a.Journal.Recovered() {
 		o.Log.Warn("journal segment recovered after a crash", "segment", r.Segment, "events", r.Events, "truncated_bytes", r.TruncatedBytes)

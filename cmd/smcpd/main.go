@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleauth"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
+	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/filterapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
@@ -49,6 +51,28 @@ func main() {
 	if err := run(*cfgPath, *logLevel); err != nil {
 		fmt.Fprintln(os.Stderr, "smcpd:", err)
 		os.Exit(1)
+	}
+}
+
+// journalRetry is how often smcpd checks, while fail-closed, whether the
+// journal directory has become writable (FR-9.17).
+var journalRetry = 2 * time.Second
+
+// journalWritable reports whether a file can be created in the journal
+// directory, the condition for retrying the start.
+func journalWritable(cfg *config.Config) func() bool {
+	dir := filepath.Join(cfg.State.Dir, "journal")
+	return func() bool {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return false
+		}
+		f, err := os.CreateTemp(dir, ".writable-*")
+		if err != nil {
+			return false
+		}
+		name := f.Name()
+		f.Close()
+		return os.Remove(name) == nil
 	}
 }
 
@@ -172,6 +196,17 @@ func run(cfgPath, level string) error {
 		obs.SetSecretScanner(func(b []byte) int { return len(fps.Scan(b)) })
 	}
 	a, err := app.Start(ctx, cfg, opts)
+	// FR-9.17: while the Evidence Journal cannot be opened for writing,
+	// harness requests get -31004; Start is retried once the journal
+	// directory is writable again.
+	for errors.Is(err, app.ErrJournal) {
+		log.Error("evidence journal cannot be opened; answering harness requests with -31004 until it is writable", "err", err)
+		if serr := edge.ServeFailClosed(ctx, cfg, lns.Harness, edge.ReasonJournalUnavailable, journalWritable(cfg), journalRetry); serr != nil {
+			return fmt.Errorf("%w (while fail-closed: %w)", err, serr)
+		}
+		log.Info("evidence journal directory is writable; starting")
+		a, err = app.Start(ctx, cfg, opts)
+	}
 	if err != nil {
 		return err
 	}

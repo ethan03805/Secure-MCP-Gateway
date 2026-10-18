@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
@@ -41,14 +42,14 @@ func (g *gateway) expect31004(tok string) string {
 //     with one altered byte is refused at restart, the Gateway is
 //     fail-closed with cause policy_signature and answers -31004, and
 //     restoring the file restores normal start;
-//   - FR-9.17: -31004 with an altered revision, no service with a
-//     read-only journal directory, and normal service with health degraded
-//     when the graph database is down;
+//   - FR-9.17: -31004 with an altered revision, -31004 with a read-only
+//     journal directory and normal service once it is writable again, and
+//     normal service with health degraded when the graph database is down;
 //   - the journal keeps recording permits and denials while the graph
 //     mirror is unreachable.
 //
-// Partial: FR-9.17 because smcpd exits with a read-only journal directory
-// instead of answering -31004; SR-1.1-1 shows one alternative source (the
+// FR-9.17 is verified when the read-only journal case runs (not as root,
+// where the directory mode does not stop writes); SR-1.1-1 shows one alternative source (the
 // configured policy file) is ignored, while its verification is an
 // Inspection of every rule source; SR-1.2-1 checks the altered-revision
 // case only; SR-1.2-2 covers the graph outage, not an injected flush
@@ -132,25 +133,54 @@ func TestAT03PolicyAuthorityAndOutage(t *testing.T) {
 	g.mustCall(cs, "ref_echo", map[string]any{"text": "restored"}, "restored")
 	g.stop()
 
-	// A read-only journal directory: no request is served. smcpd exits at
-	// startup instead of answering -31004, which is why FR-9.17 is partial.
+	// A read-only journal directory: smcpd does not start the Gateway; it
+	// answers every harness request with -31004 (JOURNAL_UNAVAILABLE) until
+	// the directory is writable, and then starts and serves normally.
 	if os.Geteuid() != 0 {
 		jdir := filepath.Join(g.state, "journal")
 		if err := os.Chmod(jdir, 0o500); err != nil {
 			t.Fatal(err)
 		}
-		err := g.tryStart(20e9)
-		if err == nil {
-			// Started: every harness request must be refused.
-			resp, body := g.mcpPost(g.tokenOrEmpty(), wireCall(9, "ref_echo", `{"text":"x"}`, ""), wireHeaders("tools/call", "ref_echo"))
-			if resp.StatusCode == http.StatusOK && !strings.Contains(body, "-31004") {
+		if err := g.launch(); err != nil {
+			t.Fatal(err)
+		}
+		refused := false
+		for deadline := time.Now().Add(30 * time.Second); time.Now().Before(deadline) && !refused; {
+			select {
+			case <-g.exited:
+				t.Fatalf("smcpd exited with a read-only journal directory\n%s", g.logs.String())
+			case <-time.After(200 * time.Millisecond):
+			}
+			resp, body, err := g.tryMCPPost("", wireCall(9, "ref_echo", `{"text":"x"}`, ""), wireHeaders("tools/call", "ref_echo"))
+			if err != nil {
+				continue // not listening yet
+			}
+			if resp.StatusCode == http.StatusOK || strings.Contains(body, "echo:") {
 				t.Fatalf("served with a read-only journal: %d %s", resp.StatusCode, body)
 			}
-			g.kill()
+			refused = resp.StatusCode == http.StatusServiceUnavailable && strings.Contains(body, "-31004") && strings.Contains(body, "JOURNAL_UNAVAILABLE")
+		}
+		if !refused {
+			t.Fatalf("no -31004 with a read-only journal directory\n%s", g.logs.String())
 		}
 		if err := os.Chmod(jdir, 0o700); err != nil {
 			t.Fatal(err)
 		}
+		for deadline := time.Now().Add(60 * time.Second); ; {
+			if _, err := g.ctl("health"); err == nil {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("smcpd did not start after the journal became writable\n%s", g.logs.String())
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		cs = g.session(g.token(""))
+		g.mustCall(cs, "ref_echo", map[string]any{"text": "journal back"}, "journal back")
+		g.stop()
+		// All three cases of the verification ran: an altered revision, a
+		// read-only journal directory, and the graph outage below.
+		reqtest.Verifies(t, "FR-9.17")
 	}
 
 	// The graph database is down: requests are served, health is
@@ -186,14 +216,4 @@ func TestAT03PolicyAuthorityAndOutage(t *testing.T) {
 	if out := g.mustCtl("journal", "verify"); !strings.Contains(out, "journal OK") {
 		t.Fatal(out)
 	}
-}
-
-// tokenOrEmpty signs in when the Gateway allows it and returns "" when it
-// does not (a fail-closed Gateway may refuse sign-in as well).
-func (g *gateway) tokenOrEmpty() string {
-	tok, err := g.signIn("", approverPassword)
-	if err != nil {
-		return ""
-	}
-	return tok
 }
