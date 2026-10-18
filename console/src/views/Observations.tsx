@@ -119,10 +119,25 @@ function savePreset(name: string, ids: string[]): void {
 
 const masked = new Set(["S2", "S3"]);
 
-function Preview({ selected, catalog }: { selected: string[]; catalog: Parameter[] }) {
-  const res = useResource<{ rows: Record<string, unknown>[] }>("/api/v1/observations?limit=20", { live: false });
+/** Whether a stored record falls within the draft's scope (FR-8.9, FR-8.12). */
+function inScope(r: Record<string, unknown>, scope: Scope): boolean {
+  const has = (list: string[] | undefined, v: unknown) => !list?.length || list.includes(String(v ?? ""));
+  if (!has(scope.principals, r.principal_id) || !has(scope.frameworks, r.framework_type) || !has(scope.templates, r.session_template) || !has(scope.servers, r.server_id)) return false;
+  return !scope.tools?.length || scope.tools.includes(`${String(r.server_id ?? "")}/${String(r.tool_name ?? "")}`);
+}
+
+/**
+ * Up to 20 recent stored records as the draft would have recorded them
+ * (FR-8.12): records outside the draft's scope are left out, the columns
+ * are the draft's parameters in catalog order, S2 and S3
+ * values are masked, and a parameter the policy in force did not capture
+ * is marked as such (stored records cannot be derived again).
+ */
+function Preview({ selected, catalog, scope, inForce }: { selected: string[]; catalog: Parameter[]; scope: Scope; inForce?: string[] }) {
+  const res = useResource<{ rows: Record<string, unknown>[] }>("/api/v1/observations?limit=200", { live: false });
   const byName = new Map(catalog.map((p) => [p.name, p]));
-  const cols = selected.filter((n) => byName.has(n)).slice(0, 8);
+  const cols = catalog.filter((p) => selected.includes(p.name)).map((p) => p.name);
+  const captured = new Set(inForce ?? []);
   return (
     <Loaded res={res} what="recent records" route="/api/v1/observations">
       {(d) =>
@@ -131,9 +146,12 @@ function Preview({ selected, catalog }: { selected: string[]; catalog: Parameter
         ) : (
           <DataTable
             caption="Recent records with the selected parameters"
-            rows={(d.rows ?? []).slice(-20).map((r, i) => ({ r, i }))}
+            rows={(d.rows ?? [])
+              .filter((r) => inScope(r, scope))
+              .slice(-20)
+              .map((r, i) => ({ r, i }))}
             rowKey={(x) => String(x.i)}
-            empty="No record is stored yet. Records appear after tool calls when observation is enabled."
+            empty="No stored record falls within the draft's scope. Records appear after tool calls when observation is enabled."
             initialSort="ts"
             initialDir="desc"
             columns={[
@@ -157,6 +175,7 @@ function Preview({ selected, catalog }: { selected: string[]; catalog: Parameter
                 render: (x: { r: Record<string, unknown> }) => {
                   const v = x.r[c];
                   if (masked.has(byName.get(c)!.sensitivity)) return <span className="muted">masked ({byName.get(c)!.sensitivity})</span>;
+                  if (inForce && !captured.has(c) && (v === null || v === undefined)) return <span className="muted">not captured in force</span>;
                   if (v === null || v === undefined) return <span className="muted">null</span>;
                   const s = typeof v === "string" ? v : JSON.stringify(v);
                   return <Mono>{s.length > 40 ? s.slice(0, 39) + "…" : s}</Mono>;
@@ -387,6 +406,17 @@ function Workbench({ catalog, version, status }: { catalog: Parameter[]; version
               {!p.builtin && " (saved)"}
             </button>
           ))}
+          <button
+            type="button"
+            className="btn-quiet"
+            onClick={() => {
+              setSel([]);
+              setNote("Cleared the selection.");
+              setShown(false);
+            }}
+          >
+            Clear the selection
+          </button>
         </div>
         <form
           className="inline-form"
@@ -518,8 +548,11 @@ function Workbench({ catalog, version, status }: { catalog: Parameter[]; version
       />
       {perm.can("GET /api/v1/observations") && (
         <Section title="Live record preview">
-          <p className="small">The 20 most recent stored records, limited to the selected parameters (first eight). S2 and S3 values are masked.</p>
-          <Preview selected={sel} catalog={catalog} />
+          <p className="small">
+            The 20 most recent stored records within the draft&apos;s scope, limited to the selected parameters in catalog order (scroll sideways for more). S2 and S3
+            values are masked. A parameter the Observation Policy in force does not capture has no stored value.
+          </p>
+          <Preview selected={sel} catalog={catalog} scope={scope} inForce={status?.parameters} />
         </Section>
       )}
     </>

@@ -1,6 +1,7 @@
 // G-07 Performance & meta-metrics (FR-8.15): throughput over time, p50,
 // p95 and p99 gateway-added overhead per policy revision, time per
-// enforcement stage and per policy object, filterable by policy revision.
+// enforcement stage, and time per decisive rule and per filter, all
+// filterable by policy revision.
 // Routes: /api/v1/observations/metrics, /cost and /aggregate.
 import { useState } from "react";
 import { BarChart, LineChart } from "../charts";
@@ -25,6 +26,41 @@ interface CostRow {
   total_ms: number;
 }
 
+/** Span time of one rule or filter since start (FR-10.11, Collector.Cost). */
+interface ObjectCost {
+  stage: string;
+  policy_revision: string;
+  rule_id?: string;
+  filter_id?: string;
+  observation_policy?: string;
+  spans: number;
+  total_ms: number;
+  mean_ms: number;
+  max_ms: number;
+}
+
+function ObjectCostTable({ caption, rows, label, id }: { caption: string; rows: ObjectCost[]; label: string; id: (r: ObjectCost) => string }) {
+  return (
+    <DataTable
+      caption={caption}
+      rows={rows}
+      rowKey={(r) => `${r.stage}|${r.policy_revision}|${r.rule_id ?? ""}|${r.filter_id ?? ""}|${r.observation_policy ?? ""}`}
+      initialSort="total"
+      initialDir="desc"
+      empty="No timing recorded since smcpd started."
+      columns={[
+        { key: "id", label, sort: (r) => id(r), render: (r) => <Mono>{id(r)}</Mono> },
+        { key: "stage", label: "Stage", sort: (r) => r.stage, render: (r) => <Mono>{r.stage}</Mono> },
+        { key: "rev", label: "Policy revision", sort: (r) => r.policy_revision, render: (r) => <Mono>{r.policy_revision}</Mono> },
+        { key: "n", label: "Spans", sort: (r) => r.spans, render: (r) => <Mono>{r.spans}</Mono>, className: "num" },
+        { key: "mean", label: "Mean (ms)", sort: (r) => r.mean_ms, render: (r) => <Mono>{compact(r.mean_ms)}</Mono>, className: "num" },
+        { key: "max", label: "Max (ms)", sort: (r) => r.max_ms, render: (r) => <Mono>{compact(r.max_ms)}</Mono>, className: "num" },
+        { key: "total", label: "Total (ms)", sort: (r) => r.total_ms, render: (r) => <Mono>{compact(r.total_ms)}</Mono>, className: "num" },
+      ]}
+    />
+  );
+}
+
 const ranges: [string, string][] = [
   ["1h", "last hour"],
   ["6h", "last 6 hours"],
@@ -45,9 +81,12 @@ export function Performance() {
   const [range, setRange] = useState("6h");
   const [rev, setRev] = useState("");
   const metrics = useResource<{ rows: MetricRow[] }>(`/api/v1/observations/metrics?from=${range}&limit=2000`);
-  const cost = useResource<{ rows: CostRow[] }>(`/api/v1/observations/cost?from=${range}`);
+  const cost = useResource<{ rows: CostRow[]; policy_objects?: ObjectCost[] }>(`/api/v1/observations/cost?from=${range}`);
   const overhead = useResource<{ rows: CostRow[] }>(`/api/v1/observations/aggregate?feature=gateway_overhead&from=${range}&group_by=policy_revision&quantiles=0.5,0.95,0.99`);
-  const revisions = cost.status === "ok" ? [...new Set(cost.data.rows.map((r) => r.group.policy_revision ?? ""))].filter(Boolean).sort() : [];
+  const revisions =
+    cost.status === "ok"
+      ? [...new Set([...cost.data.rows.map((r) => r.group.policy_revision ?? ""), ...(cost.data.policy_objects ?? []).map((r) => r.policy_revision)])].filter(Boolean).sort()
+      : [];
   return (
     <>
       <PageHeader code="G-07" title="Performance">
@@ -121,6 +160,20 @@ export function Performance() {
                     { key: "total", label: "Total (ms)", sort: (r) => r.total_ms, render: (r) => <Mono>{compact(r.total_ms)}</Mono>, className: "num" },
                   ]}
                 />
+              </>
+            );
+          }}
+        </Loaded>
+      </Section>
+      <Section title="Time per rule and filter">
+        <Loaded res={cost} what="rule and filter cost" route="/api/v1/observations/cost">
+          {(d) => {
+            const objs = (d.policy_objects ?? []).filter((r) => !rev || r.policy_revision === rev);
+            return (
+              <>
+                <p className="small">Span time since smcpd started, attributed to the decisive rule of each decision and to each filter that ran{rev ? ` under ${rev}` : ""}.</p>
+                <ObjectCostTable caption="Time per decisive rule" label="Rule" rows={objs.filter((r) => r.rule_id)} id={(r) => r.rule_id ?? ""} />
+                <ObjectCostTable caption="Time per filter" label="Filter" rows={objs.filter((r) => r.filter_id)} id={(r) => r.filter_id ?? ""} />
               </>
             );
           }}
