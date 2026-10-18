@@ -66,6 +66,8 @@ export interface ObsStatus {
   contexts?: string[];
   store?: { backend: string; dir: string; bytes: number; files: number; rows_written?: Record<string, number> };
   store_error?: string;
+  /** Degradation stage of the observation path (FR-9.12). */
+  degradation?: { stage: number; name: string; reason: string; backpressure: boolean };
 }
 
 /** Bytes per captured record a parameter adds, by data type (cost class). */
