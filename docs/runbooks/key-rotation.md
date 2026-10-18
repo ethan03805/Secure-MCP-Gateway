@@ -1,6 +1,6 @@
 # Runbook: key and certificate rotation
 
-Reference: [../operations/keys.md](../operations/keys.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-key-rotation-2026-10-17.md](../verification/runbooks/runbook-key-rotation-2026-10-17.md). `scripts/ci-integration.sh` rotates all three kinds on every pull request.
+Reference: [../operations/keys.md](../operations/keys.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-key-rotation-2026-10-18.md](../verification/runbooks/runbook-key-rotation-2026-10-18.md). `scripts/ci-integration.sh` rotates all three kinds on every pull request.
 
 ## Listener certificate
 
@@ -14,7 +14,7 @@ Reference: [../operations/keys.md](../operations/keys.md). Execution records go 
 2. Distribute `<state>/tls/ca.crt` (now holding both CAs) to every client before `switch_at` (for example `NODE_EXTRA_CA_CERTS` for Claude Code; see `docs/clients/`).
 3. Confirm each client still connects.
 4. At `switch_at` the Gateway activates the new CA, or run `smcpctl keys rotate ca --finish --config smcp.toml`.
-5. `smcpctl keys status` — `trust_bundle` has one CA and `ca_rotation` is gone.
+5. `smcpctl keys status` — `trust_bundle` has one CA and `ca_rotation` is gone. The listeners pick up the listener certificate reissued by the new CA within a second (they check the file at most once per second), so wait a second before checking a client that trusts only the new bundle.
 
 ## Evidence-signing key
 

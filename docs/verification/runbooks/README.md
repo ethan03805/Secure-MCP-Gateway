@@ -6,11 +6,11 @@ An execution record starts with a `| Runbook | ... |` row instead of `| Requirem
 
 | Runbook | Latest record |
 |---|---|
-| [emergency-stop.md](../../runbooks/emergency-stop.md) | [runbook-emergency-stop-2026-10-17.md](runbook-emergency-stop-2026-10-17.md) |
-| [revocation.md](../../runbooks/revocation.md) | [runbook-revocation-2026-10-17.md](runbook-revocation-2026-10-17.md) |
-| [backup-restore.md](../../runbooks/backup-restore.md) | [runbook-backup-restore-2026-10-17.md](runbook-backup-restore-2026-10-17.md) |
-| [upgrade-rollback.md](../../runbooks/upgrade-rollback.md) | [runbook-upgrade-rollback-2026-10-17.md](runbook-upgrade-rollback-2026-10-17.md) |
-| [key-rotation.md](../../runbooks/key-rotation.md) | [runbook-key-rotation-2026-10-17.md](runbook-key-rotation-2026-10-17.md) |
-| [key-compromise.md](../../runbooks/key-compromise.md) | [runbook-key-compromise-2026-10-17.md](runbook-key-compromise-2026-10-17.md) |
-| [policy-rollback.md](../../runbooks/policy-rollback.md) | [runbook-policy-rollback-2026-10-17.md](runbook-policy-rollback-2026-10-17.md) |
-| [operations/health.md](../../operations/health.md), [operations/logging-metrics-reload.md](../../operations/logging-metrics-reload.md) | [runbook-operations-2026-10-17.md](runbook-operations-2026-10-17.md) |
+| [emergency-stop.md](../../runbooks/emergency-stop.md) | [runbook-emergency-stop-2026-10-18.md](runbook-emergency-stop-2026-10-18.md) |
+| [revocation.md](../../runbooks/revocation.md) | [runbook-revocation-2026-10-18.md](runbook-revocation-2026-10-18.md) |
+| [backup-restore.md](../../runbooks/backup-restore.md) | [runbook-backup-restore-2026-10-18.md](runbook-backup-restore-2026-10-18.md) |
+| [upgrade-rollback.md](../../runbooks/upgrade-rollback.md) | [runbook-upgrade-rollback-2026-10-18.md](runbook-upgrade-rollback-2026-10-18.md) |
+| [key-rotation.md](../../runbooks/key-rotation.md) | [runbook-key-rotation-2026-10-18.md](runbook-key-rotation-2026-10-18.md) |
+| [key-compromise.md](../../runbooks/key-compromise.md) | [runbook-key-compromise-2026-10-18.md](runbook-key-compromise-2026-10-18.md) |
+| [policy-rollback.md](../../runbooks/policy-rollback.md) | [runbook-policy-rollback-2026-10-18.md](runbook-policy-rollback-2026-10-18.md) |
+| [operations/health.md](../../operations/health.md), [operations/logging-metrics-reload.md](../../operations/logging-metrics-reload.md) | [runbook-operations-2026-10-18.md](runbook-operations-2026-10-18.md) |
