@@ -695,7 +695,7 @@ S: The Egress Broker (E-18) SHALL bound each outbound operation's request size, 
 A: E-18; F-45; X-06
 V: Test | Exceed each bound with a fixture; confirm termination and an event.
 SRC: SEC Appendix F (resource limits)
-R: Bounded egress resource use.
+R: Bounded egress resource use. Release 1.x reads the Runtime Profile from the `[egress]` limits and grant of the configuration (FR-3.26), the manifest limits from the optional `request_bytes`, `response_bytes` and `timeout_ms` of its egress rules (Appendix J), and the decision obligation from the optional `egress_limits` of the permit rule, which travels with the call's egress capabilities.
 
 @FR-5.39 | Artifact cache
 P: FR-5

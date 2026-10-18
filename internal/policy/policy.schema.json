@@ -53,6 +53,17 @@
                 "side_effect": { "type": "string", "enum": ["read", "write", "external", "execute"] },
                 "source_trust": { "type": "string", "enum": ["trusted", "untrusted"] },
                 "filters": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" } },
+                "egress_limits": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "description": "Bounds on each egress operation of the calls this rule permits (FR-5.38); the smallest of these, the manifest's and the configuration's applies.",
+                  "properties": {
+                    "request_bytes": { "type": "integer", "minimum": 1 },
+                    "response_bytes": { "type": "integer", "minimum": 1 },
+                    "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 3600000 }
+                  }
+                },
                 "when": {
                   "type": "array",
                   "maxItems": 32,

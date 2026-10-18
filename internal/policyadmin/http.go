@@ -140,6 +140,9 @@ type Permission struct {
 	SideEffect      string   `json:"side_effect,omitempty"`
 	SourceTrust     string   `json:"source_trust,omitempty"`
 	Filters         []string `json:"filters,omitempty"`
+	// EgressLimits bound each egress operation of the permitted calls
+	// (FR-5.38).
+	EgressLimits *policy.EgressLimits `json:"egress_limits,omitempty"`
 	// Constraints are the rule's argument predicates (FR-3.6): the call
 	// is permitted only when every one holds.
 	Constraints []policy.Predicate `json:"constraints,omitempty"`
@@ -158,7 +161,7 @@ func Permissions(snap *policy.Snapshot, template string) []Permission {
 		}
 		out = append(out, Permission{Server: g.Server, Tool: g.Tool, Rule: g.Rule.ID, Approval: approval, CallsPerMinute: g.Rule.CallsPerMinute,
 			CallsPerSession: g.Rule.CallsPerSession, SideEffect: g.Rule.SideEffect, SourceTrust: g.Rule.SourceTrust, Filters: g.Rule.Filters,
-			Constraints: g.Rule.When})
+			EgressLimits: g.Rule.EgressLimits, Constraints: g.Rule.When})
 	}
 	return out
 }

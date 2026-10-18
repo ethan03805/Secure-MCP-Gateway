@@ -256,11 +256,14 @@ func TestEgressCapabilities(t *testing.T) {
 }
 
 // TestEgressCapabilitiesOptional: without RequireCapability the broker
-// mints nothing and still removes the header.
+// mints nothing (Issue only records the call's egress-limit obligation,
+// bounds.go) and still removes the header.
 func TestEgressCapabilitiesOptional(t *testing.T) {
 	h := newHarness(t, []Grant{{Server: "web", Host: "api.test", Ports: []int{443}, Methods: []string{"GET"}}}, Limits{})
-	if att := h.attach(); att.Issue != nil {
-		t.Fatal("capabilities minted although not required")
+	auth, end := h.attach().Issue(testBinding)
+	defer end()
+	if auth != nil || h.b.outstanding() != 0 {
+		t.Fatalf("capabilities minted although not required: %+v", auth)
 	}
 }
 

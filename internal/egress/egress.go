@@ -97,7 +97,8 @@ func (l *Limits) defaults() {
 }
 
 // effective returns the limits for one operation under grant g: the
-// smaller of the broker limit and the grant's own (FR-5.38).
+// smaller of the broker limit and the grant's own. Broker.opLimits adds
+// the manifest and the decision obligation (FR-5.38).
 func (l Limits) effective(g Grant) Limits {
 	minPos := func(a, b int64) int64 {
 		if b > 0 && b < a {
@@ -172,8 +173,9 @@ type Broker struct {
 	full      bool
 	closed    bool
 
-	headers headerSet // S1 header grants (inject.go)
-	caps    capStore  // one-use egress capabilities (capability.go)
+	headers  headerSet      // S1 header grants (inject.go)
+	caps     capStore       // one-use egress capabilities (capability.go)
+	manifest ManifestLimits // manifest egress limits (bounds.go); under mu
 }
 
 type serverLimiter struct {
@@ -258,6 +260,11 @@ type instance struct {
 	remove    func() error
 	once      sync.Once
 	err       error
+	// calls holds the egress-limit obligations of the calls the instance
+	// is serving when capabilities are not required (bounds.go); under
+	// Broker.mu.
+	calls map[uint64]pipeline.EgressLimits
+	seq   uint64
 }
 
 // InstanceInfo is the control API view of an attachment.
@@ -365,9 +372,10 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 		b.o.Log.Warn("egress for this instance is advisory: the standalone profile does not confine its network", "server", in.alias, "proxy", in.proxyURL)
 	}
 	att = &pipeline.EgressAttachment{ID: in.id, Env: env, Enforced: in.enforced, Allow: slices.Clone(allow), Close: func() error { return b.detach(in) }}
-	if b.o.RequireCapability {
-		att.Issue = func(bnd pipeline.Binding) (*pipeline.EgressAuth, func()) { return b.issue(in, bnd) }
-	}
+	// With capabilities required, Issue mints the call's tokens; without,
+	// it records the call's egress-limit obligation for the instance
+	// (FR-5.38) and returns no tokens.
+	att.Issue = func(bnd pipeline.Binding) (*pipeline.EgressAuth, func()) { return b.issue(in, bnd) }
 	return att, nil
 }
 
