@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T12:26:47Z",
+  "generatedAt": "2026-10-18T12:49:39Z",
   "commit": "1a96b1cfa4cb804b57c680b74c2f05b8a3bb62bc",
   "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1a96b1cfa4cb804b57c680b74c2f05b8a3bb62bc",
   "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39125826648",
@@ -9,7 +9,7 @@
     "passed": 1399,
     "failed": 0,
     "skipped": 41,
-    "durationSec": 1235.3,
+    "durationSec": 2610.5,
     "packages": [
       {
         "name": "console/e2e/browsers",
