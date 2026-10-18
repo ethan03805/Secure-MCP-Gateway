@@ -347,7 +347,7 @@ flowchart TB
       direction LR
       O1(["Administrator, Operator,<br/>Policy Author, Auditor,<br/>Researcher, Approver,<br/>Session Approver"]):::actor
       O2["Console 127.0.0.1:8444,<br/>G-01 to G-14; cookie,<br/>CSRF, If-Match · E-24"]
-      O3["smcpctl with the<br/>operator token<br/>(Administrator)"]
+      O3["CLI with the operator<br/>token: the smcpctl<br/>commands (Administrator)"]
       O4{{"Control API role<br/>matrix, Appendix C<br/>E-24"}}
       O1 --> O2 & O3 --> O4
     end
