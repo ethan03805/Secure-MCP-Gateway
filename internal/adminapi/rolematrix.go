@@ -49,7 +49,8 @@ var (
 //     and stop their own campaigns (refined below).
 //   - Approve dynamic client registrations: Session Approver.
 //   - Enable / suspend / retire servers: Operator may suspend only.
-//   - Principals, credentials, sessions: Operator may terminate sessions.
+//   - Principals, credentials, sessions: Operator may suspend and
+//     terminate sessions (not resume them).
 //   - Secret create / rotate / revoke: Administrator only; metadata reads
 //     are open to Operators and Auditors.
 //   - Audit query and redacted export: Operator, Policy Author, Auditor.
@@ -107,12 +108,13 @@ var routeRoles = map[string][]string{
 	"GET /api/v1/runtime/doctor":               opsRead,
 
 	// consoleapi (E-24)
-	"GET /api/v1/sessions":                   opsRead,
-	"GET /api/v1/sessions/principals":        opsRead,
-	"GET /api/v1/sessions/{id}":              opsRead,
-	"POST /api/v1/sessions/{id}/terminate":   operator,
-	"POST /api/v1/sessions/{id}/suspend":     operator,
-	"POST /api/v1/sessions/{id}/resume":      operator,
+	"GET /api/v1/sessions":                 opsRead,
+	"GET /api/v1/sessions/principals":      opsRead,
+	"GET /api/v1/sessions/{id}":            opsRead,
+	"POST /api/v1/sessions/{id}/terminate": operator,
+	"POST /api/v1/sessions/{id}/suspend":   operator,
+	// Resuming a session is the Administrator's: the Operator may suspend
+	// and terminate sessions only (Appendix C).
 	"GET /api/v1/principals":                 opsRead,
 	"GET /api/v1/servers":                    auditQuery,
 	"GET /api/v1/servers/{alias}":            auditQuery,
@@ -166,11 +168,13 @@ var routeRoles = map[string][]string{
 
 	// ops (E-21, E-22, E-23)
 	"GET /api/v1/health/status": everyRole,
-	"POST /api/v1/health/ack":   operator,
-	"GET /api/v1/keys":          operator,
-	"POST /api/v1/keys/rotate":  operator,
-	"GET /api/v1/backup":        operator,
-	"POST /api/v1/backup":       operator,
+	// POST /api/v1/health/ack is the Administrator's: leaving fail-closed
+	// after an integrity cause needs an administrator acknowledgment
+	// (FR-7.13), as resuming after a stop does.
+	"GET /api/v1/keys":         operator,
+	"POST /api/v1/keys/rotate": operator,
+	"GET /api/v1/backup":       operator,
+	"POST /api/v1/backup":      operator,
 
 	// library (E-13, E-14)
 	"GET /api/v1/packages":                            opsRead,

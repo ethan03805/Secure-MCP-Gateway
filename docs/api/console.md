@@ -80,7 +80,7 @@ Response 200: the session, with `state` `terminated`.
 
 ### POST /api/v1/sessions/{id}/suspend and /resume
 
-Suspends an active session or resumes a suspended one (FR-2.8, FR-8.19; Administrator and Operator). A suspended session's access and refresh tokens are refused (the harness gets 401 `SESSION_INVALID`) and its calls in flight are refused at the edge's next session check. It keeps its idle and maximum deadlines and its place in the principal's session count, expires as usual, and can be terminated. Resuming lets the harness continue with its current tokens unless the session expired meanwhile. `GET /api/v1/sessions` lists active and suspended sessions with their `state`.
+Suspends an active session or resumes a suspended one (FR-2.8, FR-8.19; suspend: Administrator and Operator; resume: Administrator, Appendix C). A suspended session's access and refresh tokens are refused (the harness gets 401 `SESSION_INVALID`) and its calls in flight are refused at the edge's next session check. It keeps its idle and maximum deadlines and its place in the principal's session count, expires as usual, and can be terminated. Resuming lets the harness continue with its current tokens unless the session expired meanwhile. `GET /api/v1/sessions` lists active and suspended sessions with their `state`.
 
 Request: `{"reason": "..."}` (optional, up to 1000 characters). Response 200: the session. Evidence before the change: `admin`/`suspend_requested`/`SESSION_SUSPENDED_BY_OPERATOR` or `admin`/`resume_requested`/`SESSION_RESUMED_BY_OPERATOR` with `detail.actor` and `detail.reason`. Errors: 400 `bad_request`, 404 `not_found`, 409 `wrong_state` (with `state`), 503 `audit_unavailable` (nothing changed).
 
@@ -330,7 +330,7 @@ password_hash = "$argon2id$..."   # smcpctl hash-password
 role = "operator"
 ```
 
-A person who holds several roles has one account per role. The matrix, by Appendix C row (the exact roles per route are `x-smcp-roles` in `GET /api/v1/openapi.json`, and the table is `internal/adminapi/rolematrix.go`):
+A person who holds several roles has one account per role. The rules for routes the matrix does not name are in the note under SRS Appendix C; `internal/acceptance.TestRoleMatrixEveryOperation` performs every operation as every role against a running `smcpd` (FR-8.2). The matrix, by Appendix C row (the exact roles per route are `x-smcp-roles` in `GET /api/v1/openapi.json`, and the table is `internal/adminapi/rolematrix.go`):
 
 | Appendix C row | Routes | Roles besides the Administrator |
 |---|---|---|
@@ -343,16 +343,16 @@ A person who holds several roles has one account per role. The matrix, by Append
 | Enable / suspend / retire servers | `POST /api/v1/packages/{id}/{rev}/enable`, `disable`, `retire`; `POST /api/v1/runtime/instances/{id}/kill`; `POST /api/v1/packages/scan` | Operator may suspend (`disable`), kill an instance and scan |
 | Enroll trust anchors | `POST /api/v1/packages/trust`, `DELETE /api/v1/packages/trust/{name}` | none |
 | Enable or disable the Remote Access Profile | `POST /api/v1/remote/enable`, `disable` | none |
-| Principals, credentials, sessions | `POST /api/v1/sessions/{id}/terminate` | Operator; session reads also Auditor |
+| Principals, credentials, sessions | `POST /api/v1/sessions/{id}/terminate`, `suspend`; `resume`; principal and credential routes | Operator may terminate and suspend sessions; resume and principal and credential management are Administrator-only; session reads also Auditor |
 | Secret create / rotate / revoke | `POST /api/v1/secrets*`, `DELETE /api/v1/secrets/{name}` | none; metadata reads Operator and Auditor |
 | Audit query and redacted export | `GET /api/v1/audit/*`, `POST /api/v1/audit/verify`, graph reads, server and catalog reads | Operator, Policy Author, Auditor |
 | Observation analytics (S0/S1) | `GET /api/v1/observations/status`, `parameters`, `aggregate`, `metrics`, `cost`, `GET /api/v1/baselines*`, `GET /api/v1/anomalies` | Operator, Policy Author, Auditor, Researcher |
 | Observation S2 fields | `GET /api/v1/observations` (raw records) | Operator, Policy Author, Auditor (not the Researcher, whose S2 view would need pseudonymization) |
 | Baseline promotion / rollback | `POST /api/v1/baselines/snapshots`, `/{id}/promote`, `/flags` | Policy Author |
-| Memory budgets, backups, key rotation | `GET`/`POST /api/v1/backup`, `GET /api/v1/keys`, `POST /api/v1/keys/rotate`, `POST /api/v1/health/ack`, `POST /api/v1/graph/rebuild` | Operator |
+| Memory budgets, backups, key rotation | `GET`/`POST /api/v1/backup`, `GET /api/v1/keys`, `POST /api/v1/keys/rotate`, `POST /api/v1/observations/memory-budget`, `POST /api/v1/graph/rebuild` | Operator |
 | Dataset export | `POST /api/v1/research/exports`, export reads and downloads | Researcher, for a request naming `campaign_id` (the export route refuses a campaign that is not active, completed or exported) |
 | Egress and runtime reads | `GET /api/v1/egress*`, `GET /api/v1/runtime*` | Operator, Auditor |
-| Purge, configuration reload, Session Approver accounts | `POST /api/v1/config/reload` | none |
+| Purge, configuration reload, Session Approver accounts, integrity acknowledgment | `POST /api/v1/observations/purge`, `POST /api/v1/config/reload`, `/api/v1/approvers*`, `POST /api/v1/health/ack` | none |
 
 ### POST /api/v1/console/login
 

@@ -511,6 +511,11 @@ func (g *gateway) signIn(scope, password string) (string, error) {
 // signInAt runs the authorization-code flow against the authorization
 // server at base (the harness listener or the remote public URL).
 func (g *gateway) signInAt(base, clientID, redirect, scope, password string) (string, error) {
+	return g.signInAtAs(base, clientID, redirect, scope, "approver", password)
+}
+
+// signInAtAs is signInAt with the account name typed on the sign-in page.
+func (g *gateway) signInAtAs(base, clientID, redirect, scope, user, password string) (string, error) {
 	hc := g.httpClient()
 	var asm struct {
 		AuthorizationEndpoint string `json:"authorization_endpoint"`
@@ -546,7 +551,7 @@ func (g *gateway) signInAt(base, clientID, redirect, scope, password string) (st
 	if err != nil {
 		return "", err
 	}
-	fields.Set("username", "approver")
+	fields.Set("username", user)
 	fields.Set("password", password)
 	actionURL, err := authURL.Parse(action)
 	if err != nil {
