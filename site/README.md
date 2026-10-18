@@ -76,6 +76,21 @@ installed `chrome` channel, else Playwright's Chromium, else `CHROME_PATH`) at 1
 when a diagram is wider than its box, is drawn outside it, is clipped or loses its aspect ratio, when the page scrolls
 sideways, or, at 1280 px, when the smallest text is under 11 px (`CHECK_DIAGRAMS_MIN_TEXT_PX`).
 
+## System map
+
+`docs/flows/system-map.md` is one flowchart of the whole product. It does not use the flow page: `/flows/system-map/`
+(`src/app/flows/system-map/page.tsx`, `src/lib/system-map.ts`, `src/components/SystemMap.tsx`) draws it across the
+full page width with built-in pan and zoom, and lists the stages from the document's "Stages" table; selecting a stage
+zooms to its subgraph. The overview is fitted to the page width and is as tall as the chart; zoomed, the box is as tall
+as the window. The source is laid out so the overview stays legible at 1280 px: stages run top to bottom, each split
+into left-to-right rows of at most four boxes, with lines of about 30 characters. `check-diagrams` measures the
+overview like any diagram and also every stage view at 1280 and 390 px (`measureSystemMap`).
+
+`public/system-map.svg` is the static download, written by `npm run render-system-map` (Chrome, light colors, SVG text
+labels) with the SHA-256 of the Mermaid source in its first comment; `test/system-map.test.ts` fails when it is older
+than the source, when a stage names a missing subgraph, or when an element E-01 to E-33 is not on the chart. After
+changing the chart, run `npm run render-system-map` and commit the SVG.
+
 ## Charts
 
 Charts are server-rendered SVG in `src/components/charts/`. Each has a title and description for assistive

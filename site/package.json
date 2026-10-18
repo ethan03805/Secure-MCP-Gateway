@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --no-warnings --test \"test/**/*.test.ts\"",
     "check-out": "node scripts/check-out.mjs",
-    "check-diagrams": "node scripts/check-diagrams.mjs"
+    "check-diagrams": "node scripts/check-diagrams.mjs",
+    "render-system-map": "node scripts/render-system-map.mjs"
   },
   "dependencies": {
     "@fontsource-variable/newsreader": "^5.3.0",

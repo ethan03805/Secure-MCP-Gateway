@@ -12,7 +12,7 @@ function token(name: string): string {
 }
 
 /** Mermaid theme variables read from the page's CSS tokens, so diagrams follow light and dark. */
-function themeVariables() {
+export function themeVariables() {
   const paper = token("--paper");
   const ink = token("--ink");
   return {
@@ -51,7 +51,7 @@ function themeVariables() {
   };
 }
 
-async function load(): Promise<MermaidApi> {
+export async function load(): Promise<MermaidApi> {
   if (!api) api = import("mermaid").then((m) => m.default);
   return api;
 }

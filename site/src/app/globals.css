@@ -1299,6 +1299,173 @@ table.notes .note-text {
   max-width: none;
 }
 
+/*
+ * System map (/flows/system-map/). The chart takes the full width of the
+ * page, not the sheet: the overview fits it to that width and the box is as
+ * tall as the fitted chart; zoomed, the box is as tall as the window below
+ * the sticky toolbar and the chart pans inside it (SystemMap.tsx).
+ */
+.sysmap-callout {
+  max-width: var(--main);
+  border-left: 2px solid var(--ink);
+  padding: 0.2rem 0 0.2rem 0.9rem;
+  margin: 0 0 2rem;
+}
+.sysmap-download {
+  font-family: var(--font-mono-stack);
+  font-size: 0.8rem;
+}
+.sysmap-wrap {
+  max-width: 1800px;
+  margin: 0 auto 2.5rem;
+}
+.sysmap-stages ol {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0 1.5rem;
+}
+.sysmap-stages li {
+  border-top: 1px solid var(--rule);
+  padding: 0.55rem 0 0.7rem;
+}
+.sysmap-stages li[aria-current="true"] {
+  border-top: 2px solid var(--ink);
+  padding-top: calc(0.55rem - 1px);
+}
+.sysmap-stages p {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.sysmap-stage-links {
+  font-family: var(--font-mono-stack);
+  font-size: 0.74rem !important;
+}
+.sysmap-stage-zoom {
+  font: inherit;
+  font-weight: 500;
+  color: var(--moss);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+  cursor: pointer;
+}
+.sysmap-stage-zoom:disabled {
+  color: var(--ink-3);
+  text-decoration: none;
+  cursor: default;
+}
+.sysmap-stage-no {
+  font-family: var(--font-mono-stack);
+  font-size: 0.8em;
+  color: var(--ink-3);
+}
+.sysmap-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.45rem 0;
+  background: var(--paper);
+  border-top: 1px solid var(--ink);
+  font-family: var(--font-mono-stack);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.sysmap-bar button,
+.sysmap-bar select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  padding: 0.2rem 0.6rem;
+  min-height: 2rem;
+  cursor: pointer;
+}
+.sysmap-bar button:disabled {
+  color: var(--ink-3);
+  border-color: var(--rule);
+  cursor: default;
+}
+.sysmap-pct {
+  min-width: 3.4em;
+  text-align: center;
+  color: var(--ink);
+}
+.sysmap-go {
+  min-width: 0;
+  flex: 0 1 24rem;
+}
+.sysmap-go select {
+  width: 100%;
+}
+.sysmap-go select {
+  max-width: calc(100vw - 2rem);
+}
+.sysmap-help {
+  max-width: var(--main);
+  margin: 0 0 0.6rem;
+  font-family: var(--font-mono-stack);
+  font-size: 0.74rem;
+  color: var(--ink-3);
+}
+.sysmap-box {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  touch-action: pan-y;
+  user-select: none;
+}
+.sysmap-box[data-zoomed="1"] {
+  touch-action: none;
+  cursor: grab;
+}
+.sysmap-box[data-zoomed="1"]:active {
+  cursor: grabbing;
+}
+.sysmap-box:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.sysmap-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+.sysmap-canvas svg {
+  display: block;
+  max-width: none;
+}
+.sysmap-state {
+  margin: 0;
+  padding: 1.5rem 0;
+  font-family: var(--font-mono-stack);
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+.sysmap-edges {
+  margin: 2rem 0 0;
+}
+.sysmap-edges summary {
+  cursor: pointer;
+  font-family: var(--font-mono-stack);
+  font-size: 0.82rem;
+}
+
 /* Footer ---------------------------------------------------------------- */
 .footer {
   border-top: 1px solid var(--ink);
