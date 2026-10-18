@@ -70,49 +70,47 @@ Every leaf SHALL should name its element in its subject (e.g., *"The Anomaly Sco
 
 ### 2.3 System context
 
+The context is drawn in three views of the same system of interest: who calls it, what it takes in and runs on, and what it sends out.
+
+**Agents and people**
+
 ```mermaid
 flowchart LR
-  subgraph EXT[External actors and systems]
-    AF[Agentic framework instance<br/>Hermes / Codex / Claude Code ...]
-    HA[Harness Adapter<br/>framework-specific]
-    CA[Cloud agent on a vendor computer<br/>Grok Bot / ChatGPT dots / Meta Muse]
-    TUN[Tunnel provider<br/>Cloudflare / Tailscale / vendor tunnel]
-    CUR[Operator packaging or<br/>external curation system]
-    REG[Package registries<br/>npm / PyPI / OCI / release URLs]
-    NOTE[OS notification service]
-    MET[Local metrics scraper]
-    REL[Release channel<br/>GitHub Releases / Homebrew]
-    LIB[(Trusted MCP Server Library)]
-    OP[Operator / Policy Administrator]
-    AP[Approver]
-    AUD[Auditor]
-    RES[Researcher / Analyst]
-    NET[External destinations<br/>APIs, documents, services]
-    SSRC[External secret source<br/>optional]
-    ARC[Evidence archive / SIEM<br/>optional]
-    OFF[Offline analytics tools<br/>notebooks, R, Python, BI]
-  end
-  AF --> HA
+  AF[Agentic framework instance<br/>Hermes / Codex / Claude Code ...] --> HA[Harness Adapter<br/>framework-specific]
   HA -->|X-01 Gateway Harness Interface| GW
-  CA --> TUN
+  CA[Cloud agent on a vendor computer<br/>Grok Bot / ChatGPT dots / Meta Muse] --> TUN[Tunnel provider<br/>Cloudflare / Tailscale / vendor tunnel]
   TUN -->|X-13 Remote Access Interface| GW
-  REG -->|X-17 Package sources, packaging time only| CUR
-  CUR -->|X-02 Publish signed packages + revocations| LIB
-  GW -->|X-14 Desktop notification| NOTE
-  MET -->|X-15 Operational metrics| GW
-  REL -->|X-16 Release distribution| GW
+  OP[Operator / Policy Administrator] -->|X-04 Management GUI| GW
+  AP[Approver] -->|X-05 Approval Interface| GW
+  AUD[Auditor] -->|X-04 read-only roles| GW
+  RES[Researcher / Analyst] -->|X-04 research roles| GW
+  GW[[Secure MCP Gateway — SoI]]
+```
+
+**Inputs and platform**
+
+```mermaid
+flowchart TB
+  REG[Package registries<br/>npm / PyPI / OCI / release URLs] -->|X-17 Package sources, packaging time only| CUR[Operator packaging or<br/>external curation system]
+  CUR -->|X-02 Publish signed packages + revocations| LIB[(Trusted MCP Server Library)]
   LIB -->|X-03 Library Retrieval| GW
-  OP -->|X-04 Management GUI| GW
-  AP -->|X-05 Approval Interface| GW
-  AUD -->|X-04 read-only roles| GW
-  RES -->|X-04 research roles| GW
-  GW -->|X-06 Brokered egress| NET
-  SSRC -->|X-08 Secret Provisioning| GW
-  GW -->|X-09 Evidence Export| ARC
-  GW -->|X-11 Research Dataset Export| OFF
+  REL[Release channel<br/>GitHub Releases / Homebrew] -->|X-16 Release distribution| GW
+  SSRC[External secret source<br/>optional] -->|X-08 Secret Provisioning| GW
+  MET[Local metrics scraper] -->|X-15 Operational metrics| GW
   GW[[Secure MCP Gateway — SoI]]
   GW ---|X-07 Host Platform| HOST[Host OS / kernel / container runtime]
   GW ---|X-10 Time| TIME[Trusted time source]
+```
+
+**Outputs**
+
+```mermaid
+flowchart LR
+  GW[[Secure MCP Gateway — SoI]]
+  GW -->|X-14 Desktop notification| NOTE[OS notification service]
+  GW -->|X-06 Brokered egress| NET[External destinations<br/>APIs, documents, services]
+  GW -->|X-09 Evidence Export| ARC[Evidence archive / SIEM<br/>optional]
+  GW -->|X-11 Research Dataset Export| OFF[Offline analytics tools<br/>notebooks, R, Python, BI]
 ```
 
 ---
@@ -133,6 +131,10 @@ The SoI decomposes into **ten subsystems** and **thirty-three elements**. Elemen
 | **SS-8 Management** | E-24 Management Console & Control API (with GUI view modules G-01…G-14) |
 | **SS-9 Data Server** | E-25 Graph Database Engine · E-26 Data Access Service · E-27 Observation Store · E-28 Data Lifecycle & Memory Manager |
 | **SS-10 Observation & Analytics** | E-29 Observation Collector · E-30 Behavior Baseline Engine · E-31 Anomaly Scorer · E-32 Research Dataset Service |
+
+The overview is drawn in three views. Elements that appear in more than one view are the same element. In the third view a node listing several element IDs stands for one edge from each of them.
+
+**Request path (SS-1 to SS-4)**
 
 ```mermaid
 flowchart TB
@@ -156,6 +158,25 @@ flowchart TB
     E11[E-11 Response Inspection]
     E12[E-12 Enforcement Coordinator]
   end
+  E02 --> E03 --> E04
+  E02 --> E08
+  E08 --> E06
+  E08 --> E09 --> E07
+  E09 --> E12 --> E10
+  E10 --> E11 --> E12
+  E12 --> E02
+  E05 --> E06
+  E04 --> E06
+  E24[E-24 Console & Control API] --> E05
+  E24 --> E07
+```
+
+**Server execution and secrets (SS-5, SS-6)**
+
+```mermaid
+flowchart TB
+  E10[E-10 Tool Dispatcher] --> E15
+  E22[E-22 Key & Trust Anchors] --> E13
   subgraph SS5[SS-5 Server Trust & Execution]
     E13[E-13 Library Trust Verifier]
     E14[E-14 Local Server Registry]
@@ -168,19 +189,24 @@ flowchart TB
     E19[E-19 Secret Vault]
     E20[E-20 Secret Broker]
   end
+  E13 --> E14 --> E15
+  E15 --> E16
+  E17 -.observes.-> E16
+  E16 -->|egress| E18
+  E20 --> E16
+  E20 --> E18
+  E19 --> E20
+```
+
+**Evidence, data and observation (SS-7 to SS-10)**
+
+```mermaid
+flowchart TB
+  EV["E-08, E-09, E-10, E-11, E-15, E-17, E-18, E-20"] --> E21
+  OB["E-06, E-08, E-09, E-10, E-11, E-17, E-18"] --> E29
   subgraph SS7[SS-7 Assurance]
     E21[E-21 Audit & Evidence]
-    E22[E-22 Key & Trust Anchors]
     E23[E-23 Health & Safety Monitor]
-  end
-  subgraph SS8[SS-8 Management]
-    E24[E-24 Console & Control API<br/>G-01…G-14]
-  end
-  subgraph SS9[SS-9 Data Server]
-    E26[E-26 Data Access Service]
-    E25[(E-25 Graph Database Engine)]
-    E27[(E-27 Observation Store)]
-    E28[E-28 Data Lifecycle & Memory Mgr]
   end
   subgraph SS10[SS-10 Observation & Analytics]
     E29[E-29 Observation Collector]
@@ -188,40 +214,23 @@ flowchart TB
     E31[E-31 Anomaly Scorer]
     E32[E-32 Research Dataset Service]
   end
-  E02 --> E03 --> E04
-  E02 --> E08
-  E08 --> E06
-  E08 --> E09 --> E07
-  E09 --> E12 --> E10 --> E15
-  E15 --> E16
-  E17 -.observes.-> E16
-  E16 -->|egress| E18
-  E20 --> E16
-  E20 --> E18
-  E19 --> E20
-  E10 --> E11 --> E12
-  E12 --> E02
-  E13 --> E14 --> E15
-  E22 --> E13
-  E05 --> E06
-  E24 --> E05
-  E24 --> E07
-  E04 --> E06
-  E08 & E09 & E10 & E11 & E15 & E17 & E18 & E20 --> E21
-  E08 & E09 & E10 & E11 & E17 & E18 & E06 --> E29
-  E31 -->|anomaly obligations| E06
+  subgraph SS9[SS-9 Data Server]
+    E26[E-26 Data Access Service]
+    E25[(E-25 Graph Database Engine)]
+    E27[(E-27 Observation Store)]
+    E28[E-28 Data Lifecycle & Memory Mgr]
+  end
+  WR["E-05, E-14, E-24"] --> E26
+  E31 -->|anomaly obligations| E06[E-06 Policy Decision]
   E29 --> E31
   E29 --> E26
   E21 --> E26
-  E05 --> E26
-  E14 --> E26
   E26 --> E25
   E26 --> E27
   E30 --> E26
   E30 -->|published baseline snapshot| E31
   E32 --> E26
   E28 -.manages.-> E25 & E27 & E29
-  E24 --> E26
 ```
 
 ---
@@ -448,23 +457,32 @@ The Data Server is a subsystem of several cooperating components. A **graph data
 
 ```mermaid
 flowchart LR
+  W1[E-05 / E-14 / E-04 / E-12] -->|I-07| DAS
+  W2[E-21 Audit] -->|I-30| DAS
+  W3[E-29 Observation Collector] -->|I-33| DAS
+  W4[E-30 Baseline Engine] -->|I-34| DAS
+  W5[E-32 Research Service] -->|I-35| DAS
+  W6[E-24 GUI] -->|I-06| DAS
   subgraph SS9[SS-9 Data Server]
     DAS[E-26 Data Access Service<br/>typed ops, single writer,<br/>write batching, query templates]
     GDB[(E-25 Graph Database Engine<br/>D-01 Policy · D-02 Registry · D-05 Audit<br/>D-07 Sessions · D-10 Behavior Model · D-11 Catalog)]
     OBS[(E-27 Observation Store<br/>D-09 Observation records · D-13 Meta-metrics)]
-    DLM[E-28 Data Lifecycle & Memory Manager]
+    DLM[E-28 Data Lifecycle & Memory Manager<br/>budgets, tiering, retention, backup]
     DAS --> GDB
     DAS --> OBS
-    DLM -.budgets, tiering, retention, backup.-> GDB
+    DLM -.-> GDB
     DLM -.-> OBS
   end
-  W1[E-05 / E-14 / E-04 / E-12] -->|I-07 policy, registry, session mirror| DAS
-  W2[E-21 Audit] -->|I-30 journal mirror feed| DAS
-  W3[E-29 Observation Collector] -->|I-33 observation batches| DAS
-  W4[E-30 Baseline Engine] -->|I-34 read features / write baselines| DAS
-  W5[E-32 Research Service] -->|I-35 dataset extraction| DAS
-  W6[E-24 GUI] -->|I-06 typed queries| DAS
 ```
+
+Writers to E-26, by interface:
+
+- I-07 from E-05, E-14, E-04 and E-12: policy, registry and session mirror.
+- I-30 from E-21: journal mirror feed.
+- I-33 from E-29: observation batches.
+- I-34 from E-30: read features, write baselines.
+- I-35 from E-32: dataset extraction.
+- I-06 from E-24 (GUI): typed queries.
 
 #### E-25 Graph Database Engine — T2
 - **Purpose:** The graph database server. It hosts mirrors of the policy, the server registry, principals and sessions and the audit relationship graph, plus the **behavior model graph** (baseline contexts, baseline snapshots, tool-transition edges, abnormal-event links) and the Parameter Catalog. It is optional for enforcement (A-9): when it is absent or down, the Gateway enforces from the Policy Store and the Evidence Journal and reports `degraded`.
@@ -803,21 +821,33 @@ The manifest declares the modes a server supports. The Secret Use Policy selects
 
 ### 8.3 Secret-use sequence
 
+The sequence is drawn in two parts. Step numbers run on from the first part to the second.
+
+**Grant (steps 1–5)**
+
 ```mermaid
 sequenceDiagram
   participant D as E-10 Dispatcher
   participant B as E-20 Secret Broker
   participant P as E-06 Policy Decision
   participant V as E-19 Vault
-  participant X as E-18 Egress Broker
-  participant S as E-16 Sandbox (server)
-  participant R as E-11 Response Inspection
-  participant A as E-21 Audit
   D->>B: secret slot needed (session, call, server rev, tool)
   B->>P: secret-use decision request
   P-->>B: permit + mode S1 + destination + grant TTL
   B->>V: retrieve(secret ref)
   V-->>B: value
+```
+
+**Binding and use (steps 6–11)**
+
+```mermaid
+sequenceDiagram
+  autonumber 6
+  participant B as E-20 Secret Broker
+  participant X as E-18 Egress Broker
+  participant R as E-11 Response Inspection
+  participant A as E-21 Audit
+  participant S as E-16 Sandbox (server)
   B->>X: bind credential to grant (destination-scoped)
   B->>R: register leak fingerprints
   B->>A: secret-use event (no value)
@@ -851,7 +881,7 @@ E-20 registers keyed hashes or similar non-reversible detectors (e.g., HMAC over
 The Gateway audits **per policy** and treats both normal and abnormal behavior as first-class observations. The Observation Policy names the features to capture. E-30 learns the distribution of each feature in each **baseline context**. E-31 scores new activity by its distance from the learned mean in standard deviations, and the Anomaly Response Policy decides what happens at each distance band.
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph HOT[Hot path — synchronous, in-memory]
     REQ[Request features] --> SC["E-31 Anomaly Scorer<br/>z = (x − μ) / σ"]
     RSP[Response features] --> SC
@@ -994,7 +1024,7 @@ The workbench is how a non-programmer researcher or policy author tunes audits a
 ## 12. Trust boundaries and TCB
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph U1[Untrusted: agent side]
     MODEL[Model] --- AF[Framework] --- HA[Harness Adapter]
   end
@@ -1067,18 +1097,28 @@ flowchart LR
 
 ### 13.1 Behavior model in the graph (illustrative)
 
+The model is drawn in two views. The second shows how a decision links to the baseline nodes of the first.
+
+**Baselines and their statistics**
+
 ```mermaid
-flowchart LR
+flowchart TB
   P[Principal] -->|HAS_CONTEXT| BC[BaselineContext]
   T[ToolRevision] -->|HAS_CONTEXT| BC
+  OP[ObservationPolicyRevision] -->|DEFINES| BC
   BC -->|HAS_STAT| FS[FeatureStat<br/>feature, n, mean, M2, decay]
   BS[BaselineSnapshot vN] -->|INCLUDES| FS
   BS -->|PROMOTED_BY| A[Actor]
   T -->|NEXT_TOOL count, p| T2[ToolRevision]
-  D[Decision] -->|SCORED_AGAINST| BS
+```
+
+**Scoring a decision**
+
+```mermaid
+flowchart LR
+  D[Decision] -->|SCORED_AGAINST| BS[BaselineSnapshot vN]
   D -->|ANOMALY band, max z| AE[AbnormalEvent]
-  AE -->|IN_CONTEXT| BC
-  OP[ObservationPolicyRevision] -->|DEFINES| BC
+  AE -->|IN_CONTEXT| BC[BaselineContext]
 ```
 
 ---
@@ -1184,6 +1224,10 @@ These extend rev 2.0 §10 targets. All are unmeasured design targets.
 
 ### 18.3 Tool call (all three control points plus observation)
 
+The sequence is drawn in four parts. Step numbers run on from one part to the next.
+
+**Admission and decision (steps 1–6)**
+
 ```mermaid
 sequenceDiagram
   participant H as Harness Adapter
@@ -1192,32 +1236,61 @@ sequenceDiagram
   participant AEP as E-08 Access EP
   participant PDS as E-06 Decision
   participant RQ as E-09 Request Insp.
-  participant AS as E-31 Anomaly Scorer
-  participant AP as E-07 Approval
-  participant C as E-12 Coordinator
-  participant D as E-10 Dispatcher
-  participant RM as E-15/E-16 Runtime
-  participant RS as E-11 Response Insp.
-  participant OC as E-29 Observation
-  participant AU as E-21 Audit
   H->>G: tools/call (X-01)
   G->>I: authenticate + session proof
   G->>AEP: canonical request
   AEP->>PDS: evaluate
   PDS-->>AEP: permit + obligations + route
   AEP->>RQ: apply request filters
+```
+
+**Request scoring, approval and launch (steps 7–12)**
+
+```mermaid
+sequenceDiagram
+  autonumber 7
+  participant RQ as E-09 Request Insp.
+  participant AS as E-31 Anomaly Scorer
+  participant AP as E-07 Approval
+  participant C as E-12 Coordinator
+  participant AU as E-21 Audit
+  participant D as E-10 Dispatcher
   RQ->>AS: score request features
   AS-->>RQ: band + z-scores (restrict-only obligations)
   RQ->>AP: approval if obligated (hold mode, Section 18.10)
   RQ->>C: request launch
   C->>AU: append decision + intent to journal D-06, flush
   C-->>D: one-use launch capability
+```
+
+**Dispatch and response inspection (steps 13–18)**
+
+```mermaid
+sequenceDiagram
+  autonumber 13
+  participant D as E-10 Dispatcher
+  participant RM as E-15/E-16 Runtime
+  participant RS as E-11 Response Insp.
+  participant AS as E-31 Anomaly Scorer
+  participant C as E-12 Coordinator
   D->>RM: acquire instance, call tool
   RM-->>D: response (buffered, bounded)
   D->>RS: validate + inspect
   RS->>AS: score response features
   AS-->>RS: band (may withhold)
   RS->>C: request release
+```
+
+**Release (steps 19–21)**
+
+```mermaid
+sequenceDiagram
+  autonumber 19
+  participant H as Harness Adapter
+  participant G as E-01/E-02 Edge
+  participant C as E-12 Coordinator
+  participant AU as E-21 Audit
+  participant OC as E-29 Observation
   C->>AU: append outcome to journal D-06, flush
   C-->>G: release authorization
   G-->>H: filtered response

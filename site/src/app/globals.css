@@ -629,13 +629,12 @@ dl.facts dd {
   display: block;
   width: 100%;
   max-width: 720px;
-  min-width: 540px;
   height: auto;
   font-family: var(--font-mono-stack);
 }
 .chart-svg text {
   fill: var(--ink-2);
-  font-size: 11px;
+  font-size: 12px;
 }
 .chart-svg .tick,
 .chart-svg .axis-title,
@@ -1114,7 +1113,6 @@ table.notes .note-text {
 }
 .prose {
   min-width: 0;
-  max-width: 50rem;
 }
 .prose > div > *:not(.table-wrap):not(table):not(figure):not(pre) {
   max-width: var(--main);
@@ -1138,22 +1136,106 @@ table.notes .note-text {
   max-width: 100%;
 }
 
-/* Diagrams */
+/*
+ * Diagrams. Mermaid draws with useMaxWidth: the SVG takes the width of its
+ * box, up to its drawn width, and keeps its aspect ratio. The whole diagram
+ * is always in view; nothing scrolls sideways. "View full size" opens the
+ * diagram at 100% in a dialog when the box is narrower than the drawing.
+ */
 .diagram {
   margin: 1.5rem 0 0.75rem;
 }
 .mermaid-block {
-  overflow-x: auto;
   padding: 1rem 0;
   border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
   min-height: 4rem;
 }
-.mermaid-block svg {
+.mermaid-block > svg {
   display: block;
   margin: 0 auto;
+  width: 100%;
   height: auto;
+}
+/* Message text crosses lifelines; a paper-colored outline keeps it legible. */
+.mermaid-block svg .messageText,
+.mermaid-block svg .loopText,
+.mermaid-block svg .labelText {
+  paint-order: stroke fill;
+  stroke: var(--paper) !important;
+  stroke-width: 3px !important;
+  stroke-linejoin: round;
+}
+.diagram-full {
+  font: inherit;
+  color: var(--ink-2);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  padding: 0;
+  margin-left: 0.4em;
+  cursor: pointer;
+}
+.diagram-full:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.diagram-full[hidden] {
+  display: none;
+}
+.diagram-dialog {
+  width: calc(100vw - 2rem);
+  height: calc(100vh - 2rem);
   max-width: none;
+  max-height: none;
+  margin: 1rem;
+  padding: 0;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+.diagram-dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+}
+.diagram-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.diagram-dialog-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-mono-stack);
+  font-size: 0.78rem;
+}
+.diagram-dialog-bar p {
+  margin: 0;
+}
+.diagram-dialog-close {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+.diagram-dialog-body {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+}
+.diagram-dialog-body svg {
+  display: block;
+  max-width: none;
+}
+/* Flow pages: diagrams take the full sheet, rail column included. */
+@media (min-width: 981px) {
+  .flow-body .diagram {
+    margin-left: calc(-1 * (var(--rail) + var(--gutter)));
+  }
 }
 .mermaid-block[data-rendered="1"] .mermaid-fallback {
   display: none;

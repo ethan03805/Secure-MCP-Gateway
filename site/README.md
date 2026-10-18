@@ -13,6 +13,7 @@ npm ci
 npm test            # unit tests (test/*.test.ts, node --test with type stripping)
 npm run build       # static export to out/
 npm run check-out   # after a build: every docs/ file has a page, every internal link and anchor resolves
+npm run check-diagrams  # after a build: every diagram and chart fits its box (Chrome, 1280 and 390 px)
 npm run typecheck   # tsc --noEmit
 npm run dev
 ```
@@ -56,6 +57,24 @@ SITE_STATUS_URL=http://10.255.255.1/status.json npm run build   # unreachable: f
 SITE_STATUS_URL=file:///path/to/status.json npm run build       # a local status file, read as live data
 SITE_FLOWS_DIR=/path/to/flows npm run build                     # flow documents from another directory
 ```
+
+## Diagrams
+
+Mermaid diagrams are drawn in the browser by `src/components/Mermaid.tsx` with `useMaxWidth`: each SVG is as wide as
+its box and never wider than drawn, so a whole diagram is always in view and nothing scrolls sideways. A box is 860 px
+on document pages and 1,136 px on flow pages (the flow figure spans the rail column) at 1280 px and wider. When a box
+is narrower than the drawing (a phone, a narrow window) the caption offers "View full size", a dialog with the diagram
+at 100%.
+
+A diagram stays legible only if its source is laid out for those widths: about six sequence participants on a
+document page and eight on a flow page, flowcharts top to bottom when a left-to-right layout has many ranks. Split a
+longer sequence into parts and continue the numbers with `autonumber N`; the step tables follow (`src/lib/diagram.ts`,
+tested in `test/diagram.test.ts`). Diagrams of one section of `ArchitectureV2.md` share one Flows page.
+
+`npm run check-diagrams` (after a build) loads every page with a diagram or chart in Chrome (`playwright-core`, the
+installed `chrome` channel, else Playwright's Chromium, else `CHROME_PATH`) at 1280 x 800 and 390 x 844. It fails
+when a diagram is wider than its box, is drawn outside it, is clipped or loses its aspect ratio, when the page scrolls
+sideways, or, at 1280 px, when the smallest text is under 11 px (`CHECK_DIAGRAMS_MIN_TEXT_PX`).
 
 ## Charts
 

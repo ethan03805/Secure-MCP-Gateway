@@ -51,9 +51,17 @@ function parseSequence(src: string): Step[] {
   const names = new Map<string, string>();
   const steps: Step[] = [];
   const stack: string[] = [];
+  // "autonumber 13" starts the numbering at 13: a diagram drawn in parts
+  // keeps one sequence of step numbers across its parts.
+  let first = 1;
   for (const raw of src.split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("%%")) continue;
+    const a = line.match(/^autonumber\s+(\d+)\b/);
+    if (a) {
+      if (!steps.length) first = Number(a[1]);
+      continue;
+    }
     const p = line.match(/^(participant|actor)\s+(\S+?)(?:\s+as\s+(.+))?$/);
     if (p) {
       names.set(p[2], clean(p[3] ?? p[2]));
@@ -77,7 +85,7 @@ function parseSequence(src: string): Step[] {
     const arrow = m[2];
     const style = arrow.endsWith(")") ? "async" : arrow.startsWith("--") || arrow.startsWith("<<--") ? "dashed" : "solid";
     steps.push({
-      n: steps.length + 1,
+      n: first + steps.length,
       from: names.get(from) ?? clean(from),
       to: names.get(to) ?? clean(to),
       label: clean(m[5]),

@@ -180,6 +180,10 @@ jobs:
       - name: Check pages and internal links
         run: npm run check-out
         working-directory: site
+      # The runner image's Google Chrome through playwright-core; no browser download.
+      - name: Check that every diagram and chart fits its box (1280 and 390 px)
+        run: npm run check-diagrams
+        working-directory: site
 
   security:
     name: security

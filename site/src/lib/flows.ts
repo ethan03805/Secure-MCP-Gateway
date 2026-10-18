@@ -52,7 +52,11 @@ function flowDocs(): Flow[] {
   });
 }
 
-/** Each Mermaid diagram in ArchitectureV2.md with the heading and text of the section that holds it. */
+/**
+ * Each section of ArchitectureV2.md that holds Mermaid diagrams, with its
+ * heading and text up to the next heading. The diagrams of one section form
+ * one entry, so a diagram drawn in parts stays on one page.
+ */
 function architectureDiagrams(): Flow[] {
   const md = readDoc("ArchitectureV2.md");
   const lines = md.split("\n");
@@ -61,24 +65,37 @@ function architectureDiagrams(): Flow[] {
   let heading = "";
   let headingLine = 0;
   let inFence = false;
+  // The entry of the current section, until the next heading.
+  let open: Flow | null = null;
+  const close = (upTo: number) => {
+    if (!open) return;
+    const rest = lines.slice(headingLine + 1, upTo).join("\n").trim();
+    if (rest) open.markdown += `\n${rest}\n`;
+    open = null;
+  };
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     if (l.startsWith("```")) {
       if (!inFence && l.startsWith("```mermaid")) {
-        // Section body from the heading to the end of this diagram.
+        // Section text from the heading, or from the previous diagram, to the end of this diagram.
         let end = i + 1;
         while (end < lines.length && !lines[end].startsWith("```")) end++;
         const body = lines.slice(headingLine + 1, end + 1).join("\n");
-        const title = heading.replace(/^[\d.]+\s+/, "").replace(/[*`]/g, "");
-        out.push({
-          slug: `architecture-${slugger.slug(title)}`,
-          title,
-          file: "ArchitectureV2.md",
-          origin: "architecture",
-          markdown: `# ${title}\n\n${body}\n`,
-          diagrams: diagramsIn(body),
-        });
-        // Text before the diagram belongs to this entry; the next diagram starts after it.
+        if (open) {
+          open.markdown += `\n${body}\n`;
+          open.diagrams.push(...diagramsIn(body));
+        } else {
+          const title = heading.replace(/^[\d.]+\s+/, "").replace(/[*`]/g, "");
+          open = {
+            slug: `architecture-${slugger.slug(title)}`,
+            title,
+            file: "ArchitectureV2.md",
+            origin: "architecture",
+            markdown: `# ${title}\n\n${body}\n`,
+            diagrams: diagramsIn(body),
+          };
+          out.push(open);
+        }
         headingLine = end;
         i = end;
         continue;
@@ -89,10 +106,12 @@ function architectureDiagrams(): Flow[] {
     if (inFence) continue;
     const h = l.match(/^#{2,4}\s+(.*)$/);
     if (h) {
+      close(i);
       heading = h[1].trim();
       headingLine = i;
     }
   }
+  close(lines.length);
   return out;
 }
 
