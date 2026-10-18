@@ -110,7 +110,7 @@ Checked on 2026-10-17 by the phase-8 documentation pass against the status data 
 
 ## E-29 Observation Collector
 
-- FR-11.4 external: the CI job `perf` compares p95 P-213 with observation enabled and disabled over eight fresh instances in a balanced order (partial claim; -0.04 ms and -0.02 ms in two runs on 4-CPU runners, enabled 10.27 ms and disabled 10.28 ms in the second, after the capture path changes of 2026-10-17; 0.42 ms in the run of main `ee2e851`, 0.97 ms at `788c8b4` against the 1 ms budget; the runners' processor model varies between runs); no measurement on recorded reference hardware.
+- FR-11.4 external: the CI job `perf` compares p95 P-213 with observation enabled and disabled over sixteen fresh instances in a balanced order, each load after `sync(2)` and with the instances' state on a memory file system (partial claim; 0.52 to 0.95 ms on EPYC 7763 runners, mean 0.73 over fourteen runs, and 0.1 to 0.6 ms on EPYC 9V74 and Xeon runners, after the changes of 2026-10-18; the runners' processor model varies between runs); no measurement on recorded reference hardware.
 
 ## E-31 Anomaly Scorer
 

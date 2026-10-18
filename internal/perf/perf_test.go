@@ -157,32 +157,32 @@ func TestCaptureMeasurement(t *testing.T) {
 		} else {
 			off++
 		}
-		// Balanced: each half has two runs of each condition.
-		if i == len(CaptureOrder)/2-1 && (on != 2 || off != 2) {
-			t.Fatalf("first half %d enabled, %d disabled", on, off)
+		// Balanced: every four runs have two of each condition.
+		if (i+1)%4 == 0 && (on != (i+1)/2 || off != (i+1)/2) {
+			t.Fatalf("after %d runs %d enabled, %d disabled", i+1, on, off)
 		}
 	}
-	if on != 4 || off != 4 {
+	if on != 8 || off != 8 {
 		t.Fatalf("%d enabled and %d disabled runs", on, off)
 	}
 	var runs []captureRun
 	p95 := []float64{12, 10, 11, 13, 10, 12.5, 11.5, 11}
-	for i, e := range CaptureOrder {
+	for i, e := range captureBlock {
 		runs = append(runs, captureRun{enabled: e, p95: p95[i], n: 2000})
 	}
-	m := captureMeasurement(runs)
+	m := captureMeasurement(runs, true)
 	// Enabled 12, 13, 12.5, 11.5 (mean 12.25); disabled 10, 11, 10, 11 (10.5).
 	if m.Requirement != "FR-11.4" || m.Value != 1.75 || m.Pass || m.Samples != 8000 || m.Budget != BudgetCaptureMs {
 		t.Fatalf("measurement %+v", m)
 	}
-	if !strings.Contains(m.Method, "12.250 ms, mean of 12.000, 13.000, 12.500, 11.500") || !strings.Contains(m.Method, "8 fresh instances") {
+	if !strings.Contains(m.Method, "12.250 ms, mean of 12.000, 13.000, 12.500, 11.500") || !strings.Contains(m.Method, "8 fresh instances") || !strings.Contains(m.Method, "after sync(2), state on a memory file system") {
 		t.Fatalf("method %q", m.Method)
 	}
 	runs[0].p95, runs[3].p95, runs[5].p95, runs[6].p95 = 11, 11, 10.5, 10.5
-	if m := captureMeasurement(runs); !m.Pass || m.Value != 0.25 {
+	if m := captureMeasurement(runs, false); !m.Pass || !strings.HasSuffix(m.Method, "state on disk") || m.Value != 0.25 {
 		t.Fatalf("measurement %+v", m)
 	}
-	if m := captureMeasurement(runs[:1]); m.Pass || m.Note == "" {
+	if m := captureMeasurement(runs[:1], true); m.Pass || m.Note == "" {
 		t.Fatalf("one condition only: %+v", m)
 	}
 }
@@ -217,5 +217,22 @@ func TestOverheadsFromReceiptToDeliveryWithoutServerTime(t *testing.T) {
 	// 32 ms end to end minus 10 ms of server execution; c2 is incomplete.
 	if len(got) != 1 || got[0] != 22 {
 		t.Fatalf("overheads %v, want [22]", got)
+	}
+}
+
+// TestCaptureWork: the FR-11.4 instances get a new directory on the memory
+// file system when the host has one, and the work directory otherwise.
+func TestCaptureWork(t *testing.T) {
+	saved := memFS
+	t.Cleanup(func() { memFS = saved })
+	work := t.TempDir()
+	memFS = t.TempDir()
+	d, onMemory := CaptureWork(work)
+	if !onMemory || filepath.Dir(d) != memFS {
+		t.Fatalf("with a memory file system: %q %v", d, onMemory)
+	}
+	memFS = filepath.Join(work, "absent")
+	if d, onMemory := CaptureWork(work); onMemory || d != work {
+		t.Fatalf("without one: %q %v", d, onMemory)
 	}
 }

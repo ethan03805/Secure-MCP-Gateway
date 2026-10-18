@@ -96,9 +96,9 @@ func (w *writer) drops() map[string]uint64 {
 }
 
 // run writes batches until ctx ends, on a thread of lowered priority
-// (lowPriority), and writes what is queued before it returns.
+// (idlePriority), and writes what is queued before it returns.
 func (w *writer) run(ctx context.Context) {
-	lowPriority() // the goroutine keeps its thread until it returns
+	idlePriority() // the goroutine keeps its thread until it returns
 	t := time.NewTicker(w.interval)
 	defer t.Stop()
 	buf := map[string][]obsstore.Row{}

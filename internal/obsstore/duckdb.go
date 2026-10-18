@@ -22,28 +22,61 @@ const duckdbAvailable = true
 // runs in memory; the Parquet files are the store. Extensions are never
 // installed or loaded from the network (FR-12.2): JSON and Parquet support
 // are built into the driver's library.
+//
+// Batches are written by a second in-memory DuckDB instance with a single
+// thread (w), which runs each COPY entirely on the calling thread: the
+// store writer's thread, at lowered priority (internal/analytics). Through
+// the two-threaded query instance (db) a batch's COPY ran on two threads
+// that, on a host whose processors are all busy, waited for each other:
+// each batch took about twice its idle CPU time, five batches a second per
+// table (FR-9.5), most of observation's CPU time on the 4-CPU CI runners
+// and part of what put it over its FR-11.4 budget.
 type duckStore struct {
 	*base
-	db      *sql.DB
+	db      *sql.DB // queries and research exports
+	w       *sql.DB // store batches (Append)
 	staging string
 }
 
+// writerMemory is the memory limit of the single-threaded instance that
+// writes batches (at most 1,000 rows each, FR-9.5); it comes out of
+// Options.MemoryLimit, so both instances together keep CP-33's bound.
+const writerMemory = 64 << 20
+
 func openDuckDB(o Options) (Store, error) {
-	dsn := "?threads=2&autoinstall_known_extensions=false&autoload_known_extensions=false"
+	const opts = "autoinstall_known_extensions=false&autoload_known_extensions=false"
+	queryMem, writeMem := o.MemoryLimit, int64(writerMemory)
 	if o.MemoryLimit > 0 {
-		dsn += "&memory_limit=" + strconv.FormatInt(o.MemoryLimit>>20, 10) + "MB"
+		writeMem = min(writeMem, o.MemoryLimit/4)
+		queryMem = o.MemoryLimit - writeMem
 	}
-	db, err := sql.Open("duckdb", dsn)
+	open := func(threads int, mem int64) (*sql.DB, error) {
+		dsn := "?threads=" + strconv.Itoa(threads) + "&" + opts
+		if mem > 0 {
+			dsn += "&memory_limit=" + strconv.FormatInt(mem>>20, 10) + "MB"
+		}
+		db, err := sql.Open("duckdb", dsn)
+		if err != nil {
+			return nil, fmt.Errorf("duckdb: %w", err)
+		}
+		if err := db.Ping(); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("duckdb: %w", err)
+		}
+		return db, nil
+	}
+	db, err := open(2, queryMem)
 	if err != nil {
-		return nil, fmt.Errorf("duckdb: %w", err)
+		return nil, err
 	}
-	if err := db.Ping(); err != nil {
+	w, err := open(1, writeMem)
+	if err != nil {
 		db.Close()
-		return nil, fmt.Errorf("duckdb: %w", err)
+		return nil, err
 	}
-	s := &duckStore{base: newBase(o), db: db, staging: filepath.Join(o.Dir, ".staging")}
+	s := &duckStore{base: newBase(o), db: db, w: w, staging: filepath.Join(o.Dir, ".staging")}
 	if err := os.MkdirAll(s.staging, 0o700); err != nil {
-		db.Close()
+		s.Close()
 		return nil, err
 	}
 	// Leftover staging files from a crash are partial batches that were
@@ -72,6 +105,12 @@ func columnsSpec(cols []Column) string {
 
 // WriteParquet implements ParquetWriter.
 func (s *duckStore) WriteParquet(cols []Column, jsonlPath, parquetPath string) error {
+	return writeParquet(s.db, cols, jsonlPath, parquetPath)
+}
+
+// writeParquet copies a JSON Lines file with the columns cols to a
+// zstd-compressed Parquet file with db.
+func writeParquet(db *sql.DB, cols []Column, jsonlPath, parquetPath string) error {
 	for _, c := range cols {
 		if !validName(c.Name) {
 			return fmt.Errorf("%w: %q", ErrBadColumn, c.Name)
@@ -84,7 +123,7 @@ func (s *duckStore) WriteParquet(cols []Column, jsonlPath, parquetPath string) e
 	// Identifiers are validated column names; paths are quoted literals.
 	q := fmt.Sprintf("COPY (SELECT %s FROM read_json(%s, format='newline_delimited', columns=%s)) TO %s (FORMAT parquet, COMPRESSION zstd)", //nolint:gosec // G201: validated identifiers and quoted literals only
 		strings.Join(sel, ","), sqlString(jsonlPath), columnsSpec(cols), sqlString(parquetPath))
-	if _, err := s.db.Exec(q); err != nil {
+	if _, err := db.Exec(q); err != nil {
 		return fmt.Errorf("duckdb: write parquet: %w", err)
 	}
 	return os.Chmod(parquetPath, 0o600)
@@ -122,7 +161,7 @@ func (s *duckStore) Append(table string, rows []Row) error {
 		// Write under a temporary name and rename, so that a reader never
 		// sees a partial Parquet file.
 		part := filepath.Join(dir, name+".parquet")
-		err := s.WriteParquet(t.Columns, tmp, part+".tmp")
+		err := writeParquet(s.w, t.Columns, tmp, part+".tmp")
 		os.Remove(tmp)
 		if err != nil {
 			os.Remove(part + ".tmp")
@@ -396,4 +435,10 @@ func (s *duckStore) Retain(now time.Time, keep time.Duration) ([]string, error) 
 
 func (s *duckStore) Stats() (Stats, error) { return s.stats("duckdb") }
 
-func (s *duckStore) Close() error { return s.db.Close() }
+func (s *duckStore) Close() error {
+	werr := s.w.Close()
+	if err := s.db.Close(); err != nil {
+		return err
+	}
+	return werr
+}

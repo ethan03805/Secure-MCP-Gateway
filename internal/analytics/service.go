@@ -334,6 +334,11 @@ func (s *Service) Start(ctx context.Context, rec audit.Recorder, admin *adminapi
 	s.mu.Unlock()
 	s.Baselines.SetRecorder(rec)
 	s.wg.Add(3)
+	// The collector keeps the calls' priority: it runs Go code throughout,
+	// and a goroutine locked to a low-priority thread keeps its processor
+	// slot (P) while the kernel withholds the thread, which on a busy host
+	// took the slot from calls for longer than the collector's own work.
+	// The writer spends its time in DuckDB (cgo), which hands the slot back.
 	go func() { defer s.wg.Done(); s.Collector.Run() }()
 	go func() { defer s.wg.Done(); lowPriority(); s.Baselines.Run(ctx) }()
 	go func() { defer s.wg.Done(); s.loop(ctx) }()

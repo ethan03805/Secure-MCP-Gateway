@@ -170,8 +170,14 @@ func TestCatalogPagination(t *testing.T) {
 		if next == "" {
 			break
 		}
-		if strings.Contains(next, "t_") {
-			t.Fatalf("cursor %q exposes a tool name", next)
+		// The cursor must not carry a tool name. (Checking for the names'
+		// common prefix "t_" failed about one run in twenty: the sealed
+		// cursor is base64url, and "t_" occurs in random text of its
+		// length that often.)
+		for name := range seen {
+			if strings.Contains(next, name) {
+				t.Fatalf("cursor %q exposes the tool name %s", next, name)
+			}
 		}
 		cursor = next
 	}
