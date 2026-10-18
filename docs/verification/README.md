@@ -56,4 +56,5 @@ Some Test-method requirements are verified by a GitHub Actions workflow that is 
 - [FR-8.30.md](FR-8.30.md): the browser matrix run of the console suite (supporting record).
 - [FR-8.32-webkit.md](FR-8.32-webkit.md): the manual focus-order, target-size and contrast check repeated with WebKit (supporting record).
 - [FR-12.3.md](FR-12.3.md): the platform Demonstration (Enforced on an Ubuntu runner, Standalone on macOS arm64).
+- [SR-4.1-1.md](SR-4.1-1.md): the UIDs of the running `smcpd` and server processes on the Enforced CI host (Inspection).
 - [gap-list.md](gap-list.md): requirements that are not verified, grouped by element, with what is missing.
