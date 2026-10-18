@@ -16,6 +16,18 @@ type Binding struct {
 	DecisionID     string
 	PolicyRevision string
 	PublicName     string
+	// Egress is the decision's egress-limit obligation (FR-5.38). The
+	// Egress Broker applies it to every operation that spends a
+	// capability minted for the call.
+	Egress EgressLimits
+}
+
+// EgressLimits bound each brokered operation of one call: request size,
+// response size and duration. Zero sets no bound.
+type EgressLimits struct {
+	RequestBytes  int64
+	ResponseBytes int64
+	Timeout       time.Duration
 }
 
 // Capability errors. The dispatcher refuses the call on any of them.

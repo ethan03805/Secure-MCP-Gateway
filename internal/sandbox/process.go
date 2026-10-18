@@ -30,8 +30,9 @@ type container struct {
 	once    sync.Once
 	err     error
 	release func()
-	// issue mints the egress capabilities of a call (SR-5.16-1); nil
-	// without an egress attachment or when capabilities are not required.
+	// issue mints the egress capabilities of a call (SR-5.16-1) or, when
+	// they are not required, records its egress-limit obligation
+	// (FR-5.38); nil without an egress attachment.
 	issue func(pipeline.Binding) (*pipeline.EgressAuth, func())
 }
 

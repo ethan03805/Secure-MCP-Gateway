@@ -90,6 +90,18 @@ func runBackend() {
 		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "slow"}}}, nil, nil
 	})
+	// egress_get sends one request through the Egress Broker proxy
+	// (HTTP_PROXY) with an egress capability delivered with the call and
+	// reports the status and the broker's reason code
+	// (TestEgressLimitObligationEndToEnd).
+	type egressArgs struct {
+		Port int    `json:"port"`
+		Path string `json:"path"`
+		Body int    `json:"body"`
+	}
+	mcp.AddTool(s, &mcp.Tool{Name: "egress_get", Description: "fetch through the egress broker"}, func(ctx context.Context, req *mcp.CallToolRequest, a egressArgs) (*mcp.CallToolResult, any, error) {
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: egressGet(req.Params.Meta, a.Port, a.Path, a.Body)}}}, nil, nil
+	})
 	type bigArgs struct {
 		KiB int `json:"kib"`
 	}

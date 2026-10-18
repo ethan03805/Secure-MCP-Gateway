@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
 
 // Reason codes of egress refusals and terminations. docs/egress.md lists
@@ -105,7 +106,11 @@ type Record struct {
 	BytesUp        int64  `json:"bytes_up"`
 	BytesDown      int64  `json:"bytes_down"`
 	DurationMS     int64  `json:"duration_ms"`
-	start          time.Time
+	// Bounds are the request size, response size and duration limits
+	// applied to the operation once authorized (FR-5.38, bounds.go).
+	Bounds     *Bounds `json:"bounds,omitempty"`
+	start      time.Time
+	obligation pipeline.EgressLimits // of the call whose capability was spent
 }
 
 func (b *Broker) newRecord(in *instance, mode, method string) *Record {

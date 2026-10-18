@@ -83,8 +83,10 @@ type EgressAttachment struct {
 	Close func() error
 	// Issue, when set, mints the one-use egress capabilities of one call
 	// to this instance (SR-5.16-1). The launcher exposes it through the
-	// Process it returns (EgressIssuer). Nil when the broker does not
-	// require capabilities.
+	// Process it returns (EgressIssuer). When the broker does not require
+	// capabilities it mints none (nil EgressAuth) and only records the
+	// call's egress-limit obligation (FR-5.38) until the returned function
+	// is called.
 	Issue func(Binding) (*EgressAuth, func())
 }
 
