@@ -1,6 +1,7 @@
 package backup
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,8 +13,13 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
+	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
+	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
+	"github.com/ethan03805/secure-mcp-gateway/internal/policystore"
+	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 )
 
 // RestoreOptions configure Restore. The Gateway must not be running.
@@ -29,6 +35,16 @@ type RestoreOptions struct {
 	// removes it without changing the installation.
 	VerifyOnly bool
 	Now        func() time.Time
+	// GraphBackend replaces the Neo4j connection of the restored
+	// configuration's [graph] table for the mirror rebuild (tests).
+	GraphBackend graph.Backend
+	// GraphTimeout bounds the wait for the graph database and the rebuild
+	// (default 5 minutes).
+	GraphTimeout time.Duration
+	// GraphBestEffort reports a failed mirror rebuild in the report
+	// instead of refusing the restore (the rollback of a failed upgrade,
+	// which must not depend on the graph database).
+	GraphBestEffort bool
 }
 
 // Revocation is one revocation found in a journal. Restore re-applies
@@ -42,7 +58,10 @@ type Revocation struct {
 	ReasonCode string `json:"reason_code"`
 	SessionID  string `json:"session_id,omitempty"`
 	Principal  string `json:"principal_id,omitempty"`
-	Detail     any    `json:"detail,omitempty"`
+	ClientID   string `json:"client_id,omitempty"`
+	// ServerRevision is the package revision of a package revocation.
+	ServerRevision string `json:"server_revision,omitempty"`
+	Detail         any    `json:"detail,omitempty"`
 }
 
 // RevocationsFile holds the re-applied revocations under the state
@@ -61,11 +80,21 @@ type RestoreReport struct {
 	Revocations      []Revocation `json:"revocations"`
 	// DirectoryChanges counts the principal suspensions and credential
 	// revocations re-applied to the restored principal directory.
-	DirectoryChanges int    `json:"directory_changes"`
-	GraphMirror      string `json:"graph_mirror"`
-	Isolated         string `json:"isolated_dir"`
-	PreviousState    string `json:"previous_state,omitempty"`
-	Applied          bool   `json:"applied"`
+	DirectoryChanges int `json:"directory_changes"`
+	// PackageRevocations and ClientRevocations count the package revisions
+	// and dynamic client registrations whose revocation was re-applied to
+	// the restored registries.
+	PackageRevocations int `json:"package_revocations"`
+	ClientRevocations  int `json:"client_revocations"`
+	// PolicyStoreRevision is the active revision of the restored Policy
+	// Store and PolicyRevisionsVerified the number of signed revisions
+	// verified; both are empty when the archive holds no Policy Store.
+	PolicyStoreRevision     string `json:"policy_store_revision,omitempty"`
+	PolicyRevisionsVerified int    `json:"policy_revisions_verified"`
+	GraphMirror             string `json:"graph_mirror"`
+	Isolated                string `json:"isolated_dir"`
+	PreviousState           string `json:"previous_state,omitempty"`
+	Applied                 bool   `json:"applied"`
 }
 
 // Restore decrypts the archive into an isolated directory next to the
@@ -121,7 +150,8 @@ func Restore(o RestoreOptions) (RestoreReport, error) {
 	if err != nil {
 		return rep, err
 	}
-	if _, err := config.Parse(raw); err != nil {
+	cfg, err := config.Parse(raw)
+	if err != nil {
 		return rep, fmt.Errorf("restored configuration: %w", err)
 	}
 	snap, err := policy.Load(polFile)
@@ -129,6 +159,19 @@ func Restore(o RestoreOptions) (RestoreReport, error) {
 		return rep, fmt.Errorf("restored policy: %w", err)
 	}
 	rep.PolicyRevision = snap.Revision
+	if exists(filepath.Join(rstate, filepath.Dir(policystore.ControlFile))) {
+		// The signed Policy Store: every revision file and the control
+		// record must verify under the restored policy-signing key.
+		st, err := policystore.Open(rstate)
+		if err != nil {
+			return rep, fmt.Errorf("restored Policy Store: %w", err)
+		}
+		active, _, err := st.Active()
+		if err != nil {
+			return rep, fmt.Errorf("restored Policy Store: %w", err)
+		}
+		rep.PolicyStoreRevision, rep.PolicyRevisionsVerified = active.Record.Revision, len(st.List())
+	}
 	revs, err := revocations(filepath.Join(rstate, "journal"))
 	if err != nil {
 		return rep, err
@@ -155,8 +198,37 @@ func Restore(o RestoreOptions) (RestoreReport, error) {
 	if rep.DirectoryChanges, err = applyDirectoryRevocations(rstate, revs, enabled); err != nil {
 		return rep, err
 	}
+	pkgs, clients := map[string]string{}, map[string]time.Time{}
+	for _, r := range revs {
+		switch {
+		case r.Class == "package" && r.ServerRevision != "":
+			pkgs[r.ServerRevision] = r.Time
+		case r.ReasonCode == "DCR_REVOKED" && r.ClientID != "":
+			at, _ := time.Parse(time.RFC3339Nano, r.Time)
+			clients[r.ClientID] = at
+		}
+	}
+	if rep.PackageRevocations, err = library.ReapplyRevocations(rstate, pkgs, o.Now()); err != nil {
+		return rep, fmt.Errorf("package registry: %w", err)
+	}
+	if rep.ClientRevocations, err = remote.ReapplyRevocations(rstate, clients); err != nil {
+		return rep, fmt.Errorf("remote client registry: %w", err)
+	}
 	if o.VerifyOnly {
+		if graphEnabled(cfg, o.GraphBackend) {
+			rep.GraphMirror = "configured; not rebuilt (verify only)"
+		}
 		return rep, nil
+	}
+	if graphEnabled(cfg, o.GraphBackend) {
+		switch err := rebuildGraph(cfg, rstate, o); {
+		case err == nil:
+			rep.GraphMirror = "rebuilt from the restored journal"
+		case o.GraphBestEffort:
+			rep.GraphMirror = "not rebuilt: " + err.Error() + "; rebuild it with smcpctl graph rebuild --yes"
+		default:
+			return rep, fmt.Errorf("graph mirror rebuild from the restored journal: %w (start the graph database, or set [graph] enabled = false, and restore again)", err)
+		}
 	}
 
 	// Swap. The previous state stays next to the restored one.
@@ -331,7 +403,8 @@ func revocations(journalDir string) ([]Revocation, error) {
 	var out []Revocation
 	for _, ev := range evs {
 		if isRevocation(ev) {
-			out = append(out, Revocation{EventID: ev.EventID, Time: ev.Time, Class: ev.Class, ReasonCode: ev.ReasonCode, SessionID: ev.SessionID, Principal: ev.PrincipalID, Detail: ev.Detail})
+			out = append(out, Revocation{EventID: ev.EventID, Time: ev.Time, Class: ev.Class, ReasonCode: ev.ReasonCode, SessionID: ev.SessionID, Principal: ev.PrincipalID,
+				ClientID: ev.ClientID, ServerRevision: ev.ServerRevision, Detail: ev.Detail})
 		}
 	}
 	return out, nil
@@ -359,4 +432,43 @@ func writeRevocations(stateDir string, revs []Revocation) error {
 		return err
 	}
 	return keys.WriteFileAtomic(filepath.Join(stateDir, RevocationsFile), b, 0o600)
+}
+
+// graphEnabled reports whether the restored configuration mirrors the
+// journal into a graph database.
+func graphEnabled(cfg *config.Config, b graph.Backend) bool {
+	return b != nil || cfg.Graph.Enabled
+}
+
+// rebuildGraph wipes the graph mirror and rebuilds it from the restored
+// journal, before the restored state is swapped in and service starts
+// (SR-7.8-1). The graph database settings, password file included, are
+// read from the restored configuration and state.
+func rebuildGraph(cfg *config.Config, rstate string, o RestoreOptions) error {
+	gcfg := *cfg
+	gcfg.State.Dir = rstate
+	m, err := graph.New(graph.Options{Config: &gcfg, Backend: o.GraphBackend, JournalDir: filepath.Join(rstate, "journal"), Log: diag.Discard(), Now: o.Now})
+	if err != nil {
+		return err
+	}
+	timeout := o.GraphTimeout
+	if timeout <= 0 {
+		timeout = 5 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	m.Start(ctx, nil)
+	defer m.Close()
+	for {
+		if _, err := m.DAS(); err == nil {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			st := m.Status(context.Background(), false)
+			return fmt.Errorf("graph database not ready (%s: %s)", st.State, st.Error)
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+	return m.Rebuild(ctx)
 }
