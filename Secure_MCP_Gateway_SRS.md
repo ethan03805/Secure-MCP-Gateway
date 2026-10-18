@@ -6091,12 +6091,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-4.1-1 |
 | Parent ID | SEC-4.1 — Separate OS identities (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | In the Enforced profile, the Gateway **SHALL** run the core enforcement, Data Server, vault and secret broker, evidence exporter, key manager and console as the distinct CP-46 operating-system service identities. |
+| Statement | In the Enforced profile, the Gateway **SHALL** run its enforcement core process `smcpd` (which in release 1.x also hosts the Data Access Service, the vault and secret broker, the evidence exporter, the key manager and the console) as the CP-46 service identity `smcp-core`, and every MCP server process under the CP-46 server identity `smcp-srv` (as `smcp-srv` or a UID of its subordinate range); neither identity **SHALL** be root or the operator's account. |
 | Allocation | Elements: E-12 Enforcement Coordinator, E-25 Graph Database Engine, E-19 Secret Vault, E-21 Audit & Evidence Service, E-24 Management Console & Control API; External interfaces: X-07 |
 | Verification Method | Inspection |
-| Verification Statement | Inspect running processes and their UIDs. |
-| Source | SEC 4.1 |
-| Rationale | Separation of authority. |
+| Verification Statement | On an Enforced host, inspect the running `smcpd` process and the processes of a running MCP server and their UIDs. |
+| Source | SEC 4.1; OWNER (release 1.x narrowed to the core and server identities) |
+| Rationale | Separation of authority. Release 1.x narrows the statement to the boundary it enforces, between the Gateway and the servers it runs: the components that SEC 4.1 places under `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data` and `smcp-console` are packages of the one `smcpd` process, so they share `smcp-core`. `smcpctl install` still creates those identities (CP-46). Running each component as its own process under its own identity needs an inter-process interface between components that release 1.x does not have; it is left to a later release, together with the directory owners of CP-46 that depend on it. |
 
 #### SR-4-1 — Standalone profile restrictions
 

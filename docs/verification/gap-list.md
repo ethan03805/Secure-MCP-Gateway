@@ -40,7 +40,7 @@ Updated on 2026-10-18 by the data partials work: FR-17.7 is verified (`TestOpsKe
 
 Checked on 2026-10-17 by the phase-8 documentation pass against the status data of main `788c8b4` (529 requirements: 413 verified, 95 partial, 21 unverified, none failing). The 21 unverified are the 12 parents FR-3, FR-5, FR-7, FR-8, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17 and FR-19 and the nine requirements marked external or missing below (FR-12.1, FR-12.8, SR-4.1-1, FR-18.6, SR-6.12-1, FR-12.4, FR-15.9, FR-16.10, FR-18.3). Every acceptance scenario passed in the Enforced profile for that commit (label "enforced"). The FR-11 figures below are from the CI job `perf` of that commit.
 
-Updated on 2026-10-18 by the release-ops work: FR-19.3 has an Inspection record (`FR-19.3.md`), FR-19.4 is verified by `TestEveryScenarioHasEvidence` (it now reads the AT-07 annotation of the console suite), FR-14.9 is verified by the `reference-packages` run on tag v1.0.0 (run 39096364892, published to `site-data/workflows.json`), and the FR-12.1 and FR-12.8 entries record the inspection of the v1.0.0 release.
+Updated on 2026-10-18 by the release-ops work: FR-19.3 has an Inspection record (`FR-19.3.md`), FR-19.4 is verified by `TestEveryScenarioHasEvidence` (it now reads the AT-07 annotation of the console suite), FR-14.9 is verified by the `reference-packages` run on tag v1.0.0 (run 39096364892, published to `site-data/workflows.json`), and the FR-12.1 and FR-12.8 entries record the inspection of the v1.0.0 release. SR-7.5-2 (the prompt on a pseudo-terminal, and `smcpctl install`) and FR-16.11 (Operator refused through a signed-in console account) are verified, FR-13.6 is claimed by the `install-standalone` job (macOS arm64 and Ubuntu without Podman, merged only when both report), and SR-4.1-1 is narrowed.
 
 ## E-01 Harness Interface Endpoint
 
@@ -69,7 +69,7 @@ Updated on 2026-10-18 by the release-ops work: FR-19.3 has an Inspection record 
 
 ## E-12 Enforcement Coordinator
 
-- SR-4.1-1 external: distinct CP-46 service identities are prepared by `packaging/linux/install-enforced.sh`; running processes on an Enforced host have not been inspected.
+- SR-4.1-1 external: narrowed on 2026-10-18 (SRS change) to what release 1.x does: `smcpd`, which hosts the other core components, runs as `smcp-core` and servers run under `smcp-srv`; separate identities per component are left to a later release. `scripts/ci-systemd.sh` (CI job linux-integration) now checks the UID of the running `smcpd` and of the server containers; an Inspection record of such a run is missing.
 
 ## E-13 Library Trust Verifier
 
@@ -104,7 +104,6 @@ Updated on 2026-10-18 by the release-ops work: FR-19.3 has an Inspection record 
 - FR-8.31 partial: G-01 shows a first-run checklist (`console/src/views/Control.tsx`); no record compares its items with the requirement's list.
 - FR-8.32, FR-8.33 unverified (partial claims): `console/e2e/a11y.spec.ts` runs axe on every view as it loads and tabs through every control of every view in all three browsers (WebKit with Option+Tab); `console/e2e/keyboard.spec.ts` completes the actions of every view G-01 to G-14 and Egress with keyboard events only in all three browsers and runs axe on each intermediate state; G-08 key rotation and graph rebuild, G-14 journal export downloads, the Runtime instance kill, and, on a dedicated Gateway, G-10 suspend and enable of the running server and the G-01 health acknowledgment are done with keyboard events too; the manual checks are in `FR-8.32.md` (Chromium, Firefox) and `FR-8.32-webkit.md`. Missing: a real instance for the Runtime kill (the acceptance Gateway runs no sandboxed instance, so its instance table is mocked) and an accepted graph rebuild (no graph database in the console job; the refusal is real, the accepted answer is mocked).
 - FR-11.8 external: the CI job `perf` measures the console's audit queries over a 100,000-event, 30-day journal (partial claim; 803 ms p95 at `788c8b4`, budget 2,000 ms); analytics queries over 30 days of observation data and reference hardware are missing. The journal has no index (E-21 note).
-- SR-7.5-2 partial: bootstrap, hash-password and admin redeem refuse arguments, standard input and files looser than 0600; the interactive prompt is not exercised (no terminal in tests), and there is no separate install command (installation runs bootstrap).
 
 ## E-25 Graph Database Engine
 

@@ -14,9 +14,9 @@ import (
 // password file readable by group or others and standard input, and accept
 // a mode 0600 file.
 //
-// Partial: the interactive prompt needs a terminal, which the test does not
-// have (its refusal without a terminal is checked), and there is no
-// `smcpctl install` command; installation runs bootstrap.
+// Partial on its own: the prompt (on a pseudo-terminal) and the install
+// command are TestPasswordPromptAndInstallSources; this test checks the
+// refusal without a terminal.
 func TestPasswordSources(t *testing.T) {
 	reqtest.Partial(t, "SR-7.5-2")
 	secrets := t.TempDir()
