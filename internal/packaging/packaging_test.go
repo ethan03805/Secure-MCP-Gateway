@@ -410,11 +410,22 @@ type registries struct {
 
 func newRegistries(t *testing.T) *registries {
 	t.Helper()
+	return newRegistriesImage(t, tgz(t, map[string]string{"app/server": "binary"}), nil)
+}
+
+// newRegistriesImage is newRegistries with the OCI image's one gzip layer
+// and its diff_ids (needed when the image is run, not only fetched).
+func newRegistriesImage(t *testing.T, layer []byte, diffIDs []string) *registries {
+	t.Helper()
 	r := &registries{npmTGZ: tgz(t, map[string]string{"package/package.json": `{"name":"@fx/hello","version":"1.2.3"}`, "package/index.js": jsServer}), whl: wheel(t)}
 	r.sdistSHA = packaging.SHA256Hex([]byte("sdist"))
 	// OCI: an index pointing at a linux image for this architecture.
-	r.layer = tgz(t, map[string]string{"app/server": "binary"})
-	cfg := []byte(`{"architecture":"` + runtime.GOARCH + `","os":"linux","config":{"Labels":{"org.opencontainers.image.source":"https://example.invalid/src"}},"rootfs":{"type":"layers","diff_ids":[]}}`)
+	r.layer = layer
+	ids := []byte("[]")
+	if diffIDs != nil {
+		ids, _ = json.Marshal(diffIDs)
+	}
+	cfg := []byte(`{"architecture":"` + runtime.GOARCH + `","os":"linux","config":{"Labels":{"org.opencontainers.image.source":"https://example.invalid/src"}},"rootfs":{"type":"layers","diff_ids":` + string(ids) + `}}`)
 	img, _ := json.Marshal(map[string]any{"schemaVersion": 2, "mediaType": "application/vnd.oci.image.manifest.v1+json",
 		"config": map[string]any{"mediaType": "application/vnd.oci.image.config.v1+json", "digest": "sha256:" + packaging.SHA256Hex(cfg), "size": len(cfg)},
 		"layers": []any{map[string]any{"mediaType": "application/vnd.oci.image.layer.v1.tar+gzip", "digest": "sha256:" + packaging.SHA256Hex(r.layer), "size": len(r.layer)}}})
