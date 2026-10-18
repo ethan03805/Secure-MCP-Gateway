@@ -7,10 +7,10 @@
 // says so. Claims are annotations (see docs/console.md).
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
-import { bin, mcpCall, work } from "./gateway";
+import { expect, test, type Page } from "@playwright/test";
+import { bin, mcpCall, startDedicated, work } from "./gateway";
 import { claims, g, go, mock, nav, signIn } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
@@ -158,6 +158,234 @@ test("G-04 observation workbench: grouped catalog search, presets, cost and prev
   expect(body.features.find((f: { parameter: string }) => f.parameter === "request_bytes")).toMatchObject({ transform: "none", robust: true, sigma_floor: 0.5 });
 });
 
+// FR-8.6's demonstration (a full claim): a search for "latency" shows the
+// matching catalog parameters under their capture-point group, and every
+// result row shows its description, unit, sensitivity class and cost
+// indicator. The catalog has one latency parameter, so a second search
+// ("bytes") shows results spread over several groups.
+test("G-04 catalog search: grouped results with description, unit, sensitivity and cost", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.6" });
+  await signIn(page, "/observations");
+  const catalog = await page.evaluate(() => fetch("/api/v1/observations/parameters").then((r) => r.json()));
+  type P = { id: string; name: string; description: string; unit: string; sensitivity: string; cost_class?: string; capture_point: string };
+  const params = catalog.parameters as P[];
+  const tables = page.getByRole("table", { name: /^Parameters captured at / });
+  const search = async (term: string) => {
+    await page.getByLabel(/Search parameters/).fill(term);
+    const want = params.filter((p) => [p.id, p.name, p.description, p.unit, p.capture_point].some((s) => s.toLowerCase().includes(term)));
+    const groups = new Set(want.map((p) => p.capture_point));
+    await expect(tables).toHaveCount(groups.size);
+    let seen = 0;
+    for (let i = 0; i < groups.size; i++) {
+      const t = tables.nth(i);
+      const group = (await t.locator("caption").innerText()).replace(/^Parameters captured at /, "").trim();
+      expect(groups.has(group), group).toBe(true);
+      const headers = (await t.locator("thead th").allInnerTexts()).map((s) => s.trim());
+      const col = (h: string) => headers.findIndex((x) => x.startsWith(h));
+      for (const h of ["ID", "Name", "Description", "Unit", "Sensitivity", "Cost class"]) expect(col(h), h).toBeGreaterThanOrEqual(0);
+      const rows = t.locator("tbody tr");
+      const rc = await rows.count();
+      for (let j = 0; j < rc; j++) {
+        const cells = (await rows.nth(j).locator("td").allInnerTexts()).map((s) => s.trim());
+        const p = params.find((x) => x.name === cells[col("Name")])!;
+        expect(p, cells[col("Name")]).toBeTruthy();
+        expect(p.capture_point).toBe(group);
+        expect(cells[col("Description")]).toBe(p.description);
+        expect(cells[col("Unit")]).toBe(p.unit);
+        expect(cells[col("Sensitivity")]).toContain(p.sensitivity);
+        expect(cells[col("Cost class")]).toContain(p.cost_class!);
+        seen++;
+      }
+    }
+    expect(seen).toBe(want.length);
+    return groups.size;
+  };
+  expect(await search("latency")).toBeGreaterThanOrEqual(1);
+  await expect(page.getByRole("checkbox", { name: "Capture end_to_end_latency" })).toBeVisible();
+  expect(await search("bytes")).toBeGreaterThan(1);
+});
+
+// FR-8.7's verification (a full claim): a test catalog version with one
+// added parameter, served to the same console build in place of the
+// release catalog, shows the parameter with its controls and attributes in
+// its own group; selecting it puts it in the configuration.
+test("G-04 controls come from the catalog: a parameter added to a test catalog version appears without a console rebuild", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.7" });
+  const added = {
+    id: "P-990",
+    name: "e2e_added_metric",
+    description: "Parameter added by the test catalog version",
+    unit: "ms",
+    data_type: "number",
+    sensitivity: "S1",
+    capture_point: "test-capture-point",
+    baselinable: true,
+    selected: false,
+    escalation: false,
+    cost_class: "C1",
+  };
+  await page.route("**/api/v1/observations/parameters", async (route) => {
+    const res = await route.fetch();
+    const body = await res.json();
+    body.catalog_version = "e2e-test-catalog";
+    body.parameters.push(added);
+    await route.fulfill({ response: res, json: body });
+  });
+  await signIn(page, "/observations");
+  await expect(page.getByRole("heading", { name: /Parameter Catalog e2e-test-catalog: \d+ of \d+ selected/ })).toBeVisible();
+  await page.getByLabel(/Search parameters/).fill("e2e_added");
+  const t = page.getByRole("table", { name: "Parameters captured at test-capture-point" });
+  await expect(t).toBeVisible();
+  const row = t.getByRole("row").filter({ hasText: "e2e_added_metric" });
+  for (const v of ["P-990", "Parameter added by the test catalog version", "ms", "S1", "C1"]) await expect(row).toContainText(v);
+  await row.getByRole("checkbox", { name: "Capture e2e_added_metric" }).check();
+  await expect(page.getByRole("heading", { name: /test-capture-point \(1 of 1 selected\)/ }).or(page.getByText("test-capture-point (1 of 1 selected)"))).toBeVisible();
+  await page.getByRole("button", { name: "Show the configuration for this selection" }).click();
+  await expect(page.getByText(/parameters = \[.*"e2e_added_metric"/)).toBeVisible();
+});
+
+// FR-8.8's demonstration (a full claim): each of the five presets is
+// applied, one is modified and saved as a new preset, and the saved preset
+// is still offered after the page is loaded again.
+test("G-04 presets: apply each, modify one and save it as a new preset", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.8" });
+  await signIn(page, "/observations");
+  const heading = page.getByRole("heading", { name: /^Parameter Catalog .*: \d+ of \d+ selected$/ });
+  const selectedCount = async () => Number(/: (\d+) of/.exec(await heading.innerText())![1]);
+  const counts: Record<string, number> = {};
+  for (const name of ["Minimal security floor", "Security standard", "Behavior characterization", "Performance profiling", "Research — full capture"]) {
+    await page.getByRole("button", { name, exact: true }).click();
+    const note = page.getByText(new RegExp(`^Applied preset ${name}: (\\d+) parameters\\.$`));
+    await expect(note).toBeVisible();
+    counts[name] = Number(/: (\d+) parameters/.exec(await note.innerText())![1]);
+    expect(counts[name]).toBeGreaterThan(0);
+    expect(await selectedCount()).toBe(counts[name]);
+  }
+  // The presets select different sets.
+  expect(new Set(Object.values(counts)).size).toBeGreaterThan(1);
+  // Modify Security standard: drop request_bytes, then save it.
+  await page.getByRole("button", { name: "Security standard", exact: true }).click();
+  await page.getByLabel(/Search parameters/).fill("request_bytes");
+  const box = page.getByRole("checkbox", { name: "Capture request_bytes" });
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await page.getByLabel(/Search parameters/).fill("");
+  expect(await selectedCount()).toBe(counts["Security standard"]! - 1);
+  await page.getByLabel("Save the selection as a preset").fill("e2e edited standard");
+  await page.getByRole("button", { name: "Save preset" }).click();
+  await expect(page.getByText("Saved the selection as preset e2e edited standard in this browser.")).toBeVisible();
+  // Saved presets outlive the page.
+  await page.reload();
+  await page.getByRole("button", { name: "Research — full capture", exact: true }).click();
+  await page.getByRole("button", { name: "e2e edited standard (saved)" }).click();
+  await expect(page.getByText(`Applied preset e2e edited standard: ${counts["Security standard"]! - 1} parameters.`)).toBeVisible();
+  await page.getByLabel(/Search parameters/).fill("request_bytes");
+  await expect(page.getByRole("checkbox", { name: "Capture request_bytes" })).not.toBeChecked();
+});
+
+// FR-8.11's demonstration (a full claim, statement as narrowed with the
+// FR-3.7 deferral): the cost preview refreshes with each edit of the
+// draft, and the publish action stays disabled while the draft has no
+// cost preview (no parameter selected).
+test("G-04 cost preview: it refreshes with each edit and publish waits for it", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.11" });
+  await signIn(page, "/observations");
+  const preview = page.locator("section").filter({ has: page.getByRole("heading", { name: "Cost preview" }) });
+  const value = async (term: string) => (await preview.getByRole("term").filter({ hasText: term }).locator("xpath=following-sibling::dd[1]").innerText()).trim();
+  const publish = page.getByRole("button", { name: "Publish the Observation Policy" });
+  await page.getByRole("button", { name: "Clear the selection" }).click();
+  expect(await value("Selected parameters")).toBe("0");
+  expect(await value("Bytes per captured record (estimate)")).toBe("0 B");
+  await expect(publish).toBeDisabled();
+  const steps: string[] = [];
+  for (const name of ["request_bytes", "tool_name", "argument_entropy"]) {
+    await page.getByLabel(/Search parameters/).fill(name);
+    await page.getByRole("checkbox", { name: `Capture ${name}` }).check();
+    const bytesNow = await value("Bytes per captured record (estimate)");
+    expect(steps).not.toContain(bytesNow);
+    steps.push(bytesNow);
+    expect(await value("Selected parameters")).toBe(String(steps.length));
+    await expect(publish).toBeEnabled();
+  }
+  expect(await value("Sampling rate in force")).toMatch(/^[\d.]+$/);
+  expect(await value("Store growth at that volume")).toMatch(/B$/);
+  // An S2 parameter changes the sensitivity line of the preview.
+  await page.getByLabel(/Search parameters/).fill("path_prefixes");
+  await page.getByRole("checkbox", { name: "Capture path_prefixes" }).check();
+  await expect(preview.getByText("included: raw values need a separate grant")).toBeVisible();
+  await page.getByRole("button", { name: "Clear the selection" }).click();
+  await expect(publish).toBeDisabled();
+});
+
+/**
+ * Publishes, from G-04, an Observation Policy that records every call with
+ * every per-call parameter of the catalog except S3 ones (the Research —
+ * full capture preset, sampling rate 1, no scope), so that a test does not
+ * depend on the policy an earlier test left in force.
+ */
+async function recordEveryCall(page: Page) {
+  await go(page, "/observations");
+  await page.getByRole("button", { name: "Research — full capture", exact: true }).click();
+  await page.getByLabel("Normal-band sampling rate (0 to 1)").fill("1");
+  for (const grp of ["Principals", "Tools"]) {
+    const group = page.getByRole("group", { name: grp });
+    await expect(group.getByRole("checkbox").first()).toBeVisible(); // the lists have loaded
+    for (const box of await group.getByRole("checkbox", { checked: true }).all()) await box.uncheck();
+  }
+  await page.getByRole("form", { name: "Publish the Observation Policy" }).getByRole("button", { name: "Publish the Observation Policy" }).click();
+  await expect(page.getByText(/Published Observation Policy revision \d+/)).toBeVisible();
+  const pol = await page.evaluate(() => fetch("/api/v1/observations/objects/observation_policy").then((r) => r.json()));
+  const body = (pol.revisions ?? pol)[0].body;
+  expect(body).toMatchObject({ sampling_rate: 1 });
+  expect(body.scope).toBeUndefined();
+  expect(body.parameters).toContain("gateway_overhead");
+}
+
+// FR-8.12's demonstration (a full claim): the preview shows up to 20
+// recent records the draft would have produced, within the draft's scope
+// and limited to its parameters, with S2 values masked.
+test("G-04 live record preview: masked records within the draft's scope", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.12" });
+  await signIn(page, "/observations");
+  await recordEveryCall(page);
+  // Two calls in the scope used below and one outside it (the per-principal
+  // burst limit of CP-11 allows ten calls at once).
+  for (const [tool, args, want] of [
+    ["ref_read_file", { path: "hello.txt" }, g.marker],
+    ["ref_echo", { text: "preview" }, "preview"],
+    ["ref_read_file", { path: "hello.txt" }, g.marker],
+  ] as const) {
+    {
+      const r = await mcpCall(g, tool, args, { expect: want, timeout: "60s" }).done;
+      expect(r.code, r.out).toBe(0);
+    }
+  }
+  const preview = page.getByRole("table", { name: "Recent records with the selected parameters" });
+  // The stored records the draft's scope admits. Records reach the store
+  // shortly after the calls and the preview reads them when the page loads,
+  // so load the page until the preview shows every stored record of the
+  // scope (at most 20) and the store also holds records outside it.
+  type Rec = Record<string, unknown>;
+  await expect(async () => {
+    await page.reload();
+    // Research — full capture includes end_user_claim (S2).
+    await page.getByRole("button", { name: "Research — full capture", exact: true }).click();
+    await page.getByRole("group", { name: "Tools" }).getByRole("checkbox", { name: "ref/read_file", exact: true }).check();
+    const d = await page.evaluate(() => fetch("/api/v1/observations?limit=200").then((r) => r.json()));
+    const rows = (d.rows ?? []) as Rec[];
+    const inScope = rows.filter((r) => `${r.server_id}/${r.tool_name}` === "ref/read_file").length;
+    expect(inScope).toBeGreaterThan(0);
+    expect(rows.length).toBeGreaterThan(inScope); // a record outside the scope is left out
+    await expect(preview).toBeVisible({ timeout: 10_000 });
+    expect(await preview.locator("tbody tr").count()).toBe(Math.min(20, inScope));
+  }).toPass({ timeout: 60_000 });
+  const headers = (await preview.locator("thead th").allInnerTexts()).map((s) => s.trim());
+  const selected = Number(/: (\d+) of/.exec(await page.getByRole("heading", { name: /^Parameter Catalog .*selected$/ }).innerText())![1]);
+  expect(headers.length).toBe(1 + selected); // the time and every parameter of the draft
+  expect(headers.join("|")).toContain("end_user_claim");
+  await expect(preview.locator("tbody tr").first()).toContainText("masked (S2)");
+});
+
 test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly drill-down", async ({ page }) => {
   claims("FR-8.13");
   await signIn(page, "/analytics");
@@ -183,6 +411,107 @@ test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly dr
   await page.getByRole("button", { name: /^critical 6.20/ }).focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/audit\?correlation_id=corr-critical/);
+});
+
+// FR-8.13's demonstration (a full claim), on a dedicated Gateway whose
+// baseline characterizes a context after five calls: calls train the
+// baseline, a snapshot is built and promoted from G-05, the context's
+// feature distribution is inspected, a call far outside it is scored and
+// opened from the abnormal-event list and the z-score timeline, a second
+// snapshot is built and its drift against the promoted one is shown, and
+// it is promoted and then rolled back to the first.
+test("G-05 behavior analytics on a dedicated Gateway: inspect a context, open a scored abnormal event, diff, promote and roll back snapshots", async ({ browser, browserName }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.13" });
+  test.setTimeout(600_000);
+  const d = await startDedicated(`g05-${browserName}`);
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  try {
+    appendFileSync(
+      d.config,
+      [
+        "",
+        "[limits]",
+        "principal_call_burst = 0",
+        "sessions_per_principal = 64",
+        "",
+        "[observation]",
+        "sampling_rate = 1.0",
+        'flush_interval = "1s"',
+        "",
+        "[observation.baseline]",
+        "n_min = 5",
+        "",
+      ].join("\n"),
+    );
+    await d.restart();
+    const call = async (text: string, repeat = 1) => {
+      const r = await mcpCall(d, "ref_echo", { text }, { expect: text, repeat, timeout: "120s" }).done;
+      expect(r.code, r.out).toBe(0);
+    };
+    await call("steady", 12);
+    const page = await context.newPage();
+    await page.goto(d.adminURL + "/analytics");
+    await page.getByLabel("Password").fill(d.adminPassword);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Behavior analytics" })).toBeVisible();
+    const kv = (term: string) => page.getByRole("term").filter({ hasText: term }).locator("xpath=following-sibling::dd[1]");
+    // The calls are learned once their records are stored.
+    await expect(async () => {
+      await page.reload();
+      await expect(kv("Records learned")).toHaveText(/^(1[2-9]|[2-9]\d|\d{3,})$/, { timeout: 2_000 });
+    }).toPass({ timeout: 60_000 });
+    // First snapshot: build and promote.
+    const snapshots = page.getByRole("table", { name: "Baseline snapshots" });
+    await page.getByRole("button", { name: "Build a snapshot now" }).click();
+    await expect(page.getByText(/^Built snapshot \w{8} from \d+ records/)).toBeVisible();
+    await snapshots.getByRole("button", { name: "Promote" }).click();
+    await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
+    await expect(kv("Contexts / characterized")).toHaveText(/^\d+ \/ [1-9]\d*$/);
+    const first = (await snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link").innerText()).trim();
+    // Inspect the context: the request size of the echo calls per context.
+    await page.getByRole("combobox", { name: "Feature", exact: true }).selectOption("request_bytes");
+    const perContext = page.getByRole("table", { name: "request_bytes per context" });
+    await expect(perContext.getByRole("row").filter({ hasText: "echo" }).first()).toBeVisible();
+    // A call far outside the learned request size is scored abnormal.
+    await call("x".repeat(6000));
+    const events = page.getByRole("table", { name: "Abnormal events" });
+    await expect(async () => {
+      await page.reload();
+      await expect(events.getByRole("row").filter({ hasText: /abnormal|critical/ }).first()).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 60_000 });
+    const row = events.getByRole("row").filter({ hasText: /abnormal|critical/ }).first();
+    await expect(row).toContainText("request_bytes");
+    await expect(page.getByRole("group", { name: /z-score timeline/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^(abnormal|critical) \d/ }).first()).toBeVisible();
+    // Drill down to the call in the journal.
+    await row.getByRole("link").click();
+    await expect(page).toHaveURL(/\/audit\?correlation_id=/);
+    await expect(page.getByRole("heading", { level: 1, name: "Audit investigation" })).toBeVisible();
+    const corr = new URL(page.url()).searchParams.get("correlation_id")!;
+    await expect(page.getByText(corr).first()).toBeVisible();
+    // Second snapshot: its drift against the promoted one is shown.
+    await page.goto(d.adminURL + "/analytics");
+    const stored = () => page.evaluate(() => fetch("/api/v1/observations?limit=1000").then((r) => r.json()).then((d) => (d.rows ?? []).length as number));
+    const before = await stored();
+    await call("steady", 6);
+    await expect.poll(stored, { timeout: 60_000 }).toBeGreaterThanOrEqual(before + 6);
+    await page.getByRole("button", { name: "Build a snapshot now" }).click();
+    await expect(page.getByText(/^Built snapshot \w{8} from \d+ records/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Drift of the last build" })).toBeVisible();
+    await expect(page.getByRole("table", { name: "Drift per context and feature" })).toContainText("request_bytes");
+    // Promote the second snapshot, then roll back to the first.
+    await snapshots.getByRole("button", { name: "Promote" }).click();
+    await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
+    // The table reloads after the promotion.
+    await expect(snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link")).not.toHaveText(first);
+    await snapshots.getByRole("row").filter({ hasText: first }).getByRole("button", { name: "Roll back to this snapshot" }).click();
+    await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
+    await expect(snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link")).toHaveText(first);
+    await expect(page.getByRole("table", { name: "Promotion history" }).getByRole("row")).toHaveCount(4); // header and three promotions
+  } finally {
+    await context.close();
+    d.stop();
+  }
 });
 
 test("G-06 anomaly response: only restrict-only actions per band", async ({ page }) => {
@@ -217,15 +546,61 @@ test("G-06 anomaly response: only restrict-only actions per band", async ({ page
   });
 });
 
-test("G-07 performance: throughput, overhead per revision and stage time", async ({ page }) => {
-  claims("FR-8.15");
-  const r = await mcpCall(g, "ref_echo", { text: "perf" }, { expect: "perf", timeout: "60s" }).done;
-  expect(r.code, r.out).toBe(0);
-  await signIn(page, "/performance");
-  await expect(page.getByRole("heading", { name: "Gateway overhead per policy revision" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Time per stage and policy object" })).toBeVisible();
-  await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
-  await expect(page.getByRole("combobox", { name: "Policy revision" })).toBeVisible();
+// FR-8.15's demonstration (a full claim): the costs of two policy
+// revisions are compared in G-07. Calls were made under r1 by earlier tests
+// and are made here under the revision the G-02 rollback activated; the
+// view shows throughput, p50, p95 and p99 overhead for both, and the
+// revision filter narrows the overhead, stage, rule and filter tables to
+// one revision at a time.
+test("G-07 performance: compare two policy revisions' overhead, stage, rule and filter time", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.15" });
+  const calls = async () => {
+    const r = await mcpCall(g, "ref_echo", { text: "perf" }, { expect: "perf", timeout: "60s" }).done;
+    expect(r.code, r.out).toBe(0);
+  };
+  // Calls under the active revision, then under a second one: a rollback
+  // to r1 publishes r1's content under a new revision ID.
+  await signIn(page, "/observations");
+  await recordEveryCall(page);
+  await calls();
+  await go(page, "/policy/revisions/r1");
+  await page.getByRole("button", { name: "Roll back to this revision" }).click();
+  await page.getByRole("dialog", { name: "Roll back to r1" }).getByRole("button", { name: "Roll back" }).click();
+  await expect(page.getByRole("table", { name: "Policy revisions" })).toBeVisible();
+  await calls();
+  await go(page, "/performance");
+  const overhead = page.getByRole("table", { name: "Gateway overhead per policy revision" });
+  const revCells = async () => (await overhead.locator("tbody tr td:first-child").allInnerTexts()).map((s) => s.trim()).filter(Boolean);
+  // Observation records reach the store shortly after the calls, and the
+  // meta-metrics (throughput) are sampled every 10 seconds.
+  await expect(async () => {
+    await page.reload();
+    await expect(overhead.or(page.getByText(/^No stored call in this range/))).toBeVisible({ timeout: 10_000 });
+    expect((await revCells()).length).toBeGreaterThanOrEqual(2);
+    await expect(page.getByRole("img", { name: /Calls assembled per second/ }).or(page.getByText("Calls assembled per second")).first()).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 60_000 });
+  const revs = (await revCells()).slice(0, 2);
+  for (const row of await overhead.locator("tbody tr").all()) {
+    const cells = (await row.locator("td").allInnerTexts()).map((s) => s.trim());
+    for (const q of cells.slice(2, 5)) expect(q, `p50/p95/p99 of ${cells[0]}`).toMatch(/^[\d.]+[kM]?$/);
+  }
+  const stage = page.getByRole("table", { name: "Time per stage, policy revision and observation policy" });
+  const rules = page.getByRole("table", { name: "Time per decisive rule" });
+  const filters = page.getByRole("table", { name: "Time per filter" });
+  const revColumn = async (t: typeof stage, col: number) => (await t.locator(`tbody tr td:nth-child(${col})`).allInnerTexts()).map((s) => s.trim());
+  for (const rev of revs) {
+    await page.getByRole("combobox", { name: "Policy revision" }).selectOption(rev);
+    await expect(overhead.locator("tbody tr")).toHaveCount(1);
+    expect(await revCells()).toEqual([rev]);
+    // Each table lists rows of the selected revision only, and has some.
+    for (const [t, col, what] of [
+      [stage, 2, "stages"],
+      [rules, 3, "rules"],
+      [filters, 3, "filters"],
+    ] as const) {
+      await expect.poll(async () => [...new Set(await revColumn(t, col))], { message: `${what} under ${rev}` }).toEqual([rev]);
+    }
+  }
 });
 
 test("G-08 data server: graph state, store sizes, backup and keys", async ({ page }) => {
@@ -233,6 +608,10 @@ test("G-08 data server: graph state, store sizes, backup and keys", async ({ pag
   await signIn(page, "/data-server");
   await expect(page.getByText("The graph mirror is disabled")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Observation Store" })).toBeVisible();
+  // Degradation stage and storage quota levels.
+  await expect(page.getByRole("term").filter({ hasText: "Degradation stage" }).locator("xpath=following-sibling::dd[1]")).toContainText("normal");
+  const quotas = page.getByRole("table", { name: "Storage quotas" });
+  await expect(quotas.getByRole("row").filter({ hasText: "journal" })).toContainText(/\d+\.\d%/);
   // Change the Observation Store memory budget; it is published and shown as pending until the next start.
   await page.getByLabel(/Observation Store memory budget \(MiB\)/).fill("384");
   await page.getByRole("form", { name: "Publish the memory budget" }).getByRole("button", { name: "Publish the memory budget" }).click();
@@ -245,14 +624,21 @@ test("G-08 data server: graph state, store sizes, backup and keys", async ({ pag
   await expect(page.getByRole("term").filter({ hasText: "Listener certificate" })).toBeVisible();
 });
 
-test("G-09 research campaigns: create, submit, approve, export and dictionary", async ({ page }) => {
-  claims("FR-8.17", "FR-8.9");
+// FR-8.17's demonstration (a full claim): one campaign through its whole
+// lifecycle in G-09. It is created, submitted, approved and becomes
+// active; its record count is monitored while calls are made (its scope
+// is empty, so it captures every call); it is stopped (completed),
+// exported with its data dictionary (exported) and expired.
+test("G-09 research campaigns: create, submit, approve, monitor, stop, export with dictionary and expire", async ({ page }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.17" });
+  claims("FR-8.9");
   await signIn(page, "/research");
   await page.getByRole("link", { name: "New campaign" }).click();
   await page.getByLabel("Name", { exact: true }).fill("console acceptance study");
   await page.getByLabel("Start (RFC 3339)").fill(new Date(Date.now() - 60_000).toISOString().replace(/\.\d{3}Z$/, "Z"));
   await page.getByRole("button", { name: "Create draft campaign" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Campaign console acceptance study" })).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: /^draft$/ })).toBeVisible();
   await page.getByRole("button", { name: "Submit for approval" }).click();
   await expect(page.getByText("The campaign is now submitted.")).toBeVisible();
   await page.getByRole("button", { name: "Approve" }).click();
@@ -262,9 +648,36 @@ test("G-09 research campaigns: create, submit, approve, export and dictionary", 
     await page.reload();
     await expect(page.getByRole("definition").filter({ hasText: /^active$/ })).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 60_000 });
+  // Monitor: calls raise the record count.
+  const records = page.getByRole("definition").filter({ hasText: / records, / });
+  await expect(records).toContainText(/^0 records/);
+  for (let i = 0; i < 2; i++) {
+    const r = await mcpCall(g, "ref_echo", { text: `campaign ${i}` }, { expect: `campaign ${i}`, timeout: "60s" }).done;
+    expect(r.code, r.out).toBe(0);
+  }
+  await expect(async () => {
+    await page.reload();
+    await expect(records).toContainText(/^[1-9]\d* records/, { timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
+  // Stop: the campaign is completed.
+  await page.getByLabel("Reason (optional, recorded)").fill("enough data");
+  await page.getByRole("button", { name: "Stop now" }).click();
+  await expect(page.getByText("The campaign is now completed.")).toBeVisible();
+  // Export with the data dictionary.
   await page.getByRole("button", { name: "Export", exact: true }).click();
   await expect(page.getByRole("table", { name: "Export files" })).toContainText("dictionary.json");
-  await expect(page.getByRole("table", { name: "Data dictionary" })).toBeVisible();
+  const dict = page.getByRole("table", { name: "Data dictionary" });
+  await expect(dict).toBeVisible();
+  await expect(dict).toContainText("tool_name");
+  await page.reload();
+  await expect(page.getByRole("definition").filter({ hasText: /^exported$/ })).toBeVisible();
+  // Expire ends the lifecycle.
+  await page.getByRole("button", { name: "Expire" }).click();
+  await expect(page.getByText("The campaign is now expired.")).toBeVisible();
+  const history = page.getByRole("table", { name: "Campaign history" });
+  for (const step of ["draft to submitted", "submitted to approved", "approved to active", "active to completed", "completed to exported", "exported to expired"]) {
+    await expect(history).toContainText(step);
+  }
   await go(page, "/research");
   await expect(page.getByRole("table", { name: "Dataset exports" })).toContainText("csv");
 });
