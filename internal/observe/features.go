@@ -35,11 +35,22 @@ func entropyCount(s string) (float64, int) { return entropyOfParts([]string{s}) 
 // entropyOfParts is entropyCount of the concatenation of valid UTF-8
 // parts, without concatenating them.
 func entropyOfParts(parts []string) (float64, int) {
+	h, n, _ := textStats(parts)
+	return h, n
+}
+
+// textStats is entropyOfParts and, from the same pass, the sum of the
+// parts' lengths as encoding/json writes them inside string literals
+// (jsonStringLen). The probe of a large text result reads it once instead
+// of twice: the encoded length was a second pass over the text, about half
+// of the observe-response probe's time on the call path (FR-11.4).
+func textStats(parts []string) (float64, int, int) {
 	// Four tables, summed below, so that runs of equal bytes do not
 	// serialize on one counter.
 	var tab [4][utf8.RuneSelf]int
 	var other map[rune]int
 	n := 0
+	jsonLen := 0 // of the non-ASCII code points here; of the ASCII bytes from tab below
 	for _, s := range parts {
 		i := 0
 		for ; i+4 <= len(s); i += 4 {
@@ -63,13 +74,14 @@ func entropyOfParts(parts []string) (float64, int) {
 					other = map[rune]int{}
 				}
 				other[r]++
+				jsonLen += jsonRuneLen(r, size)
 				i += size
 			}
 			n++
 		}
 	}
 	if n == 0 {
-		return 0, 0
+		return 0, 0, 0
 	}
 	h := 0.0
 	add := func(c int) {
@@ -79,12 +91,13 @@ func entropyOfParts(parts []string) (float64, int) {
 	for b := range tab[0] {
 		if c := tab[0][b] + tab[1][b] + tab[2][b] + tab[3][b]; c > 0 {
 			add(c)
+			jsonLen += c * int(jsonASCIILen[b])
 		}
 	}
 	for _, c := range other {
 		add(c)
 	}
-	return h, n
+	return h, n, jsonLen
 }
 
 // unicodeControl counts control and format characters other than tab,
@@ -245,32 +258,33 @@ func ArgumentFeatures(args json.RawMessage) (map[string]any, string) {
 //   - embedded_url_count (P-127): resource links, embedded resources and
 //     absolute URLs in text.
 func ResponseFeatures(res *mcp.CallToolResult, validate func(structured any) string, hasSchema bool) map[string]any {
-	out := map[string]any{}
+	out, finish := ResponseFeaturesDeferred(res, validate, hasSchema)
+	finish()
+	return out
+}
+
+// ResponseFeaturesDeferred is ResponseFeatures in two parts. It returns
+// the parameters that need only the result's shape, and finish, which
+// adds those that read the text parts (response_bytes, response_entropy,
+// response_token_estimate and embedded_url_count) to the same map. finish
+// reads nothing of res but the text parts' strings, which never change, so
+// it may run later on another goroutine once the map has been handed over:
+// with asynchronous scoring the observe-response probe leaves it to the
+// Observation Collector, and a large text result is no longer read on the
+// call path (FR-11.4).
+func ResponseFeaturesDeferred(res *mcp.CallToolResult, validate func(structured any) string, hasSchema bool) (out map[string]any, finish func()) {
+	out = map[string]any{}
 	if res == nil {
-		return out
-	}
-	if n, err := encodedSize(res); err == nil {
-		out["response_bytes"] = n
+		return out, func() {}
 	}
 	parts := map[string]int64{}
-	var texts []string // the text parts up to 4 MiB, not copied
-	textLen := 0
+	var texts []string // the text parts, not copied
 	urls := 0
 	for _, c := range res.Content {
 		switch x := c.(type) {
 		case *mcp.TextContent:
 			parts["text"]++
-			if textLen < 4<<20 {
-				texts = append(texts, x.Text)
-				textLen += len(x.Text)
-			}
-			if strings.Contains(x.Text, "://") { // looksLikeURL needs a scheme separator
-				for _, f := range strings.Fields(x.Text) {
-					if looksLikeURL(strings.Trim(f, `"'()<>[],.`)) {
-						urls++
-					}
-				}
-			}
+			texts = append(texts, x.Text)
 		case *mcp.ImageContent:
 			parts["image"]++
 		case *mcp.AudioContent:
@@ -286,9 +300,7 @@ func ResponseFeatures(res *mcp.CallToolResult, validate func(structured any) str
 		}
 	}
 	out["content_parts_by_type"] = parts
-	h, runes := entropyOfParts(texts)
-	out["response_entropy"] = h
-	out["response_token_estimate"] = int64(runes / 4)
+	skeleton, skelErr := encodedSkeleton(res)
 	out["is_error"] = map[string]any{"is_error": res.IsError}
 	if res.StructuredContent != nil {
 		var v any
@@ -310,25 +322,51 @@ func ResponseFeatures(res *mcp.CallToolResult, validate func(structured any) str
 	default:
 		out["output_schema_conformance"] = "conforms"
 	}
-	out["embedded_url_count"] = int64(urls)
-	return out
+	finish = func() {
+		var counted []string // the text parts up to 4 MiB
+		textLen, restJSON := 0, 0
+		textURLs := 0
+		for _, s := range texts {
+			if textLen < 4<<20 {
+				counted = append(counted, s)
+				textLen += len(s)
+			} else {
+				restJSON += jsonStringLen(s)
+			}
+			if strings.Contains(s, "://") { // looksLikeURL needs a scheme separator
+				for _, f := range strings.Fields(s) {
+					if looksLikeURL(strings.Trim(f, `"'()<>[],.`)) {
+						textURLs++
+					}
+				}
+			}
+		}
+		h, runes, textJSON := textStats(counted)
+		if skelErr == nil {
+			out["response_bytes"] = skeleton + int64(textJSON+restJSON)
+		}
+		out["response_entropy"] = h
+		out["response_token_estimate"] = int64(runes / 4)
+		out["embedded_url_count"] = int64(urls + textURLs)
+	}
+	return out, finish
 }
 
-// encodedSize is the length of res's JSON encoding (P-120) without
-// encoding the text parts: each is encoded with a one-byte placeholder and
-// its text's encoded length is added (jsonStringLen), which for a large
-// text result avoids encoding, and compacting, the whole text again on the
-// call path.
-func encodedSize(res *mcp.CallToolResult) (int64, error) {
+// encodedSkeleton is the length of res's JSON encoding (P-120) without its
+// text parts' encoded strings: each non-empty text part is encoded with a
+// one-byte placeholder, which is subtracted. Adding the text parts' encoded
+// lengths (jsonStringLen, or textStats) gives the length of the encoding,
+// without encoding, and compacting, a large text result again.
+func encodedSkeleton(res *mcp.CallToolResult) (int64, error) {
 	cp := *res
 	cp.Content = make([]mcp.Content, len(res.Content))
-	var extra int
+	placeholders := 0
 	for i, c := range res.Content {
 		if x, ok := c.(*mcp.TextContent); ok && len(x.Text) > 0 {
 			t := *x
 			t.Text = "x"
 			cp.Content[i] = &t
-			extra += jsonStringLen(x.Text) - 1
+			placeholders++
 			continue
 		}
 		cp.Content[i] = c
@@ -337,7 +375,7 @@ func encodedSize(res *mcp.CallToolResult) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int64(len(raw) + extra), nil
+	return int64(len(raw) - placeholders), nil
 }
 
 // jsonStringLen is the length of s as encoding/json writes it inside a
@@ -353,17 +391,23 @@ func jsonStringLen(s string) int {
 			continue
 		}
 		r, size := utf8.DecodeRuneInString(s[i:])
-		switch {
-		case r == utf8.RuneError && size == 1:
-			n += 6 // \ufffd
-		case r == '\u2028' || r == '\u2029':
-			n += 6
-		default:
-			n += size
-		}
+		n += jsonRuneLen(r, size)
 		i += size
 	}
 	return n
+}
+
+// jsonRuneLen is the encoded length in a JSON string of a non-ASCII code
+// point read as size bytes: invalid UTF-8 is written as \ufffd, and U+2028
+// and U+2029 are escaped.
+func jsonRuneLen(r rune, size int) int {
+	switch {
+	case r == utf8.RuneError && size == 1:
+		return 6 // \ufffd
+	case r == '\u2028' || r == '\u2029':
+		return 6
+	}
+	return size
 }
 
 // jsonASCIILen is the encoded length of each ASCII byte in a JSON string.

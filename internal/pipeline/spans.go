@@ -127,7 +127,8 @@ type SpanTimer struct {
 // NewSpanTimer starts recording the spans of the call corr.
 func NewSpanTimer(corr string) *SpanTimer {
 	_, ok := threadCPU()
-	return &SpanTimer{ok: ok, corr: corr}
+	// About 20 spans per call: the stages and the filter runs.
+	return &SpanTimer{ok: ok, corr: corr, spans: make([]StageSpan, 0, 24)}
 }
 
 // Start begins a stage; the returned function ends it. The stage's CPU

@@ -11,3 +11,6 @@ func lowPriority() bool {
 	runtime.LockOSThread()
 	return false
 }
+
+// idlePriority is lowPriority on this platform.
+func idlePriority() bool { return lowPriority() }

@@ -85,8 +85,8 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 		Method: fmt.Sprintf("policy.Decider.Decide on the compiled reference policy (%d rules, %d candidates per decision), %d concurrent callers, latency as the caller sees it", RefRules, RefCandidates, o.Callers)})
 
 	// FR-11.4 and FR-11.5: load against three instances.
-	load := func(name, extra string) ([]float64, error) {
-		in, err := newInstance(o.BinDir, filepath.Join(o.Work, name), extra, doc)
+	load := func(work, name, extra string) ([]float64, error) {
+		in, err := newInstance(o.BinDir, filepath.Join(work, name), extra, doc)
 		if err != nil {
 			return nil, err
 		}
@@ -97,6 +97,11 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 			return nil, err
 		}
 		defer in.stop()
+		// Start the load on a quiet disk: P-213 includes the journal's
+		// flush before launch, and dirty pages left by earlier work (the
+		// build before the CI job, the previous instances) are otherwise
+		// written back during this run's flushes.
+		flushDisk()
 		say("%s: %d calls of read_file (64 KiB result), %d callers", name, o.Calls, o.Callers)
 		if err := drive(ctx, in, o.Calls, o.Callers); err != nil {
 			return nil, err
@@ -104,7 +109,7 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 		in.stop()
 		return in.overheads()
 	}
-	syncScoring, err := load("sync-scoring", "\n[observation]\nscoring = \"sync\"\n")
+	syncScoring, err := load(o.Work, "sync-scoring", "\n[observation]\nscoring = \"sync\"\n")
 	if err != nil {
 		return nil, err
 	}
@@ -112,24 +117,41 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.5", Name: "Gateway-added overhead (P-213)", Metric: "p95", Unit: "ms",
 		Value: p95, Budget: BudgetOverheadMs, Ceiling: CeilingOverheadMs, Samples: len(syncScoring), Pass: p95 <= BudgetOverheadMs,
 		Method: fmt.Sprintf("real smcpd with synchronous scoring, %d concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (request receipt to delivered, minus dispatched to the backend's response)", o.Callers)})
-	// Four instances of each condition in the order of CaptureOrder, so
+	// Eight instances of each condition in the order of CaptureOrder, so
 	// that warm-up and drift on the runner affect both conditions alike;
 	// the p95 of each condition is the mean of its runs' p95. With two runs
 	// of each, the spread between runs of one condition on a CI runner
 	// (about 5 ms) was larger than the 1 ms being measured.
+	//
+	// The instances keep their state on a memory file system where the
+	// host has one (CaptureWork). Their journals' flushes before launch
+	// are in P-213, and on some CI runners a few percent of those flushes
+	// stalled for about 190 ms, in enabled and disabled runs alike (0.56%
+	// and 0.60% of 208,000 calls each): each run's p95 then fell anywhere
+	// between 13 and 130 ms, and the difference between conditions said
+	// nothing about observation. Flush latency is the disk's and the same
+	// with observation on or off; FR-11.5 measures it, on disk.
+	capWork, onMemory := CaptureWork(o.Work)
+	if onMemory {
+		defer os.RemoveAll(capWork)
+	}
 	var runs []captureRun
 	for i, enabled := range CaptureOrder {
 		extra := ""
 		if !enabled {
 			extra = "\n[observation]\nenabled = false\n"
 		}
-		lat, err := load(fmt.Sprintf("capture-%d", i), extra)
+		name := fmt.Sprintf("capture-%d", i)
+		lat, err := load(capWork, name, extra)
+		if onMemory {
+			os.RemoveAll(filepath.Join(capWork, name))
+		}
 		if err != nil {
 			return nil, err
 		}
 		runs = append(runs, captureRun{enabled: enabled, p95: Quantile(lat, 0.95), n: len(lat)})
 	}
-	res.Measurements = append(res.Measurements, captureMeasurement(runs))
+	res.Measurements = append(res.Measurements, captureMeasurement(runs, onMemory))
 
 	// FR-11.8: the console's audit queries over 30 days of reference data.
 	qi, err := newInstance(o.BinDir, filepath.Join(o.Work, "queries"), "", doc)
@@ -248,11 +270,17 @@ func queries(in *instance, reps int) ([]float64, error) {
 	return out, nil
 }
 
-// CaptureOrder is the order of the FR-11.4 runs, true for observation
-// enabled: two enabled-disabled-disabled-enabled blocks, the second
-// mirrored, so that a linear or quadratic drift over the runs affects both
-// conditions alike.
-var CaptureOrder = []bool{true, false, false, true, false, true, true, false}
+// captureBlock is two enabled-disabled-disabled-enabled blocks, the second
+// mirrored, so that a linear or quadratic drift over its runs affects both
+// conditions alike (true for observation enabled).
+var captureBlock = []bool{true, false, false, true, false, true, true, false}
+
+// CaptureOrder is the order of the FR-11.4 runs: captureBlock twice,
+// sixteen runs. With eight, the mean p95 of a condition still moved by
+// 0.2 to 0.3 ms between repetitions on one CI runner, which put a
+// difference of 0.7 ms over the 1 ms budget in about one repetition in
+// six; sixteen halve the variance of the estimate.
+var CaptureOrder = append(append([]bool{}, captureBlock...), captureBlock...)
 
 type captureRun struct {
 	enabled bool
@@ -261,8 +289,9 @@ type captureRun struct {
 }
 
 // captureMeasurement is FR-11.4: the mean p95 P-213 of the enabled runs
-// minus that of the disabled runs.
-func captureMeasurement(runs []captureRun) Measurement {
+// minus that of the disabled runs. onMemory reports whether the instances
+// kept their state on a memory file system (CaptureWork).
+func captureMeasurement(runs []captureRun, onMemory bool) Measurement {
 	var on, off []string
 	var sumOn, sumOff float64
 	var nOn, nOff, samplesOn, samplesOff int
@@ -279,11 +308,30 @@ func captureMeasurement(runs []captureRun) Measurement {
 		m.Note = "no runs of one condition"
 		return m
 	}
+	where := "state on disk"
+	if onMemory {
+		where = "state on a memory file system"
+	}
 	pOn, pOff := sumOn/float64(nOn), sumOff/float64(nOff)
 	m.Value, m.Samples, m.Pass = pOn-pOff, min(samplesOn, samplesOff), pOn-pOff <= BudgetCaptureMs
-	m.Method = fmt.Sprintf("p95 P-213 with observation enabled (%.3f ms, mean of %s) minus disabled (%.3f ms, mean of %s), %d fresh instances run in the order %s",
-		pOn, strings.Join(on, ", "), pOff, strings.Join(off, ", "), len(runs), orderText(runs))
+	m.Method = fmt.Sprintf("p95 P-213 with observation enabled (%.3f ms, mean of %s) minus disabled (%.3f ms, mean of %s), %d fresh instances run in the order %s, each load started after sync(2), %s",
+		pOn, strings.Join(on, ", "), pOff, strings.Join(off, ", "), len(runs), orderText(runs), where)
 	return m
+}
+
+// memFS is the memory file system CaptureWork uses when it exists.
+var memFS = "/dev/shm"
+
+// CaptureWork returns the directory for the FR-11.4 instances: a new
+// directory on the memory file system memFS when the host has one and it
+// is writable (Linux), which the caller removes, otherwise work.
+func CaptureWork(work string) (dir string, onMemory bool) {
+	if fi, err := os.Stat(memFS); err == nil && fi.IsDir() {
+		if d, err := os.MkdirTemp(memFS, "smcp-capture-"); err == nil {
+			return d, true
+		}
+	}
+	return work, false
 }
 
 func orderText(runs []captureRun) string {

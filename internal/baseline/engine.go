@@ -176,11 +176,15 @@ func (e *Engine) Config() Config { return e.cfg }
 func ContextKey(dims []string, values map[string]string) string {
 	parts := make([]string, len(dims))
 	for i, d := range dims {
-		v := strings.NewReplacer(`\`, `\\`, "|", `\|`, "=", `\=`).Replace(values[d])
-		parts[i] = d + "=" + v
+		parts[i] = d + "=" + keyEscaper.Replace(values[d])
 	}
 	return strings.Join(parts, "|")
 }
+
+// keyEscaper escapes context key values. It is built once: building a
+// Replacer for every value, several times per call, was a tenth of the
+// Observation Collector's time per call (FR-11.4).
+var keyEscaper = strings.NewReplacer(`\`, `\\`, "|", `\|`, "=", `\=`)
 
 // ContextKey returns the context key of a sample.
 func (e *Engine) ContextKey(s Sample) string { return ContextKey(e.cfg.Dimensions, s.Dims) }

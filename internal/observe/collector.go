@@ -85,6 +85,10 @@ type Probe struct {
 	Score         *anomaly.Result // synchronous scoring result
 	CaptureCost   time.Duration   // the probe's own cost (P-211)
 	ScoringCost   time.Duration   // synchronous scoring cost (P-210)
+	// Finish, when set, completes Values off the call path: the collector
+	// calls it on its own goroutine when it takes the probe, and adds its
+	// time to CaptureCost (ResponseFeaturesDeferred).
+	Finish func()
 }
 
 // Analyzer is the baseline and scoring side of the collector: it is
@@ -482,6 +486,12 @@ func (c *Collector) get(corr string, now time.Time) *pending {
 // the fan-out queue while probes come straight from the call path; such a
 // probe waits in early until the event arrives or PendingTTL passes.
 func (c *Collector) onProbe(pr *Probe) {
+	if pr.Finish != nil {
+		st := time.Now()
+		pr.Finish()
+		pr.Finish = nil
+		pr.CaptureCost += time.Since(st)
+	}
 	c.mu.Lock()
 	p := c.pending[pr.CorrelationID]
 	if p == nil {

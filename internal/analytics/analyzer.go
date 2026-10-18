@@ -246,7 +246,7 @@ func (p *responseProbe) FilterResponse(ctx context.Context, call *pipeline.Call,
 	start := time.Now()
 	s := p.s
 	hasSchema := call.OutputSchema != nil
-	vals := observe.ResponseFeatures(res, func(v any) string {
+	vals, finish := observe.ResponseFeaturesDeferred(res, func(v any) string {
 		raw, err := json.Marshal(v)
 		if err != nil {
 			return "unserializable"
@@ -255,7 +255,13 @@ func (p *responseProbe) FilterResponse(ctx context.Context, call *pipeline.Call,
 	}, hasSchema)
 	pr := &observe.Probe{Response: true, CorrelationID: call.CorrelationID, Time: s.now(), ServerID: call.Server, Values: vals}
 	verdict := pipeline.ResponseVerdict{Action: pipeline.Pass}
-	if s.cur().Scoring == "sync" {
+	syncScoring := s.cur().Scoring == "sync"
+	if syncScoring {
+		finish() // the score needs every response feature now
+	} else {
+		pr.Finish = finish // the text parts are read by the collector, off the call path (FR-11.4)
+	}
+	if syncScoring {
 		st := time.Now()
 		now := s.now()
 		get := func(k string) string {

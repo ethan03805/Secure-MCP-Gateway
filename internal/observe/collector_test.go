@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -464,5 +465,50 @@ func TestAnomalyResponseEscalation(t *testing.T) {
 	c2.Sync()
 	if len(fa2.records()) != 0 {
 		t.Fatal("capture escalated with escalate_capture_band off")
+	}
+}
+
+// TestDeferredResponseFeatures: the response features that read the text
+// parts are left out until finish runs, which the collector does on its own
+// goroutine for a probe that carries it; the record then has the same
+// values ResponseFeatures computes on the call path.
+func TestDeferredResponseFeatures(t *testing.T) {
+	res := &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "see https://a.example/x and " + strings.Repeat("0123456789abcdef", 4096)},
+		&mcp.ImageContent{Data: []byte{1}, MIMEType: "image/png"}, &mcp.TextContent{Text: "ünïcode   <tail>"}}}
+	want := ResponseFeatures(res, nil, false)
+	vals, finish := ResponseFeaturesDeferred(res, nil, false)
+	for _, k := range []string{"response_bytes", "response_entropy", "response_token_estimate", "embedded_url_count"} {
+		if _, ok := vals[k]; ok {
+			t.Fatalf("%s computed before finish", k)
+		}
+	}
+	if vals["content_parts_by_type"].(map[string]int64)["text"] != 2 || vals["output_schema_conformance"] != "no_schema" {
+		t.Fatalf("shape features %v", vals)
+	}
+	c, fa := newCollector(t, Options{SamplingRate: 1, Parameters: DefaultCatalog().DefaultParameters()})
+	base := audit.Event{CorrelationID: "corr-d", SessionID: "s", PrincipalID: "p", ServerRevision: "live-abc", ToolRevision: "live-abc/read"}
+	ev := func(phase audit.Phase, d time.Duration) {
+		e := base
+		e.Class, e.Phase, e.Time = "call", phase, ts(d)
+		c.Observe(e)
+	}
+	ev(audit.PhaseRequested, 0)
+	ev(audit.PhaseDispatched, time.Millisecond)
+	c.Offer(&Probe{Response: true, CorrelationID: "corr-d", Values: vals, Finish: finish})
+	ev(audit.PhaseCompleted, 2*time.Millisecond)
+	ev(audit.PhaseDelivered, 3*time.Millisecond)
+	c.Sync()
+	recs := fa.records()
+	if len(recs) != 1 {
+		t.Fatalf("%d records", len(recs))
+	}
+	raw, _ := json.Marshal(res)
+	if recs[0].Values["response_bytes"] != int64(len(raw)) {
+		t.Fatalf("response_bytes %v, want %d", recs[0].Values["response_bytes"], len(raw))
+	}
+	for _, k := range []string{"response_bytes", "response_entropy", "response_token_estimate", "embedded_url_count"} {
+		if recs[0].Values[k] != want[k] {
+			t.Fatalf("%s = %v, want %v", k, recs[0].Values[k], want[k])
+		}
 	}
 }

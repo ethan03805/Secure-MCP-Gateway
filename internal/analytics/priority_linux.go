@@ -32,6 +32,30 @@ func lowPriority() bool {
 	return unix.Setpriority(unix.PRIO_PROCESS, unix.Gettid(), backgroundNice) == nil
 }
 
+// idlePriority is lowPriority and, where the kernel allows it, the
+// SCHED_IDLE policy for the thread; it reports whether SCHED_IDLE was set.
+// A thread at nice 10 that the kernel has picked may keep its processor
+// until its slice ends (EEVDF's run-to-parity), so a call thread that
+// wakes behind it can wait for milliseconds; a waking thread of a normal
+// policy always preempts a SCHED_IDLE thread (FR-11.4). The store writer
+// runs here: it spends its time in DuckDB (cgo), during which its
+// goroutine hands back its processor slot (P). A goroutine that runs Go
+// code here would keep its P while the kernel withholds the thread.
+func idlePriority() bool {
+	lowPriority()
+	attr := unix.SchedAttr{Size: unix.SizeofSchedAttr, Policy: unix.SCHED_IDLE, Nice: backgroundNice}
+	return unix.SchedSetAttr(unix.Gettid(), &attr, 0) == nil
+}
+
+// threadPolicy returns the scheduling policy of the calling thread (tests).
+func threadPolicy() (uint32, bool) {
+	a, err := unix.SchedGetAttr(0, 0)
+	if err != nil {
+		return 0, false
+	}
+	return a.Policy, true
+}
+
 // threadNice returns the nice value of the calling thread (tests), field
 // 19 of /proc/thread-self/stat.
 func threadNice() (int, bool) {
