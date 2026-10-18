@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T06:46:40Z",
-  "commit": "b06c52575520f6d62f95b5f3313b93e4ca436ef6",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/b06c52575520f6d62f95b5f3313b93e4ca436ef6",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39103166149",
+  "generatedAt": "2026-10-18T07:15:48Z",
+  "commit": "2d29a5c4b719b031559af49ebfcd83056822bc4f",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/2d29a5c4b719b031559af49ebfcd83056822bc4f",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39104394735",
   "tests": {
-    "total": 1378,
-    "passed": 1365,
+    "total": 1380,
+    "passed": 1367,
     "failed": 0,
     "skipped": 13,
-    "durationSec": 1787.6,
+    "durationSec": 1113.5,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -151,7 +151,7 @@
       },
       {
         "name": "internal/backup",
-        "passed": 4,
+        "passed": 6,
         "failed": 0,
         "skipped": 0
       },
@@ -452,7 +452,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.1,
+    "totalPct": 76.2,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -512,7 +512,7 @@
       },
       {
         "name": "internal/approval",
-        "pct": 85.5
+        "pct": 85.3
       },
       {
         "name": "internal/audit",
@@ -528,7 +528,7 @@
       },
       {
         "name": "internal/backup",
-        "pct": 78.6
+        "pct": 79.6
       },
       {
         "name": "internal/baseline",
@@ -560,7 +560,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 82.4
+        "pct": 82.3
       },
       {
         "name": "internal/filterapi",
@@ -572,7 +572,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 84.1
+        "pct": 84
       },
       {
         "name": "internal/gwtest",
@@ -668,7 +668,7 @@
       },
       {
         "name": "internal/remote",
-        "pct": 70.6
+        "pct": 71.4
       },
       {
         "name": "internal/reqtest",
@@ -688,7 +688,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.6
+        "pct": 80
       },
       {
         "name": "internal/session",
@@ -696,7 +696,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 77.5
+        "pct": 82.5
       },
       {
         "name": "internal/tunnel",
@@ -738,8 +738,8 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 421,
-    "partial": 91,
+    "verified": 422,
+    "partial": 90,
     "failing": 0,
     "unverified": 17,
     "byElement": [
@@ -963,8 +963,8 @@
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
-        "verified": 6,
-        "partial": 5,
+        "verified": 7,
+        "partial": 4,
         "failing": 0
       },
       {
@@ -6319,13 +6319,15 @@
       {
         "id": "SR-7.8-1",
         "element": "E-28",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestAT19BackupRestoreRollback",
+          "internal/backup.TestRestoreGraphUnavailable",
           "internal/backup.TestRestoreReappliesDirectoryRevocations",
-          "internal/backup.TestRestoreVerifiesBeforeSwapping"
+          "internal/backup.TestRestoreVerifiesBeforeSwapping",
+          "internal/backup.TestRestoreVerifiesPolicyStoreReappliesRevocationsAndRebuildsGraph"
         ]
       },
       {
@@ -7041,7 +7043,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7052,7 +7054,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7087,7 +7089,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44351: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41279: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7204,7 +7206,7 @@
     }
   ],
   "acceptance": {
-    "commit": "b06c52575520f6d62f95b5f3313b93e4ca436ef6",
+    "commit": "2d29a5c4b719b031559af49ebfcd83056822bc4f",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -7896,15 +7898,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "b06c52575520f6d62f95b5f3313b93e4ca436ef6",
-    "generatedAt": "2026-10-18T06:14:16Z",
+    "commit": "2d29a5c4b719b031559af49ebfcd83056822bc4f",
+    "generatedAt": "2026-10-18T07:01:43Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000006453"
+      "runner": "GitHub Actions 1000006749"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7921,7 +7923,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.010035,
+        "value": 0.024693,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7933,7 +7935,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 12.803805,
+        "value": 16.299579,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7945,18 +7947,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.13059962499999944,
+        "value": 0.7461499999999965,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (6.246 ms, mean of 6.152, 5.734, 5.648, 6.234, 6.528, 6.811, 6.588, 6.276) minus disabled (6.116 ms, mean of 6.901, 5.637, 5.626, 6.070, 5.940, 6.152, 6.447, 6.154), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.197 ms, mean of 10.745, 10.114, 9.992, 10.040, 10.122, 9.965, 10.232, 10.364) minus disabled (9.451 ms, mean of 9.299, 9.184, 9.970, 9.494, 9.491, 8.983, 9.650, 9.533), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 450.517959,
+        "value": 796.963996,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7968,11 +7970,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 108.19140625,
+        "value": 104.625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 10m0s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 11m23s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
