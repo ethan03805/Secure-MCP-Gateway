@@ -2573,12 +2573,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-8.4 |
 | Parent ID | FR-8 — Management product |
-| Statement | The Policy Studio view (G-02) **SHALL** provide structured editors for every policy object type, draft diff against the active revision, simulation results and publish and rollback actions. |
+| Statement | The Policy Studio view (G-02) **SHALL** provide structured editors for the policy object types Framework Profile, Session Allow Policy Template and Secret Use Policy, draft diff against the active revision, simulation results and publish and rollback actions; the other object types of FR-3.1 are edited in their own views (Audit Profile in G-03, Observation Policy in G-04, Anomaly Response Policy in G-06, Research Campaign in G-09). |
 | Allocation | Elements: E-24 Management Console & Control API; Functions: F-65, F-10, F-11, F-12; External interfaces: X-04 |
 | Verification Method | Demonstration |
 | Verification Statement | Author, simulate and publish a Session Allow Policy template entirely in G-02. |
 | Source | ARCH §4 G-02; SEC 8.2 |
-| Rationale | Policy development is the owner's primary purpose. |
+| Rationale | Policy development is the owner's primary purpose. ARCH §4 assigns G-02 the Framework Profiles, Session Allow templates, Response and Secret Use Policies; the Response Policy is deferred (FR-3.26). |
 
 #### FR-8.5 — G-03 Audit Profile Tuning
 
@@ -7792,13 +7792,13 @@ Use this matrix to code element by element. A requirement allocated to several e
 |---|---|
 | G-01 | FR-8.3, FR-8.28, FR-8.29, FR-8.31, FR-8.34 |
 | G-02 | FR-8.4, FR-8.27 |
-| G-03 | FR-8.5 |
-| G-04 | FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.24 |
+| G-03 | FR-8.4, FR-8.5 |
+| G-04 | FR-8.4, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.24 |
 | G-05 | FR-8.13 |
-| G-06 | FR-8.14 |
+| G-06 | FR-8.4, FR-8.14 |
 | G-07 | FR-8.15 |
 | G-08 | FR-8.16 |
-| G-09 | FR-8.17, FR-10.36 |
+| G-09 | FR-8.4, FR-8.17, FR-10.36 |
 | G-10 | FR-8.18, SR-3.3-1, SR-3.4-1 |
 | G-11 | FR-2.18, FR-8.19, FR-16.5 |
 | G-12 | FR-8.20 |

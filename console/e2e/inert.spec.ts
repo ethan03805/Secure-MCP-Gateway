@@ -34,6 +34,7 @@ const paths = [
   "/library",
   "/policy/draft",
   "/policy/filters",
+  "/policy/secret-use",
   "/audit/graph",
 ];
 

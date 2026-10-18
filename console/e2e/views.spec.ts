@@ -27,8 +27,15 @@ test("G-01 gateway control: health, monitor causes, verification and checklist",
   await expect(checklist).toContainText("Backup configured");
 });
 
+// FR-8.4's demonstration (a full claim): a Session Allow template is
+// authored with the structured editor, validated, diffed, simulated and
+// published entirely in G-02, and the policy rolls back; then the Secret
+// Use Policy, the other object type G-02 edits (Framework Profiles are
+// edited with the templates), is edited structurally, validated, diffed,
+// published twice and rolled back.
 test("G-02 policy studio: draft, validate, diff, simulate, publish and roll back", async ({ page }) => {
-  claims("FR-8.4", "FR-3.4", "FR-3.9");
+  test.info().annotations.push({ type: "requirement", description: "FR-8.4" });
+  claims("FR-3.4", "FR-3.9");
   // A call in the journal for the simulation to replay (earlier tests made
   // others; a refused call is recorded as well).
   await mcpCall(g, "ref_echo", { text: "policy" }, { expect: "policy", timeout: "60s" }).done;
@@ -67,6 +74,58 @@ test("G-02 policy studio: draft, validate, diff, simulate, publish and roll back
   await page.getByRole("dialog", { name: "Roll back to r1" }).getByRole("button", { name: "Roll back" }).click();
   await expect(page.getByRole("table", { name: "Policy revisions" })).toContainText(/r1-rb\d+/);
   await expect(page.getByTestId("status-strip")).toContainText(/policy r1-rb\d+/);
+
+  // Secret Use Policy. A secret to bind, created in G-12.
+  await go(page, "/secrets");
+  await page.getByText("Create a secret").click();
+  await page.getByLabel("Name").fill("sup-token");
+  await page.getByLabel(/^Value/).fill("sup-token-value-0123456789");
+  await page.getByRole("button", { name: "Create secret" }).click();
+  await expect(page.getByText("Created sup-token as version 1.")).toBeVisible();
+  await go(page, "/policy");
+  await page.getByRole("link", { name: "Secret Use Policy" }).click();
+  await expect(page.getByRole("heading", { name: "Active Secret Use Policy" })).toBeVisible();
+  await expect(page.getByText(/^Revision u0, 0 bindings/)).toBeVisible();
+  await expect(page.getByLabel("Revision ID of the draft")).toHaveValue("u0-2");
+  // A slot: the validation refuses it until it names the file variable S3 needs.
+  await page.getByRole("button", { name: "Add a slot" }).click();
+  const slot = page.getByRole("group", { name: "Slot ref/slot-1" });
+  await slot.getByLabel("Slot name").fill("api_key");
+  const slotNamed = page.getByRole("group", { name: "Slot ref/api_key" });
+  await expect(slotNamed.getByRole("group", { name: "Delivery modes the slot supports" }).getByLabel("S3")).toBeChecked();
+  await page.getByRole("button", { name: "Validate" }).click();
+  await expect(page.getByRole("alert")).toContainText("S2 and S3 need file_env");
+  await slotNamed.getByLabel("File variable (S2, S3)").fill("API_KEY_FILE");
+  await page.getByRole("button", { name: "Validate" }).click();
+  await expect(page.getByText("Valid: revision u0-2, 0 bindings.")).toBeVisible();
+  await page.getByRole("button", { name: "Diff against the active document" }).click();
+  const changes = page.getByRole("table", { name: "Secret Use Policy changes" });
+  await expect(changes.getByRole("row").filter({ hasText: "ref/api_key" })).toContainText("added");
+  const publishSup = page.getByRole("form", { name: "Publish the Secret Use Policy" });
+  await publishSup.getByLabel(/Reason for this revision/).fill("declare the API key slot");
+  await publishSup.getByRole("button", { name: "Publish the Secret Use Policy" }).click();
+  await expect(page.getByText("Published Secret Use Policy revision u0-2 (0 bindings). It is active.")).toBeVisible();
+  await expect(page.getByText(/^Revision u0-2, 0 bindings/)).toBeVisible();
+  // A binding of the secret to the slot, in the next revision.
+  await expect(page.getByLabel("Revision ID of the draft")).toHaveValue("u0-3");
+  await page.getByRole("button", { name: "Add a binding" }).click();
+  const binding = page.getByRole("group", { name: "Binding binding-1" });
+  await binding.getByLabel("Secret").selectOption("sup-token");
+  await binding.getByLabel("Slot").selectOption("api_key");
+  await expect(binding.getByLabel("Mode")).toHaveValue("S3");
+  await binding.getByLabel("Purpose").fill("console acceptance test");
+  await page.getByRole("button", { name: "Diff against the active document" }).click();
+  await expect(changes.getByRole("row").filter({ hasText: "binding-1" })).toContainText("added");
+  await publishSup.getByLabel(/Reason for this revision/).fill("bind the token");
+  await publishSup.getByRole("button", { name: "Publish the Secret Use Policy" }).click();
+  await expect(page.getByText("Published Secret Use Policy revision u0-3 (1 binding). It is active.")).toBeVisible();
+  const sup = await page.evaluate(() => fetch("/api/v1/secret-use-policy").then((r) => r.json()));
+  expect(sup.active).toMatchObject({ revision: "u0-3", bindings: 1 });
+  expect(sup.document.policies).toEqual([{ id: "binding-1", secret: "sup-token", server: "ref", slot: "api_key", mode: "S3", tools: ["*"], purpose: "console acceptance test" }]);
+  // Roll back to u0-2: the binding is gone again.
+  await page.getByRole("table", { name: "Secret Use Policy revisions" }).getByRole("button", { name: "Roll back to u0-2" }).click();
+  await expect(page.getByText("Rolled back: Secret Use Policy revision u0-2 is active.")).toBeVisible();
+  await expect(page.getByText(/^Revision u0-2, 0 bindings/)).toBeVisible();
 });
 
 test("G-02 filter workbench: a redaction profile on synthetic text", async ({ page }) => {

@@ -3,8 +3,8 @@
 // structured editors for every object of the policy document (Framework
 // Profiles, Session Allow templates and their rules) plus the full
 // document as JSON, validation, diff against the active revision,
-// simulation from the journal and publication; and the filter test
-// workbench. Routes: /api/v1/policy* (E-05) and /api/v1/filters* (E-09,
+// simulation from the journal and publication; the filter test
+// workbench; and the Secret Use Policy editor (SecretUse.tsx). Routes: /api/v1/policy* (E-05) and /api/v1/filters* (E-09,
 // E-11).
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { asApiError, get, post, type ApiError } from "../api";
@@ -12,6 +12,7 @@ import { useResource } from "../data";
 import { helpFor, policyHelp } from "../policyhelp";
 import { Can, usePerm } from "../perm";
 import { Link, match, navigate, useLocation } from "../router";
+import { SecretUse } from "./SecretUse";
 import {
   CheckList,
   Crumbs,
@@ -120,7 +121,7 @@ interface SimResult {
   }[];
 }
 
-function Tabs({ current }: { current: "revisions" | "draft" | "filters" }) {
+function Tabs({ current }: { current: "revisions" | "draft" | "filters" | "secret-use" }) {
   const perm = usePerm();
   return (
     <nav aria-label="Policy studio sections" className="tabs">
@@ -135,6 +136,11 @@ function Tabs({ current }: { current: "revisions" | "draft" | "filters" }) {
       {perm.can("POST /api/v1/filters/scan") && (
         <Link to="/policy/filters" aria-current={current === "filters" ? "page" : undefined}>
           Filter workbench
+        </Link>
+      )}
+      {perm.can("GET /api/v1/secret-use-policy") && (
+        <Link to="/policy/secret-use" aria-current={current === "secret-use" ? "page" : undefined}>
+          Secret Use Policy
         </Link>
       )}
     </nav>
@@ -845,11 +851,11 @@ function ScanResult({ r }: { r: ScanReport }) {
 export function Policy({ path }: { path: string }) {
   const m = match("/policy/revisions/:id", path);
   if (m?.id) return <RevisionDetail id={m.id} />;
-  const tab = path === "/policy/draft" ? "draft" : path === "/policy/filters" ? "filters" : "revisions";
+  const tab = path === "/policy/draft" ? "draft" : path === "/policy/filters" ? "filters" : path === "/policy/secret-use" ? "secret-use" : "revisions";
   return (
     <>
       <PageHeader code="G-02" title="Policy studio">
-        <p>Session Allow templates and Framework Profiles: drafts, diffs, simulation against recent calls, publication and rollback, and filter tests.</p>
+        <p>Session Allow templates and Framework Profiles: drafts, diffs, simulation against recent calls, publication and rollback, and filter tests; the Secret Use Policy.</p>
       </PageHeader>
       <Help>
         <p>
@@ -861,7 +867,7 @@ export function Policy({ path }: { path: string }) {
         </p>
       </Help>
       <Tabs current={tab} />
-      {tab === "draft" ? <Draft /> : tab === "filters" ? <Workbench /> : <Revisions />}
+      {tab === "draft" ? <Draft /> : tab === "filters" ? <Workbench /> : tab === "secret-use" ? <SecretUse /> : <Revisions />}
     </>
   );
 }

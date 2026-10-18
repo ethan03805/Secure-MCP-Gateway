@@ -28,6 +28,7 @@ func (s *Service) RegisterRoutes(h Handler) {
 	h.Handle("POST /api/v1/secrets/{name}/rotate", s.rotate)
 	h.Handle("GET /api/v1/secrets/{name}/impact", s.impact)
 	h.Handle("POST /api/v1/secrets/{name}/resume", s.resume)
+	s.registerUsePolicy(h)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -273,11 +273,11 @@ R: The operator's primary control surface.
 
 @FR-8.4 | G-02 Policy Studio
 P: FR-8
-S: The Policy Studio view (G-02) SHALL provide structured editors for every policy object type, draft diff against the active revision, simulation results and publish and rollback actions.
+S: The Policy Studio view (G-02) SHALL provide structured editors for the policy object types Framework Profile, Session Allow Policy Template and Secret Use Policy, draft diff against the active revision, simulation results and publish and rollback actions; the other object types of FR-3.1 are edited in their own views (Audit Profile in G-03, Observation Policy in G-04, Anomaly Response Policy in G-06, Research Campaign in G-09).
 A: E-24; F-65; F-10; F-11; F-12; X-04
 V: Demonstration | Author, simulate and publish a Session Allow Policy template entirely in G-02.
 SRC: ARCH §4 G-02; SEC 8.2
-R: Policy development is the owner's primary purpose.
+R: Policy development is the owner's primary purpose. ARCH §4 assigns G-02 the Framework Profiles, Session Allow templates, Response and Secret Use Policies; the Response Policy is deferred (FR-3.26).
 
 @FR-8.5 | G-03 Audit Profile Tuning
 P: FR-8
