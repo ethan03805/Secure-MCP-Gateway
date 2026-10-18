@@ -230,6 +230,10 @@ type CreateParams struct {
 	IdleTimeout      time.Duration
 	AllowedTemplates []string
 	ClientAddress    string
+	// Remote marks a session created through the Remote Access listener:
+	// its template must be one the Framework Profile marks remote_allowed
+	// (FR-16.12).
+	Remote bool
 }
 
 // Tokens are the secrets returned once at creation or refresh.
@@ -270,6 +274,9 @@ func (s *Store) Create(p CreateParams) (*Session, Tokens, error) {
 		tmpl = prof.DefaultTemplate
 	} else if !slices.Contains(prof.Templates, tmpl) {
 		return nil, Tokens{}, ErrNoTemplate
+	}
+	if p.Remote && !slices.Contains(prof.RemoteAllowed, tmpl) {
+		return nil, Tokens{}, fmt.Errorf("%w: template %q is not marked remote_allowed in framework profile %q", ErrNoTemplate, tmpl, pr.Profile)
 	}
 	if p.AllowedTemplates != nil && !slices.Contains(p.AllowedTemplates, tmpl) {
 		return nil, Tokens{}, fmt.Errorf("%w: template %q is not allowed on this listener", ErrNoTemplate, tmpl)

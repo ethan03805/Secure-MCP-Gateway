@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,7 +20,9 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/gwtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
 
 const remoteTable = `
@@ -290,13 +293,12 @@ func TestDynamicRegistrationNeedsApproval(t *testing.T) {
 }
 
 func TestRemoteSessionAndOriginEvidence(t *testing.T) {
-	reqtest.Partial(t, "FR-16.1", "FR-16.8", "FR-16.12")
+	reqtest.Partial(t, "FR-16.1", "FR-16.8")
 	// FR-16.1: proves the separate listener, remote binding of sessions and
 	// that local sessions are refused there. FR-16.8: proves the fields on
 	// every event of a remote call and session; events written by the
 	// Approval Service (E-07) for remote calls do not yet carry them.
-	// FR-16.12: templates come from remote.templates, not a remote_allowed
-	// mark in the Framework Profile.
+	// FR-16.12 is TestRemoteAllowedTemplates.
 	e := newEnv(t, "")
 	e.enable()
 	if e.Config.Remote.Address == e.Config.Listener.Address {
@@ -360,6 +362,69 @@ func TestRemoteSessionAndOriginEvidence(t *testing.T) {
 	rr, rt := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tok["refresh_token"].(string)}}, gwtest.PreClientID, gwtest.PreSecret)
 	if rr.StatusCode != 200 || rt["access_token"] == nil {
 		t.Fatalf("refresh %d %v", rr.StatusCode, rt)
+	}
+}
+
+// TestRemoteAllowedTemplates is FR-16.12: through the remote listener a
+// session is created only for a template that the principal's Framework
+// Profile marks remote_allowed, even when the configuration's
+// remote.templates lists another; the session gets the CP-49 remote
+// lifetimes (15 minutes idle, 2 hours at most); and a policy revision that
+// removes the mark refuses the next sign-in. Every session through the
+// remote listener is created by the same issue path (authorization code
+// and device grants), which sets session.CreateParams.Remote.
+func TestRemoteAllowedTemplates(t *testing.T) {
+	reqtest.Verifies(t, "FR-16.12")
+	callerAddr.Store("203.0.113.7")
+	// remote.templates lists both; the policy marks only "remote".
+	g := gwtest.Start(t, strings.Replace(remoteTable, `templates = ["remote"]`, `templates = ["ro", "remote"]`, 1))
+	e := &env{Gateway: g, public: g.Tunnel(func() string { return callerAddr.Load().(string) })}
+	e.enable()
+	if resp, body := e.signIn(gwtest.PreClientID, gwtest.PreSecret, "smcp:template:ro"); resp.StatusCode != 400 || body["error"] != "invalid_scope" {
+		t.Fatalf("template without remote_allowed: %d %v", resp.StatusCode, body)
+	}
+	e.WaitEvent(func(ev audit.Event) bool {
+		return ev.ReasonCode == "REMOTE_TEMPLATE_REFUSED" && ev.Outcome == "deny" && fmt.Sprint(ev.Detail) == "map[template:ro]"
+	})
+	// The default template (ro) is refused the same way.
+	if resp, _ := e.signIn(gwtest.PreClientID, gwtest.PreSecret, ""); resp.StatusCode != 400 {
+		t.Fatalf("default template: %d", resp.StatusCode)
+	}
+	resp, tok := e.signIn(gwtest.PreClientID, gwtest.PreSecret, "smcp:template:remote")
+	if resp.StatusCode != 200 {
+		t.Fatalf("remote_allowed template: %d %v", resp.StatusCode, tok)
+	}
+	if tok["expires_in"].(float64) != 900 {
+		t.Fatalf("remote idle lifetime %v, want 900 s (CP-49)", tok["expires_in"])
+	}
+	exp, _ := time.Parse(time.RFC3339, tok["expires_at"].(string))
+	if d := time.Until(exp); d > 2*time.Hour+time.Minute || d < 2*time.Hour-time.Minute {
+		t.Fatalf("remote maximum lifetime %v, want 2 h (CP-49)", d)
+	}
+	// A local session of the same principal gets the longer CP-18 lifetime.
+	local, _, err := g.App.Store.Create(session.CreateParams{PrincipalID: "cloud", ClientID: "local", Listener: "tls", Claims: session.Claims{Template: "ro"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !local.MaxDeadline.After(time.Now().Add(2*time.Hour + time.Minute)) {
+		t.Fatalf("local session max deadline %v is not longer than the remote one", local.MaxDeadline)
+	}
+	// Without the mark in the active policy, the template is refused.
+	unmarked := strings.Replace(gwtest.Policy, `, "remote_allowed": ["remote"]`, "", 1)
+	snap, err := policy.Compile([]byte(strings.Replace(unmarked, `"r1"`, `"r2"`, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.App.Gateway.ActivatePolicy("test", snap); err != nil {
+		t.Fatal(err)
+	}
+	if resp, body := e.signIn(gwtest.PreClientID, gwtest.PreSecret, "smcp:template:remote"); resp.StatusCode != 400 || body["error"] != "invalid_scope" {
+		t.Fatalf("template after its mark was removed: %d %v", resp.StatusCode, body)
+	}
+	// The session store refuses a remote session for an unmarked template
+	// whatever the caller.
+	if _, _, err := g.App.Store.Create(session.CreateParams{PrincipalID: "cloud", ClientID: "x", Listener: "remote", Remote: true, Claims: session.Claims{Template: "remote"}}); !errors.Is(err, session.ErrNoTemplate) {
+		t.Fatalf("store: %v", err)
 	}
 }
 

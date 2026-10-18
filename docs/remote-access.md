@@ -60,14 +60,14 @@ session_idle_timeout = "15m"
 | `public_url` | none | `https://<name>[:port]`, no path. Used when an enable request names none. |
 | `clients` | `[]` | Pre-registered `[[client]]` entries allowed on the remote listener. Their `redirect_uris` apply. |
 | `default_principal` | none | Principal an approved dynamic registration is bound to when the approval names none. |
-| `templates` | `[]` | Templates a remote session may use. The resolved template (requested, or the profile default) must be listed; an empty list refuses every remote session. |
+| `templates` | `[]` | Templates a remote session may use. The resolved template (requested, or the profile default) must be listed here and marked `remote_allowed` in the principal's Framework Profile; an empty list refuses every remote session. |
 | `client_address_header` | `X-Forwarded-For` | For `X-Forwarded-For` the rightmost entry is used (the one the tunnel connector appended). Cloudflare also sets `Cf-Connecting-Ip`. |
 | `max_pending_registrations` | 32 | Further registrations are refused with 429 until some are approved, denied or expire. |
 | `max_pending_per_source` | 4 | Pending registrations one caller address may hold (an IPv6 address counts as its /64). Further registrations from that address get 429 until some are decided or expire, so one caller cannot take the whole queue. With a tunnel that does not report the caller address every caller shares one quota. |
 | `pending_registration_lifetime` | `24h` | A pending registration not approved or denied within this time is dropped (1m to 168h). |
 | `limits.*` | CP-49 | As above. A zero or absent key takes the default. |
 
-The SRS (FR-16.12) asks for templates to be marked `remote_allowed` in the Framework Profile; this release reads them from `remote.templates` instead, so the policy document is unchanged.
+A remote session's template must also be marked `remote_allowed` in the principal's Framework Profile in the active policy (FR-16.12, `docs/policy-reference.md`), for example `"dev": {"templates": ["read-only"], "default_template": "read-only", "remote_allowed": ["read-only"]}`. The policy decides which templates a cloud agent may ever use; `remote.templates` can only narrow that. A policy from release 1.0.0 marks no template, so after upgrading, remote sign-ins are refused (`invalid_scope`, event `REMOTE_TEMPLATE_REFUSED`) until a revision with the mark is published.
 
 ## Enabling
 

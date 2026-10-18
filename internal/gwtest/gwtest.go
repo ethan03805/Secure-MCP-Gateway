@@ -51,7 +51,7 @@ const (
 // permitted.
 const Policy = `{
   "revision": "r1",
-  "framework_profiles": {"dev": {"templates": ["ro", "remote"], "default_template": "ro"}},
+  "framework_profiles": {"dev": {"templates": ["ro", "remote"], "default_template": "ro", "remote_allowed": ["remote"]}},
   "templates": {
     "ro": {"rules": [{"id": "ro-t", "server": "t", "tools": ["echo"]}]},
     "remote": {"rules": [{"id": "remote-t", "server": "t", "tools": ["echo"]}]}

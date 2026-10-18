@@ -699,7 +699,7 @@ func (s *Service) issue(w http.ResponseWriter, r *http.Request, c rclient, princ
 	l := s.cfg.Remote.Limits
 	sess, tok, err := s.store.Create(session.CreateParams{PrincipalID: principal, ClientID: c.id, Claims: claims, ApprovedBy: approver,
 		Listener: channel.Remote, MaxLifetime: l.SessionMaxLifetime.Duration, IdleTimeout: l.SessionIdleTimeout.Duration,
-		AllowedTemplates: append([]string{}, s.cfg.Remote.Templates...), ClientAddress: channel.From(r.Context()).ClientAddress})
+		AllowedTemplates: append([]string{}, s.cfg.Remote.Templates...), ClientAddress: channel.From(r.Context()).ClientAddress, Remote: true})
 	if err != nil {
 		switch {
 		case errors.Is(err, session.ErrNoTemplate):

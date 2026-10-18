@@ -143,7 +143,7 @@ flowchart TB
       direction LR
       R1["smcpctl remote enable:<br/>nftables smcp_remote,<br/>loopback remote listener,<br/>Tailscale Funnel or<br/>Cloudflare · E-33"]
       R3["Cloud agent or<br/>smcp-connect registers<br/>(RFC 7591); pending until<br/>G-11 or CLI approval"]
-      R4["Auth code with PKCE or<br/>device grant; template in<br/>remote.templates · E-03"]
+      R4["Auth code with PKCE or<br/>device grant; template<br/>remote_allowed · E-03"]
       R5["Session as in 4c;<br/>events carry the<br/>remote origin · E-04"]
       R1 -->|public URL| R3 --> R4 --> R5
     end

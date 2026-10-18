@@ -40,7 +40,7 @@ sequenceDiagram
 
 Implemented in `internal/remote` (listener, OAuth, registration, limits), `internal/channel` (remote origin on evidence), `internal/tunnel` and `cmd/smcpctl/remote.go` (tunnels), and `internal/adapter` plus `packaging/npm/smcp-connect` (`smcp-connect`). Differences from the diagram:
 
-- Templates allowed for remote sessions come from `remote.templates` in the configuration, not a `remote_allowed` mark in the Framework Profile.
+- Templates allowed for remote sessions are those the Framework Profile marks `remote_allowed`, narrowed by `remote.templates` in the configuration.
 - `smcp-connect` signs in with the device authorization grant (`/oauth/device_authorization`, `/oauth/device`) instead of the authorization-code redirect, because it usually runs on a computer without the person's browser.
 - In the Enforced profile, `smcpctl remote enable` installs the nftables table `inet smcp_remote` (SR-4.14-1), which drops non-loopback connections to the Gateway ports; macOS has no equivalent installed automatically.
 

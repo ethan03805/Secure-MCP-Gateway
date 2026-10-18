@@ -59,6 +59,7 @@ Response Policy and Runtime Profile objects are deferred (FR-3.26). The obligati
 | `calls_per_minute` | no | Rate bound for calls under this profile (at least 1). |
 | `servers` | no | Authority ceiling: the server aliases sessions of this profile may reach through any of its templates. Absent means unrestricted. |
 | `high_risk` | no | High-risk tool classes (`general-sql`, `code-execution`, `cad-scripting`, `browser-automation`) the profile's sessions may be granted; see High-risk classes. |
+| `remote_allowed` | no | Templates of this profile that sessions created through the Remote Access listener may use (FR-16.12). Each must be in `templates`; a remote sign-in for any other template, including the default, is refused with `invalid_scope` and a `REMOTE_TEMPLATE_REFUSED` event. The configuration's `remote.templates` narrows further: a remote session needs both. Absent or empty: no remote session for this profile. |
 
 A session whose template is no longer listed by its principal's profile in the active revision is denied with `NO_TEMPLATE`, and a session whose profile sets `servers` is denied (`NO_PERMIT`) every server outside it even when its template names one (each layer can only remove authority, SR-1-2).
 
