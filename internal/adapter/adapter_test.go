@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -177,12 +179,10 @@ func pipeClient(t *testing.T, run func(in io.Reader, out io.Writer)) *mcp.Client
 
 func TestStdioBridgeWithSDKClient(t *testing.T) {
 	reqtest.Partial(t, "FR-12.13")
-	// Partial: the northbound conformance fixtures of FR-12.9 do not exist
-	// yet; this runs an MCP SDK client through the bridge (tools/list, a
-	// permitted call, a call outside the catalog) and compares raw
-	// responses for both eras with direct requests in
-	// TestStdioBridgeRawEquivalence. The UDS listener is not built in the
-	// Gateway, so the socket path is tested only against a local server.
+	// Partial: session creation with the client secret and an MCP SDK
+	// client through the bridge (tools/list, a permitted call, a call
+	// outside the catalog). The conformance fixtures through the bridge
+	// are internal/conformance.TestConformanceThroughAdapters.
 	g := gwtest.Start(t, "")
 	path := writeCreds(t, g, 0o600)
 	cs := pipeClient(t, func(in io.Reader, out io.Writer) {
@@ -382,6 +382,59 @@ func TestRelayUnixSocket(t *testing.T) {
 	}
 }
 
+// TestRelayTrustsOnlyNamedCA: with ca_file in the credential file, the
+// relay trusts only that CA (FR-12.13): a Gateway whose certificate a
+// different CA issued is refused at the TLS handshake, so no request and
+// no token reaches it, and the framework gets a JSON-RPC error.
+func TestRelayTrustsOnlyNamedCA(t *testing.T) {
+	reqtest.Partial(t, "FR-12.13")
+	g := gwtest.Start(t, "")
+	var hits atomic.Int32
+	other := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hits.Add(1) }))
+	other.Config.ErrorLog = log.New(io.Discard, "", 0) // the refused handshake
+	other.StartTLS()
+	defer other.Close()
+	// The named CA is the Gateway's; the server presents another CA's
+	// certificate.
+	path := filepath.Join(t.TempDir(), "credentials.toml")
+	c, _ := adapter.LoadOrNew(path)
+	c.Gateway = adapter.GatewaySection{URL: other.URL + "/mcp", CAFile: g.CAFile}
+	c.Session = adapter.SessionSection{AccessToken: "tok", IssuedAt: time.Now().UTC(), ExpiresIn: 3600}
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	msg := `{"jsonrpc":"2.0","id":7,"method":"tools/list","params":{}}` + "\n"
+	if code := adapter.StdioMain([]string{"--credentials", path}, strings.NewReader(msg), &out, &errOut); code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("%d requests reached a server outside the named CA", hits.Load())
+	}
+	if !strings.Contains(out.String(), `"id":7`) || !strings.Contains(out.String(), `"code":-32000`) || !strings.Contains(out.String(), "certificate") {
+		t.Fatalf("framework answer: %s", out.String())
+	}
+	// The same server's own CA in the file is accepted (the test server's
+	// certificate is self-issued by its CA).
+	caPath := filepath.Join(t.TempDir(), "other-ca.pem")
+	if err := os.WriteFile(caPath, pemCert(other.Certificate().Raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c.Gateway.CAFile = caPath
+	if err := c.Save(); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	adapter.StdioMain([]string{"--credentials", path}, strings.NewReader(msg), &out, &errOut)
+	if hits.Load() != 1 {
+		t.Fatalf("named CA: %d requests reached the server", hits.Load())
+	}
+}
+
+func pemCert(der []byte) []byte {
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
 type staticToken string
 
 func (s staticToken) Token(context.Context) (string, error) { return string(s), nil }
@@ -391,8 +444,9 @@ func TestConnectThroughTunnel(t *testing.T) {
 	reqtest.Partial(t, "FR-16.9")
 	// Partial: proves dynamic registration, the operator approval wait,
 	// device sign-in, the 0600 credential file and relayed tools/list and
-	// tools/call through a tunnel; the FR-12.9 conformance fixtures do not
-	// exist yet. The npm package is exercised in TestNPMConnect.
+	// tools/call through a tunnel. The conformance fixtures through
+	// smcp-connect are internal/conformance.TestConformanceThroughAdapters;
+	// the npm package is exercised in TestNPMConnect.
 	g := gwtest.Start(t, "[remote]\naddress = \"%REMOTE%\"\ndefault_principal = \"cloud\"\ntemplates = [\"remote\"]\n")
 	public := g.Tunnel(func() string { return "203.0.113.9" })
 	g.EnableRemote(public)

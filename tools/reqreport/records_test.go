@@ -130,8 +130,60 @@ func TestChildAnalysis(t *testing.T) {
 	for _, r := range results {
 		status[r.ID] = r.Status
 	}
-	if status["FR-1"] != "verified" || status["FR-2"] != "unverified" || status["FR-3"] != "unverified" || status["FR-4"] != "unverified" {
+	if status["FR-1"] != "verified" || status["FR-2"] != "partial" || status["FR-3"] != "unverified" || status["FR-4"] != "unverified" {
 		t.Fatalf("%v", status)
+	}
+}
+
+// TestChildAnalysisPartial: a parent with evidence for some children is
+// partial, never verified, until every child is verified; a parent with a
+// failing child, with no evidenced child, or with a claim of its own is
+// left to its own claims; nested parents roll up.
+func TestChildAnalysisPartial(t *testing.T) {
+	reqtest.Verifies(t, "FR-12.10")
+	const review = "Review the verification results of every FR-x child requirement; confirm each has passed."
+	reqs := []Requirement{
+		{ID: "FR-1", Method: "Analysis", Verify: review}, // one verified, one unverified child
+		{ID: "FR-1.1", Parent: "FR-1", Method: "Test"},
+		{ID: "FR-1.2", Parent: "FR-1", Method: "Test"},
+		{ID: "FR-2", Method: "Analysis", Verify: review}, // a failing child
+		{ID: "FR-2.1", Parent: "FR-2", Method: "Test"},
+		{ID: "FR-2.2", Parent: "FR-2", Method: "Test"},
+		{ID: "FR-3", Method: "Analysis", Verify: review}, // no evidence at all
+		{ID: "FR-3.1", Parent: "FR-3", Method: "Test"},
+		{ID: "FR-4", Method: "Analysis", Verify: review}, // nested: FR-4.1 is a partial parent
+		{ID: "FR-4.1", Parent: "FR-4", Method: "Analysis", Verify: review},
+		{ID: "FR-4.2", Parent: "FR-4.1", Method: "Test"}, // the nested parent's child
+		{ID: "FR-5", Method: "Analysis", Verify: review}, // its own failing claim
+		{ID: "FR-5.1", Parent: "FR-5", Method: "Test"},
+		{ID: "FR-6", Method: "Analysis", Verify: "Compute the latency budget."}, // not a roll-up
+		{ID: "FR-6.1", Parent: "FR-6", Method: "Test"},
+	}
+	const pkg = "example.com/m/internal/a"
+	log := ev("output", pkg, "TestA", "VERIFIES: FR-1.1 FR-2.1 FR-5.1 FR-6.1\n") + ev("pass", pkg, "TestA", "") +
+		ev("output", pkg, "TestB", "PARTIAL: FR-4.2\n") + ev("pass", pkg, "TestB", "") +
+		ev("output", pkg, "TestC", "VERIFIES: FR-2.2 FR-5\n") + ev("fail", pkg, "TestC", "")
+	tl, err := parseTestLog(strings.NewReader(log))
+	if err != nil {
+		t.Fatal(err)
+	}
+	results := buildResults(reqs, tl, "example.com/m")
+	applyChildAnalysis(results, reqs)
+	got := map[string]*ReqResult{}
+	for _, r := range results {
+		got[r.ID] = r
+	}
+	want := map[string]string{"FR-1": "partial", "FR-2": "unverified", "FR-3": "unverified", "FR-4": "partial", "FR-4.1": "partial", "FR-5": "failing", "FR-6": "unverified"}
+	for id, st := range want {
+		if got[id].Status != st {
+			t.Errorf("%s: %s, want %s (%+v)", id, got[id].Status, st, got[id].Claims)
+		}
+	}
+	if c := got["FR-1"].Claims; len(c) != 1 || c[0].Test != "analysis: 1 of 2 child requirements verified" || !c[0].Partial {
+		t.Errorf("FR-1 claims %+v", c)
+	}
+	if c := got["FR-4"].Claims; len(c) != 1 || c[0].Test != "analysis: 0 of 1 child requirements verified" {
+		t.Errorf("FR-4 claims %+v", c)
 	}
 }
 

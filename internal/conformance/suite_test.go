@@ -30,6 +30,10 @@ type suite struct {
 	be  *scripted
 	mu  sync.Mutex
 	err []int // every JSON-RPC error code the Gateway returned
+
+	// bridges, when set, are the stdio adapters every request is also
+	// sent through and compared with a direct connection (bridge_test.go).
+	bridges []*bridge
 }
 
 // check validates x against def and records the outcome under dir.
@@ -68,10 +72,20 @@ func (s *suite) note(r response) response {
 	return r
 }
 
-func (s *suite) send(msg map[string]any) response { return s.note(s.gw.send(msg)) }
+func (s *suite) send(msg map[string]any) response {
+	raw, err := json.Marshal(msg)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	return s.post(raw, headersFor(msg))
+}
 
 func (s *suite) post(body []byte, hdr map[string]string) response {
-	return s.note(s.gw.post(body, hdr))
+	r := s.note(s.gw.post(body, hdr))
+	for _, b := range s.bridges {
+		b.compare(s.t, body, hdr, r)
+	}
+	return r
 }
 
 // call sends a tools/call for a backend tool built from the CallToolRequest
