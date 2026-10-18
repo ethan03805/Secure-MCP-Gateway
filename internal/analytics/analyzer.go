@@ -153,6 +153,9 @@ func (p *requestProbe) FilterRequest(_ context.Context, call *pipeline.Call, arg
 	start := time.Now()
 	s := p.s
 	vals, digest := observe.ArgumentFeatures(args)
+	if scan := s.secretScanner(); scan != nil { // FR-6.10: fingerprints registered with E-29
+		vals[observe.ProbeSecretMatchesRequest] = int64(scan(args))
+	}
 	if call.TraceParent != "" { // FR-1.44
 		vals["trace_parent"] = call.TraceParent
 	}
@@ -221,6 +224,9 @@ func (p *requestProbe) score(call *pipeline.Call, vals map[string]any) anomaly.R
 		}
 	}
 	for k, v := range vals {
+		if k != "" && k[0] == '_' { // probe-internal keys (observe.ProbeSecretMatches*) are not features
+			continue
+		}
 		switch x := v.(type) {
 		case int64:
 			smp.Numeric[k] = float64(x)
@@ -253,6 +259,18 @@ func (p *responseProbe) FilterResponse(ctx context.Context, call *pipeline.Call,
 		}
 		return pipeline.ValidateArgumentsContext(ctx, call.OutputSchema, raw)
 	}, hasSchema)
+	if scan := s.secretScanner(); scan != nil { // FR-6.10: fingerprints registered with E-29
+		texts := resultTexts(res)
+		base := finish
+		finish = func() {
+			base()
+			n := 0
+			for _, t := range texts {
+				n += scan([]byte(t))
+			}
+			vals[observe.ProbeSecretMatchesResponse] = int64(n)
+		}
+	}
 	pr := &observe.Probe{Response: true, CorrelationID: call.CorrelationID, Time: s.now(), ServerID: call.Server, Values: vals}
 	verdict := pipeline.ResponseVerdict{Action: pipeline.Pass}
 	syncScoring := s.cur().Scoring == "sync"
@@ -281,6 +299,9 @@ func (p *responseProbe) FilterResponse(ctx context.Context, call *pipeline.Call,
 		}
 		num := map[string]float64{}
 		for k, v := range vals {
+			if k != "" && k[0] == '_' { // probe-internal keys (observe.ProbeSecretMatches*) are not features
+				continue
+			}
 			switch x := v.(type) {
 			case int64:
 				num[k] = float64(x)

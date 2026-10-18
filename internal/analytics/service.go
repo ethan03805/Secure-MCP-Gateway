@@ -79,6 +79,7 @@ type Service struct {
 	degrade  *degrader
 	sources  MetricSources // guarded by mu
 	live     atomic.Pointer[Settings]
+	scanner  atomic.Pointer[func([]byte) int] // secret fingerprints (FR-6.10)
 
 	mu        sync.Mutex
 	rec       audit.Recorder

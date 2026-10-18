@@ -290,6 +290,19 @@ as_core /usr/local/bin/smcpctl journal verify --config "$cfg" || fail "journal v
 sudo -n grep -rqs '"instance_launched"' "$state_root/journal" || fail "no instance_launched evidence in the journal"
 sudo -n systemctl disable --quiet smcpd.service
 
+# SR-2.13-3 while the installation exists: the vault (one secret, stored
+# above) and its passphrase file are read as every CP-46 identity other
+# than smcp-core, the identity smcpd and its Secret Broker run as.
+say "the vault is readable by the Secret Broker's identity only (SR-2.13-3)"
+repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+vault_env=(SMCP_VAULT_IT_DIR="$state_root/vault" SMCP_VAULT_IT_FILES="$ci/vault-pass")
+if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
+  (cd "$repo" && env "${vault_env[@]}" go test -json -count=1 -run '^TestIntegrationVaultIsolation$' ./internal/secrets/) \
+    | tee -a "$SMCP_ITEST_RESULTS" | jq -rj 'select(.Action == "output") | .Output' || fail "vault isolation"
+else
+  (cd "$repo" && env "${vault_env[@]}" go test -v -count=1 -run '^TestIntegrationVaultIsolation$' ./internal/secrets/) || fail "vault isolation"
+fi
+
 # Uninstall and purge on this host (FR-13.11 Enforced half, FR-13.12),
 # as the Go test cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost, whose
 # events go to SMCP_ITEST_RESULTS for the status job. It removes the
