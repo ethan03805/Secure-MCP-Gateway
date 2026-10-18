@@ -3,6 +3,10 @@
 ## Unreleased
 
 - SR-2.5-1 and SR-2-2 are verified against the real `smcpd`: the control API is served only on the admin listener (not on the harness listener, the UDS socket, the metrics listener or the Remote Access listener) and refuses every harness credential, including a client certificate issued by the Gateway's CA (`internal/acceptance.TestControlAPIOnlyOnAdminListener`); a Researcher is refused policy publication, approval decisions, secret and credential operations and S3 payload access without a campaign grant (`internal/acceptance.TestResearcherRoleLimits`).
+- Release provenance (FR-12.8): every archive now carries the build recipe (`.goreleaser.yaml`, `scripts/release-sbom.sh`), the dependency lockfiles (`go.mod`, `go.sum`, `console/package-lock.json`), `PROVENANCE.md` (source commit, Go toolchain, build run, recipe digests) and `THIRD_PARTY_NOTICES.txt` (license files of every linked Go module, the Go standard library and the bundled console npm packages), written by `tools/provenance`. The v1.0.0 archives had the SBOM and LICENSE but none of these.
+- SBOM licenses (FR-12.1): `scripts/release-sbom.sh` reads the Go modules' license files, so the SBOM inside the archives has a license for every entry (45 entries of the v1.0.0 one had none); the release workflow runs `tools/sbomcheck` over it and the per-archive SBOMs and fails on any license that is neither OSI-approved, public domain nor reviewed in `packaging/license-review.json`.
+- `smcp-refserver --version` prints `smcp-refserver <version>`; the release build now sets its version (v1.0.0 reported `0.0.0-dev` in its MCP server info), and the release workflow checks the version line of all six binaries.
+- Verification: FR-19.3 has an Inspection record (`docs/verification/FR-19.3.md`: v1.0.0 labelled enforced, an earlier candidate not enforced); `TestEveryScenarioHasEvidence` now finds the AT-07 claim of the console suite, so FR-19.4 is verified.
 
 ## v1.0.0 — 2026-10-18
 

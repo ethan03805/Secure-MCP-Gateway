@@ -29,6 +29,11 @@ trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/console" "$out"
 cp "$root/go.mod" "$root/go.sum" "$stage/"
 cp "$root/console/package.json" "$root/console/package-lock.json" "$stage/console/"
-syft scan "dir:$stage" --source-name smcp --source-version "${1:-dev}" -q -o "spdx-json=$out/sbom.spdx.json"
+# License fields (FR-12.1): read each Go module's license files from the
+# module cache (GoReleaser's `go mod download` hook fills it), falling back
+# to the module proxy; tools/sbomcheck checks the result in the release
+# workflow.
+SYFT_GOLANG_SEARCH_LOCAL_MOD_CACHE_LICENSES=true SYFT_GOLANG_SEARCH_REMOTE_LICENSES=true \
+  syft scan "dir:$stage" --source-name smcp --source-version "${1:-dev}" -q -o "spdx-json=$out/sbom.spdx.json"
 [ -s "$out/sbom.spdx.json" ] || { echo "release-sbom: syft wrote no SBOM" >&2; exit 1; }
 echo "release-sbom: wrote $out/sbom.spdx.json"

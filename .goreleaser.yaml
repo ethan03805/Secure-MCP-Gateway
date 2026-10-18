@@ -24,6 +24,10 @@ before:
     - go mod download
     # build/sbom/sbom.spdx.json, placed in every archive (FR-13.1).
     - bash scripts/release-sbom.sh {{ .Version }}
+    # build/provenance/PROVENANCE.md and THIRD_PARTY_NOTICES.txt (FR-12.8).
+    # The release workflow (SMCP_SBOM=1) installs the console's npm
+    # packages so that their license files are copied, not just named.
+    - go run ./tools/provenance -version {{ .Version }} -out build/provenance -require-npm={{ if isEnvSet "SMCP_SBOM" }}true{{ else }}false{{ end }}
 
 builds:
   - id: smcpd
@@ -55,7 +59,8 @@ builds:
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
-      - -s -w -X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version={{ .Version }}
+      # smcp-refserver does not link internal/backend; its own variable.
+      - -s -w -X main.Version={{ .Version }}
     mod_timestamp: "{{ .CommitTimestamp }}"
 
   - id: smcp-session
@@ -114,6 +119,18 @@ archives:
       # The SBOM (FR-13.1), from scripts/release-sbom.sh. Absent in a local
       # snapshot without syft; the release workflow requires it.
       - src: build/sbom/*.spdx.json
+        strip_parent: true
+        info:
+          mode: 0644
+      # Release provenance (FR-12.8): the build recipe and the dependency
+      # lockfiles, kept at their repository paths, and the provenance
+      # statement and third-party license notices from tools/provenance.
+      - src: .goreleaser.yaml
+      - src: scripts/release-sbom.sh
+      - src: go.mod
+      - src: go.sum
+      - src: console/package-lock.json
+      - src: build/provenance/*
         strip_parent: true
         info:
           mode: 0644

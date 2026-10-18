@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -35,6 +36,24 @@ func call(t *testing.T, cs *mcp.ClientSession, name string, args map[string]any)
 		t.Fatal(err)
 	}
 	return res.Content[0].(*mcp.TextContent).Text, res.IsError
+}
+
+// TestVersionFlag builds the binary with a release version, as
+// .goreleaser.yaml does, and checks that --version prints it in the form
+// the release workflow checks ("smcp-refserver 1.2.3") and exits 0.
+func TestVersionFlag(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "smcp-refserver")
+	build := exec.Command("go", "build", "-ldflags", "-X main.Version=1.2.3", "-o", bin, ".")
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build: %v\n%s", err, out)
+	}
+	out, err := exec.Command(bin, "--version").CombinedOutput()
+	if err != nil {
+		t.Fatalf("--version: %v\n%s", err, out)
+	}
+	if got := strings.TrimSpace(string(out)); got != "smcp-refserver 1.2.3" {
+		t.Fatalf("--version printed %q", got)
+	}
 }
 
 func TestReferenceServerTools(t *testing.T) {
