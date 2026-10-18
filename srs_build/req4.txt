@@ -806,11 +806,11 @@ R: Client releases change MCP behavior often; the matrix catches a break before 
 
 @FR-15.9 | Cloud agent matrix record
 P: FR-15
-S: The Gateway project SHALL record, for each cloud agent of Appendix K, the date, agent version or build where shown, tunnel provider, registration mode and the result of a manual connection run against the Remote Access Profile in `docs/clients/matrix.json`.
+S: The Gateway project SHALL keep, for each cloud agent of Appendix K, an entry in `docs/clients/matrix.json` that records either a manual connection run against the Remote Access Profile, with its date, agent version or build where shown, tunnel provider, registration mode and result, or, while no run has been made, the result `not-run`, the date the entry was last reviewed, the documented connection and registration modes and the reason no run was made.
 A: E-33; E-01; F-95; X-13
-V: Inspection | Inspect `docs/clients/matrix.json`; confirm one dated entry per cloud agent with each field.
-SRC: OWNER (cloud agents: Grok Bot, ChatGPT dots, Meta Muse)
-R: Cloud agents cannot run in CI, so their support claim rests on dated manual records.
+V: Inspection | Inspect `docs/clients/matrix.json`; confirm one entry per cloud agent, each either a dated run with every run field or a `not-run` entry with its review date, documented modes and reason.
+SRC: OWNER (cloud agents: Grok Bot, ChatGPT dots, Meta Muse; live runs descoped from release 1.x on 2026-10-18)
+R: Cloud agents cannot run in CI, so their support claim rests on dated manual records. The owner descoped live cloud-agent runs from release 1.x: the agents are documented and the Remote Access Profile is tested against a local test tunnel, and a `not-run` entry states that plainly instead of implying a run.
 
 @FR-15.10 | Pinned client matrix file
 P: FR-15
@@ -904,11 +904,11 @@ R: Some agents accept only a command to launch, not a URL.
 
 @FR-16.10 | Vendor allowlist guidance
 P: FR-16
-S: The per-client quick start for each cloud agent of Appendix K SHALL name the vendor administration setting, where the vendor offers one, that restricts the agent's MCP servers to the Gateway URL, and SHALL state when no such setting is offered.
+S: The per-client quick start for each cloud agent of Appendix K SHALL name the vendor administration setting that restricts the agent's MCP servers to the Gateway URL where the vendor's public documentation names one, and otherwise SHALL state that no such setting was confirmed in the vendor's public documentation, with the date checked and the sources reviewed.
 A: E-33; F-98; X-13
-V: Inspection | Inspect each cloud agent quick start; confirm the setting is named or its absence stated, with the date checked.
-SRC: OWNER (the vendor admin MCP allowlist restricts the agent to the Gateway URL)
-R: The vendor's allowlist is the only control that keeps a cloud agent from using other MCP servers.
+V: Inspection | Inspect each cloud agent quick start; confirm the setting is named, or the absence of a confirmed setting stated, with the date checked and the sources reviewed.
+SRC: OWNER (the vendor admin MCP allowlist restricts the agent to the Gateway URL; live cloud-agent runs descoped from release 1.x on 2026-10-18)
+R: The vendor's allowlist is the only control that keeps a cloud agent from using other MCP servers. Vendor administration consoles are not reachable without vendor business accounts, which the project does not hold, so the quick start reports what the vendor's public documentation states and says so when it states nothing.
 
 @FR-16.11 | Disabled by default
 P: FR-16

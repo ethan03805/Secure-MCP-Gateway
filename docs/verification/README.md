@@ -36,7 +36,7 @@ It then lists the steps as performed, the observations, and any deviation from t
 - an Inspection record cites at least one `` `path:line` ``, and every cited file exists in the tree;
 - the record with the latest date for that requirement has result `pass` (a later `fail` makes the requirement failing).
 
-A record that does not meet these rules is reported as a warning and not counted. A record with method `Test` is a supporting record: it documents a manual step that the SRS asks to file next to the automated tests of a Test-method requirement (for example the manual check of FR-8.32). It is validated like any record but never counts as verification. A parent requirement whose Analysis is "Review the verification results of every ... child requirement" is verified automatically when every child requirement is verified.
+A record that does not meet these rules is reported as a warning and not counted. A record with method `Test` is a supporting record: it documents a manual step that the SRS asks to file next to the automated tests of a Test-method requirement (for example the manual check of FR-8.32). It is validated like any record but never counts as verification. A parent requirement whose Analysis is "Review the verification results of every ... child requirement" is verified automatically when every child requirement is verified; while it has no claim of its own, no failing child and at least one verified or partly verified child, it is reported partial with the claim "analysis: N of M child requirements verified".
 
 ## Results of separate workflows
 
