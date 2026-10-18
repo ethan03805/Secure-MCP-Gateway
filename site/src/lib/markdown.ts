@@ -66,7 +66,7 @@ function liftMermaid(md: string, steps: boolean): string {
     const block =
       `<figure class="diagram" id="diagram-${i}"><div class="mermaid-block" data-mermaid="${b64}" role="img" aria-label="${escapeHtml(label)}. The table that follows lists each step.">` +
       `<pre class="mermaid-fallback">${escapeHtml(body)}</pre></div>` +
-      `<figcaption>${escapeHtml(label)}.</figcaption></figure>`;
+      `<figcaption>${escapeHtml(label)}. <button type="button" class="diagram-full" hidden>View full size</button></figcaption></figure>`;
     const table = steps
       ? stepTableHtml(
           d,

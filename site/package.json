@@ -8,7 +8,8 @@
     "start": "npx serve out",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --no-warnings --test \"test/**/*.test.ts\"",
-    "check-out": "node scripts/check-out.mjs"
+    "check-out": "node scripts/check-out.mjs",
+    "check-diagrams": "node scripts/check-diagrams.mjs"
   },
   "dependencies": {
     "@fontsource-variable/newsreader": "^5.3.0",
@@ -30,6 +31,7 @@
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "playwright-core": "^1.64.1",
     "typescript": "^5.9.3"
   },
   "overrides": {

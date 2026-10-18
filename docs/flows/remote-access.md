@@ -2,6 +2,10 @@
 
 How an operator opens the Remote Access Profile through a tunnel, and how `smcp-connect` on another computer registers, waits for approval and signs in with the device grant (FR-16.1 to FR-16.12, FR-12.13; ARCH §18.9). The browser-based authorization-code path of a cloud agent is the [cloud agent flow](cloud-agent-tunnel.md); configuration and limits are in the [Remote Access Profile guide](../remote-access.md).
 
+The flow is drawn in three parts. Step numbers run on from one part to the next.
+
+## 1. Enable and check (steps 1–10)
+
 ```mermaid
 sequenceDiagram
   autonumber
@@ -9,11 +13,8 @@ sequenceDiagram
   participant CTL as smcpctl remote
   participant TS as Tunnel CLI (tailscale or cloudflared)
   participant E24 as E-24 Control API
-  participant R as Remote listener (loopback)
-  participant E03 as E-03 Authorization server (remote)
-  participant C as smcp-connect (other computer)
-  participant P as Session Approver (browser)
   participant E21 as E-21 Journal
+  participant R as Remote listener (loopback)
 
   O->>CTL: remote enable --provider tailscale
   CTL->>TS: tailscale status --json for the MagicDNS name
@@ -25,6 +26,21 @@ sequenceDiagram
   O->>CTL: remote check
   CTL->>R: protected-resource metadata through the public name
   R-->>CTL: metadata from the remote listener, not the harness listener
+```
+
+## 2. Client registration and device sign-in (steps 11–28)
+
+```mermaid
+sequenceDiagram
+  autonumber 11
+  participant C as smcp-connect (other computer)
+  participant R as Remote listener (loopback)
+  participant E03 as E-03 Authorization server (remote)
+  participant E21 as E-21 Journal
+  participant E24 as E-24 Control API
+  participant O as Operator (Gateway host)
+  participant P as Session Approver (browser)
+
   C->>R: discover metadata at the public URL
   C->>E03: POST /oauth/register (RFC 7591)
   E03->>E21: client_registration pending
@@ -43,6 +59,19 @@ sequenceDiagram
   E03->>E21: session created (DEVICE_CODE) with the remote origin
   E03-->>C: access and refresh tokens, stored in the CP-43 credential file
   C->>R: MCP over HTTPS with the bearer token, relayed from local stdio
+```
+
+## 3. Disable (steps 29–32)
+
+```mermaid
+sequenceDiagram
+  autonumber 29
+  participant O as Operator (Gateway host)
+  participant CTL as smcpctl remote
+  participant E24 as E-24 Control API
+  participant E21 as E-21 Journal
+  participant TS as Tunnel CLI (tailscale or cloudflared)
+
   O->>CTL: remote disable
   CTL->>E24: POST /api/v1/remote/disable
   E24->>E21: remote_access_disabled, remote sessions ended

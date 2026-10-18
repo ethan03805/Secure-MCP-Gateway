@@ -2,6 +2,10 @@
 
 The path of one `tools/call` from a harness to a backend server and back, as specified in SRS V1.2 (FR-4.3 stage order) and ARCH §18.3. Element IDs are those of `ArchitectureV2.md`.
 
+The path is drawn in three parts. Step numbers run on from one part to the next.
+
+## 1. Authentication and decision (steps 1–12)
+
 ```mermaid
 sequenceDiagram
   autonumber
@@ -11,13 +15,7 @@ sequenceDiagram
   participant E02 as E-02 Protocol Mediator
   participant E08 as E-08 Access EP
   participant E06 as E-06 Decision
-  participant E09 as E-09 Request filters
-  participant E07 as E-07 Approval
-  participant E12 as E-12 Coordinator
   participant E21 as E-21 Journal
-  participant E10 as E-10 Dispatcher
-  participant B as Backend in E-15/E-16
-  participant E11 as E-11 Response filters
 
   H->>E01: POST /mcp tools/call, Authorization Bearer
   E01->>E01: Host and Origin checks, header and body bounds before parsing
@@ -33,31 +31,62 @@ sequenceDiagram
     E08->>E21: decision event (denied)
     E02-->>H: -31001 or -31005 with reasonCode, correlationId, decisionId, message
   else permit
-    E08->>E09: request filters named by the obligations
-    E09->>E09: schema-validate, path and URL canonicalization, secret fingerprint, injection tags
-    opt approval obligation (policy, anomaly or session taint)
-      E09->>E07: create pending approval and hold the call (see approval-hold.md)
-      E07-->>E09: approved
-    end
-    E09->>E12: request launch
-    E12->>E12: recheck stop epoch, policy revision, session state
-    E12->>E21: append decision and intent record
-    E21->>E21: flush to stable storage
-    E21-->>E12: flushed
-    E12-->>E10: one-use launch capability
-    E10->>B: acquire instance, tools/call with backend credential
-    B-->>E10: result, buffered and size-bounded
-    E10->>E11: envelope, correlation and output-schema checks
-    E11->>E11: response filters, provenance labels, taint update
-    E11->>E12: request release
-    E12->>E12: recheck stop epoch, policy revision, session state
-    E12->>E21: append outcome and release disposition, flush
-    E12-->>E02: release authorization
-    E02-->>H: result with _meta local.smcpgw/provenance (untrusted)
+    Note over E08,E06: continues in part 2
   end
-  Note over E21: E-21 feeds the graph mirror from the journal asynchronously. No step waits on the graph (A-9).
-  Note over E01,E11: Every stage emits timing spans and observables to E-29 asynchronously.
 ```
+
+## 2. Request inspection, approval and launch authorization (steps 13–22, on permit)
+
+```mermaid
+sequenceDiagram
+  autonumber 13
+  participant E08 as E-08 Access EP
+  participant E09 as E-09 Request filters
+  participant E07 as E-07 Approval
+  participant E12 as E-12 Coordinator
+  participant E21 as E-21 Journal
+  participant E10 as E-10 Dispatcher
+
+  E08->>E09: request filters named by the obligations
+  E09->>E09: schema-validate, path and URL canonicalization, secret fingerprint, injection tags
+  opt approval obligation (policy, anomaly or session taint)
+    E09->>E07: create pending approval and hold the call (see approval-hold.md)
+    E07-->>E09: approved
+  end
+  E09->>E12: request launch
+  E12->>E12: recheck stop epoch, policy revision, session state
+  E12->>E21: append decision and intent record
+  E21->>E21: flush to stable storage
+  E21-->>E12: flushed
+  E12-->>E10: one-use launch capability
+```
+
+## 3. Dispatch, response inspection and release (steps 23–31)
+
+```mermaid
+sequenceDiagram
+  autonumber 23
+  participant H as Harness
+  participant E02 as E-02 Protocol Mediator
+  participant E10 as E-10 Dispatcher
+  participant B as Backend in E-15/E-16
+  participant E11 as E-11 Response filters
+  participant E12 as E-12 Coordinator
+  participant E21 as E-21 Journal
+
+  E10->>B: acquire instance, tools/call with backend credential
+  B-->>E10: result, buffered and size-bounded
+  E10->>E11: envelope, correlation and output-schema checks
+  E11->>E11: response filters, provenance labels, taint update
+  E11->>E12: request release
+  E12->>E12: recheck stop epoch, policy revision, session state
+  E12->>E21: append outcome and release disposition, flush
+  E12-->>E02: release authorization
+  E02-->>H: result with _meta local.smcpgw/provenance (untrusted)
+  Note over E21: E-21 feeds the graph mirror from the journal asynchronously. No step waits on the graph (A-9).
+```
+
+Every stage, from E-01 to E-11, emits timing spans and observables to E-29 asynchronously.
 
 ## Requirements on this path
 

@@ -2,6 +2,10 @@
 
 How an operator stops all tool execution (FR-4.14, SR-7.6-1, SR-7.6-2, SR-1.16-1; ARCH §18.7). Stop is serialized through the coordinator's gate, so every launch and release is ordered entirely before or after it.
 
+The flow is drawn in two parts. Step numbers run on from one part to the next.
+
+## 1. Stop (steps 1–9)
+
 ```mermaid
 sequenceDiagram
   autonumber
@@ -9,11 +13,10 @@ sequenceDiagram
   participant E24 as E-24 Control API (G-01 or smcpctl stop)
   participant E12 as E-12 Coordinator gate
   participant E21 as E-21 Journal
-  participant E04 as E-04 Sessions
   participant E10 as E-10 Dispatcher
   participant E15 as E-15 Runtime
   participant E20 as E-20 Secret Broker
-  participant H as Harness
+  participant E04 as E-04 Sessions
 
   O->>E24: stop (Operator or Administrator)
   E24->>E12: stop request
@@ -26,6 +29,19 @@ sequenceDiagram
     E12->>E04: end affected sessions
   end
   E12-->>E24: stopped
+```
+
+## 2. While stopped, and resume (steps 10–14)
+
+```mermaid
+sequenceDiagram
+  autonumber 10
+  participant H as Harness
+  participant E12 as E-12 Coordinator gate
+  participant E21 as E-21 Journal
+  participant E24 as E-24 Control API (G-01 or smcpctl stop)
+  participant O as Operator
+
   H->>E12: new launch or pending release
   E12-->>H: -31004 EMERGENCY_STOP
   O->>E24: resume (Administrator only)
