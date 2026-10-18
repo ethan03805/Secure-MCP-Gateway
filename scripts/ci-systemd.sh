@@ -235,9 +235,16 @@ if [ -n "$(as_core podman ps -a -q --filter label=smcp.managed=1 2>/dev/null)" ]
 fi
 as_core /usr/local/bin/smcpctl runtime instances --config "$cfg" | grep -q '"alias": *"ref"' || fail "runtime instances lacks ref"
 
+say "smcpd runs as smcp-core (SR-4.1-1)"
+core_uid=$(id -u smcp-core)
+smcpd_pid=$(systemctl show smcpd.service -p MainPID --value)
+smcpd_uid=$(ps -o uid= -p "$smcpd_pid" | tr -d ' ')
+ps -o user=,uid=,pid=,comm= -p "$smcpd_pid"
+[ "$smcpd_uid" = "$core_uid" ] || fail "smcpd (PID $smcpd_pid) runs as UID $smcpd_uid, not smcp-core ($core_uid)"
+[ "$smcpd_uid" != 0 ] && [ "$smcpd_uid" != "$(id -u)" ] || fail "smcpd runs as root or as the operator's account"
+
 say "server processes run under smcp-srv's subordinate UIDs, not smcp-core"
 read -r srv_start srv_count < <(awk -F: '$1 == "smcp-srv" { print $2, $3; exit }' /etc/subuid)
-core_uid=$(id -u smcp-core)
 while read -r name _ <&3; do
   cpid=$(as_srv podman inspect --format '{{.State.Pid}}' "$name")
   cuid=$(ps -o uid= -p "$cpid" | tr -d ' ')

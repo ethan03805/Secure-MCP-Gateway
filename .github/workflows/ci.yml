@@ -260,9 +260,12 @@ jobs:
           retention-days: 7
 
   # smcpctl install in the Standalone profile with the runner's own service
-  # manager (FR-13.6, FR-13.4): a systemd user unit on Ubuntu, a launchd
-  # user agent on macOS; install twice, check the service and health, then
-  # uninstall. Not a required check.
+  # manager (FR-13.6, FR-13.4): a systemd user unit on Ubuntu (with Podman
+  # removed: FR-13.6 asks for a Linux runner without it), a launchd user
+  # agent on macOS (arm64); install twice, check the service and health,
+  # then uninstall. The Go test that runs it writes its events to
+  # build/install-standalone-<os>-test.json for the status job. Not a
+  # required check.
   install-standalone:
     name: install-standalone (${{ matrix.os }})
     strategy:
@@ -280,12 +283,28 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
           cache-dependency-path: go.sum
-      - name: Build smcpd, smcpctl and smcp-refserver
-        run: go build -o "$RUNNER_TEMP/install-bin/" ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver
-      - name: smcpctl install, second install, uninstall
+      - name: Remove Podman (FR-13.6, a Linux runner without Podman)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get remove -y -qq podman >/dev/null 2>&1 || true
+          if command -v podman; then echo "::error::podman is still installed"; exit 1; fi
+      - name: smcpctl install, second install, uninstall (TestInstallStandaloneServiceManager)
         env:
-          SMCP_REQUIRE_SERVICE: "1"
-        run: scripts/ci-install-standalone.sh "$RUNNER_TEMP/install-bin" "$RUNNER_TEMP/install-work"
+          SMCP_INSTALL_SERVICE_TEST: "1"
+        run: |
+          set -o pipefail
+          mkdir -p build
+          os=$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')
+          go test -json -count=1 -run '^TestInstallStandaloneServiceManager$' ./cmd/smcpctl \
+            | tee "build/install-standalone-$os-test.json" | jq -rj 'select(.Action == "output") | .Output'
+      - name: Upload the results of the Go test
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: install-standalone-results-${{ matrix.os }}
+          path: build/install-standalone-*-test.json
+          if-no-files-found: warn
+          retention-days: 14
 
   # Management console (E-24): typecheck and build console/, check that the
   # committed console/dist (embedded into smcpd) matches the sources, audit
@@ -785,7 +804,7 @@ jobs:
     if: >-
       always() && github.event_name != 'pull_request' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline]
+    needs: [srs, go, lint, site, security, linux-integration, install-standalone, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -844,6 +863,12 @@ jobs:
         with:
           name: console-enforced-results
           path: build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          pattern: install-standalone-results-*
+          merge-multiple: true
+          path: build
       - name: Fetch the results of the separate verification workflows (site-data/workflows.json; FR-13.3 tap, FR-14.9 reference packages)
         run: |
           if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null &&
@@ -884,6 +909,14 @@ jobs:
           # offline acceptance run (FR-11, FR-19.3, FR-12.2) and the Go tests
           # of linux-integration that need real Podman or a network
           # namespace (skipped in the go job; their result here is counted).
+          # smcpctl install with the real service managers (FR-13.6 needs
+          # both macOS and Linux): merged only when both runners reported.
+          if [ -s build/install-standalone-macos-test.json ] && [ -s build/install-standalone-linux-test.json ]; then
+            cat build/install-standalone-macos-test.json build/install-standalone-linux-test.json >> build/all-test.json
+            merged=1
+          else
+            echo "install-standalone results missing for one runner; not merged"
+          fi
           for f in perf-test acceptance-enforced-test offline-test offline-enforced-test linux-integration-test; do
             if [ -s "build/$f.json" ]; then
               cat "build/$f.json" >> build/all-test.json
