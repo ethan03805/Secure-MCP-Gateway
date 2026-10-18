@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T15:19:34Z",
-  "commit": "d55c08f8da49db12fe877a2de57a1bbecec069b8",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d55c08f8da49db12fe877a2de57a1bbecec069b8",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39137547257",
+  "generatedAt": "2026-10-18T21:28:04Z",
+  "commit": "91ad37458605608ba77a7a7cfbdc462f44308f9c",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/91ad37458605608ba77a7a7cfbdc462f44308f9c",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39165908687",
   "tests": {
     "total": 1469,
     "passed": 1454,
     "failed": 0,
     "skipped": 15,
-    "durationSec": 1877.4,
+    "durationSec": 1574.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -524,7 +524,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 92.3
+        "pct": 92
       },
       {
         "name": "internal/backup",
@@ -556,7 +556,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.3
+        "pct": 91.4
       },
       {
         "name": "internal/egress",
@@ -572,7 +572,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.6
+        "pct": 83.9
       },
       {
         "name": "internal/gwtest",
@@ -688,7 +688,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.7
+        "pct": 80
       },
       {
         "name": "internal/session",
@@ -7181,7 +7181,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7216,7 +7216,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:32963: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:32849: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7333,7 +7333,7 @@
     }
   ],
   "acceptance": {
-    "commit": "d55c08f8da49db12fe877a2de57a1bbecec069b8",
+    "commit": "91ad37458605608ba77a7a7cfbdc462f44308f9c",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -8025,15 +8025,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "d55c08f8da49db12fe877a2de57a1bbecec069b8",
-    "generatedAt": "2026-10-18T14:48:01Z",
+    "commit": "91ad37458605608ba77a7a7cfbdc462f44308f9c",
+    "generatedAt": "2026-10-18T21:01:40Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000007654"
+      "runner": "GitHub Actions 1000007705"
     },
     "referenceHardware": false,
     "dataset": {
@@ -8050,7 +8050,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.027421,
+        "value": 0.029135,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -8062,7 +8062,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 17.350003,
+        "value": 17.546781,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -8074,18 +8074,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.7513288749999969,
+        "value": 0.849768874999997,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (10.971 ms, mean of 10.729, 10.790, 10.861, 11.418, 11.382, 11.108, 10.473, 11.006) minus disabled (10.220 ms, mean of 10.111, 9.884, 10.532, 10.318, 10.319, 10.064, 10.125, 10.401), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (11.072 ms, mean of 10.929, 11.601, 11.386, 11.008, 10.182, 11.048, 11.552, 10.869) minus disabled (10.222 ms, mean of 10.182, 10.010, 10.264, 9.861, 10.081, 10.604, 10.351, 10.426), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 798.074111,
+        "value": 809.231774,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -8097,11 +8097,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 103.03515625,
+        "value": 102.37890625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 11m24s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 11m33s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
