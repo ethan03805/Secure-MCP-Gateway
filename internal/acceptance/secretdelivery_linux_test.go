@@ -23,6 +23,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/posixacl"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
 )
@@ -342,8 +343,21 @@ runtime_dir = %q
 	if !secrets.IsTmpfs(inst) {
 		t.Fatalf("%s is not on a tmpfs", inst)
 	}
-	if st, err := os.Stat(inst); err != nil || st.Mode().Perm() != 0o700 {
-		t.Fatalf("instance directory %s: %v %v", inst, st, err)
+	// Owner only, except that a POSIX ACL may let the instance's own UID
+	// in (the group bits then show the ACL mask, at most search).
+	if st, err := os.Stat(inst); err != nil || st.Mode().Perm()&0o067 != 0 || st.Mode().Perm()&0o700 != 0o700 {
+		t.Fatalf("instance directory %s: %v %v", inst, st.Mode(), err)
+	}
+	if a, err := posixacl.Get(inst); err == nil {
+		others := 0
+		for uid := range a.Users() {
+			if uid != os.Getuid() {
+				others++
+			}
+		}
+		if others > 1 {
+			t.Fatalf("instance directory %s grants %d other users: %v", inst, others, a.Users())
+		}
 	}
 	sfile := container(t, "sfile")
 	var fmounts []struct {
