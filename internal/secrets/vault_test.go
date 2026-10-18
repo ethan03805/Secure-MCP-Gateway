@@ -321,3 +321,39 @@ func TestKeychainSource(t *testing.T) {
 		t.Fatal("second key stored for one vault")
 	}
 }
+
+// TestVaultCheck: the FR-7.11 availability check passes for the unlocked
+// vault and fails while its store file is missing, open to others, or
+// replaced by another vault's.
+func TestVaultCheck(t *testing.T) {
+	reqtest.Partial(t, "FR-7.11")
+	tv := newTestVault(t)
+	tv.create(t, "k", "value-of-the-key-0001")
+	if err := tv.v.Check(); err != nil {
+		t.Fatal(err)
+	}
+	store := filepath.Join(tv.dir, StoreFile)
+	if err := os.Rename(store, store+".x"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tv.v.Check(); !errors.Is(err, ErrNotInitialized) {
+		t.Fatalf("missing store: %v", err)
+	}
+	_ = os.Rename(store+".x", store)
+	_ = os.Chmod(store, 0o644)
+	if err := tv.v.Check(); !errors.Is(err, ErrPermissionsOpen) {
+		t.Fatalf("open store: %v", err)
+	}
+	_ = os.Chmod(store, 0o600)
+	other := newTestVault(t)
+	raw, _ := os.ReadFile(filepath.Join(other.dir, StoreFile))
+	saved, _ := os.ReadFile(store)
+	_ = os.WriteFile(store, raw, 0o600)
+	if err := tv.v.Check(); !errors.Is(err, ErrLocked) {
+		t.Fatalf("other vault's store: %v", err)
+	}
+	_ = os.WriteFile(store, saved, 0o600)
+	if err := tv.v.Check(); err != nil {
+		t.Fatal(err)
+	}
+}

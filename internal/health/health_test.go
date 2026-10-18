@@ -190,10 +190,11 @@ func one(t *testing.T, cs []Cause, name string, critical bool) {
 func TestChecks(t *testing.T) {
 	// FR-7.11: the critical causes snapshot currency, journal writability
 	// and signing lag, mandatory-audit capacity, clock sanity and
-	// trust-anchor validity, and the non-critical unconfined cause. Vault
-	// availability, graph mirror and Observation Store reachability and
-	// the memory stage belong to elements not built yet, which register
-	// their own checks (partial). SR-6.11-1 and SR-7.10-1: the thresholds.
+	// trust-anchor validity, and the non-critical unconfined cause, with
+	// test inputs. The vault, graph mirror, Observation Store and memory
+	// stage checks are registered by their elements; every dependency is
+	// faulted in a running Gateway by TestHealthFaultEachDependency
+	// (internal/e2e). SR-6.11-1 and SR-7.10-1: the thresholds.
 	reqtest.Partial(t, "FR-7.11", "SR-6.11-1", "SR-7.10-1", "FR-13.10")
 	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
 
@@ -288,6 +289,30 @@ func TestChecks(t *testing.T) {
 	if cs := od(now); len(cs) != 0 {
 		t.Fatal("drops reported twice")
 	}
+}
+
+func TestPolicyCurrencyAndVaultChecks(t *testing.T) {
+	reqtest.Partial(t, "FR-7.11")
+	detail, integrity := "", false
+	pc := PolicyCurrency(func() (string, bool) { return detail, integrity })
+	if cs := pc(time.Now()); len(cs) != 0 {
+		t.Fatal(cs)
+	}
+	detail = "active.json names r2, r1 is in force"
+	if cs := pc(time.Now()); len(cs) != 1 || cs[0].Name != CauseSnapshotStale || !cs[0].Critical || cs[0].Integrity {
+		t.Fatalf("%+v", cs)
+	}
+	integrity = true
+	if cs := pc(time.Now()); len(cs) != 1 || !cs[0].Integrity {
+		t.Fatalf("%+v", cs)
+	}
+	var verr error
+	v := Vault(func() error { return verr })
+	if cs := v(time.Now()); len(cs) != 0 {
+		t.Fatal(cs)
+	}
+	verr = errors.New("vault store missing")
+	one(t, v(time.Now()), CauseVault, true)
 }
 
 func TestEveryCachesAndPanicIsCritical(t *testing.T) {

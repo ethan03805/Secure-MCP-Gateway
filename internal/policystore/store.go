@@ -140,6 +140,7 @@ type Store struct {
 	seq     int
 	ctlSq   int
 	damaged []string
+	checked checkedFile // last revision file CheckActive verified
 }
 
 // Damaged lists revision files that failed verification when the store was
@@ -386,25 +387,81 @@ func writeImmutable(path string, data []byte) error {
 	return syncDir(filepath.Dir(path))
 }
 
-// Active returns the verified active revision and its control record.
-func (s *Store) Active() (*Revision, Control, error) {
+// readControl reads the control record and verifies its signature.
+func (s *Store) readControl() (Control, error) {
 	raw, err := os.ReadFile(filepath.Join(s.state, ControlFile))
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, Control{}, ErrNoActive
+		return Control{}, ErrNoActive
 	}
 	if err != nil {
-		return nil, Control{}, err
+		return Control{}, err
 	}
 	var c Control
 	if err := json.Unmarshal(raw, &c); err != nil {
-		return nil, Control{}, fmt.Errorf("%w: active.json is not a control record", ErrIntegrity)
+		return Control{}, fmt.Errorf("%w: active.json is not a control record", ErrIntegrity)
 	}
 	sig, err := base64.StdEncoding.DecodeString(c.Signature)
 	unsigned := c
 	unsigned.Signature = ""
 	msg, merr := s.signingBytes(controlFormat, unsigned)
 	if err != nil || merr != nil || !ed25519.Verify(s.pub, msg, sig) {
-		return nil, Control{}, fmt.Errorf("%w: active.json signature does not verify under key %s", ErrIntegrity, s.keyID)
+		return Control{}, fmt.Errorf("%w: active.json signature does not verify under key %s", ErrIntegrity, s.keyID)
+	}
+	return c, nil
+}
+
+// ErrNotCurrent: the control record names a revision other than the one
+// the caller has in force.
+var ErrNotCurrent = errors.New("the decision snapshot in force is not the active revision")
+
+// CheckActive verifies that the signed control record names revision and
+// that the revision file it points to verifies (FR-7.11 decision-snapshot
+// currency). The revision file is re-verified only when its size or
+// modification time changed since the last successful check, so the check
+// is cheap enough to run every second.
+func (s *Store) CheckActive(revision string) error {
+	c, err := s.readControl()
+	if err != nil {
+		return err
+	}
+	if c.Revision != revision {
+		return fmt.Errorf("%w: active.json names %s, %s is in force", ErrNotCurrent, c.Revision, revision)
+	}
+	fi, err := os.Stat(s.revPath(c.Digest))
+	if err != nil {
+		return fmt.Errorf("%w: revision file %s.json: %w", ErrIntegrity, c.Digest, err)
+	}
+	key := checkedFile{digest: c.Digest, size: fi.Size(), mod: fi.ModTime()}
+	s.mu.Lock()
+	same := s.checked == key
+	s.mu.Unlock()
+	if same {
+		return nil
+	}
+	rev, err := s.readFile(c.Digest)
+	if err != nil {
+		return err
+	}
+	if rev.Record.Revision != c.Revision {
+		return fmt.Errorf("%w: active.json names %s but %s.json holds %s", ErrIntegrity, c.Revision, c.Digest, rev.Record.Revision)
+	}
+	s.mu.Lock()
+	s.checked = key
+	s.mu.Unlock()
+	return nil
+}
+
+type checkedFile struct {
+	digest string
+	size   int64
+	mod    time.Time
+}
+
+// Active returns the verified active revision and its control record.
+func (s *Store) Active() (*Revision, Control, error) {
+	c, err := s.readControl()
+	if err != nil {
+		return nil, Control{}, err
 	}
 	rev, err := s.readFile(c.Digest)
 	if err != nil {

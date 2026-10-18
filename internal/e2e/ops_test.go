@@ -91,6 +91,13 @@ SMCP_E2E_BACKEND = "1"
 // [limits] table (more limits or whole tables).
 func startOps(t *testing.T, extra string, setup func(stateDir string)) *opsFixture {
 	t.Helper()
+	return startOpsWith(t, extra, setup, health.Options{Interval: 200 * time.Millisecond, Recovery: time.Second})
+}
+
+// startOpsWith is startOps with the health monitor's options (its log is
+// always discarded).
+func startOpsWith(t *testing.T, extra string, setup func(stateDir string), hopts health.Options) *opsFixture {
+	t.Helper()
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
 	if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
@@ -115,7 +122,8 @@ func startOps(t *testing.T, extra string, setup func(stateDir string)) *opsFixtu
 	if _, err := ops.Prepare(cfg); err != nil {
 		t.Fatal(err)
 	}
-	mon := health.New(health.Options{Log: diag.Discard(), Interval: 200 * time.Millisecond, Recovery: time.Second})
+	hopts.Log = diag.Discard()
+	mon := health.New(hopts)
 	ctx, cancel := context.WithCancel(context.Background())
 	a, err := app.Start(ctx, cfg, app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond, HealthGate: mon.Gate})
 	if err != nil {

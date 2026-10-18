@@ -211,3 +211,52 @@ func TestActivationAndRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestCheckActive: the currency check of FR-7.11 passes for the active
+// revision, and fails for another revision, an altered control record, a
+// missing control record and an altered or missing revision file (also
+// after a successful check cached the file).
+func TestCheckActive(t *testing.T) {
+	reqtest.Partial(t, "FR-7.11")
+	dir := t.TempDir()
+	s := open(t, dir)
+	rev, _, err := s.Put(doc("r1"), Meta{Actor: "a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CheckActive("r1"); !errors.Is(err, ErrNoActive) {
+		t.Fatalf("no control record: %v", err)
+	}
+	if _, err := s.Activate(rev, "a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CheckActive("r1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CheckActive("r0"); !errors.Is(err, ErrNotCurrent) {
+		t.Fatalf("other revision: %v", err)
+	}
+	ctl := filepath.Join(dir, ControlFile)
+	raw, _ := os.ReadFile(ctl)
+	_ = os.WriteFile(ctl, []byte(strings.Replace(string(raw), `"actor": "a"`, `"actor": "b"`, 1)), 0o600)
+	if err := s.CheckActive("r1"); !errors.Is(err, ErrIntegrity) {
+		t.Fatalf("altered control record: %v", err)
+	}
+	_ = os.WriteFile(ctl, raw, 0o600)
+	if err := s.CheckActive("r1"); err != nil {
+		t.Fatal(err)
+	}
+	revFile := s.revPath(rev.Record.Digest)
+	body, _ := os.ReadFile(revFile)
+	_ = os.Chmod(revFile, 0o600)
+	if err := os.WriteFile(revFile, []byte(strings.Replace(string(body), "read_file", "rm_rf_all", 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CheckActive("r1"); !errors.Is(err, ErrIntegrity) {
+		t.Fatalf("altered revision file: %v", err)
+	}
+	_ = os.Remove(revFile)
+	if err := s.CheckActive("r1"); !errors.Is(err, ErrIntegrity) {
+		t.Fatalf("missing revision file: %v", err)
+	}
+}

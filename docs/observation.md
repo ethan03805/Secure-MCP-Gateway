@@ -194,7 +194,7 @@ Tables: `records`, `spans`, `metrics`, `scores`, partitioned by UTC day. Each fl
 
 ## Degradation
 
-The Observation Collector sheds load in stages instead of slowing the Gateway (FR-9.12). The path is overloaded while the store writer's queue is at 80% or more of its capacity (the backpressure signal, FR-9.6), while the process heap is above 90% of the observation memory budget (`memory_limit_bytes`, CP-33), or, on Linux, while less than 10% of host memory is available. Every second the stage moves one step: up while overloaded, down once not.
+The Observation Collector sheds load in stages instead of slowing the Gateway (FR-9.12). The path is overloaded while the store writer's queue is at 80% or more of its capacity (the backpressure signal, FR-9.6), while the process heap is above 90% of the observation memory budget (`memory_limit_bytes`, CP-33), or, on Linux, while less than 10% of host memory is available. Every half second the stage moves one step: up while overloaded, down once not. The Health & Safety Monitor reports a stage above `normal` as the non-critical cause `observation_degraded`.
 
 | Stage | Name | Effect |
 |---|---|---|

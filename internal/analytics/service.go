@@ -386,6 +386,11 @@ func (s *Service) Close() {
 	}
 }
 
+// degradeInterval is how often the degradation stage moves one step
+// (FR-9.12). It is half the Health & Safety Monitor's interval, so that a
+// stage change is reported within 2 seconds of the overload (FR-7.11).
+const degradeInterval = 500 * time.Millisecond
+
 // retainInterval is how often retention runs: at start and then hourly,
 // well within FR-9.14's once a day.
 var retainInterval = time.Hour
@@ -397,6 +402,8 @@ func (s *Service) loop(ctx context.Context) {
 	defer mt.Stop()
 	ct := time.NewTicker(time.Second)
 	defer ct.Stop()
+	dt := time.NewTicker(degradeInterval)
+	defer dt.Stop()
 	rt := time.NewTicker(retainInterval)
 	defer rt.Stop()
 	s.retain()
@@ -408,6 +415,7 @@ func (s *Service) loop(ctx context.Context) {
 			s.sampleMetrics()
 		case <-ct.C:
 			s.tickCampaigns()
+		case <-dt.C:
 			s.degrade.step()
 		case <-rt.C:
 			s.retain()

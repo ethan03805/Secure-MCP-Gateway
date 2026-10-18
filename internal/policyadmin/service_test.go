@@ -2,6 +2,7 @@ package policyadmin
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -294,5 +295,57 @@ func TestPermissionsAndErrorMapping(t *testing.T) {
 	f.svc.httpPermissions(w, req)
 	if w.Code != 404 {
 		t.Fatalf("%d", w.Code)
+	}
+}
+
+// TestCheckCurrency (FR-7.11): the snapshot in force is current after
+// load and after each publication, also while publications run
+// concurrently with the check; an altered control record or a control
+// record naming another revision is reported.
+func TestCheckCurrency(t *testing.T) {
+	reqtest.Partial(t, "FR-7.11")
+	f := newFixture(t)
+	if c := f.svc.CheckCurrency(); c.Detail != "" {
+		t.Fatalf("after load: %+v", c)
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 2; i < 30; i++ {
+			if _, err := f.svc.Publish(rev(fmt.Sprintf("r%d", i)), PublishOptions{Actor: "admin"}); err != nil {
+				t.Error(err)
+				return
+			}
+		}
+	}()
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	for running := true; running; {
+		select {
+		case <-done:
+			running = false
+		default:
+		}
+		if c := f.svc.CheckCurrency(); c.Detail != "" {
+			t.Fatalf("during publications: %+v", c)
+		}
+	}
+	ctl := filepath.Join(f.dir, policystore.ControlFile)
+	raw, _ := os.ReadFile(ctl)
+	_ = os.WriteFile(ctl, []byte(strings.Replace(string(raw), "admin", "intruder", 1)), 0o600)
+	if c := f.svc.CheckCurrency(); c.Detail == "" || !c.Integrity {
+		t.Fatalf("altered control record: %+v", c)
+	}
+	_ = os.WriteFile(ctl, raw, 0o600)
+	r1, err := f.store.Get("r1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.store.Activate(r1, "intruder"); err != nil { // the store moved, the Gateway did not
+		t.Fatal(err)
+	}
+	if c := f.svc.CheckCurrency(); !strings.Contains(c.Detail, "r1") || c.Integrity {
+		t.Fatalf("control record naming another revision: %+v", c)
 	}
 }

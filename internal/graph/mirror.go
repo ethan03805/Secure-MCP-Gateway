@@ -30,6 +30,13 @@ const (
 	DefaultQueue             = 4096
 	// BatchWindow bounds how long a live event waits for its batch.
 	BatchWindow = 200 * time.Millisecond
+	// ProbeInterval is how often a connected mirror checks that the
+	// database still answers, so that an unreachable database is reported
+	// to the Health & Safety Monitor (which evaluates once per second)
+	// within 2 seconds even without traffic (FR-7.11).
+	ProbeInterval = 500 * time.Millisecond
+	// probeTimeout bounds one reachability probe.
+	probeTimeout = time.Second
 	// opTimeout bounds one database operation of the worker.
 	opTimeout   = 30 * time.Second
 	maxBackoff  = 60 * time.Second
@@ -345,6 +352,8 @@ func (m *Mirror) run(ctx context.Context) {
 	catchTick := time.NewTicker(m.set.CatchUpInterval)
 	retainTick := time.NewTicker(m.set.RetentionInterval)
 	memTick := time.NewTicker(m.set.MemoryInterval)
+	probeTick := time.NewTicker(ProbeInterval)
+	defer probeTick.Stop()
 	defer catchTick.Stop()
 	defer retainTick.Stop()
 	defer memTick.Stop()
@@ -417,6 +426,16 @@ func (m *Mirror) run(ctx context.Context) {
 			if das != nil {
 				m.sampleMemory(ctx, das)
 			}
+		case <-probeTick.C:
+			if das != nil {
+				pctx, cancel := context.WithTimeout(ctx, probeTimeout)
+				err := das.Ping(pctx)
+				cancel()
+				if err != nil {
+					m.fail(ctx, fmt.Errorf("%w: reachability probe: %w", ErrUnavailable, err))
+					needCatch = true
+				}
+			}
 		case r := <-m.reqs:
 			r.done <- m.handle(ctx, das, r)
 			if r.kind == reqRebuild {
@@ -467,7 +486,14 @@ func (m *Mirror) handle(ctx context.Context, das *DAS, r request) error {
 }
 
 func (m *Mirror) connect(ctx context.Context) (*DAS, error) {
-	m.setState(StateConnecting, nil)
+	// A reconnection after a failure stays "unavailable" until it
+	// succeeds, so the health cause does not lapse while retrying.
+	m.mu.Lock()
+	retrying := m.st.State == StateUnavailable
+	m.mu.Unlock()
+	if !retrying {
+		m.setState(StateConnecting, nil)
+	}
 	if m.backend == nil {
 		b, err := m.open()
 		if err != nil {
