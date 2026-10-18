@@ -316,6 +316,24 @@ jobs:
     name: console
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    # The graph mirror for the G-14 investigation test (console/e2e/
+    # decision.spec.ts, FR-8.22) on a dedicated Gateway.
+    services:
+      neo4j:
+        image: neo4j:2026.05.0-community
+        env:
+          NEO4J_AUTH: neo4j/smcp-ci-graph-password
+          NEO4J_server_http_enabled: "false"
+          NEO4J_dbms_usage__report_enabled: "false"
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 7687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p smcp-ci-graph-password 'RETURN 1'"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -351,11 +369,14 @@ jobs:
       - name: Build the Gateway binaries once for the three runs
         run: |
           mkdir -p build/e2e-bin
-          go build -o build/e2e-bin/ ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver ./scripts/itest-client
+          go build -o build/e2e-bin/ ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver ./scripts/itest-client ./scripts/evidence-fixture
       - name: Acceptance tests against a running smcpd (Chromium, Firefox, WebKit)
         env:
           CI: "1"
           SMCP_E2E_BIN: ${{ github.workspace }}/build/e2e-bin
+          SMCP_NEO4J_URL: bolt://127.0.0.1:7687
+          SMCP_NEO4J_USER: neo4j
+          SMCP_NEO4J_PASSWORD: smcp-ci-graph-password
         run: npm run test:e2e
         working-directory: console
       - name: Upload the requirement claims of the acceptance tests

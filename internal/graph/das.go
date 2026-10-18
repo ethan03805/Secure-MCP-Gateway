@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -102,7 +103,7 @@ func (d *DAS) Migrate(ctx context.Context) (from, to int, err error) {
 		// Schema statements cannot share a transaction with data writes,
 		// so each runs alone; all are idempotent (IF NOT EXISTS).
 		for _, op := range m.Ops {
-			if _, err := d.write(ctx, Statement{Op: op, Params: map[string]any{}}); err != nil {
+			if err := d.migrateOp(ctx, op); err != nil {
 				return from, to, fmt.Errorf("migration %d (%s): %w", m.Version, m.Name, err)
 			}
 		}
@@ -116,6 +117,32 @@ func (d *DAS) Migrate(ctx context.Context) (from, to int, err error) {
 		to = m.Version
 	}
 	return from, to, nil
+}
+
+// constraintOp matches a migration's uniqueness constraint statement.
+var constraintOp = regexp.MustCompile(`^\s*CREATE CONSTRAINT (smcp_[a-z0-9_]+) IF NOT EXISTS `)
+
+// migrateOp runs one schema statement. A migration interrupted while the
+// engine built a constraint's backing index (the Gateway stopped during
+// its first start) can leave that index without its constraint; CREATE
+// CONSTRAINT ... IF NOT EXISTS then fails on the index name and the
+// database could never be migrated. The orphaned index, which carries the
+// constraint's own name, is dropped and the statement run again.
+func (d *DAS) migrateOp(ctx context.Context, op *Op) error {
+	_, err := d.write(ctx, Statement{Op: op, Params: map[string]any{}})
+	if err == nil || !strings.Contains(err.Error(), "IndexWithNameAlreadyExists") {
+		return err
+	}
+	m := constraintOp.FindStringSubmatch(op.text)
+	if m == nil {
+		return err
+	}
+	drop := &Op{id: "schema.drop_orphan_index", mode: ModeWrite, params: map[string]ParamType{}, text: "DROP INDEX " + m[1] + " IF EXISTS"}
+	if _, derr := d.write(ctx, Statement{Op: drop, Params: map[string]any{}}); derr != nil {
+		return fmt.Errorf("%w (dropping the orphaned index %s: %w)", err, m[1], derr)
+	}
+	_, err = d.write(ctx, Statement{Op: op, Params: map[string]any{}})
+	return err
 }
 
 // SchemaObject is one constraint or index of the deployed schema.

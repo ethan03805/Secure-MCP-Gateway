@@ -97,8 +97,11 @@ Errors: 400 `bad_request` (unknown kind or bad overlap), 409 `rotation_in_progre
 ```json
 { "dir": "/.../backups",
   "backups": [ { "path": "/.../backups/smcp-backup-20261016T220000.000Z.age", "sha256": "...", "size": 48213,
-                 "created_at": "...", "components": ["configuration", "evidence_journal", "key_material", "policy_store", "trust_anchors"], "result": "ok" } ] }
+                 "created_at": "...", "components": ["configuration", "evidence_journal", "key_material", "policy_store", "trust_anchors"], "result": "ok" } ],
+  "scheduled": false, "configured": true }
 ```
+
+`scheduled` is true when `[backup] interval` is set; `configured` is true when a schedule is set or a backup has been taken (the G-01 first-run checklist item "Backup configured", FR-8.31).
 
 ## POST /api/v1/backup
 

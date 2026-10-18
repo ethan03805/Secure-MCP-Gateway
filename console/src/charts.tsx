@@ -104,7 +104,7 @@ export function LineChart({ title, series, unit, height = 180, format = (v: numb
   const shown = series.slice(0, 3);
   const xs = useMemo(() => [...new Set(shown.flatMap((s) => s.points.map((p) => p.x)))].sort((a, b) => a - b), [shown]);
   const ys = shown.flatMap((s) => s.points.map((p) => p.y));
-  if (xs.length === 0) return <p className="empty">No values in this range yet.</p>;
+  if (xs.length === 0) return <p className="empty">No values in this range yet. Values appear after tool calls when observation is enabled.</p>;
   const m = { l: 48, r: 12, t: 10, b: 24 };
   const iw = width - m.l - m.r;
   const ih = height - m.t - m.b;
@@ -221,7 +221,7 @@ export function BarChart({ title, bars, unit, format = (v: number) => compact(v)
   const [ref, width] = useWidth();
   const [at, setAt] = useState<number | null>(null);
   const id = useId();
-  if (bars.length === 0) return <p className="empty">No values in this range yet.</p>;
+  if (bars.length === 0) return <p className="empty">No values in this range yet. Values appear after tool calls when observation is enabled.</p>;
   const labelW = Math.min(220, Math.max(80, Math.max(...bars.map((b) => b.label.length)) * 7.2 + 12));
   const valueW = 72;
   const band = 24;
@@ -293,7 +293,7 @@ export function ScoreTimeline({ title, dots, thresholds, onOpen }: { title: stri
   const [ref, width] = useWidth();
   const [at, setAt] = useState<number | null>(null);
   const id = useId();
-  if (dots.length === 0) return <p className="empty">No call scored elevated or worse in this range.</p>;
+  if (dots.length === 0) return <p className="empty">No call scored elevated or worse in this range. Scores appear after tool calls while a promoted baseline snapshot is in force.</p>;
   const height = 200;
   const m = { l: 40, r: 12, t: 10, b: 24 };
   const iw = width - m.l - m.r;

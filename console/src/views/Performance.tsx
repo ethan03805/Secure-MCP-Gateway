@@ -149,7 +149,7 @@ export function Performance() {
                   rowKey={(r) => JSON.stringify(r.group)}
                   initialSort="total"
                   initialDir="desc"
-                  empty="No stage timing in this range."
+                  empty="No stage timing in this range. Stage timings appear after tool calls when observation is enabled."
                   columns={[
                     { key: "stage", label: "Stage or object", sort: (r) => r.group.stage ?? "", render: (r) => <Mono>{r.group.stage ?? r.group.rule ?? r.group.filter ?? ""}</Mono> },
                     { key: "rev", label: "Policy revision", sort: (r) => r.group.policy_revision ?? "", render: (r) => <Mono>{r.group.policy_revision}</Mono> },

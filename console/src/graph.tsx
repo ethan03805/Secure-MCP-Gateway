@@ -43,7 +43,7 @@ export function nodeHref(label: string, id: string): string {
     case "Session":
       return `/sessions/${encodeURIComponent(id)}`;
     case "Decision":
-      return `/audit?decision_id=${encodeURIComponent(id)}`;
+      return `/audit/decisions/${encodeURIComponent(id)}`;
     case "Invocation":
       return `/audit?correlation_id=${encodeURIComponent(id)}`;
     case "Principal":
@@ -61,12 +61,18 @@ const short = (s: string, n = 18) => (s.length > n ? s.slice(0, n - 5) + "…" +
 
 function NodeMark({ x, y, label, id, sub, current, onOpen, w = 150 }: { x: number; y: number; label: string; id: string; sub?: string; current?: boolean; onOpen: () => void; w?: number }) {
   const h = 40;
+  const shownSub = sub ? short(sub, 12) : "";
+  const shownId = short(id, Math.floor((w - 16) / 6.7));
+  // The accessible name starts with the visible text (WCAG 2.5.3 label in
+  // name), then the full ID and state when the mark shortens them.
+  const visible = `${label}${shownSub ? ` ${shownSub}` : ""} ${shownId}`;
+  const full = shownId !== id || shownSub !== (sub ?? "") ? `, ${id}${sub ? `, ${sub}` : ""}` : "";
   return (
     <g
       className={current ? "gnode gnode-current" : "gnode"}
       tabIndex={0}
       role="link"
-      aria-label={`${label} ${id}${sub ? `, ${sub}` : ""}`}
+      aria-label={visible + full}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
@@ -76,12 +82,14 @@ function NodeMark({ x, y, label, id, sub, current, onOpen, w = 150 }: { x: numbe
       }}
     >
       <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx="2" />
+      {/* One text element, so the visible text reads "label state ID" with spaces. */}
       <text x={x - w / 2 + 8} y={y - 5} className="gnode-label">
         {label}
-        {sub && <tspan className="gnode-sub"> {short(sub, 12)}</tspan>}
-      </text>
-      <text x={x - w / 2 + 8} y={y + 11} className="gnode-id">
-        {short(id, Math.floor((w - 16) / 6.7))}
+        {sub && <tspan className="gnode-sub"> {shownSub}</tspan>}
+        <tspan x={x - w / 2 + 8} dy={16} className="gnode-id">
+          {" "}
+          {shownId}
+        </tspan>
       </text>
     </g>
   );

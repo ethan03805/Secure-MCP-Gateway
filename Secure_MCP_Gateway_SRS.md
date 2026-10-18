@@ -5946,12 +5946,12 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 |---|---|
 | ID | SR-3.4-1 |
 | Parent ID | SEC-3.4 — Dependency inspection (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The Servers & Library view (G-10) **SHALL** display each revision's SBOM, launcher argument vector, mounts, egress destinations, secret slots and sandbox profile. |
+| Statement | The Servers & Library view (G-10) **SHALL** display each revision's bill of materials as recorded in its signed provenance statement (artifact and source with their digests, licenses and the pinned dependency lock), launcher argument vector, mounts, egress destinations, secret slots and sandbox profile. |
 | Allocation | Elements: E-24 Management Console & Control API, E-14 Local Server Registry; Functions: F-65 |
 | Verification Method | Demonstration |
 | Verification Statement | Open a revision in G-10; confirm each item. |
 | Source | SEC 3.4 |
-| Rationale | Privileges are visible beside the server. |
+| Rationale | Privileges are visible beside the server. A release 1.0 package carries no separate SPDX document: its bill of materials is the signed provenance statement (FR-14.5), which binds the artifact and source digests, the licenses and the digest of the dependency lock file that pinned the transitive dependencies (FR-14.1). The Gateway's own release archives carry an SPDX SBOM (FR-13.1). |
 
 #### SR-3.5-1 — Packaging probe isolation
 

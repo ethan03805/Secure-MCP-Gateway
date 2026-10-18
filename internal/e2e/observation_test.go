@@ -441,7 +441,7 @@ func checkExplanations(t *testing.T, of *obsFixture, snapshot, permitID, anomaly
 		a := get(anomalyID)
 		ob, _ := a["anomaly_obligation"].(map[string]any)
 		obl, _ := a["obligations"].(map[string]any)
-		if ob == nil || ob["snapshot_id"] != snapshot || obl["approval"] != true || a["reason_code"] != "APPROVAL_REQUIRED" {
+		if ob == nil || ob["snapshot_id"] != snapshot || a["baseline_snapshot_id"] != snapshot || obl["approval"] != true || a["reason_code"] != "APPROVAL_REQUIRED" {
 			t.Fatalf("anomaly explanation %v", a)
 		}
 		if ev, _ := a["anomaly"].([]any); len(ev) > 0 {

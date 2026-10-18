@@ -58,9 +58,19 @@ func (c *Console) decisionExplanation(w http.ResponseWriter, r *http.Request) {
 		"time": dec.Time, "phase": dec.Phase, "reason_code": dec.ReasonCode, "event_id": dec.EventID,
 	}
 	for _, k := range []string{"outcome", "template", "route", "considered_rules", "applicable_rules", "decisive_rules", "obligations",
-		"side_effect", "source_trust", "tainted", "superseded_decision_id", "redecision_reason", "anomaly_obligation", "failed_predicate"} {
+		"side_effect", "source_trust", "tainted", "superseded_decision_id", "redecision_reason", "anomaly_obligation", "failed_predicate", "baseline_snapshot_id"} {
 		if v, ok := detail[k]; ok {
 			out[k] = v
+		}
+	}
+	// The baseline snapshot the decision used (FR-8.22): the one the
+	// decision point recorded, else the one behind its anomaly obligation.
+	if s, _ := out["baseline_snapshot_id"].(string); s == "" {
+		delete(out, "baseline_snapshot_id")
+		if ob, _ := detail["anomaly_obligation"].(map[string]any); ob != nil {
+			if s, _ := ob["snapshot_id"].(string); s != "" {
+				out["baseline_snapshot_id"] = s
+			}
 		}
 	}
 	anomaly := []map[string]any{}

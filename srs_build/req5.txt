@@ -607,11 +607,11 @@ R: Evidence is untrusted content.
 
 @SR-3.4-1 | Dependency visibility
 P: SEC-3.4
-S: The Servers & Library view (G-10) SHALL display each revision's SBOM, launcher argument vector, mounts, egress destinations, secret slots and sandbox profile.
+S: The Servers & Library view (G-10) SHALL display each revision's bill of materials as recorded in its signed provenance statement (artifact and source with their digests, licenses and the pinned dependency lock), launcher argument vector, mounts, egress destinations, secret slots and sandbox profile.
 A: E-24; E-14; F-65
 V: Demonstration | Open a revision in G-10; confirm each item.
 SRC: SEC 3.4
-R: Privileges are visible beside the server.
+R: Privileges are visible beside the server. A release 1.0 package carries no separate SPDX document: its bill of materials is the signed provenance statement (FR-14.5), which binds the artifact and source digests, the licenses and the digest of the dependency lock file that pinned the transitive dependencies (FR-14.1). The Gateway's own release archives carry an SPDX SBOM (FR-13.1).
 
 @SR-3.5-1 | Packaging probe isolation
 P: SEC-3.5

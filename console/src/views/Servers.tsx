@@ -93,7 +93,7 @@ function ServerDetail({ alias }: { alias: string }) {
                 rows={tools}
                 rowKey={(t) => t.name}
                 initialSort="name"
-                empty="This server offers no tools."
+                empty="This server offers no tools. Its tools appear here when it lists them at start or a package manifest names them."
                 columns={[
                   { key: "name", label: "Tool", sort: (t) => t.name, render: (t) => <Mono>{t.name}</Mono> },
                   { key: "public", label: "Public name", sort: (t) => t.public_name, render: (t) => <Mono>{t.public_name}</Mono> },

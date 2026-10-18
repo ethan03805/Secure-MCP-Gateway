@@ -109,8 +109,13 @@ export async function start(): Promise<GatewayInfo> {
   mkdirSync(bin, { recursive: true });
   if (process.env.SMCP_E2E_BIN) {
     for (const b of ["smcpd", "smcpctl", "smcp-refserver", "itest-client"]) execFileSync("cp", [join(process.env.SMCP_E2E_BIN, b), bin]);
+    // Test tooling that only some jobs build (console/e2e/exports.spec.ts).
+    for (const b of ["evidence-fixture"]) if (existsSync(join(process.env.SMCP_E2E_BIN, b))) execFileSync("cp", [join(process.env.SMCP_E2E_BIN, b), bin]);
   } else {
-    execFileSync("go", ["build", "-o", bin + "/", "./cmd/smcpd", "./cmd/smcpctl", "./cmd/smcp-refserver", "./scripts/itest-client"], { cwd: repoRoot, stdio: "inherit" });
+    execFileSync("go", ["build", "-o", bin + "/", "./cmd/smcpd", "./cmd/smcpctl", "./cmd/smcp-refserver", "./scripts/itest-client", "./scripts/evidence-fixture"], {
+      cwd: repoRoot,
+      stdio: "inherit",
+    });
   }
   const adminPassword = "console-e2e-admin-pw";
   const sessionApproverPassword = "console-e2e-session-approver";
@@ -240,7 +245,7 @@ export function stop(): void {
 export interface Dedicated extends GatewayInfo {
   dir: string;
   /** Stops smcpd and starts it again on the same instance; resolves once it answers. */
-  restart(): Promise<void>;
+  restart(between?: () => void | Promise<void>): Promise<void>;
   stop(): void;
 }
 
@@ -250,7 +255,15 @@ export interface Dedicated extends GatewayInfo {
  * Sign in with a fresh browser context: the session cookie is per host, not
  * per port, so it would replace the shared Gateway's.
  */
-export async function startDedicated(name: string): Promise<Dedicated> {
+/** The Neo4j database for the graph mirror (SMCP_NEO4J_URL, SMCP_NEO4J_USER, SMCP_NEO4J_PASSWORD), or null. */
+export const neo4j = process.env.SMCP_NEO4J_URL
+  ? { url: process.env.SMCP_NEO4J_URL, user: process.env.SMCP_NEO4J_USER || "neo4j", password: process.env.SMCP_NEO4J_PASSWORD ?? "" }
+  : null;
+
+export async function startDedicated(
+  name: string,
+  opts: { secrets?: boolean; egress?: boolean; graph?: boolean; edit?: (toml: string) => string } = {},
+): Promise<Dedicated> {
   const dir = join(work, name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
@@ -269,6 +282,19 @@ export async function startDedicated(name: string): Promise<Dedicated> {
     { stdio: "ignore" },
   );
   const config = join(instDir, "smcp.toml");
+  if (opts.edit) writeFileSync(config, opts.edit(readFileSync(config, "utf8")));
+  // Optional elements, configured as on the shared Gateway.
+  if (opts.egress) appendFileSync(config, "\n[egress]\nenabled = true\n");
+  if (opts.graph) {
+    if (!neo4j) throw new Error("the graph mirror needs SMCP_NEO4J_URL");
+    const pw = secretFile(`${name}-neo4j.pw`, neo4j.password + "\n");
+    appendFileSync(config, `\n[graph]\nenabled = true\nuri = "${neo4j.url}"\nusername = "${neo4j.user}"\npassword_file = "${pw}"\ncatchup_interval = "1s"\n`);
+  }
+  if (opts.secrets) {
+    const vaultPw = secretFile(`${name}-vault.pw`, "console-e2e-dedicated-vault");
+    appendFileSync(config, `\n[secrets]\nkey_source = "passphrase"\npassphrase_file = "${vaultPw}"\n`);
+    execFileSync(ctl, ["secrets", "init", "--config", config, "--passphrase-file", vaultPw], { stdio: "ignore" });
+  }
   const marker = `console-e2e-${name}-${Date.now()}`;
   writeFileSync(join(instDir, "sandbox", "hello.txt"), marker + "\n");
   let p: ChildProcess | null = null;
@@ -308,8 +334,9 @@ export async function startDedicated(name: string): Promise<Dedicated> {
     pid: (p as ChildProcess | null)?.pid ?? 0,
     profile: await reportedProfile(`https://127.0.0.1:${admin}`, join(instDir, "state", "tls", "ca.crt"), readFileSync(join(instDir, "state", "keys", "admin.token"), "utf8").trim()),
     dir: instDir,
-    restart: async () => {
+    restart: async (between?: () => void | Promise<void>) => {
       await halt();
+      await between?.();
       await launch();
     },
     stop: () => {

@@ -9,6 +9,7 @@ directory inside the repository.
 | `merge-queue.sh` | merge-steward agent, maintainers | Rebase, regenerate, check, push and squash-merge ready PRs one at a time |
 | `ci-integration.sh` | CI job `linux-integration`, `make integration` | Bootstrap an instance, run smcpd, drive an MCP client, verify the journal, check Podman and nftables |
 | `itest-client/` | `ci-integration.sh` | Go MCP client: OAuth 2.1 with PKCE through the sign-in form, `tools/list`, `tools/call` |
+| `evidence-fixture/` | console job (`console/e2e/exports.spec.ts`) | Writes hostile journal events and observation records (formula, HTML, script and remote-media payloads) into a stopped instance, for the inert-rendering and CSV export test (SR-6.17-1) |
 | `ci-offline.sh` | CI job `offline` | Run the acceptance suite in a network namespace with loopback only (FR-12.2, AT-17), after building the reference filesystem and git packages |
 | `agents/` | workflow `agents` ("Real agents"), developers | Real-agent conformance suite: drives Claude Code, Codex CLI, Hermes, OpenCode, Gemini CLI and Goose against a fresh Gateway and judges each scenario from the journal; `install-clis.sh` installs the pinned CLIs, `publish.sh` puts `agents.json` on `site-data`. See `docs/agents-conformance.md` |
 | `publish-status.sh` | CI job `status` | Commit `status.json` and `history.json` to the orphan branch `site-data` |

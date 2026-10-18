@@ -71,7 +71,11 @@ func (c *Console) serveConsole(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write(b) //nolint:gosec // G705: the bytes are a file of the embedded build; the request only selects which one
 			return
 		}
-		if path.Ext(name) != "" {
+		// A missing file of the build is a 404. Deep links whose last
+		// segment has a dot (a package revision such as /library/x/1.2.0,
+		// FR-8.28) are page routes, so only build paths count: the assets
+		// directory and top-level files.
+		if path.Ext(name) != "" && (strings.HasPrefix(name, "assets/") || !strings.Contains(name, "/")) {
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}

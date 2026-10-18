@@ -71,7 +71,7 @@ function DriftTable({ d }: { d: Drift }) {
         rowKey={(r) => r.context + r.feature}
         initialSort="shift"
         initialDir="desc"
-        empty="No context is characterized in both snapshots."
+        empty="No context is characterized in both snapshots. Build snapshots after more calls to compare them."
         columns={[
           { key: "ctx", label: "Context", sort: (r) => r.context, render: (r) => <Mono>{r.context}</Mono> },
           { key: "f", label: "Feature", sort: (r) => r.feature, render: (r) => <Mono>{r.feature}</Mono> },
@@ -163,7 +163,7 @@ function SnapshotsSection() {
                 rowKey={(h) => h.id + h.at}
                 initialSort="at"
                 initialDir="desc"
-                empty="No snapshot has been promoted."
+                empty="No snapshot has been promoted. Promote a built snapshot to start scoring calls."
                 columns={[
                   { key: "at", label: "Time", sort: (h) => h.at, render: (h) => <Time value={h.at} /> },
                   { key: "id", label: "Snapshot", render: (h) => <ShortId id={h.id} /> },
@@ -237,7 +237,7 @@ function AnomaliesSection() {
                 rowKey={(r) => r.correlation_id + r.ts}
                 initialSort="ts"
                 initialDir="desc"
-                empty="No call scored elevated or worse in this range."
+                empty="No call scored elevated or worse in this range. Scores appear after tool calls while a promoted baseline snapshot is in force."
                 columns={[
                   { key: "ts", label: "Time", sort: (r) => r.ts, render: (r) => <Time value={r.ts} /> },
                   { key: "band", label: "Band", sort: (r) => r.band, render: (r) => <StateLabel tone={r.band === "critical" ? "bad" : r.band === "abnormal" ? "warn" : "pending"}>{r.band}</StateLabel> },
@@ -336,7 +336,7 @@ function Distributions() {
             rowKey={(r) => JSON.stringify(r.group)}
             initialSort="count"
             initialDir="desc"
-            empty="No context has records in this range."
+            empty="No context has records in this range. Records appear after tool calls when observation is enabled."
             columns={[
               { key: "ctx", label: "Context", sort: (r) => JSON.stringify(r.group), render: (r) => <Mono>{Object.entries(r.group).map(([k, v]) => `${k}=${v}`).join(" ")}</Mono> },
               { key: "count", label: "Records", sort: (r) => r.count, render: (r) => <Mono>{r.count}</Mono>, className: "num" },
