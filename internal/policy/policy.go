@@ -92,6 +92,10 @@ type FrameworkProfile struct {
 	// sessions may be granted; a grant of a server in such a class needs
 	// the flag here and on the template (SR-3.13-1).
 	HighRisk []string `json:"high_risk,omitempty"`
+	// RemoteAllowed lists the profile's templates that sessions created
+	// through the Remote Access listener may use (FR-16.12). A template
+	// not listed is refused there; an empty list allows no remote session.
+	RemoteAllowed []string `json:"remote_allowed,omitempty"`
 }
 
 // Template is a Session Allow Policy Template (ARCH §7.1 layer 3).
@@ -301,6 +305,11 @@ func Compile(raw []byte) (*Snapshot, error) {
 		}
 		if !found {
 			return nil, fmt.Errorf("framework profile %q: default_template %q is not in its templates", name, p.DefaultTemplate)
+		}
+		for _, t := range p.RemoteAllowed {
+			if !slices.Contains(p.Templates, t) {
+				return nil, fmt.Errorf("framework profile %q: remote_allowed template %q is not in its templates", name, t)
+			}
 		}
 	}
 	if err := checkProfileCeilings(doc); err != nil {

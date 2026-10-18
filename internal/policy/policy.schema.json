@@ -19,7 +19,8 @@
           "default_template": { "type": "string" },
           "calls_per_minute": { "type": "integer", "minimum": 1 },
           "servers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9]{1,16}$" } },
-          "high_risk": { "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["general-sql", "code-execution", "cad-scripting", "browser-automation"] } }
+          "high_risk": { "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["general-sql", "code-execution", "cad-scripting", "browser-automation"] } },
+          "remote_allowed": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
         }
       }
     },

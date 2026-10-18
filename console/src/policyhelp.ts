@@ -12,6 +12,7 @@ export const policyHelp: Record<string, string> = {
   "framework_profiles[].calls_per_minute": "Rate bound for all calls under this profile, at least 1. Empty means no profile bound.",
   "framework_profiles[].servers": "Authority ceiling: the server aliases this profile's sessions may reach through any template. Absent means unrestricted. Edit it in the document (JSON).",
   "framework_profiles[].high_risk": "High-risk tool classes (general-sql, code-execution, cad-scripting, browser-automation) the profile's sessions may be granted. Edit it in the document (JSON).",
+  "framework_profiles[].remote_allowed": "Templates of this profile that sessions created through the Remote Access listener may use; each must also be listed in the configuration's remote.templates. Absent means no remote session for this profile. Edit it in the document (JSON).",
   templates: "Session Allow Policy Templates by name. A session runs under exactly one template.",
   "templates[].description": "Free text shown with the template.",
   "templates[].calls_per_minute": "Rate bound for calls under this template. Empty means no template bound.",

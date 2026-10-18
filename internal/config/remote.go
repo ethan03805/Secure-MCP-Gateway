@@ -32,7 +32,9 @@ type Remote struct {
 	// bound to when the approval names none.
 	DefaultPrincipal string `toml:"default_principal" json:"default_principal"`
 	// Templates are the Session Allow Policy templates remote sessions may
-	// use (FR-16.12). Empty means no remote session can be created.
+	// use; each must also be marked remote_allowed in the principal's
+	// Framework Profile (FR-16.12). Empty means no remote session can be
+	// created.
 	Templates []string `toml:"templates" json:"templates"`
 	// ClientAddressHeader names the header the tunnel connector sets to the
 	// caller's address (default X-Forwarded-For; Cloudflare also sets

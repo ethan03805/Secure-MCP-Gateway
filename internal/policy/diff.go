@@ -41,6 +41,9 @@ func renderProfile(p FrameworkProfile) string {
 	if p.CallsPerMinute > 0 {
 		s += fmt.Sprintf(" calls_per_minute=%d", p.CallsPerMinute)
 	}
+	if len(p.RemoteAllowed) > 0 {
+		s += " remote_allowed=" + strings.Join(p.RemoteAllowed, ",")
+	}
 	return s
 }
 
@@ -159,6 +162,9 @@ func Diff(a, b *Snapshot) DiffReport {
 			widens := looser(pa.CallsPerMinute, pb.CallsPerMinute)
 			for _, t := range pb.Templates {
 				widens = widens || !slices.Contains(pa.Templates, t)
+			}
+			for _, t := range pb.RemoteAllowed {
+				widens = widens || !slices.Contains(pa.RemoteAllowed, t)
 			}
 			add(Change{Kind: "profile_changed", Profile: name, Before: renderProfile(pa), After: renderProfile(pb)}, widens)
 		}
