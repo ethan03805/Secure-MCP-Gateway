@@ -345,7 +345,7 @@ runtime_dir = %q
 	}
 	// Owner only, except that a POSIX ACL may let the instance's own UID
 	// in (the group bits then show the ACL mask, at most search).
-	if st, err := os.Stat(inst); err != nil || st.Mode().Perm()&0o067 != 0 || st.Mode().Perm()&0o700 != 0o700 {
+	if st, err := os.Stat(inst); err != nil || st.Mode().Perm()&0o067&^0o010 != 0 || st.Mode().Perm()&0o700 != 0o700 {
 		t.Fatalf("instance directory %s: %v %v", inst, st.Mode(), err)
 	}
 	if a, err := posixacl.Get(inst); err == nil {
