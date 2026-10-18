@@ -1,8 +1,9 @@
 // G-08 Data server & memory (FR-8.16): graph mirror memory against its
-// budget, store sizes and counts, observation queue use, the last backups
-// and taking one, and the key inventory with rotation. Routes:
-// /api/v1/graph/status, /api/v1/graph/rebuild, /api/v1/observations/status,
-// /api/v1/backup, /api/v1/keys*.
+// budget, store sizes and counts, observation queue use and degradation
+// stage, storage quota levels, the last backups and taking one, and the key
+// inventory with rotation. Routes: /api/v1/graph/status,
+// /api/v1/graph/rebuild, /api/v1/observations/status,
+// /api/v1/health/status (quotas), /api/v1/backup, /api/v1/keys*.
 import { ObjectState, Publish, useObjects } from "./objects";
 import { useState, type ReactNode } from "react";
 import { post } from "../api";
@@ -162,12 +163,67 @@ function ObservationStore() {
                   ["Rows written", <Mono>{Object.entries(s.store?.rows_written ?? {}).map(([k, v]) => `${k} ${compact(v)}`).join(", ") || "none"}</Mono>],
                   ["Retention", <Mono>{s.retention}</Mono>],
                   ["Dropped", <Mono>{Object.entries(s.collector?.drops ?? {}).map(([k, v]) => `${k} ${compact(v)}`).join(", ") || "none"}</Mono>],
+                  [
+                    "Degradation stage",
+                    s.degradation ? (
+                      <>
+                        <StateLabel tone={s.degradation.stage === 0 ? "ok" : "warn"}>{s.degradation.name}</StateLabel>
+                        {s.degradation.reason && <span className="muted small"> {s.degradation.reason}</span>}
+                      </>
+                    ) : (
+                      "not reported"
+                    ),
+                  ],
                 ]}
               />
               {s.collector && <Meter label="Collector queue" used={s.collector.queue_depth} budget={s.collector.queue_capacity} />}
             </>
           )
         }
+      </Loaded>
+    </Section>
+  );
+}
+
+interface QuotaLevel {
+  name: string;
+  bytes: number;
+  limit_bytes: number;
+  percent: number;
+  warning: boolean;
+  measured_at: string;
+  error?: string;
+}
+
+/** Storage quota levels the Health & Safety Monitor reports (FR-9.15, CP-26). */
+function Quotas() {
+  const res = useResource<{ quotas?: QuotaLevel[] }>("/api/v1/health/status");
+  return (
+    <Section title="Storage quotas">
+      <Loaded res={res} what="the quota levels" route="/api/v1/health/status">
+        {(h) => (
+          <DataTable
+            caption="Storage quotas"
+            rows={h.quotas ?? []}
+            rowKey={(q) => q.name}
+            initialSort="pct"
+            initialDir="desc"
+            empty="No store has a quota."
+            columns={[
+              { key: "name", label: "Store", sort: (q) => q.name, render: (q) => <Mono>{q.name}</Mono> },
+              { key: "used", label: "Used", sort: (q) => q.bytes, render: (q) => <Mono>{bytes(q.bytes)}</Mono>, className: "num" },
+              { key: "limit", label: "Quota", sort: (q) => q.limit_bytes, render: (q) => <Mono>{bytes(q.limit_bytes)}</Mono>, className: "num" },
+              {
+                key: "pct",
+                label: "Percent of quota",
+                sort: (q) => q.percent,
+                render: (q) => <StateLabel tone={q.warning ? "warn" : "ok"}>{`${q.percent.toFixed(1)}%`}</StateLabel>,
+                className: "num",
+              },
+              { key: "at", label: "Measured", sort: (q) => q.measured_at, render: (q) => (q.error ? <StateLabel tone="bad">{q.error}</StateLabel> : <Time value={q.measured_at} />) },
+            ]}
+          />
+        )}
       </Loaded>
     </Section>
   );
@@ -280,7 +336,7 @@ export function DataServer() {
   return (
     <>
       <PageHeader code="G-08" title="Data server and memory">
-        <p>Memory use against budget, store sizes, queue use, backups and keys.</p>
+        <p>Memory use against budget, store sizes, queue use, degradation stage, quota levels, backups and keys.</p>
       </PageHeader>
       <Help>
         <p>
@@ -292,6 +348,7 @@ export function DataServer() {
       {perm.can("GET /api/v1/graph/status") && <Graph />}
       {perm.can("GET /api/v1/observations/status") && <ObservationStore />}
       {perm.can("GET /api/v1/observations/objects") && <MemoryBudget />}
+      {perm.can("GET /api/v1/health/status") && <Quotas />}
       {perm.can("GET /api/v1/backup") && <Backups />}
       {perm.can("GET /api/v1/keys") && <Keys />}
     </>

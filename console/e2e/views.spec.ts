@@ -7,10 +7,10 @@
 // says so. Claims are annotations (see docs/console.md).
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { bin, mcpCall, work } from "./gateway";
+import { bin, mcpCall, startDedicated, work } from "./gateway";
 import { claims, g, go, mock, nav, signIn } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
@@ -413,6 +413,107 @@ test("G-05 behavior analytics: snapshot, promotion, distributions and anomaly dr
   await expect(page).toHaveURL(/\/audit\?correlation_id=corr-critical/);
 });
 
+// FR-8.13's demonstration (a full claim), on a dedicated Gateway whose
+// baseline characterizes a context after five calls: calls train the
+// baseline, a snapshot is built and promoted from G-05, the context's
+// feature distribution is inspected, a call far outside it is scored and
+// opened from the abnormal-event list and the z-score timeline, a second
+// snapshot is built and its drift against the promoted one is shown, and
+// it is promoted and then rolled back to the first.
+test("G-05 behavior analytics on a dedicated Gateway: inspect a context, open a scored abnormal event, diff, promote and roll back snapshots", async ({ browser, browserName }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.13" });
+  test.setTimeout(600_000);
+  const d = await startDedicated(`g05-${browserName}`);
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  try {
+    appendFileSync(
+      d.config,
+      [
+        "",
+        "[limits]",
+        "principal_call_burst = 0",
+        "sessions_per_principal = 64",
+        "",
+        "[observation]",
+        "sampling_rate = 1.0",
+        'flush_interval = "1s"',
+        "",
+        "[observation.baseline]",
+        "n_min = 5",
+        "",
+      ].join("\n"),
+    );
+    await d.restart();
+    const call = async (text: string, repeat = 1) => {
+      const r = await mcpCall(d, "ref_echo", { text }, { expect: text, repeat, timeout: "120s" }).done;
+      expect(r.code, r.out).toBe(0);
+    };
+    await call("steady", 12);
+    const page = await context.newPage();
+    await page.goto(d.adminURL + "/analytics");
+    await page.getByLabel("Password").fill(d.adminPassword);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Behavior analytics" })).toBeVisible();
+    const kv = (term: string) => page.getByRole("term").filter({ hasText: term }).locator("xpath=following-sibling::dd[1]");
+    // The calls are learned once their records are stored.
+    await expect(async () => {
+      await page.reload();
+      await expect(kv("Records learned")).toHaveText(/^(1[2-9]|[2-9]\d|\d{3,})$/, { timeout: 2_000 });
+    }).toPass({ timeout: 60_000 });
+    // First snapshot: build and promote.
+    const snapshots = page.getByRole("table", { name: "Baseline snapshots" });
+    await page.getByRole("button", { name: "Build a snapshot now" }).click();
+    await expect(page.getByText(/^Built snapshot \w{8} from \d+ records/)).toBeVisible();
+    await snapshots.getByRole("button", { name: "Promote" }).click();
+    await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
+    await expect(kv("Contexts / characterized")).toHaveText(/^\d+ \/ [1-9]\d*$/);
+    const first = (await snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link").innerText()).trim();
+    // Inspect the context: the request size of the echo calls per context.
+    await page.getByRole("combobox", { name: "Feature", exact: true }).selectOption("request_bytes");
+    const perContext = page.getByRole("table", { name: "request_bytes per context" });
+    await expect(perContext.getByRole("row").filter({ hasText: "echo" }).first()).toBeVisible();
+    // A call far outside the learned request size is scored abnormal.
+    await call("x".repeat(6000));
+    const events = page.getByRole("table", { name: "Abnormal events" });
+    await expect(async () => {
+      await page.reload();
+      await expect(events.getByRole("row").filter({ hasText: /abnormal|critical/ }).first()).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 60_000 });
+    const row = events.getByRole("row").filter({ hasText: /abnormal|critical/ }).first();
+    await expect(row).toContainText("request_bytes");
+    await expect(page.getByRole("group", { name: /z-score timeline/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^(abnormal|critical) \d/ }).first()).toBeVisible();
+    // Drill down to the call in the journal.
+    await row.getByRole("link").click();
+    await expect(page).toHaveURL(/\/audit\?correlation_id=/);
+    await expect(page.getByRole("heading", { level: 1, name: "Audit investigation" })).toBeVisible();
+    const corr = new URL(page.url()).searchParams.get("correlation_id")!;
+    await expect(page.getByText(corr).first()).toBeVisible();
+    // Second snapshot: its drift against the promoted one is shown.
+    await page.goto(d.adminURL + "/analytics");
+    const stored = () => page.evaluate(() => fetch("/api/v1/observations?limit=1000").then((r) => r.json()).then((d) => (d.rows ?? []).length as number));
+    const before = await stored();
+    await call("steady", 6);
+    await expect.poll(stored, { timeout: 60_000 }).toBeGreaterThanOrEqual(before + 6);
+    await page.getByRole("button", { name: "Build a snapshot now" }).click();
+    await expect(page.getByText(/^Built snapshot \w{8} from \d+ records/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Drift of the last build" })).toBeVisible();
+    await expect(page.getByRole("table", { name: "Drift per context and feature" })).toContainText("request_bytes");
+    // Promote the second snapshot, then roll back to the first.
+    await snapshots.getByRole("button", { name: "Promote" }).click();
+    await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
+    const second = (await snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link").innerText()).trim();
+    expect(second).not.toBe(first);
+    await snapshots.getByRole("row").filter({ hasText: first }).getByRole("button", { name: "Roll back to this snapshot" }).click();
+    await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
+    await expect(snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link")).toHaveText(first);
+    await expect(page.getByRole("table", { name: "Promotion history" }).getByRole("row")).toHaveCount(4); // header and three promotions
+  } finally {
+    await context.close();
+    d.stop();
+  }
+});
+
 test("G-06 anomaly response: only restrict-only actions per band", async ({ page }) => {
   // FR-8.14 in full: each band and the uncharacterized state is set from
   // the restrict-only lists only, published, and read back.
@@ -507,6 +608,10 @@ test("G-08 data server: graph state, store sizes, backup and keys", async ({ pag
   await signIn(page, "/data-server");
   await expect(page.getByText("The graph mirror is disabled")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Observation Store" })).toBeVisible();
+  // Degradation stage and storage quota levels.
+  await expect(page.getByRole("term").filter({ hasText: "Degradation stage" }).locator("xpath=following-sibling::dd[1]")).toContainText("normal");
+  const quotas = page.getByRole("table", { name: "Storage quotas" });
+  await expect(quotas.getByRole("row").filter({ hasText: "journal" })).toContainText(/\d+\.\d%/);
   // Change the Observation Store memory budget; it is published and shown as pending until the next start.
   await page.getByLabel(/Observation Store memory budget \(MiB\)/).fill("384");
   await page.getByRole("form", { name: "Publish the memory budget" }).getByRole("button", { name: "Publish the memory budget" }).click();

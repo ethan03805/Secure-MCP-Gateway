@@ -316,8 +316,9 @@ export async function startDedicated(name: string): Promise<Dedicated> {
 }
 
 /** Runs the test MCP client: OAuth sign-in as the Session Approver, then one tool call. */
-export function mcpCall(g: GatewayInfo, tool: string, args: object, opts: { scope?: string; expect?: string; timeout?: string; clientID?: string } = {}) {
+export function mcpCall(g: GatewayInfo, tool: string, args: object, opts: { scope?: string; expect?: string; timeout?: string; clientID?: string; repeat?: number } = {}) {
   const a = ["-url", g.publicURL, "-ca", g.ca, "-call", tool, "-args", JSON.stringify(args), "-timeout", opts.timeout ?? "150s"];
+  if (opts.repeat) a.push("-repeat", String(opts.repeat));
   if (opts.scope) a.push("-scope", opts.scope);
   if (opts.clientID) a.push("-client-id", opts.clientID);
   if (opts.expect) a.push("-expect", opts.expect);
