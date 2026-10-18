@@ -7,7 +7,8 @@
 # configuration, restarts smcpd.service with runtime.run_as = "smcp-srv", makes tool
 # calls that run in rootless Podman containers of the separate server
 # identity smcp-srv (CP-46), delivers an S3 secret file to a server in an
-# auto user namespace, stops the service and verifies the evidence journal.
+# auto user namespace, stops the service and verifies the evidence journal,
+# then uninstalls and purges the installation (FR-13.11, FR-13.12).
 # When AppArmor is enabled it also checks that smcpd runs confined by the
 # shipped profile and that the servers run confined by smcp-server, which
 # denies a read their own permissions allow.
@@ -288,4 +289,17 @@ if sudo -n systemctl is-active --quiet smcpd.service; then fail "smcpd.service s
 as_core /usr/local/bin/smcpctl journal verify --config "$cfg" || fail "journal verify after stop"
 sudo -n grep -rqs '"instance_launched"' "$state_root/journal" || fail "no instance_launched evidence in the journal"
 sudo -n systemctl disable --quiet smcpd.service
+
+# Uninstall and purge on this host (FR-13.11 Enforced half, FR-13.12),
+# as the Go test cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost, whose
+# events go to SMCP_ITEST_RESULTS for the status job. It removes the
+# installation, so it comes last.
+say "uninstall and purge of the Enforced installation (FR-13.11, FR-13.12)"
+repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
+  (cd "$repo" && SMCP_ENFORCED_HOST_TEST=1 go test -json -count=1 -run '^TestEnforcedUninstallAndPurgeOnHost$' ./cmd/smcpctl/) \
+    | tee -a "$SMCP_ITEST_RESULTS" | jq -rj 'select(.Action == "output") | .Output' || fail "uninstall and purge"
+else
+  (cd "$repo" && SMCP_ENFORCED_HOST_TEST=1 go test -v -count=1 -run '^TestEnforcedUninstallAndPurgeOnHost$' ./cmd/smcpctl/) || fail "uninstall and purge"
+fi
 say "passed"

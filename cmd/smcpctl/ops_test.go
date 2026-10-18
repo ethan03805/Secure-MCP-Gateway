@@ -240,13 +240,15 @@ func TestUninstallKeepsEvidenceAndPurge(t *testing.T) {
 func TestUpgradeAndRollback(t *testing.T) {
 	// FR-13.7: backup, dispatch stopped, binaries swapped, migration run,
 	// new version started and healthy within the bound. FR-13.8: a release
-	// that never becomes healthy is rolled back to the previous binaries
-	// and the pre-upgrade backup, and the previous version records
-	// upgrade_rolled_back. Both releases are signed release directories
-	// that pass the FR-13.2 checks (TestVerifyReleaseDir covers the
-	// refusals). A failing migration and the launchd and systemd service
-	// paths are not exercised (partial).
-	reqtest.Partial(t, "FR-13.7", "FR-13.8")
+	// that never becomes healthy and a release whose migration fails are
+	// each rolled back to the previous binaries and the pre-upgrade backup;
+	// the previous version runs with its policy, keys and journal intact
+	// and records upgrade_rolled_back. Every release is a signed release
+	// directory that passes the FR-13.2 checks (TestVerifyReleaseDir covers
+	// the refusals). FR-13.7 is partial: the launchd and systemd service
+	// paths of each profile are not exercised here.
+	reqtest.Verifies(t, "FR-13.8")
+	reqtest.Partial(t, "FR-13.7")
 	if testing.Short() {
 		t.Skip("builds a second release")
 	}
@@ -315,6 +317,28 @@ func TestUpgradeAndRollback(t *testing.T) {
 		t.Fatal("binaries not swapped with .prev kept")
 	}
 
+	// Policy and keys as the upgraded version left them; each rollback
+	// must restore exactly these (the journal is checked by verification).
+	intact := func() map[string]string {
+		return digests(t, filepath.Join(dir, "policy.json"), filepath.Join(dir, "state", "keys"))
+	}
+	before := intact()
+	if len(before) < 2 {
+		t.Fatalf("policy and keys not found: %v", before)
+	}
+	checkIntact := func(what string) {
+		t.Helper()
+		after := intact()
+		for p, d := range before {
+			if after[p] != d {
+				t.Errorf("%s: %s changed", what, p)
+			}
+		}
+		if len(after) != len(before) {
+			t.Errorf("%s: %d policy and key files, want %d", what, len(after), len(before))
+		}
+	}
+
 	// A fault-injected release whose daemon never becomes healthy.
 	badDir, badKey, _ := testRelease(t, "9.9.10", map[string][]byte{"smcpd": []byte("#!/bin/sh\nexit 1\n"), "smcpctl": newBins["smcpctl"]})
 	// An unsigned or wrongly signed release is refused before anything
@@ -332,17 +356,36 @@ func TestUpgradeAndRollback(t *testing.T) {
 		t.Fatal("previous smcpd not restored")
 	}
 	waitUp()
-	// Stop and check the journal: it verifies and holds the rollback event.
+	checkIntact("after the unhealthy release")
+
+	// A fault-injected release whose migration fails: its smcpctl, which
+	// upgrade runs for `config migrate`, exits with an error.
+	migDir, migKey, _ := testRelease(t, "9.9.11", map[string][]byte{"smcpd": newBins["smcpd"], "smcpctl": []byte("#!/bin/sh\necho 'migration: injected failure' >&2\nexit 3\n")})
+	pubkey = migKey
+	goodSmcpctl := sha(t, filepath.Join(inst, "smcpctl"))
+	out, err = up(migDir)
+	if err == nil || !strings.Contains(out, "migration failed") || !strings.Contains(out, "previous version is running") {
+		t.Fatalf("rollback after a failed migration: %v\n%s", err, out)
+	}
+	if sha(t, filepath.Join(inst, "smcpd")) != goodSmcpd || sha(t, filepath.Join(inst, "smcpctl")) != goodSmcpctl {
+		t.Fatal("previous binaries not restored after the failed migration")
+	}
+	waitUp()
+	checkIntact("after the failed migration")
+
+	// Stop and check the journal: it verifies and holds both rollbacks.
 	_ = exec.Command("/bin/sh", "-c", stop).Run()
 	if o := mustCtl(t, "journal", "verify", "--config", cfg); !strings.Contains(o, "journal OK") {
 		t.Fatal(o)
 	}
 	evs, _ := audit.ReadEvents(filepath.Join(dir, "state", "journal"))
-	found := false
+	rolledBack := 0
 	for _, e := range evs {
-		found = found || e.Outcome == "upgrade_rolled_back"
+		if e.Outcome == "upgrade_rolled_back" {
+			rolledBack++
+		}
 	}
-	if !found {
-		t.Fatal("upgrade_rolled_back not in the journal")
+	if rolledBack != 2 {
+		t.Fatalf("%d upgrade_rolled_back events in the journal, want 2", rolledBack)
 	}
 }

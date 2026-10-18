@@ -49,10 +49,12 @@ Some Test-method requirements are verified by a GitHub Actions workflow that is 
 - [FR-3.25.md](FR-3.25.md): the real-harness approval run with Claude Code, with its [transcript](FR-3.25-transcript.md).
 - [FR-12.12.md](FR-12.12.md): Claude Code and Codex CLI connecting through `smcp-session` (Demonstration).
 - [FR-13.3.md](FR-13.3.md): the Homebrew tap installation run of v1.0.0-rc.2 on macOS and Ubuntu (supporting record).
+- [FR-18.6.md](FR-18.6.md): the packaging guide followed for a server that is not a reference server (Inspection).
 - [FR-19.3.md](FR-19.3.md): the release labels of v1.0.0 ("enforced") and of an earlier candidate ("not enforced") (Inspection).
 - [runbooks/](runbooks/README.md): the runbook execution records and the FR-18.8 Inspection record.
 - [FR-8.24.md](FR-8.24.md): the scripted, timed G-04 first-time task (supporting record; the Demonstration with three people is not done).
 - [FR-8.30.md](FR-8.30.md): the browser matrix run of the console suite (supporting record).
 - [FR-8.32-webkit.md](FR-8.32-webkit.md): the manual focus-order, target-size and contrast check repeated with WebKit (supporting record).
 - [FR-12.3.md](FR-12.3.md): the platform Demonstration (Enforced on an Ubuntu runner, Standalone on macOS arm64).
+- [SR-4.1-1.md](SR-4.1-1.md): the UIDs of the running `smcpd` and server processes on the Enforced CI host (Inspection).
 - [gap-list.md](gap-list.md): requirements that are not verified, grouped by element, with what is missing.
