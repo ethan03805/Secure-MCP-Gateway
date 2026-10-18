@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T08:34:56Z",
-  "commit": "9359a08c1582db9a4bb3363edfbf0372bbfe3f66",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/9359a08c1582db9a4bb3363edfbf0372bbfe3f66",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39109891632",
+  "generatedAt": "2026-10-18T08:56:54Z",
+  "commit": "89113bac06184332315c402a6967ae891c3b51d4",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/89113bac06184332315c402a6967ae891c3b51d4",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39111205010",
   "tests": {
-    "total": 1397,
-    "passed": 1383,
-    "failed": 1,
+    "total": 1410,
+    "passed": 1395,
+    "failed": 2,
     "skipped": 13,
-    "durationSec": 980.5,
+    "durationSec": 1260.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -67,7 +67,7 @@
       },
       {
         "name": "docs",
-        "passed": 1,
+        "passed": 2,
         "failed": 0,
         "skipped": 0
       },
@@ -97,7 +97,7 @@
       },
       {
         "name": "internal/adapter",
-        "passed": 10,
+        "passed": 11,
         "failed": 0,
         "skipped": 0
       },
@@ -169,7 +169,7 @@
       },
       {
         "name": "internal/conformance",
-        "passed": 12,
+        "passed": 22,
         "failed": 0,
         "skipped": 0
       },
@@ -193,8 +193,8 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 67,
-        "failed": 0,
+        "passed": 65,
+        "failed": 2,
         "skipped": 0
       },
       {
@@ -307,8 +307,8 @@
       },
       {
         "name": "internal/perf/run",
-        "passed": 4,
-        "failed": 1,
+        "passed": 5,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -439,7 +439,7 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 20,
+        "passed": 21,
         "failed": 0,
         "skipped": 0
       },
@@ -492,7 +492,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 68.7
+        "pct": 72.1
       },
       {
         "name": "internal/adminapi",
@@ -524,7 +524,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 92
+        "pct": 92.2
       },
       {
         "name": "internal/backup",
@@ -572,7 +572,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 84.6
+        "pct": 84
       },
       {
         "name": "internal/gwtest",
@@ -688,7 +688,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.6
+        "pct": 80
       },
       {
         "name": "internal/session",
@@ -696,7 +696,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 80
+        "pct": 82.5
       },
       {
         "name": "internal/tunnel",
@@ -728,7 +728,7 @@
       },
       {
         "name": "tools/reqreport",
-        "pct": 84.8
+        "pct": 85
       },
       {
         "name": "tools/sbomcheck",
@@ -738,26 +738,26 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 434,
-    "partial": 81,
+    "verified": 436,
+    "partial": 87,
     "failing": 1,
-    "unverified": 13,
+    "unverified": 5,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 20,
-        "partial": 8,
+        "verified": 19,
+        "partial": 10,
         "failing": 0
       },
       {
         "element": "E-02",
         "name": "Protocol Mediator",
         "total": 43,
-        "verified": 42,
+        "verified": 41,
         "partial": 1,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-03",
@@ -780,7 +780,7 @@
         "name": "Policy Administration Service",
         "total": 18,
         "verified": 17,
-        "partial": 0,
+        "partial": 1,
         "failing": 0
       },
       {
@@ -844,7 +844,7 @@
         "name": "Library Trust Verifier",
         "total": 25,
         "verified": 23,
-        "partial": 1,
+        "partial": 2,
         "failing": 0
       },
       {
@@ -932,7 +932,7 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 38,
-        "partial": 33,
+        "partial": 35,
         "failing": 0
       },
       {
@@ -972,8 +972,8 @@
         "name": "Observation Collector",
         "total": 14,
         "verified": 7,
-        "partial": 6,
-        "failing": 1
+        "partial": 7,
+        "failing": 0
       },
       {
         "element": "E-30",
@@ -1003,8 +1003,8 @@
         "element": "E-33",
         "name": "Harness Adapter Kit",
         "total": 20,
-        "verified": 6,
-        "partial": 10,
+        "verified": 10,
+        "partial": 9,
         "failing": 0
       }
     ],
@@ -1012,10 +1012,8 @@
       {
         "id": "FR-1",
         "element": "E-01",
-        "status": "verified",
-        "tests": [
-          "analysis: all 52 child requirements verified"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-1.1",
@@ -1184,7 +1182,7 @@
       {
         "id": "FR-1.21",
         "element": "E-02",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/e2e.TestNorthboundProtocolConformance/DuplicateInFlightID"
         ]
@@ -1671,8 +1669,10 @@
       {
         "id": "FR-3",
         "element": "E-05",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 22 of 23 child requirements verified"
+        ]
       },
       {
         "id": "FR-3.1",
@@ -2696,8 +2696,10 @@
       {
         "id": "FR-8",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 13 of 35 child requirements verified"
+        ]
       },
       {
         "id": "FR-8.1",
@@ -3824,7 +3826,7 @@
       {
         "id": "FR-11.4",
         "element": "E-29",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/perf/run.TestPerfFR_11_4"
         ]
@@ -3883,8 +3885,10 @@
       {
         "id": "FR-12",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 7 of 12 child requirements verified"
+        ]
       },
       {
         "id": "FR-12.1",
@@ -3968,6 +3972,7 @@
           "internal/acceptance/enforced.TestAT21VersionBaseline",
           "internal/acceptance/offline.TestAT21VersionBaseline",
           "tools/reqreport.TestChildAnalysis",
+          "tools/reqreport.TestChildAnalysisPartial",
           "tools/reqreport.TestComputeStatus",
           "tools/reqreport.TestCoverage",
           "tools/reqreport.TestHistory",
@@ -4004,18 +4009,22 @@
       {
         "id": "FR-12.13",
         "element": "E-33",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/adapter.TestRelayTrustsOnlyNamedCA",
           "internal/adapter.TestRelayUnixSocket",
           "internal/adapter.TestStdioBridgeRawEquivalence",
-          "internal/adapter.TestStdioBridgeWithSDKClient"
+          "internal/adapter.TestStdioBridgeWithSDKClient",
+          "internal/conformance.TestConformanceThroughAdapters"
         ]
       },
       {
         "id": "FR-13",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 9 of 13 child requirements verified"
+        ]
       },
       {
         "id": "FR-13.1",
@@ -4157,8 +4166,10 @@
       {
         "id": "FR-14",
         "element": "E-13",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 11 of 12 child requirements verified"
+        ]
       },
       {
         "id": "FR-14.1",
@@ -4281,8 +4292,10 @@
       {
         "id": "FR-15",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 4 of 10 child requirements verified"
+        ]
       },
       {
         "id": "FR-15.1",
@@ -4370,8 +4383,10 @@
       {
         "id": "FR-15.9",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "docs/verification/inspections.md:613"
+        ]
       },
       {
         "id": "FR-15.10",
@@ -4384,8 +4399,10 @@
       {
         "id": "FR-16",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 7 of 12 child requirements verified"
+        ]
       },
       {
         "id": "FR-16.1",
@@ -4471,18 +4488,21 @@
       {
         "id": "FR-16.9",
         "element": "E-33",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/adapter.TestConnectThroughTunnel",
           "internal/adapter.TestNPMConnect",
+          "internal/conformance.TestConformanceThroughAdapters",
           "internal/remote.TestDeviceGrant"
         ]
       },
       {
         "id": "FR-16.10",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "docs/verification/inspections.md:641"
+        ]
       },
       {
         "id": "FR-16.11",
@@ -7113,7 +7133,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40319: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36257: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7230,7 +7250,7 @@
     }
   ],
   "acceptance": {
-    "commit": "9359a08c1582db9a4bb3363edfbf0372bbfe3f66",
+    "commit": "89113bac06184332315c402a6967ae891c3b51d4",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -7918,19 +7938,19 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   },
   "performance": {
     "schema": 1,
-    "commit": "9359a08c1582db9a4bb3363edfbf0372bbfe3f66",
-    "generatedAt": "2026-10-18T08:18:22Z",
+    "commit": "89113bac06184332315c402a6967ae891c3b51d4",
+    "generatedAt": "2026-10-18T08:35:46Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000007151"
+      "runner": "GitHub Actions 1000007237"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7947,7 +7967,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.035592,
+        "value": 0.010426,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7959,7 +7979,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 19.177861,
+        "value": 15.738652,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7971,18 +7991,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 1.0239677499999988,
+        "value": 0.4109959999999999,
         "budget": 1,
         "samples": 16000,
-        "pass": false,
-        "method": "p95 P-213 with observation enabled (11.426 ms, mean of 11.900, 11.377, 11.499, 10.964, 11.444, 11.233, 11.025, 11.968) minus disabled (10.402 ms, mean of 10.349, 10.655, 10.444, 10.252, 10.239, 10.218, 10.352, 10.710), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "pass": true,
+        "method": "p95 P-213 with observation enabled (6.734 ms, mean of 7.242, 6.504, 6.600, 6.416, 6.869, 6.546, 6.875, 6.818) minus disabled (6.323 ms, mean of 5.827, 6.002, 6.138, 6.375, 6.543, 6.676, 6.645, 6.376), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 810.932778,
+        "value": 468.004719,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7994,11 +8014,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 102.69921875,
+        "value": 106.8828125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 11m39s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 10m0s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
