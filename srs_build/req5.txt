@@ -529,7 +529,7 @@ S: The Secret Vault (E-19) SHALL be readable only by the Secret Broker (E-20) se
 A: E-19; E-20; I-27
 V: Test | Attempt vault reads as every other service identity; confirm denial.
 SRC: SEC 2.13; ARCH §4 E-19
-R: Data Server compromise does not expose secrets.
+R: Data Server compromise does not expose secrets. In release 1.x the Secret Broker runs inside smcpd, so its service identity is the one smcpd runs as (`smcp-core` in the Enforced profile); the vault directory and its key source are readable by that identity only, and every other CP-46 identity, `smcp-vault` and `smcp-srv` included, is denied.
 
 @SR-2.14-1 | Backend environment allowlist
 P: SEC-2.14

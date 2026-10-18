@@ -5819,7 +5819,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Method | Test |
 | Verification Statement | Attempt vault reads as every other service identity; confirm denial. |
 | Source | SEC 2.13; ARCH §4 E-19 |
-| Rationale | Data Server compromise does not expose secrets. |
+| Rationale | Data Server compromise does not expose secrets. In release 1.x the Secret Broker runs inside smcpd, so its service identity is the one smcpd runs as (`smcp-core` in the Enforced profile); the vault directory and its key source are readable by that identity only, and every other CP-46 identity, `smcp-vault` and `smcp-srv` included, is denied. |
 
 #### SR-2.14-1 — Backend environment allowlist
 

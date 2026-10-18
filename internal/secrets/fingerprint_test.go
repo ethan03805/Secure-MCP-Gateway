@@ -12,7 +12,9 @@ import (
 )
 
 func TestFingerprintsDetectEncodedForms(t *testing.T) {
-	reqtest.Partial(t, "FR-6.10") // registration with E-29 does not exist yet
+	// E-29 registration: analytics.TestSecretFingerprintsRegisteredWithCollector;
+	// its wiring in cmd/smcpd is not exercised by a test.
+	reqtest.Partial(t, "FR-6.10")
 	value := []byte("sk-live-4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c?&/=+")
 	fp := NewFingerprints()
 	fp.Register("sec_1", 2, value)
