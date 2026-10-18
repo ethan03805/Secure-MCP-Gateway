@@ -59,13 +59,12 @@ The Gateway must be stopped (`--verify-only` works while it runs). Restore:
 1. Checks the archive against `<archive>.sha256` when that file is present.
 2. Decrypts into an isolated directory `.smcp-restore-<time>-*` next to the state directory and checks every entry against the manifest (missing, extra, changed or unsafe entries fail).
 3. Verifies the restored journal: hash chain, signatures, key transitions and anchor, from the restored `evidence-genesis.pub`.
-4. Validates the restored configuration and policy file.
-5. Collects every revocation recorded in the restored journal and in the current journal (events of class `revocation`, outcome `revoked`, or a reason code ending in `_REVOKED`) and writes them to `state/revocations.json`.
-6. Only then moves the current state directory to `<state>.pre-restore-<time>`, moves the restored state into place, and writes the restored configuration and policy over the current files (each kept as `<file>.pre-restore-<time>`).
+4. Validates the restored configuration and policy file, and verifies the restored signed Policy Store: every revision file and the control record `policy/active.json` must verify under the restored policy-signing key.
+5. Collects every revocation recorded in the restored journal and in the current journal (events of class `revocation`, outcome `revoked`, or a reason code ending in `_REVOKED`, and principal suspensions), writes them to `state/revocations.json` as a record, and re-applies them to the restored state: principal suspensions and credential revocations to the principal directory (a later `PRINCIPAL_ENABLED` wins), package revocations to the package registry (`revoked`; a revision the restored registry does not hold is recorded so that a later import is refused), and dynamic client registration revocations (`DCR_REVOKED`) to `remote/clients.json`. Sessions are not persisted across restarts, so there is no session to revoke.
+6. When the restored configuration has `[graph] enabled = true`, wipes the graph mirror and rebuilds it from the restored journal (waiting up to 5 minutes for the graph database). If the database cannot be reached the restore is refused; start the database, or disable `[graph]`, and restore again. `--verify-only` does not touch the graph. The rollback of a failed upgrade does not depend on the graph: it reports the mirror as not rebuilt instead (rebuild it with `smcpctl graph rebuild --yes`).
+7. Only then moves the current state directory to `<state>.pre-restore-<time>`, moves the restored state into place, and writes the restored configuration and policy over the current files (each kept as `<file>.pre-restore-<time>`).
 
-If any step before 6 fails, nothing is changed and the isolated directory is removed. The previous state directory holds the journal written after the backup was taken; keep it, it is evidence.
-
-Not yet done by restore: policy revision signatures are checked once the Policy Administration Service (E-05) signs revisions; the graph mirror is rebuilt once it exists (E-26); the revocations in `revocations.json` are re-applied by the credential elements at start once they read the file.
+If any step before 7 fails, nothing is changed and the isolated directory is removed. The previous state directory holds the journal written after the backup was taken; keep it, it is evidence. The report printed by restore counts the re-applied revocations (`directory_changes`, `package_revocations`, `client_revocations`), the verified Policy Store revisions (`policy_revisions_verified`, `policy_store_revision`) and the graph mirror outcome (`graph_mirror`).
 
 ## Evidence export (FR-7.14, X-09)
 

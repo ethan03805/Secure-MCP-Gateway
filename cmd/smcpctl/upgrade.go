@@ -288,7 +288,8 @@ func (u *upgrader) rollback(reason string) error {
 	u.say("rolling back: %s", reason)
 	_ = u.stopAndWait()
 	errs := u.restoreBinaries()
-	rep, err := backup.Restore(backup.RestoreOptions{Archive: u.backup, Decryption: u.dec, StateDir: u.cfg.State.Dir, ConfigPath: u.cfgPath, PolicyPath: u.cfg.Policy.File})
+	rep, err := backup.Restore(backup.RestoreOptions{Archive: u.backup, Decryption: u.dec, StateDir: u.cfg.State.Dir, ConfigPath: u.cfgPath, PolicyPath: u.cfg.Policy.File,
+		GraphBestEffort: true, GraphTimeout: 30 * time.Second})
 	if err != nil {
 		errs = append(errs, fmt.Errorf("restore %s: %w", u.backup, err))
 	} else {
