@@ -79,12 +79,15 @@ type SimOutcome struct {
 	ApprovalReason string   `json:"approval_reason,omitempty"`
 	Filters        []string `json:"filters,omitempty"`
 	CallsPerMinute int      `json:"calls_per_minute,omitempty"`
+	// EgressLimits is the rule's egress-limit obligation (FR-5.38).
+	EgressLimits *EgressLimits `json:"egress_limits,omitempty"`
 }
 
 func outcomeOf(d Decision) SimOutcome {
 	o := SimOutcome{Outcome: d.Outcome, ReasonCode: d.ReasonCode, DecisiveRules: d.DecisiveRules}
 	if d.Outcome == Permit {
 		o.Approval, o.ApprovalReason, o.Filters, o.CallsPerMinute = d.Obligations.Approval, d.Obligations.ApprovalReason, d.Obligations.Filters, d.Obligations.CallsPerMinute
+		o.EgressLimits = d.Obligations.EgressLimits
 	}
 	return o
 }
@@ -107,10 +110,17 @@ func classify(a, b SimOutcome) string {
 	case a.ReasonCode != b.ReasonCode:
 		return SimReason
 	case a.Approval != b.Approval || a.ApprovalReason != b.ApprovalReason || a.CallsPerMinute != b.CallsPerMinute ||
-		!slices.Equal(a.Filters, b.Filters):
+		!slices.Equal(a.Filters, b.Filters) || !sameEgressLimits(a.EgressLimits, b.EgressLimits):
 		return SimObligations
 	}
 	return SimUnchanged
+}
+
+func sameEgressLimits(a, b *EgressLimits) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 // SimResult is one fixture's decision under each revision.

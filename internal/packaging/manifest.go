@@ -109,11 +109,16 @@ type FilesystemSlot struct {
 	ArgvPlaceholder string `json:"argv_placeholder,omitempty"`
 }
 
-// EgressRule is one permitted destination.
+// EgressRule is one permitted destination. The optional limits bound each
+// outbound operation to it (FR-5.38); the Egress Broker applies the
+// smallest of these, the configuration's and the decision's.
 type EgressRule struct {
-	Host    string   `json:"host"`
-	Ports   []int    `json:"ports"`
-	Methods []string `json:"methods"`
+	Host          string   `json:"host"`
+	Ports         []int    `json:"ports"`
+	Methods       []string `json:"methods"`
+	RequestBytes  int64    `json:"request_bytes,omitempty"`
+	ResponseBytes int64    `json:"response_bytes,omitempty"`
+	TimeoutMS     int64    `json:"timeout_ms,omitempty"`
 }
 
 // Resources are instance resource limits.

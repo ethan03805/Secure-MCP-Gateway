@@ -109,6 +109,18 @@ Rules checked when the configuration loads:
 
 Grants come from the configuration until the policy service (E-05, E-06) provides egress grants from decision obligations. The broker reads the current grants on every operation.
 
+### Limit sources (FR-5.38)
+
+Each operation's request size, response size and duration are bounded by the smallest of three sources:
+
+| Source | Where it is set |
+|---|---|
+| Runtime Profile | `[egress] request_bytes`, `response_bytes`, `operation_timeout` and the grant's `request_bytes`, `response_bytes`, `timeout` (release 1.x reads the Runtime Profile from the configuration, FR-3.26) |
+| Manifest | `request_bytes`, `response_bytes` and `timeout_ms` of the `capabilities.egress` rules of a packaged server's signed manifest that cover the destination host and port (every covering rule applies) |
+| Decision obligation | `egress_limits` (`request_bytes`, `response_bytes`, `timeout_ms`) of the policy permit rule that authorized the call the instance is serving (`docs/policy-reference.md`) |
+
+With capabilities required (the default), the obligation travels with the call's one-use capabilities, so an operation gets the obligation of the call whose token it spent. Without required capabilities an operation is not bound to one call, and the tightest obligation, per bound, of the calls the instance is serving at that moment applies. The bounds applied are in the operation record (`bounds`).
+
 ## Evidence
 
 Each operation writes journal events of class `egress` and origin `E-18`:
@@ -121,7 +133,7 @@ Each operation writes journal events of class `egress` and origin `E-18`:
 | `denied` | `deny` | The operation was refused before forwarding, or a redirect or address was refused |
 | `failed` | `terminated` | A forwarded operation was cut by a limit, a timeout or an upstream failure |
 
-The event detail holds the operation record: `id`, `time`, `instance`, `server`, `mode` (`connect`, `http` or `endpoint`), `method`, `host`, `port`, `path`, `sni`, `grant`, `resolved` (every address the name resolved to), `address` (the address dialed), `address_class`, `redirects`, `decision` (`allowed` or `denied`), `reason`, `detail`, `status`, `bytes_up`, `bytes_down`, `duration_ms`, `injected_headers` (names of S1 headers the broker inserted), `capability` (`consumed`, `missing`, `invalid`, `replayed` or `mismatch`; absent when capabilities are not required) and `correlation_id`, `decision_id` and `policy_revision` of the call the capability was minted for. The event itself carries the same three IDs, so an operation joins the call that authorized it. Query strings, header values, tokens and bodies are not recorded.
+The event detail holds the operation record: `id`, `time`, `instance`, `server`, `mode` (`connect`, `http` or `endpoint`), `method`, `host`, `port`, `path`, `sni`, `grant`, `resolved` (every address the name resolved to), `address` (the address dialed), `address_class`, `redirects`, `decision` (`allowed` or `denied`), `reason`, `detail`, `status`, `bytes_up`, `bytes_down`, `duration_ms`, `injected_headers` (names of S1 headers the broker inserted), `capability` (`consumed`, `missing`, `invalid`, `replayed` or `mismatch`; absent when capabilities are not required), `bounds` (the `request_bytes`, `response_bytes` and `timeout_ms` applied once the operation was authorized, FR-5.38) and `correlation_id`, `decision_id` and `policy_revision` of the call the capability was minted for. The event itself carries the same three IDs, so an operation joins the call that authorized it. Query strings, header values, tokens and bodies are not recorded.
 
 ## Commands
 
@@ -169,6 +181,6 @@ The instance receives the HTTP status below with the reason code in the `Smcp-Eg
 
 ## Not yet implemented
 
-- Grants from policy decision obligations and limits from manifests and Runtime Profiles (FR-5.38 names three sources; the broker applies the configuration and the grant).
+- Grants from policy decision obligations (the decision's egress limits are applied, FR-5.38; the destinations still come from the configuration).
 - Endpoint variable names from signed manifests (FR-5.37); today they come from `endpoint_env` in the configuration.
 - Egress observables for the Observation Collector (E-29) beyond the journal events.

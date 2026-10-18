@@ -146,7 +146,7 @@ func (c *callRun) decisionDetail() map[string]any {
 			// policy document.
 			"audit_profile": ob.AuditProfile, "observation_policy": ob.ObservationPolicy, "anomaly_response": ob.AnomalyResponse,
 			"size_limit_bytes": ob.SizeLimit, "timeout_ms": ob.Timeout.Milliseconds(), "egress_grants": append([]string{}, ob.EgressGrants...),
-			"secret_grants": append([]string{}, ob.SecretGrants...), "runtime_profile": ob.RuntimeProfile},
+			"secret_grants": append([]string{}, ob.SecretGrants...), "runtime_profile": ob.RuntimeProfile, "egress_limits": ob.EgressLimits},
 		"side_effect": d.SideEffect, "source_trust": d.SourceTrust, "tainted": d.Tainted, "duration_us": d.Duration.Microseconds(),
 		"baseline_snapshot_id": d.BaselineSnapshot,
 	}
@@ -330,6 +330,9 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		// SR-6.2-1): the decision intent is committed before the capability
 		// exists.
 		binding := pipeline.Binding{CorrelationID: corr, DecisionID: dec.ID, PolicyRevision: dec.PolicyRevision, PublicName: ref.Public}
+		if l := dec.Obligations.EgressLimits; l != nil { // FR-5.38
+			binding.Egress = pipeline.EgressLimits{RequestBytes: l.RequestBytes, ResponseBytes: l.ResponseBytes, Timeout: l.Timeout()}
+		}
 		endLaunch := c.stage(pipeline.SpanLaunchAuthorization)
 		capID, err := g.authorizeLaunch(c, sess, ref, binding)
 		endLaunch()

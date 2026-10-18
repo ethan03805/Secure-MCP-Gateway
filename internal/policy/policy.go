@@ -49,7 +49,7 @@ func SchemaJSON() []byte { return append([]byte(nil), schemaJSON...) }
 // every published revision (FR-3.4).
 const (
 	SchemaVersion    = "1"
-	EvaluatorVersion = "4"
+	EvaluatorVersion = "5"
 )
 
 var compiledSchema = func() *jsonschema.Schema {
@@ -132,9 +132,31 @@ type Rule struct {
 	SideEffect      string   `json:"side_effect,omitempty"`
 	SourceTrust     string   `json:"source_trust,omitempty"`
 	Filters         []string `json:"filters,omitempty"`
+	// EgressLimits bounds each egress operation of the calls the rule
+	// permits (FR-5.38); the Egress Broker applies the smallest of these,
+	// the manifest's and the configuration's.
+	EgressLimits *EgressLimits `json:"egress_limits,omitempty"`
 	// When holds the rule's argument predicates (FR-3.6, SR-1.7-1): a
 	// permit rule applies only when every one holds.
 	When []Predicate `json:"when,omitempty"`
+}
+
+// EgressLimits is the egress-limit part of the egress grants obligation
+// (FR-3.12, FR-5.38): request size, response size and duration of each
+// outbound operation an instance makes while serving the call. Zero sets
+// no bound.
+type EgressLimits struct {
+	RequestBytes  int64 `json:"request_bytes,omitempty"`
+	ResponseBytes int64 `json:"response_bytes,omitempty"`
+	TimeoutMS     int64 `json:"timeout_ms,omitempty"`
+}
+
+// Timeout returns the duration bound (0 when none).
+func (l *EgressLimits) Timeout() time.Duration {
+	if l == nil {
+		return 0
+	}
+	return time.Duration(l.TimeoutMS) * time.Millisecond
 }
 
 // Rule effects, taint actions, side-effect classes and source-trust values
@@ -315,7 +337,7 @@ func Compile(raw []byte) (*Snapshot, error) {
 				}
 			}
 			if r.Effect == EffectDeny {
-				if r.Approval || r.CallsPerMinute > 0 || r.CallsPerSession > 0 || len(r.Filters) > 0 || r.SideEffect != "" || r.SourceTrust != "" || len(r.When) > 0 {
+				if r.Approval || r.CallsPerMinute > 0 || r.CallsPerSession > 0 || len(r.Filters) > 0 || r.EgressLimits != nil || r.SideEffect != "" || r.SourceTrust != "" || len(r.When) > 0 {
 					return nil, fmt.Errorf("template %q: deny rule %q carries obligations or classes; a deny rule has none", tname, r.ID)
 				}
 				denyByServer[r.Server] = append(denyByServer[r.Server], r)
@@ -518,8 +540,11 @@ type Obligations struct {
 	SizeLimit         int64         `json:",omitempty"` // result bound in bytes (CP-08)
 	Timeout           time.Duration `json:",omitempty"` // upstream timeout (CP-13)
 	EgressGrants      []string      `json:",omitempty"` // granted egress destinations of the server
-	SecretGrants      []string      `json:",omitempty"` // secret slots granted to the server
-	RuntimeProfile    string        `json:",omitempty"` // launcher and sandbox profile of the instance
+	// EgressLimits are the permit rule's egress bounds for the call
+	// (FR-5.38), nil when the rule sets none.
+	EgressLimits   *EgressLimits `json:",omitempty"`
+	SecretGrants   []string      `json:",omitempty"` // secret slots granted to the server
+	RuntimeProfile string        `json:",omitempty"` // launcher and sandbox profile of the instance
 }
 
 // ObligationContext is what the Decider adds to every permit's obligations
@@ -865,6 +890,10 @@ func (d *Decider) decide(req Request, consume bool) Decision {
 	dec.Tainted = d.tainted[req.SessionID]
 
 	ob := Obligations{Approval: rule.Approval || predApproval, Filters: slices.Clone(rule.Filters)}
+	if rule.EgressLimits != nil {
+		l := *rule.EgressLimits
+		ob.EgressLimits = &l
+	}
 	if d.context != nil { // FR-3.12
 		c := d.context(req.Server)
 		ob.AuditProfile, ob.ObservationPolicy, ob.AnomalyResponse = c.AuditProfile, c.ObservationPolicy, c.AnomalyResponse

@@ -81,6 +81,9 @@ func renderRule(r *Rule) string {
 		sort.Strings(f)
 		parts = append(parts, "filters="+strings.Join(f, ","))
 	}
+	if l := r.EgressLimits; l != nil {
+		parts = append(parts, fmt.Sprintf("egress_limits=%d/%d/%dms", l.RequestBytes, l.ResponseBytes, l.TimeoutMS))
+	}
 	return strings.Join(parts, " ")
 }
 
@@ -95,11 +98,28 @@ func ruleObligations(r *Rule) string {
 // looser reports whether bound b (0 = none) is looser than a.
 func looser(a, b int) bool { return (a > 0 && b == 0) || (a > 0 && b > a) }
 
+// egressLooser reports whether egress limits b are looser than a in any
+// bound (nil sets none).
+func egressLooser(a, b *EgressLimits) bool {
+	if a == nil {
+		return false
+	}
+	var z EgressLimits
+	if b == nil {
+		b = &z
+	}
+	l64 := func(x, y int64) bool { return (x > 0 && y == 0) || (x > 0 && y > x) }
+	return l64(a.RequestBytes, b.RequestBytes) || l64(a.ResponseBytes, b.ResponseBytes) || l64(a.TimeoutMS, b.TimeoutMS)
+}
+
 func ruleWidens(a, b *Rule) bool {
 	if a.Approval && !b.Approval {
 		return true
 	}
 	if looser(a.CallsPerMinute, b.CallsPerMinute) || looser(a.CallsPerSession, b.CallsPerSession) {
+		return true
+	}
+	if egressLooser(a.EgressLimits, b.EgressLimits) {
 		return true
 	}
 	for _, f := range a.Filters {
