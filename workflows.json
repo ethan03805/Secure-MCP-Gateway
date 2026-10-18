@@ -15,10 +15,10 @@
     "requirements": [
       "FR-13.3"
     ],
-    "ref": "v1.0.0",
-    "commit": "17b84bae26d83513f8a5e602ee33ed6eb625f9b2",
+    "ref": "v1.1.0",
+    "commit": "935dc4d0849e118ccb3f033cd577a5e34875e101",
     "conclusion": "success",
-    "date": "2026-10-18T04:22:33Z",
-    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39096814323"
+    "date": "2026-10-18T23:59:57Z",
+    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39178720966"
   }
 ]
