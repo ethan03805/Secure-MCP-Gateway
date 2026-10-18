@@ -60,8 +60,9 @@ func TestAuditRoutesByRole(t *testing.T) {
 // dynamic-client decisions and raw observation records (S2 fields), and
 // may export a dataset only for a named campaign.
 //
-// Partial: principal and credential management operations and S3 payload
-// grants do not exist yet, so their refusal cannot be exercised.
+// Partial: this matrix server stubs the routes; the refusal of every
+// excluded operation by the real elements, credential operations and S3
+// payload access included, is internal/acceptance.TestResearcherRoleLimits.
 func TestResearcherExclusions(t *testing.T) {
 	reqtest.Partial(t, "SR-2-2")
 	s, toks := matrixServer(t)
