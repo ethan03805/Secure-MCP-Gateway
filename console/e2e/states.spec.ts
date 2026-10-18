@@ -167,7 +167,7 @@ async function emptyStates(browser: Browser) {
     }
     // The lists a fresh installation leaves empty, by view.
     const expected: [string, RegExp][] = [
-      ["G-04", /No record is stored yet\. Records appear after tool calls/],
+      ["G-04", /No stored record falls within the draft.s scope\. Records appear after tool calls/],
       ["G-05", /No snapshot is built\. Build one/],
       ["G-07", /Overhead is measured once calls are observed/],
       ["G-08", /No backup has been taken\. Take one/],
