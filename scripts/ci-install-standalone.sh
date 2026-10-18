@@ -6,7 +6,8 @@
 # install a second time and checks that nothing changed (FR-13.4), then
 # uninstalls and checks that the unit is gone and the journal is kept.
 #
-# Used by the CI job install-standalone (ubuntu-24.04 and macos-latest).
+# Used by the CI job install-standalone (ubuntu-24.04 without Podman and
+# macos-latest) through cmd/smcpctl.TestInstallStandaloneServiceManager.
 # It changes the current user's service manager and home directory: run it
 # on a disposable machine or account.
 #
@@ -113,7 +114,7 @@ grep -q '"profile": *"standalone"' "$work/health.json" || { cat "$work/health.js
 
 say "a second smcpctl install changes nothing (FR-13.4)"
 digests() {
-  { find "$cfg_dir" "$state_dir/keys" "$state_dir/tls" "$unit" -type f -print0 2>/dev/null || true; } \
+  { find "$cfg_dir" "$state_dir/keys" "$state_dir/tls" "$state_dir/journal" "$unit" -type f -print0 2>/dev/null || true; } \
     | while IFS= read -r -d '' f; do sha "$f"; done | sort
 }
 digests > "$work/digests1"
@@ -123,7 +124,7 @@ if grep -E '^(created|updated) ' "$work/install2.log"; then fail "the second ins
 grep -q "^present configuration $cfg" "$work/install2.log" || fail "the second install did not report the configuration present"
 grep -q "^present service unit $unit" "$work/install2.log" || fail "the second install did not report the unit present"
 digests > "$work/digests2"
-diff "$work/digests1" "$work/digests2" || fail "the second install changed configuration, keys or the unit"
+diff "$work/digests1" "$work/digests2" || fail "the second install changed configuration, policy, keys, journal or the unit"
 echo "second run: $(grep -c '^present' "$work/install2.log") steps present, none created or updated"
 
 say "smcpctl uninstall keeps the journal"
