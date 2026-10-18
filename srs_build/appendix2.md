@@ -60,7 +60,7 @@ The machine-readable matrix is `docs/clients/matrix.json` (FR-15.10). Pinned ver
 
 ### K.2 Cloud agents (Remote Access Profile)
 
-Cloud agents run on the vendor's computer. They reach the Gateway only through the Remote Access Profile (FR-16), and their built-in browser, terminal and connector tools are outside the Gateway's control (FR-18.2). Each entry is verified by a dated manual run (FR-15.9).
+Cloud agents run on the vendor's computer. They reach the Gateway only through the Remote Access Profile (FR-16), and their built-in browser, terminal and connector tools are outside the Gateway's control (FR-18.2). Each entry records a dated manual run or, while none has been made, a `not-run` entry with its review date and reason (FR-15.9); live cloud-agent runs are descoped from release 1.x.
 
 | Agent | Connection mode | Registration | Vendor allowlist | Notes |
 |---|---|---|---|---|

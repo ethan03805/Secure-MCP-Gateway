@@ -249,6 +249,13 @@ const childAnalysisPrefix = "Review the verification results of every"
 // requirement; confirm each has passed" when every child requirement is
 // verified. It runs to a fixed point so nested parents resolve. The claim
 // names the number of children reviewed.
+//
+// A parent that stays unverified, has no claim of its own, and has no
+// failing child but at least one verified or partly verified child is
+// reported partial, with a partial claim naming how many children are
+// verified. A partial parent is never verified by this rule; it becomes
+// verified only when every child is, or through evidence for its own
+// statement.
 func applyChildAnalysis(results []*ReqResult, reqs []Requirement) {
 	children := map[string][]string{}
 	for _, r := range reqs {
@@ -280,6 +287,37 @@ func applyChildAnalysis(results []*ReqResult, reqs []Requirement) {
 				rr.Status = computeStatus(rr.Claims)
 				changed = true
 			}
+		}
+	}
+	// Partial roll-up, also to a fixed point so a partial nested parent
+	// makes its own parent partial.
+	for changed := true; changed; {
+		changed = false
+		for _, r := range reqs {
+			kids := children[r.ID]
+			rr := byID[r.ID]
+			if r.Method != "Analysis" || !strings.HasPrefix(r.Verify, childAnalysisPrefix) || len(kids) == 0 || rr.Status != StatusUnverified || len(rr.Claims) > 0 {
+				continue
+			}
+			verified, evidenced, failing := 0, 0, false
+			for _, k := range kids {
+				switch st := byID[k]; {
+				case st == nil:
+				case st.Status == StatusFailing:
+					failing = true
+				case st.Status == StatusVerified:
+					verified++
+					evidenced++
+				case st.Status == StatusPartial:
+					evidenced++
+				}
+			}
+			if failing || evidenced == 0 {
+				continue
+			}
+			rr.Claims = append(rr.Claims, ClaimRef{Test: fmt.Sprintf("analysis: %d of %d child requirements verified", verified, len(kids)), Result: "pass", Partial: true})
+			rr.Status = computeStatus(rr.Claims)
+			changed = true
 		}
 	}
 }

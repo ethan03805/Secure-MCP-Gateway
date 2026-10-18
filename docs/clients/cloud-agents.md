@@ -2,7 +2,9 @@
 
 These agents run on the vendor's computer and cannot reach `127.0.0.1`. They connect through the Remote Access Profile (FR-16, `docs/remote-access.md`). Their own browser, terminal and connector tools are outside the Gateway's control, and the tunnel provider can read the traffic (`docs/security-limitations.md`).
 
-Status: the Remote Access Profile, Dynamic Client Registration with operator approval, the device flow and `smcp-connect` are implemented and tested against a local test tunnel. No cloud agent has been connected in a dated manual run yet (FR-15.9); every cloud entry in `matrix.json` is `not-run`. Vendor allowlist settings were not checked against vendor documentation for this release (checked 2026-10-16: no primary documentation reviewed), so each is stated below as not confirmed.
+Status: the Remote Access Profile, Dynamic Client Registration with operator approval, the device flow and `smcp-connect` are implemented and tested against a local test tunnel, including the MCP conformance fixtures relayed through `smcp-connect` (`internal/conformance.TestConformanceThroughAdapters`). These agents are documented but not live-tested: live cloud-agent runs were descoped from release 1.x by the owner on 2026-10-18, because the project holds no vendor account for them. Every cloud entry in `matrix.json` is `not-run`, with the date it was last reviewed and the reason (FR-15.9).
+
+Vendor allowlist settings (FR-16.10) were checked on 2026-10-18 against the vendors' public documentation; vendor administration consoles were not reachable. Where the public documentation names no setting, the line below says so and lists what was reviewed.
 
 ## Common setup
 
@@ -26,22 +28,22 @@ If the agent accepts only a command to run (a cloud coding sandbox), run `npx sm
 
 - Connection: remote MCP URL through the tunnel, or `smcp-connect` where the agent accepts only a command.
 - Registration: Dynamic Client Registration with operator approval, or a pre-registered client listed in `remote.clients`.
-- Vendor allowlist (FR-16.10): not confirmed whether xAI offers an administrator setting that restricts Grok's MCP servers to the Gateway URL (checked 2026-10-16). Until confirmed, treat it as not offered.
-- Matrix: `not-run`.
+- Vendor allowlist (FR-16.10): no setting confirmed in xAI's public documentation (checked 2026-10-18). xAI's Remote MCP Tools documentation describes a server URL and an `allowed_tools` filter set per request, not an administrator restriction of the agent's MCP servers. A third-party guide describes a team MCP allowlist on a Grok team plugins page ("Disabled by team admin"); no xAI documentation of it was found. Treat it as not offered until confirmed. Sources reviewed: https://docs.x.ai/developers/tools/remote-mcp, https://composio.dev/blog/how-to-add-mcp-servers-to-grok-bot.
+- Matrix: `not-run` (reviewed 2026-10-18; live runs descoped from release 1.x).
 
 ## ChatGPT agent "dots" and ChatGPT custom connectors (OpenAI)
 
 - Connection: add a custom connector (MCP server URL) `https://<public name>/mcp`. ChatGPT connects from OpenAI's servers through the tunnel; OpenAI's own MCP tunnel, where offered, is used with `--provider manual` (or `vendor`) and its public URL.
 - Registration: Dynamic Client Registration with operator approval (the connector registers when added), or a pre-registered client.
-- Vendor allowlist (FR-16.10): workspace administrator connector and MCP controls exist for business workspaces according to the SRS sources, but the exact setting that limits connectors to one URL was not confirmed (checked 2026-10-16).
-- Matrix: `not-run`.
+- Vendor allowlist (FR-16.10): no setting that limits connectors to one URL confirmed in OpenAI's public documentation (checked 2026-10-18). OpenAI's help article "Plugins in ChatGPT" could not be retrieved (HTTP 403); its search excerpt and third-party administrator guides describe workspace controls that limit who adds a connector rather than which URL: on Business plans only admins and owners create and publish apps for custom MCP servers, on Enterprise and Edu role-based access control grants the permission to create custom MCP connections and apps are off by default, and the workspace directory sets which actions of a published app are allowed. The nearest restriction to the Gateway URL is to publish only the Gateway's app and not grant members the create permission. Connectors were renamed apps in December 2025. Sources reviewed: https://help.openai.com/en/articles/12584461-plugins-in-chatgpt (search excerpt), https://support.fyxer.com/article/admin-setup-guide-how-to-enable-apps-and-mcp-connectors-in-chatgpt, https://developers.pleo.io/docs/current/pleo-mcp/how-tos/enablement/chatgpt.
+- Matrix: `not-run` (reviewed 2026-10-18; live runs descoped from release 1.x).
 
 ## Meta Muse (Meta)
 
 - Connection: remote MCP URL through the tunnel, or `smcp-connect`.
 - Registration: to be confirmed; both Dynamic Client Registration and pre-registered clients are supported by the Gateway.
-- Vendor allowlist (FR-16.10): not confirmed whether one is offered (checked 2026-10-16).
-- Matrix: `not-run`.
+- Vendor allowlist (FR-16.10): no setting found in Meta's public documentation (checked 2026-10-18). Meta's developer MCP documentation covers Meta's own platform integrations, not Muse; third-party guides place Muse custom connectors under Settings, Connectors, with no administrator restriction described. Treat it as not offered. Sources reviewed: https://developers.facebook.com/documentation/mcp, https://anythingmcp.com/de/guides/clients/muse, https://parallel.ai/articles/best-mcp-servers-for-meta-muse.
+- Matrix: `not-run` (reviewed 2026-10-18; live runs descoped from release 1.x).
 
 ## Limitations
 
