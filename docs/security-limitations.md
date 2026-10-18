@@ -67,7 +67,7 @@ A package signature shows who packaged a server and that it has not changed sinc
 
 ### 12. Known gaps in release 1.0
 
-These are requirements the release does not meet in full; [verification/gap-list.md](verification/gap-list.md) tracks them.
+These are requirements release 1.0, and the main branch after it, do not meet in full; [verification/gap-list.md](verification/gap-list.md) tracks them.
 
 - **Remote Access host rules on macOS (SR-4.14-1):** in the Enforced profile `smcpctl remote enable` installs nftables rules that drop non-loopback connections to the Gateway ports. macOS runs only the Standalone profile and has no nftables; the Gateway still binds loopback only, and [remote-access.md](remote-access.md#host-rules) gives a pf anchor that you load yourself.
 - **Secret copies in memory (SR-2.13-2, RR-11):** the Secret Broker overwrites its byte buffers after each delivery, but Go strings cannot be overwritten: the S4 environment value (and the `NAME=value` entry built for the child process), the header the Egress Broker sets on each S1 request and the age library's decryption buffers stay in the Gateway's memory until it is reused. Prefer S1 to S3 over S4.
@@ -78,9 +78,9 @@ These are requirements the release does not meet in full; [verification/gap-list
 - **Performance:** the FR-11 budgets have been measured on CI runners only, not on recorded reference hardware.
 - **No SELinux module:** the Enforced profile ships AppArmor profiles for `smcpd` and for image-less servers (`smcp-server`). Servers that run from an image have only the container runtime's default confinement, and on a host with SELinux instead of AppArmor no host policy module confines `smcpd`; `[[runtime.server]] selinux_type` only passes a type to Podman.
 - **Graph engine firewall (SR-4.2-1, SR-7.4-1):** the optional Neo4j engine is reached on loopback only, but no nftables rule limits the engine port to the Data Server or denies the engine outbound connections.
-- **One identity for the Secret Vault and the Secret Broker (SR-2.13-3):** both run inside `smcpd` under one service identity.
+- **One identity for the Secret Vault and the Secret Broker (SR-2.13-3):** both run inside `smcpd` under one service identity (`smcp-core` in the Enforced profile). Every other CP-46 identity is denied read access to the vault, which the linux-integration job checks; a compromise of `smcpd` itself exposes the vault.
 - **One identity for the Gateway's components (SR-4.1-1):** the Data Access Service, the vault and Secret Broker, the evidence exporter, the key manager and the console are packages of the one `smcpd` process and run as `smcp-core`. `smcpctl install` creates `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data` and `smcp-console`, but no process runs as them yet. The separation release 1.x enforces is between `smcpd` (`smcp-core`) and the servers (`smcp-srv` and its subordinate UIDs).
-- **Cloud agents not exercised:** no cloud agent (Grok Bot, ChatGPT agent, Meta Muse) has a dated run through the Remote Access Profile (FR-15.9), and the vendors' administrative allowlist settings are not confirmed (FR-16.10). The Remote Access Profile itself is tested with a local tunnel stand-in and a recorded tunnel provider run (AT-18).
+- **Cloud agents not exercised:** live cloud-agent runs are descoped from release 1.x (FR-15.9, FR-16.10). No cloud agent (Grok Bot, ChatGPT agent, Meta Muse) has a dated run through the Remote Access Profile, and the quick starts name a vendor allowlist setting only where the vendor's public documentation names one (`docs/clients/cloud-agents.md`, reviewed 2026-10-18). The Remote Access Profile itself is tested with a local tunnel stand-in, a recorded tunnel provider run (AT-18) and the conformance suite relayed through `smcp-connect` and a test tunnel (FR-16.9).
 - **Release archives without cgo:** the archives are built with `CGO_ENABLED=0`, so the Observation Store uses JSON Lines and research exports cannot be written as Parquet. Build from source with cgo for DuckDB and Parquet.
 
 ### 13. Trusted computing base

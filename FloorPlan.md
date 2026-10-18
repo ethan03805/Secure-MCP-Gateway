@@ -1,6 +1,6 @@
 # MCP Servers — FloorPlan
 
-Updated: 2026-10-17 (phases 3 to 8: every element wired into `smcpd`, the hostile fixture suite, the console with every Appendix C role and the OpenAPI description, the acceptance, conformance and performance suites with Enforced results for every scenario, the release pipeline with the Homebrew tap and its verification workflows, the Enforced profile installer, runbook execution records, site chapters for status, install and agents)
+Updated: 2026-10-18 (phases 3 to 9: every element wired into `smcpd`, the hostile fixture suite, the console with every Appendix C role and the OpenAPI description, the acceptance, conformance and performance suites with Enforced results for every scenario, the release pipeline with the Homebrew tap, its verification workflows, release provenance files and the SBOM license check, the Enforced profile installer, runbook execution records, site chapters for status, install and agents; release v1.0.0 published)
 
 Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level path and the main subdirectories. Paths are relative to the repository root.
 
@@ -23,7 +23,7 @@ Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level p
 | `go.mod`, `go.sum` | Go module `github.com/ethan03805/secure-mcp-gateway` | `go build ./...`, `go test ./...` |
 | `Makefile` | `make check` (what the required CI jobs check, including the site unit tests), `make status` (requirement report), `make integration`, `make hostile`, `make conformance`, `make openapi`, `make vuln`, `make srs`, `make site` (build plus page and link check), `make console`, `make console-e2e`, `make release-snapshot` | Developer and CI entry points |
 | `install.sh` | Release installer: detects OS and architecture, downloads the archive and checksum file, verifies the checksum file's minisign signature (and its Sigstore bundle when cosign is installed) and the archive's SHA-256, installs the binaries | Users; see `docs/install.md` |
-| `.goreleaser.yaml` | Release archives for linux and darwin, amd64 and arm64, with all seven binaries, an SBOM per archive, the minisign-signed checksum file and the Homebrew formula | Run by `release.yml` and `make release-snapshot` |
+| `.goreleaser.yaml` | Release archives for linux and darwin, amd64 and arm64, with all seven binaries, an SBOM per archive, the build recipe, lockfiles, `PROVENANCE.md` and `THIRD_PARTY_NOTICES.txt` in each archive, the minisign-signed checksum file and the Homebrew formula | Run by `release.yml` and `make release-snapshot` |
 | `.golangci.yml` | golangci-lint v2 configuration; every exclusion states why it exists | Read by the `lint` CI job |
 | `vercel.json`, `.vercelignore` | Vercel deployment configuration for the site | Deployment only |
 | `.gitignore`, `.gitattributes` | Exclusions for local work, secrets, runtime state, build output and agent worktrees; generated-file marks, `CHANGELOG.md` union merge, LF endings for shell scripts | Repository hygiene |
@@ -60,6 +60,8 @@ Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level p
 | `internal/hostile` | Hostile fixture catalog and server, and the suite (build tag `hostile`) that runs the Gateway against every Appendix L row and writes `build/hostile.{md,json}` | FR-19.1, FR-19.2; `make hostile` and the CI job `hostile` |
 | `console/` | Management console (E-24): React, TypeScript and Vite from hand-built components (`src/`), Playwright acceptance tests (`e2e/`), committed build `dist/` embedded into `smcpd` by `embed.go` | `make console` rebuilds `dist/`; `make console-e2e` runs Playwright |
 | `tools/reqreport/` | Reads `go test -json` output and the coverage profile and writes `build/reqreport.{json,md}` and `build/status.json` | FR-12.10; run by `make status` and CI |
+| `tools/sbomcheck/` | Checks that every entry of a release SBOM has a license that is OSI-approved, public domain or reviewed per package in `packaging/license-review.json` | FR-12.1; run by the release workflow over the archives' SBOMs |
+| `tools/provenance/` | Writes `PROVENANCE.md` (source commit, Go toolchain, build run, recipe digests) and `THIRD_PARTY_NOTICES.txt` (license files of every linked Go module, the Go standard library and the bundled console npm packages) into each release archive | FR-12.8; run before the GoReleaser build |
 | `tools/installsh/` | Tests of `install.sh` through a local HTTPS server with test keys (intact release, modified archive or checksum file, other key, missing signature) | FR-13.2 |
 | `tools/openapi/` | Writes `site/data/openapi.json`, the control API's OpenAPI document with the roles of each route, from `internal/openapi` and the route registrations in the Go sources; its test fails when the committed file is stale | FR-8.1; `make openapi`, and the regenerate workflow on pull requests |
 | `spikes/` | Experiments that retire SRS §3.3 stack risks; each has its own `go.mod` and a `README.md` recording the result | Evidence for design decisions; not part of the Gateway build |
@@ -69,6 +71,7 @@ Scope: this repository (`Secure-MCP-Gateway`). This map covers every top-level p
 | Path | Contents | Access / purpose |
 |---|---|---|
 | `packaging/homebrew/` | Homebrew formula template, rendered by hand with `scripts/render-brew-formula.sh`; the release workflow writes the formula to the tap `ethan03805/homebrew-tap` with GoReleaser | Release only; the `tap` workflow installs from the tap and compares the binaries with the release archive |
+| `packaging/license-review.json` | Reviewed license exceptions for the SBOM check, one entry per package with the reason | Read by `tools/sbomcheck` |
 | `packaging/linux/` | `install-enforced.sh` (prepares a Linux host for the Enforced profile: identities including `smcp-srv`, subordinate IDs, directories, nftables, AppArmor, systemd), `systemd/` units, `nftables/smcp.nft`, the AppArmor profiles; embedded in `smcpctl` for `smcpctl install --profile enforced` | Run as root on the Gateway host; see `docs/enforced-profile.md` and `docs/sandbox.md` |
 | `packaging/npm/smcp-connect/` | npm package of `smcp-connect` with no dependencies, and its tests | Published for cloud-agent machines (`npx smcp-connect`) |
 | `packaging/reference/` | Recipes and lock files for the reference servers (filesystem, memory, git, fetch) | Input to `smcpctl package build` and `scripts/build-reference-packages.sh` |

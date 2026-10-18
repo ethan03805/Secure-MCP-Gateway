@@ -44,7 +44,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Real-agent conformance suite](agents-conformance.md) | FR-15.8, FR-15.10 | `scripts/agents`, the "Real agents" workflow, the broken-build check, known client findings |
 | [Hostile backend fixtures](hostile-fixtures.md) | FR-19.1, FR-19.2, Appendix L | `internal/hostile`, `cmd/smcp-hostile`, the CI job "hostile" |
 | [Acceptance scenarios, release label and performance](acceptance.md) | FR-19.3, FR-19.4, FR-11, FR-10.2, FR-10.11 | AT-01 to AT-21 and where they run, the release label, `smcp-workload` and the CI job "perf", stage timing spans |
-| [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)) and the [gap list](verification/gap-list.md) of unverified requirements |
+| [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)), runbook execution records and the [gap list](verification/gap-list.md) of unverified requirements |
 
 ## Client quick starts (FR-18.3)
 
@@ -62,7 +62,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Key rotation](runbooks/key-rotation.md) | Scheduled rotation of the listener certificate, CA or evidence key |
 | [Upgrade rollback](runbooks/upgrade-rollback.md) | Upgrading, or an upgrade rolled back |
 
-FR-18.8 asks for a recorded execution of each runbook against the release commit. None is recorded yet; `scripts/ci-integration.sh` runs the backup, restore, rotation and upgrade steps on every pull request.
+FR-18.8 asks for a recorded execution of each runbook against the release commit. Each runbook was executed against a real `smcpd` on 2026-10-17; the records are in [verification/runbooks/](verification/runbooks/FR-18.8.md). `scripts/ci-integration.sh` also runs the backup, restore, rotation and upgrade steps on every pull request.
 
 ## Control API
 
@@ -73,7 +73,7 @@ Routes are on the loopback admin listener (default `https://127.0.0.1:8444`), au
 | [api/approvals.md](api/approvals.md) | `/api/v1/approvals*` |
 | [api/policy.md](api/policy.md) | `/api/v1/policy*` |
 | [api/packages.md](api/packages.md) | `/api/v1/packages*` |
-| [api/secrets.md](api/secrets.md) | `/api/v1/secrets*` |
+| [api/secrets.md](api/secrets.md) | `/api/v1/secrets*`, `/api/v1/secret-use-policy*` |
 | [api/runtime.md](api/runtime.md) | `/api/v1/runtime*` |
 | [api/egress.md](api/egress.md) | `/api/v1/egress*` |
 | [api/console.md](api/console.md) | `/api/v1/sessions*`, `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/audit/*` |
