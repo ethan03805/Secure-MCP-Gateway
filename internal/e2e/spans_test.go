@@ -15,14 +15,18 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-// slowFilter is a deliberately slow request filter: it waits 25 ms and
-// burns about 5 ms of CPU on every call.
+// slowFilter is a deliberately slow request filter: it waits 150 ms and
+// burns 5 ms of CPU on every call. The ranking below compares wall-clock
+// totals over six calls, and a single journal fsync in the launch
+// authorization stage took 185 ms on a CI runner (PR 117), more than six
+// 30 ms filter runs; six 155 ms runs keep the filter well above such an
+// outlier.
 type slowFilter struct{}
 
 func (slowFilter) ID() string { return "slow-filter" }
 
 func (slowFilter) FilterRequest(_ context.Context, _ *pipeline.Call, _ json.RawMessage) (pipeline.RequestVerdict, error) {
-	time.Sleep(25 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 	burnCPU(5 * time.Millisecond)
 	return pipeline.RequestVerdict{Action: pipeline.Pass}, nil
 }
@@ -146,7 +150,7 @@ func TestStageSpansAndPolicyCost(t *testing.T) {
 		}
 	}
 	slow := filters["slow-filter"]
-	if slow.Duration() < 25*time.Millisecond || (cpuClock && slow.CPU < 2*time.Millisecond) {
+	if slow.Duration() < 150*time.Millisecond || (cpuClock && slow.CPU < 2*time.Millisecond) {
 		t.Fatalf("slow filter span %v, CPU %v", slow.Duration(), slow.CPU)
 	}
 	if cpuClock && byStage[pipeline.SpanRequestInspection].CPU < slow.CPU {
