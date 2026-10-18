@@ -296,16 +296,6 @@ func (g *gateway) post(body []byte, hdr map[string]string) response {
 	return r
 }
 
-// send posts a message with the headers it implies.
-func (g *gateway) send(msg map[string]any) response {
-	g.t.Helper()
-	raw, err := json.Marshal(msg)
-	if err != nil {
-		g.t.Fatal(err)
-	}
-	return g.post(raw, headersFor(msg))
-}
-
 // last is the final JSON-RPC message of a response decoded as a map.
 func (r response) last() map[string]any {
 	if len(r.Messages) == 0 {

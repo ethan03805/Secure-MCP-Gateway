@@ -605,3 +605,57 @@ Observations (the G-13 approval view, as displayed):
 The Approval Service supplies the anomaly evidence with the approval record (`internal/approval/record.go:66`); `GET /api/v1/approvals/{id}` returned `"anomaly": {"band": "critical", "context": "principal=claude-code-local|tool=echo", "contributing_feature": "request_bytes", "snapshot_id": "01a14b54-4782-78e9-848f-99fd5724ac42", "z_score": 160.94859066750217}`.
 
 Deviation: `smcpctl approvals show` printed `Anomaly  none reported` for this approval: the command printed that text for every approval. It now prints the band, feature, z-score and snapshot (`TestApprovalsShowAnomalyEvidence`); the requirement concerns the approval view, which displayed every item.
+
+## FR-15.9 Cloud agent matrix record
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-15.9 |
+| Commit | `6078b21c5b5ee82df3f5fcde254ad266efe0ab12` |
+| Profile and platform | Not profile-specific; documentation inspected on macOS 26.6.2, darwin/arm64 |
+| Date | 2026-10-18 |
+| Executor | Claude Code agent (remote-agents partials task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: read the `vendor-cloud` entries of `docs/clients/matrix.json` against FR-15.9 as changed on 2026-10-18 (live cloud-agent runs descoped from release 1.x; a `not-run` entry records its review date, documented modes and reason) and against Appendix K.2, which lists three cloud agents.
+
+Observations:
+
+| Agent | Entry | Result | Connection mode | Registration mode | Reviewed | Reason |
+|---|---|---|---|---|---|---|
+| Grok Bot (xAI) | `docs/clients/matrix.json:161` | `not-run` | remote-access (tunnel), fallback smcp-connect | dynamic registration with operator approval, or pre-registered | 2026-10-18 (`docs/clients/matrix.json:182`) | no vendor account; descoped (`docs/clients/matrix.json:183`) |
+| ChatGPT agent (dots) (OpenAI) | `docs/clients/matrix.json:188` | `not-run` | remote-access (tunnel, including the vendor MCP tunnel where offered) | as above | 2026-10-18 (`docs/clients/matrix.json:209`) | as above (`docs/clients/matrix.json:210`) |
+| Meta Muse (Meta) | `docs/clients/matrix.json:215` | `not-run` | remote-access (tunnel) | as above | 2026-10-18 (`docs/clients/matrix.json:236`) | as above |
+
+- One entry per Appendix K.2 agent; no entry claims a run, so `lastRun`, `tunnelProvider` and `agentBuild` are null, which the matrix note explains (`docs/clients/matrix.json:4`).
+- The quick start says the agents are documented but not live-tested (`docs/clients/cloud-agents.md:5`).
+- `docs.TestCloudAgentEntries` (`docs/clients_test.go:18`) keeps every cloud entry in one of the two accepted forms.
+
+Deviation: none from the changed statement. No cloud agent has been connected; the support claim rests on the tests against a local test tunnel named in each reason.
+
+## FR-16.10 Vendor allowlist guidance
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-16.10 |
+| Commit | `6078b21c5b5ee82df3f5fcde254ad266efe0ab12` |
+| Profile and platform | Not profile-specific; documentation inspected on macOS 26.6.2, darwin/arm64 |
+| Date | 2026-10-18 |
+| Executor | Claude Code agent (remote-agents partials task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: on 2026-10-18 searched the vendors' public documentation for an administrator setting that restricts each cloud agent's MCP servers to one URL (xAI developer documentation, OpenAI help center, Meta developer documentation, and third-party guides found by web search), wrote the result into each agent's section of the quick start, then read each section against FR-16.10 as changed on 2026-10-18.
+
+Observations:
+
+| Agent | Quick start line | Setting | Date checked | Sources |
+|---|---|---|---|---|
+| Grok Bot | `docs/clients/cloud-agents.md:31` | none confirmed in xAI documentation (per-request `allowed_tools` only; a team allowlist described only by a third-party guide) | 2026-10-18 | docs.x.ai remote MCP page, composio.dev guide |
+| ChatGPT | `docs/clients/cloud-agents.md:38` | none that limits connectors to one URL confirmed; workspace controls over who creates and publishes custom MCP apps described, with the nearest restriction stated | 2026-10-18 | OpenAI help article (search excerpt; page returned HTTP 403), two third-party administrator guides |
+| Meta Muse | `docs/clients/cloud-agents.md:45` | none found | 2026-10-18 | Meta developer MCP page, two third-party guides |
+
+- The introduction states that vendor administration consoles were not reachable and that the lines report public documentation (`docs/clients/cloud-agents.md:7`).
+
+Deviation: the OpenAI primary page could not be read in full (HTTP 403); its content is taken from the search excerpt, and the line says so.
