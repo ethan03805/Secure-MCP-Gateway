@@ -122,7 +122,12 @@ func TestNeo4jMigrationAfterInterruptedConstraint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 1 || rows[0]["type"] != "UNIQUENESS" {
+	// UNIQUENESS, or NODE_PROPERTY_UNIQUENESS on newer engines.
+	typ := ""
+	if len(rows) == 1 {
+		typ, _ = rows[0]["type"].(string)
+	}
+	if !strings.HasSuffix(typ, "UNIQUENESS") {
 		t.Fatalf("smcp_approval_id is not a uniqueness constraint after the migration: %v", rows)
 	}
 }
