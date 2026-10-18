@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T05:43:48Z",
-  "commit": "f6da8e4163a5e2f16f345691c39f7dde86e5ad0e",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/f6da8e4163a5e2f16f345691c39f7dde86e5ad0e",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39100217589",
+  "generatedAt": "2026-10-18T06:13:08Z",
+  "commit": "27a546365a7f77d80ab5c627492625fa8b14473d",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/27a546365a7f77d80ab5c627492625fa8b14473d",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39101838972",
   "tests": {
-    "total": 1363,
-    "passed": 1350,
+    "total": 1370,
+    "passed": 1357,
     "failed": 0,
     "skipped": 13,
-    "durationSec": 1312.9,
+    "durationSec": 1407.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -49,7 +49,7 @@
       },
       {
         "name": "cmd/smcp-refserver",
-        "passed": 1,
+        "passed": 2,
         "failed": 0,
         "skipped": 0
       },
@@ -432,8 +432,20 @@
         "skipped": 0
       },
       {
+        "name": "tools/provenance",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "tools/reqreport",
         "passed": 20,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "tools/sbomcheck",
+        "passed": 4,
         "failed": 0,
         "skipped": 0
       }
@@ -452,7 +464,7 @@
       },
       {
         "name": "cmd/smcp-refserver",
-        "pct": 73.1
+        "pct": 68.1
       },
       {
         "name": "cmd/smcp-session",
@@ -548,7 +560,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 82.4
+        "pct": 82.3
       },
       {
         "name": "internal/filterapi",
@@ -676,7 +688,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.5
+        "pct": 79.8
       },
       {
         "name": "internal/session",
@@ -688,7 +700,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 79.9
+        "pct": 81.1
       },
       {
         "name": "packaging/linux",
@@ -711,24 +723,32 @@
         "pct": 81.3
       },
       {
+        "name": "tools/provenance",
+        "pct": 71.6
+      },
+      {
         "name": "tools/reqreport",
         "pct": 84.8
+      },
+      {
+        "name": "tools/sbomcheck",
+        "pct": 88.6
       }
     ]
   },
   "requirements": {
     "total": 529,
-    "verified": 416,
+    "verified": 419,
     "partial": 92,
     "failing": 0,
-    "unverified": 21,
+    "unverified": 18,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
         "verified": 20,
-        "partial": 6,
+        "partial": 8,
         "failing": 0
       },
       {
@@ -911,8 +931,8 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 30,
-        "partial": 40,
+        "verified": 33,
+        "partial": 38,
         "failing": 0
       },
       {
@@ -3850,8 +3870,11 @@
       {
         "id": "FR-12.1",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "tools/sbomcheck.TestReleaseSBOMs",
+          "tools/sbomcheck.TestReviewsArePerPackage"
+        ]
       },
       {
         "id": "FR-12.2",
@@ -3903,8 +3926,11 @@
       {
         "id": "FR-12.8",
         "element": "E-01",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "tools/provenance.TestArchivesCarryTheProvenanceFiles",
+          "tools/provenance.TestProvenanceFiles"
+        ]
       },
       {
         "id": "FR-12.9",
@@ -4638,8 +4664,10 @@
       {
         "id": "FR-19",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "analysis: all 5 child requirements verified"
+        ]
       },
       {
         "id": "FR-19.1",
@@ -4663,19 +4691,20 @@
       {
         "id": "FR-19.3",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT21VersionBaseline",
           "internal/acceptance/enforced.TestAT21VersionBaseline",
           "internal/acceptance/offline.TestAT21VersionBaseline",
           "tools/reqreport.TestAcceptanceResults",
-          "tools/reqreport.TestReleaseLabel"
+          "tools/reqreport.TestReleaseLabel",
+          "docs/verification/FR-19.3.md:5"
         ]
       },
       {
         "id": "FR-19.4",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestEveryScenarioHasEvidence",
           "internal/acceptance/offline.TestEveryScenarioHasEvidence",
@@ -7014,7 +7043,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7049,7 +7078,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41387: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40525: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7166,7 +7195,7 @@
     }
   ],
   "acceptance": {
-    "commit": "f6da8e4163a5e2f16f345691c39f7dde86e5ad0e",
+    "commit": "27a546365a7f77d80ab5c627492625fa8b14473d",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -7858,15 +7887,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "f6da8e4163a5e2f16f345691c39f7dde86e5ad0e",
-    "generatedAt": "2026-10-18T05:21:19Z",
+    "commit": "27a546365a7f77d80ab5c627492625fa8b14473d",
+    "generatedAt": "2026-10-18T05:50:50Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000006153"
+      "runner": "GitHub Actions 1000006312"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7883,7 +7912,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.02692,
+        "value": 0.029174,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7895,7 +7924,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 17.689633,
+        "value": 18.14978,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7907,18 +7936,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.7450165000000002,
+        "value": 0.9003086249999992,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (11.042 ms, mean of 11.083, 11.062, 10.833, 11.206, 11.206, 10.912, 11.431, 10.605) minus disabled (10.297 ms, mean of 10.556, 10.393, 10.092, 10.200, 9.986, 10.134, 10.470, 10.546), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (11.187 ms, mean of 11.289, 10.931, 11.027, 10.922, 10.724, 11.878, 11.096, 11.625) minus disabled (10.286 ms, mean of 10.126, 10.061, 10.624, 10.118, 10.062, 10.381, 10.411, 10.508), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 827.000541,
+        "value": 806.608801,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7930,11 +7959,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 106.89453125,
+        "value": 102.0234375,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 11m34s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 11m31s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
