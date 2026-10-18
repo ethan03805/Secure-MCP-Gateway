@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T12:49:39Z",
-  "commit": "1a96b1cfa4cb804b57c680b74c2f05b8a3bb62bc",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1a96b1cfa4cb804b57c680b74c2f05b8a3bb62bc",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39125826648",
+  "generatedAt": "2026-10-18T13:51:07Z",
+  "commit": "5f6f36d6931551ae8edabcc586e40a8fcb356daf",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/5f6f36d6931551ae8edabcc586e40a8fcb356daf",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39132102032",
   "tests": {
     "total": 1440,
-    "passed": 1399,
+    "passed": 1425,
     "failed": 0,
-    "skipped": 41,
-    "durationSec": 2610.5,
+    "skipped": 15,
+    "durationSec": 963.8,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -19,9 +19,9 @@
       },
       {
         "name": "console/e2e/chromium",
-        "passed": 38,
+        "passed": 64,
         "failed": 0,
-        "skipped": 26
+        "skipped": 0
       },
       {
         "name": "console/e2e/chromium/enforced",
@@ -452,7 +452,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.3,
+    "totalPct": 76.4,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -500,7 +500,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 80.3
+        "pct": 80.2
       },
       {
         "name": "internal/anomaly",
@@ -556,11 +556,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.6
       },
       {
         "name": "internal/egress",
-        "pct": 84.4
+        "pct": 84.5
       },
       {
         "name": "internal/filterapi",
@@ -572,7 +572,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 84.1
+        "pct": 84.4
       },
       {
         "name": "internal/gwtest",
@@ -696,7 +696,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 77.5
+        "pct": 82.5
       },
       {
         "name": "internal/tunnel",
@@ -1531,6 +1531,7 @@
         "element": "E-04",
         "status": "verified",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "internal/consoleapi.TestSessionSuspendAndResume",
@@ -1604,6 +1605,7 @@
         "element": "E-03",
         "status": "verified",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/webkit.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "internal/e2e.TestOAuthSessionAndToolCall",
@@ -2155,6 +2157,8 @@
         "element": "E-14",
         "status": "verified",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "console/e2e/firefox.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/firefox.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "console/e2e/webkit.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
@@ -2236,6 +2240,7 @@
         "element": "E-10",
         "status": "verified",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "console/e2e/firefox.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "console/e2e/webkit.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "internal/backend.TestServerInitiatedRequestsRefused",
@@ -2428,6 +2433,7 @@
         "status": "verified",
         "tests": [
           "cmd/smcpctl.TestSecretsCommands",
+          "console/e2e/chromium.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "console/e2e/firefox.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "console/e2e/webkit.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "internal/secrets.TestControlAPIReadsNeverReturnValues",
@@ -2633,6 +2639,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/firefox.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
           "console/e2e/firefox.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/webkit.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
@@ -2706,6 +2713,7 @@
         "element": "E-24",
         "status": "verified",
         "tests": [
+          "console/e2e/chromium.views.spec.ts > the OpenAPI document describes every route with its roles",
           "console/e2e/firefox.views.spec.ts > the OpenAPI document describes every route with its roles",
           "console/e2e/webkit.views.spec.ts > the OpenAPI document describes every route with its roles",
           "internal/openapi.TestEveryRouteIsDescribed",
@@ -2718,6 +2726,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.console.spec.ts > an approver sees only the Approvals view and can deny a call",
+          "console/e2e/chromium.views.spec.ts > each role sees only its views and actions",
           "console/e2e/firefox.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/firefox.views.spec.ts > each role sees only its views and actions",
           "console/e2e/webkit.console.spec.ts > an approver sees only the Approvals view and can deny a call",
@@ -2837,6 +2846,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
+          "console/e2e/chromium.views.spec.ts > G-09 research campaigns: create, submit, approve, monitor, stop, export with dictionary and expire",
           "console/e2e/firefox.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
           "console/e2e/firefox.views.spec.ts > G-09 research campaigns: create, submit, approve, monitor, stop, export with dictionary and expire",
           "console/e2e/webkit.views.spec.ts > G-04 observation workbench: grouped catalog search, presets, cost and preview",
@@ -2911,6 +2921,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-02 filter workbench, G-03 and G-06 with the keyboard: run filters and publish both profiles",
+          "console/e2e/chromium.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
           "console/e2e/firefox.keyboard.spec.ts > G-02 filter workbench, G-03 and G-06 with the keyboard: run filters and publish both profiles",
           "console/e2e/firefox.views.spec.ts > G-06 anomaly response: only restrict-only actions per band",
           "console/e2e/webkit.keyboard.spec.ts > G-02 filter workbench, G-03 and G-06 with the keyboard: run filters and publish both profiles",
@@ -2929,6 +2940,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
+          "console/e2e/chromium.views.spec.ts > G-07 performance: compare two policy revisions' overhead, stage, rule and filter time",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/firefox.views.spec.ts > G-07 performance: compare two policy revisions' overhead, stage, rule and filter time",
           "console/e2e/webkit.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
@@ -2942,6 +2954,7 @@
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/chromium.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
+          "console/e2e/chromium.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/firefox.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/firefox.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
@@ -2959,6 +2972,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
+          "console/e2e/chromium.views.spec.ts > G-09 research campaigns: create, submit, approve, monitor, stop, export with dictionary and expire",
           "console/e2e/firefox.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
           "console/e2e/firefox.views.spec.ts > G-09 research campaigns: create, submit, approve, monitor, stop, export with dictionary and expire",
           "console/e2e/webkit.keyboard.spec.ts > G-09 research campaigns with the keyboard: create, submit, approve and export",
@@ -2973,6 +2987,8 @@
           "console/e2e/chromium.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
           "console/e2e/chromium.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/chromium.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
+          "console/e2e/chromium.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
           "console/e2e/firefox.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
           "console/e2e/firefox.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/firefox.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
@@ -2994,6 +3010,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
+          "console/e2e/chromium.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/firefox.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/firefox.views.spec.ts > G-11 sessions and principals: create a principal, issue a credential, suspend, resume and terminate its session",
           "console/e2e/webkit.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
@@ -3013,6 +3030,7 @@
         "status": "verified",
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
+          "console/e2e/chromium.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "console/e2e/firefox.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
           "console/e2e/firefox.views.spec.ts > G-12 secrets: write-only create, rotate, impact and revoke",
           "console/e2e/webkit.keyboard.spec.ts > G-12 secrets with the keyboard: create, rotate and revoke",
@@ -3027,6 +3045,7 @@
           "console/e2e/chromium.console.spec.ts > an administrator approves a held call in the Approvals view",
           "console/e2e/chromium.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/chromium.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
+          "console/e2e/chromium.views.spec.ts > G-13 approvals: a deep link to one approval opens after sign-in",
           "console/e2e/firefox.console.spec.ts > an administrator approves a held call in the Approvals view",
           "console/e2e/firefox.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/firefox.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
@@ -3044,6 +3063,7 @@
         "tests": [
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/chromium.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
+          "console/e2e/chromium.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/firefox.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/firefox.views.spec.ts > G-14 audit investigation: event, call phases and the investigation graph",
@@ -3123,6 +3143,8 @@
           "console/e2e/chromium.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/chromium.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/chromium.console.spec.ts > deep links open after sign-in; missing routes say not available",
+          "console/e2e/chromium.views.spec.ts > G-13 approvals: a deep link to one approval opens after sign-in",
+          "console/e2e/chromium.views.spec.ts > each role sees only its views and actions",
           "console/e2e/firefox.console.spec.ts > administrator signs in, sees enforcement state and signs out",
           "console/e2e/firefox.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/firefox.console.spec.ts > deep links open after sign-in; missing routes say not available",
@@ -3143,6 +3165,7 @@
         "tests": [
           "console/e2e/chromium.console.spec.ts > deep links open after sign-in; missing routes say not available",
           "console/e2e/chromium.session.spec.ts > the console reports a stale revision and the retry succeeds",
+          "console/e2e/chromium.views.spec.ts > views show loading, empty and error states with the reason code and retry",
           "console/e2e/firefox.console.spec.ts > deep links open after sign-in; missing routes say not available",
           "console/e2e/firefox.session.spec.ts > the console reports a stale revision and the retry succeeds",
           "console/e2e/firefox.views.spec.ts > views show loading, empty and error states with the reason code and retry",
@@ -4457,6 +4480,7 @@
         "tests": [
           "cmd/smcpctl.TestClientsApproveCLI",
           "console/e2e/chromium.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
+          "console/e2e/chromium.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/firefox.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
           "console/e2e/firefox.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/webkit.keyboard.spec.ts > G-11 with the keyboard: credential, session suspend, resume and terminate, revoke, remote access and a registration",
@@ -4520,6 +4544,7 @@
         "tests": [
           "cmd/smcpctl.TestRemoteAccessDisabledByDefault",
           "cmd/smcpctl.TestRemoteEnableDisableTailscaleFake",
+          "console/e2e/chromium.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/firefox.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "console/e2e/webkit.views.spec.ts > G-11 remote access: enable, disable and decide a client registration",
           "internal/remote.TestDisabledByDefaultAndAdministratorEnable"
@@ -4600,6 +4625,7 @@
         "status": "verified",
         "tests": [
           "cmd/smcpctl.TestOfflineOpsCommands",
+          "console/e2e/chromium.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/firefox.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "console/e2e/webkit.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
           "internal/backup.TestEncryptedArchives",
@@ -6464,7 +6490,7 @@
         "internal/authguard",
         "internal/remote"
       ],
-      "note": "TLS 1.3 loopback harness listener and the UDS Harness Profile socket (CP-02, mode 0660, newline-delimited JSON-RPC, peer UID plus a bearer key hashed with Argon2id, smcpctl uds key), POST-only MCP endpoint, header and body bounds, Host and Origin checks, CP-09 connection and unauthenticated-work limits (QUEUE_FULL before the body is read), per-source rate limits and lockout with bounded source tables (IPv6 counted per /64). The Remote Access listener (internal/remote) adds CP-49 bounds, the public-name Host check and per-client limits, and follows listener certificate rotation; in the Enforced profile smcpctl remote enable first installs the nftables table inet smcp_remote, which drops non-loopback connections to the CP-02, CP-03, CP-48 and CP-51 ports, and remote disable removes it (SR-4.14-1, internal/tunnel; a pf anchor is documented for macOS). Requirement report (main 788c8b4): 20 of 31 verified; partial FR-9.17, FR-11.5 (18.9 ms p95 against the 50 ms budget in the perf job, CI runners are not reference hardware), FR-12.2, FR-16.1, FR-16.2, FR-16.6. External: FR-12.1 and FR-12.8 need an inspection of the release SBOM licenses and the provenance bundle; FR-11, FR-12 and FR-16 are parents waiting on their children. Deferred from 1.0 (SRS Appendix N): the mTLS Harness Profile."
+      "note": "TLS 1.3 loopback harness listener and the UDS Harness Profile socket (CP-02, mode 0660, newline-delimited JSON-RPC, peer UID plus a bearer key hashed with Argon2id, smcpctl uds key), POST-only MCP endpoint, header and body bounds, Host and Origin checks, CP-09 connection and unauthenticated-work limits (QUEUE_FULL before the body is read), per-source rate limits and lockout with bounded source tables (IPv6 counted per /64). When the Evidence Journal cannot be opened for writing at start, smcpd answers every harness request with HTTP 503 and -31004 JOURNAL_UNAVAILABLE and starts normally once the journal directory is writable (FR-9.17, AT-03). The Remote Access listener (internal/remote) adds CP-49 bounds, the public-name Host check, OAuth rates per forwarded source address, call rates per client ID and lockout of both (FR-16.6), and follows listener certificate rotation; in the Enforced profile smcpctl remote enable first installs the nftables table inet smcp_remote, which drops non-loopback connections to the CP-02, CP-03, CP-48 and CP-51 ports, and remote disable removes it (SR-4.14-1, internal/tunnel; a pf anchor is documented for macOS). Requirement report (main 1a96b1c): 22 of 31 verified; partly verified: FR-11.5 (11.7 ms p95 against the 50 ms budget on a CI runner, not reference hardware), FR-12 (parent, 7 of 12 child requirements verified), FR-12.1 (the v1.0.0 SBOMs fail the license inspection; the release workflow now checks them, and the next release needs the Inspection record), FR-12.2, FR-12.8 (the v1.0.0 bundle lacks the build recipe, lockfiles and notices; archives built from main carry them, and the next release needs the Inspection record), FR-16 (parent, 9 of 12 child requirements verified), FR-16.1 (the Remote Access listener is tested behind a local tunnel stand-in), FR-16.2 (the tunnel drivers are tested against fake tailscale and cloudflared binaries); unverified: FR-11 (no performance report on recorded reference hardware). Deferred from 1.0 (SRS Appendix N): the mTLS Harness Profile."
     },
     {
       "id": "E-02",
@@ -6475,7 +6501,7 @@
         "internal/edge",
         "internal/conformance"
       ],
-      "note": "Both protocol eras through the MCP Go SDK in stateless mode, method allowlist, -32600 for batches and 202 for unknown notifications, cache hints, HMAC-protected pagination cursors, trace context and clientInfo capture, hold-mode keep-alives, listen streams bounded per session (CP-20) and in total with write deadlines, list_changed after policy activation and server suspension. Errors carry the Appendix B code with reasonCode, correlationId, decisionId and the Table B.2 data.message; internal/e2e.TestEveryReasonCodeEndToEnd drives running Gateways into every code and every reason a request can produce (FR-1.51), and Table B.3 names the codes no request reaches. Backend progress is relayed with the northbound token at most 10 per second per request (CP-21), each message through the response filters. Server-initiated requests other than ping get -32601 and an InputRequiredResult maps to -31010. The FR-12.9 conformance suite (internal/conformance) drives a complete Gateway with the mcp-spec examples and validates every message against schema.json. Requirement report (main 788c8b4): 42 of 43 verified; partial SR-2-1. Deferred from 1.0 (Appendix N): the MRTR Relay Profile."
+      "note": "Both protocol eras through the MCP Go SDK in stateless mode, method allowlist, -32600 for batches and 202 for unknown notifications, cache hints, HMAC-protected pagination cursors, trace context and clientInfo capture, hold-mode keep-alives, listen streams bounded per session (CP-20) and in total with write deadlines, list_changed after policy activation and server suspension. Errors carry the Appendix B code with reasonCode, correlationId, decisionId and the Table B.2 data.message; internal/e2e.TestEveryReasonCodeEndToEnd drives running Gateways into every code and every reason a request can produce (FR-1.51), and Table B.3 names the codes no request reaches. Backend progress is relayed with the northbound token at most 10 per second per request (CP-21), each message through the response filters. Server-initiated requests other than ping get -32601 and an InputRequiredResult maps to -31010. The FR-12.9 conformance suite (internal/conformance) drives a complete Gateway with the mcp-spec examples and validates every message against schema.json. Requirement report (main 1a96b1c): 42 of 43 verified; partly verified: SR-2-1. Deferred from 1.0 (Appendix N): the MRTR Relay Profile."
     },
     {
       "id": "E-03",
@@ -6488,7 +6514,7 @@
         "internal/remote",
         "internal/principals"
       ],
-      "note": "OAuth 2.1 authorization server (metadata, PKCE S256, resource, iss), pre-registered clients, Client ID Metadata Documents fetched only for CP-52 allowlisted URLs, sign-in by Session Approver accounts only (the Administrator is refused), Argon2id, rate limits, lockout with backoff and dummy verification; a second redemption of an authorization code ends the session the first created. Principals, OAuth client credentials and Session Approver accounts created from the control API (internal/principals, G-11) are found next to those of smcp.toml; revocations and suspensions run under the Enforcement Coordinator's gate. UDS clients authenticate by kernel peer UID plus a bearer key (FR-2.15). Remote Access adds RFC 7591 registration with operator approval and per-source quotas, the RFC 8628 device grant and a cross-client Session Approver lockout. Requirement report (main 788c8b4): all 13 verified. Deferred from 1.0 (Appendix N): mTLS client authentication and the open metadata fetch rule SR-2.11-3."
+      "note": "OAuth 2.1 authorization server (metadata, PKCE S256, resource, iss), pre-registered clients, Client ID Metadata Documents fetched only for CP-52 allowlisted URLs, sign-in by Session Approver accounts only (the Administrator is refused), Argon2id, rate limits, lockout with backoff and dummy verification; a second redemption of an authorization code ends the session the first created. Principals, OAuth client credentials and Session Approver accounts created from the control API (internal/principals, G-11) are found next to those of smcp.toml; revocations and suspensions run under the Enforcement Coordinator's gate. UDS clients authenticate by kernel peer UID plus a bearer key (FR-2.15). Remote Access adds RFC 7591 registration with operator approval and per-source quotas, the RFC 8628 device grant and a cross-client Session Approver lockout. Requirement report (main 1a96b1c): all 13 verified. Deferred from 1.0 (Appendix N): mTLS client authentication and the open metadata fetch rule SR-2.11-3."
     },
     {
       "id": "E-04",
@@ -6498,7 +6524,7 @@
       "packages": [
         "internal/session"
       ],
-      "note": "Session store with CP-18 lifetimes, per-principal limits, scope-to-template mapping, harness type and version recorded at creation, baseline context key per session (FR-2.13), project-root claims narrowing path roots, session API, refresh-token rotation with reuse detection, janitors that keep suspended sessions, per-session lifetime and allowed templates for remote sessions; operators suspend and resume sessions (FR-2.8). Session taint is tracked by the policy layer. Requirement report (main 788c8b4): 17 of 18 verified; partial FR-16.12. Sessions, taint, rate windows and quotas are in memory and end at a restart; survival across restarts (FR-2.16) is deferred from 1.0 (Appendix N)."
+      "note": "Session store with CP-18 lifetimes, per-principal limits, scope-to-template mapping, harness type and version recorded at creation, baseline context key per session (FR-2.13), project-root claims narrowing path roots, session API, refresh-token rotation with reuse detection, janitors that keep suspended sessions, per-session lifetime for remote sessions, which are created only for templates the active Framework Profile marks remote_allowed and remote.templates lists (FR-16.12, REMOTE_TEMPLATE_REFUSED otherwise); operators suspend and resume sessions (FR-2.8). Session taint is tracked by the policy layer. Requirement report (main 1a96b1c): all 18 verified. Sessions, taint, rate windows and quotas are in memory and end at a restart; survival across restarts (FR-2.16) is deferred from 1.0 (Appendix N)."
     },
     {
       "id": "E-05",
@@ -6510,7 +6536,7 @@
         "internal/policyadmin",
         "internal/policy"
       ],
-      "note": "Signed Policy Store (Ed25519, immutable revision files named by digest, signed active record with atomic activation), start-up import and fail-closed verification, publish with optional parent check, rollback as a new revision, diff, overlap analysis (SR-1.9-1), simulation from the journal or fixtures, /api/v1/policy* and smcpctl policy. Audit Profiles, Observation Policies and Anomaly Response Policies are published as numbered revisions by internal/obspolicy and Secret Use Policies by the Secret Broker; FR-3.1 names where each policy object type lives. Revocations, principal and server suspensions live outside the policy document and survive a policy rollback and an application rollback (AT-19 suspends a server revision before both, SR-7.9-1). Requirement report (main 788c8b4): 17 of 18 verified; FR-3, the parent, waits on children allocated to other elements. Deferred from 1.0 (Appendix N): draft workspaces (FR-3.3), observation cost estimates (FR-3.7), Response Policy and Runtime Profile objects (FR-3.26), manifest ceiling checks at publication (SR-1-1), retention validation (SR-6.9-1)."
+      "note": "Signed Policy Store (Ed25519, immutable revision files named by digest, signed active record with atomic activation), start-up import and fail-closed verification, publish with optional parent check, rollback as a new revision, diff, overlap analysis (SR-1.9-1), simulation from the journal or fixtures, /api/v1/policy* and smcpctl policy. Audit Profiles, Observation Policies and Anomaly Response Policies are published as numbered revisions by internal/obspolicy and Secret Use Policies by the Secret Broker; FR-3.1 names where each policy object type lives. Revocations, principal and server suspensions live outside the policy document and survive a policy rollback and an application rollback (AT-19 suspends a server revision before both, SR-7.9-1). Requirement report (main 1a96b1c): all 18 verified. Deferred from 1.0 (Appendix N): draft workspaces (FR-3.3), observation cost estimates (FR-3.7), Response Policy and Runtime Profile objects (FR-3.26), manifest ceiling checks at publication (SR-1-1), retention validation (SR-6.9-1)."
     },
     {
       "id": "E-06",
@@ -6520,7 +6546,7 @@
       "packages": [
         "internal/policy"
       ],
-      "note": "Default-deny decisions with deny-rule precedence, argument predicates (FR-3.6), prerequisites, routes, approval floor by side-effect class (SR-1.18-1), restrict-only session taint, sliding-window rates with CP-11 burst, per-session quotas, CP-12 evaluation bounds, filter, secret-use, egress and runtime obligations (FR-3.12), profile and template intersection, the decision explanation route (SR-1.19-1), Diff and Simulate. A build tag smcp_broken produces a deliberately defective decider for the FR-15.8 broken-build check; release builds never set it. Requirement report (main 788c8b4): 21 of 22 verified; partial FR-11.2 (0.03 ms p95 against the 10 ms budget in the perf job with 9,995 rules and 256 candidate rules, CI runners are not reference hardware). Deferred from 1.0 (Appendix N): permits bound to revision IDs (SR-1.6-1)."
+      "note": "Default-deny decisions with deny-rule precedence, argument predicates (FR-3.6), prerequisites, routes, approval floor by side-effect class (SR-1.18-1), restrict-only session taint, sliding-window rates with CP-11 burst, per-session quotas, CP-12 evaluation bounds, filter, secret-use, egress and runtime obligations (FR-3.12), profile and template intersection, the decision explanation route (SR-1.19-1), Diff and Simulate. A build tag smcp_broken produces a deliberately defective decider for the FR-15.8 broken-build check; release builds never set it. Requirement report (main 1a96b1c): 21 of 22 verified; partly verified: FR-11.2 (0.01 ms p95 against the 10 ms budget with 9,995 rules and 256 candidate rules on a CI runner, not reference hardware). Deferred from 1.0 (Appendix N): permits bound to revision IDs (SR-1.6-1)."
     },
     {
       "id": "E-07",
@@ -6530,7 +6556,7 @@
       "packages": [
         "internal/approval"
       ],
-      "note": "Persisted one-use approvals bound per SR-1.18-2, re-approval after a transforming filter (SR-1.18-3), CP-17 expiry, hold mode with keep-alives and the -31002 fallback carrying approvalId, expiresAt and approvalUrl, Approver accounts, /api/v1/approvals* with a watch stream that ends when its token ends, the harness status route, smcpctl approvals (show prints the anomaly evidence), desktop notification, the G-13 view. Anomaly-band approvals carry the band, contributing feature, z-score, baseline snapshot and context, shown in G-13 (FR-3.18, inspection record on a live approval). Approval events of remote calls carry the remote origin fields. The real-agent suite holds and approves a call from each passing client, and a recorded Claude Code run covers the four FR-3.25 cases. Requirement report (main 788c8b4): all 13 verified; nothing allocated to E-07 is deferred."
+      "note": "Persisted one-use approvals bound per SR-1.18-2, re-approval after a transforming filter (SR-1.18-3), CP-17 expiry, hold mode with keep-alives and the -31002 fallback carrying approvalId, expiresAt and approvalUrl, Approver accounts, /api/v1/approvals* with a watch stream that ends when its token ends, the harness status route, smcpctl approvals (show prints the anomaly evidence), desktop notification, the G-13 view. Anomaly-band approvals carry the band, contributing feature, z-score, baseline snapshot and context, shown in G-13 (FR-3.18, inspection record on a live approval). Approval events of remote calls carry the remote origin fields. The real-agent suite holds and approves a call from each passing client, and a recorded Claude Code run covers the four FR-3.25 cases. Requirement report (main 1a96b1c): all 13 verified. Nothing allocated to E-07 is deferred."
     },
     {
       "id": "E-08",
@@ -6541,7 +6567,7 @@
         "internal/edge",
         "internal/filters"
       ],
-      "note": "Session-scoped catalog per policy revision, updated in place on policy activation and server suspension with list_changed, unknown-tool rejection, approval hint (FR-1.50), metadata rule-set screen at presentation (FR-1.52), the gateway-admin class (SR-3.12-1), valid data: icons kept (SR-5.18-2), HMAC-protected pagination cursors. Requirement report (main 788c8b4): all 18 verified. Deferred from 1.0 (Appendix N): manifest handle contracts (SR-2.12-1)."
+      "note": "Session-scoped catalog per policy revision, updated in place on policy activation and server suspension with list_changed, unknown-tool rejection, approval hint (FR-1.50), metadata rule-set screen at presentation (FR-1.52), the gateway-admin class (SR-3.12-1), valid data: icons kept (SR-5.18-2), HMAC-protected pagination cursors. Requirement report (main 1a96b1c): all 18 verified. Deferred from 1.0 (Appendix N): manifest handle contracts (SR-2.12-1)."
     },
     {
       "id": "E-09",
@@ -6553,7 +6579,7 @@
         "internal/filters",
         "internal/secrets"
       ],
-      "note": "Ordered request chain with mandatory and policy-obliged filters, CP-14 deadline, panic as block: schema-validate (no external $ref; the CP-36 bound runs from the validator's start), size-limit, unicode-control, secret-fingerprint, path-canonicalize, url-canonicalize, injection-detect (tag only), pii-detect on arguments when the decision names it (a blocking data-class rule refuses with DATA_CLASS_IN_ARGUMENTS, SR-5.8-1), the vault's secret-in-arguments filter, request scoring as the last filter; a transforming filter causes a second decision before launch (SR-5.12-1). Versioned rule sets with digests, a required-literal prefilter, and measured corpus rates published in the status data (FR-19.5). Requirement report (main 788c8b4): all 16 verified; nothing allocated to E-09 is deferred."
+      "note": "Ordered request chain with mandatory and policy-obliged filters, CP-14 deadline, panic as block: schema-validate (no external $ref; the CP-36 bound runs from the validator's start), size-limit, unicode-control, secret-fingerprint, path-canonicalize, url-canonicalize, injection-detect (tag only), pii-detect on arguments when the decision names it (a blocking data-class rule refuses with DATA_CLASS_IN_ARGUMENTS, SR-5.8-1), the vault's secret-in-arguments filter, request scoring as the last filter; a transforming filter causes a second decision before launch (SR-5.12-1). Versioned rule sets with digests, a required-literal prefilter, and measured corpus rates published in the status data (FR-19.5). Requirement report (main 1a96b1c): all 16 verified. Nothing allocated to E-09 is deferred."
     },
     {
       "id": "E-10",
@@ -6563,7 +6589,7 @@
       "packages": [
         "internal/backend"
       ],
-      "note": "stdio dispatch with CP-10 concurrency and queue bounds, CP-13 upstream timeout, bounded result reading, backend error mapping, cancellation propagated to the backend with notifications/cancelled (FR-5.26), suspension of a server on drift or on a changed command file (SR-3.6-1). No client capability is declared southbound; server-initiated requests other than ping are refused with -32601 and an InputRequiredResult with -31010. Backend progress travels on a Gateway-issued token. An instance that times out or fails is replaced; the third unexpected exit within five minutes suspends the revision (FR-5.12). When dispatching to an instance attached to the Egress Broker it delivers the call's one-use egress capabilities in _meta. Requirement report (main 788c8b4): 21 of 22 verified (FR-5, the parent, waits on its children). Deferred from 1.0 (Appendix N): per-session and per-call instances, the modern-era southbound probe and requests (FR-5.16 to FR-5.18, SR-5.1-2, SR-5.3-2) and southbound Streamable HTTP (FR-5.28 to FR-5.31)."
+      "note": "stdio dispatch with CP-10 concurrency and queue bounds, CP-13 upstream timeout, bounded result reading, backend error mapping, cancellation propagated to the backend with notifications/cancelled (FR-5.26), suspension of a server on drift or on a changed command file (SR-3.6-1). No client capability is declared southbound; server-initiated requests other than ping are refused with -32601 and an InputRequiredResult with -31010. Backend progress travels on a Gateway-issued token. An instance that times out or fails is replaced; the third unexpected exit within five minutes suspends the revision (FR-5.12). When dispatching to an instance attached to the Egress Broker it delivers the call's one-use egress capabilities in _meta. Requirement report (main 1a96b1c): all 22 verified. Deferred from 1.0 (Appendix N): per-session and per-call instances, the modern-era southbound probe and requests (FR-5.16 to FR-5.18, SR-5.1-2, SR-5.3-2) and southbound Streamable HTTP (FR-5.28 to FR-5.31)."
     },
     {
       "id": "E-11",
@@ -6574,18 +6600,18 @@
         "internal/filters",
         "internal/edge"
       ],
-      "note": "Response chain: size-limit (size and depth), output-schema, content-type-gate, secret-fingerprint (redact or withhold with SECRET_LEAK), unicode-control, pii-detect, injection-marker, delimit-untrusted (FR-4.18), the vault's leak filter, response scoring as the last filter; provenance with disposition and tags; every malformed result envelope is refused (SR-5.20-1). Relayed progress messages pass the same chain. Requirement report (main 788c8b4): all 10 verified. Deferred from 1.0 (Appendix N): Response Policy objects (FR-3.26) and handle ownership (SR-2.12-1); response handling is set by permit-rule obligations and [filters]."
+      "note": "Response chain: size-limit (size and depth), output-schema, content-type-gate, secret-fingerprint (redact or withhold with SECRET_LEAK), unicode-control, pii-detect, injection-marker, delimit-untrusted (FR-4.18), the vault's leak filter, response scoring as the last filter; provenance with disposition and tags; every malformed result envelope is refused (SR-5.20-1). Relayed progress messages pass the same chain. Requirement report (main 1a96b1c): all 10 verified. Deferred from 1.0 (Appendix N): Response Policy objects (FR-3.26) and handle ownership (SR-2.12-1); response handling is set by permit-rule obligations and [filters]."
     },
     {
       "id": "E-12",
       "name": "Enforcement Coordinator",
       "subsystem": "SS-4",
-      "implementation": "partial",
+      "implementation": "implemented",
       "packages": [
         "internal/edge",
         "internal/pipeline"
       ],
-      "note": "One-use launch capability bound to correlation, decision, policy revision and tool; pre-launch and pre-release rechecks under the coordinator's gate, which also serializes credential revocation, principal suspension and server revision suspension (SR-1.16-1) and rechecks principal, credential and revision state at launch (SR-1.17-1); authorized committed with fsync before the capability and delivered before release; a failed release recheck returns RELEASE_REFUSED; emergency stop cancels calls in flight and a drain stop lets them finish for backups (SR-7.7-1); the health gate refuses calls. A failed journal write refuses the call with JOURNAL_UNAVAILABLE. TestIntentCrashConsistency kills a child Gateway at every journal write and flush through a fault-injecting segment layer and checks that no dispatch lacks its intent record (SR-6.2-1). Requirement report (main 788c8b4): 14 of 15 verified. External: SR-4.1-1 (CP-46 service identities of running processes on an Enforced host not inspected)."
+      "note": "One-use launch capability bound to correlation, decision, policy revision and tool; pre-launch and pre-release rechecks under the coordinator's gate, which also serializes credential revocation, principal suspension and server revision suspension (SR-1.16-1) and rechecks principal, credential and revision state at launch (SR-1.17-1); authorized committed with fsync before the capability and delivered before release; a failed release recheck returns RELEASE_REFUSED; emergency stop cancels calls in flight and a drain stop lets them finish for backups (SR-7.7-1); the health gate refuses calls. A failed journal write refuses the call with JOURNAL_UNAVAILABLE. TestIntentCrashConsistency kills a child Gateway at every journal write and flush through a fault-injecting segment layer and checks that no dispatch lacks its intent record (SR-6.2-1). Requirement report (main 1a96b1c): all 15 verified. Nothing allocated to E-12 is deferred. In release 1.x the Gateway's components run inside smcpd as smcp-core; the separation enforced is between smcpd and the servers (smcp-srv), as the narrowed SR-4.1-1 states."
     },
     {
       "id": "E-13",
@@ -6597,7 +6623,7 @@
         "internal/library",
         "cmd/smcpctl"
       ],
-      "note": "Recipes, package build (npm, PyPI, OCI or binary by digest, locked dependency closure, live probe, Appendix J manifest), smcpctl package build --sandbox podman probing the candidate with no network and only its own files mounted (SR-3.5-1, PACKAGING hostile fixture), minisign signing and offline verification, trust anchors scoped to risk classes with fingerprint confirmation, revocation entries and the revocation feed with a staleness block (SR-3-4), library scan and import with receipts, tools withheld by the import-time metadata scan kept in the registry and listed (SR-5.9-2), artifact re-verification before every launch, egress grants checked against the manifest's declared capabilities (EGRESS_EXCEEDS_MANIFEST); bootstrap packages the reference server; reference packages for filesystem, git, fetch and memory are built, signed, imported and called by the reference-packages workflow, and an inspection record checks their provenance (FR-14.5). Requirement report (main 788c8b4): 20 of 25 verified; partial FR-14.1, FR-14.3 and FR-14.9 (the reference-packages result is from main; it becomes a full claim when the workflow runs on a release tag). External: FR-18.6 (nobody has followed the packaging guide for a non-reference server); FR-14 is a parent."
+      "note": "Recipes, package build (npm, PyPI, OCI or binary by digest, locked dependency closure, live probe, Appendix J manifest), smcpctl package build --sandbox podman probing the candidate with no network and only its own files mounted (SR-3.5-1, PACKAGING hostile fixture), minisign signing and offline verification, trust anchors scoped to risk classes with fingerprint confirmation, revocation entries and the revocation feed with a staleness block (SR-3-4), library scan and import with receipts, tools withheld by the import-time metadata scan kept in the registry and listed (SR-5.9-2), artifact re-verification before every launch, egress grants checked against the manifest's declared capabilities (EGRESS_EXCEEDS_MANIFEST); TestIntegrationPackageBuildEachType builds a package of each artifact type in the linux-integration job, with the OCI image probed by rootless Podman (FR-14.1); bootstrap packages the reference server; reference packages for filesystem, git, fetch and memory are built, signed, imported and called by the reference-packages workflow (passed on tag v1.0.0, FR-14.9), and an inspection record checks their provenance (FR-14.5). The packaging guide was followed for a non-reference server (FR-18.6 Inspection record). Requirement report (main 1a96b1c): 23 of 25 verified; partly verified: FR-14 (parent, 11 of 12 child requirements verified), FR-14.3."
     },
     {
       "id": "E-14",
@@ -6608,7 +6634,7 @@
         "internal/library",
         "internal/backend"
       ],
-      "note": "Content-addressed artifact store, directory library (FR-5.1), immutable revisions and registry states, enablement checks (Standalone refuses high risk, alias uniqueness, expiry), operator classification overrides (SR-3.11-1), drift detection at start and on list_changed that suspends the revision, suspended tools recorded on the revision, /api/v1/packages, smcpctl package and the G-10 view (enable, suspend, retire). A tool-name collision disables only the colliding revision. A revision enabled while smcpd runs is launched at the next start. Requirement report (main 788c8b4): all 13 verified. Deferred from 1.0 (Appendix N): era consistency at start (FR-5.17), the southbound list-change watch (FR-5.31) and manifest ceiling checks (SR-1-1)."
+      "note": "Content-addressed artifact store, directory library (FR-5.1), immutable revisions and registry states, enablement checks (Standalone refuses high risk, alias uniqueness, expiry), operator classification overrides (SR-3.11-1), drift detection at start and on list_changed that suspends the revision, suspended tools recorded on the revision, /api/v1/packages, smcpctl package and the G-10 view (enable, suspend, retire). A tool-name collision disables only the colliding revision. A revision enabled while smcpd runs is launched at the next start. Requirement report (main 1a96b1c): all 13 verified. Deferred from 1.0 (Appendix N): era consistency at start (FR-5.17), the southbound list-change watch (FR-5.31) and manifest ceiling checks (SR-1-1)."
     },
     {
       "id": "E-15",
@@ -6620,7 +6646,7 @@
         "internal/backend",
         "internal/pipeline"
       ],
-      "note": "Launch specification from configuration and enabled package revisions, rootless Podman launcher (Enforced, optionally as the CP-46 identity smcp-srv) and subprocess launcher (Standalone), environment allowlist checked on a real instance against its manifest (FR-5.37, SR-2.14-1), mount grants cut to the manifest's declared filesystem slots, packaged node and python servers run on their image's interpreter, bounded stderr with delivered secret values redacted, FR-5.27 shutdown sequence, reaping of leftover containers, relaunch of failed instances with a crash-loop threshold. Command-configured servers are content-addressed at first launch (artifact_recorded, optional command_sha256) and a changed file is refused at relaunch (SR-3.6-1). Requirement report (main 788c8b4): all 9 verified, with the FR-12.3 Demonstration record. Deferred from 1.0 (Appendix N): per-session and per-call instance scopes and idle teardown (FR-5.10, FR-5.11) and Runtime Profile objects (FR-3.26)."
+      "note": "Launch specification from configuration and enabled package revisions, rootless Podman launcher (Enforced, optionally as the CP-46 identity smcp-srv) and subprocess launcher (Standalone), environment allowlist checked on a real instance against its manifest (FR-5.37, SR-2.14-1), mount grants cut to the manifest's declared filesystem slots, packaged node and python servers run on their image's interpreter, bounded stderr with delivered secret values redacted, FR-5.27 shutdown sequence, reaping of leftover containers, relaunch of failed instances with a crash-loop threshold. Command-configured servers are content-addressed at first launch (artifact_recorded, optional command_sha256) and a changed file is refused at relaunch (SR-3.6-1). Requirement report (main 1a96b1c): all 9 verified. Deferred from 1.0 (Appendix N): per-session and per-call instance scopes and idle teardown (FR-5.10, FR-5.11) and Runtime Profile objects (FR-3.26)."
     },
     {
       "id": "E-16",
@@ -6633,7 +6659,7 @@
         "packaging/linux",
         "internal/posixacl"
       ],
-      "note": "Rootless Podman with read-only root, no capabilities, no-new-privileges, default seccomp, a distinct user namespace per instance, private namespaces, CP-24 cgroup limits with delegated controllers (CPU limit exceeded on a real container), size-bounded tmpfs, mounts limited to the intersection of the Runtime Profile grant and the manifest's declared slots (SR-4.6-1). network = egress attaches the instance to the Egress Broker on slirp4netns with nftables in its namespace allowing only TCP to its broker listeners. S2 and S3 secret files are mounted read-only at /smcp/secrets with POSIX ACL entries for the instance UID. packaging/linux installs the CP-46 identities including smcp-srv, nftables, systemd units and the AppArmor profiles smcpd and smcp-server (enforce mode); CI runs smcpd.service under real systemd with sandboxed tool calls, and AT-08 passes in the Enforced profile. Requirement report (main 788c8b4): all 5 verified. The smcp-server AppArmor profile covers image-less servers only and no SELinux module ships, so hosts with SELinux instead of AppArmor have no host MAC profile for smcpd."
+      "note": "Rootless Podman with read-only root, no capabilities, no-new-privileges, default seccomp, a distinct user namespace per instance, private namespaces, CP-24 cgroup limits with delegated controllers (CPU limit exceeded on a real container), size-bounded tmpfs, mounts limited to the intersection of the Runtime Profile grant and the manifest's declared slots (SR-4.6-1). network = egress attaches the instance to the Egress Broker on slirp4netns with nftables in its namespace allowing only TCP to its broker listeners. S2 and S3 secret files are mounted read-only at /smcp/secrets with POSIX ACL entries for the instance UID. packaging/linux installs the CP-46 identities including smcp-srv, nftables, systemd units and the AppArmor profiles smcpd and smcp-server (enforce mode); CI runs smcpd.service under real systemd with sandboxed tool calls, and AT-08 passes in the Enforced profile. Requirement report (main 1a96b1c): all 5 verified. The smcp-server AppArmor profile covers image-less servers only and no SELinux module ships, so hosts with SELinux instead of AppArmor have no host MAC profile for smcpd."
     },
     {
       "id": "E-17",
@@ -6643,17 +6669,17 @@
       "packages": [
         "internal/sandbox"
       ],
-      "note": "Runtime Monitor: cgroup sampling and inotify on memory and PID events, podman events, process creation evaluated against the manifest's declared behavior (FR-5.34), deviation (UNDECLARED_PROCESS, EXEC_INTO_INSTANCE), limit_breach (memory, PIDs and CPU), instance_killed and instance_exited evidence, alert and kill-instance actions; revisions are suspended by the crash-loop threshold. Requirement report (main 788c8b4): all 3 verified; nothing allocated to E-17 is deferred. File opens outside mounts and network attempts are prevented by the sandbox, not observed (FR-5.33 leaves them out)."
+      "note": "Runtime Monitor: cgroup sampling and inotify on memory and PID events, podman events, process creation evaluated against the manifest's declared behavior (FR-5.34), deviation (UNDECLARED_PROCESS, EXEC_INTO_INSTANCE), limit_breach (memory, PIDs and CPU), instance_killed and instance_exited evidence, alert and kill-instance actions; revisions are suspended by the crash-loop threshold. Requirement report (main 1a96b1c): all 3 verified. Nothing allocated to E-17 is deferred. File opens outside mounts and network attempts are prevented by the sandbox, not observed (FR-5.33 leaves them out)."
     },
     {
       "id": "E-18",
       "name": "Egress Broker",
       "subsystem": "SS-5",
-      "implementation": "partial",
+      "implementation": "implemented",
       "packages": [
         "internal/egress"
       ],
-      "note": "Per-instance forward proxy (CONNECT with SNI check, plain HTTP), per-destination TLS-originating endpoints, grants by host, port, method and class, one-use capabilities per call (SR-5.16-1, Smcp-Egress-Auth), broker DNS with optional resolvers and rebinding defense, reserved-address refusal, redirect checks, outbound secret-fingerprint scan (SR-5.8-2, EGRESS_SECRET_DETECTED), size, duration and rate limits, public-fetch profile, egress evidence naming the call, /api/v1/egress and smcpctl egress. Enforced for sandboxed servers; advisory proxy variables in Standalone. AT-10 passes in both profiles (TestAT10WebBroker). Requirement report (main 788c8b4): 8 of 9 verified; partial FR-5.38 (grants and limits from configuration, not policy obligations or Runtime Profiles)."
+      "note": "Per-instance forward proxy (CONNECT with SNI check, plain HTTP), per-destination TLS-originating endpoints, grants by host, port, method and class, one-use capabilities per call (SR-5.16-1, Smcp-Egress-Auth), broker DNS with optional resolvers and rebinding defense, reserved-address refusal, redirect checks, outbound secret-fingerprint scan (SR-5.8-2, EGRESS_SECRET_DETECTED), request size, response size and duration bounded by the smallest of the Runtime Profile, the manifest's egress rule and the decision's egress_limits obligation (FR-5.38), rate limits, public-fetch profile, egress evidence naming the call, /api/v1/egress and smcpctl egress. Enforced for sandboxed servers; advisory proxy variables in Standalone. AT-10 passes in both profiles (TestAT10WebBroker). Requirement report (main 1a96b1c): all 9 verified. Nothing allocated to E-18 is deferred. In the Standalone profile the broker is advisory (proxy variables) and a one-use capability can be used by another process of the same user while the call runs (security review RR-09)."
     },
     {
       "id": "E-19",
@@ -6663,7 +6689,7 @@
       "packages": [
         "internal/secrets"
       ],
-      "note": "Age-encrypted versioned vault, master key in the macOS Keychain or passphrase-wrapped (SR-2.13-1), owner-only file modes, rotation with CP-15 overlap and retirement, smcpctl secrets and /api/v1/secrets (metadata only). Requirement report (main 788c8b4): 6 of 8 verified; partial FR-6 and SR-2.13-3 (separate service identities for vault and broker). No vault health check is registered (FR-7.11)."
+      "note": "Age-encrypted versioned vault, master key in the macOS Keychain or passphrase-wrapped (SR-2.13-1), owner-only file modes, rotation with CP-15 overlap and retirement, smcpctl secrets and /api/v1/secrets (metadata only), the vault_unavailable health check (FR-7.11). On the Enforced CI host every CP-46 identity other than smcp-core is denied reading the vault and its passphrase file (SR-2.13-3); the vault and the Secret Broker share smcpd's identity. Requirement report (main 1a96b1c): 7 of 8 verified; partly verified: FR-6 (FR-6.10 is partial)."
     },
     {
       "id": "E-20",
@@ -6673,7 +6699,7 @@
       "packages": [
         "internal/secrets"
       ],
-      "note": "Secret Use Policy file, S1 header injection through the Egress Broker (also for sandboxed servers with network = egress), S2 per-call files, S3 per-instance files (mounted read-only into the sandbox), S4 environment with waiver, secret_use evidence without values naming the secret on early denials, HMAC leak fingerprints for the filters and the Egress Broker registered from the broker's byte slices without string copies (SR-2.13-2, narrowed to what Go allows and verified by inspection), leak suspension and resume, withdrawal on emergency stop and when a launch is refused (LAUNCH_FAILED), secret bindings in the permission report. Requirement report (main 788c8b4): 3 of 7 verified; partial FR-6.6, FR-6.7 (no tmpfs on macOS), FR-6.8, FR-6.10. Launch-time deliveries are not withdrawn at session end because instances are not session-scoped."
+      "note": "Secret Use Policy file, edited, validated, published and rolled back from G-02 (FR-8.4), S1 header injection through the Egress Broker (also for sandboxed servers with network = egress), S2 per-call files, S3 per-instance files (mounted read-only into the sandbox), S4 environment with waiver, secret_use evidence without values naming the secret on early denials, HMAC leak fingerprints for the filters, the Egress Broker and the Observation Collector (P-142) registered from the broker's byte slices without string copies (SR-2.13-2, narrowed to what Go allows and verified by inspection), leak suspension and resume, withdrawal on emergency stop and when a launch is refused (LAUNCH_FAILED), secret bindings in the permission report. TestEnforcedSecretDelivery runs S1, S2 and S3 deliveries through real smcpd and rootless Podman in the acceptance-enforced job (FR-6.6 to FR-6.8). Requirement report (main 1a96b1c): 6 of 7 verified; partly verified: FR-6.10. Launch-time deliveries are not withdrawn at session end because instances are not session-scoped (FR-5.10 is deferred)."
     },
     {
       "id": "E-21",
@@ -6683,7 +6709,7 @@
       "packages": [
         "internal/audit"
       ],
-      "note": "Signed hash-chained JSON Lines journal with group-committed fsync, crash recovery, signed anchor, verifier that follows evidence-key transitions and counts unsigned open events, evidence export of closed segments whose anchor only moves forward, CP-27 unsigned-age rule, CP-26 storage quota, purge receipts, a segment-file seam for fault injection (audit.Options.OpenSegment), non-blocking observers feeding the graph mirror and observation. A failed write fails the endpoint closed; AT-11 to AT-14 pass in both profiles. Requirement report (main 788c8b4): 15 of 21 verified; partial FR-16.8, SR-6.1-1, SR-6.7-1, SR-6.10-1 (the evidence export half). External: SR-6.12-1 (key custody depends on the Enforced installation's identities); FR-7 is a parent. Anchor rollback with segment deletion is detectable only with an off-host export (RR-08); the journal has no index for queries (FR-11.8). Deferred from 1.0 (Appendix N): alerts (FR-7.6), payload capture and encryption (SR-6.6-1, SR-6.8-1)."
+      "note": "Signed hash-chained JSON Lines journal with group-committed fsync, crash recovery, signed anchor, verifier that follows evidence-key transitions and counts unsigned open events, evidence export of closed segments whose anchor only moves forward, CP-27 unsigned-age rule, CP-26 storage quota, purge receipts, a segment-file seam for fault injection (audit.Options.OpenSegment), non-blocking observers feeding the graph mirror and observation. A failed write fails the endpoint closed; AT-11 to AT-14 pass in both profiles. Requirement report (main 1a96b1c): 16 of 21 verified; partly verified: FR-16.8, SR-6.1-1, SR-6.7-1, SR-6.10-1 (the evidence export half is not tested); unverified: SR-6.12-1 (key custody depends on the Enforced installation's identities; not inspected). Anchor rollback with segment deletion is detectable only with an off-host export (RR-08); the journal has no index for queries (FR-11.8). Deferred from 1.0 (Appendix N): alerts (FR-7.6), payload capture and encryption (SR-6.6-1, SR-6.8-1)."
     },
     {
       "id": "E-22",
@@ -6694,13 +6720,13 @@
         "internal/keys",
         "internal/packaging"
       ],
-      "note": "CP-53 server CA (365 days, path length 0, dNSName constraints) and listener certificate (90 days, renewed at 30), hot reload on every listener including the remote one, CA rotation with overlap, evidence-key rotation with signed transition, policy-signing key, package trust anchors, operator token, installation ID, UDS bearer keys; smcpd refuses to start when the operator token or a private key file is readable by group or others, and warns when an older CA still has iPAddress constraints. FR-7.8 lists the key purposes release 1.0 has, verified by inspection. Requirement report (main 788c8b4): 7 of 8 verified; partial FR-17.7 (a client trusting only the incoming CA connects after the switch, not during the overlap). Deferred from 1.0 (Appendix N): the client CA and certificate issuance (FR-7.15, FR-2.14), TPM or Keychain sealing of private keys (FR-7.9) and payload encryption keys (SR-6.8-1)."
+      "note": "CP-53 server CA (365 days, path length 0, dNSName constraints) and listener certificate (90 days, renewed at 30), hot reload on every listener including the remote one, CA rotation with overlap, evidence-key rotation with signed transition, policy-signing key, package trust anchors, operator token, installation ID, UDS bearer keys; smcpd refuses to start when the operator token or a private key file is readable by group or others, and warns when an older CA still has iPAddress constraints. FR-7.8 lists the key purposes release 1.0 has, verified by inspection. TestOpsKeyRotationUnderTraffic keeps calls running through TLS, CA and evidence-key rotation (FR-17.7; during a CA overlap the listener presents the outgoing CA's certificate, as the narrowed statement says). Requirement report (main 1a96b1c): all 8 verified. Deferred from 1.0 (Appendix N): the client CA and certificate issuance (FR-7.15, FR-2.14), TPM or Keychain sealing of private keys (FR-7.9) and payload encryption keys (SR-6.8-1)."
     },
     {
       "id": "E-23",
       "name": "Health & Safety Monitor",
       "subsystem": "SS-7",
-      "implementation": "partial",
+      "implementation": "implemented",
       "packages": [
         "internal/health",
         "internal/metrics",
@@ -6708,7 +6734,7 @@
         "internal/profile",
         "internal/diag"
       ],
-      "note": "Health and Safety Monitor with one-second checks, fail-closed latch with 10 s recovery and acknowledgment of integrity causes, edge gate, health of the graph mirror, Observation Store, observation degradation, revocation feed and storage quotas, loopback Prometheus metrics with a Host check, rotating redacted diagnostic log with call tracing at debug (TestDiagnosticLogExcludesSecrets runs the real smcpd at debug with a delivered secret and refreshed tokens, FR-17.3), configuration reload of the CP-50 keys, configuration schema version check (FR-13.13, narrowed to one version), profile decision with the not-enforced label. Listeners are bound before anything else opens a socket. Requirement report (main 788c8b4): 11 of 13 verified; partial FR-7.11 (no vault check); FR-17, the parent, waits on FR-17.7."
+      "note": "Health and Safety Monitor with one-second checks, fail-closed latch with 10 s recovery and acknowledgment of integrity causes, edge gate, health of the graph mirror, Observation Store, observation degradation, revocation feed, storage quotas, vault availability and decision-snapshot currency, every check on every evaluation (FR-7.11, TestHealthFaultEachDependency faults each dependency in a running Gateway), loopback Prometheus metrics with a Host check, rotating redacted diagnostic log with call tracing at debug (TestDiagnosticLogExcludesSecrets runs the real smcpd at debug with a delivered secret and refreshed tokens, FR-17.3), configuration reload of the CP-50 keys, configuration schema version check (FR-13.13, narrowed to one version), profile decision with the not-enforced label. Listeners are bound before anything else opens a socket. Requirement report (main 1a96b1c): all 13 verified. Nothing allocated to E-23 is deferred."
     },
     {
       "id": "E-24",
@@ -6727,7 +6753,7 @@
         "internal/principals",
         "internal/filterapi"
       ],
-      "note": "smcpctl covers bootstrap, install, configuration, journal, policy, approvals, approvers, packages, trust, filters, secrets, egress, runtime, graph, observe, keys, uds, backup, restore, upgrade (verified minisign release), uninstall, remote, clients, lockdown and doctor. Control API with every Appendix C role from one route matrix, per-object If-Match revisions (SR-8.9-1) and GET /api/v1/openapi.json describing every route (rendered on the project site). Embedded React console with views G-01 to G-14 under a strict CSP: HttpOnly SameSite=Strict cookie sessions with a CSRF token, inert rendering of hostile evidence (AT-07, also against a sandboxed server in the console-enforced job), per-field help, keyboard-only flows for every view, including G-10 suspend and enable, G-08 key rotation and graph rebuild, G-01 health acknowledgment, instance kill and export downloads, and axe WCAG 2.2 AA checks in Chromium, Firefox and WebKit. Releases: install.sh with minisign and Sigstore checks, Homebrew tap (verified by the tap workflow for v1.0.0-rc.2, FR-13.3), SBOM per archive, release label from the acceptance results (label \"enforced\" in the status data of main 788c8b4, 21 of 21 scenarios in the Enforced profile); v1.0.0-rc.1 and rc.2 published; runbooks executed against a real smcpd (FR-18.8). Requirement report (main 788c8b4): 28 of 73 verified, 42 partial; FR-8, FR-13 and FR-19 are parents. Partial claims with supporting records: FR-8.24 (a scripted first-time task, not three people), FR-8.30 (current browser engines only), FR-8.32 and FR-8.33 (the Runtime instance kill and an accepted graph rebuild are mocked), FR-11.8 (802 ms p95 for the audit queries over a 30-day journal; analytics over observation data and reference hardware missing). The view requirements FR-8.4 to FR-8.17 have Playwright claims without Demonstration records. Deferred from 1.0 (Appendix N): per-element services (FR-12.5)."
+      "note": "smcpctl covers bootstrap, install, configuration, journal, policy, approvals, approvers, packages, trust, filters, secrets, egress, runtime, graph, observe, keys, uds, backup, restore, upgrade (verified minisign release), uninstall, remote, clients, lockdown and doctor. Control API with every Appendix C role from one route matrix (TestRoleMatrixEveryOperation performs every OpenAPI operation as every role on a running smcpd, FR-8.2), per-object If-Match revisions (SR-8.9-1) and GET /api/v1/openapi.json describing every route (rendered on the project site). Embedded React console with views G-01 to G-14 under a strict CSP: HttpOnly SameSite=Strict cookie sessions with a CSRF token, inert rendering of hostile evidence (AT-07, also against a sandboxed server in the console-enforced job), per-field help, keyboard-only flows for every view, including G-10 suspend and enable, G-08 key rotation and graph rebuild, G-01 health acknowledgment, instance kill and export downloads, and axe WCAG 2.2 AA checks in Chromium, Firefox and WebKit. G-02 includes a Secret Use Policy editor (FR-8.4). Releases: install.sh with minisign and Sigstore checks, Homebrew tap (verified by the tap workflow for v1.0.0, FR-13.3), SBOM per archive with a license check and provenance files (build recipe, lockfiles, PROVENANCE.md, THIRD_PARTY_NOTICES.txt) in archives built after v1.0.0, release label from the acceptance results (v1.0.0 labelled \"enforced\", FR-19.3 Inspection record); v1.0.0-rc.1 to rc.3 and v1.0.0 published; runbooks executed against a real smcpd (FR-18.8). Requirement report (main 1a96b1c): 49 of 73 verified; partly verified: FR-8 (parent, 23 of 35 child requirements verified), FR-8.16 (cache hit ratios and the Observation Store's memory use against its budget are not shown), FR-8.22, FR-8.23, FR-8.24 (a scripted first-time task, not three people), FR-8.26 (the help text and fonts are part of the bundle but not inspected), FR-8.27, FR-8.28, FR-8.29 (no test covers loading, empty and error states for every view), FR-8.30 (current browser engines only), FR-8.31 (no record compares the first-run checklist with the requirement's list), FR-8.32 (the Runtime instance kill and an accepted graph rebuild are mocked), FR-8.33 (the Runtime instance kill and an accepted graph rebuild are mocked), FR-11.8 (484 ms p95 for the audit queries over a 30-day journal against 2,000 ms; analytics over observation data and reference hardware missing), FR-12.7, FR-13 (parent, 9 of 13 child requirements verified), FR-13.4, FR-13.5, FR-13.7, FR-13.11, FR-18, FR-18.1 (the install guide has not been followed on clean hosts), SR-3.4-1 (the console shows the server attributes it has; SBOM, mounts, egress and sandbox profile are not all shown), SR-6.17-1. Deferred from 1.0 (Appendix N): per-element services (FR-12.5)."
     },
     {
       "id": "E-25",
@@ -6737,7 +6763,7 @@
       "packages": [
         "internal/graph"
       ],
-      "note": "Neo4j Community Edition 2026.05.0 integration, disabled unless [graph] enabled: ordered migrations with uniqueness constraints for every Appendix D label, engine settings and heap checks against CP-33, a health check that reports degraded and never fail-closed, smcpctl graph config. AT-11 and AT-12 run against a real Neo4j in the acceptance-enforced and graph jobs. Requirement report (main 788c8b4): 3 of 7 verified; partial FR-9, FR-9.1 (relationship types of other elements), SR-4.2-1 and SR-7.4-1 (no nftables rules for the engine port or outbound denial). Deferred from 1.0 (Appendix N): per-element services (FR-12.5)."
+      "note": "Neo4j Community Edition 2026.05.0 integration, disabled unless [graph] enabled: ordered migrations with uniqueness constraints for every Appendix D label, engine settings and heap checks against CP-33, a health check that reports degraded and never fail-closed, smcpctl graph config. AT-11 and AT-12 run against a real Neo4j in the acceptance-enforced and graph jobs. Requirement report (main 1a96b1c): 3 of 7 verified; partly verified: FR-9, FR-9.1 (relationship types owned by other elements are not created by the mirror), SR-4.2-1 (no nftables rule limits the engine port to the Data Server), SR-7.4-1 (no nftables rule denies the engine outbound connections). Deferred from 1.0 (Appendix N): per-element services (FR-12.5)."
     },
     {
       "id": "E-26",
@@ -6747,7 +6773,7 @@
       "packages": [
         "internal/graph"
       ],
-      "note": "Data Access Service with a digest-checked template catalog, declared and bound parameters, server-side timeouts; the evidence mirror is an idempotent audit observer with journal catch-up and rebuild; /api/v1/graph* and canned queries. Observation batching and backpressure (FR-9.5, FR-9.6) are verified. Requirement report (main 788c8b4): all 8 verified. Deferred from 1.0 (Appendix N): write priority classes (FR-9.4) and peer credentials of the Data Access Service (SR-4.3-1)."
+      "note": "Data Access Service with a digest-checked template catalog, declared and bound parameters, server-side timeouts; the evidence mirror is an idempotent audit observer with journal catch-up and rebuild; /api/v1/graph* and canned queries. Observation batching and backpressure (FR-9.5, FR-9.6) are verified. Requirement report (main 1a96b1c): all 8 verified. Deferred from 1.0 (Appendix N): write priority classes (FR-9.4) and peer credentials of the Data Access Service (SR-4.3-1)."
     },
     {
       "id": "E-27",
@@ -6757,7 +6783,7 @@
       "packages": [
         "internal/obsstore"
       ],
-      "note": "Observation Store tables partitioned by UTC day with one column per catalog parameter and a spans table, write-once batches of at most 1,000 rows or 200 ms on a low-priority writer, DuckDB with zstd Parquet (cgo builds) or JSON Lines (release archives), aggregate queries with parity between backends, CP-25 retention, storage quota with a health warning at 80%, a published memory budget (G-08). Requirement report (main 788c8b4): 3 of 5 verified; partial FR-11.6 and SR-4.2-2. Release archives built without cgo have no Parquet."
+      "note": "Observation Store tables partitioned by UTC day with one column per catalog parameter and a spans table, write-once batches of at most 1,000 rows or 200 ms on a low-priority writer, DuckDB with zstd Parquet (cgo builds) or JSON Lines (release archives), aggregate queries with parity between backends, CP-25 retention, storage quota with a health warning at 80%, a published memory budget (G-08). Requirement report (main 1a96b1c): 3 of 5 verified; partly verified: FR-11.6, SR-4.2-2. Release archives built without cgo have no Parquet."
     },
     {
       "id": "E-28",
@@ -6769,7 +6795,7 @@
         "internal/backup",
         "internal/obsstore"
       ],
-      "note": "Graph retention in bounded batches, heap sampling with pressure flag, DuckDB memory limit, degradation stages under memory or queue pressure in a fixed order (FR-9.12), observation and research dataset retention, encrypted online backup after a drain whose archive manifest names the Server Registry and the signed Policy Store (TestBackupUnderLoadComponents checks every component under load, SR-7.7-1), scheduled backups (FR-9.16) and verified restore that re-applies suspensions and revocations (smcpctl backup, restore). Requirement report (main 788c8b4): 6 of 12 verified; partial FR-9.10, FR-9.11, FR-11.9 (103 MiB idle RSS against 4 GiB in the perf job on CI runners), SR-6.14-1, SR-7.8-1 (no graph dump in backups, the mirror is not rebuilt on restore). External: FR-12.4 (CP-46 directories on installed hosts not inspected). Deferred from 1.0 (Appendix N): storage tiering (FR-9.13)."
+      "note": "Graph retention in bounded batches, heap sampling with pressure flag, DuckDB memory limit, degradation stages under memory or queue pressure in a fixed order (FR-9.12), observation and research dataset retention, encrypted online backup after a drain whose archive manifest names the Server Registry and the signed Policy Store (TestBackupUnderLoadComponents checks every component under load, SR-7.7-1), scheduled backups (FR-9.16) and a restore that verifies the signed Policy Store, re-applies suspensions, credential, package and client revocations and, with [graph] enabled, rebuilds the graph mirror from the restored journal (SR-7.8-1; smcpctl backup, restore). Requirement report (main 1a96b1c): 7 of 12 verified; partly verified: FR-9.10 (the page-cache measurement and the other budgeted components are not covered), FR-9.11 (the page-cache measurement and the other budgeted components are not covered), FR-11.9 (102 MiB idle RSS against 4,096 MiB on a CI runner), SR-6.14-1; unverified: FR-12.4 (CP-46 directories on installed hosts not inspected). Deferred from 1.0 (Appendix N): storage tiering (FR-9.13)."
     },
     {
       "id": "E-29",
@@ -6781,7 +6807,7 @@
         "internal/analytics",
         "internal/obspolicy"
       ],
-      "note": "Observation Collector as an audit observer plus mandatory probes run inline on the call's goroutine: one record per call with the computed catalog parameters, deterministic sampling, capture escalation, scope by principal, framework type, template, server and tool, drop counting, meta-metrics, per-stage and per-filter spans with thread CPU time (FR-10.2); batched queue taken every 10 ms; never blocks a call. Published Observation Policies apply at once, baseline contexts at the next start. Requirement report (main 788c8b4): 7 of 14 verified; partial FR-10, FR-10.1, FR-10.2, FR-10.5, FR-10.8, FR-10.10 and FR-11.4 (0.97 ms p95 difference with observation enabled in the perf job at 788c8b4, budget 1 ms; earlier runs measured -0.04 to 0.42 ms; CI runners are not reference hardware). Missing: S3 payload capture and first-N-per-session capture. Deferred from 1.0 (Appendix N): policy-directed payload capture (SR-6.6-1)."
+      "note": "Observation Collector as an audit observer plus mandatory probes run inline on the call's goroutine: one record per call with the computed catalog parameters, deterministic sampling, capture escalation, scope by principal, framework type, template, server and tool, drop counting, meta-metrics, per-stage and per-filter spans with thread CPU time (FR-10.2); batched queue taken every 10 ms; never blocks a call. Published Observation Policies apply at once, baseline contexts at the next start. Requirement report (main 1a96b1c): 7 of 14 verified; partly verified: FR-10, FR-10.1, FR-10.2 (only the edge's stages emit spans), FR-10.5, FR-10.8, FR-10.10, FR-11.4 (0.26 ms p95 difference against the 1 ms budget on a CI runner, not reference hardware). Missing: S3 payload capture and first-N-per-session capture. Deferred from 1.0 (Appendix N): policy-directed payload capture (SR-6.6-1)."
     },
     {
       "id": "E-30",
@@ -6791,7 +6817,7 @@
       "packages": [
         "internal/baseline"
       ],
-      "note": "Welford statistics with optional decay, log1p and Box-Cox transforms, t-digest median and MAD, category and transition surprise, learning exclusions, sealed snapshots, drift reports, promotion and rollback, integrity events. Baseline contexts and bands come from the published Observation Policy, with a baseline context key per session (FR-2.13). Requirement report (main 788c8b4): all 11 verified; nothing allocated to E-30 is deferred."
+      "note": "Welford statistics with optional decay, log1p and Box-Cox transforms, t-digest median and MAD, category and transition surprise, learning exclusions, sealed snapshots, drift reports, promotion and rollback, integrity events. Baseline contexts and bands come from the published Observation Policy, with a baseline context key per session (FR-2.13). Requirement report (main 1a96b1c): all 11 verified. Nothing allocated to E-30 is deferred."
     },
     {
       "id": "E-31",
@@ -6801,7 +6827,7 @@
       "packages": [
         "internal/anomaly"
       ],
-      "note": "Digest-verified atomic snapshot load, z and robust z with sigma floors, max-|z| combination naming the feature, CP-30 bands and uncharacterized, asynchronous alerts and capture escalation, optional synchronous approval and withhold obligations (off by default) as the last filters of the chains, per-band actions from the published Anomaly Response Policy (restrict-only, alert-only bands, the uncharacterized state maps to record, escalate or approve), anomaly evidence on the approval record. Requirement report (main 788c8b4): all 10 verified; nothing allocated to E-31 is deferred."
+      "note": "Digest-verified atomic snapshot load, z and robust z with sigma floors, max-|z| combination naming the feature, CP-30 bands and uncharacterized, asynchronous alerts and capture escalation, optional synchronous approval and withhold obligations (off by default) as the last filters of the chains, per-band actions from the published Anomaly Response Policy (restrict-only, alert-only bands, the uncharacterized state maps to record, escalate or approve), anomaly evidence on the approval record. Requirement report (main 1a96b1c): all 10 verified. Nothing allocated to E-31 is deferred."
     },
     {
       "id": "E-32",
@@ -6811,7 +6837,7 @@
       "packages": [
         "internal/research"
       ],
-      "note": "Campaign life cycle with clocks and quota, exports in Parquet, CSV, JSON Lines and GraphML (including the audit subgraph) with per-dataset HMAC pseudonyms, dictionary, manifest and checksums, CSV formula neutralization, export files opened inside their root, retention that deletes datasets and their keys (FR-9.14). A CI virtual environment with pinned pyarrow, pandas and NetworkX loads every export format (FR-10.34). Researcher accounts create, submit and stop campaigns and export their datasets. Requirement report (main 788c8b4): all 9 verified. Release archives are built without cgo and cannot write Parquet; build from source with cgo for Parquet exports."
+      "note": "Campaign life cycle with clocks and quota, exports in Parquet, CSV, JSON Lines and GraphML (including the audit subgraph) with per-dataset HMAC pseudonyms, dictionary, manifest and checksums, CSV formula neutralization, export files opened inside their root, retention that deletes datasets and their keys (FR-9.14). A CI virtual environment with pinned pyarrow, pandas and NetworkX loads every export format (FR-10.34). Researcher accounts create, submit and stop campaigns and export their datasets. Requirement report (main 1a96b1c): all 9 verified. Release archives are built without cgo and cannot write Parquet; build from source with cgo for Parquet exports."
     },
     {
       "id": "E-33",
@@ -6827,7 +6853,7 @@
         "cmd/smcp-connect",
         "packaging/npm/smcp-connect"
       ],
-      "note": "smcp-session, smcp-stdio (both eras, UDS dialing) and smcp-connect (binary and npm) with the CP-43 credential file; smcpctl clients setup, lockdown and doctor for the seven local clients; Tailscale Funnel and Cloudflare tunnel drivers. The session helper is demonstrated with Claude Code (headersHelper) and Codex CLI (env_http_headers fed by smcp-session --env) (FR-12.12). The real-agent suite passes Claude Code 2.1.302, Codex CLI 0.142.2, Hermes Agent 0.17.0, OpenCode 1.15.13 and Goose 1.55.0 on every scenario, and its broken-build check turns a client to fail against a deliberately broken smcpd. Gemini CLI is not run (no GEMINI_API_KEY) and Grok Build is not run (no public CLI). Requirement report (main 788c8b4): 6 of 20 verified, 10 partial (setup and lockdown at pinned versions, FR-15.8, adapters, SR-4.9-1 and SR-4.11-1). Missing: dated cloud-agent runs for Grok Bot, the ChatGPT agent and Meta Muse (FR-15.9), confirmed vendor allowlist settings (FR-16.10). External: FR-18.3 (quick starts not followed at the pinned version for every client); FR-15 is a parent."
+      "note": "smcp-session, smcp-stdio (both eras, UDS dialing) and smcp-connect (binary and npm) with the CP-43 credential file; smcpctl clients setup, lockdown and doctor for the seven local clients; Tailscale Funnel and Cloudflare tunnel drivers. TestConformanceThroughAdapters runs the northbound conformance checks relayed through smcp-stdio and through smcp-connect behind a test tunnel and requires each response to equal a direct connection's (FR-12.13, FR-16.9). The session helper is demonstrated with Claude Code (headersHelper) and Codex CLI (env_http_headers fed by smcp-session --env) (FR-12.12). The real-agent suite passes Claude Code 2.1.302, Codex CLI 0.142.2, Hermes Agent 0.17.0, OpenCode 1.15.13 and Goose 1.55.0 on every scenario, and its broken-build check turns a client to fail against a deliberately broken smcpd. Gemini CLI is not run (no GEMINI_API_KEY) and Grok Build is not run (no public CLI). Requirement report (main 1a96b1c): 10 of 20 verified; partly verified: FR-15 (parent, 4 of 10 child requirements verified), FR-15.1 (the generated lockdown settings are checked; refusal by each pinned client is not run), FR-15.2 (the generated managed settings are checked; refusal by the pinned client is not run), FR-15.4 (run on a Standalone host only; the Enforced host case is not), FR-15.7 (the per-client trust settings are checked; connecting each pinned client over TLS is not), FR-15.8, FR-15.10, SR-4.9-1 (needs each client started at its pinned version with a second server added), SR-4.11-1 (needs each client started at its pinned version with a second server added); unverified: FR-18.3 (quick starts not followed at the pinned version for every client). Live cloud-agent runs (Grok Bot, ChatGPT agent, Meta Muse) are descoped from release 1.x; FR-15.9 and FR-16.10 are verified by Inspection records of the documented modes and vendor settings, reviewed 2026-10-18."
     }
   ],
   "agents": [
@@ -7096,7 +7122,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7107,7 +7133,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7142,7 +7168,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:34371: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41285: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7259,7 +7285,7 @@
     }
   ],
   "acceptance": {
-    "commit": "1a96b1cfa4cb804b57c680b74c2f05b8a3bb62bc",
+    "commit": "5f6f36d6931551ae8edabcc586e40a8fcb356daf",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -7947,19 +7973,19 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
-    "commit": "1a96b1cfa4cb804b57c680b74c2f05b8a3bb62bc",
-    "generatedAt": "2026-10-18T12:05:43Z",
+    "commit": "5f6f36d6931551ae8edabcc586e40a8fcb356daf",
+    "generatedAt": "2026-10-18T13:34:46Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000007534"
+      "runner": "GitHub Actions 1000007570"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7976,7 +8002,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.011247,
+        "value": 0.036828,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7988,7 +8014,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 11.707237,
+        "value": 17.674169,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -8000,18 +8026,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.26029312499999957,
+        "value": 0.5690628749999984,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (6.374 ms, mean of 6.416, 6.342, 6.145, 6.659, 6.499, 6.338, 6.089, 6.502) minus disabled (6.114 ms, mean of 5.780, 5.919, 6.441, 6.014, 5.849, 6.357, 6.290, 6.257), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.542 ms, mean of 10.990, 10.173, 10.504, 10.645, 10.582, 10.019, 10.438, 10.983) minus disabled (9.973 ms, mean of 9.931, 9.776, 10.445, 9.361, 9.751, 10.079, 10.483, 9.958), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 483.948717,
+        "value": 810.80794,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -8023,11 +8049,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 102.1953125,
+        "value": 103.22265625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 10m0s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 11m33s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
