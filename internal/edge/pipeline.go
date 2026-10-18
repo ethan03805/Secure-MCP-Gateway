@@ -333,18 +333,26 @@ func (g *Gateway) toolHandler(sess session.Session, ref *backend.ToolRef) mcp.To
 		if l := dec.Obligations.EgressLimits; l != nil { // FR-5.38
 			binding.Egress = pipeline.EgressLimits{RequestBytes: l.RequestBytes, ResponseBytes: l.ResponseBytes, Timeout: l.Timeout()}
 		}
+		// Dispatch (FR-4.8, FR-4.9, FR-4.10) with the one-use capability.
+		// The dispatched event is recorded under the same barrier hold as
+		// the authorization, so that an emergency stop (or the backup's
+		// drain stop) is ordered entirely before or after both: no call is
+		// recorded as dispatched after the stop event (SR-7.7-1).
 		endLaunch := c.stage(pipeline.SpanLaunchAuthorization)
-		capID, err := g.authorizeLaunch(c, sess, ref, binding)
+		endDispatch := func() {}
+		capID, err := g.authorizeLaunch(c, sess, ref, binding, func() error {
+			endLaunch()
+			endLaunch = func() {}
+			endDispatch = c.stage(pipeline.SpanDispatch)
+			if err := c.record("call", audit.PhaseDispatched, "E-10", "", "", "evaluated"); err != nil {
+				endDispatch()
+				return c.auditFailure(err)
+			}
+			return nil
+		})
 		endLaunch()
 		if err != nil {
 			return nil, err
-		}
-
-		// Dispatch (FR-4.8, FR-4.9, FR-4.10) with the one-use capability.
-		endDispatch := c.stage(pipeline.SpanDispatch)
-		if err := c.record("call", audit.PhaseDispatched, "E-10", "", "", "evaluated"); err != nil {
-			endDispatch()
-			return nil, c.auditFailure(err)
 		}
 		cctx, ccancel := context.WithTimeout(ctx, g.cfg.Limits.ClientDeadline.Duration) // CP-13 client deadline (FR-1.43)
 		defer ccancel()
@@ -489,12 +497,13 @@ func harnessVisible(e *jsonrpc.Error) *jsonrpc.Error {
 }
 
 // authorizeLaunch rechecks state under the barrier, commits the decision
-// intent ("authorized") durably and only then issues the capability.
+// intent ("authorized") durably and only then issues the capability;
+// dispatched (which records the dispatch) runs under the barrier as well.
 // SR-1.17-1: the recheck covers the policy revision, the session state,
 // the principal and credential state and the server revision state, each
 // as the gate sees it now, so a revocation completed after the decision
 // refuses the launch.
-func (g *Gateway) authorizeLaunch(c *callRun, sess session.Session, ref *backend.ToolRef, b pipeline.Binding) (string, error) {
+func (g *Gateway) authorizeLaunch(c *callRun, sess session.Session, ref *backend.ToolRef, b pipeline.Binding, dispatched func() error) (string, error) {
 	g.gate.RLock()
 	defer g.gate.RUnlock()
 	reason, code := "", int64(CodeGatewayFailClosed)
@@ -523,7 +532,11 @@ func (g *Gateway) authorizeLaunch(c *callRun, sess session.Session, ref *backend
 	if err := c.commit("decision", audit.PhaseAuthorized, "E-12", "permit", c.dec.ReasonCode, "evaluated", c.decisionDetail()); err != nil {
 		return "", c.auditFailure(err)
 	}
-	return g.caps.Issue(b), nil
+	capID := g.caps.Issue(b)
+	if err := dispatched(); err != nil {
+		return "", err
+	}
+	return capID, nil
 }
 
 // authorizeRelease rechecks session and stop state under the barrier and

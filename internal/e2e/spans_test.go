@@ -23,9 +23,28 @@ func (slowFilter) ID() string { return "slow-filter" }
 
 func (slowFilter) FilterRequest(_ context.Context, _ *pipeline.Call, _ json.RawMessage) (pipeline.RequestVerdict, error) {
 	time.Sleep(25 * time.Millisecond)
-	for t0 := time.Now(); time.Since(t0) < 5*time.Millisecond; {
-	}
+	burnCPU(5 * time.Millisecond)
 	return pipeline.RequestVerdict{Action: pipeline.Pass}, nil
+}
+
+// burnCPU burns d of the thread's CPU time, not of wall-clock time: on a
+// loaded host a loop timed by the wall clock can get much less CPU than
+// its duration, so the 2 ms CPU floor checked below would fail (as the
+// same pattern did in internal/pipeline, CI run 39038412680). Without a
+// thread CPU clock it burns d of wall-clock time.
+func burnCPU(d time.Duration) {
+	spin := func(d time.Duration) {
+		for t0 := time.Now(); time.Since(t0) < d; {
+		}
+	}
+	for total := time.Duration(0); total < d; {
+		c, ok := pipeline.MeasureCPU(func() { spin(250 * time.Microsecond) })
+		if !ok {
+			spin(d)
+			return
+		}
+		total += c
+	}
 }
 
 // TestStageSpansAndPolicyCost traces calls through a Gateway wired as

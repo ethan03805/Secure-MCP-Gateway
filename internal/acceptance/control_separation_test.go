@@ -132,12 +132,7 @@ func controlStatus(t *testing.T, hc *http.Client, base, method, path, token stri
 //     tool call on the harness listener.
 func TestControlAPIOnlyOnAdminListener(t *testing.T) {
 	reqtest.Verifies(t, "SR-2.5-1")
-	dir, err := os.MkdirTemp("", "smcp-sep")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
-	sock := filepath.Join(dir, "h.sock")
+	sock := filepath.Join(testport.SocketDir(t), "h.sock")
 	u, err := user.Current()
 	if err != nil {
 		t.Fatal(err)

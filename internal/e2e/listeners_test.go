@@ -18,6 +18,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
 
 // TestHarnessListenerSet is FR-1.1: a Gateway with the UDS Harness Profile
@@ -36,11 +37,7 @@ func TestHarnessListenerSet(t *testing.T) {
 			t.Skip("lsof not installed")
 		}
 	}
-	dir, err := os.MkdirTemp("", "smcp-l")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
+	dir := testport.SocketDir(t)
 	sock := filepath.Join(dir, "h.sock")
 	u, err := user.Current()
 	if err != nil {
