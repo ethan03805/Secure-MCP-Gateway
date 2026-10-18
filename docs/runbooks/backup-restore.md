@@ -1,6 +1,6 @@
 # Runbook: backup and restore
 
-Reference: [../operations/backup.md](../operations/backup.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-backup-restore-2026-10-17.md](../verification/runbooks/runbook-backup-restore-2026-10-17.md). `scripts/ci-integration.sh` runs steps 1 to 6 on every pull request.
+Reference: [../operations/backup.md](../operations/backup.md). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-backup-restore-2026-10-18.md](../verification/runbooks/runbook-backup-restore-2026-10-18.md). `scripts/ci-integration.sh` runs steps 1 to 6 on every pull request.
 
 ## Back up
 
@@ -14,7 +14,7 @@ Reference: [../operations/backup.md](../operations/backup.md). Execution records
 
 1. Stop the Gateway (`launchctl bootout gui/$(id -u)/com.smcp.gateway`, `sudo systemctl stop smcpd`, or stop the process).
 2. `smcpctl restore --config smcp.toml --archive <file> --passphrase-file /secure/backup.pass --verify-only` — expect `archive verified; nothing was changed`.
-3. `smcpctl restore --config smcp.toml --archive <file> --passphrase-file /secure/backup.pass` — note `previous_state`.
+3. `smcpctl restore --config smcp.toml --archive <file> --passphrase-file /secure/backup.pass` — note `previous_state`. Before changing anything the restore verifies the archived Policy Store (`policy_store_revision`, `policy_revisions_verified`) and re-applies the revocations recorded in the restored and the current journal (`directory_changes`, `package_revocations`, `client_revocations`), so a package revoked after the backup stays revoked.
 4. `smcpctl journal verify --config smcp.toml` — expect `journal OK`.
 5. Start the Gateway; `smcpctl health` answers with a state other than `fail-closed`.
 6. Keep the `previous_state` directory: its journal holds the evidence written after the backup.
