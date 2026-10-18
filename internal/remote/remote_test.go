@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,7 +20,9 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/gwtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
 
 const remoteTable = `
@@ -290,13 +293,12 @@ func TestDynamicRegistrationNeedsApproval(t *testing.T) {
 }
 
 func TestRemoteSessionAndOriginEvidence(t *testing.T) {
-	reqtest.Partial(t, "FR-16.1", "FR-16.8", "FR-16.12")
+	reqtest.Partial(t, "FR-16.1", "FR-16.8")
 	// FR-16.1: proves the separate listener, remote binding of sessions and
 	// that local sessions are refused there. FR-16.8: proves the fields on
 	// every event of a remote call and session; events written by the
 	// Approval Service (E-07) for remote calls do not yet carry them.
-	// FR-16.12: templates come from remote.templates, not a remote_allowed
-	// mark in the Framework Profile.
+	// FR-16.12 is TestRemoteAllowedTemplates.
 	e := newEnv(t, "")
 	e.enable()
 	if e.Config.Remote.Address == e.Config.Listener.Address {
@@ -363,6 +365,69 @@ func TestRemoteSessionAndOriginEvidence(t *testing.T) {
 	}
 }
 
+// TestRemoteAllowedTemplates is FR-16.12: through the remote listener a
+// session is created only for a template that the principal's Framework
+// Profile marks remote_allowed, even when the configuration's
+// remote.templates lists another; the session gets the CP-49 remote
+// lifetimes (15 minutes idle, 2 hours at most); and a policy revision that
+// removes the mark refuses the next sign-in. Every session through the
+// remote listener is created by the same issue path (authorization code
+// and device grants), which sets session.CreateParams.Remote.
+func TestRemoteAllowedTemplates(t *testing.T) {
+	reqtest.Verifies(t, "FR-16.12")
+	callerAddr.Store("203.0.113.7")
+	// remote.templates lists both; the policy marks only "remote".
+	g := gwtest.Start(t, strings.Replace(remoteTable, `templates = ["remote"]`, `templates = ["ro", "remote"]`, 1))
+	e := &env{Gateway: g, public: g.Tunnel(func() string { return callerAddr.Load().(string) })}
+	e.enable()
+	if resp, body := e.signIn(gwtest.PreClientID, gwtest.PreSecret, "smcp:template:ro"); resp.StatusCode != 400 || body["error"] != "invalid_scope" {
+		t.Fatalf("template without remote_allowed: %d %v", resp.StatusCode, body)
+	}
+	e.WaitEvent(func(ev audit.Event) bool {
+		return ev.ReasonCode == "REMOTE_TEMPLATE_REFUSED" && ev.Outcome == "deny" && fmt.Sprint(ev.Detail) == "map[template:ro]"
+	})
+	// The default template (ro) is refused the same way.
+	if resp, _ := e.signIn(gwtest.PreClientID, gwtest.PreSecret, ""); resp.StatusCode != 400 {
+		t.Fatalf("default template: %d", resp.StatusCode)
+	}
+	resp, tok := e.signIn(gwtest.PreClientID, gwtest.PreSecret, "smcp:template:remote")
+	if resp.StatusCode != 200 {
+		t.Fatalf("remote_allowed template: %d %v", resp.StatusCode, tok)
+	}
+	if tok["expires_in"].(float64) != 900 {
+		t.Fatalf("remote idle lifetime %v, want 900 s (CP-49)", tok["expires_in"])
+	}
+	exp, _ := time.Parse(time.RFC3339, tok["expires_at"].(string))
+	if d := time.Until(exp); d > 2*time.Hour+time.Minute || d < 2*time.Hour-time.Minute {
+		t.Fatalf("remote maximum lifetime %v, want 2 h (CP-49)", d)
+	}
+	// A local session of the same principal gets the longer CP-18 lifetime.
+	local, _, err := g.App.Store.Create(session.CreateParams{PrincipalID: "cloud", ClientID: "local", Listener: "tls", Claims: session.Claims{Template: "ro"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !local.MaxDeadline.After(time.Now().Add(2*time.Hour + time.Minute)) {
+		t.Fatalf("local session max deadline %v is not longer than the remote one", local.MaxDeadline)
+	}
+	// Without the mark in the active policy, the template is refused.
+	unmarked := strings.Replace(gwtest.Policy, `, "remote_allowed": ["remote"]`, "", 1)
+	snap, err := policy.Compile([]byte(strings.Replace(unmarked, `"r1"`, `"r2"`, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.App.Gateway.ActivatePolicy("test", snap); err != nil {
+		t.Fatal(err)
+	}
+	if resp, body := e.signIn(gwtest.PreClientID, gwtest.PreSecret, "smcp:template:remote"); resp.StatusCode != 400 || body["error"] != "invalid_scope" {
+		t.Fatalf("template after its mark was removed: %d %v", resp.StatusCode, body)
+	}
+	// The session store refuses a remote session for an unmarked template
+	// whatever the caller.
+	if _, _, err := g.App.Store.Create(session.CreateParams{PrincipalID: "cloud", ClientID: "x", Listener: "remote", Remote: true, Claims: session.Claims{Template: "remote"}}); !errors.Is(err, session.ErrNoTemplate) {
+		t.Fatalf("store: %v", err)
+	}
+}
+
 func TestLockoutAndRates(t *testing.T) {
 	reqtest.Partial(t, "FR-16.6")
 	// Partial: per-source rate and per-client call rate and lockout are
@@ -407,6 +472,99 @@ func TestLockoutAndRates(t *testing.T) {
 	r, body := e.mcp(e.public, tok["access_token"].(string), call)
 	if r.StatusCode != 429 || body["error"].(map[string]any)["code"].(float64) != -31005 || r.Header.Get("Retry-After") == "" {
 		t.Fatalf("second call %d %v", r.StatusCode, body)
+	}
+}
+
+// TestRemoteLimitKeys is FR-16.6 with TestLockoutAndRates and
+// TestOAuthSourceRate: the OAuth rate is per forwarded source address (a
+// second address is served while the first gets 429); the call rate is
+// per client ID (a second client from the same address is served while
+// the first gets -31005 with HTTP 429); failed token requests, like failed
+// sign-ins, lock after the CP-49 number of consecutive failures, with a
+// REMOTE_LOCKOUT event; and the lockout holds both the client ID (refused
+// from another address) and the source address (another client refused
+// from it) for the lockout period.
+func TestRemoteLimitKeys(t *testing.T) {
+	reqtest.Verifies(t, "FR-16.6")
+	e := newEnv(t, "[remote.limits]\ncalls_per_minute = 1\ncalls_burst = 1\nlockout_failures = 3\nlockout = \"1m\"\noauth_per_second = 1\noauth_burst = 6\n")
+	e.enable()
+	redirect := "http://127.0.0.1/callback"
+	metadata := e.public + "/.well-known/oauth-authorization-server"
+
+	// OAuth rate per source address.
+	callerAddr.Store("198.51.100.20")
+	limited := false
+	for range 12 {
+		if resp, _ := e.get(metadata); resp.StatusCode == http.StatusTooManyRequests {
+			limited = true
+			break
+		}
+	}
+	if !limited {
+		t.Fatal("OAuth source rate not applied")
+	}
+	callerAddr.Store("198.51.100.21")
+	if resp, _ := e.get(metadata); resp.StatusCode != http.StatusOK {
+		t.Fatalf("another source address was limited too: %d", resp.StatusCode)
+	}
+	time.Sleep(6 * time.Second) // refill the OAuth buckets (1 per second)
+
+	// Call rate per client ID: two approved clients from one address.
+	callerAddr.Store("198.51.100.22")
+	tokens := []string{}
+	for range 2 {
+		reg := e.register(redirect)
+		id := reg["client_id"].(string)
+		if st, body := e.Admin("POST", "/api/v1/clients/"+id+"/approve", map[string]any{}); st != 200 {
+			t.Fatalf("approve %d %v", st, body)
+		}
+		resp, tok := e.signIn(id, "", "smcp:template:remote")
+		if resp.StatusCode != 200 {
+			t.Fatalf("sign-in %d %v", resp.StatusCode, tok)
+		}
+		tokens = append(tokens, tok["access_token"].(string))
+		time.Sleep(3 * time.Second)
+	}
+	call := map[string]any{"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": map[string]any{"name": "t_echo", "arguments": map[string]any{"text": "a"}}}
+	if r, _ := e.mcp(e.public, tokens[0], call); r.StatusCode != 200 {
+		t.Fatalf("first client, first call: %d", r.StatusCode)
+	}
+	if r, body := e.mcp(e.public, tokens[0], call); r.StatusCode != 429 || body["error"].(map[string]any)["code"].(float64) != -31005 {
+		t.Fatalf("first client, second call: %d %v", r.StatusCode, body)
+	}
+	if r, _ := e.mcp(e.public, tokens[1], call); r.StatusCode != 200 {
+		t.Fatalf("second client from the same address was limited: %d", r.StatusCode)
+	}
+
+	// Failed token requests lock the client and the source.
+	callerAddr.Store("198.51.100.23")
+	for i := range 3 {
+		time.Sleep(time.Second)
+		resp, body := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {fmt.Sprintf("not-a-token-%d", i)}}, gwtest.PreClientID, gwtest.PreSecret)
+		if resp.StatusCode != 400 || body["error"] != "invalid_grant" {
+			t.Fatalf("failed token request %d: %d %v", i, resp.StatusCode, body)
+		}
+	}
+	e.WaitEvent(func(ev audit.Event) bool {
+		return ev.ReasonCode == "REMOTE_LOCKOUT" && ev.Outcome == "locked" && ev.ClientID == gwtest.PreClientID && ev.Channel == "remote"
+	})
+	time.Sleep(time.Second)
+	if resp, _ := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"x"}}, gwtest.PreClientID, gwtest.PreSecret); resp.StatusCode != 429 || resp.Header.Get("Retry-After") == "" {
+		t.Fatalf("locked client, same address: %d", resp.StatusCode)
+	}
+	// The client ID is locked from another address.
+	callerAddr.Store("198.51.100.24")
+	if resp, _ := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"x"}}, gwtest.PreClientID, gwtest.PreSecret); resp.StatusCode != 429 {
+		t.Fatalf("locked client from another address: %d", resp.StatusCode)
+	}
+	// The source address is locked for another client.
+	reg := e.register(redirect)
+	other := reg["client_id"].(string)
+	e.Admin("POST", "/api/v1/clients/"+other+"/approve", map[string]any{})
+	callerAddr.Store("198.51.100.23")
+	time.Sleep(time.Second)
+	if resp, _ := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"x"}, "client_id": {other}}, "", ""); resp.StatusCode != 429 {
+		t.Fatalf("another client from the locked address: %d", resp.StatusCode)
 	}
 }
 

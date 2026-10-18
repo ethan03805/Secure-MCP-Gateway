@@ -8,7 +8,7 @@ Vendor allowlist settings (FR-16.10) were checked on 2026-10-18 against the vend
 
 ## Common setup
 
-1. Configure `[remote]` (`docs/remote-access.md`): at least `default_principal` (a principal for cloud agents) and `templates` (the templates a remote session may use; keep them narrow).
+1. Configure `[remote]` (`docs/remote-access.md`): at least `default_principal` (a principal for cloud agents) and `templates` (the templates a remote session may use; keep them narrow), and mark the same templates `remote_allowed` in that principal's Framework Profile in the policy (`smcpctl policy publish`).
 2. Enable remote access with a tunnel, as the Gateway's user:
 
    ```
@@ -48,5 +48,5 @@ If the agent accepts only a command to run (a cloud coding sandbox), run `npx sm
 ## Limitations
 
 - Per-address limits use the address the tunnel reports; it is recorded as `server-asserted`.
-- Templates come from `remote.templates`, not a `remote_allowed` mark in the policy (FR-16.12 deviation, documented in `docs/remote-access.md`).
+- A remote session's template must be marked `remote_allowed` in the Framework Profile and listed in `remote.templates` (FR-16.12, `docs/remote-access.md`).
 - The tunnel must preserve the public `Host` header; `smcpctl remote check` reports a tunnel that does not.

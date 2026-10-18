@@ -99,6 +99,19 @@ func nonLoopback() string {
 // The recorded run through a real tunnel provider is documented in
 // docs/verification (FR-15.9); SR-4.14-1 (nftables rules in the Enforced
 // profile) is not covered.
+// at18Policy is the bootstrap policy with read-only marked remote_allowed.
+const at18Policy = `{
+  "revision": "at18-r2",
+  "framework_profiles": {"dev": {"templates": ["read-only", "approval-demo"], "default_template": "read-only", "remote_allowed": ["read-only"]}},
+  "templates": {
+    "read-only": {"rules": [{"id": "ro-ref", "server": "ref", "tools": ["echo", "time_now", "list_files", "read_file"]}]},
+    "approval-demo": {"rules": [
+      {"id": "demo-free", "server": "ref", "tools": ["echo", "time_now", "list_files"]},
+      {"id": "demo-approve", "server": "ref", "tools": ["read_file"], "approval": true}
+    ]}
+  }
+}`
+
 func TestAT18RemoteAccess(t *testing.T) {
 	remoteAddr := fmt.Sprintf("127.0.0.1:%d", testport.Free(t))
 	g := newGateway(t, options{extra: fmt.Sprintf(`
@@ -115,6 +128,11 @@ templates = ["read-only"]
 	g.start()
 	g.scenario("AT-18")
 	reqtest.Partial(t, "FR-16.1", "FR-16.5", "SR-2.9-3", "SR-4.14-2")
+
+	// Remote sessions use only templates the Framework Profile marks
+	// remote_allowed (FR-16.12): publish the bootstrap policy with
+	// read-only marked.
+	g.mustCtl("policy", "publish", writeFile(t, t.TempDir(), "at18.json", at18Policy, 0o644))
 
 	public := g.tunnel(remoteAddr)
 	if g.profile() == reqtest.Enforced && os.Geteuid() != 0 {

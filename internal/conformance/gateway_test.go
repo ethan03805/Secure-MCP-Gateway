@@ -118,7 +118,7 @@ oauth_burst = 1000
 		t.Fatal(err)
 	}
 	tools, _ := json.Marshal(b.names())
-	pol := fmt.Sprintf(`{"revision": "r1", "framework_profiles": {"dev": {"templates": ["all"], "default_template": "all"}},
+	pol := fmt.Sprintf(`{"revision": "r1", "framework_profiles": {"dev": {"templates": ["all"], "default_template": "all", "remote_allowed": ["all"]}},
   "templates": {"all": {"rules": [{"id": "all", "server": %q, "tools": %s}]}}}`, alias, tools)
 	if err := os.WriteFile(filepath.Join(dir, "policy.json"), []byte(pol), 0o644); err != nil {
 		t.Fatal(err)

@@ -84,6 +84,6 @@ sequenceDiagram
 
 - With Cloudflare the tunnel is started before the enable request, because the public URL is only known once `cloudflared` reports it; with Tailscale the Gateway side is enabled first and disabled again if Funnel fails.
 - In the Enforced profile `remote enable` installs the nftables table `inet smcp_remote` (SR-4.14-1) before the remote listener exists and `remote disable` removes it; on macOS the pf anchor in `docs/remote-access.md` is loaded by hand. The listeners are loopback-only regardless (SR-2.9-3).
-- Remote-allowed templates are read from `remote.templates`, not from a `remote_allowed` mark in the Framework Profile (FR-16.12).
+- A remote session's template must be marked `remote_allowed` in the Framework Profile and listed in `remote.templates` (FR-16.12).
 - The caller address is what the tunnel connector reports; a connector that reports none makes the per-address limits global.
 - Dated runs with the cloud agents themselves (FR-15.9) are not recorded.
