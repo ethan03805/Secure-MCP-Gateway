@@ -2664,12 +2664,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-8.11 |
 | Parent ID | FR-8 — Management product |
-| Statement | The Observation & Parameter Workbench view (G-04) **SHALL** display the F-66 cost estimate for the draft before the publish action is enabled. |
+| Statement | The Observation & Parameter Workbench view (G-04) **SHALL** display a cost preview of the draft (the selected parameters, bytes per captured record, content scans and payload copies, the sampling rate in force and the store growth at the recorded call volume), refreshed with each edit, and **SHALL** keep the publish action disabled while the draft has no cost preview. |
 | Allocation | Elements: E-24 Management Console & Control API; Functions: F-67, F-66; External interfaces: X-04 |
 | Verification Method | Demonstration |
-| Verification Statement | Edit a draft; confirm the estimate refreshes and publish remains disabled until the estimate is shown. |
+| Verification Statement | Edit a draft; confirm the preview refreshes with each edit and publish remains disabled while the draft has no preview. |
 | Source | ARCH §11 item 6 |
-| Rationale | Cost awareness before capture. |
+| Rationale | Cost awareness before capture. The F-66 forecast of records, storage and added latency per day from seven days of call rates is deferred with FR-3.7; release 1.0 previews the cost from the catalog's data types and cost classes and the recorded call volume. |
 
 #### FR-8.12 — Live record preview
 
@@ -2677,12 +2677,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-8.12 |
 | Parent ID | FR-8 — Management product |
-| Statement | The Observation & Parameter Workbench view (G-04) **SHALL** display up to 20 sensitivity-masked sample records that the draft would have produced from the most recent traffic. |
+| Statement | The Observation & Parameter Workbench view (G-04) **SHALL** display up to 20 sensitivity-masked sample records that the draft would have produced from the most recent stored records: the records within the draft's scope, with a value for each of the draft's parameters that the Observation Policy in force captured. |
 | Allocation | Elements: E-24 Management Console & Control API; Functions: F-67; External interfaces: X-04 |
 | Verification Method | Demonstration |
 | Verification Statement | Preview a draft; confirm masked sample records appear. |
 | Source | ARCH §11 item 7 |
-| Rationale | Researchers verify the capture before publishing. |
+| Rationale | Researchers verify the capture before publishing. Release 1.0 stores no payloads (SR-6.6-1), so a parameter the policy in force did not capture cannot be derived again for the preview; the preview marks it. |
 
 #### FR-8.13 — G-05 Behavior Analytics
 
