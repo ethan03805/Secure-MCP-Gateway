@@ -53,6 +53,7 @@ func (g *gateway) consoleToken(user, role string) string {
 // the refusals are the role limits and not a broken research service, and
 // nothing the Researcher sent changed the state behind the routes.
 func TestResearcherRoleLimits(t *testing.T) {
+	needBinaries(t)
 	reqtest.Verifies(t, "SR-2-2")
 	priv := t.TempDir()
 	pw := writeFile(t, priv, "role.pw", rolePassword+"\n", 0o600)
