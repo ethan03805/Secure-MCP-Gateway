@@ -1,6 +1,6 @@
 # Runbook: emergency stop
 
-Use when tool execution must end now: a server behaves unexpectedly, a policy is wrong and simulation is not an option, or a compromise is suspected. Reference: [../flows/emergency-stop.md](../flows/emergency-stop.md), [../operator-guide.md](../operator-guide.md#emergency-stop). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-emergency-stop-2026-10-17.md](../verification/runbooks/runbook-emergency-stop-2026-10-17.md).
+Use when tool execution must end now: a server behaves unexpectedly, a policy is wrong and simulation is not an option, or a compromise is suspected. Reference: [../flows/emergency-stop.md](../flows/emergency-stop.md), [../operator-guide.md](../operator-guide.md#emergency-stop). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-emergency-stop-2026-10-18.md](../verification/runbooks/runbook-emergency-stop-2026-10-18.md).
 
 ## Stop
 

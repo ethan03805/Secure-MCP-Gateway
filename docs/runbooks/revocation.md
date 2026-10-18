@@ -1,6 +1,6 @@
 # Runbook: withdraw a server package
 
-Use when a packaged server revision must never run again: a malicious or vulnerable release, a compromised upstream, or a key that signed it is no longer trusted. Reference: [../packaging-guide.md](../packaging-guide.md#revoking). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-revocation-2026-10-17.md](../verification/runbooks/runbook-revocation-2026-10-17.md).
+Use when a packaged server revision must never run again: a malicious or vulnerable release, a compromised upstream, or a key that signed it is no longer trusted. Reference: [../packaging-guide.md](../packaging-guide.md#revoking). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-revocation-2026-10-18.md](../verification/runbooks/runbook-revocation-2026-10-18.md).
 
 | Need | Command | Reversible |
 |---|---|---|

@@ -1,6 +1,6 @@
 # Runbook: roll back a policy
 
-Use when a published policy grants too much, refuses legitimate calls, or was published by mistake. Reference: [../policy-reference.md](../policy-reference.md#policy-store). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-policy-rollback-2026-10-17.md](../verification/runbooks/runbook-policy-rollback-2026-10-17.md).
+Use when a published policy grants too much, refuses legitimate calls, or was published by mistake. Reference: [../policy-reference.md](../policy-reference.md#policy-store). Execution records go in `docs/verification/runbooks/` (FR-18.8); the latest is [runbook-policy-rollback-2026-10-18.md](../verification/runbooks/runbook-policy-rollback-2026-10-18.md).
 
 A rollback never rewrites history: it publishes the content of an earlier revision as a new revision, signed and activated atomically like any other publication.
 
@@ -22,7 +22,7 @@ A rollback never rewrites history: it publishes the content of an earlier revisi
 
 The active revision or control record in `<state>/policy/` failed verification (tampering or damage). Every call is refused with `-31004 NO_SNAPSHOT`.
 
-1. `smcpctl health --config smcp.toml` shows the cause `policy_signature`.
+1. `smcpctl health --config smcp.toml` shows the cause `policy_signature`. If the files were changed while the Gateway runs, it reports the damage within seconds as `decision_snapshot_stale` ("policy store integrity check failed") and is fail-closed until the cause clears and an administrator runs `smcpctl health ack decision_snapshot_stale`; `policy_signature` appears at the next start.
 2. Restore the state directory from the last good backup ([backup-restore.md](backup-restore.md)), or
 3. publish a valid revision: `smcpctl policy publish <file> --config smcp.toml`.
 4. Investigate how the state directory was changed; its files are owned by the Gateway's account.
