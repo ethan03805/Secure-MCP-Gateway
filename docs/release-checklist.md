@@ -6,14 +6,14 @@ The procedure for publishing a Secure MCP Gateway release, starting with v1.0.0.
 
 | Asset | Made by | Requirement |
 |---|---|---|
-| `smcp_<version>_<os>_<arch>.tar.gz` for darwin-arm64, darwin-amd64, linux-amd64, linux-arm64, each with `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `README.md`, `CHANGELOG.md`, `LICENSE` and `sbom.spdx.json` | GoReleaser (`.goreleaser.yaml`); the SBOM from `scripts/release-sbom.sh` (syft over `go.mod`, `go.sum` and `console/package-lock.json`) | FR-13.1 |
+| `smcp_<version>_<os>_<arch>.tar.gz` for darwin-arm64, darwin-amd64, linux-amd64, linux-arm64, each with `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `README.md`, `CHANGELOG.md`, `LICENSE` and `sbom.spdx.json`; since v1.1.0 also `PROVENANCE.md`, `THIRD_PARTY_NOTICES.txt`, the build recipe (`.goreleaser.yaml`, `scripts/release-sbom.sh`) and the lockfiles (`go.mod`, `go.sum`, `console/package-lock.json`) | GoReleaser (`.goreleaser.yaml`); the SBOM from `scripts/release-sbom.sh` (syft over `go.mod`, `go.sum` and `console/package-lock.json`, with the modules' license files); `PROVENANCE.md` and the notices from `tools/provenance` | FR-13.1, FR-12.8 |
 | `smcp_<version>_checksums.txt` (SHA-256 of every archive) | GoReleaser | FR-13.1 |
 | `smcp_<version>_checksums.txt.minisig` | GoReleaser `signs` with the release key (secrets `MINISIGN_SECRET_KEY`, `MINISIGN_PASSWORD`) | FR-13.1, FR-13.2 |
 | `smcp_<version>_checksums.txt.sigstore.json` | cosign keyless step in `release.yml` | security review RR-01 |
 | `*.tar.gz.sbom.json` per archive (syft over the archive, so it lists the Go modules compiled into each binary) | syft through GoReleaser | FR-12.1 |
 | `Formula/smcp.rb` in [ethan03805/homebrew-tap](https://github.com/ethan03805/homebrew-tap) | GoReleaser `brews` (secret `HOMEBREW_TAP_TOKEN`); not for a pre-release unless the variable `SMCP_TAP_PRERELEASE` is `true` | FR-13.3 |
 
-The console is embedded in `smcpd` from the committed `console/dist`. The release workflow fails when an archive lacks one of the files above or when a linux-amd64 binary's `--version` does not print the tag's version; GoReleaser has published the release by then, so a failure there means deleting the release (below). After a release whose formula was pushed, the release workflow starts the `tap` workflow (FR-13.3).
+The console is embedded in `smcpd` from the committed `console/dist`. The release workflow fails when an archive lacks one of the files above, when one of the six linux-amd64 binaries does not print the tag's version (`--version`, `smcpctl version --short`), or when an SBOM entry has a license that is neither OSI-approved, public domain nor reviewed in `packaging/license-review.json` (`tools/sbomcheck`, FR-12.1); GoReleaser has published the release by then, so a failure there means deleting the release (below). After a release whose formula was pushed, the release workflow starts the `tap` workflow (FR-13.3).
 
 The release public key, published in `SECURITY.md`, `docs/install.md` and embedded in `install.sh`:
 

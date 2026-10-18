@@ -13,7 +13,10 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-var atLiteral = regexp.MustCompile(`"(AT-(?:0[1-9]|1[0-9]|2[01]))"`)
+// atLiteral matches a scenario ID at the start of a Go string literal
+// ("AT-01") or of a TypeScript template literal (`AT-07 profile=...`, the
+// scenario annotation of console/e2e/inert.spec.ts).
+var atLiteral = regexp.MustCompile("(?:\"(AT-(?:0[1-9]|1[0-9]|2[01]))\"|`(AT-(?:0[1-9]|1[0-9]|2[01])) profile=)")
 
 // scenarioEvidence returns, per scenario ID, the files that claim it: Go
 // test files that call reqtest.Scenario (directly or through the
@@ -62,7 +65,7 @@ func scenarioEvidence(t *testing.T) map[string][]string {
 			return nil
 		}
 		for _, m := range atLiteral.FindAllStringSubmatch(s, -1) {
-			add(m[1], p)
+			add(m[1]+m[2], p) // one of the two groups is empty
 		}
 		return nil
 	})

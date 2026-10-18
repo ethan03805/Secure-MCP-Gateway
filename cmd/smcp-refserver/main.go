@@ -31,14 +31,23 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Version is set by the build.
+// Version is set by the build (-X main.Version in .goreleaser.yaml).
 var Version = "0.0.0-dev"
+
+// versionLine is what smcp-refserver --version prints, in the form of the
+// other release binaries ("smcpd 1.0.0").
+func versionLine() string { return "smcp-refserver " + Version }
 
 const maxRead = 256 << 10
 
 func main() {
 	root := flag.String("root", "", "directory the file tools may read (file tools are disabled when empty)")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(versionLine())
+		return
+	}
 	srv, closeRoot, err := newServer(*root)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "smcp-refserver:", err)

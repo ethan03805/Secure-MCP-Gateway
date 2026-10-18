@@ -60,6 +60,12 @@ jobs:
           umask 077
           printf '%s\n' "$MINISIGN_SECRET_KEY" > "$RUNNER_TEMP/minisign.key"
           echo "MINISIGN_KEY_FILE=$RUNNER_TEMP/minisign.key" >> "$GITHUB_ENV"
+      # tools/provenance copies the license files of the npm packages bundled
+      # into the console into THIRD_PARTY_NOTICES.txt (FR-12.8); the
+      # console itself is the committed console/dist.
+      - name: Install the console's production npm packages (license notices)
+        working-directory: console
+        run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
@@ -85,7 +91,8 @@ jobs:
             a=build/dist/smcp_${version}_${platform}.tar.gz
             [ -f "$a" ] || { echo "::error::$a missing"; exit 1; }
             list=$(tar -tzf "$a")
-            for f in smcpd smcpctl smcp-refserver smcp-session smcp-stdio smcp-connect smcp-workload README.md CHANGELOG.md LICENSE sbom.spdx.json; do
+            for f in smcpd smcpctl smcp-refserver smcp-session smcp-stdio smcp-connect smcp-workload README.md CHANGELOG.md LICENSE sbom.spdx.json \
+              PROVENANCE.md THIRD_PARTY_NOTICES.txt .goreleaser.yaml scripts/release-sbom.sh go.mod go.sum console/package-lock.json; do
               printf '%s\n' "$list" | grep -qx "$f" || { echo "::error::$a lacks $f"; exit 1; }
             done
             echo "$a: $(printf '%s\n' "$list" | tr '\n' ' ')"
@@ -94,13 +101,24 @@ jobs:
           tar -xzf "build/dist/smcp_${version}_linux_amd64.tar.gz" -C "$x"
           jq -e '.spdxVersion and (.packages | length > 10)' "$x/sbom.spdx.json" >/dev/null \
             || { echo "::error::sbom.spdx.json is not an SPDX document with packages"; exit 1; }
-          for b in smcpd smcp-session smcp-stdio smcp-connect; do
+          # The six release binaries report the release version.
+          for b in smcpd smcp-refserver smcp-session smcp-stdio smcp-connect; do
             out=$("$x/$b" --version 2>&1)
             echo "$b: $out"
             [ "$out" = "$b $version" ] || { echo "::error::$b --version printed '$out', not '$b $version'"; exit 1; }
           done
           out=$("$x/smcpctl" version --short)
           [ "$out" = "$version" ] || { echo "::error::smcpctl version --short printed '$out'"; exit 1; }
+          grep -q "^| Source commit | \`$GITHUB_SHA\` |" "$x/PROVENANCE.md" || { echo "::error::PROVENANCE.md does not name commit $GITHUB_SHA"; exit 1; }
+      # FR-12.1: every package of the SBOM in the archives and of the
+      # per-archive SBOMs has an OSI-approved or public-domain license, or a
+      # reviewed exception in packaging/license-review.json.
+      - name: Check the SBOM licenses (FR-12.1)
+        run: |
+          set -o pipefail
+          x=$(mktemp -d)
+          tar -xzf "build/dist/smcp_${GITHUB_REF_NAME#v}_linux_amd64.tar.gz" -C "$x" sbom.spdx.json
+          go run ./tools/sbomcheck -review packaging/license-review.json "$x/sbom.spdx.json" build/dist/*.sbom.json | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Check the minisign signature against SECURITY.md
         run: |
           rm -f "$MINISIGN_KEY_FILE"
