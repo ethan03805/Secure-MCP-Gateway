@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T00:10:46Z",
-  "commit": "15327ce2b5682a8c5f7ad29b811afef7835b1935",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/15327ce2b5682a8c5f7ad29b811afef7835b1935",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39080267493",
+  "generatedAt": "2026-10-18T01:09:24Z",
+  "commit": "38701dc9d92be1a98c75142238748888615f4c84",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/38701dc9d92be1a98c75142238748888615f4c84",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39083977607",
   "tests": {
     "total": 1355,
     "passed": 1341,
     "failed": 1,
     "skipped": 13,
-    "durationSec": 1432.5,
+    "durationSec": 1338.5,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -544,7 +544,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.6
       },
       {
         "name": "internal/egress",
@@ -560,7 +560,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.9
+        "pct": 84
       },
       {
         "name": "internal/gwtest",
@@ -676,7 +676,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.8
+        "pct": 79.5
       },
       {
         "name": "internal/session",
@@ -684,7 +684,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 77.5
+        "pct": 80
       },
       {
         "name": "internal/tunnel",
@@ -696,7 +696,7 @@
       },
       {
         "name": "scripts/agents",
-        "pct": 66.2
+        "pct": 66
       },
       {
         "name": "scripts/itest-client",
@@ -6999,7 +6999,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7010,7 +7010,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7045,7 +7045,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:46599: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:46257: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7162,7 +7162,7 @@
     }
   ],
   "acceptance": {
-    "commit": "15327ce2b5682a8c5f7ad29b811afef7835b1935",
+    "commit": "38701dc9d92be1a98c75142238748888615f4c84",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -7854,15 +7854,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "15327ce2b5682a8c5f7ad29b811afef7835b1935",
-    "generatedAt": "2026-10-17T23:46:47Z",
+    "commit": "38701dc9d92be1a98c75142238748888615f4c84",
+    "generatedAt": "2026-10-18T00:46:29Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000005830"
+      "runner": "GitHub Actions 1000005890"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7879,7 +7879,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.016785,
+        "value": 0.009705,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7891,7 +7891,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 19.35722,
+        "value": 10.443354,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -7903,18 +7903,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 7.317385499999997,
+        "value": 4.114607749999999,
         "budget": 1,
         "samples": 8000,
         "pass": false,
-        "method": "p95 P-213 with observation enabled (24.156 ms, mean of 39.304, 25.528, 17.810, 13.980) minus disabled (16.838 ms, mean of 21.311, 20.333, 13.229, 12.480), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
+        "method": "p95 P-213 with observation enabled (12.257 ms, mean of 22.495, 8.708, 8.825, 9.000) minus disabled (8.143 ms, mean of 7.884, 8.309, 8.012, 8.365), 8 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 594.134703,
+        "value": 422.714133,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -7926,7 +7926,7 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 105.78515625,
+        "value": 107.07421875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
