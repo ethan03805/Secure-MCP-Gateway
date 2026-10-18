@@ -320,6 +320,24 @@ func Open(dir string, ks KeySource, o VaultOptions) (*Vault, error) {
 	return &Vault{dir: dir, identity: id, recip: id.Recipient(), overlap: o.Overlap, now: o.Now, st: st, rec: o.Evidence}, nil
 }
 
+// Check reports whether the vault is available (FR-7.11): its store file
+// can be read with safe permissions and is still the vault this process
+// unlocked, so the next create, rotation or removal can be persisted and
+// the in-memory versions match the file.
+func (v *Vault) Check() error {
+	st, err := readStore(v.dir)
+	if err != nil {
+		return err
+	}
+	v.mu.Lock()
+	id, recip := v.st.VaultID, v.recip.String()
+	v.mu.Unlock()
+	if st.VaultID != id || st.Recipient != recip {
+		return fmt.Errorf("%w: the vault store no longer matches the unlocked key", ErrLocked)
+	}
+	return nil
+}
+
 // SetEvidence sets the recorder of vault changes.
 func (v *Vault) SetEvidence(rec audit.Recorder) {
 	v.mu.Lock()

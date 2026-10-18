@@ -139,6 +139,16 @@ type Service struct {
 	gw    adminapi.Controller
 	fault atomic.Value // string
 	mu    sync.Mutex   // serializes publications
+
+	currency atomic.Pointer[Currency] // last result of CheckCurrency
+}
+
+// Currency is the result of a decision-snapshot currency check: Detail is
+// empty when the snapshot in force is the Policy Store's verified active
+// revision; Integrity is set when a store file no longer verifies.
+type Currency struct {
+	Detail    string
+	Integrity bool
 }
 
 // New returns the service; Bind must be called with the Gateway before use.
@@ -157,6 +167,28 @@ func (s *Service) Bind(gw adminapi.Controller) { s.gw = gw }
 // Fault returns the current policy fault ("" when none). The edge reports it
 // as a health cause.
 func (s *Service) Fault() string { v, _ := s.fault.Load().(string); return v }
+
+// CheckCurrency compares the decision snapshot in force with the signed
+// control record and the revision file it names (FR-7.11). While a
+// publication holds the service lock the control record and the snapshot
+// may differ for a moment, so the previous result is returned instead.
+func (s *Service) CheckCurrency() Currency {
+	if !s.mu.TryLock() {
+		if c := s.currency.Load(); c != nil {
+			return *c
+		}
+		return Currency{}
+	}
+	defer s.mu.Unlock()
+	var c Currency
+	if cur := s.o.Active(); cur != nil && s.o.Store != nil {
+		if err := s.o.Store.CheckActive(cur.Revision); err != nil {
+			c = Currency{Detail: err.Error(), Integrity: errors.Is(err, policystore.ErrIntegrity)}
+		}
+	}
+	s.currency.Store(&c)
+	return c
+}
 
 // Health implements adminapi.Controller.
 func (s *Service) Health() edge.Health { return s.gw.Health() }

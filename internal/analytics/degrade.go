@@ -41,7 +41,23 @@ type degrader struct {
 }
 
 func newDegrader(budget int64, pressure func() bool, log *slog.Logger) *degrader {
-	return &degrader{budget: budget, heap: heapBytes, hostFree: hostAvailable, pressure: pressure, log: log}
+	return &degrader{budget: budget, heap: heapBytes, hostFree: hostAvailableNow, pressure: pressure, log: log}
+}
+
+var hostAvailImpl atomic.Pointer[func() (float64, bool)]
+
+// SetHostAvailable replaces the host available-memory measurement (tests)
+// and returns a function that restores the real one.
+func SetHostAvailable(f func() (float64, bool)) (restore func()) {
+	hostAvailImpl.Store(&f)
+	return func() { hostAvailImpl.Store(nil) }
+}
+
+func hostAvailableNow() (float64, bool) {
+	if f := hostAvailImpl.Load(); f != nil {
+		return (*f)()
+	}
+	return hostAvailable()
 }
 
 // Stage returns the current stage.

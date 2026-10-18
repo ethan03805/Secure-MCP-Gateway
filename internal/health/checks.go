@@ -18,6 +18,8 @@ import (
 // causes also need an administrator acknowledgment (docs/operations/health.md).
 const (
 	CauseNoSnapshot       = "no_decision_snapshot"    // critical
+	CauseSnapshotStale    = "decision_snapshot_stale" // critical (integrity when a store file no longer verifies)
+	CauseVault            = "vault_unavailable"       // critical
 	CauseEvidence         = "evidence_unavailable"    // critical, integrity
 	CauseJournalWritable  = "journal_not_writable"    // critical
 	CauseSigningLag       = "signing_lag"             // critical
@@ -64,6 +66,32 @@ func PolicyFault(fault func() string) Check {
 	return func(time.Time) []Cause {
 		if f := fault(); f != "" {
 			return []Cause{{Name: f, Critical: true, Detail: "the Policy Store refused the active revision"}}
+		}
+		return nil
+	}
+}
+
+// PolicyCurrency is critical while the decision snapshot in force is not
+// the Policy Store's signed active revision: the control record or the
+// revision file no longer verifies, is missing, or names another revision
+// (FR-7.11). check returns an empty detail while the snapshot is current;
+// integrity marks a store file that no longer verifies.
+func PolicyCurrency(check func() (detail string, integrity bool)) Check {
+	return func(time.Time) []Cause {
+		if d, integrity := check(); d != "" {
+			return []Cause{{Name: CauseSnapshotStale, Critical: true, Integrity: integrity, Detail: d}}
+		}
+		return nil
+	}
+}
+
+// Vault is critical while the secret vault cannot be read or no longer
+// matches the key the Gateway unlocked it with (FR-7.11). check returns
+// nil while the vault is available.
+func Vault(check func() error) Check {
+	return func(time.Time) []Cause {
+		if err := check(); err != nil {
+			return []Cause{{Name: CauseVault, Critical: true, Detail: "secret vault unavailable: " + err.Error()}}
 		}
 		return nil
 	}

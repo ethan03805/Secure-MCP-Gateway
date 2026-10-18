@@ -1,6 +1,8 @@
 package analytics
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
@@ -16,8 +18,18 @@ func (s *Service) HealthCheck() health.Check {
 			return nil
 		}
 		var out []health.Cause
-		if s.storeErr != nil {
+		switch {
+		case s.storeErr != nil:
 			out = append(out, health.Cause{Name: health.CauseObservationUnavailable, Detail: "observation store unavailable: " + s.storeErr.Error()})
+		case s.Store != nil:
+			// FR-7.11 reachability: the store directory must still
+			// accept files, and the last batch write must have
+			// succeeded.
+			if err := probeDir(filepath.Join(s.S.Dir, "store")); err != nil {
+				out = append(out, health.Cause{Name: health.CauseObservationUnavailable, Detail: "observation store unreachable: " + err.Error()})
+			} else if e := s.writer.lastError(); e != "" {
+				out = append(out, health.Cause{Name: health.CauseObservationUnavailable, Detail: "observation store write failed: " + e})
+			}
 		}
 		// FR-9.12: the degradation stage is reported to the Health &
 		// Safety Monitor; observation never gates enforcement.
@@ -56,4 +68,18 @@ func (s *Service) StoreError() error {
 		return nil
 	}
 	return s.storeErr
+}
+
+// probeDir creates and removes a file in dir.
+func probeDir(dir string) error {
+	f, err := os.CreateTemp(dir, ".health-probe-*")
+	if err != nil {
+		return err
+	}
+	name := f.Name()
+	err = f.Close()
+	if rerr := os.Remove(name); err == nil {
+		err = rerr
+	}
+	return err
 }

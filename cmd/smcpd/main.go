@@ -165,6 +165,9 @@ func run(cfgPath, level string) error {
 		return fmt.Errorf("secrets: %w", err)
 	}
 	defer sec.Close()
+	if sec != nil {
+		mon.Register("vault", health.Vault(sec.Vault.Check)) // FR-7.11: critical while the vault cannot be read
+	}
 	a, err := app.Start(ctx, cfg, opts)
 	if err != nil {
 		return err

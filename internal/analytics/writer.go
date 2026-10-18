@@ -34,6 +34,19 @@ type writer struct {
 	dropCount map[string]uint64
 	pressure  atomic.Uint64 // offers seen at ≥ 80% occupancy
 	written   atomic.Int64
+	failing   atomic.Pointer[string] // error of the last batch write, nil after a success
+}
+
+// lastError returns the error of the most recent batch write, or "" when
+// it succeeded (or nothing was written yet).
+func (w *writer) lastError() string {
+	if w == nil {
+		return ""
+	}
+	if e := w.failing.Load(); e != nil {
+		return *e
+	}
+	return ""
 }
 
 func newWriter(s obsstore.Store, maxRows int, interval time.Duration, queue int, log *slog.Logger) *writer {
@@ -111,8 +124,11 @@ func (w *writer) run(ctx context.Context) {
 			if err := w.store.Append(table, rows); err != nil {
 				w.log.Warn("observation store write failed", "table", table, "rows", len(rows), "err", err)
 				w.drop(observe.DropStoreError, uint64(len(rows)))
+				msg := err.Error()
+				w.failing.Store(&msg)
 			} else {
 				w.written.Add(int64(len(rows)))
+				w.failing.Store(nil)
 			}
 			buf[table] = nil
 		}
