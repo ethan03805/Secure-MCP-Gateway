@@ -667,6 +667,7 @@ func (c *Collector) finish(p *pending, ev *audit.Event, end time.Time) {
 			r.Score = mergeScore(r.Score, pr.Score)
 		}
 	}
+	combineSecretMatches(v)
 	// Timings (P-101, P-162, P-206, P-213) from evidence timestamps.
 	var exec, wait time.Duration
 	if !p.requested.IsZero() {
@@ -1029,6 +1030,42 @@ func mergeScore(a, b *anomaly.Result) *anomaly.Result {
 		}
 	}
 	return &out
+}
+
+// Probe value keys of the collector's own secret-fingerprint matches
+// (FR-6.10): the probes scan arguments and results with the fingerprints
+// the Secret Broker registered with the collector. They are combined into
+// secret_fingerprint_matches (P-142) and never stored themselves.
+const (
+	ProbeSecretMatchesRequest  = "_secret_fingerprint_matches_request"
+	ProbeSecretMatchesResponse = "_secret_fingerprint_matches_response"
+)
+
+// combineSecretMatches sets secret_fingerprint_matches (P-142) to the
+// larger of the filter chain's count and the collector's own count over
+// the request and the response, and removes the probe keys.
+func combineSecretMatches(v map[string]any) {
+	own, seen := int64(0), false
+	for _, k := range []string{ProbeSecretMatchesRequest, ProbeSecretMatchesResponse} {
+		if n, ok := v[k].(int64); ok {
+			own += n
+			seen = true
+		}
+		delete(v, k)
+	}
+	if !seen {
+		return
+	}
+	var cur int64
+	switch x := v["secret_fingerprint_matches"].(type) {
+	case int64:
+		cur = x
+	case int:
+		cur = int64(x)
+	case float64:
+		cur = int64(x)
+	}
+	v["secret_fingerprint_matches"] = max(own, cur)
 }
 
 // filterParams maps the parameter IDs of a filter evidence event (written

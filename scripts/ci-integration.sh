@@ -609,6 +609,11 @@ EOF
   if [ "${SMCP_RUN_SYSTEMD:-${SMCP_REQUIRE_PREREQS:-0}}" = 1 ] && [ -d /run/systemd/system ] && sudo -n true 2>/dev/null; then
     say "Enforced profile: smcpd.service under systemd (scripts/ci-systemd.sh)"
     "$root/scripts/ci-systemd.sh" "$bin" "$sbin" "$work" || fail "smcpd.service under systemd"
+    # ci-systemd.sh left a vault with one secret, owned by smcp-core (the
+    # identity smcpd and its Secret Broker run as).
+    say "Enforced profile: the vault is readable by the Secret Broker's identity only (SR-2.13-3)"
+    go_test SMCP_VAULT_IT_DIR=/var/lib/smcp/state/vault SMCP_VAULT_IT_FILES=/var/lib/smcp/ci/vault-pass \
+      -count=1 -run '^TestIntegrationVaultIsolation$' ./internal/secrets/ || fail "vault isolation"
   else
     skip "smcpd.service under systemd: set SMCP_RUN_SYSTEMD=1 on a disposable Linux host with systemd and passwordless sudo"
   fi

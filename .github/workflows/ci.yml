@@ -691,7 +691,7 @@ jobs:
           export TMPDIR="$RUNNER_TEMP/acceptance"
           mkdir -p build
           rc=0
-          go test -count=1 -json -timeout 35m -run 'TestAT' ./internal/acceptance/ > build/acceptance-raw.json || rc=$?
+          go test -count=1 -json -timeout 35m -run 'TestAT|TestEnforcedSecretDelivery' ./internal/acceptance/ > build/acceptance-raw.json || rc=$?
           jq -c 'if .Package then .Package += "/enforced" else . end' build/acceptance-raw.json > build/acceptance-enforced-test.json
           jq -r 'select(.Action == "fail" and .Test != null) | "FAIL \(.Test)"' build/acceptance-enforced-test.json || true
           if [ "$rc" != 0 ]; then echo "::warning::acceptance scenarios failed in the Enforced profile; see build/acceptance-enforced-test.json"; fi

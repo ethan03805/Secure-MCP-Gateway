@@ -167,6 +167,9 @@ func run(cfgPath, level string) error {
 	defer sec.Close()
 	if sec != nil {
 		mon.Register("vault", health.Vault(sec.Vault.Check)) // FR-7.11: critical while the vault cannot be read
+		// FR-6.10: the leak fingerprints are registered with the Observation Collector too.
+		fps := sec.Broker.Fingerprints()
+		obs.SetSecretScanner(func(b []byte) int { return len(fps.Scan(b)) })
 	}
 	a, err := app.Start(ctx, cfg, opts)
 	if err != nil {
