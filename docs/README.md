@@ -84,10 +84,13 @@ Routes are on the loopback admin listener (default `https://127.0.0.1:8444`), au
 
 ## Flows
 
+**[System map](flows/system-map.md)**: the whole product in one flowchart, from installation and start-up through a tool call to its evidence and day-2 operations, with element IDs on every box. On the project site it has pan and zoom, a stage index and an SVG download (`/flows/system-map/`).
+
 Sequence diagrams of the main flows, each with the differences of the current implementation.
 
 | Flow | File |
 |---|---|
+| System map (whole product, one flowchart) | [flows/system-map.md](flows/system-map.md) |
 | Tool call | [flows/tool-call.md](flows/tool-call.md) |
 | OAuth sign-in | [flows/oauth-sign-in.md](flows/oauth-sign-in.md) |
 | Approval in hold mode | [flows/approval-hold.md](flows/approval-hold.md) |

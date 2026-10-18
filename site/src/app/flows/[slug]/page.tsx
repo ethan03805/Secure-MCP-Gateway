@@ -5,11 +5,15 @@ import { DocHead } from "@/components/Sheet";
 import { loadFlows } from "@/lib/flows";
 import { renderMarkdown } from "@/lib/markdown";
 import { REPO_URL, buildCommit, chapter, plural } from "@/lib/site";
+import { SYSTEM_MAP_SLUG } from "@/lib/system-map";
 
 const CH = chapter("/flows/");
 
 export function generateStaticParams() {
-  return loadFlows().map((f) => ({ slug: f.slug }));
+  // The system map has its own page (flows/system-map/page.tsx) with pan and zoom.
+  return loadFlows()
+    .filter((f) => f.slug !== SYSTEM_MAP_SLUG)
+    .map((f) => ({ slug: f.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {

@@ -11,6 +11,7 @@ import { loadMatrix } from "@/lib/matrix";
 import { loadOpenApi } from "@/lib/openapi";
 import { loadReleases } from "@/lib/release";
 import { CHAPTERS, buildCommit, fmtDateTime, fmtPct, shortSha } from "@/lib/site";
+import { SYSTEM_MAP_HREF, loadSystemMap } from "@/lib/system-map";
 
 /** The README's opening paragraph: what the system is. */
 function readmeIntro(): string {
@@ -34,6 +35,7 @@ export default function Home() {
   const matrix = loadMatrix();
   const api = loadOpenApi();
   const releases = loadReleases();
+  const map = loadSystemMap();
 
   const counts: Record<string, string> = {
     "/status/": `${s.tests.passed} of ${s.tests.total} tests passing`,
@@ -97,6 +99,14 @@ export default function Home() {
           {s.tests.failed ? `, ${s.tests.failed} failed` : ""}; statement coverage {fmtPct(s.coverage.totalPct)}.
         </p>
       </section>
+
+      <p className="sysmap-callout">
+        <Link href={SYSTEM_MAP_HREF}>
+          <strong>System map</strong>
+        </Link>
+        : the whole Gateway in one flowchart, from installation and start-up through a tool call to the evidence it
+        leaves and day-2 operations, in {map.stages.length} stages with element IDs, pan and zoom.
+      </p>
 
       <section aria-labelledby="contents-h">
         <h2 id="contents-h">Contents</h2>

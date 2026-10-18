@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DocHead, Note, Sec } from "@/components/Sheet";
 import { loadFlows, flowSourceDir, type Flow } from "@/lib/flows";
 import { buildCommit, chapter, plural } from "@/lib/site";
+import { SYSTEM_MAP_HREF, SYSTEM_MAP_SLUG, loadSystemMap } from "@/lib/system-map";
 
 export const metadata = { title: "Flows" };
 
@@ -45,7 +46,8 @@ function FlowTable({ flows, caption }: { flows: Flow[]; caption: string }) {
 
 export default function FlowsIndex() {
   const flows = loadFlows();
-  const docs = flows.filter((f) => f.origin === "flow");
+  const docs = flows.filter((f) => f.origin === "flow" && f.slug !== SYSTEM_MAP_SLUG);
+  const map = loadSystemMap();
   const arch = flows.filter((f) => f.origin === "architecture");
   const diagrams = flows.reduce((a, f) => a + f.diagrams.length, 0);
   return (
@@ -62,6 +64,14 @@ export default function FlowsIndex() {
           disagree.
         </p>
       </DocHead>
+
+      <p className="sysmap-callout">
+        <Link href={SYSTEM_MAP_HREF}>
+          <strong>System map</strong>
+        </Link>
+        : the whole product in one flowchart, from installation to a tool call and its evidence, in {map.stages.length}{" "}
+        stages with pan and zoom. Each stage links to the detailed flows below.
+      </p>
 
       <Sec no={`${CH.n}.1`} id="flow-docs" title="Flow documents">
         <Note label="Source">
