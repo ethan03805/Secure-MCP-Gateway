@@ -4788,12 +4788,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-17.7 |
 | Parent ID | FR-17 — Operations |
-| Statement | The `smcpctl keys rotate` command **SHALL** rotate the server TLS certificate without dropping sessions, rotate the server CA with an overlap period during which certificates from both CAs are accepted, and rotate the evidence-signing key by closing the open segment and writing a key-transition record signed by the outgoing key. |
+| Statement | The `smcpctl keys rotate` command **SHALL** rotate the server TLS certificate without dropping sessions, rotate the server CA with an overlap period during which the published trust bundle holds both CAs and the listeners present the certificate issued by the outgoing CA until they switch to one issued by the incoming CA when the overlap ends, and rotate the evidence-signing key by closing the open segment and writing a key-transition record signed by the outgoing key. |
 | Allocation | Elements: E-22 Key & Trust Anchor Manager, E-21 Audit & Evidence Service; Functions: F-60, F-55; Data stores: D-08 |
 | Verification Method | Test |
-| Verification Statement | Rotate each key type under traffic; confirm sessions continue across TLS rotation, clients trusting either CA connect during the overlap, and the journal records the transition. |
+| Verification Statement | Rotate each key type under traffic; confirm sessions continue across TLS rotation and the CA switch, clients trusting the outgoing CA or the published bundle connect during the overlap, clients trusting the incoming CA connect after the switch, and the journal records the transition. |
 | Source | REVIEW (I6); SEC 6.12 |
-| Rationale | Keys expire and can be exposed; rotation must not require reinstalling. |
+| Rationale | Keys expire and can be exposed; rotation must not require reinstalling. A TLS server presents one certificate chain per handshake, and the CP-53 path length 0 rules out a cross-certificate between the two CAs, so a client that trusts only the incoming CA cannot be served before the switch; clients import the published bundle during the overlap instead. |
 
 #### FR-17.8 — Verification across key transitions
 
