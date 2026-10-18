@@ -54,7 +54,7 @@ func TestEnforcedUninstallAndPurgeOnHost(t *testing.T) {
 		unit     = "/etc/systemd/system/smcpd.service"
 		profile  = "/etc/apparmor.d/smcpd"
 		journal  = state + "/journal"
-		evidence = state + "/keys/" + keys.EvidenceGenesisFile
+		evidence = state + "/" + keys.EvidenceGenesisFile
 	)
 	exists := func(p string) bool {
 		_, err := sudoOut(t, "", "test", "-e", p)
