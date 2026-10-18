@@ -3151,8 +3151,7 @@
      "operations"
     ],
     "x-smcp-roles": [
-     "administrator",
-     "operator"
+     "administrator"
     ]
    }
   },
@@ -6657,8 +6656,7 @@
      "sessions"
     ],
     "x-smcp-roles": [
-     "administrator",
-     "operator"
+     "administrator"
     ]
    }
   },

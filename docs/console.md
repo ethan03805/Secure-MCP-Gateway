@@ -15,7 +15,7 @@ Approval links in harness error messages (`data.approvalUrl`) and in desktop not
 | Account | Configured in | What it can open |
 |---|---|---|
 | Administrator | `[admin]` (`username`, `password_hash`), or the bootstrap token | Every view and action |
-| Operator | `[[console.account]]` with `role = "operator"` | Gateway control with emergency stop (not resume), sessions (terminate), servers and library (suspend), secrets metadata, egress, runtime (kill), data server, backups and keys, analytics, audit |
+| Operator | `[[console.account]]` with `role = "operator"` | Gateway control with emergency stop (not resume or the acknowledgment of an integrity cause), sessions (suspend and terminate, not resume), servers and library (suspend), secrets metadata, egress, runtime (kill), data server, backups and keys, analytics, audit |
 | Policy Author | `[[console.account]]` with `role = "policy_author"` | Policy studio with drafts, simulation, publication, rollback and the filter workbench; baseline promotion; campaign approval; analytics and audit |
 | Auditor | `[[console.account]]` with `role = "auditor"` | Audit investigation and export; read-only policy, sessions, servers, secrets metadata, egress, runtime, analytics and campaigns |
 | Researcher | `[[console.account]]` with `role = "researcher"` | Observation workbench, analytics aggregates, research campaigns (create, submit, stop) and dataset exports of campaigns |

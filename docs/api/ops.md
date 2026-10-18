@@ -40,7 +40,7 @@ Health monitor report (FR-7.12) combined with the enforcement edge's report.
 
 ## POST /api/v1/health/ack
 
-Acknowledge a latched integrity cause (FR-7.13).
+Acknowledge a latched integrity cause (FR-7.13). Administrator only.
 
 Request: `{ "cause": "evidence_unavailable" }`
 

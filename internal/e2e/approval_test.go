@@ -362,8 +362,8 @@ func TestApprovalHeldApprovedDeniedAndReplay(t *testing.T) {
 }
 
 func TestApprovalRoles(t *testing.T) {
-	// Appendix C has no Auditor account in this slice, so the Auditor
-	// refusal of FR-3.24 is not covered.
+	// The CLI half of FR-3.24, with the Auditor refusal, is
+	// cmd/smcpctl.TestApprovalsCLI; this covers the control API roles.
 	reqtest.Partial(t, "FR-3.24")
 	af := startApprovals(t, "0s", "5m")
 	// A Session Approver account cannot sign in for tool-call approvals,
