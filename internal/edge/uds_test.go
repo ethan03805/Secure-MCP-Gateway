@@ -19,6 +19,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
 
 const udsKey = "uds bearer key 0123456789"
@@ -57,12 +58,7 @@ func udsGroup(t *testing.T) (string, int) {
 // peer with the given UID and template, and serves the socket.
 func udsHarness(t *testing.T, o harnessOpts, uid int, template string) (*harness, string) {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "smcp-uds")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
-	path := filepath.Join(dir, "h.sock")
+	path := filepath.Join(testport.SocketDir(t), "h.sock")
 	group, _ := udsGroup(t)
 	o.toml = fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = %q\n[[uds.peer]]\nuid = %d\nprincipal = \"cc\"\nkey_hash = %q\ntemplate = %q\n",
 		path, group, uid, udsKeyHash(t), template)

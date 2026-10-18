@@ -48,6 +48,25 @@ func Free(t testing.TB) int {
 	return p
 }
 
+// SocketDir returns a new directory for Unix domain sockets, removed when
+// the test ends. A socket path is limited to 104 bytes on macOS and 108 on
+// Linux (sun_path), and $TMPDIR, where t.TempDir and os.MkdirTemp("", ...)
+// put directories, can be long (macOS's per-user /var/folders/... or a
+// sandbox's own), so the directory is made directly under /tmp, with a
+// one-letter prefix, wherever /tmp is writable.
+func SocketDir(t testing.TB) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("/tmp", "s")
+	if err != nil {
+		dir, err = os.MkdirTemp("", "s")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	return dir
+}
+
 // Port is Free for programs that are not tests (the agent conformance
 // runner): it returns an error instead of failing a test.
 func Port() (int, error) {

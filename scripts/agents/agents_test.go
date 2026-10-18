@@ -48,6 +48,16 @@ func TestReferenceRun(t *testing.T) {
 	if res[1].Result != resultFail || !strings.Contains(res[1].Detail, "no call to ref_echo") || !strings.Contains(res[1].Detail, "ungranted (not proven") {
 		t.Fatalf("silent client must fail: %+v", res[1])
 	}
+	// A client that makes no call is given one retry (runChecked), which is
+	// recorded and logged separately, and still fails.
+	if !strings.Contains(res[1].Detail, "after one retry; first attempt: the agent made no call to ref_echo") || strings.Contains(res[0].Detail, "retr") {
+		t.Fatalf("retry not recorded as expected: reference %q, silent %q", res[0].Detail, res[1].Detail)
+	}
+	for _, f := range []string{"allowed.log", "allowed-retry.log", "denied.log", "denied-retry.log"} {
+		if _, err := os.Stat(filepath.Join(dir, "work", "agents", "silent", f)); err != nil {
+			t.Errorf("silent client: %v", err)
+		}
+	}
 
 	// agents.json follows the status contract: exactly these keys.
 	b, err := os.ReadFile(filepath.Join(dir, "agents.json"))

@@ -2,11 +2,13 @@ package edge
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
@@ -87,5 +89,57 @@ func TestDrainStopReleasesInFlightResults(t *testing.T) {
 	}
 	if h.gw.Stopped() {
 		t.Fatal("still stopped after Resume")
+	}
+}
+
+// TestStopOrderedAgainstDispatch: a stop entered while a call is between
+// its launch authorization and its dispatched record is ordered entirely
+// after that record, so that no call is recorded as dispatched after the
+// stop event (SR-7.7-1; AT-19 saw one on CI). The recorder starts the stop
+// when the dispatched event is written and gives it time to finish first;
+// it can only finish once the call leaves the barrier.
+func TestStopOrderedAgainstDispatch(t *testing.T) {
+	reqtest.Partial(t, "SR-7.7-1")
+	h := newHarness(t, harnessOpts{})
+	_, tok := h.session("ro")
+	cs := h.client(tok)
+	var once sync.Once
+	stopped := make(chan error, 1)
+	h.rec.set(func(ev audit.Event) error {
+		if ev.Class == "call" && ev.Phase == audit.PhaseDispatched {
+			once.Do(func() {
+				go func() { stopped <- h.gw.StopDraining("backup", "backup") }()
+				select {
+				case err := <-stopped:
+					stopped <- err
+				case <-time.After(300 * time.Millisecond):
+				}
+			})
+		}
+		return nil
+	}, nil)
+	if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "t_echo", Arguments: map[string]any{"text": "x"}}); err != nil {
+		t.Fatalf("a call in flight at a drain stop: %v", err)
+	}
+	if err := <-stopped; err != nil {
+		t.Fatal(err)
+	}
+	h.rec.set(nil, nil)
+	stopAt, dispatchedAt := -1, -1
+	h.rec.mu.Lock()
+	for i, e := range h.rec.events {
+		switch {
+		case e.Class == "admin" && e.Outcome == "stopped" && stopAt < 0:
+			stopAt = i
+		case e.Class == "call" && e.Phase == audit.PhaseDispatched:
+			dispatchedAt = i
+		}
+	}
+	h.rec.mu.Unlock()
+	if stopAt < 0 || dispatchedAt < 0 || dispatchedAt > stopAt {
+		t.Fatalf("dispatched at %d, stop at %d: a call was recorded as dispatched after the stop", dispatchedAt, stopAt)
+	}
+	if err := h.gw.ResumeDraining("backup"); err != nil {
+		t.Fatal(err)
 	}
 }

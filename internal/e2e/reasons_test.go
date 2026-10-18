@@ -811,11 +811,32 @@ tool_concurrency_per_principal = 1`})
 	}
 
 	// -31007, -31009, -31010: backend outcomes.
+	// A garbled line, an exit and a timeout each replace the instance. The
+	// next call waits for the replacement within its 2 s upstream timeout,
+	// and a loaded host (CI's -race -coverpkg test binary is the backend)
+	// can take longer to start it, which turned INSTANCE_FAILED into
+	// UPSTREAM_TIMEOUT now and then; so each call after a replacement is
+	// made once the replacement is serving.
+	rsrv := rg.app.Registry.Servers()["r"]
+	restarts := rsrv.Restarts()
+	replaced := func(after string) {
+		t.Helper()
+		restarts++
+		for deadline := time.Now().Add(60 * time.Second); rsrv.Restarts() < restarts; time.Sleep(20 * time.Millisecond) {
+			if time.Now().After(deadline) {
+				t.Fatalf("the instance was not replaced after %s", after)
+			}
+		}
+	}
 	callR("BACKEND_ERROR", "r_fail", nil)
 	callR("BACKEND_OUTPUT_INVALID", "r_garble", nil)
+	replaced("BACKEND_OUTPUT_INVALID")
 	callR("INSTANCE_FAILED", "r_crash", nil)
+	replaced("INSTANCE_FAILED")
 	callR("DISPATCH_FAILED", "r_crash_read", nil)
+	replaced("DISPATCH_FAILED")
 	callR("UPSTREAM_TIMEOUT", "r_hang", nil)
+	replaced("UPSTREAM_TIMEOUT")
 	callR("INPUT_REQUIRED_UNSUPPORTED", "r_ask", nil)
 
 	// NO_TEMPLATE: the profile stops permitting the bound session's

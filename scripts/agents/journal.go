@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -12,6 +13,11 @@ import (
 // Gateway's evidence journal, never from the model's text. Each takes the
 // events of one session written after a scenario started (sinceIndex) and
 // returns nil or the reason the scenario failed.
+
+// errNoCall: the agent made no call to the scenario's tool at all; the
+// journal holds no call event for it in this session since the scenario
+// started. It is the one failure runChecked retries (see there).
+var errNoCall = errors.New("the agent made no call")
 
 // backendTool returns the backend tool name of a call event: the Gateway
 // writes tool_revision as "<server revision>/<tool>".
@@ -105,7 +111,7 @@ func checkUngranted(evs []audit.Event) error {
 func checkAllowed(evs []audit.Event) error {
 	order, by := callsTo(evs, toolAllowed)
 	if len(order) == 0 {
-		return fmt.Errorf("the agent made no call to %s", publicName(toolAllowed))
+		return fmt.Errorf("%w to %s", errNoCall, publicName(toolAllowed))
 	}
 	for _, c := range order {
 		ce := by[c]
@@ -121,7 +127,7 @@ func checkAllowed(evs []audit.Event) error {
 func checkDenied(evs []audit.Event) error {
 	order, by := callsTo(evs, toolLimited)
 	if len(order) == 0 {
-		return fmt.Errorf("the agent made no call to %s", publicName(toolLimited))
+		return fmt.Errorf("%w to %s", errNoCall, publicName(toolLimited))
 	}
 	for _, c := range order {
 		ce := by[c]
@@ -146,7 +152,7 @@ func checkDenied(evs []audit.Event) error {
 func checkApproval(evs []audit.Event, serviceAvailable bool) error {
 	order, by := callsTo(evs, toolApproval)
 	if len(order) == 0 {
-		return fmt.Errorf("the agent made no call to %s", publicName(toolApproval))
+		return fmt.Errorf("%w to %s", errNoCall, publicName(toolApproval))
 	}
 	if !serviceAvailable {
 		for _, c := range order {

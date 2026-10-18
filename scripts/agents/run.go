@@ -48,12 +48,18 @@ type scenarioResult struct {
 	Detail      string  `json:"detail"`
 	DurationSec float64 `json:"durationSec"`
 	ExitStatus  string  `json:"agentExit,omitempty"`
+	// Retried: the first attempt made no call to the scenario's tool and
+	// the prompt was run once more (runChecked); Detail says why.
+	Retried bool `json:"retried,omitempty"`
 }
 
 // scenario is one scripted prompt.
 type scenario struct {
 	ID     string
 	Prompt string
+	// Retry marks the second attempt of runChecked; its output is saved
+	// as <ID>-retry.log next to the first attempt's <ID>.log.
+	Retry bool
 }
 
 // Scenario IDs, in run order.
@@ -74,13 +80,13 @@ const notResource = " The Gateway's tools are MCP tools, not MCP resources: do n
 
 func prompts(nonce string) map[string]scenario {
 	return map[string]scenario{
-		scnCatalog: {scnCatalog, "List the names of the tools the MCP server smcp gives you, in one line. If a tool named " +
+		scnCatalog: {ID: scnCatalog, Prompt: "List the names of the tools the MCP server smcp gives you, in one line. If a tool named " +
 			publicName(toolUngranted) + " is among them, call it once with path \".\". Use no other tool." + notResource},
-		scnAllowed: {scnAllowed, fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with text %q and reply with its result. Use no other tool.",
+		scnAllowed: {ID: scnAllowed, Prompt: fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with text %q and reply with its result. Use no other tool.",
 			publicName(toolAllowed), nonce) + notResource},
-		scnDenied: {scnDenied, fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with no arguments and reply with its result or error message. Do not retry. Use no other tool.",
+		scnDenied: {ID: scnDenied, Prompt: fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with no arguments and reply with its result or error message. Do not retry. Use no other tool.",
 			publicName(toolLimited)) + notResource},
-		scnApproval: {scnApproval, fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with path %q and reply with the file's contents. The call may take a while because a person must approve it first. Do not retry. Use no other tool.",
+		scnApproval: {ID: scnApproval, Prompt: fmt.Sprintf("Call the MCP tool %s (server smcp) exactly once with path %q and reply with the file's contents. The call may take a while because a person must approve it first. Do not retry. Use no other tool.",
 			publicName(toolApproval), helloFile) + notResource},
 	}
 }
@@ -164,25 +170,20 @@ func runClient(ctx context.Context, c *client, e *runEnv, r *clientReport, appro
 	add(verdict(scnCatalog, start, err, exit))
 
 	// Allowed call.
-	mark := eventCount(e.g)
-	start = time.Now()
-	exit = runAgent(ctx, c, e, ps[scnAllowed], timeout)
-	err = withEvents(e.g, func(evs []audit.Event) error { return checkAllowed(sessionEvents(evs, mark, sess.SessionID)) })
-	allowedOK := err == nil
-	add(verdict(scnAllowed, start, err, exit))
+	s := runChecked(ctx, c, e, ps[scnAllowed], timeout, sess.SessionID, nil, checkAllowed)
+	allowedOK := s.Result == resultPass
+	add(s)
 
 	// Denied call: the probe fills the one-call-per-minute window of the
 	// rate-limited tool with this session's token, so the agent's call is
-	// refused by the policy decision with RATE_LIMITED.
-	_, _, _ = pr.call(pctx, publicName(toolLimited), map[string]any{})
-	mark = eventCount(e.g)
-	start = time.Now()
-	exit = runAgent(ctx, c, e, ps[scnDenied], timeout)
-	err = withEvents(e.g, func(evs []audit.Event) error { return checkDenied(sessionEvents(evs, mark, sess.SessionID)) })
-	add(verdict(scnDenied, start, err, exit))
+	// refused by the policy decision with RATE_LIMITED. It fills it again
+	// before a retry, whose call may come after the first window ended.
+	fill := func() { _, _, _ = pr.call(pctx, publicName(toolLimited), map[string]any{}) }
+	fill()
+	add(runChecked(ctx, c, e, ps[scnDenied], timeout, sess.SessionID, fill, checkDenied))
 
 	// Approval-obligated call, approved with smcpctl while it is held.
-	mark = eventCount(e.g)
+	mark := eventCount(e.g)
 	start = time.Now()
 	actx, acancel := context.WithCancel(ctx)
 	done := make(chan []string, 1)
@@ -216,7 +217,7 @@ func runClient(ctx context.Context, c *client, e *runEnv, r *clientReport, appro
 		}
 		return nil
 	})
-	s := verdict(scnApproval, start, err, exit)
+	s = verdict(scnApproval, start, err, exit)
 	if err == nil {
 		s.Detail = detail
 	}
@@ -231,6 +232,49 @@ func runClient(ctx context.Context, c *client, e *runEnv, r *clientReport, appro
 		err = errors.New("not proven: the agent made no successful call, so absence of calls shows nothing")
 	}
 	add(verdict(scnUngranted, start, err, ""))
+}
+
+// runChecked runs one scenario's prompt and decides it from the journal
+// events of the session written after the prompt started. A language model
+// now and then answers without calling the tool at all: Codex CLI printed
+// the call as JSON text instead of making it (Real agents run 39128160687,
+// 2026-10-18). That one failure, errNoCall on the first attempt, is model
+// nondeterminism rather than a property of the client or the Gateway, so
+// the prompt is run once more (after before, when given) and the retry is
+// decided from its own journal events. The first attempt's events were
+// checked too: they hold no call to the tool, which is what errNoCall
+// asserts. The result records the retry; any other failure, and a second
+// errNoCall, fails the scenario.
+func runChecked(ctx context.Context, c *client, e *runEnv, s scenario, timeout time.Duration, sessionID string,
+	before func(), check func([]audit.Event) error) scenarioResult {
+	attempt := func(s scenario) (string, error) {
+		mark := eventCount(e.g)
+		exit := runAgent(ctx, c, e, s, timeout)
+		return exit, withEvents(e.g, func(evs []audit.Event) error { return check(sessionEvents(evs, mark, sessionID)) })
+	}
+	start := time.Now()
+	exit, err := attempt(s)
+	if err == nil || !errors.Is(err, errNoCall) {
+		return verdict(s.ID, start, err, exit)
+	}
+	first := err.Error()
+	if exit != "" && exit != "0" {
+		first += " (agent exit: " + exit + ")"
+	}
+	if before != nil {
+		before()
+	}
+	retry := s
+	retry.Retry = true
+	exit, err = attempt(retry)
+	r := verdict(s.ID, start, err, exit)
+	r.Retried = true
+	if err == nil {
+		r.Detail = "retried once; first attempt: " + first
+	} else {
+		r.Detail += " (after one retry; first attempt: " + first + ")"
+	}
+	return r
 }
 
 func verdict(name string, start time.Time, err error, exit string) scenarioResult {
@@ -303,7 +347,11 @@ func runAgentOutput(ctx context.Context, c *client, e *runEnv, s scenario, timeo
 		out = buf.Bytes()
 	}
 	out = redact(out, e.token, os.Getenv(aiKeyEnv))
-	_ = os.WriteFile(filepath.Join(e.dir, s.ID+".log"), out, 0o600)
+	name := s.ID
+	if s.Retry {
+		name += "-retry"
+	}
+	_ = os.WriteFile(filepath.Join(e.dir, name+".log"), out, 0o600)
 	return status, out
 }
 

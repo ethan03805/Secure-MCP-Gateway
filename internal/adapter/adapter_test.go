@@ -27,6 +27,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/gwtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
 
 func writeCreds(t *testing.T, g *gwtest.Gateway, mode os.FileMode) string {
@@ -335,11 +336,7 @@ func TestStdioBridgeRawEquivalence(t *testing.T) {
 // directions (FR-12.13 with the UDS Harness Profile).
 func TestRelayUnixSocket(t *testing.T) {
 	reqtest.Partial(t, "FR-12.13")
-	dir, err := os.MkdirTemp("", "smcp-uds-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := testport.SocketDir(t)
 	sock := filepath.Join(dir, "h.sock")
 	u, err := user.Current()
 	if err != nil {

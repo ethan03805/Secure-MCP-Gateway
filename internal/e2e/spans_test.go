@@ -15,17 +15,40 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-// slowFilter is a deliberately slow request filter: it waits 25 ms and
-// burns about 5 ms of CPU on every call.
+// slowFilter is a deliberately slow request filter: it waits 150 ms and
+// burns 5 ms of CPU on every call. The ranking below compares wall-clock
+// totals over six calls, and a single journal fsync in the launch
+// authorization stage took 185 ms on a CI runner (PR 117), more than six
+// 30 ms filter runs; six 155 ms runs keep the filter well above such an
+// outlier.
 type slowFilter struct{}
 
 func (slowFilter) ID() string { return "slow-filter" }
 
 func (slowFilter) FilterRequest(_ context.Context, _ *pipeline.Call, _ json.RawMessage) (pipeline.RequestVerdict, error) {
-	time.Sleep(25 * time.Millisecond)
-	for t0 := time.Now(); time.Since(t0) < 5*time.Millisecond; {
-	}
+	time.Sleep(150 * time.Millisecond)
+	burnCPU(5 * time.Millisecond)
 	return pipeline.RequestVerdict{Action: pipeline.Pass}, nil
+}
+
+// burnCPU burns d of the thread's CPU time, not of wall-clock time: on a
+// loaded host a loop timed by the wall clock can get much less CPU than
+// its duration, so the 2 ms CPU floor checked below would fail (as the
+// same pattern did in internal/pipeline, CI run 39038412680). Without a
+// thread CPU clock it burns d of wall-clock time.
+func burnCPU(d time.Duration) {
+	spin := func(d time.Duration) {
+		for t0 := time.Now(); time.Since(t0) < d; {
+		}
+	}
+	for total := time.Duration(0); total < d; {
+		c, ok := pipeline.MeasureCPU(func() { spin(250 * time.Microsecond) })
+		if !ok {
+			spin(d)
+			return
+		}
+		total += c
+	}
 }
 
 // TestStageSpansAndPolicyCost traces calls through a Gateway wired as
@@ -127,7 +150,7 @@ func TestStageSpansAndPolicyCost(t *testing.T) {
 		}
 	}
 	slow := filters["slow-filter"]
-	if slow.Duration() < 25*time.Millisecond || (cpuClock && slow.CPU < 2*time.Millisecond) {
+	if slow.Duration() < 150*time.Millisecond || (cpuClock && slow.CPU < 2*time.Millisecond) {
 		t.Fatalf("slow filter span %v, CPU %v", slow.Duration(), slow.CPU)
 	}
 	if cpuClock && byStage[pipeline.SpanRequestInspection].CPU < slow.CPU {
