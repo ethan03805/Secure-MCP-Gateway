@@ -475,6 +475,99 @@ func TestLockoutAndRates(t *testing.T) {
 	}
 }
 
+// TestRemoteLimitKeys is FR-16.6 with TestLockoutAndRates and
+// TestOAuthSourceRate: the OAuth rate is per forwarded source address (a
+// second address is served while the first gets 429); the call rate is
+// per client ID (a second client from the same address is served while
+// the first gets -31005 with HTTP 429); failed token requests, like failed
+// sign-ins, lock after the CP-49 number of consecutive failures, with a
+// REMOTE_LOCKOUT event; and the lockout holds both the client ID (refused
+// from another address) and the source address (another client refused
+// from it) for the lockout period.
+func TestRemoteLimitKeys(t *testing.T) {
+	reqtest.Verifies(t, "FR-16.6")
+	e := newEnv(t, "[remote.limits]\ncalls_per_minute = 1\ncalls_burst = 1\nlockout_failures = 3\nlockout = \"1m\"\noauth_per_second = 1\noauth_burst = 6\n")
+	e.enable()
+	redirect := "http://127.0.0.1/callback"
+	metadata := e.public + "/.well-known/oauth-authorization-server"
+
+	// OAuth rate per source address.
+	callerAddr.Store("198.51.100.20")
+	limited := false
+	for range 12 {
+		if resp, _ := e.get(metadata); resp.StatusCode == http.StatusTooManyRequests {
+			limited = true
+			break
+		}
+	}
+	if !limited {
+		t.Fatal("OAuth source rate not applied")
+	}
+	callerAddr.Store("198.51.100.21")
+	if resp, _ := e.get(metadata); resp.StatusCode != http.StatusOK {
+		t.Fatalf("another source address was limited too: %d", resp.StatusCode)
+	}
+	time.Sleep(6 * time.Second) // refill the OAuth buckets (1 per second)
+
+	// Call rate per client ID: two approved clients from one address.
+	callerAddr.Store("198.51.100.22")
+	tokens := []string{}
+	for range 2 {
+		reg := e.register(redirect)
+		id := reg["client_id"].(string)
+		if st, body := e.Admin("POST", "/api/v1/clients/"+id+"/approve", map[string]any{}); st != 200 {
+			t.Fatalf("approve %d %v", st, body)
+		}
+		resp, tok := e.signIn(id, "", "smcp:template:remote")
+		if resp.StatusCode != 200 {
+			t.Fatalf("sign-in %d %v", resp.StatusCode, tok)
+		}
+		tokens = append(tokens, tok["access_token"].(string))
+		time.Sleep(3 * time.Second)
+	}
+	call := map[string]any{"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": map[string]any{"name": "t_echo", "arguments": map[string]any{"text": "a"}}}
+	if r, _ := e.mcp(e.public, tokens[0], call); r.StatusCode != 200 {
+		t.Fatalf("first client, first call: %d", r.StatusCode)
+	}
+	if r, body := e.mcp(e.public, tokens[0], call); r.StatusCode != 429 || body["error"].(map[string]any)["code"].(float64) != -31005 {
+		t.Fatalf("first client, second call: %d %v", r.StatusCode, body)
+	}
+	if r, _ := e.mcp(e.public, tokens[1], call); r.StatusCode != 200 {
+		t.Fatalf("second client from the same address was limited: %d", r.StatusCode)
+	}
+
+	// Failed token requests lock the client and the source.
+	callerAddr.Store("198.51.100.23")
+	for i := range 3 {
+		time.Sleep(time.Second)
+		resp, body := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {fmt.Sprintf("not-a-token-%d", i)}}, gwtest.PreClientID, gwtest.PreSecret)
+		if resp.StatusCode != 400 || body["error"] != "invalid_grant" {
+			t.Fatalf("failed token request %d: %d %v", i, resp.StatusCode, body)
+		}
+	}
+	e.WaitEvent(func(ev audit.Event) bool {
+		return ev.ReasonCode == "REMOTE_LOCKOUT" && ev.Outcome == "locked" && ev.ClientID == gwtest.PreClientID && ev.Channel == "remote"
+	})
+	time.Sleep(time.Second)
+	if resp, _ := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"x"}}, gwtest.PreClientID, gwtest.PreSecret); resp.StatusCode != 429 || resp.Header.Get("Retry-After") == "" {
+		t.Fatalf("locked client, same address: %d", resp.StatusCode)
+	}
+	// The client ID is locked from another address.
+	callerAddr.Store("198.51.100.24")
+	if resp, _ := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"x"}}, gwtest.PreClientID, gwtest.PreSecret); resp.StatusCode != 429 {
+		t.Fatalf("locked client from another address: %d", resp.StatusCode)
+	}
+	// The source address is locked for another client.
+	reg := e.register(redirect)
+	other := reg["client_id"].(string)
+	e.Admin("POST", "/api/v1/clients/"+other+"/approve", map[string]any{})
+	callerAddr.Store("198.51.100.23")
+	time.Sleep(time.Second)
+	if resp, _ := e.postForm(e.public+"/oauth/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"x"}, "client_id": {other}}, "", ""); resp.StatusCode != 429 {
+		t.Fatalf("another client from the locked address: %d", resp.StatusCode)
+	}
+}
+
 func TestOAuthSourceRate(t *testing.T) {
 	reqtest.Partial(t, "FR-16.6")
 	e := newEnv(t, "[remote.limits]\noauth_per_second = 1\noauth_burst = 2\n")
