@@ -286,7 +286,19 @@ func removeIdentities() []string {
 		if _, err := user.Lookup(name); err != nil {
 			continue
 		}
-		if err := runQuiet(asRoot("userdel", name)...); err != nil {
+		// The Gateway is stopped, but rootless Podman leaves a pause
+		// process per identity (and smcp-srv's user manager may still be
+		// stopping); userdel refuses a user with running processes.
+		_ = runQuiet(asRoot("pkill", "-KILL", "-u", name)...)
+		var err error
+		for i := 0; i < 25; i++ {
+			if err = runQuiet(asRoot("userdel", name)...); err == nil {
+				break
+			}
+			time.Sleep(200 * time.Millisecond)
+			_ = runQuiet(asRoot("pkill", "-KILL", "-u", name)...)
+		}
+		if err != nil {
 			out = append(out, "service identity "+name+": "+err.Error())
 		} else {
 			out = append(out, "removed service identity "+name)

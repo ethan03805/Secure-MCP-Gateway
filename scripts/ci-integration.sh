@@ -393,6 +393,8 @@ enforced_section() {
     -count=1 -run Integration ./internal/sandbox/ || fail "sandbox integration tests"
   go_test SMCP_SANDBOX_IT=1 -count=1 -run '^TestIntegrationPackageBuildProbeSandbox$' ./cmd/smcpctl/ ||
     fail "package build probe in the sandbox"
+  go_test CGO_ENABLED=0 SMCP_SANDBOX_IT=1 -count=1 -run '^TestIntegrationPackageBuildEachType$' ./internal/packaging/ ||
+    fail "package build of each artifact type (OCI probed with Podman)"
 
   if [ "${SMCP_RUN_INSTALLER:-${SMCP_REQUIRE_PREREQS:-0}}" = 1 ] && sudo -n true 2>/dev/null; then
     say "Enforced profile: packaging/linux/install-enforced.sh (twice; the second run changes nothing)"
