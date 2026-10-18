@@ -29,6 +29,10 @@ trap 'rm -rf "$stage"' EXIT
 mkdir -p "$stage/console" "$out"
 cp "$root/go.mod" "$root/go.sum" "$stage/"
 cp "$root/console/package.json" "$root/console/package-lock.json" "$stage/console/"
+# Fill the Go packages' license fields from the module cache (GoReleaser's
+# before hook runs `go mod download` first); without this they are
+# NOASSERTION (FR-12.1). The npm packages' licenses come from the lock file.
+SYFT_GOLANG_SEARCH_LOCAL_MOD_CACHE_LICENSES=true \
 syft scan "dir:$stage" --source-name smcp --source-version "${1:-dev}" -q -o "spdx-json=$out/sbom.spdx.json"
 [ -s "$out/sbom.spdx.json" ] || { echo "release-sbom: syft wrote no SBOM" >&2; exit 1; }
 echo "release-sbom: wrote $out/sbom.spdx.json"

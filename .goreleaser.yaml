@@ -24,6 +24,11 @@ before:
     - go mod download
     # build/sbom/sbom.spdx.json, placed in every archive (FR-13.1).
     - bash scripts/release-sbom.sh {{ .Version }}
+    # build/notices/THIRD_PARTY_NOTICES.txt and BUILDINFO.txt (FR-12.8):
+    # license texts of every linked Go module and embedded npm package,
+    # each checked to be an OSI-approved license (FR-12.1), and the
+    # source commit with where the recipe and lock files are.
+    - go run ./tools/notices -version {{ .Version }} -commit {{ .FullCommit }} -out build/notices
 
 builds:
   - id: smcpd
@@ -114,6 +119,40 @@ archives:
       # The SBOM (FR-13.1), from scripts/release-sbom.sh. Absent in a local
       # snapshot without syft; the release workflow requires it.
       - src: build/sbom/*.spdx.json
+        strip_parent: true
+        info:
+          mode: 0644
+      # Release provenance (FR-12.8): license notices and build information
+      # from tools/notices, and in source/ the build recipe and the
+      # dependency lock files.
+      - src: build/notices/*.txt
+        strip_parent: true
+        info:
+          mode: 0644
+      - src: .goreleaser.yaml
+        dst: source/.goreleaser.yaml
+        info:
+          mode: 0644
+      - src: .github/workflows/release.yml
+        dst: source
+        strip_parent: true
+        info:
+          mode: 0644
+      - src: scripts/release-sbom.sh
+        dst: source/scripts
+        strip_parent: true
+        info:
+          mode: 0644
+      - src: go.mod
+        dst: source/go.mod
+        info:
+          mode: 0644
+      - src: go.sum
+        dst: source/go.sum
+        info:
+          mode: 0644
+      - src: console/package*.json
+        dst: source/console
         strip_parent: true
         info:
           mode: 0644

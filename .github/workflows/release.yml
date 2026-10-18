@@ -85,7 +85,9 @@ jobs:
             a=build/dist/smcp_${version}_${platform}.tar.gz
             [ -f "$a" ] || { echo "::error::$a missing"; exit 1; }
             list=$(tar -tzf "$a")
-            for f in smcpd smcpctl smcp-refserver smcp-session smcp-stdio smcp-connect smcp-workload README.md CHANGELOG.md LICENSE sbom.spdx.json; do
+            for f in smcpd smcpctl smcp-refserver smcp-session smcp-stdio smcp-connect smcp-workload README.md CHANGELOG.md LICENSE sbom.spdx.json \
+              THIRD_PARTY_NOTICES.txt BUILDINFO.txt source/.goreleaser.yaml source/release.yml source/go.mod source/go.sum \
+              source/console/package.json source/console/package-lock.json source/scripts/release-sbom.sh; do
               printf '%s\n' "$list" | grep -qx "$f" || { echo "::error::$a lacks $f"; exit 1; }
             done
             echo "$a: $(printf '%s\n' "$list" | tr '\n' ' ')"
@@ -94,6 +96,12 @@ jobs:
           tar -xzf "build/dist/smcp_${version}_linux_amd64.tar.gz" -C "$x"
           jq -e '.spdxVersion and (.packages | length > 10)' "$x/sbom.spdx.json" >/dev/null \
             || { echo "::error::sbom.spdx.json is not an SPDX document with packages"; exit 1; }
+          # FR-12.1: Go packages should carry license fields (release-sbom.sh
+          # reads them from the module cache). A warning, not a failure: the
+          # licenses are also checked by tools/notices before the build.
+          jq -e '[.packages[] | select(any(.externalRefs[]?; .referenceLocator | startswith("pkg:golang")))
+                  | select(.licenseConcluded == "NOASSERTION" and .licenseDeclared == "NOASSERTION")] | length == 0' \
+            "$x/sbom.spdx.json" >/dev/null || echo "::warning::sbom.spdx.json has Go packages without license fields"
           for b in smcpd smcp-session smcp-stdio smcp-connect; do
             out=$("$x/$b" --version 2>&1)
             echo "$b: $out"

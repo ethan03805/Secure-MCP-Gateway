@@ -3,6 +3,7 @@
 ## Unreleased
 
 - SR-2.5-1 and SR-2-2 are verified against the real `smcpd`: the control API is served only on the admin listener (not on the harness listener, the UDS socket, the metrics listener or the Remote Access listener) and refuses every harness credential, including a client certificate issued by the Gateway's CA (`internal/acceptance.TestControlAPIOnlyOnAdminListener`); a Researcher is refused policy publication, approval decisions, secret and credential operations and S3 payload access without a campaign grant (`internal/acceptance.TestResearcherRoleLimits`).
+- Release provenance (FR-12.8, FR-12.1): every archive now also carries `THIRD_PARTY_NOTICES.txt` (the license texts of each Go module linked into the binaries, the Go standard library and each npm package embedded as the console), `BUILDINFO.txt` (source commit, version, Go toolchain, how to rebuild) and `source/` with the build recipe (`.goreleaser.yaml`, `release.yml`, `scripts/release-sbom.sh`) and the dependency lock files (`go.mod`, `go.sum`, the console's `package.json` and `package-lock.json`). `tools/notices` writes them before the build. It fails when a component has no license file recognized as OSI-approved, and it checks each npm tarball against the lock file's integrity digest. `scripts/release-sbom.sh` fills the Go license fields of `sbom.spdx.json` from the module cache; in v1.0.0 they were `NOASSERTION`. The release workflow checks for the new files.
 
 ## v1.0.0 — 2026-10-18
 

@@ -6,7 +6,7 @@ The procedure for publishing a Secure MCP Gateway release, starting with v1.0.0.
 
 | Asset | Made by | Requirement |
 |---|---|---|
-| `smcp_<version>_<os>_<arch>.tar.gz` for darwin-arm64, darwin-amd64, linux-amd64, linux-arm64, each with `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `README.md`, `CHANGELOG.md`, `LICENSE` and `sbom.spdx.json` | GoReleaser (`.goreleaser.yaml`); the SBOM from `scripts/release-sbom.sh` (syft over `go.mod`, `go.sum` and `console/package-lock.json`) | FR-13.1 |
+| `smcp_<version>_<os>_<arch>.tar.gz` for darwin-arm64, darwin-amd64, linux-amd64, linux-arm64, each with `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `README.md`, `CHANGELOG.md`, `LICENSE`, `sbom.spdx.json`, `THIRD_PARTY_NOTICES.txt`, `BUILDINFO.txt` and `source/` (`.goreleaser.yaml`, `release.yml`, `scripts/release-sbom.sh`, `go.mod`, `go.sum`, `console/package.json`, `console/package-lock.json`) | GoReleaser (`.goreleaser.yaml`); the SBOM from `scripts/release-sbom.sh` (syft over `go.mod`, `go.sum` and `console/package-lock.json`, Go license fields from the module cache); the notices and build information from `tools/notices`, which fails when a linked Go module or embedded npm package has no license file recognized as OSI-approved | FR-13.1, FR-12.8, FR-12.1 |
 | `smcp_<version>_checksums.txt` (SHA-256 of every archive) | GoReleaser | FR-13.1 |
 | `smcp_<version>_checksums.txt.minisig` | GoReleaser `signs` with the release key (secrets `MINISIGN_SECRET_KEY`, `MINISIGN_PASSWORD`) | FR-13.1, FR-13.2 |
 | `smcp_<version>_checksums.txt.sigstore.json` | cosign keyless step in `release.yml` | security review RR-01 |
@@ -53,7 +53,7 @@ RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
   rm -rf build/dist
   ```
 
-  Check that the four archives exist, that each lists the six binaries, that the signature verifies, and that `build/dist/homebrew/Formula/smcp.rb` names the four archives with their checksums. Without `MINISIGN_KEY_FILE` the snapshot skips signing; without syft installed the archives carry no `sbom.spdx.json` (GoReleaser prints `no files matched glob=build/sbom/*.spdx.json`), which the release workflow does not allow. The snapshot builds 24 binaries in about two minutes and takes about 500 MB in `build/dist`.
+  Check that the four archives exist, that each lists the six binaries, that the signature verifies, and that `build/dist/homebrew/Formula/smcp.rb` names the four archives with their checksums. Without `MINISIGN_KEY_FILE` the snapshot skips signing; without syft installed the archives carry no `sbom.spdx.json` (GoReleaser prints `no files matched glob=build/sbom/*.spdx.json`), which the release workflow does not allow. The snapshot builds 24 binaries in about two minutes and takes about 500 MB in `build/dist`. It needs network access: `tools/notices` downloads the console's npm packages named in `console/package-lock.json` (checked against the lock file's integrity digests) to read their license files.
 
 - [ ] Rehearse with a release candidate on the same commit: tag `v<version>-rc.<n>` as below. GoReleaser marks a tag with a `-` suffix as a pre-release and does not push the Homebrew formula for it. Check the pre-release as in "After publishing" (install.sh needs `--version`, because `releases/latest` never resolves to a pre-release), and `smcpctl upgrade` from the previous release to it. Fix any failure through a pull request, then tag the next candidate (`-rc.<n+1>`) at the new `main` commit rather than moving a published tag.
 
