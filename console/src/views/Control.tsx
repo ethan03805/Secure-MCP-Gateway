@@ -239,7 +239,7 @@ function Causes() {
             caption="Health monitor causes"
             rows={h.causes}
             rowKey={(c) => c.name}
-            empty="The health monitor reports no cause."
+            empty="The health monitor reports no cause. A cause appears here when a monitored condition degrades the Gateway."
             columns={[
               { key: "name", label: "Cause", sort: (c) => c.name, render: (c) => <Mono>{c.name}</Mono> },
               { key: "state", label: "State", sort: (c) => String(c.active), render: (c) => (c.active ? <StateLabel tone={c.critical ? "bad" : "warn"}>{c.critical ? "active, critical" : "active"}</StateLabel> : <StateLabel tone="ok">cleared</StateLabel>) },

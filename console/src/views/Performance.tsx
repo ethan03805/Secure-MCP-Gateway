@@ -47,7 +47,7 @@ function ObjectCostTable({ caption, rows, label, id }: { caption: string; rows: 
       rowKey={(r) => `${r.stage}|${r.policy_revision}|${r.rule_id ?? ""}|${r.filter_id ?? ""}|${r.observation_policy ?? ""}`}
       initialSort="total"
       initialDir="desc"
-      empty="No timing recorded since smcpd started."
+      empty="No timing recorded since smcpd started. Timings appear after tool calls when observation is enabled."
       columns={[
         { key: "id", label, sort: (r) => id(r), render: (r) => <Mono>{id(r)}</Mono> },
         { key: "stage", label: "Stage", sort: (r) => r.stage, render: (r) => <Mono>{r.stage}</Mono> },
@@ -149,7 +149,7 @@ export function Performance() {
                   rowKey={(r) => JSON.stringify(r.group)}
                   initialSort="total"
                   initialDir="desc"
-                  empty="No stage timing in this range."
+                  empty="No stage timing in this range. Stage timings appear after tool calls when observation is enabled."
                   columns={[
                     { key: "stage", label: "Stage or object", sort: (r) => r.group.stage ?? "", render: (r) => <Mono>{r.group.stage ?? r.group.rule ?? r.group.filter ?? ""}</Mono> },
                     { key: "rev", label: "Policy revision", sort: (r) => r.group.policy_revision ?? "", render: (r) => <Mono>{r.group.policy_revision}</Mono> },

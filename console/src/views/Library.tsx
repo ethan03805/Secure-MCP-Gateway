@@ -410,6 +410,7 @@ export function PackageDetail({ id, rev }: { id: string; rev: string }) {
                 ]}
               />
             </Section>
+            <RevisionPrivileges manifest={d.manifest} provenance={d.provenance} />
             <Section title="Signed manifest (publisher content, shown as text)">
               {/* SR-3.3-1: both blocks share one 256 KiB page budget. */}
               <JsonBlock value={d.manifest} label="Manifest" />
@@ -418,6 +419,112 @@ export function PackageDetail({ id, rev }: { id: string; rev: string }) {
           </>
         )}
       </Loaded>
+    </>
+  );
+}
+
+// SR-3.4-1: the revision's bill of materials and privileges, read from the
+// signed manifest and provenance statement stored at import. Every value
+// is publisher content and is shown as text.
+type Obj = Record<string, unknown>;
+const obj = (v: unknown): Obj => (v && typeof v === "object" && !Array.isArray(v) ? (v as Obj) : {});
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const str = (v: unknown): string => (typeof v === "string" ? v : typeof v === "number" || typeof v === "boolean" ? String(v) : "");
+const none = (what: string): ReactNode => <span className="muted">{what}</span>;
+const mono = (v: unknown, empty = "none"): ReactNode => (str(v) ? <Mono>{str(v)}</Mono> : none(empty));
+const words = (v: unknown, empty: string): ReactNode => (arr(v).length ? <Mono>{arr(v).map(str).join(" ")}</Mono> : none(empty));
+
+function RevisionPrivileges({ manifest, provenance }: { manifest: unknown; provenance: unknown }) {
+  const m = obj(manifest);
+  const p = obj(provenance);
+  const art = obj(p["artifact"] ?? m["artifact"]);
+  const src = obj(p["source"] ?? obj(m["provenance"])["source"]);
+  const deps = obj(p["dependencies"]);
+  const builder = obj(p["builder"]);
+  const probe = obj(p["probe"]);
+  const licenses = p["licenses"] ?? obj(m["provenance"])["licenses"];
+  const launch = obj(m["launch"]);
+  const caps = obj(m["capabilities"]);
+  const res = obj(caps["resources"]);
+  const mounts = arr(caps["filesystem"]).map(obj);
+  const egress = arr(caps["egress"]).map(obj);
+  const secrets = arr(m["secrets"]).map(obj);
+  const env = Object.entries(obj(launch["env_fixed"]));
+  const limit = (k: string, unit: string): ReactNode => (str(res[k]) && res[k] !== 0 ? <Mono>{`${str(res[k])}${unit}`}</Mono> : none("launcher default"));
+  return (
+    <>
+      <Section title="Bill of materials (signed provenance statement)">
+        <KV
+          rows={[
+            ["Artifact", <>{mono(art["type"])} {mono(art["reference"])} version {mono(art["version"])}</>],
+            ["Artifact digest", mono(art["sha256"])],
+            ["Source", <>{mono(src["kind"])} {mono(src["uri"])}</>],
+            ["Source digest", mono(src["sha256"])],
+            ["Licenses", words(licenses, "none declared")],
+            ["Pinned dependencies", str(deps["kind"]) ? <>{mono(deps["kind"])} digest {mono(deps["sha256"])}</> : none("none: the artifact is self-contained")],
+            ["Built by", <>{mono(builder["tool"])} {mono(builder["version"], "")} {str(builder["host"]) ? <>on {mono(builder["host"])}</> : null}</>],
+            ["Built", str(p["built_at"]) ? <Time value={str(p["built_at"])} /> : none("not recorded")],
+          ]}
+        />
+      </Section>
+      <Section title="Launch and privileges">
+        <KV
+          rows={[
+            ["Runtime", mono(launch["runtime"])],
+            ["Launcher argument vector", words(launch["argv"], "none")],
+            ["Environment passed through", words(launch["env_allowlist"], "none")],
+            ["Fixed environment", env.length ? <Mono>{env.map(([k, v]) => `${k}=${str(v)}`).join(" ")}</Mono> : none("none")],
+          ]}
+        />
+        <DataTable
+          caption="Mounts"
+          rows={mounts}
+          rowKey={(r) => str(r["slot"])}
+          empty="Mounts: none. The server gets no host directory."
+          columns={[
+            { key: "slot", label: "Mount slot", render: (r) => <Mono>{str(r["slot"])}</Mono> },
+            { key: "mode", label: "Mode", render: (r) => (str(r["mode"]) === "rw" ? "read-write" : str(r["mode"]) === "ro" ? "read-only" : <Mono>{str(r["mode"])}</Mono>) },
+            { key: "arg", label: "Argument placeholder", render: (r) => mono(r["argv_placeholder"]) },
+          ]}
+        />
+        <DataTable
+          caption="Egress destinations"
+          rows={egress}
+          rowKey={(r) => `${str(r["host"])}:${arr(r["ports"]).map(str).join(",")}`}
+          empty="Egress destinations: none. The server has no network access."
+          columns={[
+            { key: "host", label: "Destination host", render: (r) => <Mono>{str(r["host"])}</Mono> },
+            { key: "ports", label: "Ports", render: (r) => words(r["ports"], "any") },
+            { key: "methods", label: "Methods", render: (r) => words(r["methods"], "any") },
+          ]}
+        />
+        <DataTable
+          caption="Secret slots"
+          rows={secrets}
+          rowKey={(r) => str(r["slot"])}
+          empty="Secret slots: none. The server receives no secret."
+          columns={[
+            { key: "slot", label: "Secret slot", render: (r) => <Mono>{str(r["slot"])}</Mono> },
+            { key: "purpose", label: "Purpose", render: (r) => str(r["purpose"]) },
+            { key: "modes", label: "Delivery modes", render: (r) => words(r["modes"], "none") },
+            { key: "dest", label: "Destination", render: (r) => mono(r["destination"]) },
+            { key: "env", label: "Variable", render: (r) => mono(r["env_name"]) },
+          ]}
+        />
+        <h3>Sandbox profile</h3>
+        <KV
+          rows={[
+            ["Network", egress.length ? `egress only, through the Egress Broker, to the ${egress.length} destination${egress.length === 1 ? "" : "s"} above` : "none"],
+            ["Child processes", caps["spawns_processes"] === true ? "may start child processes" : "may not start child processes"],
+            ["Memory limit", limit("memory_mib", " MiB")],
+            ["CPU limit", limit("cpus", " CPUs")],
+            ["Process limit", limit("pids", " processes")],
+            ["Wall-clock limit", limit("wall_seconds", " s")],
+            ["Instance scope", words(m["instance_scope"], "not declared")],
+            ["Tool-list probe at packaging", <>{mono(probe["launcher"], "not recorded")} {probe["confined"] === true ? "(confined)" : probe["confined"] === false ? "(unconfined)" : null}</>],
+          ]}
+        />
+      </Section>
     </>
   );
 }

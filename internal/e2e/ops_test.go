@@ -524,6 +524,10 @@ func TestOpsOnlineBackup(t *testing.T) {
 	if err := f.echo(cs, "x"); err != nil {
 		t.Fatal(err)
 	}
+	// No schedule and no backup yet: not configured (FR-8.31 checklist).
+	if _, list := f.admin("GET", "/api/v1/backup", f.operator, nil); list["configured"] != false || list["scheduled"] != false {
+		t.Fatalf("backup state before any backup: %v", list)
+	}
 	if code, res := f.admin("POST", "/api/v1/backup", f.operator, map[string]any{}); code != 400 || !strings.Contains(fmt.Sprint(res), "BACKUP_UNENCRYPTED_REFUSED") {
 		t.Fatalf("unencrypted backup %d %v", code, res)
 	}
@@ -535,7 +539,7 @@ func TestOpsOnlineBackup(t *testing.T) {
 		t.Fatalf("dispatch not resumed: %v", err)
 	}
 	_, list := f.admin("GET", "/api/v1/backup", f.operator, nil)
-	if n := len(list["backups"].([]any)); n != 1 { // the refused request wrote nothing
+	if n := len(list["backups"].([]any)); n != 1 || list["configured"] != true { // the refused request wrote nothing
 		t.Fatalf("index %v", list)
 	}
 	// Stopping dispatch first leaves it stopped afterwards.

@@ -34,6 +34,10 @@ func TestScheduledAndOnDemandBackups(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := startOps(t, fmt.Sprintf("[backup]\ninterval = \"1s\"\npassphrase_file = %q\n", pf), nil)
+	// A schedule counts as a configured backup before the first one runs.
+	if _, list := f.admin("GET", "/api/v1/backup", f.operator, nil); list["scheduled"] != true || list["configured"] != true {
+		t.Fatalf("backup state with a schedule: %v", list)
+	}
 	access, _, _ := f.oauthLogin("")
 	// A backup stops dispatch while it runs (SR-7.7-1), so a call that
 	// meets a scheduled backup is refused; between backups calls run.

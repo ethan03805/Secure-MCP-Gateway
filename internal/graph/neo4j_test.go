@@ -100,6 +100,38 @@ func TestNeo4jEveryTemplateCompiles(t *testing.T) {
 	}
 }
 
+// TestNeo4jMigrationAfterInterruptedConstraint is FR-9.2 after a first
+// start that was stopped while the engine built a constraint's backing
+// index: the database holds an index with the constraint's name and no
+// constraint. The next migration drops that index, creates the constraint
+// and completes.
+func TestNeo4jMigrationAfterInterruptedConstraint(t *testing.T) {
+	reqtest.Partial(t, "FR-9.2")
+	b := neo4jEnv(t)
+	ctx := context.Background()
+	orphan := &Op{id: "test.orphan", mode: ModeWrite, params: map[string]ParamType{}, text: "CREATE INDEX smcp_approval_id FOR (n:Approval) ON (n.id)"}
+	if _, err := b.Write(ctx, []Statement{{Op: orphan, Params: map[string]any{}}}); err != nil {
+		t.Fatal(err)
+	}
+	das := NewDAS(b, nil, nil)
+	if from, to, err := das.Migrate(ctx); err != nil || from != 0 || to != 2 {
+		t.Fatalf("migration over an orphaned index: %d %d %v", from, to, err)
+	}
+	show := &Op{id: "test.show", mode: ModeRead, params: map[string]ParamType{}, text: "SHOW CONSTRAINTS YIELD name, type WHERE name = 'smcp_approval_id' RETURN name, type"}
+	rows, err := b.Read(ctx, Statement{Op: show, Params: map[string]any{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// UNIQUENESS, or NODE_PROPERTY_UNIQUENESS on newer engines.
+	typ := ""
+	if len(rows) == 1 {
+		typ, _ = rows[0]["type"].(string)
+	}
+	if !strings.HasSuffix(typ, "UNIQUENESS") {
+		t.Fatalf("smcp_approval_id is not a uniqueness constraint after the migration: %v", rows)
+	}
+}
+
 func TestNeo4jSchemaMigrationAndIndexes(t *testing.T) {
 	// FR-9.2 on Neo4j: an empty database migrates; one at version 1
 	// migrates to 2; one newer than the release is refused. FR-9.18: the

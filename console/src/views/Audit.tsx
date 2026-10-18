@@ -180,7 +180,7 @@ function EventDetail({ id }: { id: string }) {
                   ["Reason code", e.reason_code ? <Mono>{e.reason_code}</Mono> : <span className="muted">none</span>],
                   ["Origin element", <Mono>{e.origin}</Mono>],
                   ["Policy status", <Mono>{e.policy_status}</Mono>],
-                  ["Decision", link("decision_id", e.decision_id)],
+                  ["Decision", e.decision_id ? <Link to={`/audit/decisions/${encodeURIComponent(e.decision_id)}`}><Mono>{e.decision_id}</Mono></Link> : <span className="muted">none</span>],
                   ["Call", link("correlation_id", e.correlation_id)],
                   ["Session", e.session_id ? <Link to={`/sessions/${e.session_id}`}><Mono>{e.session_id}</Mono></Link> : <span className="muted">none</span>],
                   ["Principal", link("principal_id", e.principal_id)],
@@ -283,6 +283,8 @@ function GraphExplorer() {
 export function Audit({ path }: { path: string }) {
   const m = match("/audit/events/:id", path);
   if (m?.id) return <EventDetail id={m.id} />;
+  const dm = match("/audit/decisions/:id", path);
+  if (dm?.id) return <DecisionDetail id={dm.id} />;
   if (path === "/audit/graph") return <GraphExplorer />;
   return (
     <>
@@ -298,6 +300,164 @@ export function Audit({ path }: { path: string }) {
       </Help>
       <VerifyPanel />
       <Journal />
+    </>
+  );
+}
+
+// A decision's own page (FR-8.22, FR-8.28): the decision record of the
+// journal with links to its rule revisions, route, server revision,
+// baseline snapshot, session and the other phases of the call.
+interface Explanation {
+  decision_id: string;
+  superseded_by?: string;
+  note?: string;
+  event_id?: string;
+  correlation_id?: string;
+  session_id?: string;
+  principal_id?: string;
+  policy_revision?: string;
+  server_revision?: string;
+  tool_revision?: string;
+  time?: string;
+  phase?: string;
+  reason_code?: string;
+  outcome?: string;
+  template?: string;
+  route?: string;
+  considered_rules?: string[];
+  applicable_rules?: string[];
+  decisive_rules?: string[];
+  obligations?: unknown;
+  side_effect?: string;
+  source_trust?: string;
+  tainted?: boolean;
+  baseline_snapshot_id?: string;
+  failed_predicate?: string;
+  anomaly?: { event_id: string; class: string; outcome?: string; reason_code?: string }[];
+}
+
+interface RuleRow {
+  id: string;
+  kind: string;
+  rule?: Record<string, unknown>;
+}
+
+function DecisionDetail({ id }: { id: string }) {
+  const res = useResource<Explanation>(`/api/v1/decisions/${encodeURIComponent(id)}/explanation`, { live: false });
+  const perm = usePerm();
+  const d = res.status === "ok" ? res.data : undefined;
+  const canPolicy = perm.can("GET /api/v1/policy/revisions/{id}");
+  const doc = useResource<{ document: { templates?: Record<string, { rules?: Record<string, unknown>[] }> } }>(
+    d?.policy_revision && canPolicy ? `/api/v1/policy/revisions/${encodeURIComponent(d.policy_revision)}` : null,
+    { live: false },
+  );
+  const phases = useResource<EventPage>(d?.correlation_id ? `/api/v1/audit/events?correlation_id=${encodeURIComponent(d.correlation_id)}&limit=50` : null, { live: false });
+  const graph = useResource<EventPath>(d?.event_id && perm.can("GET /api/v1/graph/events/{id}/path") ? `/api/v1/graph/events/${encodeURIComponent(d.event_id)}/path` : null, { live: false });
+  const none = <span className="muted">none</span>;
+  const ruleOf = (rid: string): Record<string, unknown> | undefined => {
+    if (doc.status !== "ok") return undefined;
+    const [, tpl, rule] = rid.split("/");
+    return doc.data.document.templates?.[tpl ?? ""]?.rules?.find((r) => r["id"] === rule);
+  };
+  const rules: RuleRow[] = d
+    ? [
+        ...(d.decisive_rules ?? []).map((r) => ({ id: r, kind: "decisive" })),
+        ...(d.applicable_rules ?? []).filter((r) => !(d.decisive_rules ?? []).includes(r)).map((r) => ({ id: r, kind: "applicable" })),
+        ...(d.considered_rules ?? []).filter((r) => !(d.applicable_rules ?? []).includes(r) && !(d.decisive_rules ?? []).includes(r)).map((r) => ({ id: r, kind: "considered" })),
+      ].map((r) => ({ ...r, rule: ruleOf(r.id) }))
+    : [];
+  const revLink = (rev?: string) => (rev ? canPolicy ? <Link to={`/policy/revisions/${encodeURIComponent(rev)}`}><Mono>{rev}</Mono></Link> : <Mono>{rev}</Mono> : none);
+  return (
+    <>
+      <Crumbs items={[["Audit investigation", "/audit"], [`Decision ${id.slice(0, 8)}`, null]]} />
+      <PageHeader code="G-14" title="Decision">
+        <p>
+          <Mono>{id}</Mono>
+        </p>
+      </PageHeader>
+      <Loaded res={res} what="the decision" route="/api/v1/decisions/{id}/explanation">
+        {(x) =>
+          x.superseded_by ? (
+            <Section title="Superseded">
+              <p>
+                {x.note ?? "This decision was replaced."} The call was decided again as{" "}
+                <Link to={`/audit/decisions/${encodeURIComponent(x.superseded_by)}`}>
+                  <Mono>{x.superseded_by}</Mono>
+                </Link>
+                .
+              </p>
+            </Section>
+          ) : (
+            <>
+              <Section title="Decision record">
+                <KV
+                  rows={[
+                    ["Outcome", x.outcome ? <StateLabel tone={toneOf(x.outcome)}>{x.outcome}</StateLabel> : none],
+                    ["Reason code", x.reason_code ? <Mono>{x.reason_code}</Mono> : none],
+                    ["Time", <Time value={x.time} />],
+                    ["Decision event", x.event_id ? <Link to={`/audit/events/${encodeURIComponent(x.event_id)}`}><Mono>{x.event_id}</Mono></Link> : none],
+                    ["Policy revision", revLink(x.policy_revision)],
+                    ["Session Allow template", x.template ? <Mono>{x.template}</Mono> : none],
+                    ["Route (server alias)", x.route ? <Link to={`/servers/${encodeURIComponent(x.route)}`}><Mono>{x.route}</Mono></Link> : none],
+                    ["Server revision", x.server_revision ? (x.route ? <Link to={`/servers/${encodeURIComponent(x.route)}`}><Mono>{x.server_revision}</Mono></Link> : <Mono>{x.server_revision}</Mono>) : none],
+                    ["Tool revision", x.tool_revision ? <Mono>{x.tool_revision}</Mono> : none],
+                    ["Baseline snapshot", x.baseline_snapshot_id ? <Link to={`/analytics/snapshots/${encodeURIComponent(x.baseline_snapshot_id)}`}><Mono>{x.baseline_snapshot_id}</Mono></Link> : <span className="muted">none in force</span>],
+                    ["Session", x.session_id ? <Link to={`/sessions/${encodeURIComponent(x.session_id)}`}><Mono>{x.session_id}</Mono></Link> : none],
+                    ["Principal", x.principal_id ? <Mono>{x.principal_id}</Mono> : none],
+                    ["Side effect and source trust", <Mono>{`${x.side_effect ?? "unknown"} / ${x.source_trust ?? "unknown"}${x.tainted ? " / tainted" : ""}`}</Mono>],
+                    ["Failed predicate", x.failed_predicate ? <Mono>{x.failed_predicate}</Mono> : none],
+                  ]}
+                />
+                {x.obligations !== undefined && <JsonBlock value={x.obligations} label="Obligations" />}
+              </Section>
+              <Section title={`Rule revisions (${rules.length})`}>
+                <DataTable
+                  caption="Rule revisions of the decision"
+                  rows={rules}
+                  rowKey={(r) => `${r.kind}:${r.id}`}
+                  empty="No rule matched: the decision is the template's default."
+                  columns={[
+                    { key: "kind", label: "Role", render: (r) => (r.kind === "decisive" ? <StateLabel tone="neutral">decisive</StateLabel> : r.kind) },
+                    { key: "id", label: "Rule revision", render: (r) => <Mono>{r.id}</Mono> },
+                    { key: "effect", label: "Effect", render: (r) => (r.rule?.["effect"] ? <Mono>{String(r.rule["effect"])}</Mono> : <span className="muted">see the revision</span>) },
+                    { key: "rule", label: "Rule as published", render: (r) => (r.rule ? <Mono>{JSON.stringify(r.rule)}</Mono> : revLink(r.id.split("/")[0])) },
+                  ]}
+                />
+              </Section>
+              {x.anomaly && x.anomaly.length > 0 && (
+                <Section title="Anomaly evidence">
+                  <DataTable
+                    caption="Anomaly events of the call"
+                    rows={x.anomaly}
+                    rowKey={(a) => a.event_id}
+                    empty=""
+                    columns={[
+                      { key: "event", label: "Event", render: (a) => <Link to={`/audit/events/${encodeURIComponent(a.event_id)}`}><Mono>{a.event_id.slice(0, 8)}</Mono></Link> },
+                      { key: "class", label: "Class", render: (a) => <Mono>{a.class}</Mono> },
+                      { key: "outcome", label: "Outcome", render: (a) => <Mono>{a.outcome ?? ""}</Mono> },
+                      { key: "reason", label: "Reason code", render: (a) => <Mono>{a.reason_code ?? ""}</Mono> },
+                    ]}
+                  />
+                </Section>
+              )}
+              {x.correlation_id && (
+                <Section title="Phases of this call">
+                  <Loaded res={phases} what="the phases of the call" route="/api/v1/audit/events">
+                    {(p) => <DataTable caption="Events of the decided call" columns={eventColumns()} rows={[...p.events].reverse()} rowKey={(e) => e.event_id} empty="No event of this call is in the journal." />}
+                  </Loaded>
+                </Section>
+              )}
+              {x.event_id && perm.can("GET /api/v1/graph/events/{id}/path") && (
+                <Section title="Investigation graph" actions={<Link to={`/audit/graph?label=Decision&id=${encodeURIComponent(x.decision_id)}`}>Explore the neighborhood</Link>}>
+                  <Loaded res={graph} what="the investigation graph" route="/api/v1/graph/events/{id}/path">
+                    {(g) => <EventPathGraph path={g} />}
+                  </Loaded>
+                </Section>
+              )}
+            </>
+          )
+        }
+      </Loaded>
     </>
   );
 }

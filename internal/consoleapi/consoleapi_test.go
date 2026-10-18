@@ -200,7 +200,8 @@ func TestStaticConsoleCSPAndDeepLinks(t *testing.T) {
 	// unit test does not inspect. FR-8.28: deep links return the page.
 	reqtest.Partial(t, "FR-8.26", "FR-8.28", "SR-6.17-1")
 	f := newFixture(t, nil)
-	for _, p := range []string{"/", "/approvals/01a1-xyz", "/sessions/abc", "/audit/events/e1"} {
+	for _, p := range []string{"/", "/approvals/01a1-xyz", "/sessions/abc", "/audit/events/e1", "/library/smcp-ref-filesystem/0.0.0-dev+abc",
+		"/library/pkg/1.2.0", "/policy/revisions/r1.1", "/audit/decisions/d1"} {
 		r := f.raw("GET", p, "", nil)
 		b, _ := io.ReadAll(r.Body)
 		r.Body.Close()
@@ -220,10 +221,12 @@ func TestStaticConsoleCSPAndDeepLinks(t *testing.T) {
 	if r.StatusCode != 200 || !strings.Contains(r.Header.Get("Content-Type"), "javascript") || !strings.Contains(r.Header.Get("Cache-Control"), "immutable") {
 		t.Fatalf("asset: %d %v", r.StatusCode, r.Header)
 	}
-	r = f.raw("GET", "/assets/missing.js", "", nil)
-	r.Body.Close()
-	if r.StatusCode != 404 {
-		t.Fatalf("missing asset: %d", r.StatusCode)
+	for _, p := range []string{"/assets/missing.js", "/favicon.ico", "/assets/sub/missing.css"} {
+		r = f.raw("GET", p, "", nil)
+		r.Body.Close()
+		if r.StatusCode != 404 {
+			t.Fatalf("missing build file %s: %d", p, r.StatusCode)
+		}
 	}
 	// Unknown control API routes are JSON 404 for the console's
 	// "not available in this build" state, never the page.

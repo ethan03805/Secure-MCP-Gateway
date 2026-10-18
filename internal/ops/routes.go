@@ -182,7 +182,10 @@ func (r *Runtime) handleBackups(w http.ResponseWriter, _ *http.Request) {
 	if list == nil {
 		list = []backup.IndexEntry{}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"dir": r.app.Config.Backup.Dir, "backups": list})
+	// configured is what the G-01 first-run checklist shows (FR-8.31): a
+	// backup schedule is set or a backup has been taken.
+	scheduled := r.app.Config.Backup.Interval.Duration > 0
+	writeJSON(w, http.StatusOK, map[string]any{"dir": r.app.Config.Backup.Dir, "backups": list, "scheduled": scheduled, "configured": scheduled || len(list) > 0})
 }
 
 // BackupRequest is the body of POST /api/v1/backup.

@@ -70,7 +70,7 @@ function Summary() {
                 caption="Prerequisite checks"
                 rows={d.checks}
                 rowKey={(c) => c.id}
-                empty="No check ran."
+                empty="No check ran. Run the prerequisite checks with smcpctl runtime doctor."
                 columns={[
                   { key: "name", label: "Check", render: (c) => c.name },
                   { key: "status", label: "Result", sort: (c) => c.status, render: (c) => <StateLabel tone={c.status === "pass" ? "ok" : c.status === "warn" ? "warn" : "bad"}>{c.status}</StateLabel> },

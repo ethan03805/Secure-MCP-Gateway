@@ -128,7 +128,7 @@ export function Egress() {
                 caption="Attached instances"
                 rows={s.instances}
                 rowKey={(i) => i.id}
-                empty="No server instance is attached to the broker."
+                empty="No server instance is attached to the broker. An instance appears here when a server with an egress grant starts."
                 columns={[
                   { key: "id", label: "Instance", render: (i) => <ShortId id={i.id} /> },
                   { key: "server", label: "Server", sort: (i) => i.server, render: (i) => <Mono>{i.server}</Mono> },
@@ -149,7 +149,7 @@ export function Egress() {
               rows={d.grants}
               rowKey={(g) => g.server + g.host + g.ports.join(",")}
               initialSort="server"
-              empty="No server has an egress grant, so no instance can reach the network."
+              empty="No server has an egress grant, so no instance can reach the network. A grant appears here when a server whose manifest declares egress destinations is enabled."
               columns={[
                 { key: "server", label: "Server", sort: (g) => g.server, render: (g) => <Mono>{g.server}</Mono> },
                 { key: "host", label: "Host", sort: (g) => g.host, render: (g) => <Mono>{g.host}</Mono> },

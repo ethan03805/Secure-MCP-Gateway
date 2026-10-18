@@ -69,7 +69,7 @@ function Graph() {
                 ["Last retention run", <Time value={g.last_retention} />],
               ]}
             />
-            {!g.enabled && <p className="empty">The graph mirror is disabled ([graph] enabled = false). Enforcement never depends on it.</p>}
+            {!g.enabled && <p className="empty">The graph mirror is disabled ([graph] enabled = false). Enforcement never depends on it. To use it, install Neo4j and set [graph] enabled = true (docs/graph.md).</p>}
             {g.enabled && (
               <>
                 <Meter label="Heap in use against budget" used={g.memory.heap_used} budget={g.memory.budget.heap_bytes} format={bytes} />
