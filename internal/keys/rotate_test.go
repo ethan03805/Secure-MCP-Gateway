@@ -86,9 +86,10 @@ func TestCP53ServerCA(t *testing.T) {
 func TestCARotationOverlap(t *testing.T) {
 	// FR-17.7 CA clause: during the overlap the listener still presents the
 	// outgoing CA's certificate, so clients trusting the outgoing CA
-	// connect, and the published bundle holds both CAs. A client that
-	// trusts only the incoming CA connects after the switch, not during
-	// the overlap, so the clause is partial.
+	// connect, and the published bundle holds both CAs; a client that
+	// trusts only the incoming CA connects after the switch. The whole
+	// requirement under traffic is TestOpsKeyRotationUnderTraffic
+	// (internal/e2e).
 	reqtest.Partial(t, "FR-17.7")
 	dir := t.TempDir()
 	if err := Ensure(dir, "127.0.0.1"); err != nil {
