@@ -72,7 +72,8 @@ func installCmd(args []string, out io.Writer) error {
 		return err
 	}
 	if fs.NArg() > 0 {
-		return fmt.Errorf("unexpected argument %q", fs.Arg(0))
+		// Never echo the argument: it may be a password (SR-7.5-2).
+		return errPasswordArg
 	}
 	in := newInstaller(out)
 	in.noStart, in.healthWait, in.boot = *noStart, *wait, o
