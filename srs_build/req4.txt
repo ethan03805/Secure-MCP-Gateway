@@ -986,11 +986,11 @@ R: The archive contains private keys; it must not be readable where it is stored
 
 @FR-17.7 | Key rotation
 P: FR-17
-S: The `smcpctl keys rotate` command SHALL rotate the server TLS certificate without dropping sessions, rotate the server CA with an overlap period during which certificates from both CAs are accepted, and rotate the evidence-signing key by closing the open segment and writing a key-transition record signed by the outgoing key.
+S: The `smcpctl keys rotate` command SHALL rotate the server TLS certificate without dropping sessions, rotate the server CA with an overlap period during which the published trust bundle holds both CAs and the listeners present the certificate issued by the outgoing CA until they switch to one issued by the incoming CA when the overlap ends, and rotate the evidence-signing key by closing the open segment and writing a key-transition record signed by the outgoing key.
 A: E-22; E-21; F-60; F-55; D-08
-V: Test | Rotate each key type under traffic; confirm sessions continue across TLS rotation, clients trusting either CA connect during the overlap, and the journal records the transition.
+V: Test | Rotate each key type under traffic; confirm sessions continue across TLS rotation and the CA switch, clients trusting the outgoing CA or the published bundle connect during the overlap, clients trusting the incoming CA connect after the switch, and the journal records the transition.
 SRC: REVIEW (I6); SEC 6.12
-R: Keys expire and can be exposed; rotation must not require reinstalling.
+R: Keys expire and can be exposed; rotation must not require reinstalling. A TLS server presents one certificate chain per handshake, and the CP-53 path length 0 rules out a cross-certificate between the two CAs, so a client that trusts only the incoming CA cannot be served before the switch; clients import the published bundle during the overlap instead.
 
 @FR-17.8 | Verification across key transitions
 P: FR-17

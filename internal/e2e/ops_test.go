@@ -12,10 +12,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -316,15 +319,44 @@ func TestOpsMetricsAndHealthGate(t *testing.T) {
 	}
 }
 
+// bundleFollowingClient returns an HTTP client that opens a new TLS
+// connection for every request and trusts, at each handshake, the CAs in
+// the extra file and in the published bundle as it is then: a client that
+// imports the bundle during a CA overlap.
+func bundleFollowingClient(t *testing.T, extra, bundle string) *http.Client {
+	t.Helper()
+	return &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{
+		DisableKeepAlives: true,
+		DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			pool := x509.NewCertPool()
+			for _, f := range []string{extra, bundle} {
+				b, err := os.ReadFile(f)
+				if err != nil {
+					return nil, err
+				}
+				pool.AppendCertsFromPEM(b)
+			}
+			host, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			d := &tls.Dialer{Config: &tls.Config{RootCAs: pool, ServerName: host, MinVersion: tls.VersionTLS13}}
+			return d.DialContext(ctx, network, addr)
+		},
+	}}
+}
+
 func TestOpsKeyRotationUnderTraffic(t *testing.T) {
-	// FR-17.7: TLS rotation keeps sessions; during the CA overlap clients
-	// trusting the outgoing CA connect and the bundle carries both; the
-	// evidence key rotation writes a transition record that verifies. A
-	// client trusting only the incoming CA connects after the switch, not
-	// during the overlap (partial).
-	reqtest.Partial(t, "FR-17.7")
-	reqtest.Verifies(t, "FR-17.8")
-	f := startOps(t, "", nil)
+	// FR-17.7, with calls running throughout on one session over a new TLS
+	// connection per request (a client that follows the published bundle)
+	// and on a second session over a kept-alive connection: TLS rotation
+	// keeps sessions; during the CA overlap clients trusting the outgoing
+	// CA and clients trusting the published bundle connect; after the
+	// switch clients trusting the incoming CA connect and sessions
+	// continue; the evidence key rotation writes a transition record that
+	// verifies. Not one call fails across the rotations.
+	reqtest.Verifies(t, "FR-17.7", "FR-17.8")
+	f := startOps(t, "principal_calls_per_minute = 100000\nprincipal_call_burst = 1000\n", nil)
 	oldCAFile := filepath.Join(t.TempDir(), "old-ca.crt")
 	b, _ := os.ReadFile(filepath.Join(f.stateDir, keys.CACertFile))
 	_ = os.WriteFile(oldCAFile, b, 0o644)
@@ -333,6 +365,69 @@ func TestOpsKeyRotationUnderTraffic(t *testing.T) {
 	if err := f.echo(cs, "before"); err != nil {
 		t.Fatal(err)
 	}
+	// Background traffic until the rotations are done.
+	follower := f.mcpWith(bundleFollowingClient(t, oldCAFile, filepath.Join(f.stateDir, keys.CACertFile)), access)
+	var (
+		trafficMu   sync.Mutex
+		trafficErrs []error
+		trafficOK   = map[string]int{}
+		phase       atomic.Value
+	)
+	phase.Store("tls")
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	for name, sess := range map[string]*mcp.ClientSession{"new-connection": follower, "kept-alive": cs} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; ; i++ {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				err := f.echo(sess, fmt.Sprintf("%s-%d", name, i))
+				trafficMu.Lock()
+				if err != nil {
+					trafficErrs = append(trafficErrs, fmt.Errorf("%s call %d during %v: %w", name, i, phase.Load(), err))
+				} else {
+					trafficOK[name+"/"+phase.Load().(string)]++
+				}
+				trafficMu.Unlock()
+				time.Sleep(20 * time.Millisecond)
+			}
+		}()
+	}
+	stopTraffic := func() {
+		close(stop)
+		wg.Wait()
+		trafficMu.Lock()
+		defer trafficMu.Unlock()
+		for _, err := range trafficErrs {
+			t.Error(err)
+		}
+		for _, name := range []string{"new-connection", "kept-alive"} {
+			for _, ph := range []string{"tls", "overlap", "switched", "evidence"} {
+				if trafficOK[name+"/"+ph] == 0 {
+					t.Errorf("no %s call succeeded during %s: %v", name, ph, trafficOK)
+				}
+			}
+		}
+	}
+	waitCalls := func() { // every traffic session completes calls in the current phase
+		ph := phase.Load().(string)
+		deadline := time.Now().Add(10 * time.Second)
+		for time.Now().Before(deadline) {
+			trafficMu.Lock()
+			ok := trafficOK["new-connection/"+ph] > 2 && trafficOK["kept-alive/"+ph] > 2
+			trafficMu.Unlock()
+			if ok {
+				return
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+	waitCalls()
 
 	code, res := f.admin("POST", "/api/v1/keys/rotate", f.operator, map[string]any{"kind": "tls"})
 	if code != 200 || res["kind"] != "tls" {
@@ -347,10 +442,13 @@ func TestOpsKeyRotationUnderTraffic(t *testing.T) {
 		t.Fatalf("existing client after TLS rotation: %v", err)
 	}
 
+	waitCalls()
 	code, res = f.admin("POST", "/api/v1/keys/rotate", f.operator, map[string]any{"kind": "ca", "overlap": "1h"})
 	if code != 200 || res["stage"] != "overlap" {
 		t.Fatalf("rotate ca %d %v", code, res)
 	}
+	phase.Store("overlap")
+	waitCalls()
 	if code, _ := f.admin("POST", "/api/v1/keys/rotate", f.operator, map[string]any{"kind": "ca"}); code != 409 {
 		t.Fatalf("second CA rotation: %d", code)
 	}
@@ -367,6 +465,8 @@ func TestOpsKeyRotationUnderTraffic(t *testing.T) {
 		t.Fatalf("finish ca %d %v", code, res)
 	}
 	time.Sleep(1100 * time.Millisecond)
+	phase.Store("switched")
+	waitCalls()
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(newCA)
 	if err := f.echo(f.mcpWith(clientWithPool(pool), access), "new-ca"); err != nil {
@@ -382,9 +482,12 @@ func TestOpsKeyRotationUnderTraffic(t *testing.T) {
 	if code != 200 || res["public_key"] == "" {
 		t.Fatalf("rotate evidence %d %v", code, res)
 	}
+	phase.Store("evidence")
 	if err := f.echo(f.mcpWith(clientWithPool(pool), access), "after-evidence-rotation"); err != nil {
 		t.Fatal(err)
 	}
+	waitCalls()
+	stopTraffic()
 	if code, _ := f.admin("POST", "/api/v1/keys/rotate", f.operator, map[string]any{"kind": "bogus"}); code != 400 {
 		t.Fatalf("bogus kind %d", code)
 	}
