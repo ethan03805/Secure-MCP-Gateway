@@ -239,12 +239,16 @@ smcpctl install          # or: smcpctl bootstrap --dir ~/smcp`}</code>
           <Link href="/docs/security-review-2026-10/">security review</Link>.
         </p>
         <p>
-          The release pipeline was rehearsed with the pre-releases v1.0.0-rc.1 and v1.0.0-rc.2. For rc.2 the{" "}
-          <code>tap</code> workflow installed the formula from the Homebrew tap and the archive with{" "}
-          <code>install.sh</code> on macOS and Ubuntu runners and found every binary equal to the release archive (
-          <Link href="/docs/verification/fr-13-3/">supporting record</Link>); the SBOM in every archive is checked in
-          the <Link href="/docs/verification/inspections/">inspection records</Link>, and what the rehearsal showed is in
-          the <Link href="/docs/release-checklist/">release checklist</Link>.
+          The release pipeline was rehearsed with the pre-releases v1.0.0-rc.1, v1.0.0-rc.2 and v1.0.0-rc.3 before
+          v1.0.0 was tagged on the same commit as rc.3. For rc.2 and again for v1.0.0 the <code>tap</code> workflow
+          installed the formula from the Homebrew tap and the archive with <code>install.sh</code> on macOS and Ubuntu
+          runners and found every binary equal to the release archive (
+          <Link href="/docs/verification/fr-13-3/">supporting record</Link>, results below); the SBOM in every archive
+          is checked in the <Link href="/docs/verification/inspections/">inspection records</Link>, and what the
+          rehearsals showed is in the <Link href="/docs/release-checklist/">release checklist</Link>. Archives built
+          after v1.0.0 also carry the build recipe, the lockfiles, <code>PROVENANCE.md</code> and{" "}
+          <code>THIRD_PARTY_NOTICES.txt</code>, and the release workflow refuses an SBOM entry without an accepted
+          license.
         </p>
         <p>
           Two workflows check a published release from outside the build: <code>tap</code> installs it from the

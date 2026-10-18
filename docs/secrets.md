@@ -182,7 +182,7 @@ Control API error codes are listed in [api/secrets.md](api/secrets.md).
 - The master key is held by this element's key sources, not by the Key & Trust Anchor Manager in `internal/keys`; key backup and rotation of the master key are not implemented.
 - On macOS there is no tmpfs: S2 and S3 files are on disk in an owner-only directory and are overwritten before deletion, which a journaling or copy-on-write file system may not honor.
 - Plaintext is held briefly in Go strings: the S4 environment map, the decoded control API request and the CLI's request body. Byte buffers the broker controls are overwritten after use. Overwriting cannot be guaranteed for strings.
-- The vault is protected by file modes for the Gateway's user. Separate service identities for the vault and broker (SR-2.13-3) need the Enforced profile's identity layout.
+- The vault is protected by file modes for the Gateway's user. The Secret Broker runs inside `smcpd`, so in the Enforced profile the vault is readable by `smcp-core` only; every other CP-46 identity, `smcp-vault` and `smcp-srv` included, is denied (SR-2.13-3, `TestIntegrationVaultIsolation` on the Enforced CI host). The vault and the broker do not run as separate identities.
 - In the Standalone profile nothing stops a server from copying an S2 or S3 file or its environment; containment needs the Enforced profile.
 - S1 headers are inserted only on Egress Broker endpoint requests; a server that ignores its endpoint variable and connects through the forward proxy does not get the header.
 - Session termination does not withdraw launch-time deliveries: instances are not session-scoped yet.

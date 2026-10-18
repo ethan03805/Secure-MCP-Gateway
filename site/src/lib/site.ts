@@ -9,7 +9,7 @@ export const REPO_URL = "https://github.com/ethan03805/Secure-MCP-Gateway";
 
 /** Site chapters, in reading order. The number is the chapter's section prefix. */
 export const CHAPTERS = [
-  { n: 1, href: "/status/", label: "Status", about: "Implementation, tests, coverage and requirement verification from the last CI run on main." },
+  { n: 1, href: "/status/", label: "Status", about: "Implementation, tests, coverage, requirement verification, acceptance scenarios AT-01 to AT-21, performance, real agents and hostile fixtures from the last CI run on main." },
   { n: 2, href: "/flows/", label: "Flows", about: "Every sequence and flow diagram, each with a numbered table of its steps." },
   { n: 3, href: "/architecture/", label: "Architecture", about: "The architecture document: decomposition, policy model, secrets, anomaly method." },
   { n: 4, href: "/elements/", label: "Elements", about: "Each element with trust level, implementation status, packages, requirements and interfaces." },

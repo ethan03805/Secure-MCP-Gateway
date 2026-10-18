@@ -36,6 +36,10 @@ export default function Home() {
   const api = loadOpenApi();
   const releases = loadReleases();
   const map = loadSystemMap();
+  const acc = s.acceptance;
+  const perf = s.performance;
+  const agentRows = s.agents.filter((a) => !a.mode.includes("+"));
+  const agentsPassing = agentRows.filter((a) => a.result === "pass").length;
 
   const counts: Record<string, string> = {
     "/status/": `${s.tests.passed} of ${s.tests.total} tests passing`,
@@ -45,7 +49,7 @@ export default function Home() {
     "/interfaces/": `${arch.external.length} external, ${arch.internal.length} internal, ${arch.stores.length} stores`,
     "/requirements/": `${reqs.length} requirements`,
     "/security/": `${controls.length} controls`,
-    "/clients/": `${matrix.clients.length} clients, ${s.agents.filter((a) => a.result === "pass" && !a.mode.includes("+")).length} passing`,
+    "/clients/": `${matrix.clients.length} clients, ${agentsPassing} passing`,
     "/docs/": `${allDocs().length} documents`,
     "/control-api/": `${api.operations.length} operations`,
     "/install/": releases.releases[0] ? `latest ${releases.releases[0].tag}` : releases.source === "remote" ? "no release yet" : "release list unavailable",
@@ -97,6 +101,27 @@ export default function Home() {
           {r.verified} of {r.total} requirements verified by test, {r.partial} partly verified, {r.failing}{" "}
           failing. {s.tests.passed} of {s.tests.total} tests passed
           {s.tests.failed ? `, ${s.tests.failed} failed` : ""}; statement coverage {fmtPct(s.coverage.totalPct)}.
+        </p>
+        <p className="statusline">
+          {acc ? (
+            <>
+              <Link href="/status/#acceptance">Acceptance</Link>: {acc.enforcedPassed} of {acc.total} scenarios pass
+              in the Enforced profile and {acc.standalonePassed} in the Standalone profile; release label &quot;
+              {acc.label}&quot;.{" "}
+            </>
+          ) : (
+            <>No acceptance results in this run. </>
+          )}
+          {perf ? (
+            <>
+              <Link href="/status/#performance">Performance</Link>: {perf.measurements.filter((m) => m.pass).length} of{" "}
+              {perf.measurements.length} measurements within budget
+              {perf.referenceHardware ? " on reference hardware" : " on a CI runner, not reference hardware"}.{" "}
+            </>
+          ) : null}
+          <Link href="/clients/">Agents</Link>: {agentsPassing} of {agentRows.length} agent CLIs pass through the
+          Gateway.{" "}
+          <Link href="/install/#verify">Releases</Link>: {releases.releases[0] ? `latest ${releases.releases[0].tag}` : "none listed"}.
         </p>
       </section>
 

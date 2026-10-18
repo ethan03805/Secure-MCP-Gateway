@@ -26,6 +26,7 @@ RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
 
 - `v1.0.0-rc.1` (main `200719d`): published on the first run; no SBOM inside the archives yet, `smcpd --version` unsupported, no formula pushed (pre-release).
 - `v1.0.0-rc.2` (main `4ba2189`, release run 39032406916): archives with `sbom.spdx.json`, every binary reports `1.0.0-rc.2`, minisign and cosign verify, `install.sh` installs on macOS arm64. With `SMCP_TAP_PRERELEASE=true` the formula was pushed (so `HOMEBREW_TAP_TOKEN` works) and the `tap` workflow passed on macOS and Ubuntu (run 39032895870). The variable was deleted afterwards; the tap holds the rc.2 formula until v1.0.0 replaces it.
+- `v1.0.0-rc.3` and `v1.0.0` (both main `17b84ba`, 2026-10-18): v1.0.0 published as the latest release. The `tap` workflow passed for v1.0.0 on macOS and Ubuntu (run 39096814323) and `reference-packages` built, signed, imported and called the four reference packages on the tag (run 39096364892); both results are in `site-data/workflows.json`. The inspection of the v1.0.0 SBOMs and bundle found entries without licenses and no build recipe, lockfiles or third-party notices (FR-12.1, FR-12.8; `docs/verification/gap-list.md`); the release workflow now checks both, so the next release needs the Inspection records.
 - `smcpctl upgrade` cannot upgrade from rc.1 to a later release: rc.1's `smcpctl` expects the old unsigned `SHA256SUMS` layout. Upgrades from rc.2 onward use the signed release files.
 
 ## Repository settings (once)

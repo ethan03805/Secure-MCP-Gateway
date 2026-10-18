@@ -528,9 +528,15 @@ test("G-05 behavior analytics on a dedicated Gateway: inspect a context, open a 
     await expect(kv("Contexts / characterized")).toHaveText(/^\d+ \/ [1-9]\d*$/);
     const first = (await snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link").innerText()).trim();
     // Inspect the context: the request size of the echo calls per context.
-    await page.getByRole("combobox", { name: "Feature", exact: true }).selectOption("request_bytes");
+    // The baseline learns from the collector's stream; the distributions are
+    // read from the Observation Store, whose low-priority writer stores each
+    // batch later, so the view is reloaded until the stored records show.
     const perContext = page.getByRole("table", { name: "request_bytes per context" });
-    await expect(perContext.getByRole("row").filter({ hasText: "echo" }).first()).toBeVisible();
+    await expect(async () => {
+      await page.reload();
+      await page.getByRole("combobox", { name: "Feature", exact: true }).selectOption("request_bytes");
+      await expect(perContext.getByRole("row").filter({ hasText: "echo" }).first()).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 60_000 });
     // A call far outside the learned request size is scored abnormal.
     await call("x".repeat(6000));
     const events = page.getByRole("table", { name: "Abnormal events" });

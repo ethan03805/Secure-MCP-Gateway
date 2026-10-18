@@ -135,7 +135,7 @@ credential (`config.CredentialRevoked`) and server revision under the gate
 
 ## Element status
 
-Every element E-01 to E-33 has code. E-07, E-09, E-17, E-30 and E-31 are recorded as implemented (every allocated requirement verified, none deferred from release 1.0, no other known gap); the others are partial. `docs/status/elements.json` records each element's state and its main gaps, and the requirement report (`make status`, `build/reqreport.md`) lists which requirements tests verify, partly verify or leave unverified. The Data Server (E-25 to E-28) and SS-10 (E-29 to E-32) attach as evidence observers and must not gate enforcement. `cmd/smcpd` wires every element; `smcpctl health` lists each with its runtime state (`info.elements`).
+Every element E-01 to E-33 has code. E-07, E-09, E-12, E-17, E-18, E-23, E-30 and E-31 are recorded as implemented (every allocated requirement verified, none deferred from release 1.0, no other known gap); the others are partial. `docs/status/elements.json` records each element's state and its main gaps, and the requirement report (`make status`, `build/reqreport.md`) lists which requirements tests verify, partly verify or leave unverified. The Data Server (E-25 to E-28) and SS-10 (E-29 to E-32) attach as evidence observers and must not gate enforcement. `cmd/smcpd` wires every element; `smcpctl health` lists each with its runtime state (`info.elements`).
 
 ## Residual gaps in what exists
 
@@ -156,8 +156,10 @@ Every element E-01 to E-33 has code. E-07, E-09, E-17, E-30 and E-31 are recorde
   live (CP-50); every other key is reported as `restart_required`.
 - Server CA rotation: during the overlap the listener presents the outgoing
   CA's certificate, so clients must import the bundle, not the new CA alone.
-- Per-source rate limits see the tunnel endpoint as the source under the
-  Remote Access profile; per-account lockout still applies.
+- Under the Remote Access profile the per-source limits key on the client
+  address the tunnel forwards, which is the provider's claim (FR-16.8);
+  call rates are per client ID, and lockout applies to both the client ID
+  and the source address (FR-16.6).
 - The SDK client caches `tools/list` for `ttlMs`. Policy activation updates
   every cached session catalog in place and sends
   `notifications/tools/list_changed` on that session's open
