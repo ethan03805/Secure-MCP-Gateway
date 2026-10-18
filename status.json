@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-18T09:18:29Z",
-  "commit": "e89004c09000801d89bf29b999f760d1ef094aeb",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/e89004c09000801d89bf29b999f760d1ef094aeb",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39112608183",
+  "generatedAt": "2026-10-18T09:42:04Z",
+  "commit": "055fbafc6199f6c7d66744049a0b0fe6dcb60907",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/055fbafc6199f6c7d66744049a0b0fe6dcb60907",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39114120740",
   "tests": {
-    "total": 1428,
-    "passed": 1414,
-    "failed": 1,
+    "total": 1430,
+    "passed": 1417,
+    "failed": 0,
     "skipped": 13,
-    "durationSec": 1219.3,
+    "durationSec": 1346.1,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -73,19 +73,19 @@
       },
       {
         "name": "internal/acceptance",
-        "passed": 24,
+        "passed": 25,
         "failed": 0,
         "skipped": 1
       },
       {
         "name": "internal/acceptance/enforced",
-        "passed": 17,
-        "failed": 1,
+        "passed": 18,
+        "failed": 0,
         "skipped": 1
       },
       {
         "name": "internal/acceptance/offline",
-        "passed": 23,
+        "passed": 24,
         "failed": 0,
         "skipped": 2
       },
@@ -452,7 +452,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.4,
+    "totalPct": 76.3,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -528,7 +528,7 @@
       },
       {
         "name": "internal/backup",
-        "pct": 79.8
+        "pct": 79.6
       },
       {
         "name": "internal/baseline",
@@ -572,7 +572,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 84.7
+        "pct": 84.2
       },
       {
         "name": "internal/gwtest",
@@ -688,7 +688,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 80
+        "pct": 79.6
       },
       {
         "name": "internal/session",
@@ -708,7 +708,7 @@
       },
       {
         "name": "scripts/agents",
-        "pct": 66.2
+        "pct": 66
       },
       {
         "name": "scripts/itest-client",
@@ -738,10 +738,10 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 442,
-    "partial": 78,
-    "failing": 4,
-    "unverified": 5,
+    "verified": 449,
+    "partial": 76,
+    "failing": 0,
+    "unverified": 4,
     "byElement": [
       {
         "element": "E-01",
@@ -779,9 +779,9 @@
         "element": "E-05",
         "name": "Policy Administration Service",
         "total": 18,
-        "verified": 16,
-        "partial": 1,
-        "failing": 1
+        "verified": 18,
+        "partial": 0,
+        "failing": 0
       },
       {
         "element": "E-06",
@@ -931,9 +931,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 45,
-        "partial": 26,
-        "failing": 1
+        "verified": 48,
+        "partial": 25,
+        "failing": 0
       },
       {
         "element": "E-25",
@@ -963,9 +963,9 @@
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
-        "verified": 5,
+        "verified": 7,
         "partial": 4,
-        "failing": 2
+        "failing": 0
       },
       {
         "element": "E-29",
@@ -1671,9 +1671,9 @@
       {
         "id": "FR-3",
         "element": "E-05",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "analysis: 22 of 23 child requirements verified"
+          "analysis: all 23 child requirements verified"
         ]
       },
       {
@@ -1895,7 +1895,7 @@
       {
         "id": "FR-3.24",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestApprovalsCLI",
           "internal/e2e.TestApprovalRoles"
@@ -2700,7 +2700,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "analysis: 21 of 35 child requirements verified"
+          "analysis: 22 of 35 child requirements verified"
         ]
       },
       {
@@ -2718,7 +2718,7 @@
       {
         "id": "FR-8.2",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/chromium.views.spec.ts > each role sees only its views and actions",
@@ -2726,6 +2726,8 @@
           "console/e2e/firefox.views.spec.ts > each role sees only its views and actions",
           "console/e2e/webkit.console.spec.ts > an approver sees only the Approvals view and can deny a call",
           "console/e2e/webkit.views.spec.ts > each role sees only its views and actions",
+          "internal/acceptance.TestRoleMatrixEveryOperation",
+          "internal/acceptance/offline.TestRoleMatrixEveryOperation",
           "internal/adminapi.TestAppendixCMatrix",
           "internal/adminapi.TestRoleSeam",
           "internal/adminapi.TestRoutesRecordRoles",
@@ -4041,8 +4043,10 @@
       {
         "id": "FR-13",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 9 of 13 child requirements verified"
+        ]
       },
       {
         "id": "FR-13.1",
@@ -4120,7 +4124,7 @@
       {
         "id": "FR-13.8",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestUpgradeAndRollback",
           "internal/acceptance.TestAT19BackupRestoreRollback",
@@ -6366,7 +6370,7 @@
       {
         "id": "SR-7.7-1",
         "element": "E-28",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance.TestBackupUnderLoadComponents",
@@ -6381,7 +6385,7 @@
       {
         "id": "SR-7.8-1",
         "element": "E-28",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
@@ -6395,7 +6399,7 @@
       {
         "id": "SR-7.9-1",
         "element": "E-05",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
@@ -7105,7 +7109,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7116,7 +7120,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7151,7 +7155,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:38035: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33119: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7268,13 +7272,11 @@
     }
   ],
   "acceptance": {
-    "commit": "e89004c09000801d89bf29b999f760d1ef094aeb",
-    "label": "not enforced",
-    "reasons": [
-      "AT-19 Backup, restore and rollback: failed in the Enforced profile"
-    ],
+    "commit": "055fbafc6199f6c7d66744049a0b0fe6dcb60907",
+    "label": "enforced",
+    "reasons": [],
     "total": 21,
-    "enforcedPassed": 20,
+    "enforcedPassed": 21,
     "standalonePassed": 20,
     "scenarios": [
       {
@@ -7873,7 +7875,7 @@
           "SR-7.9-1",
           "FR-13.8"
         ],
-        "enforced": "fail",
+        "enforced": "pass",
         "standalone": "pass",
         "tests": [
           {
@@ -7883,7 +7885,7 @@
           },
           {
             "test": "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
-            "result": "fail",
+            "result": "pass",
             "profile": "enforced"
           },
           {
@@ -7962,15 +7964,15 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "e89004c09000801d89bf29b999f760d1ef094aeb",
-    "generatedAt": "2026-10-18T08:57:51Z",
+    "commit": "055fbafc6199f6c7d66744049a0b0fe6dcb60907",
+    "generatedAt": "2026-10-18T09:19:30Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000007311"
+      "runner": "GitHub Actions 1000007379"
     },
     "referenceHardware": false,
     "dataset": {
@@ -7987,7 +7989,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.023399,
+        "value": 0.031161,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -7999,7 +8001,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 23.152634,
+        "value": 22.625934,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -8011,18 +8013,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.5749790000000026,
+        "value": 0.6802531250000001,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (10.576 ms, mean of 10.900, 10.576, 10.901, 9.977, 10.282, 10.067, 10.997, 10.907) minus disabled (10.001 ms, mean of 9.456, 10.050, 9.498, 10.054, 9.841, 10.362, 10.309, 10.437), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (11.032 ms, mean of 10.941, 11.117, 11.236, 10.804, 10.653, 10.889, 11.305, 11.308) minus disabled (10.351 ms, mean of 11.088, 10.394, 10.808, 10.228, 10.021, 10.050, 9.992, 10.229), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 718.826262,
+        "value": 727.55908,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -8034,11 +8036,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 113.546875,
+        "value": 102.1328125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 10m20s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 10m35s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
