@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "updated": "2026-10-16",
-  "note": "Client matrix of SRS Appendix K (FR-15.10). pinnedVersion null means the matrix job has not yet pinned and run the client. Mechanisms marked confirm=true are taken from vendor documentation and are not yet verified against a pinned version. Cloud agent entries carry tunnelProvider, registrationMode and agentBuild for the dated manual record of FR-15.9; null until a run is recorded. notes is a plain-language summary of how the client is driven and why it is not run, shown on the project site.",
+  "note": "Client matrix of SRS Appendix K (FR-15.10). pinnedVersion null means the matrix job has not yet pinned and run the client. Mechanisms marked confirm=true are taken from vendor documentation and are not yet verified against a pinned version. Cloud agent entries carry tunnelProvider, registrationMode and agentBuild for the dated manual record of FR-15.9; null until a run is recorded; until then each cloud entry is not-run with reviewed (the date the entry was last reviewed) and notRunReason. notes is a plain-language summary of how the client is driven and why it is not run, shown on the project site.",
   "clients": [
     {
       "client": "Claude Code",
@@ -179,6 +179,8 @@
       "tunnelProvider": null,
       "registrationMode": "dynamic client registration with operator approval, or pre-registered",
       "agentBuild": null,
+      "reviewed": "2026-10-18",
+      "notRunReason": "Live cloud-agent runs are descoped from release 1.x by the owner (2026-10-18): the project holds no vendor account for this agent. The Remote Access Profile, registration with operator approval, the device grant and smcp-connect are tested against a local test tunnel (internal/remote, internal/adapter, internal/conformance.TestConformanceThroughAdapters).",
       "quickStart": "docs/clients/cloud-agents.md",
       "notes": "Not run. A cloud agent on xAI's servers: it can reach the Gateway only through the Remote Access Profile (tunnel, operator-approved registration, Session Approver sign-in), or smcp-connect where it accepts only a command. No dated run is recorded (FR-15.9), and whether xAI offers an administrator MCP allowlist was not confirmed."
     },
@@ -204,6 +206,8 @@
       "tunnelProvider": null,
       "registrationMode": "dynamic client registration with operator approval, or pre-registered",
       "agentBuild": null,
+      "reviewed": "2026-10-18",
+      "notRunReason": "Live cloud-agent runs are descoped from release 1.x by the owner (2026-10-18): the project holds no vendor account for this agent. The Remote Access Profile, registration with operator approval, the device grant and smcp-connect are tested against a local test tunnel (internal/remote, internal/adapter, internal/conformance.TestConformanceThroughAdapters).",
       "quickStart": "docs/clients/cloud-agents.md",
       "notes": "Not run. ChatGPT custom connectors add https://<public name>/mcp and register through operator-approved dynamic registration. No dated run is recorded (FR-15.9), and the workspace setting that limits connectors to one URL was not confirmed."
     },
@@ -229,6 +233,8 @@
       "tunnelProvider": null,
       "registrationMode": "dynamic client registration with operator approval, or pre-registered",
       "agentBuild": null,
+      "reviewed": "2026-10-18",
+      "notRunReason": "Live cloud-agent runs are descoped from release 1.x by the owner (2026-10-18): the project holds no vendor account for this agent. The Remote Access Profile, registration with operator approval, the device grant and smcp-connect are tested against a local test tunnel (internal/remote, internal/adapter, internal/conformance.TestConformanceThroughAdapters).",
       "quickStart": "docs/clients/cloud-agents.md",
       "notes": "Not run: no Meta Muse access was available for testing. Documented only; both dynamic registration and pre-registered clients are supported by the Gateway."
     }

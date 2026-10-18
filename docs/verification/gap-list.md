@@ -8,7 +8,7 @@ Each entry is marked:
 - **unverified**: the behavior appears to exist, but no test or record proves the whole statement yet. These need a test or an inspection record, not new code.
 - **external**: the requirement needs an artifact or run outside the source tree (a release, a person, reference hardware).
 
-Parent requirements whose verification is "Review the verification results of every child requirement" (FR-1, FR-2, FR-3, FR-4, FR-5, FR-7, FR-8, FR-11, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-19) are verified automatically by `tools/reqreport` once all their children are; they are not listed below.
+Parent requirements whose verification is "Review the verification results of every child requirement" (FR-1, FR-2, FR-3, FR-4, FR-5, FR-7, FR-8, FR-12, FR-13, FR-14, FR-15, FR-16, FR-17, FR-19) are verified automatically by `tools/reqreport` once all their children are, and reported partial while some but not all children are verified or partial; they are not listed below. FR-11 is reviewed against the performance report on recorded hardware instead.
 
 Requirements deferred from release 1.0 (SRS Section 2.7, Appendix N) are not part of the requirement set and are not listed.
 
@@ -123,6 +123,6 @@ Updated on 2026-10-18 by the release-ops work: FR-19.3 has an Inspection record 
 
 ## E-33 Harness adapters
 
-- FR-15.9 missing: no dated manual cloud-agent run is recorded; every cloud entry in `docs/clients/matrix.json` is `not-run`.
-- FR-16.10 missing: the cloud-agent quick start states each vendor allowlist setting as "not confirmed" rather than naming the setting or stating that none is offered.
 - FR-18.3 external: per-client quick starts exist; none has been followed at the pinned version for every client (two local clients fail on the CA name constraints).
+
+Updated on 2026-10-18 by the remote-agents partials work: FR-12.13 and FR-16.9 are verified (`internal/conformance.TestConformanceThroughAdapters`). FR-15.9 and FR-16.10 are narrowed by an SRS change (live cloud-agent runs descoped from release 1.x) and verified by Inspection records. Parents with some evidenced children are now reported partial rather than unverified.

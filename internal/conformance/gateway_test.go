@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +24,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/gwtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
 
@@ -34,9 +38,24 @@ type gateway struct {
 	url   string
 	http  *http.Client
 	token string
+
+	cfg    *config.Config
+	caFile string
+	// public is the Remote Access public URL (a test tunnel to the remote
+	// listener) when the gateway was started with the profile enabled.
+	public string
 }
 
-func startGateway(t *testing.T, b *scripted) *gateway {
+// remoteClientID is the pre-registered public client that may sign in
+// through the remote listener (startGatewayWith remote).
+const remoteClientID = "conformance-remote"
+
+func startGateway(t *testing.T, b *scripted) *gateway { return startGatewayWith(t, b, false) }
+
+// startGatewayWith starts the Gateway; with withRemote, the Remote Access
+// Profile is configured and enabled behind a test tunnel (FR-16), with
+// limits high enough for the suite's request count.
+func startGatewayWith(t *testing.T, b *scripted, withRemote bool) *gateway {
 	t.Helper()
 	dir := t.TempDir()
 	stateDir := filepath.Join(dir, "state")
@@ -77,6 +96,23 @@ profile = "dev"
 alias = %q
 command = "/conformance/backend"
 `, port, port, adminPort, stateDir, hash, alias)
+	if withRemote {
+		toml += fmt.Sprintf(`
+[[client]]
+client_id = %q
+principal = "cc"
+redirect_uris = ["http://127.0.0.1/callback"]
+[remote]
+address = "127.0.0.1:%d"
+clients = [%q]
+templates = ["all"]
+[remote.limits]
+calls_per_minute = 100000
+calls_burst = 100000
+oauth_per_second = 1000
+oauth_burst = 1000
+`, remoteClientID, gwtest.FreePort(t), remoteClientID)
+	}
 	cfgPath := filepath.Join(dir, "smcp.toml")
 	if err := os.WriteFile(cfgPath, []byte(toml), 0o600); err != nil {
 		t.Fatal(err)
@@ -98,6 +134,15 @@ command = "/conformance/backend"
 		cancel()
 		t.Fatal(err)
 	}
+	var rs *remote.Service
+	if withRemote {
+		if rs, err = remote.New(remote.Options{Config: cfg, Store: a.Store, Evidence: a.Evidence, Gateway: a.Gateway, Log: diag.Discard()}); err != nil {
+			cancel()
+			a.Close()
+			t.Fatal(err)
+		}
+		rs.Register(a.Admin)
+	}
 	if err := a.Listen(); err != nil {
 		cancel()
 		a.Close()
@@ -105,7 +150,15 @@ command = "/conformance/backend"
 	}
 	served := make(chan error, 1)
 	go func() { served <- a.Serve(ctx) }()
+	if rs != nil {
+		if err := rs.Start(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
 	t.Cleanup(func() {
+		if rs != nil {
+			rs.Close()
+		}
 		cancel()
 		select {
 		case <-served:
@@ -123,8 +176,61 @@ command = "/conformance/backend"
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &gateway{t: t, app: a, url: cfg.ResourceURI(), token: tok.Access,
+	g := &gateway{t: t, app: a, url: cfg.ResourceURI(), token: tok.Access, cfg: cfg, caFile: filepath.Join(stateDir, keys.CACertFile),
 		http: &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS13}}}}
+	if withRemote {
+		g.public = g.tunnel(cfg.Remote.Address)
+		g.enableRemote(stateDir)
+	}
+	return g
+}
+
+// tunnel starts a test tunnel: a TLS reverse proxy with the Gateway's
+// certificate to addr that keeps the Host header and sets X-Forwarded-For,
+// as Tailscale Funnel and cloudflared do. It returns the public URL.
+func (g *gateway) tunnel(addr string) string {
+	g.t.Helper()
+	cert, err := tls.LoadX509KeyPair(g.cfg.Listener.TLSCert, g.cfg.Listener.TLSKey)
+	if err != nil {
+		g.t.Fatal(err)
+	}
+	target, _ := url.Parse("https://" + addr)
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Host = pr.In.Host
+			pr.Out.Header["X-Forwarded-For"] = []string{"203.0.113.7"}
+		},
+		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}, //nolint:gosec // like Funnel's https+insecure to the loopback listener
+	}
+	ts := httptest.NewUnstartedServer(proxy)
+	ts.TLS = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}
+	ts.StartTLS()
+	g.t.Cleanup(ts.Close)
+	return ts.URL
+}
+
+// enableRemote enables the Remote Access Profile for the tunnel's public
+// URL through the control API, as smcpctl remote enable does.
+func (g *gateway) enableRemote(stateDir string) {
+	g.t.Helper()
+	op, err := keys.LoadAdminToken(stateDir)
+	if err != nil {
+		g.t.Fatal(err)
+	}
+	body, _ := json.Marshal(map[string]any{"public_url": g.public, "provider": "manual"})
+	req, _ := http.NewRequest("POST", g.cfg.AdminURL()+"/api/v1/remote/enable", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+op)
+	resp, err := g.http.Do(req)
+	if err != nil {
+		g.t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		g.t.Fatalf("enable remote: %d %s", resp.StatusCode, b)
+	}
 }
 
 // public is the presented name of a backend tool.
@@ -188,16 +294,6 @@ func (g *gateway) post(body []byte, hdr map[string]string) response {
 		r.Messages = append(r.Messages, json.RawMessage(raw))
 	}
 	return r
-}
-
-// send posts a message with the headers it implies.
-func (g *gateway) send(msg map[string]any) response {
-	g.t.Helper()
-	raw, err := json.Marshal(msg)
-	if err != nil {
-		g.t.Fatal(err)
-	}
-	return g.post(raw, headersFor(msg))
 }
 
 // last is the final JSON-RPC message of a response decoded as a map.

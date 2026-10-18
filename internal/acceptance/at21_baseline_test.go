@@ -103,7 +103,10 @@ func TestAT21VersionBaseline(t *testing.T) {
 	var st struct {
 		Requirements struct {
 			Total, Verified, Partial, Failing, Unverified int
-			Items                                         []struct{ ID, Status string }
+			Items                                         []struct {
+				ID, Status string
+				Tests      []string
+			}
 		}
 		Acceptance struct {
 			Label     string
@@ -123,8 +126,11 @@ func TestAT21VersionBaseline(t *testing.T) {
 		if !want[it.ID] {
 			t.Fatalf("report lists %s, which is not an SRS requirement", it.ID)
 		}
-		if it.Status != "unverified" && it.Status != "verified" { // records and child analysis can verify without tests
-			t.Fatalf("%s is %s without any test claim", it.ID, it.Status)
+		// Records and child analysis can verify without tests, and child
+		// analysis makes a parent partial when some children have evidence.
+		rollup := it.Status == "partial" && len(it.Tests) == 1 && strings.HasPrefix(it.Tests[0], "analysis: ")
+		if it.Status != "unverified" && it.Status != "verified" && !rollup {
+			t.Fatalf("%s is %s without any test claim (%v)", it.ID, it.Status, it.Tests)
 		}
 	}
 	if st.Acceptance.Total != 21 || len(st.Acceptance.Scenarios) != 21 || st.Acceptance.Label != "not enforced" {

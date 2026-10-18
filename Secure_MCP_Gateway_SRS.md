@@ -4498,12 +4498,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-15.9 |
 | Parent ID | FR-15 — Harness integration |
-| Statement | The Gateway project **SHALL** record, for each cloud agent of Appendix K, the date, agent version or build where shown, tunnel provider, registration mode and the result of a manual connection run against the Remote Access Profile in `docs/clients/matrix.json`. |
+| Statement | The Gateway project **SHALL** keep, for each cloud agent of Appendix K, an entry in `docs/clients/matrix.json` that records either a manual connection run against the Remote Access Profile, with its date, agent version or build where shown, tunnel provider, registration mode and result, or, while no run has been made, the result `not-run`, the date the entry was last reviewed, the documented connection and registration modes and the reason no run was made. |
 | Allocation | Elements: E-33 Harness Adapter Kit, E-01 Harness Interface Endpoint; Functions: F-95; External interfaces: X-13 |
 | Verification Method | Inspection |
-| Verification Statement | Inspect `docs/clients/matrix.json`; confirm one dated entry per cloud agent with each field. |
-| Source | OWNER (cloud agents: Grok Bot, ChatGPT dots, Meta Muse) |
-| Rationale | Cloud agents cannot run in CI, so their support claim rests on dated manual records. |
+| Verification Statement | Inspect `docs/clients/matrix.json`; confirm one entry per cloud agent, each either a dated run with every run field or a `not-run` entry with its review date, documented modes and reason. |
+| Source | OWNER (cloud agents: Grok Bot, ChatGPT dots, Meta Muse; live runs descoped from release 1.x on 2026-10-18) |
+| Rationale | Cloud agents cannot run in CI, so their support claim rests on dated manual records. The owner descoped live cloud-agent runs from release 1.x: the agents are documented and the Remote Access Profile is tested against a local test tunnel, and a `not-run` entry states that plainly instead of implying a run. |
 
 #### FR-15.10 — Pinned client matrix file
 
@@ -4656,12 +4656,12 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-16.10 |
 | Parent ID | FR-16 — Remote Access Profile |
-| Statement | The per-client quick start for each cloud agent of Appendix K **SHALL** name the vendor administration setting, where the vendor offers one, that restricts the agent's MCP servers to the Gateway URL, and **SHALL** state when no such setting is offered. |
+| Statement | The per-client quick start for each cloud agent of Appendix K **SHALL** name the vendor administration setting that restricts the agent's MCP servers to the Gateway URL where the vendor's public documentation names one, and otherwise **SHALL** state that no such setting was confirmed in the vendor's public documentation, with the date checked and the sources reviewed. |
 | Allocation | Elements: E-33 Harness Adapter Kit; Functions: F-98; External interfaces: X-13 |
 | Verification Method | Inspection |
-| Verification Statement | Inspect each cloud agent quick start; confirm the setting is named or its absence stated, with the date checked. |
-| Source | OWNER (the vendor admin MCP allowlist restricts the agent to the Gateway URL) |
-| Rationale | The vendor's allowlist is the only control that keeps a cloud agent from using other MCP servers. |
+| Verification Statement | Inspect each cloud agent quick start; confirm the setting is named, or the absence of a confirmed setting stated, with the date checked and the sources reviewed. |
+| Source | OWNER (the vendor admin MCP allowlist restricts the agent to the Gateway URL; live cloud-agent runs descoped from release 1.x on 2026-10-18) |
+| Rationale | The vendor's allowlist is the only control that keeps a cloud agent from using other MCP servers. Vendor administration consoles are not reachable without vendor business accounts, which the project does not hold, so the quick start reports what the vendor's public documentation states and says so when it states nothing. |
 
 #### FR-16.11 — Disabled by default
 
@@ -8430,7 +8430,7 @@ The machine-readable matrix is `docs/clients/matrix.json` (FR-15.10). Pinned ver
 
 ### K.2 Cloud agents (Remote Access Profile)
 
-Cloud agents run on the vendor's computer. They reach the Gateway only through the Remote Access Profile (FR-16), and their built-in browser, terminal and connector tools are outside the Gateway's control (FR-18.2). Each entry is verified by a dated manual run (FR-15.9).
+Cloud agents run on the vendor's computer. They reach the Gateway only through the Remote Access Profile (FR-16), and their built-in browser, terminal and connector tools are outside the Gateway's control (FR-18.2). Each entry records a dated manual run or, while none has been made, a `not-run` entry with its review date and reason (FR-15.9); live cloud-agent runs are descoped from release 1.x.
 
 | Agent | Connection mode | Registration | Vendor allowlist | Notes |
 |---|---|---|---|---|
