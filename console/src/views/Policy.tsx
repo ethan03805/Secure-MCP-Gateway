@@ -86,6 +86,7 @@ export interface Profile {
   templates: string[];
   default_template: string;
   calls_per_minute?: number;
+  remote_allowed?: string[];
 }
 
 export interface PolicyDoc {
@@ -449,7 +450,7 @@ function ProfileEditor({ name, p, templates, onChange, onRemove }: { name: strin
         Framework Profile{" "}<span className="mono">{name}</span>
       </summary>
       <div className="editor-body">
-        <CheckList legend="Templates sessions of this profile may use" options={templates} value={p.templates} onChange={(v) => onChange({ ...p, templates: v, default_template: v.includes(p.default_template) ? p.default_template : (v[0] ?? "") })} hint={helpFor("framework_profiles[].templates")} />
+        <CheckList legend="Templates sessions of this profile may use" options={templates} value={p.templates} onChange={(v) => onChange({ ...p, templates: v, default_template: v.includes(p.default_template) ? p.default_template : (v[0] ?? ""), ...(p.remote_allowed ? { remote_allowed: p.remote_allowed.filter((x) => v.includes(x)) } : {}) })} hint={helpFor("framework_profiles[].templates")} />
         <div className="rule-grid">
           <SelectField label="Default template" value={p.default_template} onChange={(v) => onChange({ ...p, default_template: v })} options={p.templates.length ? p.templates : [""]} hint={helpFor("framework_profiles[].default_template")} />
           <TextField label="Calls per minute" value={p.calls_per_minute?.toString() ?? ""} onChange={(v) => onChange(clean({ ...p, calls_per_minute: numOrUndef(v) }))} type="number" hint={helpFor("framework_profiles[].calls_per_minute")} />
@@ -571,7 +572,7 @@ function Draft() {
             onRemove={() => {
               const ts = { ...doc.templates };
               delete ts[name];
-              const fp = Object.fromEntries(Object.entries(doc.framework_profiles).map(([k, p]) => [k, { ...p, templates: p.templates.filter((x) => x !== name), default_template: p.default_template === name ? "" : p.default_template }]));
+              const fp = Object.fromEntries(Object.entries(doc.framework_profiles).map(([k, p]) => [k, { ...p, templates: p.templates.filter((x) => x !== name), default_template: p.default_template === name ? "" : p.default_template, ...(p.remote_allowed ? { remote_allowed: p.remote_allowed.filter((x) => x !== name) } : {}) }]));
               update({ ...doc, templates: ts, framework_profiles: fp });
             }}
           />
