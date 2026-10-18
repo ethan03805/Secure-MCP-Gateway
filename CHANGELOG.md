@@ -1,5 +1,9 @@
 # MCP Gateway documentation changelog
 
+## Unreleased
+
+- SR-2.5-1 and SR-2-2 are verified against the real `smcpd`: the control API is served only on the admin listener (not on the harness listener, the UDS socket, the metrics listener or the Remote Access listener) and refuses every harness credential, including a client certificate issued by the Gateway's CA (`internal/acceptance.TestControlAPIOnlyOnAdminListener`); a Researcher is refused policy publication, approval decisions, secret and credential operations and S3 payload access without a campaign grant (`internal/acceptance.TestResearcherRoleLimits`).
+
 ## v1.0.0 — 2026-10-18
 
 First release of the Secure MCP Gateway, built to SRS V1.2 and architecture V2.3. The sections below this one record how it was specified and built; this section is the release note. The tag is made by the procedure in `docs/release-checklist.md` after the phase-8 pull requests.
