@@ -6020,6 +6020,178 @@
     ]
    }
   },
+  "/api/v1/secret-use-policy": {
+   "get": {
+    "description": "Reference: docs/api/secrets.md",
+    "operationId": "getSecretUsePolicy",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "The active Secret Use Policy document, its file and the published revisions (G-02 editor)",
+    "tags": [
+     "secrets"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   },
+   "post": {
+    "description": "Reference: docs/api/secrets.md",
+    "operationId": "postSecretUsePolicy",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Publish a Secret Use Policy draft to use_policy_file and activate it",
+    "tags": [
+     "secrets"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
+  },
+  "/api/v1/secret-use-policy/rollback": {
+   "post": {
+    "description": "Reference: docs/api/secrets.md",
+    "operationId": "postSecretUsePolicyRollback",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Publish an earlier Secret Use Policy revision again",
+    "tags": [
+     "secrets"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
+  },
+  "/api/v1/secret-use-policy/validate": {
+   "post": {
+    "description": "Reference: docs/api/secrets.md",
+    "operationId": "postSecretUsePolicyValidate",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Validate a Secret Use Policy draft",
+    "tags": [
+     "secrets"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
+  },
   "/api/v1/secrets": {
    "get": {
     "description": "Reference: docs/api/secrets.md",

@@ -168,6 +168,8 @@ export async function start(): Promise<GatewayInfo> {
       "[secrets]",
       'key_source = "passphrase"',
       `passphrase_file = "${vaultPw}"`,
+      // The G-02 Secret Use Policy editor publishes to this file.
+      'use_policy_file = "secret-use.json"',
       "",
       "[[approvals.account]]",
       'username = "alice"',
@@ -177,6 +179,7 @@ export async function start(): Promise<GatewayInfo> {
       "",
     ].join("\n"),
   );
+  writeFileSync(join(dirname(config), "secret-use.json"), '{"revision": "u0"}\n', { mode: 0o600 });
   execFileSync(ctl, ["secrets", "init", "--config", config, "--passphrase-file", vaultPw], { stdio: "inherit" });
   const marker = `console-e2e-${Date.now()}`;
   writeFileSync(join(sandboxDir, "hello.txt"), marker + "\n");

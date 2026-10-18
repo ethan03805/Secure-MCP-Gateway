@@ -140,3 +140,14 @@ Validate and activate the Secret Use Policy file. Request `{}`. Response:
 ```json
 {"revision": "2026-10-16b", "digest": "<sha-256>", "bindings": 3}
 ```
+
+## Secret Use Policy authoring (G-02)
+
+The Policy Studio's Secret Use Policy editor (FR-8.4) uses four routes, all Administrator-only (secret operations, Appendix C). A published document is validated like a reloaded file, recorded in the journal before it takes effect (`admin`/`activated`/`SECRET_USE_POLICY_ACTIVATED` with `detail.action` `published` or `rolled_back`, the actor, digest and reason), written atomically (mode 0600) to the configured `use_policy_file` so that it survives a restart, archived as `<state>/secrets/use-policy/<revision>.json` and activated.
+
+| Route | Request | Response |
+|---|---|---|
+| `GET /api/v1/secret-use-policy` | | `{"file", "active": {"revision", "digest", "bindings"}, "document": {...}, "revisions": [{"revision", "digest", "published_at"}]}`; `document` is the file's content when it exists |
+| `POST /api/v1/secret-use-policy/validate` | `{"document": {...}}` | 200 `{"revision", "digest", "bindings"}`; 422 `use_policy_invalid` |
+| `POST /api/v1/secret-use-policy` | `{"document": {...}, "reason": "..."}` | 200 `{"revision", "digest", "bindings", "action": "published"}`; 422 `use_policy_invalid`; 409 `revision_exists` (the active revision ID, or an archived one with other content), `use_policy_file_unset`; 503 `audit_unavailable` |
+| `POST /api/v1/secret-use-policy/rollback` | `{"revision": "...", "reason": "..."}` | as publish, with `"action": "rolled_back"`; 404 `revision_not_found` |

@@ -154,7 +154,12 @@ var appendixC = map[string]matrixOp{
 	"POST /api/v1/secrets/{name}/rotate": op(rowSecrets, "A"),
 	"DELETE /api/v1/secrets/{name}":      op(rowSecrets, "A"),
 	"POST /api/v1/secrets/{name}/resume": op(rowSecrets, "A"),
-	"POST /api/v1/secrets/reload":        op(rowSecrets, "A"),
+	// The Secret Use Policy binds secrets to servers: a secret operation.
+	"GET /api/v1/secret-use-policy":           op(rowSecrets, "A"),
+	"POST /api/v1/secret-use-policy/validate": op(rowSecrets, "A"),
+	"POST /api/v1/secret-use-policy":          op(rowSecrets, "A"),
+	"POST /api/v1/secret-use-policy/rollback": op(rowSecrets, "A"),
+	"POST /api/v1/secrets/reload":             op(rowSecrets, "A"),
 
 	"GET /api/v1/audit/events":                      op(rowAudit, "AOPU"),
 	"GET /api/v1/audit/events/{id}":                 op(rowAudit, "AOPU"),

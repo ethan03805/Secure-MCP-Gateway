@@ -99,6 +99,10 @@ var ops = []op{
 	{Pattern: "POST /api/v1/secrets/{name}/rotate", Tag: "secrets", Summary: "Rotate a secret to a new value", Doc: "secrets.md"},
 	{Pattern: "GET /api/v1/secrets/{name}/impact", Tag: "secrets", Summary: "References to a secret (impact preview)", Doc: "secrets.md"},
 	{Pattern: "POST /api/v1/secrets/{name}/resume", Tag: "secrets", Summary: "Lift a leak suspension", Doc: "secrets.md"},
+	{Pattern: "GET /api/v1/secret-use-policy", Tag: "secrets", Summary: "The active Secret Use Policy document, its file and the published revisions (G-02 editor)", Doc: "secrets.md"},
+	{Pattern: "POST /api/v1/secret-use-policy/validate", Tag: "secrets", Summary: "Validate a Secret Use Policy draft", Doc: "secrets.md"},
+	{Pattern: "POST /api/v1/secret-use-policy", Tag: "secrets", Summary: "Publish a Secret Use Policy draft to use_policy_file and activate it", Doc: "secrets.md"},
+	{Pattern: "POST /api/v1/secret-use-policy/rollback", Tag: "secrets", Summary: "Publish an earlier Secret Use Policy revision again", Doc: "secrets.md"},
 
 	// graph (E-25, E-26, E-28)
 	{Pattern: "GET /api/v1/graph/status", Tag: "graph", Summary: "Graph mirror state, memory and counts", Doc: "graph.md", Query: []string{"detail"}},
