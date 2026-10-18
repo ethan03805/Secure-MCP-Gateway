@@ -64,15 +64,9 @@ func (g *approvalGateway) approvalEvent(t *testing.T, id, outcome string) audit.
 }
 
 // startApprovalGateway runs a Gateway in process with the Approval
-// Service and returns its config path and the service.
-func startApprovalGateway(t *testing.T) (string, *approval.Service, string) {
-	g := startApprovalGatewayFull(t)
-	return g.cfgPath, g.svc, g.alicePW
-}
-
-// startApprovalGatewayFull is startApprovalGateway with an Auditor console
-// account and an evidence observer.
-func startApprovalGatewayFull(t *testing.T) *approvalGateway {
+// Service, the console sign-in service with an Auditor account, and an
+// evidence observer.
+func startApprovalGateway(t *testing.T) *approvalGateway {
 	t.Helper()
 	dir := t.TempDir()
 	state := filepath.Join(dir, "state")
@@ -189,7 +183,7 @@ func (s *syncBuf) String() string              { s.mu.Lock(); defer s.mu.Unlock(
 func TestApprovalsCLI(t *testing.T) {
 	reqtest.Verifies(t, "FR-3.24")
 	reqtest.Partial(t, "FR-3.18", "FR-3.23")
-	gw := startApprovalGatewayFull(t)
+	gw := startApprovalGateway(t)
 	cfgPath, svc, alicePW := gw.cfgPath, gw.svc, gw.alicePW
 	cli := func(stdin string, args ...string) (string, error) {
 		var out bytes.Buffer
