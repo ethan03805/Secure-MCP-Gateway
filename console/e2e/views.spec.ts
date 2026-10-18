@@ -502,8 +502,8 @@ test("G-05 behavior analytics on a dedicated Gateway: inspect a context, open a 
     // Promote the second snapshot, then roll back to the first.
     await snapshots.getByRole("button", { name: "Promote" }).click();
     await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
-    const second = (await snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link").innerText()).trim();
-    expect(second).not.toBe(first);
+    // The table reloads after the promotion.
+    await expect(snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link")).not.toHaveText(first);
     await snapshots.getByRole("row").filter({ hasText: first }).getByRole("button", { name: "Roll back to this snapshot" }).click();
     await expect(page.getByText(/^Snapshot \w{8} is promoted/)).toBeVisible();
     await expect(snapshots.getByRole("row").filter({ hasText: "promoted" }).getByRole("link")).toHaveText(first);
