@@ -140,3 +140,17 @@ Response 200:
 ```
 
 Errors: 422 `CONFIG_INVALID` (the running configuration is kept). Records `admin`/`reloaded`/`CONFIG_RELOADED` or `admin`/`rejected`/`CONFIG_INVALID`.
+
+## POST /api/v1/versions/purge
+
+Delete one stored version (SR-6.14-1). Administrator only (Appendix C "Purge" row). Registered by `internal/versions` (E-28). Request body:
+
+```json
+{ "kind": "baseline_snapshot", "version": "0199f0c2-6c1e-7b8a-9d3e-4f5a6b7c8d9e" }
+```
+
+`kind` is one of `rule`, `route`, `policy_revision`, `server_revision`, `tool_revision`, `profile` and `baseline_snapshot`. Before anything is deleted, the Evidence Journal is scanned: a version is referenced when an event's policy, server or tool revision, its decision ID or any string in its detail is the version or a path below it (`<policy revision>/<profile>/<rule>`, `<server revision>/<tool>`). The journal is never expired, so every journal event counts. A referenced version is refused and kept.
+
+Response 200: `{ "kind": "baseline_snapshot", "version": "...", "purged": true }`. The receipt `admin`/`purged`/`VERSION_PURGED` is committed before the version is deleted.
+
+Errors: 400 `bad_request`; 404 `not_found`; 409 `VERSION_REFERENCED` (with `references.count` and `references.first_event_id`), recorded as `admin`/`refused`/`VERSION_REFERENCED`; 409 `VERSION_RETAINED` for a kind that has no deletion (only baseline snapshots can be deleted; the other kinds are stored for good), recorded as `admin`/`refused`/`VERSION_RETAINED`; 409 `VERSION_IN_USE` for the promoted baseline snapshot.

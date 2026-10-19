@@ -358,3 +358,29 @@ func (st *SnapshotStore) SetPromoted(p Promotion) error {
 	}
 	return os.Rename(tmp, filepath.Join(st.dir, "promotion.json"))
 }
+
+// ErrPromoted refuses to delete the promoted snapshot.
+var ErrPromoted = errors.New("baseline snapshot is promoted")
+
+// Delete removes a stored snapshot. The promoted snapshot is refused. The
+// caller checks that no unexpired audit record references the snapshot
+// (SR-6.14-1, internal/versions).
+func (st *SnapshotStore) Delete(id string) error {
+	p, err := st.path(id)
+	if err != nil {
+		return err
+	}
+	prom, err := st.Promoted()
+	if err != nil {
+		return err
+	}
+	if prom == id {
+		return fmt.Errorf("%w: %s", ErrPromoted, id)
+	}
+	if err := os.Remove(p); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w: %s", ErrNotFound, id)
+	} else if err != nil {
+		return err
+	}
+	return nil
+}

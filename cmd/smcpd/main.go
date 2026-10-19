@@ -37,6 +37,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
+	"github.com/ethan03805/secure-mcp-gateway/internal/versions"
 )
 
 func main() {
@@ -244,6 +245,12 @@ func run(cfgPath, level string) error {
 	(&obspolicy.Service{Store: objs, Evidence: a.Evidence}).Register(a.Admin)
 	(&principals.Service{Dir: pdir, Sessions: a.Store, Snapshot: a.Decider.Snapshot, Evidence: a.Evidence, Log: log, Gate: a.Gateway.Serialize}).Register(a.Admin)
 	mirror.Register(a.Admin)
+	// E-28: purge of versions no unexpired audit record references (SR-6.14-1).
+	vs := &versions.Service{JournalDir: a.Journal.Dir(), Evidence: a.Evidence}
+	if obs.Baselines != nil {
+		vs.SetPurger(versions.KindBaselineSnapshot, versions.BaselinePurger(obs.Baselines.Store()))
+	}
+	vs.Register(a.Admin)
 	mirror.Start(ctx, a.Evidence)
 	defer mirror.Close()
 	sec.Attach(a.Admin, a.Registry)

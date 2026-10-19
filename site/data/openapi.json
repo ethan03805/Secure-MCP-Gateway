@@ -6943,6 +6943,52 @@
      "operator"
     ]
    }
+  },
+  "/api/v1/versions/purge": {
+   "post": {
+    "description": "Reference: docs/api/ops.md",
+    "operationId": "postVersionsPurge",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Delete a stored version (rule, route, policy, server, tool, profile, baseline snapshot) that no unexpired audit record references; a referenced version is refused (SR-6.14-1)",
+    "tags": [
+     "operations"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
   }
  },
  "security": [
