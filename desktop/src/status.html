@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gateway Status</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="status-view.js"></script>
+</head>
+<body>
+<div class="window">
+  <main class="content" aria-labelledby="title">
+    <h1 id="title" tabindex="-1">Gateway status</h1>
+    <p id="state-line" role="status"></p>
+    <p id="meaning"></p>
+    <h2>What to do</h2>
+    <p id="action"></p>
+    <div class="actions-inline" id="controls"></div>
+    <div id="enforcement"></div>
+    <dl class="kv" id="facts"></dl>
+  </main>
+  <div class="bar">
+    <span class="spacer"></span>
+    <button type="button" id="close">Close</button>
+  </div>
+</div>
+</body>
+</html>

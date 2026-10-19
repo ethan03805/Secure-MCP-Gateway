@@ -13,8 +13,10 @@
 //! own modules with unit tests; this file wires them to Tauri.
 
 pub mod console;
+pub mod explain;
 pub mod health;
 pub mod icons;
+pub mod intro;
 pub mod notify;
 pub mod service;
 pub mod settings;
@@ -36,7 +38,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager as _, RunEvent, State, WebviewUrl, WebviewWindowBuilder};
@@ -47,11 +49,22 @@ use crate::service::{Action, Host, Manager, SystemRunner};
 use crate::settings::{FieldError, Resolved, Settings};
 use crate::state::{Monitor, ServiceStatus, TrayState, TrayView};
 
-/// The only bundled window that has commands (capabilities/settings.json).
+/// The bundled windows. Each has its own capability file granting only its
+/// own commands (SR-2-5); the console window has none.
 pub const SETTINGS_LABEL: &str = "settings";
+pub const INTRO_LABEL: &str = "intro";
+pub const STATUS_LABEL: &str = "status";
+/// The desktop guide, opened in the default browser from Help.
+const GUIDE_URL: &str = "https://github.com/ethan03805/Secure-MCP-Gateway/blob/main/docs/desktop.md";
+/// Where the introduction sends a user for a task this version of the
+/// application cannot do itself yet (first-run setup, client setup).
+const GUIDE_SETUP_URL: &str = "https://github.com/ethan03805/Secure-MCP-Gateway/blob/main/docs/install.md";
+const GUIDE_CONNECT_URL: &str = "https://github.com/ethan03805/Secure-MCP-Gateway/blob/main/docs/quickstart.md";
 const TRAY_ID: &str = "smcp";
 
 struct Items {
+    status_title: MenuItem<tauri::Wry>,
+    status_line: MenuItem<tauri::Wry>,
     approvals: MenuItem<tauri::Wry>,
     start: MenuItem<tauri::Wry>,
     stop: MenuItem<tauri::Wry>,
@@ -66,6 +79,12 @@ struct Shared {
     service: Mutex<ServiceStatus>,
     items: Mutex<Option<Items>>,
     tray: Mutex<Option<TrayIcon>>,
+    /// The application's configuration directory (settings, introduction flag).
+    config_dir: PathBuf,
+    /// The latest tray view and when the metrics were last read, for the
+    /// Gateway Status window.
+    view: Mutex<Option<TrayView>>,
+    last_read: Mutex<Option<Instant>>,
 }
 
 impl Shared {
@@ -140,6 +159,152 @@ fn save_settings(
         }
     }
     Ok(())
+}
+
+fn only_window(w: &tauri::Webview, label: &str) -> Result<(), String> {
+    // Defence in depth beside the capability files (SR-2-5).
+    if w.label() == label {
+        Ok(())
+    } else {
+        Err("not allowed from this window".into())
+    }
+}
+
+/// What the Introduction window may offer (FR-20.40). First-run setup and
+/// client setup arrive with their windows (FR-20.8, FR-20.10); until then
+/// the introduction points to the guide for those two tasks.
+#[derive(serde::Serialize)]
+struct IntroInfo {
+    available: Vec<&'static str>,
+}
+
+#[tauri::command]
+fn intro_get(webview: tauri::Webview) -> Result<IntroInfo, String> {
+    only_window(&webview, INTRO_LABEL)?;
+    Ok(IntroInfo {
+        available: vec!["open-console"],
+    })
+}
+
+/// Stores how the user left the introduction and closes it (FR-20.41).
+#[tauri::command]
+fn intro_close(webview: tauri::Webview, shared: State<'_, Arc<Shared>>, flag: String) -> Result<(), String> {
+    only_window(&webview, INTRO_LABEL)?;
+    let flag = intro::Flag::parse(&flag).ok_or("unknown introduction flag")?;
+    let saved = intro::save(&shared.config_dir, flag).map_err(|e| e.to_string());
+    if let Some(w) = webview.app_handle().get_webview_window(INTRO_LABEL) {
+        let _ = w.close();
+    }
+    saved
+}
+
+#[tauri::command]
+fn intro_open_console(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, INTRO_LABEL)?;
+    open_console(&app, Page::Home);
+    Ok(())
+}
+
+#[tauri::command]
+fn intro_open_setup(webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, INTRO_LABEL)?;
+    Err("first-run setup is not in this version; see the desktop guide".into())
+}
+
+#[tauri::command]
+fn intro_open_client_setup(webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, INTRO_LABEL)?;
+    Err("client setup is not in this version; see the desktop guide".into())
+}
+
+/// Opens a fixed guide page in the default browser; the window names only
+/// the topic, never an address.
+#[tauri::command]
+fn intro_open_guide(webview: tauri::Webview, topic: String) -> Result<(), String> {
+    only_window(&webview, INTRO_LABEL)?;
+    let url = match topic.as_str() {
+        "setup" => GUIDE_SETUP_URL,
+        "connect" => GUIDE_CONNECT_URL,
+        _ => return Err("unknown guide topic".into()),
+    };
+    tauri_plugin_opener::open_url(url, None::<&str>).map_err(|e| e.to_string())
+}
+
+/// The Gateway Status window's reading (FR-20.45).
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StatusReading {
+    state: &'static str,
+    enforced: bool,
+    last_reading: Option<String>,
+    pending: Option<u64>,
+}
+
+#[tauri::command]
+fn status_get(webview: tauri::Webview, shared: State<'_, Arc<Shared>>) -> Result<StatusReading, String> {
+    only_window(&webview, STATUS_LABEL)?;
+    let view = shared
+        .view
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
+        .unwrap_or(TrayView {
+            state: TrayState::Unreachable,
+            not_enforced: true,
+            pending: None,
+        });
+    let last = *shared.last_read.lock().unwrap_or_else(|e| e.into_inner());
+    Ok(StatusReading {
+        state: explain::key(view.state),
+        enforced: !view.not_enforced,
+        last_reading: last.map(|t| format!("{} seconds ago", t.elapsed().as_secs())),
+        pending: view.pending,
+    })
+}
+
+#[tauri::command]
+fn status_open_console(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, STATUS_LABEL)?;
+    open_console(&app, Page::Home);
+    Ok(())
+}
+
+#[tauri::command]
+fn status_start(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, STATUS_LABEL)?;
+    run_action(&app, Action::Start);
+    Ok(())
+}
+
+#[tauri::command]
+fn status_restart(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, STATUS_LABEL)?;
+    run_action(&app, Action::Restart);
+    Ok(())
+}
+
+/// Shows a bundled window, creating it if needed.
+fn open_bundled(app: &AppHandle, label: &str, page: &str, title: &str, size: (f64, f64)) {
+    if let Some(w) = app.get_webview_window(label) {
+        let _ = w.show();
+        let _ = w.set_focus();
+        return;
+    }
+    let _ = WebviewWindowBuilder::new(app, label, WebviewUrl::App(page.into()))
+        .title(title)
+        .inner_size(size.0, size.1)
+        .resizable(false)
+        .build();
+}
+
+/// The first-run introduction (FR-20.40), at the first start and from Help.
+fn open_intro(app: &AppHandle) {
+    open_bundled(app, INTRO_LABEL, "intro.html", "Introduction", (600.0, 560.0));
+}
+
+/// The Gateway Status window (FR-20.45), from the tray's status lines.
+fn open_status(app: &AppHandle) {
+    open_bundled(app, STATUS_LABEL, "status.html", "Gateway Status", (600.0, 560.0));
 }
 
 fn notify(app: &AppHandle, body: &str) {
@@ -276,6 +441,11 @@ fn on_menu(app: &AppHandle, id: &str) {
         "stop" => run_action(app, Action::Stop),
         "restart" => run_action(app, Action::Restart),
         "settings" => open_settings(app),
+        "status" | "help_status" => open_status(app),
+        "help_intro" => open_intro(app),
+        "help_guide" => {
+            let _ = tauri_plugin_opener::open_url(GUIDE_URL, None::<&str>);
+        }
         "quit" => app.exit(0),
         _ => {}
     }
@@ -283,6 +453,10 @@ fn on_menu(app: &AppHandle, id: &str) {
 
 fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
     let item = |id: &str, text: &str, enabled: bool| MenuItem::with_id(app, id, text, enabled, None::<&str>);
+    // Status lines (FR-20.45): the state and what it means; either opens
+    // the Gateway Status window, which says what to do.
+    let status_title = item("status", "Unreachable", true)?;
+    let status_line = item("status", "", true)?;
     let open = item("open_console", "Open Console", true)?;
     let approvals = item("approvals", "Approvals", true)?;
     let start = item("start", "Start", false)?;
@@ -294,11 +468,25 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
     let setup = item("setup_client", "Set Up a Client", false)?;
     let updates = item("check_updates", "Check for Updates", false)?;
     let settings_item = item("settings", "Settings…", true)?;
+    // Help (FR-20.41): the introduction, the status explanations and the guide.
+    let help = Submenu::with_items(
+        app,
+        "Help",
+        true,
+        &[
+            &item("help_intro", "Introduction", true)?,
+            &item("help_status", "Gateway Status", true)?,
+            &item("help_guide", "Desktop Guide", true)?,
+        ],
+    )?;
     let quit = item("quit", "Quit", true)?;
     let sep = || PredefinedMenuItem::separator(app);
     let menu = Menu::with_items(
         app,
         &[
+            &status_title,
+            &status_line,
+            &sep()?,
             &open,
             &approvals,
             &sep()?,
@@ -309,6 +497,7 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
             &setup,
             &updates,
             &settings_item,
+            &help,
             &sep()?,
             &quit,
         ],
@@ -325,7 +514,12 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
         .show_menu_on_left_click(true)
         .on_menu_event(|app, ev| on_menu(app, ev.id().as_ref()))
         .build(app)?;
+    let (title, line) = explain::status_lines(&view);
+    let _ = status_title.set_text(title);
+    let _ = status_line.set_text(line);
     *shared.items.lock().unwrap_or_else(|e| e.into_inner()) = Some(Items {
+        status_title,
+        status_line,
         approvals,
         start,
         stop,
@@ -356,6 +550,9 @@ fn show(shared: &Shared, view: &TrayView, service: ServiceStatus) {
             None => "Approvals".to_string(),
         };
         let _ = items.approvals.set_text(text);
+        let (title, line) = explain::status_lines(view);
+        let _ = items.status_title.set_text(title);
+        let _ = items.status_line.set_text(line);
     }
 }
 
@@ -375,10 +572,14 @@ fn poll(app: AppHandle, shared: Arc<Shared>) {
             .map_err(|_| ())
             .and_then(|r| health::read(r.metrics, Duration::from_secs(2)).map_err(|_| ()))
         {
-            Ok(e) => monitor.record_ok(Instant::now(), e),
+            Ok(e) => {
+                monitor.record_ok(Instant::now(), e);
+                *shared.last_read.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
+            }
             Err(()) => monitor.record_failure(),
         }
         let view = monitor.view(Instant::now(), service_status);
+        *shared.view.lock().unwrap_or_else(|e| e.into_inner()) = Some(view.clone());
         if let Some(n) = view.pending {
             let enabled = resolved.as_ref().map(|r| r.notifications).unwrap_or(false);
             if let Some(notice) = notifier.observe(n, enabled) {
@@ -407,12 +608,26 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_settings, save_settings])
+        .invoke_handler(tauri::generate_handler![
+            get_settings,
+            save_settings,
+            intro_get,
+            intro_close,
+            intro_open_console,
+            intro_open_setup,
+            intro_open_client_setup,
+            intro_open_guide,
+            status_get,
+            status_open_console,
+            status_start,
+            status_restart
+        ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let dir = app.path().app_config_dir()?;
             let settings_path = dir.join("settings.json");
+            let show_intro = intro::show_at_start(intro::load(&dir));
             let shared = Arc::new(Shared {
                 settings: Mutex::new(Settings::load(&settings_path)),
                 settings_path,
@@ -421,9 +636,16 @@ pub fn run() {
                 service: Mutex::new(ServiceStatus::Unknown),
                 items: Mutex::new(None),
                 tray: Mutex::new(None),
+                config_dir: dir,
+                view: Mutex::new(None),
+                last_read: Mutex::new(None),
             });
             app.manage(shared.clone());
             build_tray(app.handle(), &shared)?;
+            // FR-20.40: the introduction opens at the first start.
+            if show_intro {
+                open_intro(app.handle());
+            }
             let handle = app.handle().clone();
             std::thread::spawn(move || poll(handle, shared));
             Ok(())

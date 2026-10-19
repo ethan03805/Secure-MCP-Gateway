@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-intro-open-guide"
+description = "Enables the intro_open_guide command without any pre-configured scope."
+commands.allow = ["intro_open_guide"]
+
+[[permission]]
+identifier = "deny-intro-open-guide"
+description = "Denies the intro_open_guide command without any pre-configured scope."
+commands.deny = ["intro_open_guide"]

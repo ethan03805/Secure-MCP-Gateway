@@ -16,18 +16,31 @@ Every other operation, including the emergency stop and every approval, happens 
 
 The only file of the Gateway installation the application reads is the public CA certificate bundle `tls/ca.crt`, so that the console window can check the admin listener's certificate.
 
+## Introduction
+
+The first time the application starts for a user, it opens a short introduction (SRS FR-20.40): four steps that say what the Gateway does and name the three things a new user does, set up the Gateway, connect an agent, and review calls and decide approvals, each with the control that starts it. Where this version cannot do a task itself yet (first-run setup and client setup), the step says so and opens the guide page with the commands instead.
+
+- **Skip** with Skip introduction or the Escape key, from any step. The introduction does not open at start again once you have finished or skipped it.
+- **Reopen** it from the menu: Help, then Introduction.
+- It is packaged with the application, works offline, needs no account and sends nothing. The only thing it stores is whether you finished or skipped it, in the file `introduction` in the application's configuration directory (on macOS, `~/Library/Application Support/com.smcp.desktop/`). Delete that file to see the introduction at the next start.
+- Keyboard and screen readers: focus moves to each step's heading, and VoiceOver reads "Step 2 of 4: Set up the Gateway". With Reduce motion on (System Settings, Accessibility, Display), the step change has no fade.
+
 ## Tray states
 
 The tray icon shows one of six states. Its shape changes with the state as well as its color, and its accessible name (the tooltip, read by VoiceOver and Orca) states it in words, for example "Secure MCP Gateway: degraded (not enforced), 2 pending approvals".
 
 | Icon | State | Meaning |
 |---|---|---|
-| Green disc | healthy | The Gateway answers and reports `healthy`. |
-| Amber triangle | degraded | The Gateway runs with a non-critical cause. In the Standalone profile this is normal: the cause is `unconfined`. |
-| Red disc with a bar | fail-closed | The Gateway refuses tool calls because of a critical cause. Open the console (Health) or run `smcpctl health`. |
-| Red octagon | emergency stop | The emergency stop is set. Resume in the console, signed in as an Administrator, or with `smcpctl resume`. |
-| Grey square | stopped | The service manager reports the service stopped, and the metrics endpoint does not answer. |
+| Green filled square | healthy | The Gateway answers and reports `healthy`. |
+| Amber diamond | degraded | The Gateway runs with a non-critical cause. In the Standalone profile this is normal: the cause is `unconfined`. |
+| Red triangle | fail-closed | The Gateway refuses tool calls because of a critical cause. Open the console (Health) or run `smcpctl health`. |
+| Red triangle with a bar under it | emergency stop | The emergency stop is set. Resume in the console, signed in as an Administrator, or with `smcpctl resume`. |
+| Grey hollow square | stopped | The service manager reports the service stopped, and the metrics endpoint does not answer. |
 | Grey ring | unreachable | No metrics reading for 15 seconds while the service is not known to be stopped. Stale data is never shown as healthy. |
+
+The shapes are those of the visual guide ([design/visual.md](design/visual.md)), so they also tell the states apart without color.
+
+The top of the menu repeats the state in words, with the first sentence of what it means, for example "Degraded, not enforced" and "The Gateway is running and checking tool calls." Selecting either line opens the **Gateway Status** window, which explains the state, says what to do and offers the control that does it: Start for stopped, Restart for unreachable, Open Console for the others. For unreachable it shows how long ago the status was last read, and on an installation that is not labelled `enforced` it explains what `not enforced` means. The text comes from the shared message catalogue `docs/design/messages.json` (FR-20.48), the same text the console uses.
 
 Beside the icon, the label **not enforced** is shown unless the Gateway reports the release label `enforced` (the gauge `smcp_release_enforced`). The application reads the endpoint every 2 seconds, so a change shows within a few seconds.
 
@@ -37,12 +50,14 @@ The tray needs the metrics endpoint. `smcpctl bootstrap` enables it on the admin
 
 | Item | Action |
 |---|---|
+| Status lines | The state and what it means (above). Opens the Gateway Status window. |
 | Open Console | Opens the console window, or brings it to the front. |
 | Approvals (*n* pending) | Opens the console window at the Approvals view (G-13). |
 | Start, Stop, Restart | Controls the `smcpd` service through the service manager. Start is enabled only while the service is stopped; Stop and Restart only while it runs. |
 | Set Up a Client | Not available yet (shown disabled). Use `smcpctl connect <client>` meanwhile. |
 | Check for Updates | Not available yet (shown disabled). |
 | Settings… | The admin listener address, the metrics endpoint, the CA file and the notification switch. |
+| Help | Introduction (reopens the introduction), Gateway Status, and Desktop Guide (this page, in the default browser). |
 | Quit | Quits the application. The Gateway keeps running. |
 
 ## Service control
