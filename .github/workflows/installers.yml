@@ -153,8 +153,10 @@ jobs:
           version: ${{ env.GORELEASER_VERSION }}
           args: build --clean --single-target ${{ inputs.tag == '' && '--snapshot' || '' }}
         env:
-          GOOS: darwin
-          GOARCH: arm64
+          # GGOOS/GGOARCH pick the --single-target platform without also
+          # cross-compiling the before hooks (go run ./tools/provenance).
+          GGOOS: darwin
+          GGOARCH: arm64
           GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
           SMCP_BUILD_REFSERVER: "1"
           SMCP_SBOM: ${{ inputs.tag != '' && '1' || '' }}

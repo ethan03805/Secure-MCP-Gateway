@@ -37,8 +37,10 @@ jobs:
           version: v2.18.2
           args: build --clean --single-target --snapshot
         env:
-          GOOS: darwin
-          GOARCH: arm64
+          # GGOOS/GGOARCH pick the --single-target platform without also
+          # cross-compiling the before hooks (go run ./tools/provenance).
+          GGOOS: darwin
+          GGOARCH: arm64
           SMCP_BUILD_REFSERVER: "1"
       - name: Build on Linux
         run: |
