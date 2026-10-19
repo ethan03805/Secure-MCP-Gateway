@@ -38,6 +38,10 @@ type Exporter struct {
 	ExportDir  string
 	// PublicKeys maps a file name under <export>/keys to a source path.
 	PublicKeys map[string]string
+	// BeforeCopy, when set, is called before each segment is copied; an
+	// error ends Sync at that point, as a crash would. Tests use it to
+	// interrupt an export mid-batch (SR-6.10-1).
+	BeforeCopy func(segment string) error
 }
 
 // ExportResult reports one Sync.
@@ -108,6 +112,13 @@ func (e *Exporter) Sync() (ExportResult, error) {
 		}
 		if ft == nil {
 			return res, fmt.Errorf("export: %s is not closed but the anchor names segment %d", s.name, a.Segment)
+		}
+		if e.BeforeCopy != nil {
+			if _, err := os.Stat(filepath.Join(dstJournal, s.name)); errors.Is(err, os.ErrNotExist) {
+				if err := e.BeforeCopy(s.name); err != nil {
+					return res, err
+				}
+			}
 		}
 		copied, err := copyOnce(src, filepath.Join(dstJournal, s.name))
 		if err != nil {

@@ -31,6 +31,7 @@ keeps today's behavior, and test the default.
 | `health` | E-23 | Health & Safety Monitor: checks, states, fail-closed latch with 10 s recovery and acknowledgment, `Gate` for the edge. |
 | `metrics` | E-23 | Loopback Prometheus exposition fed by an evidence observer and the journal's fsync timing. |
 | `backup` | E-28 (part) | age-encrypted backup archive with manifest; restore into an isolated directory with verification. |
+| `versions` | E-28 (part) | Version purge: `POST /api/v1/versions/purge` deletes a stored version only when no journal event references it (SR-6.14-1); baseline snapshots are the only kind with a deletion. |
 | `ops` | E-21, E-22, E-23 | Daemon operations runtime: attaches monitor, metrics, export, key maintenance, online backup and reload to a started `app.App`; `/api/v1/health/*`, `/api/v1/keys*`, `/api/v1/backup*`, `/api/v1/config/reload`. |
 | `packaging` | E-13, E-22 (part) | Package formats (manifest, index, provenance, recipe), `smcpctl package build` (fetch by digest, probe, manifest), minisign signing and offline verification, trust anchors, revocation entries. `pkgtest` builds signed fixture packages. |
 | `library` | E-13, E-14 | Library scan and import with receipts, content-addressed artifact store, immutable revisions and registry states, enablement, the verified `ManifestSource` with drift detection and artifact re-verification, `/api/v1/packages` routes. |

@@ -352,7 +352,7 @@ A person who holds several roles has one account per role. The rules for routes 
 | Memory budgets, backups, key rotation | `GET`/`POST /api/v1/backup`, `GET /api/v1/keys`, `POST /api/v1/keys/rotate`, `POST /api/v1/observations/memory-budget`, `POST /api/v1/graph/rebuild` | Operator |
 | Dataset export | `POST /api/v1/research/exports`, export reads and downloads | Researcher, for a request naming `campaign_id` (the export route refuses a campaign that is not active, completed or exported) |
 | Egress and runtime reads | `GET /api/v1/egress*`, `GET /api/v1/runtime*` | Operator, Auditor |
-| Purge, configuration reload, Session Approver accounts, integrity acknowledgment | `POST /api/v1/observations/purge`, `POST /api/v1/config/reload`, `/api/v1/approvers*`, `POST /api/v1/health/ack` | none |
+| Purge, configuration reload, Session Approver accounts, integrity acknowledgment | `POST /api/v1/observations/purge`, `POST /api/v1/versions/purge`, `POST /api/v1/config/reload`, `/api/v1/approvers*`, `POST /api/v1/health/ack` | none |
 
 ### POST /api/v1/console/login
 

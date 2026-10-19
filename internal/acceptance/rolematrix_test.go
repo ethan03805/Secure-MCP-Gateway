@@ -236,6 +236,7 @@ var appendixC = map[string]matrixOp{
 	}},
 
 	"POST /api/v1/observations/purge": op(rowPurge, "A"),
+	"POST /api/v1/versions/purge":     op(rowPurge, "A"), // SR-6.14-1
 
 	"POST /api/v1/health/ack":    op(rowAdminOnly, "A"), // with resume: leaving fail-closed (FR-7.13)
 	"POST /api/v1/config/reload": op(rowAdminOnly, "A"),
