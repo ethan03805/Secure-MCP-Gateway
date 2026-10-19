@@ -7366,12 +7366,12 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 |---|---|
 | ID | FR-20.8 |
 | Parent ID | FR-20 — Desktop application and platform installers |
-| Statement | When no Gateway configuration exists, the Desktop Application (E-34) **SHALL** offer a setup window that collects the Administrator and Approver passwords, runs `smcpctl bootstrap` with the passwords passed on standard input or in files of mode 0600 that it deletes when the command ends, then runs `smcpctl install` for the selected profile, and **SHALL** show each command's outcome and, when a step fails, its output and the command the user can run in a terminal to retry it. |
+| Statement | When no Gateway configuration exists, the Desktop Application (E-34) **SHALL** offer a setup window that collects the Administrator and Approver passwords, runs `smcpctl install` for the selected profile, which performs the `smcpctl bootstrap` step before it installs the service, with the passwords passed in files of mode 0600 that it deletes when the command ends, and **SHALL** show the outcome of the bootstrap step and of the service installation and, when a step fails, its output and the command the user can run in a terminal to retry it. |
 | Allocation | Elements: E-34 Desktop Application; Functions: F-103, F-97; Internal interfaces: I-42 |
 | Verification Method | Test |
 | Verification Statement | On clean macOS, Ubuntu and Windows runners, complete the setup; confirm the configuration, keys and service exist as after the terminal procedure (FR-13.6), that no password appears in any process argument list (sampled every 100 ms during setup) or remains in a file afterwards; inject a failing install and confirm the output and retry command are shown. |
 | Source | OWNER (first-run setup wraps smcpctl bootstrap/install); SEC 7.5 |
-| Rationale | The setup is a front end to the verified terminal procedure, not a second implementation of it, so FR-13 keeps verifying the installation itself. Process argument lists are readable by other local accounts. |
+| Rationale | The setup is a front end to the verified terminal procedure, not a second implementation of it, so FR-13 keeps verifying the installation itself. Process argument lists are readable by other local accounts. `smcpctl install` runs the bootstrap step itself into the CP-46 layout; a separate `smcpctl bootstrap` first would write the configuration and keys into a different directory, and `smcpctl` reads only one password from standard input, so both passwords go in files. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-20.9 — Profile choice in setup

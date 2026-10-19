@@ -73,6 +73,8 @@ const STATES = [
   ["unreachable", 0],
 ];
 
+const SETUP_DEMOS = ["form", "form-enforced", "form-missing", "running", "failed", "done", "configured", "missing-smcpctl"];
+
 const engine = process.env.ENGINE === "chromium" ? chromium : webkit;
 const browser = await engine.launch();
 for (const scheme of /** @type {const} */ (["light", "dark"])) {
@@ -96,6 +98,13 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
     await page.goto(`${base}/${p}`);
     await axe(page, `${p} (${scheme})`);
   }
+  // First-run setup in each of its stages (FR-20.8, FR-20.9, FR-20.15).
+  for (const d of SETUP_DEMOS) {
+    await page.goto(`${base}/setup.html?demo=${d}`);
+    await page.waitForSelector("#stage-title");
+    if (shots) await page.screenshot({ path: `${shots}/setup-${d}-${scheme}.png`, fullPage: true });
+    await axe(page, `setup ${d} (${scheme})`);
+  }
   // settings.html rejects outside the application; only the introduction
   // and status pages must run without an error here.
   const own = errors.filter((e) => !e.includes("only inside the desktop application"));
@@ -112,6 +121,8 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
   await page.waitForSelector("#step-body p");
   await page.goto(`${base}/status.html?csp&state=stopped`);
   await page.waitForSelector("#meaning:not(:empty)");
+  await page.goto(`${base}/setup.html?csp&demo=failed`);
+  await page.waitForSelector("#stage-title");
   if (errors.length) fail(`errors under the CSP: ${errors.join(" | ")}`);
   await ctx.close();
 }
@@ -167,6 +178,43 @@ const kb = await chromium.launch();
     await page.keyboard.press("Enter");
   }
   if (calls.at(-1) !== 'intro_close {"flag":"completed"}') fail(`Done did not complete: ${calls.join(", ")}`);
+
+  // First-run setup by keyboard alone (FR-20.15): focus starts on the
+  // heading, Tab reaches the profile and the four password fields in
+  // order, a mismatch is reported on its field, and Enter submits.
+  await page.goto(`${base}/setup.html?demo=form-enforced`);
+  await page.waitForSelector("#stage-title");
+  if ((await focused()) !== "stage-title") fail(`setup: initial focus on ${await focused()}, not the heading`);
+  await page.keyboard.press("Tab");
+  if ((await focused()) !== "profile-standalone") fail(`setup: Tab reaches ${await focused()}, not the profile`);
+  await page.keyboard.press("ArrowDown");
+  if ((await focused()) !== "profile-enforced") fail(`setup: arrow key reaches ${await focused()}, not Enforced`);
+  const typeInto = async (/** @type {string} */ id, /** @type {string} */ text) => {
+    await page.keyboard.press("Tab");
+    if ((await focused()) !== id) fail(`setup: Tab reaches ${await focused()}, not ${id}`);
+    await page.keyboard.type(text);
+  };
+  await typeInto("admin", "admin password 1");
+  await typeInto("adminRepeat", "admin password 1");
+  await typeInto("approver", "approver password 2");
+  await typeInto("approverRepeat", "approver password X");
+  await page.keyboard.press("Enter");
+  if ((await focused()) !== "approverRepeat") fail(`setup: a mismatch moves focus to ${await focused()}`);
+  const err = (await page.textContent("#approverRepeat-error")) ?? "";
+  if (!err.includes("Approver password are different")) fail(`setup: mismatch message "${err}"`);
+  if (calls.some((c) => c.startsWith("setup_run"))) fail("setup: setup_run was called with mismatched passwords");
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("approver password 2");
+  await page.keyboard.press("Enter");
+  const run = calls.find((c) => c.startsWith("setup_run")) ?? "";
+  if (run !== 'setup_run {"profile":"enforced","admin":"admin password 1","approver":"approver password 2"}') fail(`setup: submitted ${run || "nothing"}`);
+  // A failed setup: Try Again by keyboard returns to the form.
+  await page.goto(`${base}/setup.html?demo=failed`);
+  await page.waitForSelector("#stage-title");
+  if ((await focused()) !== "stage-title") fail(`setup failed: focus on ${await focused()}`);
+  await page.getByRole("button", { name: "Try Again" }).focus();
+  await page.keyboard.press("Enter");
+  if ((await focused()) !== "stage-title" || !(await page.$("#setup-form"))) fail("setup: Try Again did not return to the form");
   await ctx.close();
 }
 await kb.close();
