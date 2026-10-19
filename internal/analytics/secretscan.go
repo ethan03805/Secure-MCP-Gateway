@@ -23,6 +23,19 @@ func (s *Service) SetSecretScanner(scan func([]byte) int) {
 	s.scanner.Store(&scan)
 }
 
+// SecretMatches returns the number of registered fingerprint matches in b,
+// as the observe-request and observe-response probes count them; 0 when no
+// fingerprints are registered.
+func (s *Service) SecretMatches(b []byte) int {
+	if s == nil {
+		return 0
+	}
+	if scan := s.secretScanner(); scan != nil {
+		return scan(b)
+	}
+	return 0
+}
+
 func (s *Service) secretScanner() func([]byte) int {
 	if p := s.scanner.Load(); p != nil {
 		return *p

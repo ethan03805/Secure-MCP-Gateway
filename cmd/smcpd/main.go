@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -75,6 +76,25 @@ func journalWritable(cfg *config.Config) func() bool {
 		f.Close()
 		return os.Remove(name) == nil
 	}
+}
+
+// attachSecrets opens the vault and builds the Secret Broker (E-19, E-20)
+// when [secrets] is configured, and returns nil otherwise. It registers the
+// vault health check (FR-7.11) and the broker's leak fingerprints with the
+// Observation Collector (FR-6.10); app.Start registers the same
+// fingerprints with the Response Inspection Pipeline (E-11).
+func attachSecrets(cfg *config.Config, opts *app.Options, obs *analytics.Service, mon *health.Monitor, log *slog.Logger) (*secrets.Service, error) {
+	sec, err := secrets.Configure(cfg, opts, nil, log)
+	if err != nil {
+		return nil, fmt.Errorf("secrets: %w", err)
+	}
+	if sec == nil {
+		return nil, nil
+	}
+	mon.Register("vault", health.Vault(sec.Vault.Check)) // FR-7.11: critical while the vault cannot be read
+	fps := sec.Broker.Fingerprints()
+	obs.SetSecretScanner(func(b []byte) int { return len(fps.Scan(b)) })
+	return sec, nil
 }
 
 // versionLine is what smcpd --version prints: the release version set by
@@ -185,17 +205,11 @@ func run(cfgPath, level string) error {
 		rt.Start(ctx)
 		defer rt.Close()
 	}
-	sec, err := secrets.Configure(cfg, &opts, nil, log) // E-19, E-20; nil when [secrets] is absent
+	sec, err := attachSecrets(cfg, &opts, obs, mon, log) // E-19, E-20; nil when [secrets] is absent
 	if err != nil {
-		return fmt.Errorf("secrets: %w", err)
+		return err
 	}
 	defer sec.Close()
-	if sec != nil {
-		mon.Register("vault", health.Vault(sec.Vault.Check)) // FR-7.11: critical while the vault cannot be read
-		// FR-6.10: the leak fingerprints are registered with the Observation Collector too.
-		fps := sec.Broker.Fingerprints()
-		obs.SetSecretScanner(func(b []byte) int { return len(fps.Scan(b)) })
-	}
 	a, err := app.Start(ctx, cfg, opts)
 	// FR-9.17: while the Evidence Journal cannot be opened for writing,
 	// harness requests get -31004; Start is retried once the journal
