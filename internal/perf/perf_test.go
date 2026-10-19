@@ -273,6 +273,58 @@ func TestOverheadsFromReceiptToDeliveryWithoutServerTime(t *testing.T) {
 	}
 }
 
+// TestTreeRSS: the graph engine's memory is the sum of VmRSS over the
+// process and every descendant, and nothing else.
+func TestTreeRSS(t *testing.T) {
+	saved := procRoot
+	t.Cleanup(func() { procRoot = saved })
+	procRoot = t.TempDir()
+	for pid, st := range map[string]string{
+		"1":   "Name:\tinit\nPPid:\t0\nVmRSS:\t   1000 kB\n",
+		"10":  "Name:\ttini\nPPid:\t1\nVmRSS:\t    100 kB\n",
+		"11":  "Name:\tjava\nPPid:\t10\nVmRSS:\t 800000 kB\n",
+		"12":  "Name:\tjava\nPPid:\t11\nVmRSS:\t   2000 kB\n",
+		"20":  "Name:\tother\nPPid:\t1\nVmRSS:\t   5000 kB\n",
+		"21":  "Name:\tkthread\nPPid:\t10\n", // no VmRSS
+		"abc": "not a process",
+	} {
+		if err := os.MkdirAll(filepath.Join(procRoot, pid), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(procRoot, pid, "status"), []byte(st), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, n, err := treeRSS(10)
+	if err != nil || got != (100+800000+2000)<<10 || n != 4 {
+		t.Fatalf("treeRSS(10) = %d, %d processes, %v", got, n, err)
+	}
+	if _, _, err := treeRSS(99); err == nil {
+		t.Fatal("a missing process is not an error")
+	}
+}
+
+// TestGraphConfig: with a graph engine, the idle instance gets a [graph]
+// table with the password in a 0600 file; without one, nothing.
+func TestGraphConfig(t *testing.T) {
+	dir := t.TempDir()
+	if s, err := graphConfig(RunOptions{}, filepath.Join(dir, "pw")); err != nil || s != "" {
+		t.Fatalf("no engine: %q %v", s, err)
+	}
+	src := filepath.Join(dir, "src")
+	if err := os.WriteFile(src, []byte("secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pw := filepath.Join(dir, "work", "pw")
+	s, err := graphConfig(RunOptions{GraphURI: "bolt://127.0.0.1:7687", GraphPasswordFile: src}, pw)
+	if err != nil || !strings.Contains(s, "[graph]\nenabled = true\nuri = \"bolt://127.0.0.1:7687\"\nusername = \"neo4j\"") || !strings.Contains(s, pw) {
+		t.Fatalf("config %q %v", s, err)
+	}
+	if fi, err := os.Stat(pw); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("password file %v %v", fi, err)
+	}
+}
+
 // TestCaptureWork: the FR-11.4 instances get a new directory on the memory
 // file system when the host has one, and the work directory otherwise.
 func TestCaptureWork(t *testing.T) {

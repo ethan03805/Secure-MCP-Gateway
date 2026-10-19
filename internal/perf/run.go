@@ -27,8 +27,15 @@ type RunOptions struct {
 	Idle      time.Duration // wait before the idle memory sample (default 10 minutes)
 	Ingest    time.Duration // FR-11.6 replay duration (default IngestDuration)
 	Rate      int           // FR-11.6 replay rate in records per second (default IngestRate)
-	Commit    string
-	Log       io.Writer
+	// The graph mirror's engine for FR-11.9: with GraphURI set, the idle
+	// instance runs the graph mirror against it (Bolt URI, user and
+	// password file), and the idle sample adds the resident memory of
+	// process GraphPID (the engine, for example a container's first
+	// process) and its descendants.
+	GraphURI, GraphUser, GraphPasswordFile string
+	GraphPID                               int
+	Commit                                 string
+	Log                                    io.Writer
 }
 
 func (o *RunOptions) defaults() {
@@ -77,7 +84,11 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 
 	// FR-11.9: an idle instance, started first and sampled o.Idle after
 	// its start, while the other measurements run (it gets no traffic).
-	idle, err := newInstance(o.BinDir, filepath.Join(o.Work, "idle"), "", doc)
+	idleExtra, err := graphConfig(o, filepath.Join(o.Work, "graph-password"))
+	if err != nil {
+		return nil, err
+	}
+	idle, err := newInstance(o.BinDir, filepath.Join(o.Work, "idle"), idleExtra, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -86,10 +97,17 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	}
 	defer idle.stop()
 	idleSince := time.Now()
+	if o.GraphURI != "" {
+		if err := idle.waitGraphReady(2 * time.Minute); err != nil {
+			return nil, err
+		}
+		say("idle instance: graph mirror ready on %s", o.GraphURI)
+	}
 	type rssSample struct {
-		bytes int64
-		at    time.Duration
-		err   error
+		bytes, graph int64
+		procs        int
+		at           time.Duration
+		err          error
 	}
 	idleRSS := make(chan rssSample, 1)
 	sampleCtx, stopSample := context.WithCancel(ctx)
@@ -99,8 +117,12 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 		case <-sampleCtx.Done():
 			idleRSS <- rssSample{err: sampleCtx.Err()}
 		case <-time.After(o.Idle):
-			b, err := idle.rssBytes()
-			idleRSS <- rssSample{b, time.Since(idleSince), err}
+			s := rssSample{at: time.Since(idleSince)}
+			s.bytes, s.err = idle.rssBytes()
+			if s.err == nil && o.GraphPID > 0 {
+				s.graph, s.procs, s.err = treeRSS(o.GraphPID)
+			}
+			idleRSS <- s
 		}
 	}()
 	say("idle instance started; memory is sampled after %s", o.Idle)
@@ -240,10 +262,17 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
-	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.9", Name: "Idle resident memory", Metric: "RSS", Unit: "MiB",
-		Value: float64(s.bytes) / (1 << 20), Budget: float64(BudgetIdleRSSBytes) / (1 << 20), Samples: 1, Pass: s.bytes <= BudgetIdleRSSBytes,
-		Method: fmt.Sprintf("resident set size of smcpd %s after start with no traffic, Standalone profile, Data Server off (no Neo4j); server instances excluded", s.at.Round(time.Second)),
-		Note:   "the graph mirror's engine (Neo4j) and the Enforced profile's processes are not included"})
+	m := Measurement{Requirement: "FR-11.9", Name: "Idle resident memory", Metric: "RSS", Unit: "MiB",
+		Value: float64(s.bytes+s.graph) / (1 << 20), Budget: float64(BudgetIdleRSSBytes) / (1 << 20), Samples: 1, Pass: s.bytes+s.graph <= BudgetIdleRSSBytes,
+		Complete: o.GraphURI != "" && o.GraphPID > 0 && s.at >= 10*time.Minute,
+		Method:   fmt.Sprintf("resident set size of smcpd %s after start with no traffic, Standalone profile, graph mirror off; server instances excluded", s.at.Round(time.Second)),
+		Note:     "the graph mirror's engine (Neo4j) is not included"}
+	if o.GraphPID > 0 {
+		m.Method = fmt.Sprintf("combined resident set size %s after start with no traffic: smcpd (%.1f MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at %s (%.1f MiB in %d processes, process %d and its descendants); server instances, browsers and models excluded",
+			s.at.Round(time.Second), float64(s.bytes)/(1<<20), o.GraphURI, float64(s.graph)/(1<<20), s.procs, o.GraphPID)
+		m.Note = ""
+	}
+	res.Measurements = append(res.Measurements, m)
 	return res, nil
 }
 
@@ -443,4 +472,28 @@ func orderText(runs []captureRun) string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// graphConfig returns the idle instance's [graph] table for o.GraphURI,
+// with the password copied to pwPath (mode 0600, as the mirror requires),
+// or "" without a graph engine.
+func graphConfig(o RunOptions, pwPath string) (string, error) {
+	if o.GraphURI == "" {
+		return "", nil
+	}
+	pw, err := os.ReadFile(o.GraphPasswordFile)
+	if err != nil {
+		return "", fmt.Errorf("graph password: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(pwPath), 0o700); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(pwPath, pw, 0o600); err != nil {
+		return "", err
+	}
+	user := o.GraphUser
+	if user == "" {
+		user = "neo4j"
+	}
+	return fmt.Sprintf("\n[graph]\nenabled = true\nuri = %q\nusername = %q\npassword_file = %q\n", o.GraphURI, user, pwPath), nil
 }

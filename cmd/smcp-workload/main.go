@@ -10,7 +10,7 @@
 //	    directory that smcpd has not opened yet.
 //	smcp-workload run --bin DIR --out perf.json [--test-json perf-test.json]
 //	    [--calls 2000] [--decisions 100000] [--queries 100] [--idle 10m]
-//	    [--ingest 10m] [--rate 2000]
+//	    [--ingest 10m] [--rate 2000] [--graph-uri URI --graph-password-file F --graph-pid PID]
 //
 // The measurements are of the machine they run on; perf.json records the
 // host (processor, cores, memory, disk) and marks whether it is the
@@ -101,6 +101,10 @@ func measure(args []string) error {
 	fs.DurationVar(&o.Idle, "idle", 10*time.Minute, "time from start to the idle memory sample")
 	fs.DurationVar(&o.Ingest, "ingest", perf.IngestDuration, "duration of the FR-11.6 observation ingest replay")
 	fs.IntVar(&o.Rate, "rate", perf.IngestRate, "observation records per second of the FR-11.6 replay")
+	fs.StringVar(&o.GraphURI, "graph-uri", "", "Bolt URI of a graph engine for the idle instance's graph mirror (FR-11.9)")
+	fs.StringVar(&o.GraphUser, "graph-user", "neo4j", "graph engine user")
+	fs.StringVar(&o.GraphPasswordFile, "graph-password-file", "", "file with the graph engine password")
+	fs.IntVar(&o.GraphPID, "graph-pid", 0, "process ID of the graph engine (a container's first process); its tree's memory is added to the idle sample")
 	fs.StringVar(&o.Commit, "commit", os.Getenv("GITHUB_SHA"), "commit measured")
 	work := fs.String("work", "", "work directory (default a new temporary directory, removed afterwards)")
 	if err := fs.Parse(args); err != nil {
