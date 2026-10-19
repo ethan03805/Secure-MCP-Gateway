@@ -19,7 +19,15 @@ guide="$root/docs/install.md"
 mkdir -p "$work"
 
 say() { printf '==> install-guide: %s\n' "$*"; }
-fail() { printf 'FAIL: install-guide: %s\n' "$*" >&2; exit 1; }
+fail() {
+  printf 'FAIL: install-guide: %s\n' "$*" >&2
+  if [ "$(uname -s)" = Linux ] && sudo -n true 2>/dev/null; then
+    sudo -n systemctl status smcpd.service --no-pager -l >&2 || true
+    sudo -n journalctl -u smcpd.service -n 80 --no-pager >&2 || true
+    sudo -n tail -n 80 /var/log/smcp/smcpd.log >&2 || true
+  fi
+  exit 1
+}
 
 # The block: the first ```sh fence after the marker line, up to its closing fence.
 awk -v m="<!-- ci-install-guide: $name -->" '
