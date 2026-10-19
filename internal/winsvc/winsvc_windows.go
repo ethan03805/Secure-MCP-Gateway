@@ -15,6 +15,8 @@ import (
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/mgr"
 )
 
 // HostVersion reads the running Windows version with RtlGetVersion, which
@@ -241,4 +243,205 @@ func StartDetached(exe string, args []string, dir string, logFile *os.File) (int
 	}
 	pid := cmd.Process.Pid
 	return pid, cmd.Process.Release()
+}
+
+// ServiceAccount is the CP-46 virtual service account of the machine mode.
+const ServiceAccount = `NT SERVICE\` + ServiceName
+
+// InstallService registers the machine-mode service (FR-21.6): smcpd
+// -config cfgPath under NT SERVICE\smcpd, automatic (delayed) start, an
+// unrestricted service SID, and recovery actions that restart it after
+// the first and second failures, also when it exits with an error rather
+// than crashing. An existing registration is updated. It reports whether
+// the service was created.
+func InstallService(exe, cfgPath string) (bool, error) {
+	m, err := mgr.Connect()
+	if err != nil {
+		return false, fmt.Errorf("winsvc: connect to the Service Control Manager (run as Administrator): %w", err)
+	}
+	defer func() { _ = m.Disconnect() }()
+	c := mgr.Config{
+		DisplayName:      "Secure MCP Gateway",
+		Description:      "Secure MCP Gateway (smcpd), machine mode. Not enforced on Windows.",
+		StartType:        mgr.StartAutomatic,
+		DelayedAutoStart: true,
+		ServiceStartName: ServiceAccount,
+		SidType:          windows.SERVICE_SID_TYPE_UNRESTRICTED,
+		ErrorControl:     mgr.ErrorNormal,
+	}
+	created := false
+	s, err := m.OpenService(ServiceName)
+	if err == nil {
+		c.BinaryPathName = CommandLine(exe, "-config", cfgPath)
+		if err := s.UpdateConfig(c); err != nil {
+			s.Close()
+			return false, fmt.Errorf("winsvc: update service: %w", err)
+		}
+	} else {
+		if s, err = m.CreateService(ServiceName, exe, c, "-config", cfgPath); err != nil {
+			return false, fmt.Errorf("winsvc: create service: %w", err)
+		}
+		created = true
+	}
+	defer s.Close()
+	actions := []mgr.RecoveryAction{
+		{Type: mgr.ServiceRestart, Delay: 5 * time.Second},
+		{Type: mgr.ServiceRestart, Delay: 30 * time.Second},
+		{Type: mgr.NoAction},
+	}
+	if err := s.SetRecoveryActions(actions, 24*60*60); err != nil {
+		return created, fmt.Errorf("winsvc: recovery actions: %w", err)
+	}
+	if err := s.SetRecoveryActionsOnNonCrashFailures(true); err != nil {
+		return created, fmt.Errorf("winsvc: recovery on non-crash failures: %w", err)
+	}
+	return created, nil
+}
+
+// ServiceState returns the state of the machine-mode service, or
+// svc.Stopped and false when it is not installed.
+func ServiceState() (svc.State, bool, error) {
+	m, err := mgr.Connect()
+	if err != nil {
+		return 0, false, err
+	}
+	defer func() { _ = m.Disconnect() }()
+	s, err := m.OpenService(ServiceName)
+	if err != nil {
+		return svc.Stopped, false, nil
+	}
+	defer s.Close()
+	st, err := s.Query()
+	return st.State, true, err
+}
+
+// StartService starts the machine-mode service when it is not running.
+func StartService() error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = m.Disconnect() }()
+	s, err := m.OpenService(ServiceName)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	if st, err := s.Query(); err == nil && st.State == svc.Running {
+		return nil
+	}
+	return s.Start()
+}
+
+// StopService stops the machine-mode service and waits up to wait.
+func StopService(wait time.Duration) error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = m.Disconnect() }()
+	s, err := m.OpenService(ServiceName)
+	if err != nil {
+		return nil // not installed
+	}
+	defer s.Close()
+	st, err := s.Query()
+	if err != nil || st.State == svc.Stopped {
+		return err
+	}
+	if _, err := s.Control(svc.Stop); err != nil {
+		return fmt.Errorf("winsvc: stop: %w", err)
+	}
+	for deadline := time.Now().Add(wait); time.Now().Before(deadline); time.Sleep(250 * time.Millisecond) {
+		if st, err := s.Query(); err == nil && st.State == svc.Stopped {
+			return nil
+		}
+	}
+	return errors.New("winsvc: the service did not stop in time")
+}
+
+// DeleteService removes the machine-mode service registration.
+func DeleteService() error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = m.Disconnect() }()
+	s, err := m.OpenService(ServiceName)
+	if err != nil {
+		return nil
+	}
+	defer s.Close()
+	return s.Delete()
+}
+
+var (
+	netapi32                    = windows.NewLazySystemDLL("netapi32.dll")
+	procNetLocalGroupAdd        = netapi32.NewProc("NetLocalGroupAdd")
+	procNetLocalGroupAddMembers = netapi32.NewProc("NetLocalGroupAddMembers")
+	procNetLocalGroupDel        = netapi32.NewProc("NetLocalGroupDel")
+)
+
+const (
+	nerrGroupExists    = 2223
+	errorAliasExists   = 1379
+	errorMemberInAlias = 1378
+	nerrGroupNotFound  = 2220
+	errorNoSuchAlias   = 1376
+)
+
+// EnsureLocalGroup creates a local group (CP-46 smcp-harness and
+// smcp-operators) and reports whether it was created.
+func EnsureLocalGroup(name, comment string) (bool, error) {
+	n, err := windows.UTF16PtrFromString(name)
+	if err != nil {
+		return false, err
+	}
+	c, err := windows.UTF16PtrFromString(comment)
+	if err != nil {
+		return false, err
+	}
+	info := struct {
+		name, comment *uint16
+	}{n, c}
+	r, _, _ := procNetLocalGroupAdd.Call(0, 1, uintptr(unsafe.Pointer(&info)), 0) //nolint:gosec // LOCALGROUP_INFO_1
+	switch r {
+	case 0:
+		return true, nil
+	case nerrGroupExists, errorAliasExists:
+		return false, nil
+	}
+	return false, fmt.Errorf("winsvc: NetLocalGroupAdd %s: %w", name, windows.Errno(r))
+}
+
+// AddLocalGroupMember adds an account SID to a local group; a member
+// already in the group is not an error.
+func AddLocalGroupMember(group, sidStr string) error {
+	g, err := windows.UTF16PtrFromString(group)
+	if err != nil {
+		return err
+	}
+	sid, err := windows.StringToSid(sidStr)
+	if err != nil {
+		return err
+	}
+	info := struct{ sid *windows.SID }{sid}
+	r, _, _ := procNetLocalGroupAddMembers.Call(0, uintptr(unsafe.Pointer(g)), 0, uintptr(unsafe.Pointer(&info)), 1) //nolint:gosec // LOCALGROUP_MEMBERS_INFO_0
+	if r != 0 && r != errorMemberInAlias {
+		return fmt.Errorf("winsvc: add %s to %s: %w", sidStr, group, windows.Errno(r))
+	}
+	return nil
+}
+
+// DeleteLocalGroup removes a local group; a missing group is not an error.
+func DeleteLocalGroup(name string) error {
+	n, err := windows.UTF16PtrFromString(name)
+	if err != nil {
+		return err
+	}
+	r, _, _ := procNetLocalGroupDel.Call(0, uintptr(unsafe.Pointer(n))) //nolint:gosec // the group name
+	if r != 0 && r != nerrGroupNotFound && r != errorNoSuchAlias {
+		return fmt.Errorf("winsvc: delete group %s: %w", name, windows.Errno(r))
+	}
+	return nil
 }

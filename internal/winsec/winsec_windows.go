@@ -268,17 +268,32 @@ func merge(path, sidStr string, access Access, mode windows.ACCESS_MODE) error {
 
 // Protect encrypts data with classic DPAPI under the current account
 // (CryptProtectData, user scope, no UI), FR-21.10 and SR-2.13-4.
-func Protect(data []byte) ([]byte, error) {
+func Protect(data []byte) ([]byte, error) { return protect(data, 0) }
+
+// ProtectMachine encrypts data with DPAPI in machine scope
+// (CRYPTPROTECT_LOCAL_MACHINE): any account on this host can decrypt it,
+// so only the file's DACL keeps it private; a copy to another host cannot
+// be decrypted. The machine mode uses it for the operator token copy that
+// Administrators read (smcpctl), next to the service's own user-scope copy.
+func ProtectMachine(data []byte) ([]byte, error) {
+	return protect(data, windows.CRYPTPROTECT_LOCAL_MACHINE)
+}
+
+func protect(data []byte, flags uint32) ([]byte, error) {
 	in, err := blob(data)
 	if err != nil {
 		return nil, err
 	}
 	var out windows.DataBlob
-	if err := windows.CryptProtectData(&in, nil, nil, 0, nil, windows.CRYPTPROTECT_UI_FORBIDDEN, &out); err != nil {
+	if err := windows.CryptProtectData(&in, nil, nil, 0, nil, windows.CRYPTPROTECT_UI_FORBIDDEN|flags, &out); err != nil {
 		return nil, fmt.Errorf("winsec: CryptProtectData: %w", err)
 	}
 	return take(&out, false), nil
 }
+
+// IsElevated reports whether this process runs with an elevated
+// (Administrators) token.
+func IsElevated() bool { return windows.GetCurrentProcessToken().IsElevated() }
 
 // ErrUnprotect is returned by Unprotect for a blob this account cannot
 // decrypt: one made by another account or on another host, or damaged.

@@ -4,7 +4,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
@@ -37,6 +39,12 @@ func defaultWinHooks() winHooks {
 // and its supervisor wait on, and waits for them to exit; start runs
 // smcpd -supervise detached, as the logon start does.
 func winServiceDo(u *unitFile, action string, binDir string) error {
+	if u.kind == "win-service" {
+		if action == "stop" {
+			return winsvc.StopService(75 * time.Second)
+		}
+		return winsvc.StartService()
+	}
 	cfgPath := filepath.Join(filepath.Dir(u.path), "smcp.toml")
 	switch action {
 	case "stop":
@@ -64,6 +72,9 @@ func winRemoveUnit(u unitFile) {
 		_ = runQuiet("schtasks", "/delete", "/tn", winsvc.TaskName, "/f")
 	case "win-run":
 		_ = winsvc.DeleteRunValue()
+	case "win-service":
+		_ = winsvc.StopService(75 * time.Second)
+		_ = winsvc.DeleteService()
 	}
 }
 
@@ -71,6 +82,9 @@ func winRemoveUnit(u unitFile) {
 // label (SR-4-2) and the state directory's DACL and key protection
 // (FR-21.5, FR-21.10), which smcpd also checks at start.
 func platformDoctorFindings(cfg *config.Config) []harness.Finding {
+	if cfg.State.Dir != "" && strings.EqualFold(filepath.Dir(filepath.Clean(cfg.State.Dir)), filepath.Join(programData(), "smcp-gateway")) {
+		return machineDoctorFindings(cfg)
+	}
 	out := []harness.Finding{{Kind: harness.KindInfo, Message: "Windows per-user mode (windows-user): not enforced; MCP servers run as your user (SR-4-2)"}}
 	if cfg.State.Dir == "" {
 		return out
@@ -85,6 +99,26 @@ func platformDoctorFindings(cfg *config.Config) []harness.Finding {
 		out = append(out, harness.Finding{Kind: harness.KindWarning, Message: `smcpd starts at logon from HKCU\Software\Microsoft\Windows\CurrentVersion\Run (Windows refused the Task Scheduler task)`})
 	case runQuiet("schtasks", "/query", "/tn", winsvc.TaskName) == nil:
 		out = append(out, harness.Finding{Kind: harness.KindInfo, Message: "smcpd starts at logon from the Task Scheduler task " + winsvc.TaskName})
+	}
+	return out
+}
+
+// machineDoctorFindings: in the machine mode the keys belong to the
+// service account, which this process is not, so only the DACL of the
+// state directory is checked (FR-21.5) and the service state reported.
+func machineDoctorFindings(cfg *config.Config) []harness.Finding {
+	out := []harness.Finding{{Kind: harness.KindInfo, Message: "Windows machine mode (windows-machine): not enforced; smcpd runs as " + winsvc.ServiceAccount + " (SR-4-2)"}}
+	svcSID, err := winsec.LookupSID(winsvc.ServiceAccount)
+	if err != nil {
+		return append(out, harness.Finding{Kind: "state-protection", Message: "the service account does not exist: " + err.Error()})
+	}
+	if err := winsec.CheckDACL(cfg.State.Dir, true, svcSID, winsec.SIDSystem, winsec.SIDAdministrators); err != nil {
+		out = append(out, harness.Finding{Kind: "state-protection", Message: err.Error()})
+	} else {
+		out = append(out, harness.Finding{Kind: harness.KindInfo, Message: "state directory " + cfg.State.Dir + ": protected DACL (" + winsvc.ServiceAccount + ", SYSTEM and Administrators)"})
+	}
+	if st, ok, err := winsvc.ServiceState(); err == nil && ok {
+		out = append(out, harness.Finding{Kind: harness.KindInfo, Message: fmt.Sprintf("service %s: state %d (4 is running)", winsvc.ServiceName, st)})
 	}
 	return out
 }

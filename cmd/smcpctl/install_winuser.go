@@ -14,8 +14,9 @@ import (
 // that stand for its service definition, kept in the configuration
 // directory so that uninstall and upgrade find them like a launchd plist.
 const (
-	winTaskFile = "smcpd-task.xml" // the registered Task Scheduler definition
-	winRunFile  = "smcpd-run.txt"  // the command line of the Run-key fallback
+	winTaskFile    = "smcpd-task.xml"    // the registered Task Scheduler definition
+	winRunFile     = "smcpd-run.txt"     // the command line of the Run-key fallback
+	winServiceFile = "smcpd-service.txt" // the machine-mode service (FR-21.6)
 )
 
 // winHooks are the Windows calls of the per-user installation, replaced by
