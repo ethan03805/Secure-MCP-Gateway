@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/cachestats"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -391,6 +392,13 @@ var schemaCache = struct {
 
 const schemaCacheMax = 4096
 
+// schemaCacheStats counts schemaCache lookups for G-08 (FR-8.16).
+var schemaCacheStats = cachestats.Register("tool_input_schemas", "Compiled backend tool input schemas (SR-1.8-3)", func() int {
+	schemaCache.Lock()
+	defer schemaCache.Unlock()
+	return len(schemaCache.m)
+})
+
 var errSchema = errors.New("schema")
 
 // errExternalRef refuses every $ref outside the schema document.
@@ -407,8 +415,10 @@ func compileSchema(raw []byte) (*jsonschema.Schema, error) {
 	c, ok := schemaCache.m[key]
 	schemaCache.Unlock()
 	if ok {
+		schemaCacheStats.Hit()
 		return c, nil
 	}
+	schemaCacheStats.Miss()
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
 		return nil, fmt.Errorf("%w not parseable", errSchema)

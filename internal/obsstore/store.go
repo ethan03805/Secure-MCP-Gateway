@@ -107,6 +107,16 @@ type Stats struct {
 	Files   int                 `json:"files"`
 	Days    map[string][]string `json:"days"` // table -> partitions
 	Rows    map[string]int64    `json:"rows_written"`
+	// Memory is the store's memory use against its budget; only the
+	// DuckDB backend reports it (FR-8.16).
+	Memory *Memory `json:"memory,omitempty"`
+}
+
+// Memory is the Observation Store's memory in use and the limit it runs
+// with: the sum over its DuckDB instances.
+type Memory struct {
+	UsedBytes  int64 `json:"used_bytes"`
+	LimitBytes int64 `json:"limit_bytes"`
 }
 
 // Store is the Observation Store interface.

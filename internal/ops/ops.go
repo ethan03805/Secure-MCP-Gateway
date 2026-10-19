@@ -32,6 +32,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
+	"github.com/ethan03805/secure-mcp-gateway/internal/cachestats"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
@@ -246,7 +247,7 @@ func (r *Runtime) registerChecks() {
 	m.SetInfo(func() map[string]any {
 		h := a.Gateway.Health()
 		info := map[string]any{"profile": a.Profile.Profile, "release_label": a.Profile.Label, "version": backend.Version,
-			"emergency_stop": a.Gateway.Stopped(), "sessions": h.Sessions}
+			"emergency_stop": a.Gateway.Stopped(), "sessions": h.Sessions, "caches": cachestats.Snapshot()}
 		if h.PolicyRevision != "" {
 			info["policy_revision"] = h.PolicyRevision
 		}

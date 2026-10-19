@@ -30,6 +30,7 @@ keeps today's behavior, and test the default.
 | `keys` | E-22 (part) | CP-53 name-constrained local server CA, listener certificate and renewal, CA rotation with overlap, evidence key and pending-key rotation, `CertReloader` for listeners, key inventory, operator token, installation ID, Argon2id. |
 | `health` | E-23 | Health & Safety Monitor: checks, states, fail-closed latch with 10 s recovery and acknowledgment, `Gate` for the edge. |
 | `metrics` | E-23 | Loopback Prometheus exposition fed by an evidence observer and the journal's fsync timing. |
+| `cachestats` | E-24 (G-08), E-28 | Hit and miss counters of the in-process caches (session catalogs, compiled tool input schemas, Client ID Metadata Documents), reported in the health report's `info.caches` for G-08 (FR-8.16). |
 | `backup` | E-28 (part) | age-encrypted backup archive with manifest; restore into an isolated directory with verification. |
 | `versions` | E-28 (part) | Version purge: `POST /api/v1/versions/purge` deletes a stored version only when no journal event references it (SR-6.14-1); baseline snapshots are the only kind with a deletion. |
 | `ops` | E-21, E-22, E-23 | Daemon operations runtime: attaches monitor, metrics, export, key maintenance, online backup and reload to a started `app.App`; `/api/v1/health/*`, `/api/v1/keys*`, `/api/v1/backup*`, `/api/v1/config/reload`. |

@@ -156,7 +156,18 @@ func run(cfgPath, level string) error {
 	if err != nil {
 		return fmt.Errorf("packages: %w", err)
 	}
-	mirror, err := graph.New(graph.Options{Config: cfg, Log: log}) // E-25, E-26, E-28: never gates enforcement
+	// G-03, G-04, G-06, G-08: published observation objects overlay the
+	// [observation] table of the copy the analytics service reads, and the
+	// G-08 memory budget the [graph] budget of the copy the mirror reads.
+	objs, err := obspolicy.Open(cfg)
+	if err != nil {
+		return fmt.Errorf("observation objects: %w", err)
+	}
+	obsCfg := *cfg
+	if err := objs.Apply(&obsCfg); err != nil {
+		log.Error("published observation objects not applied; smcp.toml settings kept for them", "err", err)
+	}
+	mirror, err := graph.New(graph.Options{Config: &obsCfg, Log: log}) // E-25, E-26, E-28: never gates enforcement
 	if err != nil {
 		return fmt.Errorf("graph: %w", err)
 	}
@@ -169,16 +180,6 @@ func run(cfgPath, level string) error {
 	}))
 	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs, Listeners: lns,
 		Observers: map[string]audit.Observer{"graph": mirror}}
-	// G-03, G-04, G-06, G-08: published observation objects overlay the
-	// [observation] table of the copy the analytics service reads.
-	objs, err := obspolicy.Open(cfg)
-	if err != nil {
-		return fmt.Errorf("observation objects: %w", err)
-	}
-	obsCfg := *cfg
-	if err := objs.Apply(&obsCfg); err != nil {
-		log.Error("published observation objects not applied; smcp.toml settings kept for them", "err", err)
-	}
 	frameworkOf := func(id string) string { // FR-8.9: principals of the file and of the G-11 directory
 		if p := cfg.FindPrincipal(id); p != nil {
 			return p.Framework

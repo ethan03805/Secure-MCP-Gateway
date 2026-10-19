@@ -12,6 +12,7 @@
 // anchor enrollment with the fingerprint confirmation (FR-7.10) and
 // removal; Escape closes a dialog and returns focus (no keyboard trap).
 import AxeBuilder from "@axe-core/playwright";
+import { wcag22aa } from "./axe";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -26,7 +27,7 @@ let tabKey = "Tab";
 let states = 0;
 
 async function axe(page: Page, state: string) {
-  const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+  const r = await new AxeBuilder({ page }).withTags(wcag22aa).analyze();
   expect(r.violations.map((v) => `${state}: ${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
   states++;
 }
@@ -895,6 +896,51 @@ test("Runtime instance kill with the keyboard (instance table mocked: the accept
   await expect(page.getByRole("definition").filter({ hasText: /^killed$/ })).toBeVisible();
   await axe(page, "Runtime instance killed");
   console.log(`Runtime keyboard (${browserName}): ${states} states passed axe`);
+});
+
+// The same action on a real instance (FR-8.33): in the Enforced profile
+// (the console-enforced CI job) the reference server runs in rootless
+// Podman. A call starts its instance; it is killed from the Runtime view
+// with keyboard events only, the Gateway reports it killed by an operator,
+// and Podman no longer runs its container. Skipped in the Standalone profile, which has no sandbox.
+test("Runtime instance kill with the keyboard on a real sandboxed instance (Enforced profile)", async ({ page, browserName }) => {
+  test.skip(g.profile !== "enforced", "the Standalone profile runs no sandboxed instance");
+  claims("FR-8.33", "FR-8.32", "FR-8.18");
+  test.setTimeout(300_000);
+  const r = await mcpCall(g, "ref_read_file", { path: "hello.txt" }, { expect: g.marker, timeout: "120s" }).done;
+  expect(r.code, r.out).toBe(0);
+  await startIn(page, browserName, "Runtime", "Runtime");
+  const running = page.getByRole("table", { name: "Server instances" }).getByRole("row").filter({ hasText: "running" });
+  await expect(async () => {
+    await page.reload();
+    await expect(running.first()).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
+  await fromTop(page);
+  await activate(page, running.first().getByRole("link").first());
+  await expect(page.getByRole("heading", { level: 1, name: "Server instance" })).toBeVisible();
+  const id = decodeURIComponent(new URL(page.url()).pathname.split("/").pop()!);
+  const container = (await page.getByRole("term").filter({ hasText: /^Container$/ }).locator("xpath=following-sibling::dd[1]").innerText()).trim();
+  expect(container).not.toBe("");
+  expect(execFileSync("podman", ["ps", "-q", "--filter", `name=^${container}$`], { encoding: "utf8" }).trim()).not.toBe("");
+  await axe(page, "Runtime real instance open");
+  await activate(page, page.getByRole("button", { name: "Kill this instance" }));
+  const dialog = page.getByRole("dialog", { name: "Kill this instance" });
+  await expect(dialog).toBeVisible();
+  await typeInto(page, dialog.getByLabel(/Reason/), "keyboard kill of a real instance");
+  await axe(page, "Runtime real kill dialog filled");
+  await activate(page, dialog.getByRole("button", { name: "Kill", exact: true }));
+  await expect(page.getByText("The instance was killed.")).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: /^killed$/ })).toBeVisible();
+  await axe(page, "Runtime real instance killed");
+  // The Gateway's own record of the instance, and Podman.
+  const api = await page.request.get(`${g.adminURL}/api/v1/runtime/instances/${encodeURIComponent(id)}`);
+  expect(api.status()).toBe(200);
+  const view = ((await api.json()) as { instance: { state: string; kill_reason?: string } }).instance;
+  expect(view.state).toBe("killed");
+  // The instance records the reason code; the typed reason goes to the journal with the account.
+  expect(view.kill_reason).toBe("OPERATOR_KILL");
+  await expect.poll(() => execFileSync("podman", ["ps", "-q", "--filter", `name=^${container}$`], { encoding: "utf8" }).trim(), { timeout: 30_000 }).toBe("");
+  console.log(`Runtime real kill keyboard (${browserName}): ${states} states passed axe`);
 });
 
 test("G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway", async ({ browser, browserName }) => {

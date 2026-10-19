@@ -10,6 +10,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
+	"github.com/ethan03805/secure-mcp-gateway/internal/cachestats"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
 )
@@ -39,6 +40,11 @@ func (c *catalogSet) has(name string) bool {
 	return c.names[name]
 }
 
+// catalogCacheStats counts the lookups of the per-session catalogs for G-08
+// (FR-8.16): a hit is a request served from the session's catalog at the
+// active revision, a miss one that built or re-synchronized it.
+var catalogCacheStats = cachestats.Register("session_catalogs", "Per-session tool catalogs at the active policy revision (FR-1.13)", nil)
+
 // serverFor returns the session's mcp.Server, building it on first use and
 // bringing it to the active revision in place after a revision change
 // (SR-5.7-1), so that open listen streams on it receive
@@ -56,11 +62,13 @@ func (g *Gateway) serverFor(r *http.Request) *mcp.Server {
 	defer g.mu.Unlock()
 	ss := g.servers[sess.ID]
 	if ss != nil && ss.revision == snap.Revision {
+		catalogCacheStats.Hit()
 		return ss.srv
 	}
 	if !g.store.IsActive(sess.ID) {
 		return g.emptyServer(nil)
 	}
+	catalogCacheStats.Miss()
 	if ss == nil {
 		ss = &sessionServer{sess: *sess, catalog: &catalogSet{names: map[string]bool{}}}
 		ss.srv = g.emptyServer(ss.catalog)

@@ -689,6 +689,81 @@ test("G-08 data server: graph state, store sizes, backup and keys", async ({ pag
   await expect(page.getByRole("term").filter({ hasText: "Listener certificate" })).toBeVisible();
 });
 
+// FR-8.16's demonstration (a full claim), on a dedicated Gateway: G-08
+// shows the Observation Store's memory in use against the budget its
+// DuckDB instances run with (512 MiB by default), and the hit ratios of the
+// in-process caches. The Observation Store and graph budgets are changed
+// in G-08 and published, wait for the next start, and after smcpd restarts
+// are the budgets in force and shown; the cache counts start again and
+// report the calls made after the restart.
+test("G-08 on a dedicated Gateway: memory budgets changed in G-08 are in force after a restart; memory against budget and cache hit ratios are shown", async ({ browser, browserName }) => {
+  test.info().annotations.push({ type: "requirement", description: "FR-8.16" });
+  test.setTimeout(300_000);
+  const d = await startDedicated(`g08-${browserName}`);
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  try {
+    const page = await context.newPage();
+    const open = async () => {
+      await page.goto(d.adminURL + "/data-server");
+      const form = page.getByRole("button", { name: "Sign in" });
+      const heading = page.getByRole("heading", { level: 1, name: "Data server and memory" });
+      await expect(form.or(heading)).toBeVisible();
+      if (await form.isVisible()) {
+        // Console sessions are held in memory and end with a restart.
+        await page.getByLabel("Password").fill(d.adminPassword);
+        await form.click();
+      }
+      await expect(heading).toBeVisible();
+      await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
+    };
+    const memory = page.getByRole("meter", { name: "Memory in use against the budget in force" });
+    const caches = page.getByRole("table", { name: "Cache hit ratios" });
+    const call = async (text: string) => {
+      const r = await mcpCall(d, "ref_echo", { text }, { expect: text, repeat: 2, timeout: "120s" }).done;
+      expect(r.code, r.out).toBe(0);
+    };
+    await call("before the restart");
+    await open();
+    await expect(memory).toHaveAttribute("aria-valuemax", String(512 << 20));
+    expect(Number(await memory.getAttribute("aria-valuenow"))).toBeGreaterThanOrEqual(0);
+    await expect(caches.getByRole("row").filter({ hasText: "session_catalogs" })).toContainText(/\d+\.\d%/);
+
+    const graphBudget = page.getByRole("term").filter({ hasText: /^Memory budget in force$/ }).locator("xpath=following-sibling::dd[1]");
+    await expect(graphBudget).toContainText("page cache");
+    await expect(graphBudget).not.toContainText("768 MiB");
+    await page.getByLabel(/Observation Store memory budget \(MiB\)/).fill("192");
+    await page.getByLabel("Graph heap budget (MiB)").fill("768");
+    await page.getByLabel("Graph page cache budget (MiB)").fill("256");
+    await page.getByRole("form", { name: "Publish the memory budget" }).getByRole("button", { name: "Publish the memory budget" }).click();
+    await expect(page.getByText(/Published memory budget revision \d+/)).toBeVisible();
+    await expect(page.getByRole("definition").filter({ hasText: /^192 MiB$/ })).toBeVisible();
+    await expect(page.getByRole("definition").filter({ hasText: /^768 MiB heap, 256 MiB page cache$/ })).toBeVisible();
+    // Not yet in force: the running store keeps its budget until restarted.
+    await page.reload();
+    await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
+    await expect(memory).toHaveAttribute("aria-valuemax", String(512 << 20));
+    await expect(graphBudget).not.toContainText("768 MiB");
+
+    await d.restart();
+    await call("after the restart");
+    await open();
+    await expect(memory).toHaveAttribute("aria-valuemax", String(192 << 20));
+    await expect(memory.locator("xpath=preceding-sibling::div[1]")).toContainText("of 192 MiB");
+    await expect(page.getByRole("definition").filter({ hasText: /^192 MiB$/ })).toBeVisible();
+    // The graph mirror runs with the published budget (it checks the
+    // database's settings against it when the mirror is enabled).
+    await expect(graphBudget).toHaveText("768 MiB heap, 256 MiB page cache");
+    const catalogs = caches.getByRole("row").filter({ hasText: "session_catalogs" });
+    await expect(catalogs).toContainText(/\d+\.\d%/);
+    // Counted since this start: the calls after the restart built their sessions' catalogs.
+    const cells = (await catalogs.getByRole("cell").allInnerTexts()).map((s) => s.trim());
+    expect(Number(cells[3]), `misses in ${cells.join(" | ")}`).toBeGreaterThan(0);
+  } finally {
+    await context.close();
+    d.stop();
+  }
+});
+
 // FR-8.17's demonstration (a full claim): one campaign through its whole
 // lifecycle in G-09. It is created, submitted, approved and becomes
 // active; its record count is monitored while calls are made (its scope

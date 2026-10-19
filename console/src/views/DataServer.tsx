@@ -1,5 +1,6 @@
 // G-08 Data server & memory (FR-8.16): graph mirror memory against its
-// budget, store sizes and counts, observation queue use and degradation
+// budget, Observation Store memory against its budget, cache hit ratios,
+// store sizes and counts, observation queue use and degradation
 // stage, storage quota levels, the last backups and taking one, and the key
 // inventory with rotation. Routes: /api/v1/graph/status,
 // /api/v1/graph/rebuild, /api/v1/observations/status,
@@ -65,6 +66,7 @@ function Graph() {
                 ...(g.error ? ([["Error", <Mono>{g.error}</Mono>]] as [string, ReactNode][]) : []),
                 ["Journal checkpoint", <Mono>segment {g.checkpoint.segment}, {compact(g.checkpoint.events)} events</Mono>],
                 ["Live events applied / dropped", <Mono>{compact(g.live_applied)} / {compact(g.live_dropped)}</Mono>],
+                ["Memory budget in force", <Mono>{bytes(g.memory.budget.heap_bytes)} heap, {bytes(g.memory.budget.page_cache_bytes)} page cache</Mono>],
                 ["Last catch-up", <Time value={g.last_catch_up} />],
                 ["Last retention run", <Time value={g.last_retention} />],
               ]}
@@ -115,30 +117,73 @@ function Graph() {
   );
 }
 
-/** The Observation Store memory budget (FR-8.16), published as a revision. */
+const MiB = 1 << 20;
+const mibOf = (b: number | undefined, dflt: number) => String(b ? Math.round(b / MiB) : dflt);
+const wholeIn = (v: string, lo: number, hi: number) => {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= lo && n <= hi;
+};
+
+/**
+ * The memory budgets (FR-8.16), published as one revision: the Observation
+ * Store's and the graph engine's heap and page cache. Both take effect at
+ * the next start of smcpd.
+ */
 function MemoryBudget() {
   const objects = useObjects();
-  const eff = objects.status === "ok" ? (objects.data.effective?.memory_limit_bytes as number | undefined) : undefined;
+  const eff = objects.status === "ok" ? objects.data.effective : undefined;
+  const obs = eff?.memory_limit_bytes as number | undefined;
+  const heap = eff?.graph_heap_bytes as number | undefined;
+  const pc = eff?.graph_page_cache_bytes as number | undefined;
   const [mib, setMib] = useState<string | null>(null);
-  const value = mib ?? (eff ? String(Math.round(eff / (1 << 20))) : "512");
-  const n = Number(value);
-  const ok = Number.isInteger(n) && n >= 64 && n <= 65536;
+  const [heapMib, setHeapMib] = useState<string | null>(null);
+  const [pcMib, setPcMib] = useState<string | null>(null);
+  const value = mib ?? mibOf(obs, 512);
+  const heapValue = heapMib ?? mibOf(heap, 1024);
+  const pcValue = pcMib ?? mibOf(pc, 1024);
+  const ok = wholeIn(value, 64, 65536);
+  const heapOk = wholeIn(heapValue, 256, 65536);
+  const pcOk = wholeIn(pcValue, 64, 65536);
   return (
     <Section title="Memory budget">
       <Loaded res={objects} what="the memory budget" route="/api/v1/observations/objects">
         {(o) => (
           <>
-            <KV rows={[["Observation Store budget (published or configured)", <Mono>{eff ? bytes(eff) : "default 512 MiB"}</Mono>]]} />
+            <KV
+              rows={[
+                ["Observation Store budget (published or configured)", <Mono>{obs ? bytes(obs) : "default 512 MiB"}</Mono>],
+                ["Graph budget (published or configured)", <Mono>{heap ? bytes(heap) : "default 1 GiB"} heap, {pc ? bytes(pc) : "default 1 GiB"} page cache</Mono>],
+              ]}
+            />
             <ObjectState objects={o} kind="memory_budget" label="memory budget" />
             <div className="rule-grid">
               <TextField label="Observation Store memory budget (MiB)" value={value} onChange={setMib} type="number" hint="64 MiB to 64 GiB; DuckDB memory_limit" />
+              <TextField label="Graph heap budget (MiB)" value={heapValue} onChange={setHeapMib} type="number" hint="256 MiB to 64 GiB; Neo4j server.memory.heap.max_size" />
+              <TextField label="Graph page cache budget (MiB)" value={pcValue} onChange={setPcMib} type="number" hint="64 MiB to 64 GiB; Neo4j server.memory.pagecache.size" />
             </div>
             {!ok && (
               <p className="notice notice-bad" role="alert">
                 The budget must be a whole number of MiB from 64 to 65536.
               </p>
             )}
-            <Publish route="/api/v1/observations/memory-budget" label="memory budget" body={{ observation_memory_limit_bytes: n * (1 << 20) }} disabled={!ok} onPublished={objects.reload} />
+            {!heapOk && (
+              <p className="notice notice-bad" role="alert">
+                The graph heap budget must be a whole number of MiB from 256 to 65536.
+              </p>
+            )}
+            {!pcOk && (
+              <p className="notice notice-bad" role="alert">
+                The graph page cache budget must be a whole number of MiB from 64 to 65536.
+              </p>
+            )}
+            <p className="small">The graph budget is what the graph mirror checks the database's memory settings against; set the same values in Neo4j (smcpctl graph engine config).</p>
+            <Publish
+              route="/api/v1/observations/memory-budget"
+              label="memory budget"
+              body={{ observation_memory_limit_bytes: Number(value) * MiB, graph_heap_bytes: Number(heapValue) * MiB, graph_page_cache_bytes: Number(pcValue) * MiB }}
+              disabled={!ok || !heapOk || !pcOk}
+              onPublished={objects.reload}
+            />
           </>
         )}
       </Loaded>
@@ -176,11 +221,55 @@ function ObservationStore() {
                   ],
                 ]}
               />
+              {s.store?.memory && <Meter label="Memory in use against the budget in force" used={s.store.memory.used_bytes} budget={s.store.memory.limit_bytes} format={bytes} />}
               {s.collector && <Meter label="Collector queue" used={s.collector.queue_depth} budget={s.collector.queue_capacity} />}
             </>
           )
         }
       </Loaded>
+    </Section>
+  );
+}
+
+interface CacheStat {
+  name: string;
+  description: string;
+  hits: number;
+  misses: number;
+  hit_ratio: number | null;
+  entries?: number;
+}
+
+/** Hit ratios of the in-process caches since smcpd started (FR-8.16). */
+function Caches() {
+  const res = useResource<{ info?: { caches?: CacheStat[] } }>("/api/v1/health/status");
+  return (
+    <Section title="Caches">
+      <Loaded res={res} what="the cache counts" route="/api/v1/health/status">
+        {(h) => (
+          <DataTable
+            caption="Cache hit ratios"
+            rows={h.info?.caches ?? []}
+            rowKey={(c) => c.name}
+            initialSort="name"
+            empty="No cache is reported."
+            columns={[
+              { key: "name", label: "Cache", sort: (c) => c.name, render: (c) => <><Mono>{c.name}</Mono> <span className="muted small">{c.description}</span></> },
+              {
+                key: "ratio",
+                label: "Hit ratio",
+                sort: (c) => c.hit_ratio ?? -1,
+                render: (c) => (c.hit_ratio === null ? <span className="muted">no lookups</span> : <Mono>{`${(c.hit_ratio * 100).toFixed(1)}%`}</Mono>),
+                className: "num",
+              },
+              { key: "hits", label: "Hits", sort: (c) => c.hits, render: (c) => <Mono>{compact(c.hits)}</Mono>, className: "num" },
+              { key: "misses", label: "Misses", sort: (c) => c.misses, render: (c) => <Mono>{compact(c.misses)}</Mono>, className: "num" },
+              { key: "entries", label: "Entries", sort: (c) => c.entries ?? -1, render: (c) => (c.entries === undefined ? <span className="muted">not counted</span> : <Mono>{compact(c.entries)}</Mono>), className: "num" },
+            ]}
+          />
+        )}
+      </Loaded>
+      <p className="small">Counted since smcpd started.</p>
     </Section>
   );
 }
@@ -336,18 +425,19 @@ export function DataServer() {
   return (
     <>
       <PageHeader code="G-08" title="Data server and memory">
-        <p>Memory use against budget, store sizes, queue use, degradation stage, quota levels, backups and keys.</p>
+        <p>Memory use against budget, cache hit ratios, store sizes, queue use, degradation stage, quota levels, backups and keys.</p>
       </PageHeader>
       <Help>
         <p>
           The Data Server (graph mirror and Observation Store) is optional: enforcement never waits for it, and when it is full or down, observations are
-          dropped and counted rather than slowing calls. The Observation Store memory budget is published here and takes effect at the next start of smcpd; the graph memory budget is set in the [graph] table. Backups are encrypted with
+          dropped and counted rather than slowing calls. The Observation Store and graph memory budgets are published here and take effect at the next start of smcpd. Backups are encrypted with
           age; keep the passphrase or identity elsewhere.
         </p>
       </Help>
       {perm.can("GET /api/v1/graph/status") && <Graph />}
       {perm.can("GET /api/v1/observations/status") && <ObservationStore />}
       {perm.can("GET /api/v1/observations/objects") && <MemoryBudget />}
+      {perm.can("GET /api/v1/health/status") && <Caches />}
       {perm.can("GET /api/v1/health/status") && <Quotas />}
       {perm.can("GET /api/v1/backup") && <Backups />}
       {perm.can("GET /api/v1/keys") && <Keys />}

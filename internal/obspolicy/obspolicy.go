@@ -47,6 +47,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/analytics"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/observe"
 	"github.com/ethan03805/secure-mcp-gateway/internal/principals"
@@ -106,9 +107,16 @@ type AnomalyResponse struct {
 	WithholdBand        string `json:"withhold_band"`
 }
 
-// MemoryBudget is the Observation Store's memory budget (FR-8.16, CP-33).
+// MemoryBudget holds the memory budgets edited in G-08 (FR-8.16): the
+// Observation Store's (CP-33) and, optionally, the graph engine's heap and
+// page cache. Zero graph fields keep the [graph] table's values. The graph
+// budget is what the graph mirror checks the engine's settings against and
+// reports in G-08; like the Observation Store budget it takes effect at the
+// next start of smcpd.
 type MemoryBudget struct {
 	ObservationMemoryLimitBytes int64 `json:"observation_memory_limit_bytes"`
+	GraphHeapBytes              int64 `json:"graph_heap_bytes,omitempty"`
+	GraphPageCacheBytes         int64 `json:"graph_page_cache_bytes,omitempty"`
 }
 
 // Revision is one published revision of an object.
@@ -146,6 +154,9 @@ type Store struct {
 	restart  map[string][]string // settings of a kind's active revision that wait for the next start
 	applier  func(*config.Config) ([]string, error)
 	applyErr error
+	// graphStart is the graph budget the running components started with
+	// (set by Apply); nil before Apply, when the file's values are used.
+	graphStart *config.Graph
 }
 
 // restartKind maps a setting the applier reports as needing a restart to
@@ -195,6 +206,20 @@ func (s *Store) applyLocked() {
 		if k, ok := restartKind[f]; ok {
 			s.restart[k] = append(s.restart[k], f)
 		}
+	}
+	// The graph mirror reads its budget only at start.
+	start := s.cfg.Graph
+	if s.graphStart != nil {
+		start = *s.graphStart
+	}
+	want := s.cfg.Graph
+	overlayGraph(&want, act)
+	want, start = graphDefaults(want), graphDefaults(start)
+	if want.HeapBytes != start.HeapBytes {
+		s.restart[KindMemoryBudget] = append(s.restart[KindMemoryBudget], "graph_heap_bytes")
+	}
+	if want.PageCacheBytes != start.PageCacheBytes {
+		s.restart[KindMemoryBudget] = append(s.restart[KindMemoryBudget], "graph_page_cache_bytes")
 	}
 	for k, r := range act {
 		if len(s.restart[k]) == 0 {
@@ -310,9 +335,61 @@ func overlay(o *config.Observation, v any) error {
 		if b.ObservationMemoryLimitBytes < 64<<20 || b.ObservationMemoryLimitBytes > 64<<30 {
 			return fmt.Errorf("%w: observation_memory_limit_bytes must be between 64 MiB and 64 GiB", ErrInvalid)
 		}
+		if b.GraphHeapBytes != 0 && (b.GraphHeapBytes < 256<<20 || b.GraphHeapBytes > 64<<30) {
+			return fmt.Errorf("%w: graph_heap_bytes must be 0 (the [graph] value) or between 256 MiB and 64 GiB", ErrInvalid)
+		}
+		if b.GraphPageCacheBytes != 0 && (b.GraphPageCacheBytes < 64<<20 || b.GraphPageCacheBytes > 64<<30) {
+			return fmt.Errorf("%w: graph_page_cache_bytes must be 0 (the [graph] value) or between 64 MiB and 64 GiB", ErrInvalid)
+		}
 		o.MemoryLimitBytes = b.ObservationMemoryLimitBytes
 	}
 	return nil
+}
+
+// overlayGraph sets the graph budget of the memory budget in revs on g.
+// An invalid revision changes nothing (overlay refuses it).
+func overlayGraph(g *config.Graph, revs map[string]Revision) {
+	r, ok := revs[KindMemoryBudget]
+	if !ok {
+		return
+	}
+	v, err := decode(KindMemoryBudget, r.Body)
+	if err != nil {
+		return
+	}
+	var o config.Observation
+	if overlay(&o, v) != nil {
+		return
+	}
+	b := v.(*MemoryBudget)
+	if b.GraphHeapBytes != 0 {
+		g.HeapBytes = b.GraphHeapBytes
+	}
+	if b.GraphPageCacheBytes != 0 {
+		g.PageCacheBytes = b.GraphPageCacheBytes
+	}
+}
+
+// graphDefaults fills an unset graph budget with the mirror's defaults.
+func graphDefaults(g config.Graph) config.Graph {
+	if g.HeapBytes == 0 {
+		g.HeapBytes = graph.DefaultHeapBytes
+	}
+	if g.PageCacheBytes == 0 {
+		g.PageCacheBytes = graph.DefaultPageCacheBytes
+	}
+	return g
+}
+
+// GraphBudget returns the graph heap and page cache budget the active
+// memory budget sets, or the [graph] values (or the defaults).
+func (s *Store) GraphBudget() (heap, pageCache int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	g := s.cfg.Graph
+	overlayGraph(&g, s.activeLocked())
+	g = graphDefaults(g)
+	return g.HeapBytes, g.PageCacheBytes
 }
 
 // activeLocked returns the active revision of each kind.
@@ -376,8 +453,13 @@ func (s *Store) Apply(c *config.Config) error {
 			continue
 		}
 		c.Observation = trial.Observation
+		if k == KindMemoryBudget {
+			overlayGraph(&c.Graph, map[string]Revision{k: r})
+		}
 		s.inForce[k] = r.Number
 	}
+	g := c.Graph
+	s.graphStart = &g
 	return errors.Join(errs...)
 }
 

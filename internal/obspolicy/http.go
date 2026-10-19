@@ -73,6 +73,9 @@ func (s *Service) status(w http.ResponseWriter, r *http.Request) {
 			"escalation_bands": eff.EscalationBands, "features": eff.Baseline.Features, "scope": eff.Scope,
 			"memory_limit_bytes": eff.MemoryLimitBytes, "contexts": eff.Baseline.Contexts, "bands": eff.Baseline.Bands,
 		}
+		heap, pc := s.Store.GraphBudget()
+		out["effective"].(map[string]any)["graph_heap_bytes"] = heap
+		out["effective"].(map[string]any)["graph_page_cache_bytes"] = pc
 	}
 	writeJSON(w, http.StatusOK, out)
 }
