@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T16:01:32Z",
-  "commit": "1fe1fcc1862311fd3217bed73cfc8ece68afc870",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/1fe1fcc1862311fd3217bed73cfc8ece68afc870",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39277143196",
+  "generatedAt": "2026-10-19T17:21:51Z",
+  "commit": "61faa8687b19df7977970401ac98530f25ad7901",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/61faa8687b19df7977970401ac98530f25ad7901",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39289838865",
   "tests": {
-    "total": 1649,
-    "passed": 1631,
+    "total": 1659,
+    "passed": 1641,
     "failed": 0,
     "skipped": 18,
-    "durationSec": 1980,
+    "durationSec": 1477.8,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -19,27 +19,27 @@
       },
       {
         "name": "console/e2e/chromium",
-        "passed": 73,
+        "passed": 74,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "console/e2e/chromium/enforced",
-        "passed": 2,
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 73,
+        "passed": 74,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "console/e2e/webkit",
-        "passed": 73,
+        "passed": 74,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "desktop/linux",
@@ -67,9 +67,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 83,
+        "passed": 85,
         "failed": 0,
-        "skipped": 2
+        "skipped": 0
       },
       {
         "name": "cmd/smcpd",
@@ -170,6 +170,12 @@
       {
         "name": "internal/baseline",
         "passed": 13,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/cachestats",
+        "passed": 1,
         "failed": 0,
         "skipped": 0
       },
@@ -295,13 +301,13 @@
       },
       {
         "name": "internal/obspolicy",
-        "passed": 4,
+        "passed": 5,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/obsstore",
-        "passed": 23,
+        "passed": 24,
         "failed": 0,
         "skipped": 0
       },
@@ -463,9 +469,9 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 27,
+        "passed": 28,
         "failed": 0,
-        "skipped": 1
+        "skipped": 0
       },
       {
         "name": "tools/sbomcheck",
@@ -482,7 +488,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.3,
+    "totalPct": 76.4,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -565,6 +571,10 @@
         "pct": 85.1
       },
       {
+        "name": "internal/cachestats",
+        "pct": 100
+      },
+      {
         "name": "internal/channel",
         "pct": 100
       },
@@ -606,7 +616,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 84
       },
       {
         "name": "internal/gwtest",
@@ -646,7 +656,7 @@
       },
       {
         "name": "internal/obspolicy",
-        "pct": 85.8
+        "pct": 87.4
       },
       {
         "name": "internal/obsstore",
@@ -674,7 +684,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 91.6
+        "pct": 91.7
       },
       {
         "name": "internal/policy",
@@ -722,7 +732,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.7
+        "pct": 80
       },
       {
         "name": "internal/session",
@@ -730,7 +740,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 81.6
+        "pct": 79.6
       },
       {
         "name": "internal/tunnel",
@@ -784,10 +794,10 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 487,
-    "partial": 40,
-    "failing": 1,
-    "unverified": 2,
+    "verified": 491,
+    "partial": 38,
+    "failing": 0,
+    "unverified": 1,
     "byElement": [
       {
         "element": "E-01",
@@ -977,8 +987,8 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 59,
-        "partial": 14,
+        "verified": 63,
+        "partial": 10,
         "failing": 0
       },
       {
@@ -1050,8 +1060,8 @@
         "name": "Harness Adapter Kit",
         "total": 21,
         "verified": 12,
-        "partial": 6,
-        "failing": 1
+        "partial": 8,
+        "failing": 0
       }
     ],
     "items": [
@@ -2753,7 +2763,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "analysis: 30 of 35 child requirements verified"
+          "analysis: 31 of 35 child requirements verified"
         ]
       },
       {
@@ -3001,23 +3011,29 @@
       {
         "id": "FR-8.16",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "console/e2e/chromium.decision.spec.ts > G-14 from a withheld event to its decision, decisive rule, route, server revision, baseline snapshot, phases and the bounded graph",
           "console/e2e/chromium.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/chromium.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/chromium.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
+          "console/e2e/chromium.views.spec.ts > G-08 on a dedicated Gateway: memory budgets changed in G-08 are in force after a restart; memory against budget and cache hit ratios are shown",
           "console/e2e/firefox.decision.spec.ts > G-14 from a withheld event to its decision, decisive rule, route, server revision, baseline snapshot, phases and the bounded graph",
           "console/e2e/firefox.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/firefox.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/firefox.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
+          "console/e2e/firefox.views.spec.ts > G-08 on a dedicated Gateway: memory budgets changed in G-08 are in force after a restart; memory against budget and cache hit ratios are shown",
           "console/e2e/webkit.decision.spec.ts > G-14 from a withheld event to its decision, decisive rule, route, server revision, baseline snapshot, phases and the bounded graph",
           "console/e2e/webkit.keyboard.spec.ts > G-07, G-08 and G-14 with the keyboard: revision filter, memory budget, backup and an evidence event",
           "console/e2e/webkit.keyboard.spec.ts > G-08 key rotation and graph rebuild, G-14 journal exports, with the keyboard",
           "console/e2e/webkit.views.spec.ts > G-08 data server: graph state, store sizes, backup and keys",
+          "console/e2e/webkit.views.spec.ts > G-08 on a dedicated Gateway: memory budgets changed in G-08 are in force after a restart; memory against budget and cache hit ratios are shown",
+          "internal/cachestats.TestSnapshotReportsHitRatios",
+          "internal/obspolicy.TestGraphBudgetAppliesAtNextStart",
           "internal/obspolicy.TestPublishAndApply",
           "internal/obspolicy.TestPublishedObjectsApplyWithoutRestart",
-          "internal/obspolicy.TestRoutes"
+          "internal/obspolicy.TestRoutes",
+          "internal/obsstore.TestStatsReportMemoryAgainstBudget"
         ]
       },
       {
@@ -3044,6 +3060,7 @@
           "console/e2e/chromium.privileges.spec.ts > G-10 shows a revision's bill of materials, argument vector, mounts, egress destinations, secret slots and sandbox profile",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: enroll an anchor after its fingerprint, then retire a second revision",
           "console/e2e/chromium.views.spec.ts > G-10 servers and library: suspend, enable, trust anchors and receipts",
+          "console/e2e/chromium/enforced.keyboard.spec.ts > Runtime instance kill with the keyboard on a real sandboxed instance (Enforced profile)",
           "console/e2e/firefox.keyboard.spec.ts > G-01 and a server's tools with the keyboard: verify the journal, reload the policy, show an input schema",
           "console/e2e/firefox.keyboard.spec.ts > G-10 suspend and enable of the running server and G-01 health acknowledgment with the keyboard, on a dedicated Gateway",
           "console/e2e/firefox.keyboard.spec.ts > G-10 with the keyboard: retire a second revision, server suspend dialog, package detail; Egress filter",
@@ -3295,6 +3312,7 @@
           "console/e2e/chromium.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
           "console/e2e/chromium.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/chromium/enforced.keyboard.spec.ts > Runtime instance kill with the keyboard on a real sandboxed instance (Enforced profile)",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/firefox.a11y.spec.ts > views have no WCAG 2.2 AA violations found by axe (dark)",
@@ -3361,6 +3379,7 @@
           "console/e2e/chromium.keyboard.spec.ts > G-13 approvals with the keyboard: approve one held call and deny another",
           "console/e2e/chromium.keyboard.spec.ts > Runtime instance kill with the keyboard (instance table mocked: the acceptance Gateway runs no sandboxed instance)",
           "console/e2e/chromium.keyboard.spec.ts > console actions complete with the keyboard alone and every intermediate state passes axe",
+          "console/e2e/chromium/enforced.keyboard.spec.ts > Runtime instance kill with the keyboard on a real sandboxed instance (Enforced profile)",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (dark)",
           "console/e2e/firefox.a11y.spec.ts > every control of each view is reached by Tab with a visible, contrasting focus indicator (light)",
           "console/e2e/firefox.console.spec.ts > emergency stop refuses calls and resume restores them",
@@ -4159,7 +4178,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "analysis: 9 of 13 child requirements verified"
+          "analysis: 12 of 13 child requirements verified"
         ]
       },
       {
@@ -4194,11 +4213,13 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
-          "cmd/smcpctl.TestInstallStandalone"
+          "cmd/smcpctl.TestInstallStandalone",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
@@ -4220,9 +4241,10 @@
       {
         "id": "FR-13.6",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "cmd/smcpctl.TestInstallStandalone"
+          "cmd/smcpctl.TestInstallStandalone",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager"
         ]
       },
       {
@@ -4274,13 +4296,15 @@
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager",
           "cmd/smcpctl.TestStandaloneUninstallKeepsEnforcedHost",
           "cmd/smcpctl.TestStandaloneUninstallLeavesEnforcedTable",
           "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge",
-          "cmd/smcpctl.TestUninstallScopeByProfile"
+          "cmd/smcpctl.TestUninstallScopeByProfile",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
@@ -4430,8 +4454,10 @@
       {
         "id": "FR-15",
         "element": "E-33",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 6 of 11 child requirements verified"
+        ]
       },
       {
         "id": "FR-15.1",
@@ -4454,7 +4480,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (1fe1fcc18623, 2026-10-19T15:56:02Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39279945533"
+          "workflow agents-lockdown at main (61faa8687b19, 2026-10-19T17:01:57Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39289838389"
         ]
       },
       {
@@ -4508,7 +4534,7 @@
       {
         "id": "FR-15.8",
         "element": "E-33",
-        "status": "failing",
+        "status": "partial",
         "tests": [
           "internal/policy.TestBrokenBuildTag",
           "scripts/agents.TestBrokenGatewayRun",
@@ -4522,7 +4548,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (1fe1fcc18623, 2026-10-19T15:56:01Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39279945533"
+          "workflow agents at main (61faa8687b19, 2026-10-19T17:01:54Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39289838389"
         ]
       },
       {
@@ -4800,7 +4826,8 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestDocumentationSetFR18"
+          "cmd/smcpctl.TestDocumentationSetFR18",
+          "cmd/smcpctl.TestInstallGuideWalkthrough"
         ]
       },
       {
@@ -8481,7 +8508,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8516,7 +8543,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36867: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35055: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8633,7 +8660,7 @@
     }
   ],
   "acceptance": {
-    "commit": "1fe1fcc1862311fd3217bed73cfc8ece68afc870",
+    "commit": "61faa8687b19df7977970401ac98530f25ad7901",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9321,22 +9348,22 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
-    "commit": "1fe1fcc1862311fd3217bed73cfc8ece68afc870",
-    "generatedAt": "2026-10-19T15:27:11Z",
+    "commit": "61faa8687b19df7977970401ac98530f25ad7901",
+    "generatedAt": "2026-10-19T16:57:20Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000009848",
+      "runner": "GitHub Actions 1000009959",
       "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90424086528,
+      "diskFreeBytes": 90422247424,
       "diskDevice": "sda1",
       "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
@@ -9360,7 +9387,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.025277,
+        "value": 0.027422,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9373,7 +9400,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 18.518093,
+        "value": 15.871231,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9386,19 +9413,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.7978380000000005,
+        "value": 0.7614822500000002,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.906 ms, mean of 10.683, 11.023, 11.088, 10.726, 10.943, 10.837, 11.466, 10.480) minus disabled (10.108 ms, mean of 10.351, 10.177, 9.659, 10.285, 10.455, 9.990, 10.194, 9.751), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.873 ms, mean of 10.806, 10.304, 10.989, 10.499, 10.681, 11.150, 11.247, 11.307) minus disabled (10.111 ms, mean of 10.277, 9.716, 10.163, 10.376, 9.755, 10.080, 10.244, 10.281), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9651643667712,
+        "value": 1999.9657338704271,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9410,7 +9437,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 806.737692,
+        "value": 793.695351,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9422,12 +9449,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1544.390625,
+        "value": 1541.1640625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m20s after start with no traffic: smcpd (118.1 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1426.3 MiB in 2 processes, process 4183 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m17s after start with no traffic: smcpd (120.1 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1421.1 MiB in 2 processes, process 4157 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
