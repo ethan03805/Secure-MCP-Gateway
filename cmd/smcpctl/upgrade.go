@@ -75,6 +75,9 @@ func upgradeCmd(args []string, out io.Writer) error {
 		}
 		u.binDir = filepath.Dir(exe)
 	}
+	if f := packageFormat(u.binDir); f != "" {
+		return errPackaged(u.binDir, f, "upgrade")
+	}
 	if u.enc, err = encryption(*pass, *rcpt, true); err != nil {
 		return err
 	}

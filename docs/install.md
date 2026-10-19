@@ -92,6 +92,70 @@ export PATH="$PWD/build/bin:$PATH"
 
 Builds with cgo (the default when a C compiler is present) use DuckDB for the Observation Store and can export Parquet. Release archives are built with `CGO_ENABLED=0` and use the JSON Lines store instead ([observation.md](observation.md)).
 
+## Option 4: platform packages (.deb, .rpm, macOS .pkg)
+
+Planned for release v1.3.0 (SRS FR-20.17 to FR-20.26); no published release has them yet. The release workflow builds them from the tag, installs, exercises and removes each one on a runner of its platform before it publishes anything (`.github/workflows/installers.yml` with `scripts/package-smoke.sh`), and lists each in the signed checksum file. The desktop application packages (`smcp-desktop`, the `.dmg`, the AppImage and the Windows `.msi`) come later.
+
+| File | Platform | Installs |
+|---|---|---|
+| `smcp_<version>_amd64.deb`, `smcp_<version>_arm64.deb` | Debian, Ubuntu | `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `smcp-refserver` in `/usr/bin`; README, CHANGELOG, LICENSE, SBOM, `PROVENANCE.md` and the third-party notices in `/usr/share/doc/smcp`; the marker `/usr/lib/smcp/package-format` |
+| `smcp-<version>-1.x86_64.rpm`, `smcp-<version>-1.aarch64.rpm` | Fedora, RHEL and derivatives | The same |
+| `smcp_<version>_darwin_arm64.pkg` | macOS 13 or later on Apple silicon | The same binaries in `/usr/local/lib/smcp`, each with an ad-hoc signature, with links in `/usr/local/bin`; documents in `/usr/local/share/doc/smcp` |
+
+A pre-release version such as `1.3.0-rc.1` is written `1.3.0~rc.1` in the Linux file names, so that the package managers order it before `1.3.0`.
+
+**What the packages do and do not do.** They place files only (FR-20.21): no configuration, state, keys, service unit or account is created and nothing is started, and an existing installation's configuration, journal, keys and backups are left as they are. Every file is owned by root and cannot be written by your user, so an agent running as you cannot replace the Gateway (SR-4.11-2); `smcpctl doctor` reports a Gateway binary that your user can write, as `install.sh` into `~/.local/bin` leaves it. The `.deb` and `.rpm` declare no dependency and have one maintainer script, the pre-removal script, which stops a system `smcpd` service on removal. After installing, set the Gateway up as with any other method: `smcpctl install` (below), or `smcpctl bootstrap`. `smcpctl upgrade` refuses to replace packaged binaries; upgrade with the package manager or the new `.pkg`.
+
+### Verify the package before installing
+
+The packages carry no platform signature yet (Apple Developer ID and notarization are deferred, FR-20.29). Check them against the release's signed checksum file instead, exactly as the archives: download the package, `smcp_<version>_checksums.txt`, its `.minisig` and its `.sigstore.json` from the release page into one directory, then
+
+```sh
+minisign -Vm smcp_<version>_checksums.txt -P RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
+cosign verify-blob --bundle smcp_<version>_checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/ethan03805/Secure-MCP-Gateway/.github/workflows/release.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  smcp_<version>_checksums.txt
+sha256sum --check --ignore-missing smcp_<version>_checksums.txt      # Linux
+shasum -a 256 --check --ignore-missing smcp_<version>_checksums.txt  # macOS
+```
+
+`minisign` must print `Signature and comment signature verified` and a trusted comment naming that checksum file, `cosign` `Verified OK`, and the checksum line of your package `OK`. If any check fails, do not install the package. Packages are downloaded from the [release page](https://github.com/ethan03805/Secure-MCP-Gateway/releases) once a release has them.
+
+### Install
+
+```sh
+sudo apt install ./smcp_<version>_amd64.deb            # Debian, Ubuntu
+sudo dnf install ./smcp-<version>-1.x86_64.rpm         # Fedora, RHEL
+sudo installer -pkg smcp_<version>_darwin_arm64.pkg -target /   # macOS
+smcpctl version
+```
+
+On macOS, `sudo installer` in Terminal installs the package without a Gatekeeper prompt. Opening the downloaded `.pkg` in Finder instead shows, on macOS 15 and later, the dialog **"smcp_<version>_darwin_arm64.pkg" Not Opened** ("Apple could not verify ... is free of malware that may harm your Mac or compromise your privacy"), with the buttons Done and Move to Trash. This is the expected prompt for a package without a Developer ID signature; any other wording (for example a damaged or revoked package) is not, and you should check the download again. After verifying the package as above, click Done, open System Settings, Privacy & Security, scroll to Security, where the message **"smcp_<version>_darwin_arm64.pkg" was blocked to protect your Mac** is shown with an **Open Anyway** button; click it, confirm with your password, and the Installer opens. The button is offered for about an hour after the blocked attempt. Earlier macOS versions show a similar "cannot be opened because it is from an unidentified developer" dialog and the same Open Anyway button.
+
+### Remove a Linux package
+
+```sh
+smcpctl uninstall --config ~/.config/smcp-gateway/smcp.toml   # first, as each user with a Standalone service
+sudo apt remove smcp        # or: sudo dnf remove smcp
+```
+
+Removing the package removes its files and, through its pre-removal script (`smcpctl uninstall --package-removal`), stops, disables and removes a system-wide `smcpd.service` and `smcp-nftables.service` that `smcpctl install --profile enforced` created. It keeps the configuration, the state with the evidence journal and the evidence public key, the backups, and every other host object, so `smcpctl journal verify --dir <state>/journal --key <state>/keys/evidence-genesis.pub` still works after a fresh install (FR-20.22). The package manager does not run as each user, so per-user services (the Standalone launchd agent or systemd user unit) are removed by `smcpctl uninstall` before the package is removed; to delete configuration, state, keys and the journal as well, run `smcpctl uninstall --purge` before removing the package. `apt purge smcp` removes nothing more: the package owns no configuration file.
+
+### Remove the macOS package
+
+macOS has no command that removes a package. Remove the per-user service first, then the files the `.pkg` installed, then its receipt:
+
+```sh
+smcpctl uninstall --config "$HOME/Library/Application Support/smcp-gateway/config/smcp.toml"   # or --purge
+sudo rm -f /usr/local/bin/smcpd /usr/local/bin/smcpctl /usr/local/bin/smcp-session \
+  /usr/local/bin/smcp-stdio /usr/local/bin/smcp-connect /usr/local/bin/smcp-refserver
+sudo rm -rf /usr/local/lib/smcp /usr/local/share/doc/smcp
+sudo pkgutil --forget io.github.ethan03805.smcp
+```
+
+`smcpctl uninstall` leaves the packaged binaries in place (it says so) and, without `--purge`, keeps the configuration, journal, keys and backups. `pkgutil --files io.github.ethan03805.smcp` lists what the package installed before you forget it.
+
 ## Install as a service: smcpctl install
 
 `smcpctl install` sets up a complete installation in one idempotent command (SRS FR-13.4 to FR-13.6). It reports every step as `created` or `present` (`updated` when a unit file it wrote earlier has changed); a second run reports `present` throughout and leaves configuration, keys, policy and the journal byte-for-byte unchanged.
@@ -185,7 +249,7 @@ smcpctl uninstall --config ~/smcp/smcp.toml           # services and binaries; k
 smcpctl uninstall --config ~/smcp/smcp.toml --purge   # also configuration, state, keys, journal
 ```
 
-Without `--purge` the configuration, the state directory and the evidence journal stay, so `smcpctl journal verify` still works afterwards. `--purge` asks for the installation ID (`smcpctl keys status` shows it) before deleting. On the Enforced profile it also removes the service identities. Each profile removes only what its own install created: an installation whose configuration selects `[profile] mode = "enforced"` removes the system units, the nftables table `inet smcp`, the AppArmor profiles and the `smcp-srv` setup; any other installation removes only your launchd agent or systemd user unit, so a Standalone uninstall on a host that also has an Enforced installation leaves the Enforced one running. Homebrew installs are removed with `brew uninstall smcp` after `smcpctl uninstall`.
+Without `--purge` the configuration, the state directory and the evidence journal stay, so `smcpctl journal verify` still works afterwards. `--purge` asks for the installation ID (`smcpctl keys status` shows it) before deleting. On the Enforced profile it also removes the service identities. Each profile removes only what its own install created: an installation whose configuration selects `[profile] mode = "enforced"` removes the system units, the nftables table `inet smcp`, the AppArmor profiles and the `smcp-srv` setup; any other installation removes only your launchd agent or systemd user unit, so a Standalone uninstall on a host that also has an Enforced installation leaves the Enforced one running. Homebrew installs are removed with `brew uninstall smcp` after `smcpctl uninstall`. Binaries installed by a platform package stay in place (`smcpctl uninstall` says so); remove them as in [Remove a Linux package](#remove-a-linux-package) or [Remove the macOS package](#remove-the-macos-package).
 
 ## Verify an installation
 

@@ -8,6 +8,13 @@
 #
 # The minisign signature is required. cosign signing is on by default; set
 # the repository variable SMCP_COSIGN to "false" to skip it.
+#
+# Platform installers (E-35, FR-20.23, FR-20.24): the installers job
+# (installers.yml) builds the .deb, .rpm and macOS .pkg from the tag and
+# installs, exercises and removes each on a runner of its platform. The
+# release job needs it, so a failed smoke test publishes nothing; it then
+# publishes exactly the tested files (GoReleaser --skip=nfpm with the files
+# in build/installers/), listed in the signed checksum file.
 name: release
 
 on:
@@ -22,8 +29,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  installers:
+    name: installers
+    uses: ./.github/workflows/installers.yml
+    with:
+      tag: ${{ github.ref_name }}
+    permissions:
+      contents: read
+
   release:
     name: release
+    needs: installers
     runs-on: ubuntu-24.04
     timeout-minutes: 110
     permissions:
@@ -66,12 +82,20 @@ jobs:
       - name: Install the console's production npm packages (license notices)
         working-directory: console
         run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+      # The smoke-tested installers; GoReleaser lists them in the checksum
+      # file and uploads them (checksum.extra_files, release.extra_files).
+      - name: Download the smoke-tested installers (FR-20.23, FR-20.24)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: build/installers
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser
           version: v2.18.2
-          args: release --clean
+          args: release --clean --skip=nfpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
@@ -110,6 +134,22 @@ jobs:
           out=$("$x/smcpctl" version --short)
           [ "$out" = "$version" ] || { echo "::error::smcpctl version --short printed '$out'"; exit 1; }
           grep -q "^| Source commit | \`$GITHUB_SHA\` |" "$x/PROVENANCE.md" || { echo "::error::PROVENANCE.md does not name commit $GITHUB_SHA"; exit 1; }
+      - name: Check that the checksum file lists every installer (FR-20.23)
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          sums=build/dist/smcp_${version}_checksums.txt
+          n=0
+          for f in build/installers/*; do
+            b=$(basename "$f")
+            want=$(sha256sum "$f" | cut -d' ' -f1)
+            grep -qx "$want  $b" "$sums" || { echo "::error::$b is not in $sums with digest $want"; exit 1; }
+            n=$((n + 1))
+          done
+          for pattern in "smcp_${version}_amd64.deb" "smcp_${version}_arm64.deb" "smcp-${version}-1.x86_64.rpm" "smcp-${version}-1.aarch64.rpm" "smcp_${version}_darwin_arm64.pkg"; do
+            [ -f "build/installers/$pattern" ] || echo "::warning::no installer named $pattern"
+          done
+          echo "$n installers listed in $sums" >> "$GITHUB_STEP_SUMMARY"
+          [ "$n" -ge 5 ] || { echo "::error::expected at least 5 installers, found $n"; exit 1; }
       # FR-12.1: every package of the SBOM in the archives and of the
       # per-archive SBOMs has an OSI-approved or public-domain license, or a
       # reviewed exception in packaging/sbom-review.json.
