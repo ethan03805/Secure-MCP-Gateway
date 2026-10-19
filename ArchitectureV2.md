@@ -1,8 +1,8 @@
 # Secure MCP Gateway — Architecture V2 (Logical Decomposition)
 
 **Document:** `ArchitectureV2.md`
-**Revision:** V2.5 draft (proposed)
-**Date:** 2026-10-18 (America/Chicago)
+**Revision:** V2.6 draft (proposed)
+**Date:** 2026-10-19 (America/Chicago)
 **Owner:** netrisk
 **Inputs:** `architecture.md` rev 2.0 (problem-space analysis), `MCP_Gateway_Security_SRS.md` V1 (security-control set; renamed from `MCP_Gateway_SRS.md`), `Secure-MCP-Gateway-Research-Brief.md`
 **Intended consumer:** SRS V2. This document gives the elements, functions and interfaces that SRS V2 allocates requirements to.
@@ -67,6 +67,7 @@ Every leaf SHALL should name its element in its subject (e.g., *"The Anomaly Sco
 | A-9 | **Policy authority** is the signed, schema-validated policy revision held by E-05 in the Policy Store (D-01) and compiled to an in-memory snapshot. **Evidence authority** is the signed, hash-chained Evidence Journal (D-06). | The graph database (E-25, via E-26) and the Observation Store (E-27) are mirrors and indexes for graph views, research and analytics. Their unavailability degrades analytics and never opens or blocks enforcement. Dispatch waits only on the journal write of the decision intent. |
 | A-10 | Some agents run on a vendor's cloud computer and cannot reach the user's loopback address (Grok Bot, ChatGPT agent "dots", Meta Muse). | The **Remote Access profile** exposes the Gateway, still running on the user's computer, through an authenticated tunnel (X-13). Installing the Gateway inside the vendor's virtual machine is not a control, because the agent controls that machine. |
 | A-11 | Backends are local MCP servers that expose **tools**. | Remote (hosted) MCP servers as backends and the resources and prompts capabilities are out of scope for this baseline and are refused (V1 5.6). **Planned for v1.3.0 (OD-17):** a hosted server listed in the IBM ContextForge catalog can be imported as a *hosted package* and is then reached only through the bundled ContextForge instance that E-36 runs as a contained local backend (Section 18.11); a direct remote backend stays refused. |
+| A-12 | Windows hosts are supported (owner decision 2026-10-18; planned for v1.3.0, SRS FR-21) in three installation modes: **per-user** (no elevation), **machine** (a Windows service) and **WSL2** (the Linux build in a dedicated WSL2 distribution). | No Windows mode provides the Enforced separation of A-8, so every Windows installation applies the Standalone restrictions and is labelled "not enforced" (SR-4-2). E-15, E-16, E-18, E-22 and E-23 gain Windows realizations (Section 15.1); no new element is needed. |
 
 ### 2.3 System context
 
@@ -118,7 +119,7 @@ flowchart LR
 
 ## 3. Decomposition overview
 
-The SoI decomposes into **ten subsystems** and **thirty-five elements**. E-34 and E-35 are planned for release v1.3.0 (SRS FR-20, Section 2.8 of the SRS); they are specified here so that requirements can be allocated to them before they are built. Element IDs are stable. Later revisions retire IDs instead of reusing them. E-36 ContextForge Connector is planned for v1.3.0 as well (SRS FR-22).
+The SoI decomposes into **ten subsystems** and **thirty-six elements**. E-34 and E-35 are planned for release v1.3.0 (SRS FR-20, Section 2.8 of the SRS); they are specified here so that requirements can be allocated to them before they are built. Element IDs are stable. Later revisions retire IDs instead of reusing them. E-36 ContextForge Connector is planned for v1.3.0 as well (SRS FR-22).
 
 | Subsystem | Elements |
 |---|---|
@@ -470,7 +471,7 @@ Trust levels: **T0** = TCB, compromise defeats the security guarantee; **T1** = 
 - **Functions:** F-100 Present desktop status and service control; F-101 Raise desktop approval notices; F-102 Host the console in a native window; F-103 Guide first-run and client setup; F-104 Check, verify and apply updates.
 - **Interfaces:** I-40, I-41, I-42, X-14, X-16, X-07 (service manager, OS notification service, OS credential store).
 - **Owned data:** desktop preferences (notification and update-check switches, start at login, window geometry); no credentials.
-- **Allocation targets:** supported platforms and webview engines; tray states and menu; service control through launchd, systemd or the Windows Service Control Manager (Windows runtime: SRS FR 21, specified separately); health display that never shows `healthy` from stale data; notifications that carry no tool arguments and offer no approve or deny action; console window loaded only from the configured admin listener with TLS validated against the Gateway server CA, a non-persistent web data store and no IPC access; minimal Tauri capability set and no remote content; deep-link allowlist; first-run setup passing passwords without command-line arguments; update verification with minisign, SHA-256 and the Sigstore bundle; accessibility and a timed first-run usability measure; a skippable, reopenable, offline first-run introduction; an explanation and next action for each tray state; empty states, help and plain-language errors taken from the shared message catalogue (`docs/design/messages.json`); the writing and visual guides (`docs/design/`) and the UI string lint.
+- **Allocation targets:** supported platforms and webview engines; tray states and menu; service control through launchd, systemd or the Windows Service Control Manager (Windows runtime: SRS FR-21); health display that never shows `healthy` from stale data; notifications that carry no tool arguments and offer no approve or deny action; console window loaded only from the configured admin listener with TLS validated against the Gateway server CA, a non-persistent web data store and no IPC access; minimal Tauri capability set and no remote content; deep-link allowlist; first-run setup passing passwords without command-line arguments; update verification with minisign, SHA-256 and the Sigstore bundle; accessibility and a timed first-run usability measure; a skippable, reopenable, offline first-run introduction; an explanation and next action for each tray state; empty states, help and plain-language errors taken from the shared message catalogue (`docs/design/messages.json`); the writing and visual guides (`docs/design/`) and the UI string lint.
 
 #### E-35 Platform Installers — T1 (planned for v1.3.0)
 - **Purpose:** The native installation packages of a release: a macOS `.pkg` and `.dmg`, Linux `.deb` and `.rpm` packages (and an AppImage of the desktop application), and a Windows `.msi`. Each installs the Gateway binaries and E-34 into locations the user's agent cannot write, creates no Gateway state and starts no service (first-run setup or `smcpctl install` does that, F-97), is listed in the signed checksum file of the release, and keeps evidence when removed. The packages are **not** signed with platform certificates in v1.3.0; they are verified with the release's minisign signature, Sigstore bundle and SHA-256 checksums, and platform signing and notarization are a later, additive step.
@@ -1244,6 +1245,42 @@ These extend rev 2.0 §10 targets. All are unmeasured design targets.
 | E-24 | React/TypeScript/Vite local GUI built from hand-built components (no component kit); Cytoscape.js for graph views; a charting library for distributions and timelines | GUI generated in part from D-11 catalog metadata |
 | E-13 | minisign signing and verification (OD-1 decided) | Offline; operator key enrolled as a scoped trust anchor |
 
+### 15.1 Windows deployment (planned v1.3.0, non-normative)
+
+The Windows realization keeps the element boundaries of Section 4 and replaces the Linux host mechanisms element by element. SRS FR-21 and its SR children state the obligations; the table gives the mapping and the honest gap against the Linux Enforced profile.
+
+| Element | Linux Enforced | Windows per-user mode | Windows machine mode | Gap against Linux Enforced |
+|---|---|---|---|---|
+| E-24 install (F-97) | `smcpctl install`, systemd system units | Task Scheduler logon task, no elevation | Windows service (SCM), virtual account `NT SERVICE\smcpd`, elevated install | None for lifecycle |
+| E-01 UDS profile | Unix socket, mode 0660, peer UID | Named pipe, protected DACL (user only), peer SID | Named pipe, DACL `smcp-harness` group, `PIPE_REJECT_REMOTE_CLIENTS`, first-instance flag | Equivalent |
+| E-15 launch | argv `execve`, no shell | `CreateProcess` with CRT quoting, no `cmd.exe` or batch files, placed in a Job Object at creation | same | Windows parses a command-line string; batch files are refused |
+| E-16 sandbox | rootless Podman, user namespaces, seccomp, AppArmor, read-only image rootfs | none (ordinary child process, Job Object limits only) | AppContainer per server revision (LPAC where compatible), created by the elevated enable step, + Job Object per instance; ACEs written at enablement | No system-call filter; AppContainer reads ALL APPLICATION PACKAGES locations; host interpreters instead of a pinned image |
+| E-18 egress | network namespace + nftables, broker only path | not mediated | no network capability; loopback exemption to the broker port only; WFP filters per package SID | Equivalent for TCP/UDP; relies on WFP provider integrity |
+| E-22 / E-19 keys | files 0600 under service identities | DPAPI (user) | DPAPI (user scope) under the virtual service account | No TPM sealing on either platform yet |
+| E-23 health | `healthy` possible | `degraded`, cause `unconfined` | `degraded`, cause `partially_confined` | Never `healthy`; label "not enforced" |
+| E-36 bundled ContextForge | rootless Podman container (SRS FR-22.24) | managed Python process in a Job Object, cause `contextforge_unconfined` (SRS FR-22.25) | same; no AppContainer in v1.3.0 | Not contained beyond Job Object limits |
+| E-27 / E-25 data | DuckDB (cgo builds) or JSON Lines; Neo4j behind nftables | JSON Lines; operator-installed loopback Neo4j | same | No per-identity firewall for the graph port |
+
+In the **WSL2 mode** the Linux Enforced stack runs unchanged inside a dedicated distribution with interop disabled, and Windows agents reach the forwarded loopback listener through `smcp-stdio.exe`. The label is still "not enforced": any process of the Windows user can run `wsl.exe -u root` and read or replace the Gateway state.
+
+```mermaid
+flowchart TB
+  AG[Agent on Windows] -->|stdio| ST[smcp-stdio.exe<br/>user-only credential file]
+  ST -->|loopback TLS or<br/>named pipe with DACL| GW
+  ST -.->|WSL2 mode| LGW[smcpd Linux build in WSL2<br/>Podman, nftables, systemd]
+  subgraph SVC[Machine mode: Windows service]
+    GW[smcpd.exe<br/>NT SERVICE smcpd] --- KEYS[(DPAPI keys and vault<br/>protected DACL)]
+    GW --- BR[E-18 broker<br/>loopback proxy port]
+  end
+  GW -->|CreateProcess, no shell,<br/>Job Object from creation| BE
+  subgraph AC[AppContainer per server revision]
+    BE[MCP server process<br/>no capabilities]
+  end
+  BE -->|proxy via loopback exemption| BR
+  BR -->|X-06 brokered egress| NET[External destinations]
+  BE -.->|blocked by WFP filters| NET
+```
+
 ---
 
 ## 16. Traceability: V1 SRS control roots → V2 elements
@@ -1482,6 +1519,7 @@ Call through the bundled instance:
 | OD-15 | Policy and evidence authority | Graph database as system of record; signed files plus journal | **Decided 2026-10-16:** signed Policy Store and Evidence Journal are the authorities; the graph and Observation Store are mirrors (A-9) |
 | OD-16 | Cloud agents | Unsupported; Gateway inside the vendor VM; Remote Access through a tunnel | **Decided 2026-10-16:** Remote Access profile through an authenticated tunnel (A-10, X-13); inside-VM installation is not a control |
 | OD-17 | Real MCP servers out of the box | Reference packages only; import from the IBM ContextForge catalog; bundled ContextForge as a contained backend; ContextForge as a general federated upstream for remote instances | **Decided 2026-10-18 (owner), planned for v1.3.0:** catalog import into the Library and a bundled ContextForge run by E-36 as a contained, loopback-only backend with the Gateway authoritative (A-11, Section 18.11, FR-22). The owner's follow-up decisions of 2026-10-18, after the ContextForge spike: the bundled instance is opt-in, offered as a choice at first-run setup (FR-22.22, FR-22.44); a Gateway-held OAuth 2.1 client for OAuth hosted entries is planned for v1.4.0 (FR-22.45); federation with remote ContextForge instances and ContextForge's REST and gRPC tool wrapping are unscheduled future work |
+| OD-18 | Windows support | Unsupported; native Standalone only; native with AppContainer containment; WSL2 with the Linux Enforced stack | **Decided 2026-10-18 (owner):** Windows is supported. SRS FR-21 (planned v1.3.0) specifies the per-user, machine (AppContainer, Job Objects, WFP, DPAPI) and WSL2 modes; every Windows mode is labelled "not enforced" (A-12, SR-4-2); the machine-mode mechanism is confirmed by a spike first (`docs/windows-port.md`). Open: whether a WSL2 installation with agents under a separate Windows account and `wsl.exe` blocked by application control may later claim the Enforced label |
 
 ---
 
@@ -1489,6 +1527,7 @@ Call through the bundled instance:
 
 | Revision | Date | Change |
 |---|---|---|
+| V2.6 draft | 2026-10-19 | Windows platform (owner decision 2026-10-18): A-12, OD-18 and Section 15.1 with the Windows deployment diagram; Windows realizations of E-01, E-15, E-16, E-18, E-19, E-22, E-23 and E-24, planned for v1.3.0 (SRS FR-21). No new element. |
 | V2.5 draft | 2026-10-18 | ContextForge integration, planned for v1.3.0 (OD-17): element E-36 ContextForge Connector in SS-5, functions F-107 to F-109, interfaces X-19, X-20 and I-43, data store D-16, view module G-15, boundary B-9 and its threat notes, scenario 18.11, A-11 amended. After the ContextForge spike (`docs/contextforge-spike.md`): per-package ContextForge team and non-admin user, reconciliation by polling, tool-name mapping (E-36, F-109, I-43, scenario 18.11). |
 | V2.4 draft | 2026-10-18 | Desktop application and platform installers, planned for v1.3.0 (owner decision 2026-10-18): E-34 Desktop Application and E-35 Platform Installers in SS-8, functions F-100–F-106, interface X-18 and internal interfaces I-40–I-42; X-14 and X-16 extended. Function IDs now have two or three digits; the site and the SRS build parse both. The Windows runtime of `smcpd` is specified separately. Owner decisions recorded in the desktop design section: macOS arm64 only for the application, count-only notifications, strict Gateway-CA TLS in the console window (webview certificate hook, no proxy), deferred signed package repositories, system-service-only package removal, `smcpctl connect` alias, 15-minute usability target. |
 | V2.3 draft | 2026-10-16 | Re-baseline for a shippable v1. Authority decoupled from the graph (A-9, OD-15): the signed Policy Store (D-01) and the Evidence Journal (D-06) are authorities; E-25 and E-26 move from T0 to T2 and hold mirrors. Platform profiles (A-8, OD-14). Operator self-curation: packaging command F-96 on E-13, X-02 inside the SoI, X-17 package sources, OD-1 and OD-7 decided. Approval hold mode and notification (F-17 extended, X-14; OD-5 decided). Session taint (F-99) and tool-metadata scanning (F-34 extended). Remote Access profile for cloud agents (A-10, X-13; dynamic registration under F-59, `smcp-connect` under F-95; OD-16). Installation and upgrade (F-97, X-16), harness doctor and lockdown profiles (F-98), diagnostic log and metrics (F-61 extended, X-15, D-14), encrypted backup archives (D-15). Function IDs stay within two digits so that existing tools that parse `F-dd` keep working. Scope: tools only and local backends only (A-11). |

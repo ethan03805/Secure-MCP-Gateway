@@ -85,7 +85,16 @@ These are requirements release 1.1.0, and the main branch after it, do not meet 
 - **Cloud agents not exercised:** live cloud-agent runs are descoped from release 1.x (FR-15.9, FR-16.10). No cloud agent (Grok Bot, ChatGPT agent, Meta Muse) has a dated run through the Remote Access Profile, and the quick starts name a vendor allowlist setting only where the vendor's public documentation names one (`docs/clients/cloud-agents.md`, reviewed 2026-10-18). The Remote Access Profile itself is tested with a local tunnel stand-in, a recorded tunnel provider run (AT-18) and the conformance suite relayed through `smcp-connect` and a test tunnel (FR-16.9).
 - **Release archives without cgo:** the archives are built with `CGO_ENABLED=0`, so the Observation Store uses JSON Lines and research exports cannot be written as Parquet. Build from source with cgo for DuckDB and Parquet.
 
-### 13. Trusted computing base
+### 13. Windows (planned, not in a release)
+
+Windows support is specified for v1.3.0 (SRS FR-21) and is not in any release yet: a Windows build of `smcpd` refuses to start until the Windows key and ACL checks exist (`docs/windows-port.md`). When it ships, every Windows installation is labelled "not enforced" and refuses high-risk servers (SR-4-2), because:
+
+- **Per-user mode:** servers run as ordinary child processes of the user, with Job Object resource limits only, and the agent runs as the same account as `smcpd`, so it can read the Gateway's state whatever the folder permissions say. DPAPI protects the keys against copying to another account or computer, not against the agent. This is the macOS Standalone posture.
+- **Machine mode:** the Gateway runs as a Windows service under its own virtual account, so the agent's account cannot read its state, and each server runs in an AppContainer with no network capability, Windows Filtering Platform filters and access only to its granted folders. This is weaker than the Linux sandbox: there is no system-call filter, an AppContainer can still read the locations Windows grants to all app packages (most of `C:\Windows` and `C:\Program Files`), servers run the interpreters installed on the host instead of a pinned image, and a server can still start a shell of its own inside its AppContainer.
+- **WSL2 mode:** the Linux Enforced stack runs inside a WSL2 distribution, but any program of the Windows user, the agent included, can run `wsl.exe -u root` and change the Gateway inside it.
+- **Unsigned binaries:** the Windows binaries carry no Authenticode signature until the project has a signing certificate (FR-20.30, deferred). SmartScreen warns about them and Smart App Control blocks them; verify them with minisign and SHA-256.
+
+### 14. Trusted computing base
 
 The host operating system, its administrator, the Gateway binaries and the trust-anchor store are trusted (ARCH A-4). A person with administrator access to the host can change or disable every control and can delete evidence that has not been exported.
 

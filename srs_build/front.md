@@ -7,7 +7,7 @@
 | Date | 2026-10-16 (America/Chicago) |
 | Owner | netrisk |
 | System of Interest | Secure MCP Gateway (local, single computer) |
-| Architecture | `ArchitectureV2.md` V2.5 draft — elements E-01…E-36 (E-34 to E-36 planned for v1.3.0), functions F-01…F-109, interfaces X-01…X-20 and I-01…I-43, GUI modules G-01…G-15, data stores D-01…D-16 |
+| Architecture | `ArchitectureV2.md` V2.6 draft — elements E-01…E-36 (E-34 to E-36 planned for v1.3.0), functions F-01…F-109, interfaces X-01…X-20 and I-01…I-43, GUI modules G-01…G-15, data stores D-01…D-16 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
 | Skill | `Skills.md` (INCOSE GtWR + project rules) |
@@ -61,7 +61,7 @@ Per the owner, the Gateway is a local secure MCP gateway on a single computer wh
 | Remote (hosted) MCP servers as backends | Not supported. Every backend is a packaged local server launched by E-15. A manifest naming a remote URL as the server endpoint is rejected (FR-14.4). Planned for v1.3.0: hosted servers imported from the IBM ContextForge catalog, reached only through the bundled ContextForge instance, which is opt-in (FR-22). |
 | MCP resources and prompts | Not served northbound and not requested southbound. The Gateway relays tools only (FR-1.11, SR-5.6-1). |
 | Sampling, elicitation and roots | Refused unless the MRTR Relay Profile is enabled (Section 1.5). |
-| Windows hosts | Not supported. |
+| Windows hosts | Not supported in this release; current releases do not build for Windows. Planned for v1.3.0 (FR-21): per-user, machine and WSL2 installation modes, each labelled "not enforced" (SR-4-2). |
 | An agent's non-MCP native tools | Not mediated. Built-in shell, file, browser and connector tools of an agent bypass the Gateway; the lockdown profiles (FR-15) reduce this for local harnesses and the Security Limitations document (FR-18.2) states it. |
 | Running the Gateway inside a vendor's cloud agent machine | Not a control and not supported; cloud agents use the Remote Access profile. |
 
@@ -112,6 +112,7 @@ A **platform profile** is always active; exactly one of the two applies to an in
 | Linux x86_64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd (system units for Enforced, user unit for Standalone) | Enforced only | Enforced only |
 | Linux arm64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd | Enforced only | Enforced only |
 | macOS amd64 | Standalone (archive built; not part of the qualified set) | GitHub Releases archive | launchd user agent | No | No |
+| Windows x64 and arm64 (planned v1.3.0, FR-21) | Standalone restrictions and the label "not enforced" in every mode (SR-4-2) | GitHub Releases zip archive, `install.ps1`, the `.msi` of FR-20.20 | Task Scheduler logon task or Run key (per-user mode); Windows service under `NT SERVICE\smcpd` (machine mode); systemd inside a WSL2 distribution (WSL2 mode) | Machine mode: AppContainer and Job Object per server revision, partial (FR-21.13); WSL2 mode: rootless Podman | Machine mode: Windows Filtering Platform filters and the loopback broker (FR-21.14); WSL2 mode: nftables |
 
 The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The recorded reference hardware of FR-11 is the GitHub-hosted `ubuntu-24.04` standard runner class (x86_64, 4 vCPU, 16 GiB, SSD); the processor model varies within the class, so each performance report records the processor model, processor count, memory and disk of its run (`docs/reference-hardware.md`). The supported client matrix is Appendix K.
 
@@ -121,7 +122,7 @@ Planned for v1.3.0 (FR-20): native installers and a desktop tray application, di
 |---|---|---|
 | macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView; arm64 only (no Intel or universal build; Intel Macs keep the darwin-amd64 archive) |
 | Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`) as release assets (signed APT and RPM repositories deferred, FR-20.32), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
-| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is specified in `srs_build/req7-windows.txt` | Tauri 2, WebView2 |
+| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is FR-21 (service FR-21.6, archives FR-21.3) | Tauri 2, WebView2 |
 
 ## 2. Conventions and traceability rules
 
@@ -195,6 +196,7 @@ All selections carry OSI-approved licenses. Exact versions, digests and transiti
 | Host OS (Enforced profile) | Linux, kernel ≥ 6.8 (for example Ubuntu 24.04 LTS or Debian 13), x86_64 or arm64, with cgroup v2 and unprivileged user namespaces | GPL-2.0 | All, X-07 | Isolation primitives the Enforced profile relies on |
 | Host OS (Standalone profile) | macOS 14 or later on arm64; Linux without the Enforced prerequisites | Proprietary (macOS); GPL-2.0 | All except E-16, E-18 network mediation | Owner decision: the product runs on the developer's own computer, labelled "not enforced" |
 | Service management | systemd (Linux); launchd user agent (macOS) | LGPL-2.1+; part of macOS | All | Ordering, restart, sandboxing directives |
+| Host OS and service management (Windows, planned v1.3.0) | Windows 11 23H2 or later (x64, arm64), Windows Server 2022 and 2025 (x64); Task Scheduler (per-user) or the Service Control Manager (machine); optionally WSL2 with a 6.18 LTS kernel | Proprietary (Windows); GPL-2.0 (WSL2 kernel) | All, X-07 | Owner decision of 2026-10-18 (FR-21). Native isolation uses AppContainer, Job Objects, the Windows Filtering Platform and DPAPI through `golang.org/x/sys/windows` (BSD-3-Clause) |
 | Implementation language | **Go** 1.26 | BSD-3-Clause | E-01…E-33 except E-24 front end | One memory-safe language for the core; strong concurrency, static binaries |
 | MCP protocol | Official MCP Go SDK (`modelcontextprotocol/go-sdk`) in stateless mode (Section 3.3, risk 1) | Apache-2.0 (with retained MIT notices) | E-02, E-10, E-33 | Serves both protocol eras on one handler |
 | JSON Schema validation | `santhosh-tekuri/jsonschema` v6 | Apache-2.0 | E-05, E-09, E-11, E-13, E-14 | Supports 2020-12 and draft-07; no remote `$ref` by default |

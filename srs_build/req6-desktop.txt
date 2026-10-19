@@ -4,7 +4,7 @@ TEXT: The requirements of this section are planned for the release named in each
 
 ### FR-20 Desktop application and platform installers
 
-TEXT: Owner decision of 2026-10-18: the product gets a desktop application and native installers so that a person can install, run and operate the Gateway without a terminal. The Desktop Application (E-34) is a Tauri 2 tray application for macOS, Linux and Windows; the Platform Installers (E-35) are a macOS `.pkg` and `.dmg`, Linux `.deb`, `.rpm` and AppImage packages, and a Windows `.msi`. Installers are verified with the project's minisign signature, Sigstore bundle and SHA-256 checksums; platform code signing, notarization and MSIX are deferred (Appendix N) and are additive when enabled. The Windows runtime of `smcpd` itself (service, paths, listeners) is specified separately in `srs_build/req7-windows.txt`; this section relies on it for Windows and does not restate it. The desktop application holds no more authority than the console: every control-API operation is performed in the console window under the user's own console sign-in.
+TEXT: Owner decision of 2026-10-18: the product gets a desktop application and native installers so that a person can install, run and operate the Gateway without a terminal. The Desktop Application (E-34) is a Tauri 2 tray application for macOS, Linux and Windows; the Platform Installers (E-35) are a macOS `.pkg` and `.dmg`, Linux `.deb`, `.rpm` and AppImage packages, and a Windows `.msi`. Installers are verified with the project's minisign signature, Sigstore bundle and SHA-256 checksums; platform code signing, notarization and MSIX are deferred (Appendix N) and are additive when enabled. The Windows runtime of `smcpd` itself (host versions, service, directories, listeners and the "not enforced" label) is FR-21 (FR-21.1, FR-21.5, FR-21.6, FR-21.8, SR-4-2); this section relies on it for Windows and does not restate it. The desktop application holds no more authority than the console: every control-API operation is performed in the console window under the user's own console sign-in.
 
 @FR-20 | Desktop application and platform installers
 P: —
@@ -17,7 +17,7 @@ TARGET: v1.3.0
 
 @FR-20.1 | Desktop application platforms
 P: FR-20
-S: The Desktop Application (E-34) SHALL be built with Tauri 2 from source in the Gateway repository and SHALL run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 10 22H2 or later and Windows 11 on x86_64 (WebView2), where it controls the Windows service defined in `srs_build/req7-windows.txt`. On macOS the application SHALL be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6).
+S: The Desktop Application (E-34) SHALL be built with Tauri 2 from source in the Gateway repository and SHALL run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on the x64 Windows hosts of FR-21.1 (WebView2), where it controls the Windows service of FR-21.6. On macOS the application SHALL be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6).
 A: E-34; F-100; X-07
 V: Test | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens.
 SRC: OWNER (Tauri v2 tray app on macOS, Linux and Windows; desktop application macOS arm64 only, 2026-10-18)
@@ -188,11 +188,11 @@ TARGET: v1.3.0
 
 @FR-20.20 | Windows installer
 P: FR-20
-S: The Gateway release SHALL publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries and service defined in `srs_build/req7-windows.txt` per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime.
+S: The Gateway release SHALL publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries of FR-21.3 and the machine-mode Windows service of FR-21.6 per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime.
 A: E-35; F-105; F-106; X-18
 V: Test | On a GitHub-hosted Windows runner with networking blocked, install the `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that the application starts and that installation succeeded without network access; uninstall from Settings and confirm removal.
 SRC: OWNER (Windows MSI/MSIX)
-R: MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 10 and 11 ship the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB.
+R: MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 11 ships the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB.
 TARGET: v1.3.0
 
 @FR-20.21 | Installers place files only
