@@ -6919,7 +6919,7 @@
       "version": "0.142.2",
       "mode": "ai-gateway",
       "result": "pass",
-      "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 2 with smcpctl); journal verify ok"
+      "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
     },
     {
       "client": "Hermes Agent",
