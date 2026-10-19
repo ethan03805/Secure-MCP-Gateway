@@ -74,7 +74,7 @@ func TestHostedImportImage(t *testing.T) {
 	if err != nil {
 		t.Skipf("host.docker.internal is not resolvable: %s", out)
 	}
-	nets := strings.Fields(string(out))
+	nets := cidrLines(string(out))
 	port := hostedUpstream(t, "get-time", "read.file", strings.Repeat("long-name-", 6))
 	dupPort := hostedUpstream(t, "get-time", "get_time")
 
@@ -239,4 +239,16 @@ func manifestName(s string) bool {
 		}
 	}
 	return true
+}
+
+// cidrLines keeps the network lines of an engine's output (a pull prints
+// progress lines first).
+func cidrLines(out string) []string {
+	var nets []string
+	for _, f := range strings.Fields(out) {
+		if strings.Contains(f, "/") && !strings.Contains(f, ":/") && strings.IndexFunc(f, func(r rune) bool { return r >= 'g' && r <= 'z' }) < 0 {
+			nets = append(nets, f)
+		}
+	}
+	return nets
 }

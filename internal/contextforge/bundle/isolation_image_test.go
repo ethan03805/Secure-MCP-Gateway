@@ -58,7 +58,7 @@ func hostNetworks(t *testing.T, eng Engine, img string) []string {
 	if err != nil {
 		t.Skipf("host.docker.internal is not resolvable in this engine: %s", out)
 	}
-	return strings.Fields(string(out))
+	return cidrs(string(out))
 }
 
 // TestIsolationImage provisions two hosted packages in the pinned image
@@ -166,4 +166,16 @@ func TestIsolationImage(t *testing.T) {
 		t.Fatalf("the leaking set-up was not found: %+v", findings)
 	}
 	t.Logf("leaking set-up findings: %d (for example %+v)", len(findings), findings[0])
+}
+
+// cidrs keeps the network lines of an engine's output (a pull prints
+// progress lines first).
+func cidrs(out string) []string {
+	var nets []string
+	for _, f := range strings.Fields(out) {
+		if strings.Contains(f, "/") && !strings.Contains(f, ":/") && strings.IndexFunc(f, func(r rune) bool { return r >= 'g' && r <= 'z' }) < 0 {
+			nets = append(nets, f)
+		}
+	}
+	return nets
 }

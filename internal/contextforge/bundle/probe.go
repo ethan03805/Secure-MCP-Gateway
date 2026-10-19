@@ -70,7 +70,12 @@ func (a *Admin) Deprovision(ctx context.Context, p *Provisioned) error {
 		del("/v1/teams/" + pathEscape(p.TeamID))
 	}
 	if p.UserEmail != "" {
-		del("/v1/auth/email/admin/users/" + pathEscape(p.UserEmail))
+		if err := a.RemoveUser(ctx, p.UserEmail); err != nil && first == nil {
+			var api *APIError
+			if !asAPI(err, &api) || api.Status != http.StatusNotFound {
+				first = err
+			}
+		}
 	}
 	return first
 }

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -35,8 +36,32 @@ func (e *APIError) Error() string {
 }
 
 // Call sends one request with token (the administrator's when token is
-// "", none when it is "-") and decodes a JSON answer into out when out is not nil.
+// "", none when it is "-") and decodes a JSON answer into out when out is
+// not nil. ContextForge's SQLite store refuses a write now and then while
+// another statement runs ("database is locked", "SQL statements in
+// progress"); such a refusal is rolled back and the request is sent again,
+// at most five times.
 func (a *Admin) Call(ctx context.Context, method, path, token string, in, out any) error {
+	var err error
+	for attempt := 0; attempt < 5; attempt++ {
+		if err = a.call(ctx, method, path, token, in, out); !transient(err) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(time.Duration(200*(attempt+1)) * time.Millisecond):
+		}
+	}
+	return err
+}
+
+func transient(err error) bool {
+	var api *APIError
+	return err != nil && asAPI(err, &api) && (strings.Contains(api.Body, "OperationalError") || strings.Contains(api.Body, "database is locked"))
+}
+
+func (a *Admin) call(ctx context.Context, method, path, token string, in, out any) error {
 	if token == "" {
 		t, err := a.AdminToken()
 		if err != nil {
@@ -97,6 +122,36 @@ func (a *Admin) CreateUser(ctx context.Context, email, password, fullName string
 	return a.Call(ctx, http.MethodPost, "/v1/auth/email/admin/users", "", map[string]any{
 		"email": email, "password": password, "full_name": fullName, "is_admin": false, "is_active": true,
 		"password_change_required": false}, nil)
+}
+
+// EnsureUser creates a package user, or, when ContextForge already has it
+// (it keeps users that once held tokens, so an earlier registration or
+// probe leaves them deactivated), reactivates it with the given password.
+func (a *Admin) EnsureUser(ctx context.Context, email, password, fullName string) error {
+	err := a.CreateUser(ctx, email, password, fullName)
+	var api *APIError
+	if err == nil || !asAPI(err, &api) || api.Status != http.StatusConflict {
+		return err
+	}
+	upd := map[string]any{"is_active": true, "is_admin": false, "password_change_required": false, "password": password}
+	if err := a.Call(ctx, http.MethodPatch, "/v1/auth/email/admin/users/"+pathEscape(email), "", upd, nil); err != nil {
+		// The same password again can be refused as a reuse; then only
+		// reactivate.
+		delete(upd, "password")
+		return a.Call(ctx, http.MethodPatch, "/v1/auth/email/admin/users/"+pathEscape(email), "", upd, nil)
+	}
+	return nil
+}
+
+// RemoveUser deletes a user, or deactivates it when ContextForge keeps it
+// for the tokens it held.
+func (a *Admin) RemoveUser(ctx context.Context, email string) error {
+	err := a.Call(ctx, http.MethodDelete, "/v1/auth/email/admin/users/"+pathEscape(email), "", nil, nil)
+	var api *APIError
+	if err != nil && asAPI(err, &api) && api.Status == http.StatusConflict {
+		return a.Call(ctx, http.MethodPatch, "/v1/auth/email/admin/users/"+pathEscape(email), "", map[string]any{"is_active": false}, nil)
+	}
+	return err
 }
 
 // Login returns a session token for a user.

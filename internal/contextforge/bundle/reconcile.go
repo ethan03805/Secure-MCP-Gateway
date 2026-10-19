@@ -43,9 +43,10 @@ type adminObject struct {
 	Description string `json:"description"`
 	Email       string `json:"email"`
 	IsAdmin     bool   `json:"is_admin"`
+	IsActive    bool   `json:"is_active"`
 	IsPersonal  bool   `json:"is_personal"`
 	// Tool IDs a virtual server holds.
-	AssociatedTools []string `json:"associatedTools"`
+	AssociatedTools []string `json:"associatedToolIds"`
 }
 
 // list reads a collection that ContextForge answers either as a bare list
@@ -170,6 +171,12 @@ func (a *Admin) Reconcile(ctx context.Context, exp []Expected) ([]Drift, error) 
 		if s.TeamID != e.TeamID || s.Visibility != "team" {
 			out = append(out, Drift{Package: e.Slug, Kind: "server_team", Object: "virtual server " + e.Slug, Detail: fmt.Sprintf("team %q visibility %q", s.TeamID, s.Visibility)})
 		}
+		got, want := slices.Clone(s.AssociatedTools), slices.Clone(e.ToolIDs)
+		slices.Sort(got)
+		slices.Sort(want)
+		if !slices.Equal(got, want) {
+			out = append(out, Drift{Package: e.Slug, Kind: "server_tools", Object: "virtual server " + e.Slug, Detail: fmt.Sprintf("holds %d tools, registered %d", len(got), len(want))})
+		}
 	}
 	for _, kind := range []struct{ path, name string }{{"/v1/prompts", "prompt"}, {"/v1/resources", "resource"}, {"/v1/a2a", "a2a_agent"}} {
 		objs, err := a.list(ctx, kind.path+"?include_inactive=true")
@@ -189,8 +196,12 @@ func (a *Admin) Reconcile(ctx context.Context, exp []Expected) ([]Drift, error) 
 		return nil, err
 	}
 	for _, u := range us {
-		if !users[u.Email] {
-			remove("unknown_user", "/v1/auth/email/admin/users/"+pathEscape(u.Email), "user "+u.Email, "a user the Connector did not create")
+		if !users[u.Email] && u.IsActive {
+			d := Drift{Kind: "unknown_user", Object: "user " + u.Email, Detail: "a user the Connector did not create", Removed: true}
+			if err := a.RemoveUser(ctx, u.Email); err != nil {
+				d.Removed, d.Detail = false, d.Detail+"; removal failed: "+err.Error()
+			}
+			out = append(out, d)
 		}
 	}
 	ts, err := a.list(ctx, "/v1/teams?include_personal=false")

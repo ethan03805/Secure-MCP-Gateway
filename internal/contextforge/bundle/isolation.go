@@ -59,7 +59,7 @@ func UserEmail(slug string) string { return slug + "@" + UserDomain }
 // team once the objects exist.
 func (a *Admin) Provision(ctx context.Context, spec PackageSpec, password string) (*Provisioned, error) {
 	p := &Provisioned{Slug: spec.Slug, UserEmail: UserEmail(spec.Slug)}
-	if err := a.CreateUser(ctx, p.UserEmail, password, "Secure MCP Gateway package "+spec.Slug); err != nil {
+	if err := a.EnsureUser(ctx, p.UserEmail, password, "Secure MCP Gateway package "+spec.Slug); err != nil {
 		return nil, err
 	}
 	var team struct {

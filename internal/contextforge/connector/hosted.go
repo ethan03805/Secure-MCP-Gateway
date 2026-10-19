@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/bundle"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
@@ -185,19 +187,9 @@ func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforg
 		Packaging: packaging.PackagingInfo{OperatorNote: "Hosted package of ContextForge catalog entry " + e.ID + "."},
 	}
 	for _, n := range mapped {
-		t := byBackend[n.BackendName]
-		in := t.InputSchema
-		if len(in) == 0 || string(in) == "null" {
-			in = json.RawMessage(`{"type":"object"}`)
-		}
-		mt := packaging.Tool{Name: n.Name, BackendName: n.BackendName, Title: t.Title, Description: clip(t.Description, 8192), InputSchema: in,
-			SideEffect: "external", SourceTrust: "untrusted"}
-		mt.DescriptionSHA256 = packaging.SHA256Hex([]byte(mt.Description))
-		if len(t.OutputSchema) > 0 && string(t.OutputSchema) != "null" {
-			mt.OutputSchema = t.OutputSchema
-		}
-		if len(t.Annotations) > 0 && string(t.Annotations) != "null" && string(t.Annotations) != "{}" {
-			mt.Annotations = t.Annotations
+		mt, err := manifestTool(byBackend[n.BackendName], n)
+		if err != nil {
+			return nil, err
 		}
 		m.Tools = append(m.Tools, mt)
 	}
@@ -369,4 +361,39 @@ func (c *Connector) ProposeStarterSet(actor string) ([]proposal, error) {
 		out = append(out, p)
 	}
 	return out, nil
+}
+
+// manifestTool builds a hosted manifest tool from the served definition.
+// The definition goes through the same canonical form the Gateway gives a
+// live tool list (packaging.CanonicalLive, after the MCP SDK has read it),
+// so the drift check at launch compares like with like.
+func manifestTool(t bundle.ServedTool, n contextforge.ToolName) (packaging.Tool, error) {
+	raw, err := json.Marshal(t)
+	if err != nil {
+		return packaging.Tool{}, err
+	}
+	var st mcp.Tool
+	if err := json.Unmarshal(raw, &st); err != nil {
+		return packaging.Tool{}, packaging.Wrap(packaging.ReasonProbeFailed, "tool "+t.Name, err)
+	}
+	if st.InputSchema == nil {
+		st.InputSchema = map[string]any{"type": "object"}
+	}
+	cts, err := packaging.CanonicalLive([]*mcp.Tool{&st})
+	if err != nil {
+		return packaging.Tool{}, err
+	}
+	ct := cts[0]
+	mt := packaging.Tool{Name: n.Name, BackendName: n.BackendName, SideEffect: "external", SourceTrust: "untrusted"}
+	mt.Title, _ = ct["title"].(string)
+	mt.Description, _ = ct["description"].(string)
+	mt.DescriptionSHA256 = packaging.SHA256Hex([]byte(mt.Description))
+	for k, dst := range map[string]*json.RawMessage{"inputSchema": &mt.InputSchema, "outputSchema": &mt.OutputSchema, "annotations": &mt.Annotations} {
+		if v, ok := ct[k]; ok {
+			if *dst, err = json.Marshal(v); err != nil {
+				return packaging.Tool{}, err
+			}
+		}
+	}
+	return mt, nil
 }
