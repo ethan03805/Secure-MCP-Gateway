@@ -117,3 +117,4 @@ if (-not (Get-ChildItem -LiteralPath $journal -Filter '*.jsonl' -ErrorAction Sil
 $last = Get-ChildItem -LiteralPath $journal -Filter '*.jsonl' | Sort-Object Name | Select-Object -Last 1
 if ((Get-Content -LiteralPath $last.FullName -Raw) -notmatch '"outcome":"stopped"') { Fail 'the journal has no stop record' }
 Write-Host 'windows install smoke test passed'
+exit 0
