@@ -169,6 +169,7 @@ var ops = []op{
 	{Pattern: "POST /api/v1/keys/rotate", Tag: "operations", Summary: "Rotate the listener certificate, server CA or evidence key", Doc: "ops.md"},
 	{Pattern: "GET /api/v1/backup", Tag: "operations", Summary: "Backups in the backup directory", Doc: "ops.md"},
 	{Pattern: "POST /api/v1/backup", Tag: "operations", Summary: "Take an online encrypted backup", Doc: "ops.md"},
+	{Pattern: "POST /api/v1/versions/purge", Tag: "operations", Summary: "Delete a stored version (rule, route, policy, server, tool, profile, baseline snapshot) that no unexpired audit record references; a referenced version is refused (SR-6.14-1)", Doc: "ops.md"},
 	{Pattern: "POST /api/v1/config/reload", Tag: "operations", Summary: "Reload the configuration file", Doc: "ops.md"},
 
 	// library (E-13, E-14)
