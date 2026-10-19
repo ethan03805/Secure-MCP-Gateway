@@ -37,7 +37,7 @@ The claiming tests of each partly verified requirement say, in the comment next 
 - FR-8.30 **unverified** (partly verified): Current browser engines only; the previous major version of each browser and Safari itself are not run.
 - FR-8.32 **unverified** (partly verified): The Runtime instance kill is done against a mocked instance table.
 - FR-8.33 **unverified** (partly verified): The Runtime instance kill is done against a mocked instance table.
-- FR-12.7 **unverified** (partly verified): The subcommands are tested one by one; the Demonstration in both profiles is not recorded.
+- FR-12.7 **unverified** (partly verified): 20 of the 23 subcommands run on one installation in each profile (TestAdminCLIDemonstration); install --profile enforced and upgrade on a real Enforced installation, and a Demonstration record of a release build, are missing.
 - FR-13.7 **unverified** (partly verified): The launchd and systemd service paths of each profile are not exercised.
 - FR-18.1 **unverified** (partly verified): The install guide has not been followed on clean hosts.
 
