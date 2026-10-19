@@ -32,11 +32,10 @@ The claiming tests of each partly verified requirement say, in the comment next 
 
 ## E-24 Management Console & Control API
 
-- FR-8.16 **missing** (partly verified): Cache hit ratios and the Observation Store's memory use against its budget are not shown.
 - FR-8.24 **external** (partly verified): A scripted first-time task, not the Demonstration with three first-time users.
-- FR-8.30 **unverified** (partly verified): Current browser engines only; the previous major version of each browser and Safari itself are not run.
-- FR-8.32 **unverified** (partly verified): The Runtime instance kill is done against a mocked instance table.
-- FR-8.33 **unverified** (partly verified): The Runtime instance kill is done against a mocked instance table.
+- FR-8.30 **external** (partly verified): The CI job `console-previous-browsers` runs the suite on the builds of Playwright 1.63.0 (Chromium 153, Firefox 155, WebKit 26.6); the previous major release of each browser product (no Playwright release has Chromium 155 or Firefox 156) and Safari itself are not run.
+- FR-8.32 **unverified** (partly verified): axe (full WCAG 2.2 AA tag set) runs on every view as it loads and on the keyboard specs' intermediate states, not on every state of the other specs.
+- FR-8.33 **unverified** (partly verified): The Runtime instance kill on a real instance runs in Chromium only (CI job `console-enforced`), and no claim aggregates the per-test results into a full claim.
 - FR-12.7 **unverified** (partly verified): 20 of the 23 subcommands run on one installation in each profile (TestAdminCLIDemonstration); install --profile enforced and upgrade on a real Enforced installation, and a Demonstration record of a release build, are missing.
 - FR-13.7 **unverified** (partly verified): The launchd and systemd service paths of each profile are not exercised.
 - FR-18.1 **unverified** (partly verified): The install guide has not been followed on clean hosts.
@@ -121,6 +120,8 @@ Updated on 2026-10-18 by the perf work: the GitHub-hosted `ubuntu-24.04` standar
 
 
 Rebuilt on 2026-10-19 by the phase-10 steward pass: the per-element lines are now generated from the status data of main `383485d` and list every open requirement, partly verified ones included, with the missing part taken from the claiming tests' comments and the verification statement. The section below collects what only the owner can provide.
+
+Updated on 2026-10-19 by the console partials work (part C): FR-8.16 is claimed in full (G-08 shows the in-process cache hit ratios and the Observation Store's memory against its budget, and edits both the Observation Store and graph memory budgets) and its line is removed. FR-8.30 has the `console-previous-browsers` job, FR-8.32 runs axe with the full WCAG 2.2 AA tag set, and FR-8.33 kills a real Runtime instance with the keyboard in the `console-enforced` job; their lines say what is still missing.
 
 ## Blocked on the owner
 
