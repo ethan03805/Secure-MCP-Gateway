@@ -59,7 +59,7 @@ smcpctl lockdown remove <client> [--dry-run]
 ## smcpctl doctor
 
 ```
-smcpctl doctor [--client <id>]... [--json]
+smcpctl doctor [--client <id>]... [--json] [--config FILE] [--gateway-url URL]
 ```
 
 Checks every installed client (configuration directory or binary present), or the named ones:
@@ -74,6 +74,8 @@ Checks every installed client (configuration directory or binary present), or th
 | `warning` | no | The Gateway is not configured in a client; unreadable configuration files; unknown client names |
 
 Doctor exits 1 when any failing finding is reported and 0 otherwise (FR-15.5); `--json` prints the same findings with the server inventory. In the Standalone profile the Gateway state is readable by the user running the clients by construction, so doctor always reports `readable-path` findings there.
+
+On an Enforced host the configuration `/etc/smcp/smcp.toml` is `root:smcp` 0640, and the user who runs the clients (the harness user) is not in group `smcp`. When doctor cannot read the configuration for that reason, it does not stop. It reports an `info` finding saying so and checks the CP-46 Enforced directories (`/etc/smcp`, `/var/lib/smcp`, `/var/lib/smcp/state`, `/var/lib/smcp/state/keys`, `/run/smcp`, `/var/log/smcp`) and the user's credential file as that user. It matches HTTP client entries against `--gateway-url` (default `https://127.0.0.1:8443/mcp`). On a correct installation only the credential file is reported, because the harness user cannot read the Gateway's directories (FR-15.4). Any other read error still stops doctor.
 
 Doctor also runs the sandbox element's enforced-profile prerequisite checks (the same checks as `smcpctl runtime doctor`). Each one that does not pass is reported; a failed prerequisite is a failing `prerequisite` finding when `[profile] mode = "enforced"`, and `info` otherwise.
 

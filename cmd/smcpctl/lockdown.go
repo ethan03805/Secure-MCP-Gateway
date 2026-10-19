@@ -6,9 +6,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/adapter"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/harness"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
@@ -79,20 +82,36 @@ func doctorCmd(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	cfgPath := fs.String("config", "smcp.toml", "configuration file")
 	asJSON := fs.Bool("json", false, "print the findings as JSON")
+	gatewayURL := fs.String("gateway-url", "https://127.0.0.1:8443/mcp", "the Gateway's MCP endpoint, used only when the configuration is not readable (Enforced host)")
 	var only multiFlag
 	fs.Var(&only, "client", "check only this client (repeatable); default every installed client")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	var e harness.Env
+	var notes []harness.Finding
 	cfg, err := config.Load(*cfgPath)
-	if err != nil {
+	switch {
+	case errors.Is(err, iofs.ErrPermission):
+		// On an Enforced host the configuration is root:smcp 0640 and the
+		// harness user, who runs the clients, is not in group smcp. Doctor
+		// then checks the CP-46 Enforced paths as that user (FR-15.4).
+		cfg = &config.Config{Profile: config.Profile{Mode: "enforced"}}
+		if e, err = enforcedHarnessEnv(*gatewayURL); err != nil {
+			return err
+		}
+		notes = append(notes, harness.Finding{Kind: harness.KindInfo, Message: fmt.Sprintf(
+			"the configuration %s is not readable by this user, as on an Enforced host where clients run under their own identity: the Gateway paths checked are the Enforced CP-46 directories, and HTTP entries are matched against %s (--gateway-url)",
+			*cfgPath, *gatewayURL)})
+	case err != nil:
 		return err
-	}
-	e, err := harnessEnv(cfg)
-	if err != nil {
-		return err
+	default:
+		if e, err = harnessEnv(cfg); err != nil {
+			return err
+		}
 	}
 	r := harness.Doctor(e, only, doctorPrereq(cfg))
+	r.Findings = append(notes, r.Findings...)
 	if *asJSON {
 		printJSON(out, r)
 	} else {
@@ -102,6 +121,32 @@ func doctorCmd(args []string, out io.Writer) error {
 		return errFindings
 	}
 	return nil
+}
+
+// enforcedPaths are the CP-46 directories of the Enforced profile.
+var enforcedPaths = []string{"/etc/smcp", "/var/lib/smcp", "/var/lib/smcp/state", "/var/lib/smcp/state/keys", "/run/smcp", "/var/log/smcp"}
+
+// enforcedHarnessEnv is the harness environment of a user who cannot read
+// the Enforced configuration: the CP-46 Enforced directories that this user
+// can see (a directory below one it cannot search is not readable either),
+// the user's own credential file, and the Gateway endpoint given by
+// --gateway-url.
+func enforcedHarnessEnv(mcpURL string) (harness.Env, error) {
+	gw := harness.Gateway{MCPURL: mcpURL, CAFile: "/var/lib/smcp/state/tls/ca.crt", Credentials: adapter.DefaultPath(),
+		Origins: []string{originOf(mcpURL)}}
+	e, err := harness.NewEnv(gw)
+	if err != nil {
+		return e, err
+	}
+	for _, p := range enforcedPaths {
+		if _, err := os.Stat(filepath.Join(hostRoot, p)); err == nil {
+			e.Paths = append(e.Paths, filepath.Join(hostRoot, p))
+		}
+	}
+	if root := os.Getenv("SMCP_HARNESS_ROOT"); root != "" {
+		e.Root = root
+	}
+	return e, nil
 }
 
 // doctorPrereq reports the enforced-profile prerequisites from the sandbox
