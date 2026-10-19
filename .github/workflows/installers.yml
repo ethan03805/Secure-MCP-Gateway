@@ -25,8 +25,15 @@
 #     anything is published (FR-20.24). release.yml then smoke-tests the
 #     .pkg on macOS and uploads it only when that test passed.
 #
-# The desktop application packages (smcp-desktop .deb/.rpm, the .dmg, the
-# AppImage and the .msi) are not built yet.
+# The Desktop Application installers (FR-20.17 to FR-20.19): on Ubuntu
+# amd64 and arm64 the smcp-desktop .deb and .rpm (depending on smcp of the
+# same version, from the Gateway binaries of the smcp .deb) and the
+# AppImage, built by packaging/installers/desktop/build.sh and installed
+# and started by scripts/desktop-smoke.sh; they block like the other Linux
+# packages. The macOS .dmg needs a macOS runner (Tauri links WebKit and
+# AppKit): installers-desktop-macos.yml builds and smoke-tests it and,
+# like the .pkg smoke test, does not block when no runner starts. The
+# Windows .msi is built elsewhere.
 name: installers
 
 on:
@@ -58,6 +65,9 @@ permissions:
 env:
   GO_VERSION: "1.26.x"
   GORELEASER_VERSION: v2.18.2
+  NODE_VERSION: "24"
+  RUST_VERSION: "1.94.0"
+  CARGO_TERM_COLOR: never
 
 jobs:
   build-linux:
@@ -288,5 +298,134 @@ jobs:
     uses: ./.github/workflows/installers-macos-smoke.yml
     with:
       version: ${{ needs.build-linux.outputs.version }}
+    permissions:
+      contents: read
+
+  # smcp-desktop .deb and .rpm and the AppImage, on a runner of each
+  # architecture, from the Gateway binaries of the smcp .deb of this build.
+  build-desktop-linux:
+    name: build desktop .deb, .rpm and AppImage (${{ matrix.arch }})
+    needs: build-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: WebKitGTK, tray and packaging tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev rpm file libfuse2t64 >/dev/null
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: installers-linux
+          path: build/installers
+      - name: Build (packaging/installers/desktop/build.sh)
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          deb=$(ls build/installers/smcp_*_"$ARCH".deb)
+          case "$ARCH" in amd64) rpm=$(ls build/installers/smcp-*.x86_64.rpm) ;; arm64) rpm=$(ls build/installers/smcp-*.aarch64.rpm) ;; esac
+          dpkg-deb -x "$deb" "$RUNNER_TEMP/smcp"
+          bash packaging/installers/desktop/build.sh "$VERSION" "$RUNNER_TEMP/smcp/usr/bin" build/desktop "$deb" "$rpm"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-desktop-linux-${{ matrix.arch }}
+          path: |
+            build/desktop/*.deb
+            build/desktop/*.rpm
+            build/desktop/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
+
+  smoke-desktop-linux:
+    name: smoke desktop ${{ matrix.format }} (${{ matrix.arch }})
+    needs: [build-linux, build-desktop-linux]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { format: deb, arch: amd64, runner: ubuntu-24.04, file: "smcp-desktop_*_amd64.deb", smcp: "smcp_*_amd64.deb" }
+          - { format: deb, arch: arm64, runner: ubuntu-24.04-arm, file: "smcp-desktop_*_arm64.deb", smcp: "smcp_*_arm64.deb" }
+          - { format: rpm, arch: amd64, runner: ubuntu-24.04, file: "smcp-desktop-*.x86_64.rpm", smcp: "smcp-*.x86_64.rpm" }
+          - { format: rpm, arch: arm64, runner: ubuntu-24.04-arm, file: "smcp-desktop-*.aarch64.rpm", smcp: "smcp-*.aarch64.rpm" }
+          - { format: AppImage, arch: amd64, runner: ubuntu-24.04, file: "smcp-desktop_*_linux_amd64.AppImage", smcp: "" }
+          - { format: AppImage, arch: arm64, runner: ubuntu-24.04-arm, file: "smcp-desktop_*_linux_arm64.AppImage", smcp: "" }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: installers-*linux*
+          merge-multiple: true
+          path: build/installers
+      - name: Xvfb (Ubuntu)
+        if: matrix.format != 'rpm'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb xauth libegl1 libgles2 libgl1-mesa-dri >/dev/null
+      - name: Install, start and remove (Ubuntu)
+        if: matrix.format != 'rpm'
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+          SMCP: ${{ matrix.smcp }}
+        run: |
+          # shellcheck disable=SC2086 # FILE and SMCP are globs
+          set -- build/installers/$FILE
+          # shellcheck disable=SC2086
+          if [ -n "$SMCP" ]; then set -- "$1" build/installers/$SMCP; fi
+          bash scripts/desktop-smoke.sh "$1" "$VERSION" ${2:+"$2"}
+      # FR-20.19: the AppImage on a distribution without .deb or .rpm
+      # tooling (Arch Linux; its image exists for amd64 only).
+      - name: AppImage on Arch Linux (no dpkg, no rpm)
+        if: matrix.format == 'AppImage' && matrix.arch == 'amd64'
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+        run: |
+          # shellcheck disable=SC2086 # FILE is a glob
+          set -- build/installers/$FILE
+          docker run --rm -v "$PWD:/w:ro" -w /w -e VERSION -e PKG="$1" archlinux:latest bash -c \
+            'pacman -Sy --noconfirm --quiet xorg-server-xvfb xorg-xauth which libglvnd mesa >/dev/null && ! command -v dpkg && ! command -v rpm && bash scripts/desktop-smoke.sh "$PKG" "$VERSION"'
+      - name: Install, start and remove (Fedora container)
+        if: matrix.format == 'rpm'
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+          SMCP: ${{ matrix.smcp }}
+        run: |
+          # shellcheck disable=SC2086 # FILE and SMCP are globs
+          set -- build/installers/$FILE build/installers/$SMCP
+          docker run --rm -v "$PWD:/w:ro" -w /w -e VERSION -e PKG="$1" -e SMCP_PKG="$2" fedora:44 bash -c \
+            'dnf install -y -q procps-ng findutils >/dev/null && bash scripts/desktop-smoke.sh "$PKG" "$VERSION" "$SMCP_PKG"'
+
+  # The macOS .dmg, built and started on a Mac; does not block (as
+  # smoke-macos). The release runs installers-desktop-macos.yml itself.
+  desktop-macos:
+    name: desktop .dmg
+    if: inputs.macos-smoke
+    uses: ./.github/workflows/installers-desktop-macos.yml
+    with:
+      tag: ${{ inputs.tag }}
     permissions:
       contents: read

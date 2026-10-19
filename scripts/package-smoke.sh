@@ -46,7 +46,7 @@ case "$pkg" in
 *.rpm) format=rpm bindir=/usr/bin libdir=/usr/bin
 	prefixes='^/usr/bin/smcp[a-z-]*$|^/usr/lib/smcp(/.*)?$|^/usr/share/doc/smcp(/.*)?$' ;;
 *.pkg) format=pkg bindir=/usr/local/bin libdir=/usr/local/lib/smcp
-	prefixes='^\.(/usr(/local(/(bin|lib|share|share/doc))?)?)?$|^\./usr/local/bin/smcp[a-z-]*$|^\./usr/local/lib/smcp(/.*)?$|^\./usr/local/share/doc/smcp(/.*)?$' ;;
+	prefixes='^\.(/usr(/local(/(bin|lib|share|share/doc))?)?)?$|^\./usr/local/bin/smcp[a-z-]*$|^\./usr/local/lib/smcp(/.*)?$|^\./usr/local/share/doc/smcp(/.*)?$|^\./Applications$|^\./Applications/Secure MCP Gateway\.app(/.*)?$' ;;
 *) fail "$pkg: not a .deb, .rpm or .pkg" ;;
 esac
 
@@ -91,7 +91,7 @@ remove_pkg() {
 	pkg)
 		priv rm -f /usr/local/bin/smcpd /usr/local/bin/smcpctl /usr/local/bin/smcp-session \
 			/usr/local/bin/smcp-stdio /usr/local/bin/smcp-connect /usr/local/bin/smcp-refserver
-		priv rm -rf /usr/local/lib/smcp /usr/local/share/doc/smcp
+		priv rm -rf /usr/local/lib/smcp /usr/local/share/doc/smcp "/Applications/Secure MCP Gateway.app"
 		priv pkgutil --forget io.github.ethan03805.smcp
 		;;
 	esac
@@ -184,6 +184,20 @@ for b in "${binaries[@]}"; do
 	echo "$link: uid 0, not writable by the user, version $want"
 done
 if asuser test -w "$libdir"; then fail "$libdir is writable by the user (SR-4.11-2)"; fi
+if [ "$format" = pkg ] && grep -q '^\./Applications/Secure MCP Gateway\.app/Contents/MacOS/smcp-desktop$' <<<"$files"; then
+	# The Desktop Application (FR-20.17, FR-20.26, SR-4.11-2).
+	app="/Applications/Secure MCP Gateway.app"
+	[ -x "$app/Contents/MacOS/smcp-desktop" ] || fail "$app was not installed"
+	[ "$(stat -f %u "$app")" = 0 ] || fail "$app is not owned by root (SR-4.11-2)"
+	if asuser test -w "$app/Contents/MacOS/smcp-desktop"; then fail "$app is writable by the user (SR-4.11-2)"; fi
+	for f in "$app" "$app"/Contents/MacOS/*; do
+		cs=$(codesign -dv "$f" 2>&1 || true)
+		grep -q 'Signature=adhoc' <<<"$cs" || fail "$f has no ad-hoc signature (FR-20.26)"
+	done
+	out=$(asuser "$app/Contents/MacOS/smcp-desktop" --commands) || { printf '%s\n' "$out" >&2; fail "the application does not find its commands"; }
+	printf '%s\n' "$out"
+	echo "$app: root-owned, ad-hoc signed, finds its commands"
+fi
 if [ "$format" = pkg ]; then
 	pkgs=$(pkgutil --pkgs || true)
 	grep -qx io.github.ethan03805.smcp <<<"$pkgs" || fail "pkgutil does not know io.github.ethan03805.smcp"

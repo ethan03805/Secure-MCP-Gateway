@@ -1,0 +1,145 @@
+# The macOS Desktop Application installer (E-35; SRS FR-20.17, FR-20.24,
+# FR-20.26): builds Secure MCP Gateway.app and smcp-desktop_<version>_
+# darwin_arm64.dmg with the Tauri bundler on a macOS arm64 runner
+# (packaging/installers/desktop/build.sh), then mounts the .dmg, copies the
+# application out, lists its bundled commands and starts it
+# (scripts/desktop-smoke.sh). The artifact installers-desktop-macos holds
+# the .dmg.
+#
+# The application links WebKit and AppKit, so unlike the command-line .pkg
+# it cannot be built on Linux. As installers-macos-smoke.yml does, this
+# workflow tells a missing runner from a failure (docs/ci.md, "macOS
+# runners"): the build job has continue-on-error, and result classifies it
+# as passed, unavailable (the job never started or was cancelled; a
+# warning) or failed (it ran and failed; this fails the run, and in a
+# release stops publication).
+#
+# Callers: installers.yml (CI, with macos-smoke) and release.yml (before
+# the release job, which publishes the .dmg only when the outcome is
+# passed).
+name: installers-desktop-macos
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag (v1.3.0); empty builds a snapshot
+        type: string
+        default: ""
+    outputs:
+      outcome:
+        description: passed, unavailable or failed
+        value: ${{ jobs.result.outputs.outcome }}
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26.x"
+  GORELEASER_VERSION: v2.18.2
+  NODE_VERSION: "24"
+  RUST_VERSION: "1.94.0"
+  CARGO_TERM_COLOR: never
+
+jobs:
+  build:
+    name: build and smoke .dmg (arm64)
+    runs-on: macos-15
+    timeout-minutes: 60
+    continue-on-error: true
+    outputs:
+      started: ${{ steps.start.outputs.started }}
+      passed: ${{ steps.done.outputs.passed }}
+    steps:
+      - name: Runner acquired
+        id: start
+        run: echo "started=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install syft (SBOM)
+        if: inputs.tag != ''
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - name: Install the console's production npm packages (license notices)
+        if: inputs.tag != ''
+        working-directory: console
+        run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+      - name: GoReleaser (darwin-arm64 binaries)
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: ${{ env.GORELEASER_VERSION }}
+          args: build --clean --single-target ${{ inputs.tag == '' && '--snapshot' || '' }}
+        env:
+          GGOOS: darwin
+          GGOARCH: arm64
+          GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
+          SMCP_BUILD_REFSERVER: "1"
+          SMCP_SBOM: ${{ inputs.tag != '' && '1' || '' }}
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+      - name: Build the application and the .dmg (Tauri bundler, ad-hoc signed)
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version=$(jq -r .version build/dist/metadata.json)
+          if [ -n "$TAG" ] && [ "$version" != "${TAG#v}" ]; then echo "::error::binaries have version $version, not ${TAG#v}"; exit 1; fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          bash packaging/installers/desktop/build.sh "$version" build/dist "$RUNNER_TEMP/desktop"
+          mkdir -p build/installers
+          mv "$RUNNER_TEMP"/desktop/*.dmg build/installers/
+          shasum -a 256 build/installers/*.dmg | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Mount the .dmg, copy the application out, list its commands, start it
+        run: bash scripts/desktop-smoke.sh "build/installers/smcp-desktop_${VERSION}_darwin_arm64.dmg" "$VERSION"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-desktop-macos
+          path: build/installers/*.dmg
+          if-no-files-found: error
+          retention-days: 14
+      - name: Passed
+        id: done
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  result:
+    name: macOS desktop result
+    needs: build
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      outcome: ${{ steps.classify.outputs.outcome }}
+    steps:
+      - name: Classify the macOS desktop build
+        id: classify
+        env:
+          RESULT: ${{ needs.build.result }}
+          STARTED: ${{ needs.build.outputs.started }}
+          PASSED: ${{ needs.build.outputs.passed }}
+        run: |
+          if [ "$PASSED" = true ]; then
+            outcome=passed
+          elif [ "$RESULT" = cancelled ] || [ "$STARTED" != true ]; then
+            outcome=unavailable
+          else
+            outcome=failed
+          fi
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          echo "macOS desktop .dmg build and smoke test: **$outcome** (job result $RESULT; docs/ci.md, macOS runners)" >> "$GITHUB_STEP_SUMMARY"
+          case "$outcome" in
+            unavailable) echo "::warning::the macOS .dmg was not built (no macOS runner, or cancelled); re-run the job 'build and smoke .dmg (arm64)'" ;;
+            failed) echo "::error::the macOS .dmg build or smoke test failed"; exit 1 ;;
+          esac

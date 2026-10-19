@@ -23,6 +23,14 @@
 # checksum file. A failed test leaves the .pkg off the release and opens
 # an issue; a test that never ran opens an issue saying to re-run it
 # (docs/ci.md, "macOS runners"; docs/release-checklist.md).
+#
+# Desktop Application installers (FR-20.17 to FR-20.19): the installers
+# job also builds and smoke-tests the smcp-desktop .deb, .rpm and AppImage
+# on Ubuntu, which block like the other Linux packages. The macOS .dmg can
+# only be built on a Mac: the desktop-macos job (installers-desktop-
+# macos.yml) builds and smoke-tests it before the release job. A failed
+# build or test stops publication; no macOS runner is a warning, and the
+# release is published without the .dmg.
 name: release
 
 on:
@@ -46,9 +54,21 @@ jobs:
     permissions:
       contents: read
 
+  desktop-macos:
+    name: desktop-macos
+    uses: ./.github/workflows/installers-desktop-macos.yml
+    with:
+      tag: ${{ github.ref_name }}
+    permissions:
+      contents: read
+
   release:
     name: release
-    needs: installers
+    needs: [installers, desktop-macos]
+    # desktop-macos succeeds when the .dmg passed or no macOS runner started
+    # (outcome unavailable, a warning); it fails only when the build or its
+    # smoke test failed, which stops publication (FR-20.24).
+    if: ${{ !cancelled() && needs.installers.result == 'success' && needs.desktop-macos.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 110
     permissions:
@@ -162,11 +182,15 @@ jobs:
             grep -qx "$want  $b" "$sums" || { echo "::error::$b is not in $sums with digest $want"; exit 1; }
             n=$((n + 1))
           done
-          for pattern in "smcp_${version}_amd64.deb" "smcp_${version}_arm64.deb" "smcp-${version}-1.x86_64.rpm" "smcp-${version}-1.aarch64.rpm" "smcp_${version}_darwin_arm64.pkg"; do
+          for pattern in "smcp_${version}_amd64.deb" "smcp_${version}_arm64.deb" "smcp-${version}-1.x86_64.rpm" "smcp-${version}-1.aarch64.rpm" "smcp_${version}_darwin_arm64.pkg" \
+            "smcp-desktop_${version}_amd64.deb" "smcp-desktop_${version}_arm64.deb" "smcp-desktop-${version}-1.x86_64.rpm" "smcp-desktop-${version}-1.aarch64.rpm" \
+            "smcp-desktop_${version}_linux_amd64.AppImage" "smcp-desktop_${version}_linux_arm64.AppImage" "smcp-desktop_${version}_darwin_arm64.dmg"; do
             [ -f "build/installers/$pattern" ] || [ -f "build/installers-pending/$pattern" ] || echo "::warning::no installer named $pattern"
           done
           echo "$n installers listed in $sums" >> "$GITHUB_STEP_SUMMARY"
-          [ "$n" -ge 5 ] || { echo "::error::expected at least 5 installers, found $n"; exit 1; }
+          # 5 command-line installers and 6 Linux desktop installers; the
+          # .dmg is the 12th when a macOS runner built it.
+          [ "$n" -ge 11 ] || { echo "::error::expected at least 11 installers, found $n"; exit 1; }
       # FR-12.1: every package of the SBOM in the archives and of the
       # per-archive SBOMs has an OSI-approved or public-domain license, or a
       # reviewed exception in packaging/sbom-review.json.
