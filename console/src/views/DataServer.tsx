@@ -66,6 +66,7 @@ function Graph() {
                 ...(g.error ? ([["Error", <Mono>{g.error}</Mono>]] as [string, ReactNode][]) : []),
                 ["Journal checkpoint", <Mono>segment {g.checkpoint.segment}, {compact(g.checkpoint.events)} events</Mono>],
                 ["Live events applied / dropped", <Mono>{compact(g.live_applied)} / {compact(g.live_dropped)}</Mono>],
+                ["Memory budget in force", <Mono>{bytes(g.memory.budget.heap_bytes)} heap, {bytes(g.memory.budget.page_cache_bytes)} page cache</Mono>],
                 ["Last catch-up", <Time value={g.last_catch_up} />],
                 ["Last retention run", <Time value={g.last_retention} />],
               ]}
@@ -116,30 +117,73 @@ function Graph() {
   );
 }
 
-/** The Observation Store memory budget (FR-8.16), published as a revision. */
+const MiB = 1 << 20;
+const mibOf = (b: number | undefined, dflt: number) => String(b ? Math.round(b / MiB) : dflt);
+const wholeIn = (v: string, lo: number, hi: number) => {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= lo && n <= hi;
+};
+
+/**
+ * The memory budgets (FR-8.16), published as one revision: the Observation
+ * Store's and the graph engine's heap and page cache. Both take effect at
+ * the next start of smcpd.
+ */
 function MemoryBudget() {
   const objects = useObjects();
-  const eff = objects.status === "ok" ? (objects.data.effective?.memory_limit_bytes as number | undefined) : undefined;
+  const eff = objects.status === "ok" ? objects.data.effective : undefined;
+  const obs = eff?.memory_limit_bytes as number | undefined;
+  const heap = eff?.graph_heap_bytes as number | undefined;
+  const pc = eff?.graph_page_cache_bytes as number | undefined;
   const [mib, setMib] = useState<string | null>(null);
-  const value = mib ?? (eff ? String(Math.round(eff / (1 << 20))) : "512");
-  const n = Number(value);
-  const ok = Number.isInteger(n) && n >= 64 && n <= 65536;
+  const [heapMib, setHeapMib] = useState<string | null>(null);
+  const [pcMib, setPcMib] = useState<string | null>(null);
+  const value = mib ?? mibOf(obs, 512);
+  const heapValue = heapMib ?? mibOf(heap, 1024);
+  const pcValue = pcMib ?? mibOf(pc, 1024);
+  const ok = wholeIn(value, 64, 65536);
+  const heapOk = wholeIn(heapValue, 256, 65536);
+  const pcOk = wholeIn(pcValue, 64, 65536);
   return (
     <Section title="Memory budget">
       <Loaded res={objects} what="the memory budget" route="/api/v1/observations/objects">
         {(o) => (
           <>
-            <KV rows={[["Observation Store budget (published or configured)", <Mono>{eff ? bytes(eff) : "default 512 MiB"}</Mono>]]} />
+            <KV
+              rows={[
+                ["Observation Store budget (published or configured)", <Mono>{obs ? bytes(obs) : "default 512 MiB"}</Mono>],
+                ["Graph budget (published or configured)", <Mono>{heap ? bytes(heap) : "default 1 GiB"} heap, {pc ? bytes(pc) : "default 1 GiB"} page cache</Mono>],
+              ]}
+            />
             <ObjectState objects={o} kind="memory_budget" label="memory budget" />
             <div className="rule-grid">
               <TextField label="Observation Store memory budget (MiB)" value={value} onChange={setMib} type="number" hint="64 MiB to 64 GiB; DuckDB memory_limit" />
+              <TextField label="Graph heap budget (MiB)" value={heapValue} onChange={setHeapMib} type="number" hint="256 MiB to 64 GiB; Neo4j server.memory.heap.max_size" />
+              <TextField label="Graph page cache budget (MiB)" value={pcValue} onChange={setPcMib} type="number" hint="64 MiB to 64 GiB; Neo4j server.memory.pagecache.size" />
             </div>
             {!ok && (
               <p className="notice notice-bad" role="alert">
                 The budget must be a whole number of MiB from 64 to 65536.
               </p>
             )}
-            <Publish route="/api/v1/observations/memory-budget" label="memory budget" body={{ observation_memory_limit_bytes: n * (1 << 20) }} disabled={!ok} onPublished={objects.reload} />
+            {!heapOk && (
+              <p className="notice notice-bad" role="alert">
+                The graph heap budget must be a whole number of MiB from 256 to 65536.
+              </p>
+            )}
+            {!pcOk && (
+              <p className="notice notice-bad" role="alert">
+                The graph page cache budget must be a whole number of MiB from 64 to 65536.
+              </p>
+            )}
+            <p className="small">The graph budget is what the graph mirror checks the database's memory settings against; set the same values in Neo4j (smcpctl graph engine config).</p>
+            <Publish
+              route="/api/v1/observations/memory-budget"
+              label="memory budget"
+              body={{ observation_memory_limit_bytes: Number(value) * MiB, graph_heap_bytes: Number(heapValue) * MiB, graph_page_cache_bytes: Number(pcValue) * MiB }}
+              disabled={!ok || !heapOk || !pcOk}
+              onPublished={objects.reload}
+            />
           </>
         )}
       </Loaded>
@@ -386,7 +430,7 @@ export function DataServer() {
       <Help>
         <p>
           The Data Server (graph mirror and Observation Store) is optional: enforcement never waits for it, and when it is full or down, observations are
-          dropped and counted rather than slowing calls. The Observation Store memory budget is published here and takes effect at the next start of smcpd; the graph memory budget is set in the [graph] table. Backups are encrypted with
+          dropped and counted rather than slowing calls. The Observation Store and graph memory budgets are published here and take effect at the next start of smcpd. Backups are encrypted with
           age; keep the passphrase or identity elsewhere.
         </p>
       </Help>

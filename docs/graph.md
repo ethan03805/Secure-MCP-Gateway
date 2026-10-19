@@ -80,6 +80,8 @@ In the Enforced profile, run the engine as the CP-46 identity `smcp-data` with B
 | `page_cache_bytes` | `1073741824` (1 GiB, CP-33) | Page cache budget, checked against `server.memory.pagecache.size`. |
 | `require_hardening` | `false` | When true, any finding of the engine configuration check refuses the mirror (state `refused`). When false, findings are logged and shown in `smcpctl graph status`. |
 
+A memory budget published in G-08 (`POST /api/v1/observations/memory-budget`, `graph_heap_bytes` and `graph_page_cache_bytes`) replaces `heap_bytes` and `page_cache_bytes` from the next start of smcpd; `smcpctl graph engine config` reads only this table.
+
 ## How the mirror works
 
 - **Feed.** The mirror is an evidence observer: after the journal accepts an event, the mirror queues it without blocking. A worker writes batches through the Data Access Service in one managed transaction each.
