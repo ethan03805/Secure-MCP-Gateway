@@ -370,9 +370,13 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if o.Packages != nil {
 		o.Packages.RegisterRoutes(a.Admin)
 	}
+	started := map[string]any{"version": backend.Version, "listener": cfg.Listener.Address, "admin_listener": cfg.AdminListener.Address,
+		"profile": a.Profile.Profile, "release_label": a.Profile.Label}
+	if a.Profile.InstallMode != "" {
+		started["installation_mode"] = a.Profile.InstallMode
+	}
 	if err = a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "started", PolicyRevision: revision, PolicyStatus: "not_evaluated",
-		Detail: map[string]any{"version": backend.Version, "listener": cfg.Listener.Address, "admin_listener": cfg.AdminListener.Address,
-			"profile": a.Profile.Profile, "release_label": a.Profile.Label}}); err != nil {
+		Detail: started}); err != nil {
 		return a, fmt.Errorf("journal: %w", err)
 	}
 	return a, nil

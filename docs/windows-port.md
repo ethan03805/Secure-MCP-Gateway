@@ -46,7 +46,7 @@ Each feature that is not ported refuses with an error naming the FR-21 requireme
 | `keys.CheckPrivate` (called by `app.Start`) | `smcpd` refuses to start: file modes do not protect the CA, listener and evidence keys or the operator token, and their DACLs are not checked | FR-21.5 DACL check and FR-21.10 DPAPI |
 | `pipeline.SubprocessLauncher` | refuses to start any server instance (also the probe of `smcpctl package build`) | FR-21.11 launch rules (quoting, interpreter refusal, SR-4.8-2) and FR-21.12 Job Object |
 | `edge.ListenUDS` | refuses to listen, so no AF_UNIX socket is created | FR-21.8 named pipe and FR-21.9 SID mapping |
-| `profile.Resolve` (unchanged) | `profile = "enforced"` fails; `auto` resolves to Standalone, label "not enforced" | permanent (SR-4-2) |
+| `profile.Resolve` | `profile = "enforced"` fails; `auto` resolves to Standalone, label "not enforced", installation mode `windows-user` (the machine-mode service reports `windows-machine`). Inside WSL every mode, `enforced` included, resolves to Standalone with mode `wsl2` | permanent (SR-4-2) |
 | `sandbox.FromConfig` (unchanged) | `[runtime] sandbox = "podman"` fails the essential `os` check | permanent |
 
 On Linux and macOS behavior is unchanged: the new `_unix.go` and `!windows` files contain the code that was there before.

@@ -546,22 +546,25 @@ func (g *Gateway) failClosed() string {
 
 // Health is the Gateway's health report.
 type Health struct {
-	State          string   `json:"state"` // healthy, degraded, fail-closed
-	Causes         []string `json:"causes"`
-	Profile        string   `json:"profile"`
-	ReleaseLabel   string   `json:"release_label"`
-	ProfileReasons []string `json:"profile_reasons,omitempty"`
-	Version        string   `json:"version"`
-	PolicyRevision string   `json:"policy_revision,omitempty"`
-	Sessions       int      `json:"sessions"`
-	Launcher       string   `json:"launcher"`
-	Servers        []string `json:"servers"`
-	Unverified     []string `json:"unverified_servers,omitempty"`
+	State        string   `json:"state"` // healthy, degraded, fail-closed
+	Causes       []string `json:"causes"`
+	Profile      string   `json:"profile"`
+	ReleaseLabel string   `json:"release_label"`
+	// InstallationMode is windows-user, windows-machine or wsl2 on a
+	// Windows host or in WSL (SR-4-2), omitted elsewhere.
+	InstallationMode string   `json:"installation_mode,omitempty"`
+	ProfileReasons   []string `json:"profile_reasons,omitempty"`
+	Version          string   `json:"version"`
+	PolicyRevision   string   `json:"policy_revision,omitempty"`
+	Sessions         int      `json:"sessions"`
+	Launcher         string   `json:"launcher"`
+	Servers          []string `json:"servers"`
+	Unverified       []string `json:"unverified_servers,omitempty"`
 }
 
 // Health computes the health report.
 func (g *Gateway) Health() Health {
-	h := Health{State: "healthy", Causes: []string{}, Profile: g.prof.Profile, ReleaseLabel: g.prof.Label, ProfileReasons: g.prof.Reasons,
+	h := Health{State: "healthy", Causes: []string{}, Profile: g.prof.Profile, ReleaseLabel: g.prof.Label, InstallationMode: g.prof.InstallMode, ProfileReasons: g.prof.Reasons,
 		Version: backend.Version, Sessions: len(g.store.Active()), Launcher: g.reg.Launcher().Name(), Servers: []string{}}
 	if c := g.prof.Degraded(); c != "" {
 		h.State, h.Causes = "degraded", append(h.Causes, c)
@@ -613,7 +616,11 @@ func (g *Gateway) healthz(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusServiceUnavailable
 	}
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]any{"state": h.State, "causes": h.Causes, "profile": h.Profile, "release_label": h.ReleaseLabel, "version": h.Version})
+	body := map[string]any{"state": h.State, "causes": h.Causes, "profile": h.Profile, "release_label": h.ReleaseLabel, "version": h.Version}
+	if h.InstallationMode != "" {
+		body["installation_mode"] = h.InstallationMode
+	}
+	_ = json.NewEncoder(w).Encode(body)
 }
 
 // gatewayError builds an Appendix B error with FR-1.20 data.

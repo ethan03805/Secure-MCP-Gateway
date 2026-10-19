@@ -202,6 +202,7 @@ function StatusStrip({ cred, onSignOut }: { cred: Credentials; onSignOut: () => 
           </span>
           <span className="strip-item">
             {h.profile}: <strong>{h.release_label}</strong>
+            {h.installation_mode ? <> ({h.installation_mode})</> : null}
           </span>
           <span className="strip-item">
             policy <Mono>{h.policy_revision ?? "none"}</Mono>

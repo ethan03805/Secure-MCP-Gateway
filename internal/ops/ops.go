@@ -251,6 +251,9 @@ func (r *Runtime) registerChecks() {
 		if h.PolicyRevision != "" {
 			info["policy_revision"] = h.PolicyRevision
 		}
+		if a.Profile.InstallMode != "" {
+			info["installation_mode"] = a.Profile.InstallMode
+		}
 		if r.opts.Elements != nil {
 			info["elements"] = r.opts.Elements()
 		}

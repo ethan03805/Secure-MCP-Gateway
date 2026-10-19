@@ -6,6 +6,8 @@ export interface Health {
   causes: string[];
   profile: string;
   release_label: string;
+  /** windows-user, windows-machine or wsl2 on Windows and in WSL (SR-4-2). */
+  installation_mode?: string;
   profile_reasons?: string[];
   version: string;
   policy_revision?: string;

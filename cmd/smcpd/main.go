@@ -320,7 +320,7 @@ func run(cfgPath, level string) error {
 		log.Info("element", "id", e.ID, "name", e.Name, "state", e.State, "detail", e.Detail)
 	}
 	log.Info("smcpd listening", "mcp", cfg.ResourceURI(), "admin", cfg.AdminURL(), "policy_revision", revision,
-		"profile", a.Profile.Profile, "release_label", a.Profile.Label, "diagnostic_log", cfg.Log.File)
+		"profile", a.Profile.Profile, "release_label", a.Profile.Label, "installation_mode", a.Profile.InstallMode, "diagnostic_log", cfg.Log.File)
 	err = a.Serve(ctx)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
