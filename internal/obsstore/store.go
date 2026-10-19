@@ -123,6 +123,12 @@ type Store interface {
 	Close() error
 }
 
+// Compactor is implemented by backends that merge a partition's small
+// files (DuckDB): Compact returns the number of files merged.
+type Compactor interface {
+	Compact() (int, error)
+}
+
 // ParquetWriter is implemented by backends that can write Parquet.
 type ParquetWriter interface {
 	// WriteParquet converts a JSON Lines file whose objects use the given

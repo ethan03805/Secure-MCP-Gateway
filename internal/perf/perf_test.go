@@ -118,32 +118,85 @@ func TestQuantile(t *testing.T) {
 
 // TestWriteTestJSON: a measurement within budget becomes a passing test
 // with a partial claim; one over budget a failing test, and the package
-// fails.
+// fails. On the reference hardware a complete measurement is a full claim
+// and an incomplete one stays partial.
 func TestWriteTestJSON(t *testing.T) {
-	var b bytes.Buffer
-	ms := []Measurement{{Requirement: "FR-11.2", Name: "x", Pass: true}, {Requirement: "FR-11.8", Name: "y", Pass: false}}
-	if err := WriteTestJSON(&b, "example.com/m/internal/perf/run", ms, time.Now()); err != nil {
-		t.Fatal(err)
-	}
-	results := map[string]string{}
-	claims := map[string]bool{}
-	sc := bufio.NewScanner(&b)
-	for sc.Scan() {
-		var ev struct{ Action, Test, Output string }
-		if err := json.Unmarshal(sc.Bytes(), &ev); err != nil {
-			t.Fatal(err)
-		}
-		switch ev.Action {
-		case "pass", "fail":
-			results[ev.Test] = ev.Action
-		case "output":
-			if strings.Contains(ev.Output, "PARTIAL: ") {
-				claims[strings.TrimSpace(strings.SplitN(ev.Output, "PARTIAL: ", 2)[1])] = true
+	parse := func(b *bytes.Buffer) (results map[string]string, claims map[string]string) {
+		results, claims = map[string]string{}, map[string]string{}
+		sc := bufio.NewScanner(b)
+		for sc.Scan() {
+			var ev struct{ Action, Test, Output string }
+			if err := json.Unmarshal(sc.Bytes(), &ev); err != nil {
+				t.Fatal(err)
+			}
+			switch ev.Action {
+			case "pass", "fail":
+				results[ev.Test] = ev.Action
+			case "output":
+				for _, m := range []string{"PARTIAL: ", "VERIFIES: "} {
+					if strings.Contains(ev.Output, m) {
+						claims[strings.TrimSpace(strings.SplitN(ev.Output, m, 2)[1])] = strings.TrimSpace(m)
+					}
+				}
 			}
 		}
+		return results, claims
 	}
-	if results["TestPerfFR_11_2"] != "pass" || results["TestPerfFR_11_8"] != "fail" || results[""] != "fail" || !claims["FR-11.2"] || !claims["FR-11.8"] {
-		t.Fatalf("results %v claims %v", results, claims)
+	ms := []Measurement{{Requirement: "FR-11.2", Name: "x", Pass: true, Complete: true}, {Requirement: "FR-11.8", Name: "y", Pass: false, Complete: true},
+		{Requirement: "FR-11.9", Name: "z", Pass: true}}
+	var b bytes.Buffer
+	if err := WriteTestJSON(&b, "example.com/m/internal/perf/run", ms, false, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	results, claims := parse(&b)
+	if results["TestPerfFR_11_2"] != "pass" || results["TestPerfFR_11_8"] != "fail" || results[""] != "fail" ||
+		claims["FR-11.2"] != "PARTIAL:" || claims["FR-11.8"] != "PARTIAL:" || claims["FR-11.9"] != "PARTIAL:" {
+		t.Fatalf("not reference hardware: results %v claims %v", results, claims)
+	}
+	b.Reset()
+	if err := WriteTestJSON(&b, "example.com/m/internal/perf/run", ms, true, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	results, claims = parse(&b)
+	if results["TestPerfFR_11_2"] != "pass" || results["TestPerfFR_11_8"] != "fail" || results["TestPerfFR_11_9"] != "pass" ||
+		claims["FR-11.2"] != "VERIFIES:" || claims["FR-11.8"] != "VERIFIES:" || claims["FR-11.9"] != "PARTIAL:" {
+		t.Fatalf("reference hardware: results %v claims %v", results, claims)
+	}
+}
+
+// TestReferenceClass: only a GitHub-hosted ubuntu-24.04 runner of the
+// standard class (x86_64, 4 processors, about 16 GiB) is the recorded
+// reference hardware; another machine is measured but not counted as it.
+func TestReferenceClass(t *testing.T) {
+	ref := Host{OS: "linux", Arch: "amd64", CPUs: 4, CPU: "AMD EPYC 7763 64-Core Processor", MemoryBytes: memTotal("MemTotal:       16379624 kB\nMemFree: 1 kB\n"),
+		RunnerEnvironment: "github-hosted", Image: "ubuntu24"}
+	if ref.MemoryBytes != 16379624<<10 || !ReferenceClass(ref) {
+		t.Fatalf("runner host %+v not the reference class", ref)
+	}
+	for name, mod := range map[string]func(*Host){
+		"arm64":         func(h *Host) { h.Arch = "arm64" },
+		"macOS":         func(h *Host) { h.OS = "darwin" },
+		"2 processors":  func(h *Host) { h.CPUs = 2 },
+		"16 processors": func(h *Host) { h.CPUs = 16 },
+		"8 GiB":         func(h *Host) { h.MemoryBytes = 8 << 30 },
+		"64 GiB":        func(h *Host) { h.MemoryBytes = 64 << 30 },
+		"self-hosted":   func(h *Host) { h.RunnerEnvironment = "self-hosted" },
+		"not a runner":  func(h *Host) { h.RunnerEnvironment, h.Image = "", "" },
+		"ubuntu-22.04":  func(h *Host) { h.Image = "ubuntu22" },
+	} {
+		h := ref
+		mod(&h)
+		if ReferenceClass(h) {
+			t.Errorf("%s: counted as the reference hardware", name)
+		}
+	}
+	if memTotal("garbage") != 0 {
+		t.Fatal("memTotal of garbage")
+	}
+	// This machine is described with its memory and disk where it can be.
+	h := CurrentHost(t.TempDir())
+	if h.CPUs < 1 || h.DiskBytes <= 0 || (h.OS == "linux" && h.MemoryBytes <= 0) {
+		t.Fatalf("host %+v", h)
 	}
 }
 
@@ -217,6 +270,58 @@ func TestOverheadsFromReceiptToDeliveryWithoutServerTime(t *testing.T) {
 	// 32 ms end to end minus 10 ms of server execution; c2 is incomplete.
 	if len(got) != 1 || got[0] != 22 {
 		t.Fatalf("overheads %v, want [22]", got)
+	}
+}
+
+// TestTreeRSS: the graph engine's memory is the sum of VmRSS over the
+// process and every descendant, and nothing else.
+func TestTreeRSS(t *testing.T) {
+	saved := procRoot
+	t.Cleanup(func() { procRoot = saved })
+	procRoot = t.TempDir()
+	for pid, st := range map[string]string{
+		"1":   "Name:\tinit\nPPid:\t0\nVmRSS:\t   1000 kB\n",
+		"10":  "Name:\ttini\nPPid:\t1\nVmRSS:\t    100 kB\n",
+		"11":  "Name:\tjava\nPPid:\t10\nVmRSS:\t 800000 kB\n",
+		"12":  "Name:\tjava\nPPid:\t11\nVmRSS:\t   2000 kB\n",
+		"20":  "Name:\tother\nPPid:\t1\nVmRSS:\t   5000 kB\n",
+		"21":  "Name:\tkthread\nPPid:\t10\n", // no VmRSS
+		"abc": "not a process",
+	} {
+		if err := os.MkdirAll(filepath.Join(procRoot, pid), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(procRoot, pid, "status"), []byte(st), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, n, err := treeRSS(10)
+	if err != nil || got != (100+800000+2000)<<10 || n != 4 {
+		t.Fatalf("treeRSS(10) = %d, %d processes, %v", got, n, err)
+	}
+	if _, _, err := treeRSS(99); err == nil {
+		t.Fatal("a missing process is not an error")
+	}
+}
+
+// TestGraphConfig: with a graph engine, the idle instance gets a [graph]
+// table with the password in a 0600 file; without one, nothing.
+func TestGraphConfig(t *testing.T) {
+	dir := t.TempDir()
+	if s, err := graphConfig(RunOptions{}, filepath.Join(dir, "pw")); err != nil || s != "" {
+		t.Fatalf("no engine: %q %v", s, err)
+	}
+	src := filepath.Join(dir, "src")
+	if err := os.WriteFile(src, []byte("secret\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pw := filepath.Join(dir, "work", "pw")
+	s, err := graphConfig(RunOptions{GraphURI: "bolt://127.0.0.1:7687", GraphPasswordFile: src}, pw)
+	if err != nil || !strings.Contains(s, "[graph]\nenabled = true\nuri = \"bolt://127.0.0.1:7687\"\nusername = \"neo4j\"") || !strings.Contains(s, pw) {
+		t.Fatalf("config %q %v", s, err)
+	}
+	if fi, err := os.Stat(pw); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("password file %v %v", fi, err)
 	}
 }
 

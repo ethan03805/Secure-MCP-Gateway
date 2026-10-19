@@ -702,16 +702,19 @@ jobs:
           retention-days: 14
 
   # FR-11 measurements with the reference workload (cmd/smcp-workload,
-  # docs/acceptance.md) against real smcpd instances on the runner. The
-  # status job publishes build/perf.json as "performance" and merges
-  # build/perf-test.json (a measurement within its CP-32 budget is a
-  # partial claim, one over budget a failing test). Not a required check;
-  # pushes to main and workflow_dispatch only.
+  # docs/acceptance.md) against real smcpd instances on the runner, the
+  # recorded reference hardware class (docs/reference-hardware.md; perf.json
+  # records the run's processor, memory and disk). The status job publishes
+  # build/perf.json as "performance" and merges build/perf-test.json (a
+  # complete measurement within its CP-32 budget on the reference hardware
+  # is a full claim, an incomplete one a partial claim, one over budget a
+  # failing test). Not a required check; pushes to main and
+  # workflow_dispatch only.
   perf:
     name: perf
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -726,16 +729,29 @@ jobs:
           mkdir -p build/perf-bin
           go build -trimpath -o build/perf-bin/ ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-workload
           CGO_ENABLED=0 go build -trimpath -o build/perf-bin/ ./cmd/smcp-refserver
-      - name: Measure FR-11.2, FR-11.4, FR-11.5, FR-11.8 and FR-11.9
+      - name: Measure FR-11.2, FR-11.4, FR-11.5, FR-11.6, FR-11.8 and FR-11.9
         run: |
+          # The graph mirror's engine for FR-11.9, with the CP-33 memory
+          # budget that smcpctl graph config prints (1 GiB heap, 1 GiB page
+          # cache). smcp-workload starts it only for the FR-11.9 measurement,
+          # after the FR-11.4 loads.
+          docker create --name smcp-perf-neo4j -p 127.0.0.1:7687:7687 \
+            -e NEO4J_AUTH=neo4j/smcp-ci-graph-password -e NEO4J_server_http_enabled=false \
+            -e NEO4J_dbms_usage__report_enabled=false -e NEO4J_server_memory_heap_initial__size=1g \
+            -e NEO4J_server_memory_heap_max__size=1g -e NEO4J_server_memory_pagecache_size=1g \
+            neo4j:2026.05.0-community
+          printf '%s' smcp-ci-graph-password > "$RUNNER_TEMP/graph-password"
           build/perf-bin/smcp-workload run --bin build/perf-bin --out build/perf.json --test-json build/perf-test.json \
-            --calls 2000 --decisions 100000 --queries 100 --idle 10m
+            --calls 2000 --decisions 100000 --queries 100 --idle 10m --ingest 10m --rate 2000 \
+            --graph-uri bolt://127.0.0.1:7687 --graph-password-file "$RUNNER_TEMP/graph-password" --graph-container smcp-perf-neo4j
           {
-            echo "## Performance (runner, not reference hardware)"
+            echo "## Performance"
             echo
-            echo "| Requirement | Measurement | Value | Budget | Pass |"
-            echo "|---|---|---|---|---|"
-            jq -r '.measurements[] | "| \(.requirement) | \(.name) (\(.metric)) | \(.value * 1000 | round / 1000) \(.unit) | \(.budget) \(.unit) | \(.pass) |"' build/perf.json
+            jq -r '"Host: \(.host.cpu), \(.host.cpus) processors, \((.host.memoryBytes // 0) / 1073741824 * 10 | round / 10) GiB memory, disk \(.host.diskDevice // "?") \(.host.diskModel // "") \((.host.diskBytes // 0) / 1073741824 | round) GiB (\((.host.diskFreeBytes // 0) / 1073741824 | round) GiB free), image \(.host.image // "?") \(.host.imageVersion // ""). Reference hardware: \(.referenceHardware) \(.referenceClass // "")"' build/perf.json
+            echo
+            echo "| Requirement | Measurement | Value | Budget | Pass | Complete |"
+            echo "|---|---|---|---|---|---|"
+            jq -r '.measurements[] | "| \(.requirement) | \(.name) (\(.metric)) | \(.value * 1000 | round / 1000) \(.unit) | \(.budget) \(.unit) | \(.pass) | \(.complete) |"' build/perf.json
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the results
         if: always()

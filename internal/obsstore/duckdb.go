@@ -4,12 +4,14 @@ package obsstore
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/duckdb/duckdb-go/v2" // official DuckDB driver (cgo)
@@ -35,12 +37,18 @@ type duckStore struct {
 	*base
 	db      *sql.DB // queries and research exports
 	w       *sql.DB // store batches (Append)
+	c       *sql.DB // compaction (Compact)
 	staging string
+	// rw keeps compaction from removing files a query is reading: Scan
+	// and Aggregate hold it shared from listing the files to the last row,
+	// Compact exclusively while it swaps merged files in.
+	rw sync.RWMutex
 }
 
 // writerMemory is the memory limit of the single-threaded instance that
 // writes batches (at most 1,000 rows each, FR-9.5); it comes out of
-// Options.MemoryLimit, so both instances together keep CP-33's bound.
+// Options.MemoryLimit, as does the compaction instance's, so the three
+// instances together keep CP-33's bound.
 const writerMemory = 64 << 20
 
 func openDuckDB(o Options) (Store, error) {
@@ -48,10 +56,10 @@ func openDuckDB(o Options) (Store, error) {
 	queryMem, writeMem := o.MemoryLimit, int64(writerMemory)
 	if o.MemoryLimit > 0 {
 		writeMem = min(writeMem, o.MemoryLimit/4)
-		queryMem = o.MemoryLimit - writeMem
+		queryMem = o.MemoryLimit - 2*writeMem // the compaction instance has as much as the writer
 	}
-	open := func(threads int, mem int64) (*sql.DB, error) {
-		dsn := "?threads=" + strconv.Itoa(threads) + "&" + opts
+	open := func(threads int, mem int64, extra string) (*sql.DB, error) {
+		dsn := "?threads=" + strconv.Itoa(threads) + "&" + opts + extra
 		if mem > 0 {
 			dsn += "&memory_limit=" + strconv.FormatInt(mem>>20, 10) + "MB"
 		}
@@ -65,16 +73,26 @@ func openDuckDB(o Options) (Store, error) {
 		}
 		return db, nil
 	}
-	db, err := open(2, queryMem)
+	db, err := open(2, queryMem, "")
 	if err != nil {
 		return nil, err
 	}
-	w, err := open(1, writeMem)
+	w, err := open(1, writeMem, "")
 	if err != nil {
 		db.Close()
 		return nil, err
 	}
-	s := &duckStore{base: newBase(o), db: db, w: w, staging: filepath.Join(o.Dir, ".staging")}
+	// Compaction merges files in a third single-threaded instance: in the
+	// writer's, a merge held up the batches behind it and the queue filled
+	// (FR-11.6). Row order within a merged file does not matter (queries
+	// order by ts), so DuckDB need not buffer to keep it.
+	c, err := open(1, writeMem, "&preserve_insertion_order=false")
+	if err != nil {
+		db.Close()
+		w.Close()
+		return nil, err
+	}
+	s := &duckStore{base: newBase(o), db: db, w: w, c: c, staging: filepath.Join(o.Dir, ".staging")}
 	if err := os.MkdirAll(s.staging, 0o700); err != nil {
 		s.Close()
 		return nil, err
@@ -85,6 +103,10 @@ func openDuckDB(o Options) (Store, error) {
 		for _, p := range m {
 			os.Remove(p)
 		}
+	}
+	if err := s.finishCompactions(); err != nil {
+		s.Close()
+		return nil, err
 	}
 	return s, nil
 }
@@ -267,6 +289,8 @@ func (s *duckStore) Scan(table string, f Filter, fn func(Row) error) error {
 			return fmt.Errorf("%w: %q", ErrBadColumn, c)
 		}
 	}
+	s.rw.RLock()
+	defer s.rw.RUnlock()
 	src, present, ok, err := s.source(table, f)
 	if err != nil || !ok {
 		return err
@@ -323,6 +347,8 @@ func (s *duckStore) Aggregate(q AggQuery) ([]AggRow, error) {
 	if _, err := validateAgg(s.tables, &q); err != nil {
 		return nil, err
 	}
+	s.rw.RLock()
+	defer s.rw.RUnlock()
 	src, present, ok, err := s.source(q.Table, q.Filter)
 	if err != nil || !ok || !present[q.Feature] {
 		return []AggRow{}, err
@@ -430,13 +456,180 @@ func (s *duckStore) Aggregate(q AggQuery) ([]AggRow, error) {
 }
 
 func (s *duckStore) Retain(now time.Time, keep time.Duration) ([]string, error) {
+	s.rw.Lock()
+	defer s.rw.Unlock()
 	return s.retain(now, keep)
+}
+
+// Compaction (Compactor): every batch is its own Parquet file, up to five
+// a second per table and day (FR-9.5), and a query opens every file of its
+// range, so that queries over 30 days slowed with the number of batches
+// rather than the number of rows. Compact merges the small files of each
+// partition into one.
+const (
+	// CompactFiles is the number of small files a partition must hold
+	// before Compact merges them.
+	CompactFiles = 16
+	// compactSmall is the size below which a file is merged; larger files
+	// (earlier merges) are left alone, so a partition is not rewritten
+	// whole at every compaction.
+	compactSmall = 32 << 20
+	// compactRowGroup bounds the rows the single-threaded writer instance
+	// buffers per row group, within its memory limit (writerMemory, as the writer).
+	compactRowGroup = 16384
+)
+
+// Compact merges, in every table and day partition, the files smaller than
+// compactSmall into one file when there are at least CompactFiles of them.
+// The merged file is written beside them under a temporary name; it
+// replaces them while no query is reading (rw) and no batch or retention
+// is changing the partition (mu). It returns the number of files merged.
+func (s *duckStore) Compact() (int, error) {
+	merged := 0
+	for name := range s.tables {
+		days, err := s.days(name, Filter{})
+		if err != nil {
+			return merged, err
+		}
+		for _, d := range days {
+			t0 := time.Now()
+			n, err := s.compactPartition(name, d)
+			merged += n
+			if err != nil {
+				return merged, err
+			}
+			// Pause as long as the merge took: batches written while a
+			// merge ran took longer, and at 2,000 records per second a run
+			// of merges without pauses filled the writer's queue (FR-11.6).
+			if n > 0 {
+				time.Sleep(time.Since(t0))
+			}
+		}
+	}
+	return merged, nil
+}
+
+func (s *duckStore) compactPartition(table, day string) (int, error) {
+	dir := s.partDir(table, day)
+	all, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	if err != nil {
+		return 0, err
+	}
+	var small []string
+	for _, p := range all {
+		if fi, err := os.Stat(p); err == nil && fi.Size() < compactSmall {
+			small = append(small, p)
+		}
+	}
+	if len(small) < CompactFiles {
+		return 0, nil
+	}
+	sort.Strings(small)
+	lits := make([]string, len(small))
+	for i, p := range small {
+		lits[i] = sqlString(p)
+	}
+	part := filepath.Join(dir, s.nextName()+".parquet")
+	q := fmt.Sprintf("COPY (SELECT * FROM read_parquet([%s], union_by_name=true)) TO %s (FORMAT parquet, COMPRESSION zstd, ROW_GROUP_SIZE %d)", //nolint:gosec // G201: quoted path literals and a numeric constant only
+		strings.Join(lits, ","), sqlString(part+".tmp"), compactRowGroup)
+	if _, err := s.c.Exec(q); err != nil {
+		os.Remove(part + ".tmp")
+		return 0, fmt.Errorf("duckdb: compact %s/day=%s: %w", table, day, err)
+	}
+	if err := os.Chmod(part+".tmp", 0o600); err != nil {
+		os.Remove(part + ".tmp")
+		return 0, err
+	}
+	s.rw.Lock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	defer s.rw.Unlock()
+	// Retention may have removed the partition while the merge ran.
+	if _, err := os.Stat(dir); err != nil {
+		os.Remove(part + ".tmp")
+		return 0, nil
+	}
+	// The marker lists the merged files; after a crash between the rename
+	// and their removal, open removes them (finishCompactions), so no row
+	// is counted twice.
+	marker := filepath.Join(dir, compactMarker+filepath.Base(part))
+	if err := writeSynced(marker, []byte(strings.Join(small, "\n")+"\n")); err != nil {
+		os.Remove(part + ".tmp")
+		return 0, err
+	}
+	if err := os.Rename(part+".tmp", part); err != nil {
+		os.Remove(part + ".tmp")
+		os.Remove(marker)
+		return 0, err
+	}
+	for _, p := range small {
+		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+			return len(small), err
+		}
+	}
+	return len(small), os.Remove(marker)
+}
+
+// compactMarker starts the name of a compaction's marker file.
+const compactMarker = ".compact-"
+
+func writeSynced(path string, b []byte) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(b); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+// finishCompactions completes or abandons the compactions a crash
+// interrupted: when the merged file exists, the files it replaced are
+// removed; otherwise they stay and the partial merge is removed.
+func (s *duckStore) finishCompactions() error {
+	for name := range s.tables {
+		days, err := s.days(name, Filter{})
+		if err != nil {
+			return err
+		}
+		for _, d := range days {
+			dir := s.partDir(name, d)
+			markers, _ := filepath.Glob(filepath.Join(dir, compactMarker+"*"))
+			for _, m := range markers {
+				part := filepath.Join(dir, strings.TrimPrefix(filepath.Base(m), compactMarker))
+				if _, err := os.Stat(part); err == nil {
+					b, err := os.ReadFile(m)
+					if err != nil {
+						return err
+					}
+					for _, p := range strings.Fields(string(b)) {
+						if filepath.Dir(p) == dir {
+							os.Remove(p)
+						}
+					}
+				}
+				os.Remove(part + ".tmp")
+				os.Remove(m)
+			}
+			tmps, _ := filepath.Glob(filepath.Join(dir, "*.parquet.tmp"))
+			for _, p := range tmps {
+				os.Remove(p)
+			}
+		}
+	}
+	return nil
 }
 
 func (s *duckStore) Stats() (Stats, error) { return s.stats("duckdb") }
 
 func (s *duckStore) Close() error {
-	werr := s.w.Close()
+	werr := errors.Join(s.w.Close(), s.c.Close())
 	if err := s.db.Close(); err != nil {
 		return err
 	}

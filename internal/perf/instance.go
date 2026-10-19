@@ -305,26 +305,58 @@ func (in *instance) session(ctx context.Context) (*mcp.ClientSession, error) {
 		HTTPClient: &http.Client{Transport: bearer{tok, &http.Transport{TLSClientConfig: tc}}}}, nil)
 }
 
-// api sends a control API GET with the operator token and returns the
-// status and the time it took.
-func (in *instance) api(hc *http.Client, path string) (int, time.Duration, error) {
+// waitGraphReady waits until the instance's graph mirror reports state
+// "ready" (connected, schema applied, caught up), or fails after d.
+func (in *instance) waitGraphReady(d time.Duration) error {
+	hc, err := in.httpClient()
+	if err != nil {
+		return err
+	}
+	deadline := time.Now().Add(d)
+	last := ""
+	for time.Now().Before(deadline) {
+		code, _, body, err := in.apiGet(hc, "/api/v1/graph/status")
+		if err == nil && code == http.StatusOK {
+			var st struct {
+				State string `json:"state"`
+				Error string `json:"error"`
+			}
+			if json.Unmarshal(body, &st) == nil {
+				if st.State == "ready" {
+					return nil
+				}
+				last = st.State + " " + st.Error
+			}
+		}
+		time.Sleep(time.Second)
+	}
+	return fmt.Errorf("graph mirror not ready after %s (last state %q)", d, strings.TrimSpace(last))
+}
+
+// apiGet sends a control API GET with the operator token and returns the
+// status, the time it took and the response body; the time includes
+// reading it.
+func (in *instance) apiGet(hc *http.Client, path string) (int, time.Duration, []byte, error) {
 	tok, err := os.ReadFile(filepath.Join(in.state, "keys", "admin.token"))
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://127.0.0.1:%d%s", in.adminPort, path), nil)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(tok)))
 	t0 := time.Now()
 	resp, err := hc.Do(req)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
-	_, _ = io.Copy(io.Discard, resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	return resp.StatusCode, time.Since(t0), nil
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	return resp.StatusCode, time.Since(t0), body, nil
 }
 
 // overheads reads the journal and returns, per delivered call, the

@@ -2,12 +2,15 @@ package perf
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,8 +27,21 @@ type RunOptions struct {
 	Decisions int           // decisions for FR-11.2 (default 100,000)
 	Queries   int           // repetitions of the console query set (default 100)
 	Idle      time.Duration // wait before the idle memory sample (default 10 minutes)
-	Commit    string
-	Log       io.Writer
+	Ingest    time.Duration // FR-11.6 replay duration (default IngestDuration)
+	Rate      int           // FR-11.6 replay rate in records per second (default IngestRate)
+	// The graph mirror's engine for FR-11.9: with GraphURI set, the idle
+	// instance runs the graph mirror against it (Bolt URI, user and
+	// password file), and the idle sample adds the resident memory of
+	// process GraphPID (the engine, for example a container's first
+	// process) and its descendants.
+	GraphURI, GraphUser, GraphPasswordFile string
+	GraphPID                               int
+	// GraphContainer names a created, stopped container of the graph
+	// engine that Run starts (docker start) for the FR-11.9 measurement
+	// only, takes GraphPID from, and stops at the end.
+	GraphContainer string
+	Commit         string
+	Log            io.Writer
 }
 
 func (o *RunOptions) defaults() {
@@ -44,13 +60,20 @@ func (o *RunOptions) defaults() {
 	if o.Idle <= 0 {
 		o.Idle = 10 * time.Minute
 	}
+	if o.Ingest <= 0 {
+		o.Ingest = IngestDuration
+	}
+	if o.Rate <= 0 {
+		o.Rate = IngestRate
+	}
 	if o.Log == nil {
 		o.Log = io.Discard
 	}
 }
 
-// Run measures FR-11.2, FR-11.4, FR-11.5, FR-11.8 and FR-11.9 with the
-// reference workload against real smcpd instances.
+// Run measures FR-11.2, FR-11.4, FR-11.5, FR-11.6, FR-11.8 and FR-11.9
+// with the reference workload against real smcpd instances, and records
+// whether the host is the recorded reference hardware.
 func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	o.defaults()
 	say := func(f string, a ...any) { fmt.Fprintf(o.Log, "smcp-workload: "+f+"\n", a...) }
@@ -58,20 +81,12 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := &Results{Schema: 1, Commit: o.Commit, GeneratedAt: time.Now().UTC().Format(time.RFC3339), Host: CurrentHost(),
+	res := &Results{Schema: 1, Commit: o.Commit, GeneratedAt: time.Now().UTC().Format(time.RFC3339), Host: CurrentHost(o.Work),
 		Dataset: Dataset{Rules: RefRules, RegistryNodes: RefRegistryNodes, Candidates: RefCandidates, Events: RefEvents, Days: RefDays, Callers: o.Callers}}
-
-	// FR-11.9: an idle instance, started first and sampled last.
-	idle, err := newInstance(o.BinDir, filepath.Join(o.Work, "idle"), "", doc)
-	if err != nil {
-		return nil, err
+	if res.ReferenceHardware = ReferenceClass(res.Host); res.ReferenceHardware {
+		res.ReferenceClass = ReferenceClassName
 	}
-	if err := idle.start(); err != nil {
-		return nil, err
-	}
-	defer idle.stop()
-	idleSince := time.Now()
-	say("idle instance started; memory is sampled after %s", o.Idle)
+	full := o.Callers == RefCallers // every load uses the reference callers
 
 	// FR-11.2: decisions against the reference policy.
 	say("FR-11.2: %d decisions, %d callers, %d candidate rules", o.Decisions, o.Callers, RefCandidates)
@@ -81,7 +96,7 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	}
 	p95 := Quantile(lat, 0.95)
 	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.2", Name: "Decision latency", Metric: "p95", Unit: "ms",
-		Value: p95, Budget: BudgetDecisionMs, Ceiling: CeilingDecisionMs, Samples: len(lat), Pass: p95 <= BudgetDecisionMs,
+		Value: p95, Budget: BudgetDecisionMs, Ceiling: CeilingDecisionMs, Samples: len(lat), Pass: p95 <= BudgetDecisionMs, Complete: full && len(lat) >= 100000,
 		Method: fmt.Sprintf("policy.Decider.Decide on the compiled reference policy (%d rules, %d candidates per decision), %d concurrent callers, latency as the caller sees it", RefRules, RefCandidates, o.Callers)})
 
 	// FR-11.4 and FR-11.5: load against three instances.
@@ -115,7 +130,7 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	}
 	p95 = Quantile(syncScoring, 0.95)
 	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.5", Name: "Gateway-added overhead (P-213)", Metric: "p95", Unit: "ms",
-		Value: p95, Budget: BudgetOverheadMs, Ceiling: CeilingOverheadMs, Samples: len(syncScoring), Pass: p95 <= BudgetOverheadMs,
+		Value: p95, Budget: BudgetOverheadMs, Ceiling: CeilingOverheadMs, Samples: len(syncScoring), Pass: p95 <= BudgetOverheadMs, Complete: full && o.Calls >= 2000,
 		Method: fmt.Sprintf("real smcpd with synchronous scoring, %d concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (request receipt to delivered, minus dispatched to the backend's response)", o.Callers)})
 	// Eight instances of each condition in the order of CaptureOrder, so
 	// that warm-up and drift on the runner affect both conditions alike;
@@ -151,48 +166,132 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 		}
 		runs = append(runs, captureRun{enabled: enabled, p95: Quantile(lat, 0.95), n: len(lat)})
 	}
-	res.Measurements = append(res.Measurements, captureMeasurement(runs, onMemory))
+	cm := captureMeasurement(runs, onMemory)
+	cm.Complete = full && o.Calls >= 2000 && cm.Samples > 0
+	res.Measurements = append(res.Measurements, cm)
 
-	// FR-11.8: the console's audit queries over 30 days of reference data.
+	// FR-11.9: an idle instance, started after the load measurements and
+	// sampled o.Idle after its start while the FR-11.6 replay and the
+	// FR-11.8 queries run on another instance (it gets no traffic). The
+	// graph engine, when perf starts it (GraphContainer), starts here too:
+	// a JVM starting beside the FR-11.4 loads took processor time from
+	// both conditions and added about 3 ms to their P-213.
+	if o.GraphContainer != "" {
+		pid, stop, err := startGraphContainer(ctx, o.GraphContainer)
+		if err != nil {
+			return nil, err
+		}
+		defer stop()
+		o.GraphPID = pid
+		say("graph engine container %s started (process %d)", o.GraphContainer, pid)
+	}
+	idleExtra, err := graphConfig(o, filepath.Join(o.Work, "graph-password"))
+	if err != nil {
+		return nil, err
+	}
+	idle, err := newInstance(o.BinDir, filepath.Join(o.Work, "idle"), idleExtra, doc)
+	if err != nil {
+		return nil, err
+	}
+	if err := idle.start(); err != nil {
+		return nil, err
+	}
+	defer idle.stop()
+	idleSince := time.Now()
+	if o.GraphURI != "" {
+		if err := idle.waitGraphReady(3 * time.Minute); err != nil {
+			return nil, err
+		}
+		say("idle instance: graph mirror ready on %s", o.GraphURI)
+	}
+	type rssSample struct {
+		bytes, graph int64
+		procs        int
+		at           time.Duration
+		err          error
+	}
+	idleRSS := make(chan rssSample, 1)
+	sampleCtx, stopSample := context.WithCancel(ctx)
+	defer stopSample()
+	go func() {
+		select {
+		case <-sampleCtx.Done():
+			idleRSS <- rssSample{err: sampleCtx.Err()}
+		case <-time.After(o.Idle):
+			s := rssSample{at: time.Since(idleSince)}
+			s.bytes, s.err = idle.rssBytes()
+			if s.err == nil && o.GraphPID > 0 {
+				s.graph, s.procs, s.err = treeRSS(o.GraphPID)
+			}
+			idleRSS <- s
+		}
+	}()
+	say("idle instance started; memory is sampled after %s", o.Idle)
+
+	// FR-11.6 and FR-11.8: the reference data of the query instance, the
+	// 30-day journal and 30 days of observation records. The records are
+	// written by the FR-11.6 replay, through the analytics store writer
+	// into the instance's Observation Store, before smcpd opens it.
 	qi, err := newInstance(o.BinDir, filepath.Join(o.Work, "queries"), "", doc)
 	if err != nil {
 		return nil, err
 	}
+	now := time.Now()
 	say("FR-11.8: writing %d journal events over %d days", RefEvents, RefDays)
-	n, err := WriteJournal(qi.state, RefEvents, RefDays, time.Now())
+	n, err := WriteJournal(qi.state, RefEvents, RefDays, now)
 	if err != nil {
 		return nil, err
 	}
+	say("FR-11.6: replaying %d observation records per second for %s (times over %d days)", o.Rate, o.Ingest, RefDays)
+	ing, err := ReplayIngest(ctx, qi.cfg, o.Rate, o.Ingest, RefDays, now)
+	if err != nil {
+		return nil, err
+	}
+	res.Dataset.ObservationRecords = int(ing.Offered)
+	res.Measurements = append(res.Measurements, ingestMeasurement(ing, o.Rate, o.Ingest))
 	if err := qi.start(); err != nil {
 		return nil, err
 	}
-	qlat, err := queries(qi, o.Queries)
+	qlat, nAudit, nAnalytics, err := queries(qi, o.Queries, now)
 	qi.stop()
 	if err != nil {
 		return nil, err
 	}
 	p95 = Quantile(qlat, 0.95)
-	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.8", Name: "Console query latency", Metric: "p95", Unit: "ms",
+	qm := Measurement{Requirement: "FR-11.8", Name: "Console query latency", Metric: "p95", Unit: "ms",
 		Value: p95, Budget: BudgetQueryMs, Samples: len(qlat), Pass: p95 <= BudgetQueryMs,
-		Method: fmt.Sprintf("the console's audit queries (latest page, by class, by reason, by correlation, by time window, text search) over a journal of %d events spanning %d days, %d repetitions", n, RefDays, o.Queries),
-		Note:   "audit queries only; analytics queries over 30 days of observation data are not in the reference dataset yet"})
+		Complete: o.Queries >= 100 && ing.Stats.Written > 0 && ing.Days >= RefDays && ing.Backend == "duckdb",
+		Method: fmt.Sprintf("the console's standard query set, %d audit queries (latest page, by class, by reason, by correlation, by time window, text search) over a journal of %d events spanning %d days and %d analytics queries (feature aggregates by tool, principal, server and context with time buckets, quantiles and a histogram, record listings by principal, tool and time window, anomalies) over %d observation records and %d scoring rows spanning %d days in the %s store, %d repetitions; p95 over every request",
+			nAudit, n, RefDays, nAnalytics, ing.Offered, ing.Scores, ing.Days, ing.Backend, o.Queries)}
+	if ing.Stats.Written == 0 {
+		qm.Note = "no observation records were written"
+	}
+	res.Measurements = append(res.Measurements, qm)
 
-	// FR-11.9: wait out the idle period, then sample.
+	// FR-11.9: the sample taken o.Idle after the idle instance started.
+	var s rssSample
 	if wait := o.Idle - time.Since(idleSince); wait > 0 {
 		say("FR-11.9: waiting %s for the idle sample", wait.Round(time.Second))
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(wait):
-		}
 	}
-	rss, err := idle.rssBytes()
-	if err != nil {
-		return nil, err
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case s = <-idleRSS:
 	}
-	res.Measurements = append(res.Measurements, Measurement{Requirement: "FR-11.9", Name: "Idle resident memory", Metric: "RSS", Unit: "MiB",
-		Value: float64(rss) / (1 << 20), Budget: float64(BudgetIdleRSSBytes) / (1 << 20), Samples: 1, Pass: rss <= BudgetIdleRSSBytes,
-		Method: fmt.Sprintf("resident set size of smcpd %s after start with no traffic, Data Server off (no Neo4j); server instances excluded", time.Since(idleSince).Round(time.Second))})
+	if s.err != nil {
+		return nil, s.err
+	}
+	m := Measurement{Requirement: "FR-11.9", Name: "Idle resident memory", Metric: "RSS", Unit: "MiB",
+		Value: float64(s.bytes+s.graph) / (1 << 20), Budget: float64(BudgetIdleRSSBytes) / (1 << 20), Samples: 1, Pass: s.bytes+s.graph <= BudgetIdleRSSBytes,
+		Complete: o.GraphURI != "" && o.GraphPID > 0 && s.at >= 10*time.Minute,
+		Method:   fmt.Sprintf("resident set size of smcpd %s after start with no traffic, Standalone profile, graph mirror off; server instances excluded", s.at.Round(time.Second)),
+		Note:     "the graph mirror's engine (Neo4j) is not included"}
+	if o.GraphPID > 0 {
+		m.Method = fmt.Sprintf("combined resident set size %s after start with no traffic: smcpd (%.1f MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at %s (%.1f MiB in %d processes, process %d and its descendants); server instances, browsers and models excluded",
+			s.at.Round(time.Second), float64(s.bytes)/(1<<20), o.GraphURI, float64(s.graph)/(1<<20), s.procs, o.GraphPID)
+		m.Note = ""
+	}
+	res.Measurements = append(res.Measurements, m)
 	return res, nil
 }
 
@@ -237,16 +336,12 @@ func drive(ctx context.Context, in *instance, calls, callers int) error {
 	return <-errs
 }
 
-// queries runs the console's audit query set reps times and returns each
-// request's latency in milliseconds.
-func queries(in *instance, reps int) ([]float64, error) {
-	hc, err := in.httpClient()
-	if err != nil {
-		return nil, err
-	}
-	now := time.Now().UTC()
+// auditQuerySet is the console's audit queries over the reference journal
+// whose newest event is at now.
+func auditQuerySet(now time.Time) []string {
+	now = now.UTC()
 	window := url.Values{"since": {now.Add(-15 * 24 * time.Hour).Format(time.RFC3339)}, "until": {now.Add(-14 * 24 * time.Hour).Format(time.RFC3339)}, "limit": {"100"}}
-	set := []string{
+	return []string{
 		"/api/v1/audit/events?limit=100",
 		"/api/v1/audit/events?class=decision&limit=100",
 		"/api/v1/audit/events?reason_code=NO_PERMIT&limit=100",
@@ -254,20 +349,73 @@ func queries(in *instance, reps int) ([]float64, error) {
 		"/api/v1/audit/events?" + window.Encode(),
 		"/api/v1/audit/events?q=read_file&limit=50",
 	}
-	var out []float64
-	for range reps {
+}
+
+// analyticsQuerySet is the console's analytics queries (the Analytics
+// views, docs/api/observation.md) over 30 days of observation records
+// whose newest record is at now: each is bounded by a time range, a group
+// count or a row limit.
+func analyticsQuerySet(now time.Time) []string {
+	now = now.UTC()
+	from := now.Add(-RefDays * 24 * time.Hour).Format(time.RFC3339)
+	to := now.Add(time.Minute).Format(time.RFC3339)
+	day := url.Values{"from": {now.Add(-8 * 24 * time.Hour).Format(time.RFC3339)}, "to": {now.Add(-7 * 24 * time.Hour).Format(time.RFC3339)}}
+	agg := func(v url.Values) string {
+		v.Set("from", from)
+		v.Set("to", to)
+		return "/api/v1/observations/aggregate?" + v.Encode()
+	}
+	return []string{
+		agg(url.Values{"feature": {"end_to_end_latency"}, "group_by": {"tool_name"}, "bucket": {"24h"}, "quantiles": {"0.5,0.95,0.99"}}),
+		agg(url.Values{"feature": {"gateway_overhead"}, "group_by": {"server_id"}, "quantiles": {"0.5,0.95"}, "histogram": {"1,2,5,10,20,50"}}),
+		agg(url.Values{"feature": {"request_bytes"}, "group_by": {"principal_id"}, "bucket": {"6h"}}),
+		agg(url.Values{"feature": {"response_bytes"}, "group_by": {"context"}, "quantiles": {"0.5,0.95"}}),
+		agg(url.Values{"feature": {"server_execution_time"}, "tool": {"read_file"}, "bucket": {"1h"}, "quantiles": {"0.95"}}),
+		"/api/v1/observations/aggregate?" + url.Values{"feature": {"argument_entropy"}, "group_by": {"tool_name"}, "bucket": {"1h"}, "from": day["from"], "to": day["to"]}.Encode(),
+		"/api/v1/observations?" + url.Values{"tool": {"fetch"}, "limit": {"100"}, "from": {from}, "to": {to}}.Encode(),
+		"/api/v1/observations?" + url.Values{"principal": {"workload-3"}, "limit": {"100"}, "from": day["from"], "to": day["to"]}.Encode(),
+		"/api/v1/anomalies?" + url.Values{"from": {from}, "to": {to}, "limit": {"100"}}.Encode(),
+	}
+}
+
+// queries runs the console's standard query set (audit and analytics) reps
+// times and returns each request's latency in milliseconds and the number
+// of audit and analytics queries in the set.
+func queries(in *instance, reps int, now time.Time) (lat []float64, nAudit, nAnalytics int, err error) {
+	hc, err := in.httpClient()
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	audit, analytics := auditQuerySet(now), analyticsQuerySet(now)
+	set := append(append([]string{}, audit...), analytics...)
+	for rep := range reps {
 		for _, p := range set {
-			code, d, err := in.api(hc, p)
+			code, d, body, err := in.apiGet(hc, p)
 			if err != nil {
-				return nil, err
+				return nil, 0, 0, err
 			}
 			if code != 200 {
-				return nil, fmt.Errorf("GET %s: %d", p, code)
+				return nil, 0, 0, fmt.Errorf("GET %s: %d", p, code)
 			}
-			out = append(out, float64(d.Nanoseconds())/1e6)
+			// Every query of the set finds data in the reference dataset;
+			// an empty answer would measure nothing.
+			if rep == 0 && !hasRows(body) {
+				return nil, 0, 0, fmt.Errorf("GET %s: no rows in the reference dataset", p)
+			}
+			lat = append(lat, float64(d.Nanoseconds())/1e6)
 		}
 	}
-	return out, nil
+	return lat, len(audit), len(analytics), nil
+}
+
+// hasRows reports whether a control API answer lists at least one row or
+// event.
+func hasRows(body []byte) bool {
+	var v struct {
+		Rows   []json.RawMessage `json:"rows"`
+		Events []json.RawMessage `json:"events"`
+	}
+	return json.Unmarshal(body, &v) == nil && len(v.Rows)+len(v.Events) > 0
 }
 
 // captureBlock is two enabled-disabled-disabled-enabled blocks, the second
@@ -343,4 +491,48 @@ func orderText(runs []captureRun) string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// graphConfig returns the idle instance's [graph] table for o.GraphURI,
+// with the password copied to pwPath (mode 0600, as the mirror requires),
+// or "" without a graph engine.
+func graphConfig(o RunOptions, pwPath string) (string, error) {
+	if o.GraphURI == "" {
+		return "", nil
+	}
+	pw, err := os.ReadFile(o.GraphPasswordFile)
+	if err != nil {
+		return "", fmt.Errorf("graph password: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(pwPath), 0o700); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(pwPath, pw, 0o600); err != nil {
+		return "", err
+	}
+	user := o.GraphUser
+	if user == "" {
+		user = "neo4j"
+	}
+	return fmt.Sprintf("\n[graph]\nenabled = true\nuri = %q\nusername = %q\npassword_file = %q\n", o.GraphURI, user, pwPath), nil
+}
+
+// startGraphContainer starts the stopped container name with docker and
+// returns its first process's ID and a function that stops it.
+func startGraphContainer(ctx context.Context, name string) (int, func(), error) {
+	if out, err := exec.CommandContext(ctx, "docker", "start", name).CombinedOutput(); err != nil {
+		return 0, nil, fmt.Errorf("docker start %s: %w: %s", name, err, out)
+	}
+	stop := func() { _ = exec.Command("docker", "stop", name).Run() }
+	out, err := exec.CommandContext(ctx, "docker", "inspect", "-f", "{{.State.Pid}}", name).Output()
+	if err != nil {
+		stop()
+		return 0, nil, fmt.Errorf("docker inspect %s: %w", name, err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil || pid <= 0 {
+		stop()
+		return 0, nil, fmt.Errorf("docker inspect %s: process %q", name, out)
+	}
+	return pid, stop, nil
 }

@@ -46,7 +46,6 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 
 ## E-01 Harness Interface Endpoint
 
-- FR-11.5 external: the CI job `perf` measures p95 P-213 (request receipt to delivery minus server execution to the backend's response) for 64 KiB results at eight concurrent calls with synchronous scoring (partial claim, `cmd/smcp-workload`; 17.4 ms and 19.0 ms on 4-CPU runners, 27.1 ms in the run of main `ee2e851`, 18.9 ms at `788c8b4`, 11.7 ms at `1a96b1c`, budget 50 ms); no measurement on recorded reference hardware. AT-20 in the go job checks only the time before dispatch and after the completed event.
 
 ## E-02 Protocol Mediator
 
@@ -62,7 +61,6 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 
 ## E-06 Policy Decision Service
 
-- FR-11.2 external: the CI job `perf` measures p95 decision latency for 100,000 decisions with 256 candidate rules and eight callers (partial claim; 0.03 ms at `788c8b4`, 0.011 ms at `1a96b1c`, budget 10 ms); no measurement on recorded reference hardware.
 
 ## E-08 Access Enforcement Point
 
@@ -97,7 +95,6 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 - FR-8.24 external: the Demonstration with three first-time users has not been run. A scripted run of the same G-04 task (`console/e2e/firsttime.spec.ts`, record `FR-8.24.md`) completes it in 16 actions in all three engines; it is not a person's time.
 - FR-8.30 external: the console suite passed in Chromium 156, Firefox 157 and WebKit 27.2 of Playwright 1.64.1 (supporting record `FR-8.30.md`, partial claim in CI); the previous major version of each browser and Safari itself are not run.
 - FR-8.32, FR-8.33 unverified (partial claims): `console/e2e/a11y.spec.ts` runs axe on every view as it loads and tabs through every control of every view in all three browsers (WebKit with Option+Tab); `console/e2e/keyboard.spec.ts` completes the actions of every view G-01 to G-14 and Egress with keyboard events only in all three browsers and runs axe on each intermediate state; G-08 key rotation and graph rebuild, G-14 journal export downloads, the Runtime instance kill, and, on a dedicated Gateway, G-10 suspend and enable of the running server and the G-01 health acknowledgment are done with keyboard events too; the manual checks are in `FR-8.32.md` (Chromium, Firefox) and `FR-8.32-webkit.md`. The accepted graph rebuild is done with the keyboard on a dedicated Gateway with the graph mirror (`console/e2e/decision.spec.ts`; the console job runs Neo4j in a service container). Missing: a real instance for the Runtime kill (the acceptance Gateway runs no sandboxed instance, so its instance table is mocked).
-- FR-11.8 external: the CI job `perf` measures the console's audit queries over a 100,000-event, 30-day journal (partial claim; 803 ms p95 at `788c8b4`, 484 ms at `1a96b1c`, budget 2,000 ms); analytics queries over 30 days of observation data and reference hardware are missing. The journal has no index (E-21 note).
 
 ## E-25 Graph Database Engine
 
@@ -109,11 +106,9 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 
 ## E-28 Data Lifecycle & Memory Manager
 
-- FR-11.9 external: the CI job `perf` samples the idle `smcpd` resident memory 10 minutes after start (partial claim; 103 MiB at `788c8b4`, 102 MiB at `1a96b1c`, budget 4 GiB); not on recorded reference hardware.
 
 ## E-29 Observation Collector
 
-- FR-11.4 external: the CI job `perf` compares p95 P-213 with observation enabled and disabled over sixteen fresh instances in a balanced order, each load after `sync(2)` and with the instances' state on a memory file system (partial claim; 0.52 to 0.95 ms on EPYC 7763 runners, mean 0.73 over fourteen runs, and 0.1 to 0.6 ms on EPYC 9V74 and Xeon runners, after the changes of 2026-10-18, 0.26 ms at `1a96b1c`; the runners' processor model varies between runs); no measurement on recorded reference hardware.
 
 ## E-31 Anomaly Scorer
 
@@ -135,3 +130,5 @@ Updated on 2026-10-18 by the v1.1.0 release: v1.1.0 (main `935dc4d`, release run
 Updated on 2026-10-18 by the install-ops partials work: FR-13.5 is verified by `cmd/smcpctl.TestEnforcedInstallOnHost` on the linux-integration host, and FR-13.4 and FR-13.11 are claimed in full by `tools/reqreport.TestInstallProfilesEvidence` from the Standalone (macOS arm64, Ubuntu) and Enforced results of the same CI run. A Standalone `smcpctl uninstall` no longer removes the nftables table, AppArmor profiles, system units or service identities of an Enforced installation on the same host.
 
 Updated on 2026-10-19 by the agents-partials work: the Real agents workflow has a `lockdown` job (`scripts/agents/lockdown.go`). Claude Code 2.1.302 follows its quick start (option B), connects over TLS with only what `smcpctl clients setup` wrote, and with the managed-settings lockdown applied a second MCP server in user and project scope does not load, the Read of the Gateway state directory and the Edit of its own `.mcp.json` are refused, and `smcpctl doctor` reports the extra servers (run 39184564500). The first run found that `smcpctl lockdown apply` wrote the managed file with mode 0600, which Claude Code ignored; it is now 0644. The job's result claims FR-15.2 and the matrix job's result claims FR-15.8 through `site-data/workflows.json` (partial from main, full from a release tag), and the broken-build check now runs every client. FR-15.1, FR-15.7, SR-4.9-1 and SR-4.11-1 stay partial: only Claude Code is locked down and run through `smcpctl clients setup` by CI; the lockdown mechanisms recorded for Codex CLI, OpenCode, Gemini CLI and Goose are not yet confirmed against their pinned versions.
+
+Updated on 2026-10-18 by the perf work: the GitHub-hosted `ubuntu-24.04` standard runner class (x86_64, 4 vCPU, 16 GiB, SSD) is the recorded reference hardware of FR-11 (SRS §1.6, [reference-hardware.md](../reference-hardware.md)). `perf.json` records each run's processor, memory and disk, and a complete measurement within budget on that class is a full claim. The FR-11.2, FR-11.4, FR-11.5, FR-11.8 and FR-11.9 lines are removed. The CI job `perf` now also runs the FR-11.6 replay (2,000 records per second for 10 minutes through the analytics store writer into the DuckDB store, no backpressure signal) and the FR-11.8 analytics queries over the 30 days of observation data that replay writes. FR-11.9 now includes the graph engine (Neo4j, CP-33 budget). In the dispatch run 39190807816 of this branch (AMD EPYC 9V45, `referenceHardware` true), every measurement passed and was complete: FR-11.2 0.011 ms, FR-11.4 0.42 ms, FR-11.5 9.4 ms, FR-11.6 2,000 records/s with no offer at 80% queue occupancy and no drop, FR-11.8 458 ms p95 over 1,200,000 observation records and the 100,000-event journal, FR-11.9 1,541 MiB (smcpd 120 MiB, Neo4j 1,421 MiB). The earlier run 39187565839 on an EPYC 7763 runner measured FR-11.4 at 1.19 ms while Neo4j ran from the start of the job; the engine now starts after the FR-11.4 loads. On EPYC 7763 runners FR-11.4 had measured 0.52 to 0.95 ms before, so its margin stays thin there. FR-11 itself is reviewed by Analysis against a performance report and still needs a record that cites a passing `perf` run of main with every child verified. FR-11.6 and FR-11.8 are measured with the DuckDB store of the SRS stack. The release archives are built without cgo, and their JSON Lines fallback store is not measured at this volume.

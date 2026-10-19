@@ -36,8 +36,13 @@ type Measurement struct {
 	Ceiling     float64 `json:"ceiling,omitempty"`
 	Samples     int     `json:"samples"`
 	Pass        bool    `json:"pass"`
-	Method      string  `json:"method"`
-	Note        string  `json:"note,omitempty"`
+	// Complete reports that the measurement covers the requirement's whole
+	// verification statement (the full sample count, duration or query
+	// set); with the run on the recorded reference hardware a passing
+	// complete measurement verifies its requirement.
+	Complete bool   `json:"complete"`
+	Method   string `json:"method"`
+	Note     string `json:"note,omitempty"`
 }
 
 // Host describes the machine the measurements ran on.
@@ -48,6 +53,20 @@ type Host struct {
 	CPU       string `json:"cpu,omitempty"`
 	GoVersion string `json:"goVersion"`
 	Runner    string `json:"runner,omitempty"`
+	// MemoryBytes is the physical memory (MemTotal of /proc/meminfo).
+	MemoryBytes int64 `json:"memoryBytes,omitempty"`
+	// DiskBytes and DiskFreeBytes are the size and free space of the file
+	// system that holds the work directory, DiskDevice its device and
+	// DiskModel the device's model where the kernel reports one.
+	DiskBytes  int64  `json:"diskBytes,omitempty"`
+	DiskFree   int64  `json:"diskFreeBytes,omitempty"`
+	DiskDevice string `json:"diskDevice,omitempty"`
+	DiskModel  string `json:"diskModel,omitempty"`
+	// RunnerEnvironment, Image and ImageVersion are the GitHub Actions
+	// runner's RUNNER_ENVIRONMENT, ImageOS and ImageVersion.
+	RunnerEnvironment string `json:"runnerEnvironment,omitempty"`
+	Image             string `json:"image,omitempty"`
+	ImageVersion      string `json:"imageVersion,omitempty"`
 }
 
 // Results is the perf.json document the status data publishes as
@@ -57,16 +76,20 @@ type Results struct {
 	Commit      string `json:"commit"`
 	GeneratedAt string `json:"generatedAt"`
 	Host        Host   `json:"host"`
-	// ReferenceHardware is false unless the run was on the recorded
-	// reference hardware of FR-11; CI runners are not.
+	// ReferenceHardware reports that the run was on the recorded reference
+	// hardware of FR-11 (ReferenceClass, docs/reference-hardware.md), and
+	// ReferenceClass then names it.
 	ReferenceHardware bool          `json:"referenceHardware"`
+	ReferenceClass    string        `json:"referenceClass,omitempty"`
 	Dataset           Dataset       `json:"dataset"`
 	Measurements      []Measurement `json:"measurements"`
 }
 
-// CurrentHost describes this machine.
-func CurrentHost() Host {
-	h := Host{OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), GoVersion: runtime.Version(), Runner: os.Getenv("RUNNER_NAME")}
+// CurrentHost describes this machine; work is the directory whose file
+// system is recorded as its disk.
+func CurrentHost(work string) Host {
+	h := Host{OS: runtime.GOOS, Arch: runtime.GOARCH, CPUs: runtime.NumCPU(), GoVersion: runtime.Version(), Runner: os.Getenv("RUNNER_NAME"),
+		RunnerEnvironment: os.Getenv("RUNNER_ENVIRONMENT"), Image: os.Getenv("ImageOS"), ImageVersion: os.Getenv("ImageVersion")}
 	if b, err := os.ReadFile("/proc/cpuinfo"); err == nil {
 		for _, l := range strings.Split(string(b), "\n") {
 			if k, v, ok := strings.Cut(l, ":"); ok && strings.TrimSpace(k) == "model name" {
@@ -75,7 +98,46 @@ func CurrentHost() Host {
 			}
 		}
 	}
+	if b, err := os.ReadFile("/proc/meminfo"); err == nil {
+		h.MemoryBytes = memTotal(string(b))
+	}
+	h.DiskBytes, h.DiskFree, h.DiskDevice, h.DiskModel = diskOf(work)
 	return h
+}
+
+// memTotal returns MemTotal of a /proc/meminfo text in bytes.
+func memTotal(meminfo string) int64 {
+	for _, l := range strings.Split(meminfo, "\n") {
+		if k, v, ok := strings.Cut(l, ":"); ok && k == "MemTotal" {
+			var kb int64
+			if _, err := fmt.Sscanf(strings.TrimSpace(v), "%d kB", &kb); err == nil {
+				return kb << 10
+			}
+		}
+	}
+	return 0
+}
+
+// The recorded reference hardware of FR-11 (docs/reference-hardware.md) is
+// the GitHub-hosted standard Linux runner of the ubuntu-24.04 label for
+// public repositories: x86_64, 4 processors, 16 GiB of memory, SSD. The
+// processor model varies between runs of the class (AMD EPYC 7763, EPYC
+// 9V74, Intel Xeon); each report records the one it ran on, with its
+// memory and disk.
+const (
+	ReferenceClassName = "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)"
+	refCPUs            = 4
+	// The runners report a MemTotal of about 15.6 GiB: 16 GiB less the
+	// firmware and kernel reservations.
+	refMemMin = 15 << 30
+	refMemMax = 17 << 30
+)
+
+// ReferenceClass reports whether h is a machine of the recorded reference
+// hardware class.
+func ReferenceClass(h Host) bool {
+	return h.OS == "linux" && h.Arch == "amd64" && h.CPUs == refCPUs && h.MemoryBytes >= refMemMin && h.MemoryBytes <= refMemMax &&
+		h.RunnerEnvironment == "github-hosted" && h.Image == "ubuntu24"
 }
 
 // Quantile returns the q quantile (0 < q <= 1) of xs by the nearest-rank
@@ -145,10 +207,11 @@ func MeasureDecisions(doc []byte, n, callers int) ([]float64, error) {
 
 // WriteTestJSON writes the measurements as `go test -json` events, one
 // test per measurement under package pkg, so tools/reqreport counts them:
-// a measurement within its budget is a partial claim of its requirement
-// (the run is not on the recorded reference hardware), one over its budget
-// is a failing test. The status job merges this file with the Go results.
-func WriteTestJSON(w io.Writer, pkg string, ms []Measurement, at time.Time) error {
+// a measurement within its budget is a claim of its requirement, full when
+// reference is true (the run was on the recorded reference hardware) and
+// the measurement is complete, partial otherwise; one over its budget is a
+// failing test. The status job merges this file with the Go results.
+func WriteTestJSON(w io.Writer, pkg string, ms []Measurement, reference bool, at time.Time) error {
 	enc := json.NewEncoder(w)
 	ts := at.UTC().Format(time.RFC3339Nano)
 	failed := false
@@ -162,7 +225,7 @@ func WriteTestJSON(w io.Writer, pkg string, ms []Measurement, at time.Time) erro
 		for _, ev := range []map[string]any{
 			{"Time": ts, "Action": "run", "Package": pkg, "Test": name},
 			{"Time": ts, "Action": "output", "Package": pkg, "Test": name, "Output": out},
-			{"Time": ts, "Action": "output", "Package": pkg, "Test": name, "Output": "    PARTIAL: " + m.Requirement + "\n"},
+			{"Time": ts, "Action": "output", "Package": pkg, "Test": name, "Output": "    " + marker(m, reference) + " " + m.Requirement + "\n"},
 			{"Time": ts, "Action": action, "Package": pkg, "Test": name, "Elapsed": 0},
 		} {
 			if err := enc.Encode(ev); err != nil {
@@ -175,4 +238,13 @@ func WriteTestJSON(w io.Writer, pkg string, ms []Measurement, at time.Time) erro
 		end = "fail"
 	}
 	return enc.Encode(map[string]any{"Time": ts, "Action": end, "Package": pkg})
+}
+
+// marker is the claim of a measurement: VERIFIES for a complete
+// measurement on the reference hardware, PARTIAL otherwise.
+func marker(m Measurement, reference bool) string {
+	if reference && m.Complete {
+		return "VERIFIES:"
+	}
+	return "PARTIAL:"
 }

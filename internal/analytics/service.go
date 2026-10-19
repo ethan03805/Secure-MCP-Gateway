@@ -347,6 +347,36 @@ func (s *Service) Start(ctx context.Context, rec audit.Recorder, admin *adminapi
 		s.wg.Add(1)
 		go func() { defer s.wg.Done(); s.writer.run(ctx) }()
 	}
+	if c, ok := s.Store.(obsstore.Compactor); ok {
+		s.wg.Add(1)
+		go func() { defer s.wg.Done(); s.compact(ctx, c) }()
+	}
+}
+
+// compactInterval is how often the store's small files are merged.
+var compactInterval = time.Minute
+
+// compact merges the store's small files at start and then every
+// compactInterval, on a thread of idle priority like the store writer's
+// (it spends its time in DuckDB), and apart from the writer, so that
+// batches keep being written while it runs.
+func (s *Service) compact(ctx context.Context, c obsstore.Compactor) {
+	idlePriority()
+	t := time.NewTicker(compactInterval)
+	defer t.Stop()
+	for {
+		t0 := time.Now()
+		if n, err := c.Compact(); err != nil {
+			s.log.Warn("observation store compaction failed", "err", err)
+		} else if n > 0 {
+			s.log.Debug("observation store compacted", "files", n, "took", time.Since(t0))
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }
 
 // Sync waits until every observation offered before the call is assembled
