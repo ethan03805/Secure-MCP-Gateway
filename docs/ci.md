@@ -6,7 +6,7 @@ The CI workflow (`.github/workflows/ci.yml`) runs on pull requests, pushes to ma
 
 A full run takes 25 to 35 minutes, almost all of it in `console` (the Playwright tests on three browsers) and `go` (the tests with `-race` and coverage). A pull request that changes only documentation does not need them. The first job, `changes`, lists the files the pull request changes and decides what runs:
 
-| The pull request changes only | `srs`, `lint`, `security`, `site` | `go` | `linux-integration`, `install-standalone`, `console`, `graph`, `hostile` |
+| The pull request changes only | `srs`, `lint`, `security`, `site` | `go` | `linux-integration`, `install-standalone`, `windows`, `console`, `graph`, `hostile` |
 |---|---|---|---|
 | Markdown files under `docs/` (`docs/**/*.md`) | run | light | skipped |
 | Markdown files at the repository root (README, CHANGELOG, FloorPlan, the SRS, the architecture documents) | run | light | skipped |
@@ -19,6 +19,7 @@ A full run takes 25 to 35 minutes, almost all of it in `console` (the Playwright
 - **full**: everything, as before. Any other file means a full run: Go code, `go.mod`, `go.sum`, `console/`, `scripts/`, `packaging/`, `tools/`, `.github/`, `Makefile`, `install.sh`, test data, configuration, and every file under `docs/` that is not Markdown (`docs/*.go`, `docs/parameters.json`, which the binaries embed, `docs/schemas/`, `docs/status/elements.json`, `docs/clients/matrix.json`).
 - `srs`, `lint`, `security` and `site` always run; each takes under two minutes.
 - `console-enforced`, `perf`, `acceptance-enforced`, `offline` and `status` never run on pull requests.
+- `windows` (on `windows-latest`) is not a required check; see [windows-port.md](windows-port.md).
 
 A job skipped by its `if:` reports the conclusion "skipped", which satisfies a required check, so a docs-only pull request can merge when the jobs that ran pass.
 
