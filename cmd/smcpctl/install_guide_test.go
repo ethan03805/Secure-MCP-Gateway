@@ -44,14 +44,16 @@ func TestInstallGuideHasWalkthrough(t *testing.T) {
 // block of docs/install.md unchanged on a clean account: install.sh with
 // its signature and checksum checks (v1.0.0), smcpctl install with the
 // host's service manager, the upgrade to v1.1.0 from the downloaded
-// release files, and uninstall with the kept journal verified.
+// release files, and uninstall with the kept journal verified. On Ubuntu
+// it then runs the Enforced walkthrough block: install.sh (v1.0.0), sudo
+// smcpctl install --profile enforced, the upgrade to v1.1.0 under
+// systemd, and uninstall with the kept journal verified.
 //
 // It installs into the user's home and service manager, so it runs only
 // with SMCP_INSTALL_GUIDE_TEST=1, in the CI job install-guide (macos-latest,
 // arm64; ubuntu-24.04). The status job merges the results only when both
-// runners reported. FR-18.1 stays partial: the Enforced profile's steps,
-// the manual rollback and the Homebrew and from-source options are not
-// followed by this run.
+// runners reported. FR-18.1 stays partial: a rollback and the Homebrew
+// and from-source options are not followed by this run.
 func TestInstallGuideWalkthrough(t *testing.T) {
 	if os.Getenv("SMCP_INSTALL_GUIDE_TEST") != "1" {
 		t.Skip("installs a release into the user's home and service manager; set SMCP_INSTALL_GUIDE_TEST=1 on a disposable runner")
@@ -62,15 +64,21 @@ func TestInstallGuideWalkthrough(t *testing.T) {
 		t.Fatalf("FR-18.1 names clean macOS arm64 and Ubuntu hosts, not %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 	reqtest.Partial(t, "FR-18.1")
-	cmd := exec.Command("bash", filepath.Join("..", "..", "scripts", "ci-install-guide.sh"), "standalone", t.TempDir())
-	out, err := cmd.CombinedOutput()
-	t.Logf("%s", out)
-	if err != nil {
-		t.Fatalf("ci-install-guide.sh: %v", err)
+	blocks := []string{"standalone"}
+	if runtime.GOOS == "linux" {
+		blocks = append(blocks, "enforced")
 	}
-	for _, want := range []string{"==> install-guide: passed (" + runtime.GOOS + ")", "1.1.0", "journal OK"} {
-		if !strings.Contains(string(out), want) {
-			t.Fatalf("output lacks %q", want)
+	for _, name := range blocks {
+		cmd := exec.Command("bash", filepath.Join("..", "..", "scripts", "ci-install-guide.sh"), name, t.TempDir())
+		out, err := cmd.CombinedOutput()
+		t.Logf("%s", out)
+		if err != nil {
+			t.Fatalf("ci-install-guide.sh %s: %v", name, err)
+		}
+		for _, want := range []string{"==> install-guide: passed " + name + " (" + runtime.GOOS + ")", "1.1.0", "journal OK"} {
+			if !strings.Contains(string(out), want) {
+				t.Fatalf("%s: output lacks %q", name, want)
+			}
 		}
 	}
 }

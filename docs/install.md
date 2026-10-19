@@ -294,6 +294,40 @@ smcpctl uninstall --config "$cfg"
 ./smcpctl-kept journal verify --config "$cfg"
 ```
 
+## Walkthrough: Enforced on Ubuntu, from install to uninstall
+
+The same life cycle in the Enforced profile, on a Linux host that has the prerequisites of the table above (Ubuntu 24.04 with Podman, crun, uidmap, nftables and AppArmor) and an account with sudo. Run it in an empty directory. CI runs this block as written on Ubuntu (job `install-guide`).
+
+<!-- ci-install-guide: enforced -->
+```sh
+# 1. Install v1.0.0 with install.sh (signature and checksum checks) into ./bin.
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version v1.0.0 --dir "$PWD/bin"
+
+# 2. Passwords of the administrator, the Session Approver and the pre-upgrade backup.
+(umask 077 && openssl rand -hex 16 > admin.pw && openssl rand -hex 16 > approver.pw && openssl rand -hex 16 > backup.pw)
+
+# 3. Install the Enforced profile: identities, directories, nftables table,
+#    AppArmor profiles, systemd units, binaries in /usr/local/bin, smcpd.service started.
+sudo bin/smcpctl install --profile enforced --admin-password-file admin.pw --approver-password-file approver.pw
+sudo -u smcp-core smcpctl health --config /etc/smcp/smcp.toml
+
+# 4. Upgrade to v1.1.0 from the release files.
+arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+mkdir -p release
+for f in smcp_1.1.0_checksums.txt smcp_1.1.0_checksums.txt.minisig "smcp_1.1.0_linux_${arch}.tar.gz"; do
+  curl -fsSL -o "release/$f" "https://github.com/ethan03805/Secure-MCP-Gateway/releases/download/v1.1.0/$f"
+done
+sudo smcpctl upgrade --config /etc/smcp/smcp.toml --release release --passphrase-file backup.pw
+smcpctl version --short
+sudo -u smcp-core smcpctl health --config /etc/smcp/smcp.toml
+
+# 5. Uninstall: services, units, nftables table, AppArmor profiles and
+#    binaries go; the journal and the evidence key stay. The v1.0.0 smcpctl
+#    kept in ./bin verifies the journal.
+sudo smcpctl uninstall --config /etc/smcp/smcp.toml --bin-dir /usr/local/bin
+sudo bin/smcpctl journal verify --dir /var/lib/smcp/state/journal --key /var/lib/smcp/state/keys/evidence-genesis.pub
+```
+
 ## Verify an installation
 
 ```sh

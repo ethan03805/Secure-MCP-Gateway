@@ -390,10 +390,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # The install guide followed as written (FR-18.1): the Standalone
-  # walkthrough block of docs/install.md, run unchanged by
-  # scripts/ci-install-guide.sh on clean macOS arm64 and Ubuntu runners
-  # (install.sh v1.0.0, smcpctl install, upgrade to v1.1.0, uninstall). It
+  # The install guide followed as written (FR-18.1): the walkthrough
+  # blocks of docs/install.md, run unchanged by scripts/ci-install-guide.sh
+  # (Standalone on clean macOS arm64 and Ubuntu runners, then Enforced on
+  # Ubuntu: install.sh v1.0.0, smcpctl install, upgrade to v1.1.0,
+  # uninstall). It
   # fails when the guide drifts from what works. The Go test writes its
   # events to build/install-guide-<os>-test.json for the status job. Not a
   # required check.
