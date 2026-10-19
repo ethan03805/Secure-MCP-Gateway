@@ -51,8 +51,10 @@ func NewCredential() (string, error) {
 }
 
 // sequential reports three characters in a row whose codes ascend or
-// descend by one.
+// descend by one, letters compared without case as ContextForge's
+// password policy does ("aBc" counts).
 func sequential(s string) bool {
+	s = strings.ToLower(s)
 	for i := 0; i+2 < len(s); i++ {
 		d1, d2 := int(s[i+1])-int(s[i]), int(s[i+2])-int(s[i+1])
 		if d1 == d2 && (d1 == 1 || d1 == -1) {

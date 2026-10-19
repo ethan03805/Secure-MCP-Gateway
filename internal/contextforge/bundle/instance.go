@@ -238,6 +238,16 @@ func (i *Instance) RemoveVolume(ctx context.Context) error {
 
 func (i *Instance) volume() string { return i.o.Name + "-data" }
 
+// RemoveImage removes the pinned image from the engine (uninstall,
+// FR-22.32). The instance must be stopped.
+func (i *Instance) RemoveImage(ctx context.Context) error {
+	out, err := i.engine(ctx, nil, "rmi", i.o.Image)
+	if err != nil && !strings.Contains(strings.ToLower(out), "no such image") {
+		return fmt.Errorf("remove image: %w: %s", err, out)
+	}
+	return nil
+}
+
 // prepareVolume creates the instance's volume and, for Docker, gives it to
 // the image's user once (podman does that with the :U option).
 func (i *Instance) prepareVolume(ctx context.Context) error {

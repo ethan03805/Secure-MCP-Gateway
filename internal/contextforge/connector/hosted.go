@@ -125,6 +125,8 @@ func (c *Connector) probe(p *proposal, e *contextforge.Entry, risk, actor string
 }
 
 func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforge.Entry, risk, actor string) (*Decision, error) {
+	c.holdProbe()
+	defer c.releaseProbe()
 	if err := c.waitHealthy(ctx, actor); err != nil {
 		return nil, err
 	}

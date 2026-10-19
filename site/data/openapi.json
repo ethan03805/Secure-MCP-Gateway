@@ -2689,6 +2689,52 @@
     ]
    }
   },
+  "/api/v1/contextforge/instance/uninstall": {
+   "post": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "postContextforgeInstanceUninstall",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Remove the bundled instance, its data and image, retire its credentials and suspend hosted packages",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator"
+    ]
+   }
+  },
   "/api/v1/contextforge/proposals": {
    "get": {
     "description": "Reference: docs/api/contextforge.md",

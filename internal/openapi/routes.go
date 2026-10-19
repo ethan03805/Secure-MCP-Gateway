@@ -194,4 +194,5 @@ var ops = []op{
 	{Pattern: "POST /api/v1/contextforge/proposals/{id}/decision", Tag: "contextforge", Summary: "Accept or decline the trust decision; an accept signs and imports the package disabled", Doc: "contextforge.md"},
 	{Pattern: "POST /api/v1/contextforge/instance/start", Tag: "contextforge", Summary: "Verify the pinned image if needed and start the bundled ContextForge instance", Doc: "contextforge.md"},
 	{Pattern: "POST /api/v1/contextforge/instance/stop", Tag: "contextforge", Summary: "Stop the bundled ContextForge instance", Doc: "contextforge.md"},
+	{Pattern: "POST /api/v1/contextforge/instance/uninstall", Tag: "contextforge", Summary: "Remove the bundled instance, its data and image, retire its credentials and suspend hosted packages", Doc: "contextforge.md"},
 }

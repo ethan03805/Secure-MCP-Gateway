@@ -63,7 +63,7 @@ func TestHostedImportImage(t *testing.T) {
 	if _, err := exec.LookPath("cosign"); err != nil {
 		t.Skip("cosign not installed")
 	}
-	reqtest.Partial(t, "FR-22.9", "FR-22.10", "FR-22.11", "FR-22.12", "FR-22.13")
+	reqtest.Partial(t, "FR-22.9", "FR-22.10", "FR-22.11", "FR-22.12", "FR-22.13", "FR-22.23", "FR-22.32")
 	eng, err := exec.LookPath("docker")
 	if err != nil {
 		t.Skip("docker not installed")
@@ -97,7 +97,14 @@ func TestHostedImportImage(t *testing.T) {
 	t.Cleanup(func() { lib.Close() })
 	rec := &audit.Memory{}
 	lib.SetRecorder(rec)
-	c, err := New(Options{Config: cfg, Library: lib, Recorder: rec, Broker: testBroker(t, rec), Version: "test", SSRFAllowed: nets,
+	var clock time.Time
+	now := func() time.Time {
+		if clock.IsZero() {
+			return time.Now()
+		}
+		return clock
+	}
+	c, err := New(Options{Config: cfg, Library: lib, Recorder: rec, Broker: testBroker(t, rec), Version: "test", SSRFAllowed: nets, Now: now,
 		EndpointFor: func(u string) (string, error) {
 			if strings.Contains(u, "dup.example") {
 				return "http://host.docker.internal:" + dupPort + "/mcp", nil
@@ -182,6 +189,43 @@ func TestHostedImportImage(t *testing.T) {
 	}
 	if d.State != stateFailed || d.ReasonCode != contextforge.ReasonToolNameCollision || !strings.Contains(d.Error, "get-time") {
 		t.Fatalf("duplicate names: %s %s %s", d.State, d.ReasonCode, d.Error)
+	}
+	// FR-22.23: an enabled hosted revision keeps the instance running; it
+	// stops IdleStop after the last one is disabled. FR-22.32: uninstall.
+	ctx := context.Background()
+	if _, err := lib.Enable(got.ServerID, got.Revision, library.EnableOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	clock = time.Now()
+	c.onDemand(ctx)
+	if !c.inst.Healthy() {
+		t.Fatalf("instance not running with an enabled hosted revision: %+v", c.inst.Status())
+	}
+	if _, _, err := lib.SetState(got.ServerID, got.Revision, library.StateVerifiedDisabled, "test", "op"); err != nil {
+		t.Fatal(err)
+	}
+	c.onDemand(ctx)
+	if c.inst.Status().State == "stopped" {
+		t.Fatal("stopped at once, not after the idle period")
+	}
+	clock = clock.Add(IdleStop)
+	c.onDemand(ctx)
+	if st := c.inst.Status().State; st != "stopped" {
+		t.Fatalf("still %s %v after the last hosted revision was disabled", st, IdleStop)
+	}
+	clock = time.Time{}
+	if _, err := lib.Enable(got.ServerID, got.Revision, library.EnableOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	rep, err := c.Uninstall(ctx, "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.CredentialsRetired != 5 || !rep.VolumeRemoved || len(rep.Suspended) != 1 {
+		t.Fatalf("uninstall %+v", rep)
+	}
+	if r, _ := lib.Get(got.ServerID, got.Revision); r.State != library.StateSuspended {
+		t.Fatalf("hosted revision %s after uninstall", r.State)
 	}
 }
 

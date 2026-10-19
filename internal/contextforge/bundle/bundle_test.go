@@ -291,3 +291,20 @@ func TestNewRefusesUnpinnedImage(t *testing.T) {
 		t.Fatal("tag accepted")
 	}
 }
+
+func TestNewCredentialAvoidsSequences(t *testing.T) {
+	for _, bad := range []string{"xxabcxx", "xxaBcxx", "xx321xx", "xxZYXxx"} {
+		if !sequential(bad) {
+			t.Errorf("%q not seen as sequential", bad)
+		}
+	}
+	if sequential("a1b2c3") {
+		t.Error("a1b2c3 seen as sequential")
+	}
+	for i := 0; i < 2000; i++ {
+		v, err := NewCredential()
+		if err != nil || sequential(v) || len(v) < MinCredentialChars {
+			t.Fatalf("credential %d: %v", i, err)
+		}
+	}
+}

@@ -58,6 +58,8 @@ const (
 type Importer interface {
 	Dir() string
 	Import(dir string, o library.ImportOptions) (*library.Receipt, error)
+	Revisions() []library.Revision
+	SetState(id, rev, state, reason, actor string) (library.Revision, string, error)
 }
 
 // Options configure a Connector.
@@ -116,6 +118,12 @@ type Connector struct {
 	verified *bundle.Verification
 	platform string
 	instMu   sync.Mutex
+
+	// Demand for the instance (demand.go, FR-22.23).
+	demandMu     sync.Mutex
+	probes       int
+	operatorHold bool
+	idleSince    time.Time
 
 	wg sync.WaitGroup
 }
@@ -249,12 +257,16 @@ func (c *Connector) Start(ctx context.Context) {
 		defer c.wg.Done()
 		t := time.NewTicker(time.Minute)
 		defer t.Stop()
+		d := time.NewTicker(demandTick)
+		defer d.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-t.C:
 				c.expire()
+			case <-d.C:
+				c.onDemand(ctx)
 			}
 		}
 	}()

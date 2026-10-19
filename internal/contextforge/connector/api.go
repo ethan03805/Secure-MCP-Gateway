@@ -25,11 +25,24 @@ func (c *Connector) RegisterRoutes(s *adminapi.Server) {
 	s.Handle("POST /api/v1/contextforge/proposals/{id}/decision", c.apiDecide)
 	s.Handle("POST /api/v1/contextforge/instance/start", c.apiInstance(true))
 	s.Handle("POST /api/v1/contextforge/instance/stop", c.apiInstance(false))
+	s.Handle("POST /api/v1/contextforge/instance/uninstall", c.apiUninstall)
+}
+
+func (c *Connector) apiUninstall(w http.ResponseWriter, r *http.Request) {
+	rep, err := c.Uninstall(r.Context(), adminapi.Actor(r))
+	if err != nil {
+		writeRefusal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"uninstall": rep, "instance": c.Instance()})
 }
 
 func (c *Connector) apiInstance(start bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
+		c.demandMu.Lock()
+		c.operatorHold = start
+		c.demandMu.Unlock()
 		if start {
 			err = c.StartInstance(r.Context(), adminapi.Actor(r))
 		} else {
