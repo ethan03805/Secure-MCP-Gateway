@@ -153,6 +153,10 @@ func Environment(s Settings) map[string]string {
 	env["TOOL_TIMEOUT"] = strconv.Itoa(timeout)
 	env["TOOL_RATE_LIMIT"] = strconv.Itoa(2 * s.Limits.CallsPerMinute)
 	env["TOOL_CONCURRENT_LIMIT"] = strconv.Itoa(2 * s.Limits.Concurrency)
+	// The per-package users are machine accounts whose generated
+	// passwords the Connector rotates itself; ContextForge's 90-day
+	// expiry would lock them out of token renewal.
+	env["PASSWORD_MAX_AGE_DAYS"] = "36500"
 	return env
 }
 

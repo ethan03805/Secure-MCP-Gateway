@@ -84,6 +84,10 @@ With `[contextforge] bundled = true` and a Secret Vault (`[secrets]`), `smcpctl 
 
 The measured start on macOS arm64 with Docker was 8 to 9 s to the first healthy answer.
 
+## Per-package isolation (built, not yet wired to hosted packages)
+
+`bundle.Admin.Provision` registers one hosted package as the spike found isolating (FR-22.29, FR-22.34): a team created by the administrator, a non-admin user `<slug>@example.com` added as its owner, the gateway (named and slugged as the manifest's `upstream` member) and the virtual server created with team visibility in that team, the administrator then removed from the team, and a token minted by the user for that team with the virtual server as `scope.server_id`, valid one day. `bundle.Admin.SelfCheck` then probes, with each package's token, `tools/list` on `/mcp` and `/rpc`, `tools/call` of another package's tool through its `/servers/<id>/mcp`, `/mcp` and `/rpc`, a GET of its `/servers/<id>/sse`, and two admin routes; anything not refused is a finding, reported with `CONTEXTFORGE_SCOPE_BROKEN`. Against v1.0.11 with two fixture servers the isolated set-up gives no finding and its fixtures see no call; an administrator-owned token restricted only by `scope.server_id` with a gateway outside any team gives findings on `/mcp` and `/rpc`, as the spike reported. The per-package user passwords are generated like the instance credentials; ContextForge refuses passwords with three sequential characters, so such draws are redrawn, and its 90-day password expiry is set out of reach for these machine accounts.
+
 ## Configuration
 
 | Key | Default | Meaning |

@@ -35,12 +35,31 @@ type Credentials map[string]string
 // NewCredential returns a fresh credential: 256 random bits as base64url
 // (43 characters) followed by "Aa1!" so that ContextForge's password
 // policy (upper case, lower case, digit, special character) always holds.
+// A draw with three sequential characters such as "abc" or "321", which
+// that policy refuses, is drawn again.
 func NewCredential() (string, error) {
-	var b [32]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", err
+	for {
+		var b [32]byte
+		if _, err := rand.Read(b[:]); err != nil {
+			return "", err
+		}
+		v := base64.RawURLEncoding.EncodeToString(b[:]) + "Aa1!"
+		if !sequential(v) {
+			return v, nil
+		}
 	}
-	return base64.RawURLEncoding.EncodeToString(b[:]) + "Aa1!", nil
+}
+
+// sequential reports three characters in a row whose codes ascend or
+// descend by one.
+func sequential(s string) bool {
+	for i := 0; i+2 < len(s); i++ {
+		d1, d2 := int(s[i+1])-int(s[i]), int(s[i+2])-int(s[i+1])
+		if d1 == d2 && (d1 == 1 || d1 == -1) {
+			return true
+		}
+	}
+	return false
 }
 
 // NewCredentials generates every instance credential.
