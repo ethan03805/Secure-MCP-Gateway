@@ -1,0 +1,104 @@
+# TEMPORARY (removed before merge): one-off comparison of the .pkg built
+# on Linux by build-pkg-linux.sh with the .pkg build-pkg.sh builds on macOS
+# with pkgbuild/productbuild from the same darwin-arm64 binaries.
+name: pkg-compare
+
+on:
+  pull_request:
+    paths: [.github/workflows/pkg-compare.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - name: Tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential autoconf automake libtool libxml2-dev libssl-dev zlib1g-dev libbz2-dev file >/dev/null
+          bash scripts/install-pkg-tools.sh "$RUNNER_TEMP/pkgtools"
+          echo "$RUNNER_TEMP/pkgtools/bin" >> "$GITHUB_PATH"
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: v2.18.2
+          args: build --clean --single-target --snapshot
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+          SMCP_BUILD_REFSERVER: "1"
+      - name: Build on Linux
+        run: |
+          version=$(jq -r .version build/dist/metadata.json)
+          echo "$version" > build/version
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) bash packaging/installers/macos/build-pkg-linux.sh "$version" build/dist build/linux-pkg
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compare-inputs
+          path: |
+            build/version
+            build/dist/*_darwin_arm64*/*
+            build/sbom/
+            build/provenance/
+            build/linux-pkg/*.pkg
+          retention-days: 3
+
+  macos:
+    needs: linux
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: compare-inputs
+          path: build
+      - name: Build with pkgbuild (build-pkg.sh) from the same binaries, compare
+        run: |
+          version=$(cat build/version)
+          chmod +x build/dist/*/*
+          bash packaging/installers/macos/build-pkg.sh "$version" build/dist build/mac-pkg
+          a=build/mac-pkg/smcp_${version}_darwin_arm64.pkg b=build/linux-pkg/smcp_${version}_darwin_arm64.pkg w=$RUNNER_TEMP/cmp
+          mkdir -p "$w"
+          pkgutil --expand "$a" "$w/mac"; pkgutil --expand "$b" "$w/linux"
+          for s in mac linux; do
+            lsbom -p fmMUGsc "$w/$s/smcp-component.pkg/Bom" > "$w/$s.bom"
+            gzip -dc "$w/$s/smcp-component.pkg/Payload" | cpio -itv 2>/dev/null | awk '{print $1, $3, $4, $5, $NF}' | LC_ALL=C sort -k5 > "$w/$s.cpio"
+            mkdir -p "$w/$s.root"; (cd "$w/$s.root" && gzip -dc "../$s/smcp-component.pkg/Payload" | cpio -id --quiet 2>/dev/null)
+          done
+          echo "== lsbom -p fmMUGsc (macOS pkgbuild vs Linux build-pkg-linux.sh)"; diff "$w/mac.bom" "$w/linux.bom" && echo IDENTICAL; cat "$w/linux.bom"
+          echo "== payload cpio -itv (mode user group size name)"; diff "$w/mac.cpio" "$w/linux.cpio" && echo IDENTICAL
+          echo "== PackageInfo"; diff "$w/mac/smcp-component.pkg/PackageInfo" "$w/linux/smcp-component.pkg/PackageInfo"
+          echo "== Distribution"; diff "$w/mac/Distribution" "$w/linux/Distribution" && echo IDENTICAL
+          echo "== component contents"; ls "$w/mac/smcp-component.pkg" "$w/linux/smcp-component.pkg"
+          echo "== pkgutil --payload-files"; diff <(pkgutil --payload-files "$a") <(pkgutil --payload-files "$b") && echo IDENTICAL
+          echo "== payload files"
+          for f in $(cd "$w/mac.root" && find . -type f | LC_ALL=C sort); do
+            if cmp -s "$w/mac.root/$f" "$w/linux.root/$f"; then echo "same bytes: $f"; else
+              echo "differs: $f"
+              codesign -dvvv "$w/mac.root/$f" 2>&1 | grep -E '^(Identifier|CodeDirectory|Signature|TeamIdentifier|Internal)' | sed 's/^/    mac:   /'
+              codesign -dvvv "$w/linux.root/$f" 2>&1 | grep -E '^(Identifier|CodeDirectory|Signature|TeamIdentifier|Internal)' | sed 's/^/    linux: /'
+              codesign --verify --strict "$w/linux.root/$f" && echo "    linux: codesign --verify --strict OK"
+            fi
+          done
+          echo "== pkgutil --check-signature"; pkgutil --check-signature "$a" | head -2; pkgutil --check-signature "$b" | head -2
+          shasum -a 256 "$a" "$b"
+      - name: Install the Linux-built .pkg (package-smoke.sh)
+        run: |
+          version=$(cat build/version)
+          bash scripts/package-smoke.sh "build/linux-pkg/smcp_${version}_darwin_arm64.pkg" "$version"
