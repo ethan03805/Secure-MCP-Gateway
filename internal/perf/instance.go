@@ -305,13 +305,6 @@ func (in *instance) session(ctx context.Context) (*mcp.ClientSession, error) {
 		HTTPClient: &http.Client{Transport: bearer{tok, &http.Transport{TLSClientConfig: tc}}}}, nil)
 }
 
-// api sends a control API GET with the operator token and returns the
-// status and the time it took.
-func (in *instance) api(hc *http.Client, path string) (int, time.Duration, error) {
-	code, d, _, err := in.apiGet(hc, path)
-	return code, d, err
-}
-
 // waitGraphReady waits until the instance's graph mirror reports state
 // "ready" (connected, schema applied, caught up), or fails after d.
 func (in *instance) waitGraphReady(d time.Duration) error {
@@ -340,7 +333,8 @@ func (in *instance) waitGraphReady(d time.Duration) error {
 	return fmt.Errorf("graph mirror not ready after %s (last state %q)", d, strings.TrimSpace(last))
 }
 
-// apiGet is api that also returns the response body; the time includes
+// apiGet sends a control API GET with the operator token and returns the
+// status, the time it took and the response body; the time includes
 // reading it.
 func (in *instance) apiGet(hc *http.Client, path string) (int, time.Duration, []byte, error) {
 	tok, err := os.ReadFile(filepath.Join(in.state, "keys", "admin.token"))
