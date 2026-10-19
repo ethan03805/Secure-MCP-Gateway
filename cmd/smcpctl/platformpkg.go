@@ -34,7 +34,7 @@ func packageFormat(binDir string) string {
 			continue
 		}
 		switch f := strings.TrimSpace(string(b)); f {
-		case "deb", "rpm", "pkg":
+		case "deb", "rpm", "pkg", "msi":
 			return f
 		}
 	}
@@ -50,6 +50,8 @@ func packageRemoveHint(format string) string {
 		return "sudo dnf remove smcp"
 	case "pkg":
 		return "the commands in docs/install.md, \"Remove the macOS package\""
+	case "msi":
+		return "Settings > Apps > Installed apps > Secure MCP Gateway > Uninstall, or msiexec /x with the .msi"
 	}
 	return ""
 }

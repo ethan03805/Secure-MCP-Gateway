@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows Installer package `smcp` for the CLI and Gateway (E-35, SRS FR-21.3,
+  FR-20.18, SR-4.11-2), built with the WiX Toolset by build-msi.ps1:
+
+  - per machine, into %ProgramFiles%\smcp-gateway (CP-46 machine-mode binaries:
+    SYSTEM and Administrators full control, Users read and execute, which is
+    the inherited %ProgramFiles% DACL), so the installing user cannot write
+    the binaries;
+  - smcpd, smcpctl, smcp-refserver, smcp-session, smcp-stdio, smcp-connect,
+    the license and documentation files, and the marker package-format
+    ("msi") that tells smcpctl uninstall and upgrade the binaries belong to
+    the package;
+  - the directory appended to the system PATH;
+  - no service, configuration or state: `smcpctl install` creates them, as
+    after a .deb or .rpm. Removal deletes only the files above.
+
+  Windows Server hosts get this package only; the Desktop Application has
+  its own package (desktop/).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Secure MCP Gateway" Manufacturer="Secure MCP Gateway project" Version="$(var.Version)"
+           UpgradeCode="0572061d-bff3-427b-b72f-0c3266385450" Scope="perMachine" Compressed="yes" Language="1033">
+    <SummaryInformation Description="Secure MCP Gateway command-line tools and Gateway" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Secure MCP Gateway is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/ethan03805/Secure-MCP-Gateway" />
+    <Property Id="ARPCOMMENTS" Value="Not enforced on Windows. Run smcpctl install after installing." />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="smcp-gateway" />
+    </StandardDirectory>
+
+    <ComponentGroup Id="Binaries" Directory="INSTALLFOLDER">
+      <Component><File Id="smcpd.exe" Source="$(var.BinDir)\smcpd.exe" KeyPath="yes" /></Component>
+      <Component><File Id="smcpctl.exe" Source="$(var.BinDir)\smcpctl.exe" KeyPath="yes" /></Component>
+      <Component><File Id="smcp_refserver.exe" Source="$(var.BinDir)\smcp-refserver.exe" KeyPath="yes" /></Component>
+      <Component><File Id="smcp_session.exe" Source="$(var.BinDir)\smcp-session.exe" KeyPath="yes" /></Component>
+      <Component><File Id="smcp_stdio.exe" Source="$(var.BinDir)\smcp-stdio.exe" KeyPath="yes" /></Component>
+      <Component><File Id="smcp_connect.exe" Source="$(var.BinDir)\smcp-connect.exe" KeyPath="yes" /></Component>
+      <Component><File Id="package_format" Name="package-format" Source="$(var.SrcDir)\package-format" KeyPath="yes" /></Component>
+      <Component><File Id="LICENSE" Source="$(var.DocDir)\LICENSE" KeyPath="yes" /></Component>
+      <Component><File Id="README.md" Source="$(var.DocDir)\README.md" KeyPath="yes" /></Component>
+      <Component><File Id="CHANGELOG.md" Source="$(var.DocDir)\CHANGELOG.md" KeyPath="yes" /></Component>
+      <Component><File Id="THIRD_PARTY_NOTICES.txt" Source="$(var.DocDir)\THIRD_PARTY_NOTICES.txt" KeyPath="yes" /></Component>
+      <Component Id="SystemPath" Guid="8f2b5f0e-6a43-4f7e-9d0a-3a8c2f2c9b11">
+        <Environment Id="PATH" Name="PATH" Value="[INSTALLFOLDER]" Action="set" Part="last" System="yes" Permanent="no" />
+        <RegistryValue Root="HKLM" Key="Software\smcp-gateway" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="Secure MCP Gateway" Level="1">
+      <ComponentGroupRef Id="Binaries" />
+    </Feature>
+  </Package>
+</Wix>
