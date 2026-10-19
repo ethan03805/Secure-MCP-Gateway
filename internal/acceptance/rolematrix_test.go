@@ -55,6 +55,7 @@ const (
 	rowClients   = "Approve dynamic client registrations (Remote Access)"
 	rowServers   = "Enable / suspend / retire servers; aliases"
 	rowTrust     = "Enroll trust anchors"
+	rowCatalog   = "Import ContextForge catalog entries; start and stop the bundled ContextForge instance"
 	rowRemote    = "Enable or disable the Remote Access Profile"
 	rowPrincipal = "Principals, credentials, sessions"
 	rowSAccounts = "Create Session Approver accounts"
@@ -132,6 +133,9 @@ var appendixC = map[string]matrixOp{
 
 	"POST /api/v1/packages/trust":          op(rowTrust, "A"),
 	"DELETE /api/v1/packages/trust/{name}": op(rowTrust, "A"),
+
+	"POST /api/v1/contextforge/catalog/{id}/import":     op(rowCatalog, "AO"),
+	"POST /api/v1/contextforge/proposals/{id}/decision": op(rowCatalog, "AO"),
 
 	"POST /api/v1/remote/enable":  op(rowRemote, "A"),
 	"POST /api/v1/remote/disable": op(rowRemote, "A"),
@@ -226,6 +230,12 @@ var appendixC = map[string]matrixOp{
 	"GET /api/v1/packages":               op(rowInventory, "AOU"),
 	"GET /api/v1/packages/receipts":      op(rowInventory, "AOU"),
 	"GET /api/v1/packages/{id}/{rev}":    op(rowInventory, "AOU"),
+
+	"GET /api/v1/contextforge/status":         op(rowInventory, "AOU"),
+	"GET /api/v1/contextforge/catalog":        op(rowInventory, "AOU"),
+	"GET /api/v1/contextforge/catalog/{id}":   op(rowInventory, "AOU"),
+	"GET /api/v1/contextforge/proposals":      op(rowInventory, "AOU"),
+	"GET /api/v1/contextforge/proposals/{id}": op(rowInventory, "AOU"),
 
 	"GET /api/v1/research/exports":                   op(rowExport, "AR"),
 	"GET /api/v1/research/exports/{id}":              op(rowExport, "AR"),
