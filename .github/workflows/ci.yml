@@ -511,8 +511,8 @@ jobs:
         env:
           NEO4J_CONTAINER: ${{ job.services.neo4j.id }}
         run: |
-          plugins=$(docker exec "$NEO4J_CONTAINER" sh -c 'ls -A /var/lib/neo4j/plugins 2>/dev/null || true')
-          echo "plugins directory: ${plugins:-(empty)}"
+          plugins=$(docker exec "$NEO4J_CONTAINER" sh -c 'find /var/lib/neo4j/plugins -name "*.jar" 2>/dev/null || true')
+          echo "plugin archives (*.jar): ${plugins:-(empty)}"
           [ -z "$plugins" ] || { echo "the graph engine has plugins installed"; exit 1; }
           docker exec "$NEO4J_CONTAINER" cypher-shell -u neo4j -p smcp-ci-graph-password --format plain \
             "SHOW PROCEDURES YIELD name WHERE NOT (name STARTS WITH 'db.' OR name STARTS WITH 'dbms.' OR name STARTS WITH 'tx.') RETURN count(*) AS other" | tee "$RUNNER_TEMP/procs.txt"

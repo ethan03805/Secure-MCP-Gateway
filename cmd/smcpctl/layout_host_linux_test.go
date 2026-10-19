@@ -73,6 +73,8 @@ func TestEnforcedLayoutOnHost(t *testing.T) {
 		{"/var/lib/smcp/keys", "smcp-keys:smcp 700"},
 		{"/var/lib/smcp/vault", "smcp-vault:smcp 700"},
 		{"/var/log/smcp", "smcp-core:smcp 750"},
+		{"/var/lib/smcp/home", "root:root 755"},
+		{"/var/lib/smcp/srv", "smcp-core:smcp-srv 751"},
 		{filepath.Join(state, "keys"), "smcp-core:smcp 700"},
 		{filepath.Join(state, keys.EvidenceKeyFile), "smcp-core:smcp 600"},
 		{filepath.Join(state, "journal"), "smcp-core:smcp 700"},
