@@ -1,7 +1,9 @@
 ### FR-22 ContextForge integration (planned, v1.3.0)
 
-TEXT: The owner decided on 2026-10-18 to integrate IBM ContextForge (`github.com/IBM/mcp-context-forge`, Apache-2.0) so that users get real MCP servers: (a) **catalog import**, where an operator browses the ContextForge catalog and imports entries into the Trusted MCP Server Library, and (b) a **bundled ContextForge** instance that runs as a contained, loopback-only backend through which imported hosted servers are reached. Every requirement in this section is planned for release v1.3.0 (Section 2.8). None is part of the requirement set of the current release. The ContextForge facts these requirements rest on (release v1.0.11 of 2026-09-28, the `mcp-catalog.yml` format, the configuration keys, the cosign signing of `ghcr.io/ibm/mcp-context-forge` and the 2026 security advisories) are cited as `CF:` and were read on 2026-10-18. Not planned for any release yet and recorded as future work: a Gateway-held OAuth 2.1 client for hosted entries that need OAuth (FR-22.3 classifies them `unsupported`), federation with remote ContextForge instances (outside the owner's decision), and ContextForge's REST and gRPC tool wrapping.
+TEXT: The owner decided on 2026-10-18 to integrate IBM ContextForge (`github.com/IBM/mcp-context-forge`, Apache-2.0) so that users get real MCP servers: (a) **catalog import**, where an operator browses the ContextForge catalog and imports entries into the Trusted MCP Server Library, and (b) a **bundled ContextForge** instance that runs as a contained, loopback-only backend through which imported hosted servers are reached. Every requirement in this section is planned for release v1.3.0 (Section 2.8). None is part of the requirement set of the current release. The ContextForge facts these requirements rest on (release v1.0.11 of 2026-09-28, the `mcp-catalog.yml` format, the configuration keys, the cosign signing of `ghcr.io/ibm/mcp-context-forge` and the 2026 security advisories) are cited as `CF:` and were read on 2026-10-18. A Gateway-held OAuth 2.1 client for hosted entries that need OAuth is planned for v1.4.0 (FR-22.44); until then FR-22.3 classifies those entries `unsupported`. Not scheduled for any release and recorded as future work (OD-17): federation with remote ContextForge instances and ContextForge's REST and gRPC tool wrapping.
 
+TEXT: **Owner decisions of 2026-10-18 on this section.** (1) The SEC 3.1 and SEC 3.2 gap for hosted servers is accepted on the terms of SR-3-6 (a recorded trust decision, every tool `untrusted`, risk class `moderate` or higher), and the narrowed probe of SR-3.5-2 is accepted in place of the full SEC 3.5 quarantine; `docs/security-limitations.md` states both. (2) The southbound Streamable HTTP client (FR-5.28 to FR-5.30), deferred from release 1.0, is planned for v1.3.0. (3) A Gateway-held OAuth 2.1 client is planned for v1.4.0 (FR-22.44); v1.3.0 keeps OAuth hosted entries `unsupported`. (4) The bundled ContextForge instance is opt-in, not opt-out (FR-22.22), and the starter set is offered only when it is opted in (FR-22.17). (5) Federation with remote ContextForge instances and REST and gRPC tool wrapping stay unscheduled future work.
+TEXT:
 TEXT: Terms used below. A **local entry** is a catalog entry that names a repository and an install command for a self-hosted server. A **hosted entry** is a catalog entry whose `url` is a remote HTTPS MCP endpoint and that names no install command. A **hosted package** is a signed package built from a hosted entry; its manifest names the hosted endpoint in an `upstream` member that only the bundled ContextForge instance serves (manifest_version 2). The **bundled instance** is the one ContextForge process or container that the ContextForge Connector (E-36) runs. The **release lock** is `packaging/contextforge.lock.json` of the Gateway release.
 
 @FR-22 | ContextForge integration
@@ -9,7 +11,7 @@ P: —
 S: The Gateway release SHALL let an operator import servers listed in the IBM ContextForge catalog into the Trusted MCP Server Library under the same packaging, signature, provenance, sandbox and policy checks as any other package, and SHALL provide a bundled, contained ContextForge instance through which imported hosted servers are reached, with every tool call mediated by the Gateway.
 A: E-36; E-13; E-15; F-107; F-108; F-109; X-19; X-20
 V: Analysis | Review the verification results of every FR-22 child requirement and of SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3 and SR-6.18-2; confirm each has passed.
-SRC: OWNER (2026-10-18: integrate IBM ContextForge; catalog import into the Library; bundled ContextForge with the Gateway authoritative; opt-out possible; federation with remote ContextForge instances out of scope); ARCH §4 E-36; ARCH §18.11
+SRC: OWNER (2026-10-18: integrate IBM ContextForge; catalog import into the Library; bundled ContextForge with the Gateway authoritative; bundled instance opt-in (revised from opt-out the same day); federation with remote ContextForge instances out of scope); ARCH §4 E-36; ARCH §18.11
 R: The reference packages give four servers. The ContextForge catalog lists about 135 real servers; importing them through the Library keeps one admission path, and the bundled instance gives hosted servers a contained place to run without letting an agent reach them except through the Gateway.
 TARGET: v1.3.0
 
@@ -39,7 +41,7 @@ S: The ContextForge Connector (E-36) SHALL classify each catalog entry as `local
 A: E-36; F-107; X-19
 V: Test | Classify the pinned v1.0.11 catalog and fixture entries of each kind; confirm every entry receives exactly one class and each unsupported fixture carries its named reason.
 SRC: CF: `mcp-catalog.yml` fields `url`, `auth_type`, `transport`, `repo`, `install`, `requires_api_key`
-R: The two import paths differ: a local entry is code that can be pinned and inspected, a hosted entry is a remote service that cannot. OAuth 2.1 hosted entries need a Gateway-held OAuth client that v1.3.0 does not have (listed as future work in the introduction to this section).
+R: The two import paths differ: a local entry is code that can be pinned and inspected, a hosted entry is a remote service that cannot. OAuth 2.1 hosted entries need a Gateway-held OAuth client that v1.3.0 does not have; it is planned for v1.4.0 (FR-22.44).
 TARGET: v1.3.0
 
 @FR-22.4 | Catalog view
@@ -161,10 +163,10 @@ TARGET: v1.3.0
 
 @FR-22.17 | Starter set
 P: FR-22
-S: The Gateway release SHALL list in the release lock a starter set of catalog entry IDs whose auth type is `Open` and whose tools are read-only, and the ContextForge Connector (E-36) SHALL offer it as one import in which each entry still receives its own probe, trust decision and signature and none is enabled automatically.
+S: The Gateway release SHALL list in the release lock a starter set of catalog entry IDs whose auth type is `Open` and whose tools are read-only, and the ContextForge Connector (E-36) SHALL offer it, only while `[contextforge] bundled` is true (FR-22.22), as one import in which each entry still receives its own probe, trust decision and signature and none is enabled automatically.
 A: E-36; F-107
-V: Demonstration | On a fresh installation, accept the starter-set offer; show that each entry is probed, presented and signed separately, that all resulting packages are disabled, and that enabling one makes its tools callable through the Gateway.
-SRC: OWNER (users have a working set of real servers out of the box; the desktop first-run setup may offer adding servers from the catalog by reference to FR-22)
+V: Demonstration | On a fresh installation that opted in to the bundled instance, accept the starter-set offer; show that each entry is probed, presented and signed separately, that all resulting packages are disabled, and that enabling one makes its tools callable through the Gateway; on a fresh installation that did not opt in, show that no starter-set offer is made.
+SRC: OWNER (users have a working set of real servers out of the box; the desktop first-run setup may offer adding servers from the catalog by reference to FR-22; 2026-10-18: the starter set applies only when the bundled instance is opted in)
 R: Gives a working set of real servers on day one without an unreviewed admission. The desktop first-run setup calls this offer rather than specifying its own.
 TARGET: v1.3.0
 
@@ -206,13 +208,13 @@ SRC: OWNER (license and SBOM recorded); SEC 9.1; SEC 10.7; CF: LICENSE (Apache-2
 R: Bundling a third-party product makes its license and dependency inventory part of the Gateway release.
 TARGET: v1.3.0
 
-@FR-22.22 | Opt-out
+@FR-22.22 | Opt-in
 P: FR-22
-S: The ContextForge Connector (E-36) SHALL run the bundled instance only when `[contextforge] bundled` is true, its default; the installer SHALL write false and fetch no ContextForge artifact when given `--no-contextforge`; and while it is false the Connector SHALL refuse hosted-entry imports and the Local Server Registry (E-14) SHALL refuse to enable hosted packages, both with reason `CONTEXTFORGE_DISABLED`, while local-entry imports remain available.
-A: E-36; E-14; E-24; F-108; F-97
-V: Test | Install with `--no-contextforge`, then import a local and a hosted entry and try to enable an existing hosted package; confirm no ContextForge image or wheel was fetched, the local import succeeds, and the hosted import and enablement are refused with `CONTEXTFORGE_DISABLED`.
-SRC: OWNER (opt-out must be possible)
-R: Some operators will not accept a large third-party service on their host; catalog import of local servers does not need it.
+S: The ContextForge Connector (E-36) SHALL run the bundled instance only when `[contextforge] bundled` is true, and its default SHALL be false; the installer SHALL write true and fetch the ContextForge artifacts only when given `--with-contextforge` or when the operator selects the bundled instance in the interactive `smcpctl install` or in the desktop first-run setup (FR-20.8), each of which SHALL offer it as an explicit choice, not selected by default, with a one-line note that it adds the hosted servers of the ContextForge catalog and runs a large third-party service on the host as one shared containment domain; and while the setting is false the Connector SHALL refuse hosted-entry imports and the Local Server Registry (E-14) SHALL refuse to enable hosted packages, both with reason `CONTEXTFORGE_DISABLED`, while local-entry imports remain available.
+A: E-36; E-14; E-24; E-34; F-108; F-97
+V: Test | Install without `--with-contextforge` and decline the offer, then import a local and a hosted entry and try to enable an existing hosted package; confirm no ContextForge image or wheel was fetched, `[contextforge] bundled` is false, the local import succeeds, and the hosted import and enablement are refused with `CONTEXTFORGE_DISABLED`; install with `--with-contextforge` and confirm the setting is true and the pinned artifacts were fetched; inspect the interactive install and the desktop first-run setup and confirm the choice is unselected by default and shows the note.
+SRC: OWNER (2026-10-18: bundled ContextForge is opt-in, not opt-out; first-run setup and the desktop setup offer it as a clear choice with a one-line note on what it adds and its risk)
+R: A large third-party service with a dense advisory history should run on an operator's host only when the operator chose it; catalog import of local servers does not need it.
 TARGET: v1.3.0
 
 @FR-22.23 | Start on demand
@@ -301,7 +303,7 @@ P: FR-22
 S: The `smcpctl contextforge uninstall` command and `smcpctl uninstall` SHALL stop the bundled instance, remove its image or virtual environment and D-16, retire its credentials in the Secret Vault (E-19), suspend every hosted package revision, and leave the Evidence Journal and the hosted packages' Library records in place.
 A: E-36; E-24; E-19; F-108; F-97; F-48
 V: Test | Uninstall the bundled instance with hosted packages enabled; confirm the process, image or environment and D-16 are gone, the credentials are retired, hosted revisions are `suspended`, local packages still serve and `smcpctl journal verify` passes.
-SRC: OWNER (uninstall, opt-out); SEC 6.14
+SRC: OWNER (uninstall, opt-in); SEC 6.14
 R: Removing ContextForge must not lose evidence or leave its credentials behind.
 TARGET: v1.3.0
 
@@ -340,7 +342,7 @@ S: The Tool Dispatcher (E-10) SHALL reach virtual-server endpoints of the bundle
 A: E-10; F-23; F-24; I-13
 V: Test | Run the southbound HTTP conformance fixtures against a bundled instance; confirm the headers, JSON and SSE responses, and the package-scoped token on every request.
 SRC: CF: Streamable HTTP virtual-server endpoints `/servers/{id}/mcp`; MCP:basic/transports/streamable-http
-R: ContextForge serves MCP over HTTP; the deferred southbound HTTP client is restored for this use.
+R: ContextForge serves MCP over HTTP; the southbound HTTP client, deferred from release 1.0, is planned for v1.3.0 for this use (owner decision 2026-10-18).
 TARGET: v1.3.0
 
 @FR-22.37 | Gateway enforcement is authoritative
@@ -406,6 +408,15 @@ SRC: OWNER (the existing smcp-hostile suite must cover a malicious catalog entry
 R: The two new attack surfaces (third-party catalog text and a shared third-party gateway) need the same standing adversarial tests as backends.
 TARGET: v1.3.0
 
+@FR-22.44 | Gateway-held OAuth client for hosted packages
+P: FR-22
+S: For a hosted entry whose `auth_type` contains `OAuth2.1`, the ContextForge Connector (E-36) SHALL act as an OAuth 2.1 client of the entry's authorization server, obtaining tokens at import with the authorization code grant and PKCE through the operator's browser, SHALL hold the access and refresh tokens only in the Secret Vault (E-19), SHALL deliver the access token only through S1 at the hosted package's E-18 endpoint and refresh it before expiry, and FR-22.3 SHALL then classify such an entry `hosted` instead of `unsupported`.
+A: E-36; E-19; E-20; E-18; F-107; F-109; F-50; I-26
+V: Test | Import a hosted fixture entry protected by a fixture OAuth 2.1 authorization server; confirm the PKCE authorization, that the tokens exist only as vault entries, that the fixture receives the access token as a header through the E-18 endpoint and never through the bundled instance's configuration or database, that a token near expiry is refreshed, and that a revoked refresh token suspends the package with a recorded reason.
+SRC: OWNER (2026-10-18: schedule a Gateway-held OAuth 2.1 client for a later release so the OAuth hosted catalog entries can become supported); CF: `mcp-catalog.yml` `auth_type` values
+R: About 75 hosted catalog entries need OAuth. Holding the tokens in the vault and injecting them at the broker keeps the bundled instance free of upstream credentials (FR-22.15) while making those entries usable.
+TARGET: v1.4.0
+
 TEXT: Hostile ContextForge fixtures (FR-22.43). "Both" means the Enforced and Standalone profiles. The rows use the prefix HFC so that they stay outside Appendix L until the release that adopts them.
 
 TEXT: | ID | Attack | Fixture behavior | Expected outcome | Profiles |
@@ -432,8 +443,8 @@ P: SEC-3
 S: The Library Trust Verifier (E-13) SHALL import a hosted package only when its provenance statement carries a `trust_decision` acknowledging that the server's code cannot be inspected, every tool's `source_trust` is `untrusted`, its risk class is `moderate` or higher, and the bundled instance is enabled.
 A: E-13; E-36; F-33; F-34; X-03
 V: Test | Import hosted fixture packages lacking each condition in turn and one meeting all; confirm each lacking package is rejected naming the condition and the complete one is imported.
-SRC: SEC 3; SEC 3.1; SEC 3.2; OWNER (an imported server never runs until it passes the same signature/provenance checks as any other package)
-R: SEC 3 asks for source-inspectable servers; a hosted server cannot meet SEC 3.1 and SEC 3.2. The recorded decision, the untrusted labelling and the risk floor are the conditions under which the owner accepts that gap.
+SRC: SEC 3; SEC 3.1; SEC 3.2; OWNER (an imported server never runs until it passes the same signature/provenance checks as any other package; 2026-10-18: the SEC 3.1 and SEC 3.2 gap for hosted servers accepted on these terms)
+R: SEC 3 asks for source-inspectable servers; a hosted server cannot meet SEC 3.1 and SEC 3.2. The recorded decision, the untrusted labelling and the risk floor are the conditions under which the owner accepted that gap on 2026-10-18; `docs/security-limitations.md` states it.
 TARGET: v1.3.0
 
 @SR-3.2-2 | ContextForge source-to-image binding
@@ -450,8 +461,8 @@ P: SEC-3.5
 S: The ContextForge Connector (E-36) SHALL run a hosted-entry probe with no production secret, no mount other than the bundled instance's volume, and no network destination other than the entry's host through its E-18 endpoint.
 A: E-36; E-18; F-107; I-25
 V: Test | Run a probe while a fixture records every connection attempt from the bundled instance and with a production secret bound to another package; confirm only the entry's host was contacted and the production secret was not delivered.
-SRC: SEC 3.5
-R: SEC 3.5 forbids external network access in a probe; a hosted server has nothing but its network, so the access is narrowed to the one host the operator chose.
+SRC: SEC 3.5; OWNER (2026-10-18: the narrowed probe accepted in place of the full SEC 3.5 quarantine)
+R: SEC 3.5 forbids external network access in a probe; a hosted server has nothing but its network, so the access is narrowed to the one host the operator chose. The owner accepted this narrowing on 2026-10-18; `docs/security-limitations.md` states it.
 TARGET: v1.3.0
 
 @SR-3.6-2 | No catalog bootstrap at run time

@@ -2078,6 +2078,48 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Source | MCP:basic/transports/stdio §Shutdown |
 | Rationale | Graceful but bounded shutdown. |
 
+#### FR-5.28 — Southbound Streamable HTTP client
+
+| Field | Value |
+|---|---|
+| ID | FR-5.28 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | For an instance using Streamable HTTP, the Tool Dispatcher (E-10) **SHALL** send each request as a POST carrying `Accept: application/json, text/event-stream`, `MCP-Protocol-Version`, `Mcp-Method` and, where applicable, `Mcp-Name`, and **SHALL** accept both JSON and SSE responses. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23, F-24; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Run the southbound HTTP conformance fixtures; confirm the headers and both response types. |
+| Source | MCP:basic/transports/streamable-http §Sending Messages; §Standard Request Headers |
+| Rationale | Some curated servers use the HTTP binding inside their sandbox, and the bundled ContextForge instance serves hosted packages over it (FR-22.36). Release 1.0 runs every server instance over stdio; the owner planned this client for v1.3.0 on 2026-10-18. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-5.29 — Southbound header encoding
+
+| Field | Value |
+|---|---|
+| ID | FR-5.29 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | The Tool Dispatcher (E-10) **SHALL** mirror `x-mcp-header` parameters into `Mcp-Param-{name}` headers and **SHALL** apply the `=?base64?…?=` encoding rules to `Mcp-Name` and `Mcp-Param-*` values. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Call fixture tools with non-ASCII, padded and sentinel-like values; confirm the encodings. |
+| Source | MCP:basic/transports/streamable-http §Value Encoding |
+| Rationale | Clients must support `x-mcp-header`. Planned with the southbound Streamable HTTP client (FR-5.28): header mirroring exists only on that transport. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-5.30 — Southbound SSE comments
+
+| Field | Value |
+|---|---|
+| ID | FR-5.30 |
+| Parent ID | FR-5 — Server trust and execution |
+| Statement | The Tool Dispatcher (E-10) **SHALL** ignore SSE comment lines received from Streamable HTTP instances. |
+| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-24; Internal interfaces: I-13 |
+| Verification Method | Test |
+| Verification Statement | Inject comment lines into a fixture stream; confirm no error. |
+| Source | MCP:basic/transports/streamable-http §Receiving Messages |
+| Rationale | Keep-alive comments are valid. Planned with the southbound Streamable HTTP client (FR-5.28): SSE exists only on that transport. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
 #### FR-5.32 — Southbound progress token
 
 | Field | Value |
@@ -7743,7 +7785,9 @@ Parents are the MUSTs of `MCP_Gateway_Security_SRS.md` whose controls the deskto
 
 ### FR-22 ContextForge integration (planned, v1.3.0)
 
-The owner decided on 2026-10-18 to integrate IBM ContextForge (`github.com/IBM/mcp-context-forge`, Apache-2.0) so that users get real MCP servers: (a) **catalog import**, where an operator browses the ContextForge catalog and imports entries into the Trusted MCP Server Library, and (b) a **bundled ContextForge** instance that runs as a contained, loopback-only backend through which imported hosted servers are reached. Every requirement in this section is planned for release v1.3.0 (Section 2.8). None is part of the requirement set of the current release. The ContextForge facts these requirements rest on (release v1.0.11 of 2026-09-28, the `mcp-catalog.yml` format, the configuration keys, the cosign signing of `ghcr.io/ibm/mcp-context-forge` and the 2026 security advisories) are cited as `CF:` and were read on 2026-10-18. Not planned for any release yet and recorded as future work: a Gateway-held OAuth 2.1 client for hosted entries that need OAuth (FR-22.3 classifies them `unsupported`), federation with remote ContextForge instances (outside the owner's decision), and ContextForge's REST and gRPC tool wrapping.
+The owner decided on 2026-10-18 to integrate IBM ContextForge (`github.com/IBM/mcp-context-forge`, Apache-2.0) so that users get real MCP servers: (a) **catalog import**, where an operator browses the ContextForge catalog and imports entries into the Trusted MCP Server Library, and (b) a **bundled ContextForge** instance that runs as a contained, loopback-only backend through which imported hosted servers are reached. Every requirement in this section is planned for release v1.3.0 (Section 2.8). None is part of the requirement set of the current release. The ContextForge facts these requirements rest on (release v1.0.11 of 2026-09-28, the `mcp-catalog.yml` format, the configuration keys, the cosign signing of `ghcr.io/ibm/mcp-context-forge` and the 2026 security advisories) are cited as `CF:` and were read on 2026-10-18. A Gateway-held OAuth 2.1 client for hosted entries that need OAuth is planned for v1.4.0 (FR-22.44); until then FR-22.3 classifies those entries `unsupported`. Not scheduled for any release and recorded as future work (OD-17): federation with remote ContextForge instances and ContextForge's REST and gRPC tool wrapping.
+
+**Owner decisions of 2026-10-18 on this section.** (1) The SEC 3.1 and SEC 3.2 gap for hosted servers is accepted on the terms of SR-3-6 (a recorded trust decision, every tool `untrusted`, risk class `moderate` or higher), and the narrowed probe of SR-3.5-2 is accepted in place of the full SEC 3.5 quarantine; `docs/security-limitations.md` states both. (2) The southbound Streamable HTTP client (FR-5.28 to FR-5.30), deferred from release 1.0, is planned for v1.3.0. (3) A Gateway-held OAuth 2.1 client is planned for v1.4.0 (FR-22.44); v1.3.0 keeps OAuth hosted entries `unsupported`. (4) The bundled ContextForge instance is opt-in, not opt-out (FR-22.22), and the starter set is offered only when it is opted in (FR-22.17). (5) Federation with remote ContextForge instances and REST and gRPC tool wrapping stay unscheduled future work.
 
 Terms used below. A **local entry** is a catalog entry that names a repository and an install command for a self-hosted server. A **hosted entry** is a catalog entry whose `url` is a remote HTTPS MCP endpoint and that names no install command. A **hosted package** is a signed package built from a hosted entry; its manifest names the hosted endpoint in an `upstream` member that only the bundled ContextForge instance serves (manifest_version 2). The **bundled instance** is the one ContextForge process or container that the ContextForge Connector (E-36) runs. The **release lock** is `packaging/contextforge.lock.json` of the Gateway release.
 
@@ -7757,7 +7801,7 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Allocation | Elements: E-36 ContextForge Connector, E-13 Library Trust Verifier, E-15 Server Runtime Manager; Functions: F-107, F-108, F-109; External interfaces: X-19, X-20 |
 | Verification Method | Analysis |
 | Verification Statement | Review the verification results of every FR-22 child requirement and of SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3 and SR-6.18-2; confirm each has passed. |
-| Source | OWNER (2026-10-18: integrate IBM ContextForge; catalog import into the Library; bundled ContextForge with the Gateway authoritative; opt-out possible; federation with remote ContextForge instances out of scope); ARCH §4 E-36; ARCH §18.11 |
+| Source | OWNER (2026-10-18: integrate IBM ContextForge; catalog import into the Library; bundled ContextForge with the Gateway authoritative; bundled instance opt-in (revised from opt-out the same day); federation with remote ContextForge instances out of scope); ARCH §4 E-36; ARCH §18.11 |
 | Rationale | The reference packages give four servers. The ContextForge catalog lists about 135 real servers; importing them through the Library keeps one admission path, and the bundled instance gives hosted servers a contained place to run without letting an agent reach them except through the Gateway. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
@@ -7802,7 +7846,7 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Verification Method | Test |
 | Verification Statement | Classify the pinned v1.0.11 catalog and fixture entries of each kind; confirm every entry receives exactly one class and each unsupported fixture carries its named reason. |
 | Source | CF: `mcp-catalog.yml` fields `url`, `auth_type`, `transport`, `repo`, `install`, `requires_api_key` |
-| Rationale | The two import paths differ: a local entry is code that can be pinned and inspected, a hosted entry is a remote service that cannot. OAuth 2.1 hosted entries need a Gateway-held OAuth client that v1.3.0 does not have (listed as future work in the introduction to this section). |
+| Rationale | The two import paths differ: a local entry is code that can be pinned and inspected, a hosted entry is a remote service that cannot. OAuth 2.1 hosted entries need a Gateway-held OAuth client that v1.3.0 does not have; it is planned for v1.4.0 (FR-22.44). |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.4 — Catalog view
@@ -7993,11 +8037,11 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 |---|---|
 | ID | FR-22.17 |
 | Parent ID | FR-22 — ContextForge integration |
-| Statement | The Gateway release **SHALL** list in the release lock a starter set of catalog entry IDs whose auth type is `Open` and whose tools are read-only, and the ContextForge Connector (E-36) **SHALL** offer it as one import in which each entry still receives its own probe, trust decision and signature and none is enabled automatically. |
+| Statement | The Gateway release **SHALL** list in the release lock a starter set of catalog entry IDs whose auth type is `Open` and whose tools are read-only, and the ContextForge Connector (E-36) **SHALL** offer it, only while `[contextforge] bundled` is true (FR-22.22), as one import in which each entry still receives its own probe, trust decision and signature and none is enabled automatically. |
 | Allocation | Elements: E-36 ContextForge Connector; Functions: F-107 |
 | Verification Method | Demonstration |
-| Verification Statement | On a fresh installation, accept the starter-set offer; show that each entry is probed, presented and signed separately, that all resulting packages are disabled, and that enabling one makes its tools callable through the Gateway. |
-| Source | OWNER (users have a working set of real servers out of the box; the desktop first-run setup may offer adding servers from the catalog by reference to FR-22) |
+| Verification Statement | On a fresh installation that opted in to the bundled instance, accept the starter-set offer; show that each entry is probed, presented and signed separately, that all resulting packages are disabled, and that enabling one makes its tools callable through the Gateway; on a fresh installation that did not opt in, show that no starter-set offer is made. |
+| Source | OWNER (users have a working set of real servers out of the box; the desktop first-run setup may offer adding servers from the catalog by reference to FR-22; 2026-10-18: the starter set applies only when the bundled instance is opted in) |
 | Rationale | Gives a working set of real servers on day one without an unreviewed admission. The desktop first-run setup calls this offer rather than specifying its own. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
@@ -8059,18 +8103,18 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Rationale | Bundling a third-party product makes its license and dependency inventory part of the Gateway release. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
-#### FR-22.22 — Opt-out
+#### FR-22.22 — Opt-in
 
 | Field | Value |
 |---|---|
 | ID | FR-22.22 |
 | Parent ID | FR-22 — ContextForge integration |
-| Statement | The ContextForge Connector (E-36) **SHALL** run the bundled instance only when `[contextforge] bundled` is true, its default; the installer **SHALL** write false and fetch no ContextForge artifact when given `--no-contextforge`; and while it is false the Connector **SHALL** refuse hosted-entry imports and the Local Server Registry (E-14) **SHALL** refuse to enable hosted packages, both with reason `CONTEXTFORGE_DISABLED`, while local-entry imports remain available. |
-| Allocation | Elements: E-36 ContextForge Connector, E-14 Local Server Registry, E-24 Management Console & Control API; Functions: F-108, F-97 |
+| Statement | The ContextForge Connector (E-36) **SHALL** run the bundled instance only when `[contextforge] bundled` is true, and its default **SHALL** be false; the installer **SHALL** write true and fetch the ContextForge artifacts only when given `--with-contextforge` or when the operator selects the bundled instance in the interactive `smcpctl install` or in the desktop first-run setup (FR-20.8), each of which **SHALL** offer it as an explicit choice, not selected by default, with a one-line note that it adds the hosted servers of the ContextForge catalog and runs a large third-party service on the host as one shared containment domain; and while the setting is false the Connector **SHALL** refuse hosted-entry imports and the Local Server Registry (E-14) **SHALL** refuse to enable hosted packages, both with reason `CONTEXTFORGE_DISABLED`, while local-entry imports remain available. |
+| Allocation | Elements: E-36 ContextForge Connector, E-14 Local Server Registry, E-24 Management Console & Control API, E-34 Desktop Application; Functions: F-108, F-97 |
 | Verification Method | Test |
-| Verification Statement | Install with `--no-contextforge`, then import a local and a hosted entry and try to enable an existing hosted package; confirm no ContextForge image or wheel was fetched, the local import succeeds, and the hosted import and enablement are refused with `CONTEXTFORGE_DISABLED`. |
-| Source | OWNER (opt-out must be possible) |
-| Rationale | Some operators will not accept a large third-party service on their host; catalog import of local servers does not need it. |
+| Verification Statement | Install without `--with-contextforge` and decline the offer, then import a local and a hosted entry and try to enable an existing hosted package; confirm no ContextForge image or wheel was fetched, `[contextforge] bundled` is false, the local import succeeds, and the hosted import and enablement are refused with `CONTEXTFORGE_DISABLED`; install with `--with-contextforge` and confirm the setting is true and the pinned artifacts were fetched; inspect the interactive install and the desktop first-run setup and confirm the choice is unselected by default and shows the note. |
+| Source | OWNER (2026-10-18: bundled ContextForge is opt-in, not opt-out; first-run setup and the desktop setup offer it as a clear choice with a one-line note on what it adds and its risk) |
+| Rationale | A large third-party service with a dense advisory history should run on an operator's host only when the operator chose it; catalog import of local servers does not need it. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.23 — Start on demand
@@ -8209,7 +8253,7 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Allocation | Elements: E-36 ContextForge Connector, E-24 Management Console & Control API, E-19 Secret Vault; Functions: F-108, F-97, F-48 |
 | Verification Method | Test |
 | Verification Statement | Uninstall the bundled instance with hosted packages enabled; confirm the process, image or environment and D-16 are gone, the credentials are retired, hosted revisions are `suspended`, local packages still serve and `smcpctl journal verify` passes. |
-| Source | OWNER (uninstall, opt-out); SEC 6.14 |
+| Source | OWNER (uninstall, opt-in); SEC 6.14 |
 | Rationale | Removing ContextForge must not lose evidence or leave its credentials behind. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
@@ -8268,7 +8312,7 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Verification Method | Test |
 | Verification Statement | Run the southbound HTTP conformance fixtures against a bundled instance; confirm the headers, JSON and SSE responses, and the package-scoped token on every request. |
 | Source | CF: Streamable HTTP virtual-server endpoints `/servers/{id}/mcp`; MCP:basic/transports/streamable-http |
-| Rationale | ContextForge serves MCP over HTTP; the deferred southbound HTTP client is restored for this use. |
+| Rationale | ContextForge serves MCP over HTTP; the southbound HTTP client, deferred from release 1.0, is planned for v1.3.0 for this use (owner decision 2026-10-18). |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.37 — Gateway enforcement is authoritative
@@ -8369,6 +8413,20 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Rationale | The two new attack surfaces (third-party catalog text and a shared third-party gateway) need the same standing adversarial tests as backends. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
+#### FR-22.44 — Gateway-held OAuth client for hosted packages
+
+| Field | Value |
+|---|---|
+| ID | FR-22.44 |
+| Parent ID | FR-22 — ContextForge integration |
+| Statement | For a hosted entry whose `auth_type` contains `OAuth2.1`, the ContextForge Connector (E-36) **SHALL** act as an OAuth 2.1 client of the entry's authorization server, obtaining tokens at import with the authorization code grant and PKCE through the operator's browser, **SHALL** hold the access and refresh tokens only in the Secret Vault (E-19), **SHALL** deliver the access token only through S1 at the hosted package's E-18 endpoint and refresh it before expiry, and FR-22.3 **SHALL** then classify such an entry `hosted` instead of `unsupported`. |
+| Allocation | Elements: E-36 ContextForge Connector, E-19 Secret Vault, E-20 Secret Broker, E-18 Egress Broker; Functions: F-107, F-109, F-50; Internal interfaces: I-26 |
+| Verification Method | Test |
+| Verification Statement | Import a hosted fixture entry protected by a fixture OAuth 2.1 authorization server; confirm the PKCE authorization, that the tokens exist only as vault entries, that the fixture receives the access token as a header through the E-18 endpoint and never through the bundled instance's configuration or database, that a token near expiry is refreshed, and that a revoked refresh token suspends the package with a recorded reason. |
+| Source | OWNER (2026-10-18: schedule a Gateway-held OAuth 2.1 client for a later release so the OAuth hosted catalog entries can become supported); CF: `mcp-catalog.yml` `auth_type` values |
+| Rationale | About 75 hosted catalog entries need OAuth. Holding the tokens in the vault and injecting them at the broker keeps the bundled instance free of upstream credentials (FR-22.15) while making those entries usable. |
+| Target release | v1.4.0 (planned, Section 2.8) |
+
 Hostile ContextForge fixtures (FR-22.43). "Both" means the Enforced and Standalone profiles. The rows use the prefix HFC so that they stay outside Appendix L until the release that adopts them.
 
 | ID | Attack | Fixture behavior | Expected outcome | Profiles |
@@ -8415,8 +8473,8 @@ Hostile ContextForge fixtures (FR-22.43). "Both" means the Enforced and Standalo
 | Allocation | Elements: E-13 Library Trust Verifier, E-36 ContextForge Connector; Functions: F-33, F-34; External interfaces: X-03 |
 | Verification Method | Test |
 | Verification Statement | Import hosted fixture packages lacking each condition in turn and one meeting all; confirm each lacking package is rejected naming the condition and the complete one is imported. |
-| Source | SEC 3; SEC 3.1; SEC 3.2; OWNER (an imported server never runs until it passes the same signature/provenance checks as any other package) |
-| Rationale | SEC 3 asks for source-inspectable servers; a hosted server cannot meet SEC 3.1 and SEC 3.2. The recorded decision, the untrusted labelling and the risk floor are the conditions under which the owner accepts that gap. |
+| Source | SEC 3; SEC 3.1; SEC 3.2; OWNER (an imported server never runs until it passes the same signature/provenance checks as any other package; 2026-10-18: the SEC 3.1 and SEC 3.2 gap for hosted servers accepted on these terms) |
+| Rationale | SEC 3 asks for source-inspectable servers; a hosted server cannot meet SEC 3.1 and SEC 3.2. The recorded decision, the untrusted labelling and the risk floor are the conditions under which the owner accepted that gap on 2026-10-18; `docs/security-limitations.md` states it. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### SR-3.2-2 — ContextForge source-to-image binding
@@ -8443,8 +8501,8 @@ Hostile ContextForge fixtures (FR-22.43). "Both" means the Enforced and Standalo
 | Allocation | Elements: E-36 ContextForge Connector, E-18 Egress Broker; Functions: F-107; Internal interfaces: I-25 |
 | Verification Method | Test |
 | Verification Statement | Run a probe while a fixture records every connection attempt from the bundled instance and with a production secret bound to another package; confirm only the entry's host was contacted and the production secret was not delivered. |
-| Source | SEC 3.5 |
-| Rationale | SEC 3.5 forbids external network access in a probe; a hosted server has nothing but its network, so the access is narrowed to the one host the operator chose. |
+| Source | SEC 3.5; OWNER (2026-10-18: the narrowed probe accepted in place of the full SEC 3.5 quarantine) |
+| Rationale | SEC 3.5 forbids external network access in a probe; a hosted server has nothing but its network, so the access is narrowed to the one host the operator chose. The owner accepted this narrowing on 2026-10-18; `docs/security-limitations.md` states it. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### SR-3.6-2 — No catalog bootstrap at run time
@@ -8983,7 +9041,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-07 | Approval Service | FR-3, FR-3.14, FR-3.15, FR-3.16, FR-3.17, FR-3.18, FR-3.19, FR-3.20, FR-3.21, FR-3.22, FR-3.23, FR-3.24, FR-3.25 | SR-1.18-2, SR-1.18-3 |
 | E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-1.50, FR-1.52, FR-4, FR-4.1, FR-4.3, FR-11.5, FR-22.35 (planned v1.3.0) | SR-1.2-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
 | E-09 | Request Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
-| E-10 | Tool Dispatcher | FR-1.32, FR-1.39, FR-1.40, FR-1.41, FR-1.43, FR-4, FR-4.3, FR-4.8, FR-4.9, FR-4.10, FR-4.13, FR-5, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.32, FR-5.40, FR-11.5, FR-12.9, FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.36 (planned v1.3.0), FR-22.39 (planned v1.3.0) | SR-2.10-1, SR-5.6-2, SR-5.7-3, SR-7.2-1, SR-7.6-2, SR-7.12-1, SR-2.10-2 (planned v1.3.0), SR-5.6-3 (planned v1.3.0) |
+| E-10 | Tool Dispatcher | FR-1.32, FR-1.39, FR-1.40, FR-1.41, FR-1.43, FR-4, FR-4.3, FR-4.8, FR-4.9, FR-4.10, FR-4.13, FR-5, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.28 (planned v1.3.0), FR-5.29 (planned v1.3.0), FR-5.30 (planned v1.3.0), FR-5.32, FR-5.40, FR-11.5, FR-12.9, FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.36 (planned v1.3.0), FR-22.39 (planned v1.3.0) | SR-2.10-1, SR-5.6-2, SR-5.7-3, SR-7.2-1, SR-7.6-2, SR-7.12-1, SR-2.10-2 (planned v1.3.0), SR-5.6-3 (planned v1.3.0) |
 | E-11 | Response Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.12, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5, FR-22.43 (planned v1.3.0) | SR-2-1, SR-5.7-3, SR-5.9-1, SR-5.10-1, SR-5.13-1, SR-5.14-1, SR-5.18-1, SR-5.20-1, SR-5.20-2 |
 | E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8, FR-22.35 (planned v1.3.0) | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-5.16-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1 |
 | E-13 | Library Trust Verifier | FR-5, FR-5.1, FR-5.2, FR-5.3, FR-5.4, FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.4, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.11, FR-14.12, FR-18.6, FR-22 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.43 (planned v1.3.0) | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3.1-1, SR-3.2-1, SR-3.5-1, SR-5.9-2, SR-3-6 (planned v1.3.0) |
@@ -8991,9 +9049,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1, FR-22 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.31 (planned v1.3.0) | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1, SR-4-3 (planned v1.3.0) |
 | E-16 | Execution Sandbox | FR-5, FR-12.3, FR-13.5, FR-19.1, FR-22.24 (planned v1.3.0) | SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2, SR-4.5-4 (planned v1.3.0), SR-4.7-3 (planned v1.3.0) |
 | E-17 | Runtime Monitor | FR-5, FR-5.33, FR-5.34, FR-5.35 | — |
-| E-18 | Egress Broker | FR-5, FR-5.36, FR-5.37, FR-5.38, FR-6.6, FR-12.2, FR-19.1, FR-22.9 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.43 (planned v1.3.0) | SR-4.5-1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1, SR-3.5-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0) |
-| E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.32 (planned v1.3.0) | SR-2.13-1, SR-2.13-3, SR-4.1-1, SR-2.13-5 (planned v1.3.0) |
-| E-20 | Secret Broker | FR-3.1, FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0) | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
+| E-18 | Egress Broker | FR-5, FR-5.36, FR-5.37, FR-5.38, FR-6.6, FR-12.2, FR-19.1, FR-22.9 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.43 (planned v1.3.0), FR-22.44 (planned v1.4.0) | SR-4.5-1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1, SR-3.5-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0) |
+| E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.44 (planned v1.4.0) | SR-2.13-1, SR-2.13-3, SR-4.1-1, SR-2.13-5 (planned v1.3.0) |
+| E-20 | Secret Broker | FR-3.1, FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.44 (planned v1.4.0) | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
 | E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8, FR-22.14 (planned v1.3.0), FR-22.39 (planned v1.3.0) | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1, SR-6.18-2 (planned v1.3.0) |
 | E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1 |
 | E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, FR-20.5 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.30 (planned v1.3.0) | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
@@ -9007,9 +9065,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-31 | Anomaly Scorer | FR-4.15, FR-10, FR-10.22, FR-10.23, FR-10.24, FR-10.25, FR-10.26, FR-10.27, FR-10.28, FR-10.29, FR-11, FR-11.3 | SR-1.12-2, SR-7-1 |
 | E-32 | Research Dataset Service | FR-3.1, FR-10, FR-10.30, FR-10.31, FR-10.32, FR-10.33, FR-10.34, FR-10.35, FR-10.36, FR-12.4 | SR-6-1, SR-6-2, SR-6.17-1 |
 | E-33 | Harness Adapter Kit | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.8, FR-15.9, FR-15.10, FR-16, FR-16.2, FR-16.9, FR-16.10, FR-18, FR-18.2, FR-18.3, FR-20.10 (planned v1.3.0) | SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1, SR-4.11-2 (planned v1.3.0) |
-| E-34 | Desktop Application | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.6 (planned v1.3.0), FR-20.7 (planned v1.3.0), FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.28 (planned v1.3.0) | SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
+| E-34 | Desktop Application | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.6 (planned v1.3.0), FR-20.7 (planned v1.3.0), FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.28 (planned v1.3.0), FR-22.22 (planned v1.3.0) | SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
 | E-35 | Platform Installers | FR-20 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), FR-20.23 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.25 (planned v1.3.0), FR-20.26 (planned v1.3.0), FR-20.27 (planned v1.3.0) | SR-4.11-2 (planned v1.3.0) |
-| E-36 | ContextForge Connector | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.7 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.13 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.17 (planned v1.3.0), FR-22.18 (planned v1.3.0), FR-22.19 (planned v1.3.0), FR-22.20 (planned v1.3.0), FR-22.21 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.27 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.30 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.33 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.37 (planned v1.3.0), FR-22.38 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0), FR-22.43 (planned v1.3.0) | SR-3-6 (planned v1.3.0), SR-3.2-2 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-3.6-2 (planned v1.3.0), SR-3.8-2 (planned v1.3.0), SR-4-3 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-2.13-5 (planned v1.3.0) |
+| E-36 | ContextForge Connector | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.7 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.13 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.17 (planned v1.3.0), FR-22.18 (planned v1.3.0), FR-22.19 (planned v1.3.0), FR-22.20 (planned v1.3.0), FR-22.21 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.27 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.30 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.33 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.37 (planned v1.3.0), FR-22.38 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0), FR-22.43 (planned v1.3.0), FR-22.44 (planned v1.4.0) | SR-3-6 (planned v1.3.0), SR-3.2-2 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-3.6-2 (planned v1.3.0), SR-3.8-2 (planned v1.3.0), SR-4-3 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-2.13-5 (planned v1.3.0) |
 
 ## Appendix G — Architecture coverage
 
@@ -9039,8 +9097,8 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-20 | Enforce access decision | FR-1.29, FR-1.30, FR-4.3, SR-1.2-1, SR-5.5-1, FR-22.35 (planned v1.3.0), SR-2.12-1 (deferred) |
 | F-21 | Inspect and transform request | FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
 | F-22 | Serialize released response | FR-1, FR-1.6, FR-1.7, FR-1.13, FR-1.14, FR-1.15, FR-1.18, FR-1.19, FR-1.20, FR-1.31, FR-1.32, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.39, FR-1.42, FR-1.43, FR-1.51, FR-5.24, FR-18.7, SR-5.11-1, FR-5.25 (deferred) |
-| F-23 | Dispatch tool call | FR-4.8, FR-4.13, FR-5.13, FR-5.19, FR-5.32, FR-5.40, SR-2.10-1, SR-5.6-2, FR-22.34 (planned v1.3.0), FR-22.36 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-5.6-3 (planned v1.3.0), FR-5.16 (deferred), FR-5.17 (deferred), FR-5.18 (deferred), FR-5.28 (deferred), FR-5.29 (deferred), SR-5.1-2 (deferred), SR-5.3-2 (deferred) |
-| F-24 | Correlate and collect response | FR-1.32, FR-1.39, FR-1.40, FR-4.10, FR-5.13, FR-5.14, FR-5.20, FR-5.21, FR-5.23, FR-5.24, SR-7.2-1, FR-22.36 (planned v1.3.0), FR-5.25 (deferred), FR-5.28 (deferred), FR-5.30 (deferred), FR-5.31 (deferred) |
+| F-23 | Dispatch tool call | FR-4.8, FR-4.13, FR-5.13, FR-5.19, FR-5.28 (planned v1.3.0), FR-5.29 (planned v1.3.0), FR-5.32, FR-5.40, SR-2.10-1, SR-5.6-2, FR-22.34 (planned v1.3.0), FR-22.36 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-5.6-3 (planned v1.3.0), FR-5.16 (deferred), FR-5.17 (deferred), FR-5.18 (deferred), SR-5.1-2 (deferred), SR-5.3-2 (deferred) |
+| F-24 | Correlate and collect response | FR-1.32, FR-1.39, FR-1.40, FR-4.10, FR-5.13, FR-5.14, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.28 (planned v1.3.0), FR-5.30 (planned v1.3.0), SR-7.2-1, FR-22.36 (planned v1.3.0), FR-5.25 (deferred), FR-5.31 (deferred) |
 | F-25 | Cancel in-flight call | FR-1.41, FR-1.43, FR-4.9, FR-5.26, SR-7.2-1, SR-7.12-1 |
 | F-26 | Validate response conformance | SR-5.20-1, SR-5.20-2 |
 | F-27 | Inspect and transform response | FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-19, FR-19.1, FR-19.5, SR-5.9-1, SR-5.10-1, SR-5.14-1, SR-5.18-1, SR-2.12-1 (deferred) |
@@ -9066,7 +9124,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-47 | Store and protect secrets | FR-6, FR-6.1, FR-6.2, FR-6.12, SR-2.13-1, SR-2.13-5 (planned v1.3.0) |
 | F-48 | Rotate and retire secrets | FR-6, FR-6.3, FR-6.4, FR-22.32 (planned v1.3.0) |
 | F-49 | Authorize secret use | FR-6, FR-6.11 |
-| F-50 | Deliver secret | FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.11, SR-2.13-2, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0) |
+| F-50 | Deliver secret | FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.11, SR-2.13-2, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.44 (planned v1.4.0) |
 | F-51 | Register leak fingerprints | FR-6, FR-6.10 |
 | F-52 | Revoke secret delivery | FR-6, FR-6.7, FR-6.8, SR-7.6-2 |
 | F-53 | Record security event | FR-7.1, FR-7.2, FR-16.8, SR-6.1-1, SR-6.7-1, SR-6.13-1, SR-6.19-1, FR-22.14 (planned v1.3.0), FR-22.39 (planned v1.3.0), SR-6.18-2 (planned v1.3.0), FR-7.6 (deferred), SR-6.6-1 (deferred), SR-6.8-1 (deferred) |
@@ -9123,9 +9181,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-104 | Check, verify and apply updates | FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
 | F-105 | Build platform installers | FR-20 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.23 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.26 (planned v1.3.0), FR-20.29 (deferred), FR-20.30 (deferred), FR-20.31 (deferred) |
 | F-106 | Install and remove platform packages | FR-20.16 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.25 (planned v1.3.0), SR-4.11-2 (planned v1.3.0), FR-20.31 (deferred) |
-| F-107 | Import catalog entry | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.7 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.17 (planned v1.3.0), FR-22.43 (planned v1.3.0), SR-3.5-2 (planned v1.3.0) |
+| F-107 | Import catalog entry | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.7 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.17 (planned v1.3.0), FR-22.43 (planned v1.3.0), FR-22.44 (planned v1.4.0), SR-3.5-2 (planned v1.3.0) |
 | F-108 | Run bundled ContextForge | FR-22 (planned v1.3.0), FR-22.18 (planned v1.3.0), FR-22.19 (planned v1.3.0), FR-22.20 (planned v1.3.0), FR-22.21 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.27 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.30 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.37 (planned v1.3.0), FR-22.41 (planned v1.3.0), SR-3.2-2 (planned v1.3.0), SR-3.6-2 (planned v1.3.0), SR-4-3 (planned v1.3.0) |
-| F-109 | Federate hosted packages through ContextForge | FR-22 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.33 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.38 (planned v1.3.0), FR-22.43 (planned v1.3.0), SR-3.6-2 (planned v1.3.0) |
+| F-109 | Federate hosted packages through ContextForge | FR-22 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.33 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.38 (planned v1.3.0), FR-22.43 (planned v1.3.0), FR-22.44 (planned v1.4.0), SR-3.6-2 (planned v1.3.0) |
 
 ### G.2 External interfaces
 
@@ -9168,7 +9226,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-10 | FR-3.14, FR-3.15, FR-3.20 |
 | I-11 | FR-3.20, FR-4.13 |
 | I-12 | FR-5.10 (deferred) |
-| I-13 | FR-1.39, FR-4.9, FR-4.10, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.32, FR-5.40, FR-12.9, SR-2.10-1, FR-22.8 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.36 (planned v1.3.0), FR-22.43 (planned v1.3.0), SR-3.8-2 (planned v1.3.0), SR-4-3 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-5.6-3 (planned v1.3.0), FR-5.16 (deferred), FR-5.18 (deferred), FR-5.25 (deferred), FR-5.28 (deferred), FR-5.29 (deferred), FR-5.30 (deferred), FR-5.31 (deferred) |
+| I-13 | FR-1.39, FR-4.9, FR-4.10, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.28 (planned v1.3.0), FR-5.29 (planned v1.3.0), FR-5.30 (planned v1.3.0), FR-5.32, FR-5.40, FR-12.9, SR-2.10-1, FR-22.8 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.36 (planned v1.3.0), FR-22.43 (planned v1.3.0), SR-3.8-2 (planned v1.3.0), SR-4-3 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-5.6-3 (planned v1.3.0), FR-5.16 (deferred), FR-5.18 (deferred), FR-5.25 (deferred), FR-5.31 (deferred) |
 | I-14 | FR-6.10 |
 | I-15 | FR-4.11 |
 | I-16 | FR-1.31 |
@@ -9181,7 +9239,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-23 | FR-5.9, FR-5.27, FR-22.24 (planned v1.3.0) |
 | I-24 | FR-5.33 |
 | I-25 | FR-5.36, SR-4.5-1, SR-5.16-1, FR-22.9 (planned v1.3.0), FR-22.40 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0) |
-| I-26 | FR-6.6, FR-22.15 (planned v1.3.0) |
+| I-26 | FR-6.6, FR-22.15 (planned v1.3.0), FR-22.44 (planned v1.4.0) |
 | I-27 | SR-2.13-3, FR-22.28 (planned v1.3.0) |
 | I-28 | FR-6.7, FR-6.8 |
 | I-29 | FR-1.44, FR-1.45, FR-4.2, FR-4.7, FR-5.15, FR-10.1, FR-10.2, FR-10.29 |
@@ -9385,6 +9443,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-5.24 | FR-5 | Test | E-10, E-02 | InputRequiredResult without MRTR profile |
 | FR-5.26 | FR-5 | Test | E-10 | Southbound cancellation |
 | FR-5.27 | FR-5 | Test | E-15 | Instance shutdown |
+| FR-5.28 (planned v1.3.0) | FR-5 | Test | E-10 | Southbound Streamable HTTP client |
+| FR-5.29 (planned v1.3.0) | FR-5 | Test | E-10 | Southbound header encoding |
+| FR-5.30 (planned v1.3.0) | FR-5 | Test | E-10 | Southbound SSE comments |
 | FR-5.32 | FR-5 | Test | E-10 | Southbound progress token |
 | FR-5.33 | FR-5 | Test | E-17 | Runtime observables |
 | FR-5.34 | FR-5 | Test | E-17 | Declared-behavior rules |
@@ -9835,7 +9896,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-22.19 (planned v1.3.0) | FR-22 | Test | E-36 | Image verification |
 | FR-22.20 (planned v1.3.0) | FR-22 | Test | E-36 | Managed-process installation |
 | FR-22.21 (planned v1.3.0) | FR-22 | Inspection | E-36 | License and SBOM records |
-| FR-22.22 (planned v1.3.0) | FR-22 | Test | E-36, E-14, E-24 | Opt-out |
+| FR-22.22 (planned v1.3.0) | FR-22 | Test | E-36, E-14, E-24, E-34 | Opt-in |
 | FR-22.23 (planned v1.3.0) | FR-22 | Test | E-36, E-15 | Start on demand |
 | FR-22.24 (planned v1.3.0) | FR-22 | Test | E-15, E-16, E-36 | Contained instance in the Enforced profile |
 | FR-22.25 (planned v1.3.0) | FR-22 | Test | E-15, E-23, E-36 | Managed process outside the Enforced profile |
@@ -9857,6 +9918,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-22.41 (planned v1.3.0) | FR-22 | Test | E-24, E-36 | Bundled instance in the console |
 | FR-22.42 (planned v1.3.0) | FR-22 | Inspection | E-36, E-24 | Limitations stated |
 | FR-22.43 (planned v1.3.0) | FR-22 | Test | E-36, E-13, E-11, E-18 | Hostile ContextForge fixtures |
+| FR-22.44 (planned v1.4.0) | FR-22 | Test | E-36, E-19, E-20, E-18 | Gateway-held OAuth client for hosted packages |
 | SR-3-6 (planned v1.3.0) | SEC-3 | Test | E-13, E-36 | Hosted package admission |
 | SR-3.2-2 (planned v1.3.0) | SEC-3.2 | Test | E-36 | ContextForge source-to-image binding |
 | SR-3.5-2 (planned v1.3.0) | SEC-3.5 | Test | E-36, E-18 | Narrowed probe for hosted entries |
@@ -9877,9 +9939,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 | Check | Result |
 |---|---|
 | Requirements of the current release | 529 total: 367 FR (19 roots), 162 SR |
-| Planned for a later release (Section 2.8) | 95; v1.3.0: FR-20, FR-20.1, FR-20.2, FR-20.3, FR-20.4, FR-20.5, FR-20.6, FR-20.7, FR-20.8, FR-20.9, FR-20.10, FR-20.11, FR-20.12, FR-20.13, FR-20.14, FR-20.15, FR-20.16, FR-20.17, FR-20.18, FR-20.19, FR-20.20, FR-20.21, FR-20.22, FR-20.23, FR-20.24, FR-20.25, FR-20.26, FR-20.27, FR-20.28, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-4.11-2, SR-7-2, FR-22, FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-22.5, FR-22.6, FR-22.7, FR-22.8, FR-22.9, FR-22.10, FR-22.11, FR-22.12, FR-22.13, FR-22.14, FR-22.15, FR-22.16, FR-22.17, FR-22.18, FR-22.19, FR-22.20, FR-22.21, FR-22.22, FR-22.23, FR-22.24, FR-22.25, FR-22.26, FR-22.27, FR-22.28, FR-22.29, FR-22.30, FR-22.31, FR-22.32, FR-22.33, FR-22.34, FR-22.35, FR-22.36, FR-22.37, FR-22.38, FR-22.39, FR-22.40, FR-22.41, FR-22.42, FR-22.43, SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3, SR-6.18-2 |
-| Deferred from release 1.0 (Appendix N) | 35: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1, FR-20.29, FR-20.30, FR-20.31 |
-| Verification methods | Analysis 21, Demonstration 30, Inspection 86, Test 487 |
+| Planned for a later release (Section 2.8) | 99; v1.3.0: FR-5.28, FR-5.29, FR-5.30, FR-20, FR-20.1, FR-20.2, FR-20.3, FR-20.4, FR-20.5, FR-20.6, FR-20.7, FR-20.8, FR-20.9, FR-20.10, FR-20.11, FR-20.12, FR-20.13, FR-20.14, FR-20.15, FR-20.16, FR-20.17, FR-20.18, FR-20.19, FR-20.20, FR-20.21, FR-20.22, FR-20.23, FR-20.24, FR-20.25, FR-20.26, FR-20.27, FR-20.28, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-4.11-2, SR-7-2, FR-22, FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-22.5, FR-22.6, FR-22.7, FR-22.8, FR-22.9, FR-22.10, FR-22.11, FR-22.12, FR-22.13, FR-22.14, FR-22.15, FR-22.16, FR-22.17, FR-22.18, FR-22.19, FR-22.20, FR-22.21, FR-22.22, FR-22.23, FR-22.24, FR-22.25, FR-22.26, FR-22.27, FR-22.28, FR-22.29, FR-22.30, FR-22.31, FR-22.32, FR-22.33, FR-22.34, FR-22.35, FR-22.36, FR-22.37, FR-22.38, FR-22.39, FR-22.40, FR-22.41, FR-22.42, FR-22.43, SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3, SR-6.18-2; v1.4.0: FR-22.44 |
+| Deferred from release 1.0 (Appendix N) | 32: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1, FR-20.29, FR-20.30, FR-20.31 |
+| Verification methods | Analysis 21, Demonstration 30, Inspection 86, Test 491 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
@@ -10197,48 +10259,6 @@ These records keep their IDs and text so that a later release can restore them u
 | Rationale | Lets elicitation be qualified later without trusting harness-carried state. |
 | Deferral | Release 1.0 ships without the MRTR Relay Profile. Relaying elicitation, sampling and roots needs a signed request-state protocol and a harness that answers it; none of the Appendix K clients needs it to use the reference packages. A backend InputRequiredResult ends the call with -31010 (FR-5.24) and server-initiated requests get -32601 (FR-5.20). |
 
-#### FR-5.28 — Southbound Streamable HTTP client (deferred)
-
-| Field | Value |
-|---|---|
-| ID | FR-5.28 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | For an instance using Streamable HTTP, the Tool Dispatcher (E-10) **SHALL** send each request as a POST carrying `Accept: application/json, text/event-stream`, `MCP-Protocol-Version`, `Mcp-Method` and, where applicable, `Mcp-Name`, and **SHALL** accept both JSON and SSE responses. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23, F-24; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Run the southbound HTTP conformance fixtures; confirm the headers and both response types. |
-| Source | MCP:basic/transports/streamable-http §Sending Messages; §Standard Request Headers |
-| Rationale | Some curated servers use the HTTP binding inside their sandbox. |
-| Deferral | Release 1.0 runs every server instance over stdio, which is the only transport of the reference packages (FR-14.9) and of servers packaged with `smcpctl package build`. A southbound Streamable HTTP client needs its own conformance fixtures and egress handling; it is deferred to the release that admits HTTP instances. |
-
-#### FR-5.29 — Southbound header encoding (deferred)
-
-| Field | Value |
-|---|---|
-| ID | FR-5.29 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | The Tool Dispatcher (E-10) **SHALL** mirror `x-mcp-header` parameters into `Mcp-Param-{name}` headers and **SHALL** apply the `=?base64?…?=` encoding rules to `Mcp-Name` and `Mcp-Param-*` values. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-23; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Call fixture tools with non-ASCII, padded and sentinel-like values; confirm the encodings. |
-| Source | MCP:basic/transports/streamable-http §Value Encoding |
-| Rationale | Clients must support `x-mcp-header`. |
-| Deferral | Deferred with the southbound Streamable HTTP client (FR-5.28): header mirroring exists only on that transport. |
-
-#### FR-5.30 — Southbound SSE comments (deferred)
-
-| Field | Value |
-|---|---|
-| ID | FR-5.30 |
-| Parent ID | FR-5 — Server trust and execution |
-| Statement | The Tool Dispatcher (E-10) **SHALL** ignore SSE comment lines received from Streamable HTTP instances. |
-| Allocation | Elements: E-10 Tool Dispatcher; Functions: F-24; Internal interfaces: I-13 |
-| Verification Method | Test |
-| Verification Statement | Inject comment lines into a fixture stream; confirm no error. |
-| Source | MCP:basic/transports/streamable-http §Receiving Messages |
-| Rationale | Keep-alive comments are valid. |
-| Deferral | Deferred with the southbound Streamable HTTP client (FR-5.28): SSE exists only on that transport. |
-
 #### FR-5.31 — Southbound list-change watch (deferred)
 
 | Field | Value |
@@ -10251,7 +10271,7 @@ These records keep their IDs and text so that a later release can restore them u
 | Verification Statement | Make a fixture add a tool at runtime; confirm the comparison and the resulting suspension. |
 | Source | MCP:basic/patterns/subscriptions; SEC 3.8 |
 | Rationale | Detects runtime tool drift. |
-| Deferral | Deferred with the southbound Streamable HTTP client and modern-era instances (FR-5.28, FR-5.16). Release 1.0 acts on `notifications/tools/list_changed` from stdio instances by re-reading the tool list and comparing it with the manifest (SR-3.8-1). |
+| Deferral | Deferred with the modern-era instances (FR-5.16): `subscriptions/listen` needs a modern-era instance, even after the southbound Streamable HTTP client (FR-5.28) arrives in v1.3.0. Release 1.0 acts on `notifications/tools/list_changed` from stdio instances by re-reading the tool list and comparing it with the manifest (SR-3.8-1). |
 
 #### FR-7.6 — Alerts (deferred)
 

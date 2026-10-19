@@ -88,6 +88,15 @@ These are requirements release 1.0, and the main branch after it, do not meet in
 
 The host operating system, its administrator, the Gateway binaries and the trust-anchor store are trusted (ARCH A-4). A person with administrator access to the host can change or disable every control and can delete evidence that has not been exported.
 
+### 14. Planned for v1.3.0: hosted servers through ContextForge
+
+Nothing in this section is implemented in the current release. The owner decided on 2026-10-18 that v1.3.0 may import hosted (remote) MCP servers from the IBM ContextForge catalog and reach them through an optional bundled ContextForge instance (SRS FR-22). Two security requirements are knowingly relaxed for those servers:
+
+- **Hosted servers cannot be inspected (SEC 3.1, SEC 3.2 not met).** Their code runs on someone else's machine; the Gateway cannot review, pin or rebuild it, and the server's operator sees every argument sent to it. The owner accepted this gap on the terms of SRS SR-3-6: a hosted package is admitted only with a recorded operator trust decision acknowledging that its code cannot be inspected, every one of its tools is marked `untrusted` (so its results taint the session), and its risk class is at least `moderate`.
+- **The admission probe is narrowed, not quarantined (SEC 3.5 not met).** A hosted server has nothing but its network, so its tool list is read through a probe that may reach the entry's one host through the Egress Broker, with no production secret and no other destination (SRS SR-3.5-2), instead of a probe without network access.
+
+The bundled instance is off unless you choose it (`--with-contextforge`, or the choice in setup). When it runs, every hosted package shares it as one containment domain, and outside the Enforced profile other processes of your user can reach its listener and memory (SRS FR-22.42).
+
 ## Reporting a limitation that is not listed
 
 See `SECURITY.md` at the repository root.

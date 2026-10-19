@@ -611,8 +611,8 @@ S: For an instance using Streamable HTTP, the Tool Dispatcher (E-10) SHALL send 
 A: E-10; F-23; F-24; I-13
 V: Test | Run the southbound HTTP conformance fixtures; confirm the headers and both response types.
 SRC: MCP:basic/transports/streamable-http §Sending Messages; §Standard Request Headers
-R: Some curated servers use the HTTP binding inside their sandbox.
-DEFER: Release 1.0 runs every server instance over stdio, which is the only transport of the reference packages (FR-14.9) and of servers packaged with `smcpctl package build`. A southbound Streamable HTTP client needs its own conformance fixtures and egress handling; it is deferred to the release that admits HTTP instances.
+R: Some curated servers use the HTTP binding inside their sandbox, and the bundled ContextForge instance serves hosted packages over it (FR-22.36). Release 1.0 runs every server instance over stdio; the owner planned this client for v1.3.0 on 2026-10-18.
+TARGET: v1.3.0
 
 @FR-5.29 | Southbound header encoding
 P: FR-5
@@ -620,8 +620,8 @@ S: The Tool Dispatcher (E-10) SHALL mirror `x-mcp-header` parameters into `Mcp-P
 A: E-10; F-23; I-13
 V: Test | Call fixture tools with non-ASCII, padded and sentinel-like values; confirm the encodings.
 SRC: MCP:basic/transports/streamable-http §Value Encoding
-R: Clients must support `x-mcp-header`.
-DEFER: Deferred with the southbound Streamable HTTP client (FR-5.28): header mirroring exists only on that transport.
+R: Clients must support `x-mcp-header`. Planned with the southbound Streamable HTTP client (FR-5.28): header mirroring exists only on that transport.
+TARGET: v1.3.0
 
 @FR-5.30 | Southbound SSE comments
 P: FR-5
@@ -629,8 +629,8 @@ S: The Tool Dispatcher (E-10) SHALL ignore SSE comment lines received from Strea
 A: E-10; F-24; I-13
 V: Test | Inject comment lines into a fixture stream; confirm no error.
 SRC: MCP:basic/transports/streamable-http §Receiving Messages
-R: Keep-alive comments are valid.
-DEFER: Deferred with the southbound Streamable HTTP client (FR-5.28): SSE exists only on that transport.
+R: Keep-alive comments are valid. Planned with the southbound Streamable HTTP client (FR-5.28): SSE exists only on that transport.
+TARGET: v1.3.0
 
 @FR-5.31 | Southbound list-change watch
 P: FR-5
@@ -639,7 +639,7 @@ A: E-10; E-14; F-24; F-37; I-13
 V: Test | Make a fixture add a tool at runtime; confirm the comparison and the resulting suspension.
 SRC: MCP:basic/patterns/subscriptions; SEC 3.8
 R: Detects runtime tool drift.
-DEFER: Deferred with the southbound Streamable HTTP client and modern-era instances (FR-5.28, FR-5.16). Release 1.0 acts on `notifications/tools/list_changed` from stdio instances by re-reading the tool list and comparing it with the manifest (SR-3.8-1).
+DEFER: Deferred with the modern-era instances (FR-5.16): `subscriptions/listen` needs a modern-era instance, even after the southbound Streamable HTTP client (FR-5.28) arrives in v1.3.0. Release 1.0 acts on `notifications/tools/list_changed` from stdio instances by re-reading the tool list and comparing it with the manifest (SR-3.8-1).
 
 @FR-5.32 | Southbound progress token
 P: FR-5
