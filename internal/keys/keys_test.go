@@ -1,10 +1,10 @@
 package keys
 
 import (
-	"crypto/tls"
 	"crypto/x509"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -47,11 +47,13 @@ func TestEnsureKeys(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if st.Mode().Perm() != 0o600 {
+		// Windows has no POSIX modes; perms_windows_test.go checks the DACL
+		// and the DPAPI protection instead (FR-21.5, FR-21.10).
+		if runtime.GOOS != "windows" && st.Mode().Perm() != 0o600 {
 			t.Errorf("%s mode %o", f, st.Mode().Perm())
 		}
 	}
-	cert, err := tls.LoadX509KeyPair(filepath.Join(dir, ServerCertFile), filepath.Join(dir, ServerKeyFile))
+	cert, err := LoadKeyPair(filepath.Join(dir, ServerCertFile), filepath.Join(dir, ServerKeyFile))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +116,7 @@ func TestCANameConstraintsAndLifetimes(t *testing.T) {
 		t.Fatalf("CA lifetime %v", life)
 	}
 	// A certificate for a public name signed by this CA fails verification.
-	caKeyPEM, _ := os.ReadFile(filepath.Join(dir, CAKeyFile))
+	caKeyPEM, _ := readPrivate(filepath.Join(dir, CAKeyFile))
 	if len(caKeyPEM) == 0 {
 		t.Fatal("no CA key")
 	}

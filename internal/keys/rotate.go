@@ -212,7 +212,7 @@ func BeginCARotation(stateDir string, now time.Time, overlap time.Duration, name
 	if err != nil {
 		return nil, TLSStatus{}, err
 	}
-	if err := writePEM(filepath.Join(stateDir, CANextKeyFile), "EC PRIVATE KEY", nextKeyDER, 0o600); err != nil {
+	if err := writePrivatePEM(filepath.Join(stateDir, CANextKeyFile), "EC PRIVATE KEY", nextKeyDER); err != nil {
 		return nil, TLSStatus{}, err
 	}
 	if err := writePEM(filepath.Join(stateDir, CANextCertFile), "CERTIFICATE", nextDER, 0o644); err != nil {
@@ -319,7 +319,7 @@ func StagePendingEvidenceKey(stateDir string, next ed25519.PrivateKey) error {
 	if err := ensureGenesis(stateDir); err != nil {
 		return err
 	}
-	return WriteFileAtomic(filepath.Join(stateDir, EvidencePendingKeyFile), []byte(hex.EncodeToString(next.Seed())+"\n"), 0o600)
+	return writePrivate(filepath.Join(stateDir, EvidencePendingKeyFile), []byte(hex.EncodeToString(next.Seed())+"\n"))
 }
 
 // ensureGenesis writes evidence-genesis.pub from evidence.pub when missing:
@@ -344,7 +344,7 @@ func CommitPendingEvidenceKey(stateDir string) error {
 		return err
 	}
 	pub := next.Public().(ed25519.PublicKey)
-	if err := WriteFileAtomic(filepath.Join(stateDir, EvidenceKeyFile), []byte(hex.EncodeToString(next.Seed())+"\n"), 0o600); err != nil {
+	if err := writePrivate(filepath.Join(stateDir, EvidenceKeyFile), []byte(hex.EncodeToString(next.Seed())+"\n")); err != nil {
 		return err
 	}
 	if err := WriteFileAtomic(filepath.Join(stateDir, EvidencePubFile), []byte(hex.EncodeToString(pub)+"\n"), 0o644); err != nil {
@@ -374,7 +374,7 @@ func ResolvePendingEvidenceKey(stateDir, lastNextKey string) (string, error) {
 }
 
 func loadSeed(path string) (ed25519.PrivateKey, error) {
-	b, err := os.ReadFile(path)
+	b, err := readPrivate(path)
 	if err != nil {
 		return nil, err
 	}
@@ -475,6 +475,21 @@ type CertReloader struct {
 	info os.FileInfo
 }
 
+// LoadKeyPair reads a PEM certificate chain and its private key, as
+// tls.LoadX509KeyPair does; on Windows the key file is a DPAPI blob
+// (FR-21.10).
+func LoadKeyPair(certFile, keyFile string) (tls.Certificate, error) {
+	certPEM, err := os.ReadFile(certFile)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	keyPEM, err := readPrivate(keyFile)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+	return tls.X509KeyPair(certPEM, keyPEM)
+}
+
 // NewCertReloader loads the pair once and returns the reloader.
 func NewCertReloader(certFile, keyFile string) (*CertReloader, error) {
 	r := &CertReloader{certFile: certFile, keyFile: keyFile}
@@ -489,7 +504,7 @@ func (r *CertReloader) load() error {
 	if err != nil {
 		return err
 	}
-	c, err := tls.LoadX509KeyPair(r.certFile, r.keyFile)
+	c, err := LoadKeyPair(r.certFile, r.keyFile)
 	if err != nil {
 		return err
 	}

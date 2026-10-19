@@ -325,7 +325,7 @@ func (g *Gateway) Tunnel(caller func() string) string {
 // harness listener, to test misconfiguration).
 func (g *Gateway) TunnelTo(addr string, caller func() string) string {
 	g.T.Helper()
-	cert, err := tls.LoadX509KeyPair(g.Config.Listener.TLSCert, g.Config.Listener.TLSKey)
+	cert, err := keys.LoadKeyPair(g.Config.Listener.TLSCert, g.Config.Listener.TLSKey)
 	if err != nil {
 		g.T.Fatal(err)
 	}

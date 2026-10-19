@@ -30,6 +30,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
@@ -448,7 +449,7 @@ func (g *gateway) scenario(ids ...string) {
 // api sends a control API request with the operator token.
 func (g *gateway) api(method, path string, body any) (int, map[string]any) {
 	g.t.Helper()
-	tok, err := os.ReadFile(filepath.Join(g.state, "keys", "admin.token"))
+	tok, err := keys.ReadPrivateFile(filepath.Join(g.state, "keys", "admin.token"))
 	if err != nil {
 		g.t.Fatal(err)
 	}

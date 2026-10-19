@@ -27,7 +27,7 @@ import (
 // listener certificate.
 func serveWith(t *testing.T, dir string) *httptest.Server {
 	t.Helper()
-	cert, err := tls.LoadX509KeyPair(filepath.Join(dir, ServerCertFile), filepath.Join(dir, ServerKeyFile))
+	cert, err := LoadKeyPair(filepath.Join(dir, ServerCertFile), filepath.Join(dir, ServerKeyFile))
 	if err != nil {
 		t.Fatal(err)
 	}

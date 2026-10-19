@@ -4,7 +4,7 @@
 //
 // Layout under the state directory:
 //
-//	keys/policy.key            Ed25519 policy-signing key (hex seed, 0600)
+//	keys/policy.key            Ed25519 policy-signing key (hex seed, 0600; a DPAPI blob on Windows)
 //	keys/policy.pub            its public key (hex, 0644)
 //	policy/revisions/<d>.json  one signed revision; <d> is the SHA-256 of
 //	                           the canonical document; files are read-only
@@ -37,12 +37,15 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/durable"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 // Paths under the state directory.
@@ -193,11 +196,15 @@ func loadOrCreateKey(stateDir string) (ed25519.PrivateKey, error) {
 		if gerr != nil {
 			return nil, gerr
 		}
+		data, perr := sealKey([]byte(hex.EncodeToString(priv.Seed()) + "\n"))
+		if perr != nil {
+			return nil, perr
+		}
 		f, cerr := os.OpenFile(kp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if cerr != nil {
 			return nil, cerr
 		}
-		_, werr := f.WriteString(hex.EncodeToString(priv.Seed()) + "\n")
+		_, werr := f.Write(data)
 		serr := f.Sync()
 		if err := errors.Join(werr, serr, f.Close()); err != nil {
 			return nil, err
@@ -210,11 +217,34 @@ func loadOrCreateKey(stateDir string) (ed25519.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
+	if b, err = openKey(kp, b); err != nil {
+		return nil, err
+	}
 	seed, err := hex.DecodeString(strings.TrimSpace(string(b)))
 	if err != nil || len(seed) != ed25519.SeedSize {
 		return nil, errors.New("policy key file is not a 32-byte hex seed")
 	}
 	return ed25519.NewKeyFromSeed(seed), nil
+}
+
+// sealKey and openKey protect the policy-signing key file with DPAPI on
+// Windows (FR-21.10); elsewhere the file is the hex seed with mode 0600.
+func sealKey(b []byte) ([]byte, error) {
+	if runtime.GOOS != "windows" {
+		return b, nil
+	}
+	return winsec.Protect(b)
+}
+
+func openKey(path string, b []byte) ([]byte, error) {
+	if runtime.GOOS != "windows" {
+		return b, nil
+	}
+	plain, err := winsec.Unprotect(b)
+	if err != nil {
+		return nil, fmt.Errorf("key_protection: %s: %w", path, err)
+	}
+	return plain, nil
 }
 
 func canonicalJSON(v any) ([]byte, error) {
@@ -362,7 +392,7 @@ func (s *Store) Put(raw []byte, m Meta) (*Revision, bool, error) {
 }
 
 // writeImmutable creates path exclusively with the data, flushes it, makes
-// it read-only and flushes the directory.
+// it read-only and makes the new name durable (durable.CreateNew).
 func writeImmutable(path string, data []byte) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".rev-*")
 	if err != nil {
@@ -377,14 +407,15 @@ func writeImmutable(path string, data []byte) error {
 	if err := os.Chmod(tmp.Name(), 0o400); err != nil {
 		return err
 	}
-	// Link refuses an existing target, so a published file is never replaced.
-	if err := os.Link(tmp.Name(), path); err != nil {
+	// CreateNew refuses an existing target, so a published file is never
+	// replaced.
+	if err := durable.CreateNew(tmp.Name(), path); err != nil {
 		if errors.Is(err, fs.ErrExist) {
 			return fmt.Errorf("%w: %s already exists", ErrRevisionExists, filepath.Base(path))
 		}
 		return err
 	}
-	return syncDir(filepath.Dir(path))
+	return nil
 }
 
 // readControl reads the control record and verifies its signature.
@@ -523,7 +554,7 @@ func (s *Store) writeControl(c Control) error {
 	return writeAtomic(filepath.Join(s.state, ControlFile), append(body, '\n'), 0o600)
 }
 
-// writeAtomic: temporary file, flush, rename, directory flush.
+// writeAtomic: temporary file, flush, durable replace (FR-21.23 on Windows).
 func writeAtomic(path string, data []byte, mode os.FileMode) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
@@ -536,19 +567,7 @@ func writeAtomic(path string, data []byte, mode os.FileMode) error {
 	if err := errors.Join(werr, cherr, serr, tmp.Close()); err != nil {
 		return err
 	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		return err
-	}
-	return syncDir(filepath.Dir(path))
-}
-
-func syncDir(dir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	return d.Sync()
+	return durable.Replace(tmp.Name(), path)
 }
 
 // Export returns the canonical JSON document of a revision (FR-3.8).

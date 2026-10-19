@@ -190,7 +190,7 @@ oauth_burst = 1000
 // as Tailscale Funnel and cloudflared do. It returns the public URL.
 func (g *gateway) tunnel(addr string) string {
 	g.t.Helper()
-	cert, err := tls.LoadX509KeyPair(g.cfg.Listener.TLSCert, g.cfg.Listener.TLSKey)
+	cert, err := keys.LoadKeyPair(g.cfg.Listener.TLSCert, g.cfg.Listener.TLSKey)
 	if err != nil {
 		g.t.Fatal(err)
 	}

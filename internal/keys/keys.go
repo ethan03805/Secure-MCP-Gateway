@@ -2,8 +2,10 @@
 // Gateway needs today: a local server CA with a certificate for the harness
 // and admin listeners (FR-7.7), the Ed25519 evidence-signing key (FR-7.8),
 // the local operator token of the control API and Argon2id password hashing
-// (CP-28). Keys are files with mode 0600 under the state directory; TPM
-// sealing and passphrase encryption (FR-7.9) are not yet implemented.
+// (CP-28). Keys are files with mode 0600 under the state directory; on
+// Windows they are DPAPI blobs of the account running the Gateway in a
+// directory with a protected DACL (FR-21.5, FR-21.10, protect_windows.go).
+// TPM sealing and passphrase encryption (FR-7.9) are not yet implemented.
 //
 // Certificate lifetimes (CP-53): the server CA is valid for CALifetime (365
 // days), has path length 0 and carries dNSName name constraints only:
@@ -40,6 +42,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/durable"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
 )
 
@@ -76,6 +79,9 @@ var loopbackIPs = []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
 // listener host names or IP literals the leaf certificate must cover in
 // addition to localhost, 127.0.0.1 and ::1. Existing files are kept.
 func Ensure(stateDir string, names ...string) error {
+	if err := SecureStateDir(stateDir); err != nil {
+		return err
+	}
 	for _, d := range []string{"tls", "keys"} {
 		if err := os.MkdirAll(filepath.Join(stateDir, d), 0o700); err != nil {
 			return err
@@ -92,7 +98,7 @@ func Ensure(stateDir string, names ...string) error {
 		}
 	}
 	if !exists(filepath.Join(stateDir, AdminTokenFile)) {
-		if err := os.WriteFile(filepath.Join(stateDir, AdminTokenFile), []byte(ids.Secret()+"\n"), 0o600); err != nil {
+		if err := writePrivate(filepath.Join(stateDir, AdminTokenFile), []byte(ids.Secret()+"\n")); err != nil {
 			return fmt.Errorf("admin token: %w", err)
 		}
 	}
@@ -154,7 +160,7 @@ func generateTLS(stateDir string, names []string) error {
 	if err := writePEM(filepath.Join(stateDir, CACertFile), "CERTIFICATE", caDER, 0o644); err != nil {
 		return err
 	}
-	if err := writePEM(filepath.Join(stateDir, CAKeyFile), "EC PRIVATE KEY", caKeyDER, 0o600); err != nil {
+	if err := writePrivatePEM(filepath.Join(stateDir, CAKeyFile), "EC PRIVATE KEY", caKeyDER); err != nil {
 		return err
 	}
 	dns, ips := leafNames(names)
@@ -276,7 +282,7 @@ func issueLeaf(stateDir string, caCert *x509.Certificate, caKey *ecdsa.PrivateKe
 	if err != nil {
 		return err
 	}
-	if err := writePEM(filepath.Join(stateDir, ServerKeyFile), "EC PRIVATE KEY", srvKeyDER, 0o600); err != nil {
+	if err := writePrivatePEM(filepath.Join(stateDir, ServerKeyFile), "EC PRIVATE KEY", srvKeyDER); err != nil {
 		return err
 	}
 	return writePEM(filepath.Join(stateDir, ServerCertFile), "CERTIFICATE", srvDER, 0o644)
@@ -375,8 +381,15 @@ func writePEM(path, typ string, der []byte, mode os.FileMode) error {
 	return WriteFileAtomic(path, pem.EncodeToMemory(&pem.Block{Type: typ, Bytes: der}), mode)
 }
 
+// writePrivatePEM writes a private key as writePEM does with mode 0600, as
+// a DPAPI blob on Windows (FR-21.10).
+func writePrivatePEM(path, typ string, der []byte) error {
+	return writePrivate(path, pem.EncodeToMemory(&pem.Block{Type: typ, Bytes: der}))
+}
+
 // WriteFileAtomic writes data to a temporary file, syncs it and renames it
-// over path.
+// over path, durably (durable.Replace: the directory is synced, or on
+// Windows the rename is written through, FR-21.23).
 func WriteFileAtomic(path string, data []byte, mode os.FileMode) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
@@ -398,7 +411,7 @@ func WriteFileAtomic(path string, data []byte, mode os.FileMode) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), path)
+	return durable.Replace(tmp.Name(), path)
 }
 
 func generateEvidenceKey(stateDir string) error {
@@ -407,7 +420,7 @@ func generateEvidenceKey(stateDir string) error {
 		return err
 	}
 	seed := hex.EncodeToString(priv.Seed())
-	if err := WriteFileAtomic(filepath.Join(stateDir, EvidenceKeyFile), []byte(seed+"\n"), 0o600); err != nil {
+	if err := writePrivate(filepath.Join(stateDir, EvidenceKeyFile), []byte(seed+"\n")); err != nil {
 		return err
 	}
 	if err := WriteFileAtomic(filepath.Join(stateDir, EvidencePubFile), []byte(hex.EncodeToString(pub)+"\n"), 0o644); err != nil {
@@ -417,7 +430,7 @@ func generateEvidenceKey(stateDir string) error {
 }
 
 func loadECKey(path string) (*ecdsa.PrivateKey, error) {
-	b, err := os.ReadFile(path)
+	b, err := readPrivate(path)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +443,7 @@ func loadECKey(path string) (*ecdsa.PrivateKey, error) {
 
 // LoadEvidenceKey returns the Ed25519 signing key from the state directory.
 func LoadEvidenceKey(stateDir string) (ed25519.PrivateKey, error) {
-	b, err := os.ReadFile(filepath.Join(stateDir, EvidenceKeyFile))
+	b, err := readPrivate(filepath.Join(stateDir, EvidenceKeyFile))
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +471,7 @@ func LoadEvidencePublicKey(stateDir string) (ed25519.PublicKey, error) {
 // file is readable only by the account that runs the Gateway; holding it is
 // equivalent to administrator access, like holding the CA key.
 func LoadAdminToken(stateDir string) (string, error) {
-	b, err := os.ReadFile(filepath.Join(stateDir, AdminTokenFile))
+	b, err := readPrivate(filepath.Join(stateDir, AdminTokenFile))
 	if err != nil {
 		return "", err
 	}
