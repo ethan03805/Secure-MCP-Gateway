@@ -30,7 +30,8 @@ Remote Access client registrations (running Gateway, Administrator):
   revoke <client-id> [--comment TEXT]
 
 Harness configuration (this user's client files):
-  setup <client> [--dry-run] [--stdio] [--helper] [--no-lockdown] [--system-trust] [--remove]
+  detect [--json]   supported clients found on this computer and their setup state
+  setup <client> [--dry-run [--json]] [--stdio] [--helper] [--no-lockdown] [--system-trust] [--remove]
   credentials --client-id ID --secret-file FILE [--template T] [--out FILE]
   (smcpctl connect <client> [flags] is an alias of setup)
 
@@ -50,6 +51,8 @@ func clientsCmd(args []string, out io.Writer) error {
 		return clientsOne(args[1:], out, args[0])
 	case "setup":
 		return clientSetup(args[1:], out)
+	case "detect":
+		return clientsDetect(args[1:], out)
 	case "credentials":
 		return clientCredentials(args[1:], out)
 	}
@@ -194,8 +197,12 @@ func clientSetup(args []string, out io.Writer) error {
 	noLock := fs.Bool("no-lockdown", false, "do not apply the lockdown profile")
 	systemTrust := fs.Bool("system-trust", false, "also add the Gateway CA to the operating-system trust store")
 	remove := fs.Bool("remove", false, "restore the files changed by a previous setup (and its lockdown)")
+	asJSON := fs.Bool("json", false, "with --dry-run: print the changes as JSON (the desktop client setup reads it)")
 	if err := fs.Parse(rest); err != nil {
 		return err
+	}
+	if *asJSON && !*dry {
+		return errors.New("--json needs --dry-run")
 	}
 	if len(pos) != 1 {
 		return errors.New("usage: smcpctl clients setup <client> [flags]\nclients: " + strings.Join(harness.IDs(), ", "))
@@ -240,6 +247,15 @@ func clientSetup(args []string, out io.Writer) error {
 		if lock, err = cl.Lockdown(e); err != nil {
 			return err
 		}
+	}
+	if *dry && *asJSON {
+		r := dryRunJSON{Client: cl.ID, Name: cl.Name, Setup: planToJSON(plan)}
+		if !*noLock {
+			l := planToJSON(lock)
+			r.Lockdown = &l
+		}
+		printJSON(out, r)
+		return nil
 	}
 	if *dry {
 		fmt.Fprint(out, "dry run: nothing is written\n"+harness.Describe(plan))
@@ -325,4 +341,94 @@ func clientCredentials(args []string, out io.Writer) error {
 	}
 	fmt.Fprintf(out, "wrote %s (mode 0600)\n", c.Path())
 	return nil
+}
+
+// detectedClient is one Appendix K client as `clients detect` reports it.
+type detectedClient struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Installed bool   `json:"installed"`
+	// Connected: a setup by smcpctl is recorded (its manifest exists), so
+	// --remove restores the client's files.
+	Connected bool `json:"connected"`
+	// Lockdown: a lockdown profile by smcpctl is recorded.
+	Lockdown bool `json:"lockdown"`
+	// LockdownAvailable: the client offers a lockdown mechanism (FR-15.1).
+	LockdownAvailable bool `json:"lockdownAvailable"`
+}
+
+// clientsDetect lists the clients `clients setup` supports with whether
+// each is installed for this user and set up by smcpctl (FR-20.10). It
+// reads no Gateway configuration and changes nothing.
+func clientsDetect(args []string, out io.Writer) error {
+	fs := flag.NewFlagSet("clients detect", flag.ContinueOnError)
+	asJSON := fs.Bool("json", false, "print JSON")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	e, err := harness.NewEnv(harness.Gateway{})
+	if err != nil {
+		return err
+	}
+	list := []detectedClient{}
+	for _, c := range harness.Clients() {
+		_, setupErr := os.Stat(harness.ManifestPath(e.Home, c.ID, "setup"))
+		_, lockErr := os.Stat(harness.ManifestPath(e.Home, c.ID, "lockdown"))
+		list = append(list, detectedClient{ID: c.ID, Name: c.Name, Installed: c.Installed(e), Connected: setupErr == nil,
+			Lockdown: lockErr == nil, LockdownAvailable: c.LockdownMechanism != ""})
+	}
+	if *asJSON {
+		printJSON(out, map[string]any{"clients": list})
+		return nil
+	}
+	for _, c := range list {
+		state := "not found"
+		if c.Installed {
+			state = "installed"
+		}
+		if c.Connected {
+			state += ", set up"
+		}
+		fmt.Fprintf(out, "%-12s %-14s %s\n", c.ID, c.Name, state)
+	}
+	return nil
+}
+
+type changeJSON struct {
+	Path    string `json:"path"`
+	Scope   string `json:"scope"`
+	Purpose string `json:"purpose"`
+	Action  string `json:"action"` // create or update
+	Content string `json:"content"`
+}
+
+type planJSON struct {
+	Changes  []changeJSON `json:"changes"`
+	Commands [][]string   `json:"commands"`
+	Notes    []string     `json:"notes"`
+}
+
+type dryRunJSON struct {
+	Client   string    `json:"client"`
+	Name     string    `json:"name"`
+	Setup    planJSON  `json:"setup"`
+	Lockdown *planJSON `json:"lockdown"`
+}
+
+func planToJSON(p harness.Plan) planJSON {
+	r := planJSON{Changes: []changeJSON{}, Commands: p.Commands, Notes: p.Notes}
+	if r.Commands == nil {
+		r.Commands = [][]string{}
+	}
+	if r.Notes == nil {
+		r.Notes = []string{}
+	}
+	for _, c := range p.Changes {
+		a := "create"
+		if c.Before != nil {
+			a = "update"
+		}
+		r.Changes = append(r.Changes, changeJSON{Path: c.Path, Scope: c.Scope, Purpose: c.Purpose, Action: a, Content: string(c.After)})
+	}
+	return r
 }

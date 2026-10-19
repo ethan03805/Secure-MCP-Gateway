@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "clients-window",
+  "description": "The bundled Set Up a Client window (SRS FR-20.10): lists the clients smcpctl detects, previews smcpctl connect --dry-run, applies the previewed setup with or without the lockdown profile, and removes a setup.",
+  "local": true,
+  "windows": ["clients"],
+  "permissions": ["allow-clients-list", "allow-clients-preview", "allow-clients-apply", "allow-clients-remove"]
+}

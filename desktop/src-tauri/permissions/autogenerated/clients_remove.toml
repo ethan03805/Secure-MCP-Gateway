@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clients-remove"
+description = "Enables the clients_remove command without any pre-configured scope."
+commands.allow = ["clients_remove"]
+
+[[permission]]
+identifier = "deny-clients-remove"
+description = "Denies the clients_remove command without any pre-configured scope."
+commands.deny = ["clients_remove"]

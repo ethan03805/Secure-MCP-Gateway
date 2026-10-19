@@ -21,6 +21,11 @@ fn main() {
             "setup_run",
             "setup_progress",
             "setup_open_console",
+            "setup_open_client_setup",
+            "clients_list",
+            "clients_preview",
+            "clients_apply",
+            "clients_remove",
         ])),
     )
     .expect("tauri-build failed");

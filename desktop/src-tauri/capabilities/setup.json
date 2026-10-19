@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "setup-window",
-  "description": "The bundled first-run setup window (SRS FR-20.8, FR-20.9): reads whether the Gateway is set up and which profiles the host can take, starts smcpctl install with the two passwords, reads its progress and opens the console window.",
+  "description": "The bundled first-run setup window (SRS FR-20.8, FR-20.9): reads whether the Gateway is set up and which profiles the host can take, starts smcpctl install with the two passwords, reads its progress and opens the console and client setup windows.",
   "local": true,
   "windows": ["setup"],
-  "permissions": ["allow-setup-get", "allow-setup-run", "allow-setup-progress", "allow-setup-open-console"]
+  "permissions": ["allow-setup-get", "allow-setup-run", "allow-setup-progress", "allow-setup-open-console", "allow-setup-open-client-setup"]
 }
