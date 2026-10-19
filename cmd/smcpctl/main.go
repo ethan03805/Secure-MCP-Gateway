@@ -62,6 +62,7 @@ Control API (running Gateway; backup and keys also work offline):
   secrets          secret vault: init (offline), list, show, set, rotate, rm, impact, resume, reload
   remote           Remote Access Profile: enable, disable, status, check (tunnels)
   clients          remote client registrations; harness setup (clients setup <client>)
+  connect          connect a local client to the Gateway (alias of clients setup <client>)
   lockdown         apply, show or remove a client lockdown profile
   doctor           report non-Gateway MCP servers, readable Gateway paths, CA trust
 
@@ -142,6 +143,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = remoteCmd(args[1:], stdout)
 	case args[0] == "clients" || args[0] == "client":
 		err = clientsCmd(args[1:], stdout)
+	case args[0] == "connect":
+		// FR-15.11: an alias of `clients setup`, same arguments and result.
+		err = clientSetup(args[1:], stdout)
 	case args[0] == "lockdown":
 		err = lockdownCmd(args[1:], stdout)
 	case args[0] == "doctor":

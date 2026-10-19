@@ -119,8 +119,8 @@ Planned for v1.3.0 (FR-20): native installers and a desktop tray application, di
 
 | Platform | Installers (E-35) | Desktop application (E-34) |
 |---|---|---|
-| macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView |
-| Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
+| macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView; arm64 only (no Intel or universal build; Intel Macs keep the darwin-amd64 archive) |
+| Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`) as release assets (signed APT and RPM repositories deferred, FR-20.32), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
 | Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is specified in `srs_build/req7-windows.txt` | Tauri 2, WebView2 |
 
 ## 2. Conventions and traceability rules

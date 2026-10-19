@@ -32,6 +32,7 @@ Remote Access client registrations (running Gateway, Administrator):
 Harness configuration (this user's client files):
   setup <client> [--dry-run] [--stdio] [--helper] [--no-lockdown] [--system-trust] [--remove]
   credentials --client-id ID --secret-file FILE [--template T] [--out FILE]
+  (smcpctl connect <client> [flags] is an alias of setup)
 
 Clients: ` + "claude-code, codex, gemini-cli, goose, grok-build, hermes, opencode" + `
 `

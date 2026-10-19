@@ -820,6 +820,14 @@ V: Inspection | Inspect the file and the CI job; confirm every Appendix K client
 SRC: REVIEW (I4)
 R: One file keeps the documentation, the tests and the status data in step.
 
+@FR-15.11 | Connect command
+P: FR-15
+S: The `smcpctl connect <client>` command SHALL be an alias of `smcpctl client setup <client>` that accepts the same clients, arguments and flags, writes the same changes and reports the same output and exit status.
+A: E-33; F-98; X-12
+V: Test | Run `smcpctl connect` and `smcpctl clients setup` for the same client with `--dry-run`, then apply and remove with `smcpctl connect`; confirm identical output and exit status for the dry run, the client's files written by the apply and restored by `--remove`, and the same error for an unknown client.
+SRC: OWNER (add `smcpctl connect` as an alias of `smcpctl clients setup`, 2026-10-18)
+R: "Connect" is the word users look for when attaching an agent; an alias adds the word without a second implementation to verify.
+
 ### FR-16 Remote Access Profile
 
 @FR-16 | Remote Access Profile
