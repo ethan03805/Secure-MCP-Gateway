@@ -187,6 +187,11 @@ func CheckLaunchSpec(spec ServerSpec) error {
 	return nil
 }
 
+// SubprocessSupported reports whether SubprocessLauncher can start server
+// instances on this platform: nil on Linux, macOS and, since the FR-21.11
+// launcher (launch_windows.go), Windows.
+func SubprocessSupported() error { return nil }
+
 // SubprocessLauncher runs servers as plain child processes with a minimal
 // environment. It provides no confinement: the standalone profile. On
 // Windows each instance runs in its own Job Object with the Limits below
