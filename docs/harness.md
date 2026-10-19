@@ -124,3 +124,19 @@ The Gateway reads the peer's user ID from the kernel (`SO_PEERCRED` on Linux, `L
 After that every message is served exactly as on the TLS endpoint, both protocol eras included: the Gateway derives `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name` from the message. Requests may be pipelined; each response, and each message of a listen stream (with its `subscriptionId` in `_meta`), is written as one line. `notifications/cancelled` for a request in flight cancels it (southbound too) and nothing more is written for it. Closing the socket cancels the requests in flight and ends the session.
 
 `smcp-stdio` uses the socket when its credential file names `[gateway] socket` and `uds_key` (`docs/adapters.md`).
+
+### On Windows: the named pipe (planned for v1.3.0)
+
+Windows has no Unix-domain harness socket. With `[uds] enabled = true` the Gateway serves the same protocol over the CP-02 named pipe (FR-21.8): by default `\\.\pipe\smcp-harness-<user SID>` (the per-user mode), or the `\\.\pipe\...` name in `[uds] path`. It never opens an AF_UNIX socket. Peers are registered by user SID instead of UID:
+
+```toml
+[uds]
+enabled = true                    # path defaults to \\.\pipe\smcp-harness-<your SID>
+
+[[uds.peer]]
+sid = "S-1-5-21-...-1001"         # whoami /user prints it
+principal = "cc"
+key_hash = "$argon2id$..."
+```
+
+The Gateway reads the client's user SID from the client's token by impersonating it at identification level, never from a process ID (FR-21.9). The pipe is created with `FILE_FLAG_FIRST_PIPE_INSTANCE` and `PIPE_REJECT_REMOTE_CLIENTS`. Its protected DACL gives read and write to the account running `smcpd` and to the local group named by `[uds] group` when that group exists. It denies NETWORK and ANONYMOUS LOGON and grants no other account (SR-2.8-6). Clients cannot create pipe instances. If the pipe name already exists when `smcpd` starts, it refuses to start with `pipe_squatted`. `smcp-stdio.exe` connects to the pipe when `[gateway] socket` names it.

@@ -2,7 +2,10 @@ package config
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 // UDS configures the optional UDS Harness Profile (CP-02, FR-1.47,
@@ -20,9 +23,12 @@ type UDS struct {
 	Peers []UDSPeer `toml:"peer" json:"peer"`
 }
 
-// UDSPeer registers one local user ID for a principal (FR-2.15).
+// UDSPeer registers one local user ID for a principal (FR-2.15). On
+// Windows the peer is the user SID of the client's token on the named
+// pipe (FR-21.9) and UID is not used.
 type UDSPeer struct {
 	UID       int    `toml:"uid" json:"uid"`
+	SID       string `toml:"sid" json:"sid,omitempty"`
 	Principal string `toml:"principal" json:"principal"`
 	// KeyHash is the Argon2id hash of the principal's bearer key on the
 	// socket (smcpctl hash-password produces one).
@@ -39,14 +45,30 @@ const (
 )
 
 // applyDefaults fills CP-02 defaults; Load resolves a relative path
-// against the configuration directory.
+// against the configuration directory. On Windows the default is the
+// per-user named pipe \\.\pipe\smcp-harness-<user SID> (FR-21.8).
 func (u *UDS) applyDefaults() {
 	if u.Path == "" {
 		u.Path = DefaultUDSPath
+		if runtime.GOOS == "windows" {
+			if sid, err := winsec.ProcessUserSID(); err == nil {
+				u.Path = `\\.\pipe\smcp-harness-` + sid
+			}
+		}
 	}
 	if u.Group == "" {
 		u.Group = DefaultUDSGroup
 	}
+}
+
+// PeerSID returns the peer registered for a Windows user SID.
+func (u *UDS) PeerSID(sid string) (UDSPeer, bool) {
+	for _, p := range u.Peers {
+		if p.SID != "" && strings.EqualFold(p.SID, sid) {
+			return p, true
+		}
+	}
+	return UDSPeer{}, false
 }
 
 // Peer returns the peer registered for uid.
@@ -68,8 +90,20 @@ func (c *Config) checkUDS() error {
 		return fmt.Errorf("uds: enabled without any [[uds.peer]]")
 	}
 	seen := map[int]bool{}
+	seenSID := map[string]bool{}
 	for i, p := range u.Peers {
-		if seen[p.UID] {
+		if runtime.GOOS == "windows" {
+			// FR-21.9: named-pipe peers are identified by user SID.
+			if p.SID == "" {
+				return fmt.Errorf("uds.peer[%d]: on Windows a peer is identified by sid (the user SID), not uid", i)
+			}
+			if seenSID[strings.ToUpper(p.SID)] {
+				return fmt.Errorf("uds.peer[%d]: sid %s registered twice", i, p.SID)
+			}
+			seenSID[strings.ToUpper(p.SID)] = true
+		} else if p.SID != "" {
+			return fmt.Errorf("uds.peer[%d]: sid identifies Windows named-pipe peers; on %s set uid", i, runtime.GOOS)
+		} else if seen[p.UID] {
 			return fmt.Errorf("uds.peer[%d]: uid %d registered twice", i, p.UID)
 		}
 		seen[p.UID] = true

@@ -55,16 +55,27 @@ func udsGroup(t *testing.T) (string, int) {
 }
 
 // udsHarness starts a harness with the UDS Harness Profile enabled for a
-// peer with the given UID and template, and serves the socket.
+// peer with the given UID and template, and serves the socket. On Windows
+// the transport is a named pipe (FR-21.8) and the peer is a user SID
+// (FR-21.9): the UID os.Getuid() stands for this process's SID, any other
+// for an SID no test process has.
 func udsHarness(t *testing.T, o harnessOpts, uid int, template string) (*harness, string) {
 	t.Helper()
+	var path string
 	if runtime.GOOS == "windows" {
-		t.Skip("the UDS Harness Profile is refused on Windows (TestWindowsUDSRefused); its transport there is the named pipe (FR-21.8)")
+		path = fmt.Sprintf(`\\.\pipe\smcp-test-%d-%d`, os.Getpid(), testport.Free(t))
+		sid := otherSID
+		if uid == os.Getuid() {
+			sid = selfSID(t)
+		}
+		o.toml = fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = \"smcp-harness-test-absent\"\n[[uds.peer]]\nsid = %q\nprincipal = \"cc\"\nkey_hash = %q\ntemplate = %q\n",
+			path, sid, udsKeyHash(t), template)
+	} else {
+		path = filepath.Join(testport.SocketDir(t), "h.sock")
+		group, _ := udsGroup(t)
+		o.toml = fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = %q\n[[uds.peer]]\nuid = %d\nprincipal = \"cc\"\nkey_hash = %q\ntemplate = %q\n",
+			path, group, uid, udsKeyHash(t), template)
 	}
-	path := filepath.Join(testport.SocketDir(t), "h.sock")
-	group, _ := udsGroup(t)
-	o.toml = fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = %q\n[[uds.peer]]\nuid = %d\nprincipal = \"cc\"\nkey_hash = %q\ntemplate = %q\n",
-		path, group, uid, udsKeyHash(t), template)
 	h := newHarness(t, o)
 	ln, err := h.gw.ListenUDS()
 	if err != nil {
@@ -90,7 +101,7 @@ type udsClient struct {
 
 func dialUDS(t *testing.T, path string) *udsClient {
 	t.Helper()
-	c, err := net.Dial("unix", path)
+	c, err := dialHarness(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,6 +361,9 @@ func udsCancellation(t *testing.T) {
 // TestUDSSocketMode is SR-2.8-3: the socket is created with mode 0660 and
 // owned by the configured group.
 func TestUDSSocketMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("socket mode and group are POSIX; the pipe's DACL is TestWindowsPipeSecurityDescriptor (SR-2.8-6)")
+	}
 	reqtest.Verifies(t, "SR-2.8-3")
 	_, gid := udsGroup(t)
 	_, path := udsHarness(t, harnessOpts{}, os.Getuid(), "ro")
@@ -364,3 +378,6 @@ func TestUDSSocketMode(t *testing.T) {
 		t.Fatalf("socket group %v, want %d", fi.Sys(), gid)
 	}
 }
+
+// otherSID is a user SID that no test process runs as.
+const otherSID = "S-1-5-21-1000-2000-3000-4242"

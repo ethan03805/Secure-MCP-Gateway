@@ -20,6 +20,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/channel"
+	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
@@ -62,6 +63,10 @@ func (g *Gateway) ListenUDS() (net.Listener, error) {
 	u := g.cfg.UDS
 	if !u.Enabled {
 		return nil, errors.New("edge: the UDS Harness Profile is not enabled")
+	}
+	// Windows: the CP-02 named pipe in place of the socket (FR-21.8).
+	if ln, ok, err := g.listenPlatform(); ok {
+		return ln, err
 	}
 	if err := udsSupported(); err != nil {
 		return nil, err
@@ -121,15 +126,10 @@ func (g *Gateway) ServeUDS(ctx context.Context, ln net.Listener) error {
 			}
 			return err
 		}
-		uc, ok := c.(*net.UnixConn)
-		if !ok {
-			c.Close()
-			continue
-		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			g.serveUDSConn(ctx, uc)
+			g.serveUDSConn(ctx, c)
 		}()
 	}
 }
@@ -137,7 +137,7 @@ func (g *Gateway) ServeUDS(ctx context.Context, ln net.Listener) error {
 // udsConn is one authenticated UDS connection.
 type udsConn struct {
 	g       *Gateway
-	c       *net.UnixConn
+	c       net.Conn
 	wmu     sync.Mutex
 	mu      sync.Mutex
 	sess    *session.Session
@@ -167,7 +167,7 @@ func (u *udsConn) writeError(id json.RawMessage, e *jsonrpc.Error) {
 	u.writeLine(msg)
 }
 
-func (g *Gateway) serveUDSConn(ctx context.Context, c *net.UnixConn) {
+func (g *Gateway) serveUDSConn(ctx context.Context, c net.Conn) {
 	defer c.Close()
 	u := &udsConn{g: g, c: c, cancels: map[string]context.CancelFunc{}, slots: make(chan struct{}, udsMaxInFlight)}
 	ctx, cancel := context.WithCancel(channel.With(ctx, channel.Origin{Channel: channel.UDS}))
@@ -267,8 +267,8 @@ func (u *udsConn) authenticate(line []byte) bool {
 		} `json:"params"`
 	}
 	_ = json.Unmarshal(line, &req)
-	uid, uidErr := peerUID(u.c)
-	peer, registered := g.cfg.UDS.Peer(uid)
+	id, idErr := g.identifyPeer(u.c)
+	peer, registered := id.peer, id.registered
 	// The key is verified even for an unregistered UID, so both failures
 	// cost the same (SR-2.3-1).
 	hash := peer.KeyHash
@@ -280,15 +280,15 @@ func (u *udsConn) authenticate(line []byte) bool {
 	switch {
 	case msg.Err != nil || msg.Method != MethodUDSAuthenticate || msg.Notification:
 		reason = "UDS_AUTH_REQUIRED"
-	case uidErr != nil || !registered:
+	case idErr != nil || !registered:
 		reason = "UDS_PEER_UNREGISTERED"
 	case !keyOK:
 		reason = "UDS_KEY_INVALID"
 	}
 	if reason != "" {
 		detail := map[string]any{"listener": channel.UDS}
-		if uidErr == nil {
-			detail["peer_uid"] = uid
+		if idErr == nil {
+			detail[id.field] = id.value
 		}
 		if err := g.evidence.Commit(audit.Event{Class: "auth_failure", Origin: "E-03", CorrelationID: corr, Outcome: "deny", ReasonCode: reason,
 			PolicyStatus: "not_evaluated", Detail: detail}); err != nil {
@@ -301,14 +301,14 @@ func (u *udsConn) authenticate(line []byte) bool {
 		u.writeError(msg.ID, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", reason, corr, "", nil))
 		return false
 	}
-	sess, tok, err := g.store.Create(session.CreateParams{PrincipalID: peer.Principal, ClientID: fmt.Sprintf("uds:%d", uid),
+	sess, tok, err := g.store.Create(session.CreateParams{PrincipalID: peer.Principal, ClientID: id.client,
 		Claims: session.Claims{Template: peer.Template}, Listener: channel.UDS})
 	if err != nil {
 		u.writeError(msg.ID, gatewayError(CodeSessionInvalid, "session not created: "+err.Error(), "SESSION_INVALID", corr, "", nil))
 		return false
 	}
 	if err := g.evidence.Commit(audit.Event{Class: "session", Origin: "E-04", SessionID: sess.ID, PrincipalID: sess.PrincipalID, PolicyRevision: sess.PolicyRevision,
-		Outcome: "created", ReasonCode: "UDS_PEER", PolicyStatus: "evaluated", Detail: map[string]any{"template": sess.Template, "listener": channel.UDS, "peer_uid": uid,
+		Outcome: "created", ReasonCode: "UDS_PEER", PolicyStatus: "evaluated", Detail: map[string]any{"template": sess.Template, "listener": channel.UDS, id.field: id.value,
 			"observation_policy": sess.ObservationPolicy, "context_key": sess.ContextKey}}); err != nil {
 		g.store.Terminate(sess.ID)
 		u.writeError(msg.ID, gatewayError(CodeGatewayFailClosed, "gateway fail-closed", ReasonJournalUnavailable, corr, "", nil))
@@ -320,6 +320,17 @@ func (u *udsConn) authenticate(line []byte) bool {
 		"_meta": map[string]any{"io.modelcontextprotocol/serverInfo": serverInfo}}})
 	u.writeLine(res)
 	return true
+}
+
+// udsPeerID identifies the process at the other end of a harness
+// connection: the kernel-reported UID on a Unix-domain socket, the user
+// SID of the client's token on a Windows named pipe (FR-21.9).
+type udsPeerID struct {
+	field      string // evidence detail key: peer_uid or peer_sid
+	value      any
+	client     string // session client ID
+	peer       config.UDSPeer
+	registered bool
 }
 
 // udsDummyHash is verified for an unregistered peer; it is made on first
