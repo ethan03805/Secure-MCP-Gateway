@@ -120,7 +120,9 @@ func TestReplayIngest(t *testing.T) {
 	for _, b := range backends {
 		t.Run(b, func(t *testing.T) {
 			cfg := replayConfig(t, b)
-			end := time.Now().UTC()
+			// The store keeps times to the microsecond; a whole-second end
+			// keeps the first record (at end minus the 30 days) inside From.
+			end := time.Now().UTC().Truncate(time.Second)
 			res, err := replayIngest(context.Background(), cfg, rate, 3*time.Second, RefDays, end)
 			if err != nil {
 				t.Fatal(err)
