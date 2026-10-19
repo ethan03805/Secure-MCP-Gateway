@@ -1,6 +1,7 @@
 // Accessibility and behavior check of the bundled windows in a browser
 // engine (SRS FR-20.15, FR-20.43, FR-20.52): axe-core with the WCAG 2.2 A and
-// AA rules on every introduction step and every tray state in the light and
+// AA rules on every introduction step, every tray state and each state of the
+// Check for Updates window in the light and
 // dark schemes, the windows under the application's CSP, keyboard use of
 // the introduction, and reduced motion. Run after `npm run build`:
 //   node e2e/a11y.mjs            (WebKit, the engine of WKWebView)
@@ -75,6 +76,8 @@ const STATES = [
 
 const CLIENTS_DEMOS = ["demo=list", "demo=none-connected", "demo=none-detected", "demo=not-set-up", "demo=failed", "demo=list&preview=codex"];
 const SETUP_DEMOS = ["form", "form-enforced", "form-missing", "running", "failed", "done", "configured", "missing-smcpctl"];
+// The Check for Updates window's states (src/updates-model.ts PREVIEWS).
+const UPDATES = ["idle", "latest", "available", "working", "verify-failed", "rolled-back", "offline"];
 
 const engine = process.env.ENGINE === "chromium" ? chromium : webkit;
 const browser = await engine.launch();
@@ -94,6 +97,12 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
     await page.waitForSelector("#meaning:not(:empty)");
     if (shots) await page.screenshot({ path: `${shots}/${name}-${scheme}.png`, fullPage: true });
     await axe(page, `${name} (${scheme})`);
+  }
+  for (const name of UPDATES) {
+    await page.goto(`${base}/updates.html?preview=${name}`);
+    await page.waitForSelector("dl#facts dt");
+    if (shots) await page.screenshot({ path: `${shots}/updates-${name}-${scheme}.png`, fullPage: true });
+    await axe(page, `updates ${name} (${scheme})`);
   }
   for (const p of ["settings.html", "error.html"]) {
     await page.goto(`${base}/${p}`);
@@ -131,6 +140,8 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
   await page.waitForSelector("#meaning:not(:empty)");
   await page.goto(`${base}/setup.html?csp&demo=failed`);
   await page.waitForSelector("#stage-title");
+  await page.goto(`${base}/updates.html?csp&preview=available`);
+  await page.waitForSelector("dl#facts dt");
   if (errors.length) fail(`errors under the CSP: ${errors.join(" | ")}`);
   await ctx.close();
 }

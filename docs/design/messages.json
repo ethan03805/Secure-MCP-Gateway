@@ -559,6 +559,11 @@
         "why": "The file may be damaged, or it may not come from the project.",
         "todo": "Select Check for Updates to download it again. If it fails again, report it as SECURITY.md describes."
       },
+      "UPDATE_INSTALL_FAILED": {
+        "title": "The installer did not finish",
+        "what": "The verified {kind} installer ended with an error or could not be started.",
+        "todo": "Read the installer's output in the details, then select Check for Updates to try again."
+      },
       "UPDATE_NOT_NEWER": {
         "title": "The update was not installed",
         "what": "The offered release, version {offered}, is not newer than the installed version {installed}.",

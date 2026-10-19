@@ -26,6 +26,11 @@ fn main() {
             "clients_preview",
             "clients_apply",
             "clients_remove",
+            "updates_get",
+            "updates_check",
+            "updates_open_notes",
+            "updates_install_app",
+            "updates_upgrade_gateway",
         ])),
     )
     .expect("tauri-build failed");

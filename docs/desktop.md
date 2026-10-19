@@ -1,16 +1,17 @@
 # Desktop application (draft)
 
-> **Status: in development for v1.3.0 (SRS FR-20, planned).** This is the first draft of the desktop application guide that SRS FR-20.27 requires. It describes what is built today in `desktop/`: the tray, service control, the console window, approval notifications, first-run setup and client setup. updates, the platform installers and Windows support come in later changes. Until the installers ship, build the application from source as described at the end of this page.
+> **Status: in development for v1.3.0 (SRS FR-20, planned).** This is the first draft of the desktop application guide that SRS FR-20.27 requires. It describes what is built today in `desktop/`: the tray, service control, the console window, approval notifications, first-run setup, client setup and updates. The platform installers and Windows support come in later changes. Until the installers ship, build the application from source as described at the end of this page.
 
 The Secure MCP Gateway desktop application is a tray (menu-bar) application, built with Tauri 2, that shows the Gateway's health at a glance, starts and stops the `smcpd` service, tells you when tool calls are waiting for approval, and opens the management console in its own window instead of a browser tab. It runs on macOS 14 or later on Apple silicon (there is no Intel build; Intel Macs keep the command-line path) and on Linux with WebKitGTK 4.1 and a tray that supports StatusNotifierItem or AppIndicator. The terminal path (`install.sh`, `smcpctl`) stays fully supported.
 
 ## What the application can and cannot do
 
-**The desktop application holds no authority beyond your console sign-in.** It has no role of its own (SRS Appendix C) and it never reads the operator token, the Secret Vault, the key store, the evidence journal or the Gateway configuration. It does three things on its own:
+**The desktop application holds no authority beyond your console sign-in.** It has no role of its own (SRS Appendix C) and it never reads the operator token, the Secret Vault, the key store, the evidence journal or the Gateway configuration. It does four things on its own:
 
 - it reads the metrics endpoint on loopback (CP-51), which needs no credential and carries no tool arguments, principals or sessions;
 - it starts, stops and restarts the `smcpd` service through the platform's service manager;
-- it opens the console that `smcpd` serves.
+- it opens the console that `smcpd` serves;
+- it checks GitHub for a newer release and, when you ask, installs it after verifying it (see [Updates](#updates)).
 
 Every other operation, including the emergency stop and every approval, happens inside the console window, under your own console sign-in and role, exactly as in a browser. A notification is never an approval, and the tray state is advisory: the console and `smcpctl health` are authoritative.
 
@@ -80,8 +81,8 @@ The tray needs the metrics endpoint. `smcpctl bootstrap` enables it on the admin
 | Approvals (*n* pending) | Opens the console window at the Approvals view (G-13). |
 | Start, Stop, Restart | Controls the `smcpd` service through the service manager. Start is enabled only while the service is stopped; Stop and Restart only while it runs. |
 | Set Up a Client… | Opens the client setup window (below). |
-| Check for Updates | Not available yet (shown disabled). |
-| Settings… | The admin listener address, the metrics endpoint, the CA file, the notification switch and Open the app when I log in. |
+| Check for Updates… | Opens the Check for Updates window and checks for a newer release (see [Updates](#updates)). The item reads "Update Available (*version*)…" after a check that found one. |
+| Settings… | The admin listener address, the metrics endpoint, the CA file, the notification switch, Open the app when I log in, and the daily update check. |
 | Help | Introduction (reopens the introduction), Set Up the Gateway (first-run setup), Gateway Status, and Desktop Guide (this page, in the default browser). |
 | Quit | Quits the application. The Gateway keeps running. |
 
@@ -113,6 +114,26 @@ For the Linux Enforced profile the state directory is not readable by your accou
 ## Approval notifications
 
 When the number of pending approvals goes up and notifications are on, the application raises one notification: "*n* tool calls are waiting for approval. Open the console to review them." The text is fixed except for the count; it never names a tool, a server or an argument, because the application knows nothing else without signing in, and notification centers are visible to anyone at the unlocked desktop. A notification has no approve, deny or reply action. To decide, open **Approvals** from the tray menu and sign in as an Approver or Administrator. Turn notifications off in **Settings**. Clicking the notification opens the console window at the Approvals view (macOS and Linux); that is its only action. On Windows the notification does not open the console yet; use Approvals in the tray menu.
+
+## Updates
+
+The application looks for a newer stable release on the project's GitHub Releases (SRS FR-20.11): once a day while it runs, and when you select **Check for Updates…**. That check is the only network request the application makes on its own. It is an anonymous HTTPS GET of the releases document (`api.github.com/repos/ethan03805/Secure-MCP-Gateway/releases/latest`) with the fixed `User-Agent` `smcp-desktop` and no cookie, credential, query string, version or other installation data. The only thing it stores is the time of the last check, in the file `update-check` in the application's configuration directory. Turn the daily check off in **Settings** (Check for updates once a day) on a computer without internet access; Check for Updates in the menu still works. Without network access a check you start shows "Could not check for updates" once, and the daily check fails silently and waits another day; it never retries in a loop.
+
+When a newer release exists, the window shows its version, the version of the app and of the Gateway, and a **Release Notes** link that opens in your browser. It then offers what applies:
+
+- **Update App** (FR-20.13). The application downloads the release's installer of the kind that installed it: the `.pkg` or `.dmg` on macOS, the `smcp` and `smcp-desktop` `.deb` or `.rpm` packages or the AppImage on Linux, the `.msi` on Windows. A copy built from source, or any build whose version is 0.x, is not updated from here, because the version check below needs the true installed version. Nothing runs until the checks below pass. Then: the `.pkg` opens in Installer, the `.dmg` opens in the Finder (drag the app to Applications again), and the `.msi` starts with its User Account Control prompt, and the application quits so the installer can replace it; on Linux, `pkexec dpkg -i` or `pkexec rpm -U` installs the packages (polkit shows the command), or the AppImage file is replaced, and the application restarts. The Tauri updater plugin is not used.
+- **Upgrade Gateway** (FR-20.12), for a Standalone installation from the release archive (`install.sh`). The application downloads the archive for your platform, verifies it, and runs `smcpctl upgrade --config <the service's configuration> --release <download directory> --passphrase-file -`, using the `smcpctl` beside the `smcpd` that the launchd agent or systemd user unit runs. Enter the backup passphrase in the window: `smcpctl upgrade` takes an encrypted backup first and restores it if the upgrade fails. The passphrase goes to `smcpctl`'s standard input, never to an argument or a file, and is not stored. The window shows the upgrade's output as it runs. A rollback is reported as a failed upgrade with the version that runs afterwards ("The upgrade was rolled back"). An Enforced installation is upgraded as root in a terminal (see [install.md](install.md#upgrade-and-rollback)), and packaged binaries are updated with their package, which Update App installs.
+
+**Verification** (SR-7-2). Before anything runs, the application checks, in this order:
+
+1. that the release is newer than the installed version. An older or equal release is refused ("The update was not installed"), so an old signed release with known flaws cannot be installed again;
+2. the minisign signature of `smcp_<version>_checksums.txt` with the release key built into the application, the key in [SECURITY.md](../SECURITY.md) and `install.sh` (key ID `064FAC0C64ACCED0`), and that its signed trusted comment names that file, which binds the signature to the version;
+3. when `cosign` is installed (in `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin` or on `PATH`), the checksum file's Sigstore bundle against the release workflow identity, as `install.sh` checks it;
+4. the SHA-256 of each downloaded file against the verified checksum file.
+
+When a check fails the downloaded files are deleted, nothing is installed, and the window names the failed check (for example "did not pass the SHA-256 checksum check") with the details. Downloads go to a directory only your user can read, in the application's cache directory; leftovers are removed at the next start. On Linux the verified packages are handed to `dpkg` or `rpm` as sealed in-memory copies, so no program running as you can change them between the check and the install. On macOS and Windows the installer reads the verified file from the download directory; see [security-limitations.md](security-limitations.md).
+
+To try a release candidate, point the application at another releases document with the environment variable `SMCP_DESKTOP_RELEASE_FEED` (an HTTPS URL, or plain HTTP to a loopback address). The release key is not configurable, so another feed can offer only releases the project signed.
 
 ## Single instance
 
@@ -150,4 +171,4 @@ The macOS bundle is not signed; macOS asks you to approve it in System Settings,
 
 ## Not yet available
 
-Update checks and upgrades (FR-20.11 to FR-20.13), Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).
+Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).

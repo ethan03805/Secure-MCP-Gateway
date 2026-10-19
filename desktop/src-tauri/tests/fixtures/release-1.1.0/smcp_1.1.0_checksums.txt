@@ -1,0 +1,8 @@
+94d4fbc6655dcfe1dd578b5fd0ae705b7b126af83e851dd9697dc63cd07d4aa5  smcp_1.1.0_darwin_amd64.tar.gz
+49fd6458f7d4edb66ed407744ccff78c674598ab10e4ea16a80d96ad1c868d3b  smcp_1.1.0_darwin_amd64.tar.gz.sbom.json
+b401ce434a9fec88783928d413f916ea370d01253454e42f26276c169a6fd953  smcp_1.1.0_darwin_arm64.tar.gz
+d9116d04d4ea0af24a7b43ca1bfd90dd50d1c0772be05754d8adf0bd9f8a185a  smcp_1.1.0_darwin_arm64.tar.gz.sbom.json
+5514ef5f8d3458ee1aa918fd65a9aa198c87b49da7d6e4bccb5d2cabc91c9669  smcp_1.1.0_linux_amd64.tar.gz
+86571fed01f6f0fb7e239f38e9680f155f84c0e929c063de02fdd76e592dc8c2  smcp_1.1.0_linux_amd64.tar.gz.sbom.json
+74a7f8bd8f854291870ecf3f4aa31080254983ac919475c7411c41522456bb4c  smcp_1.1.0_linux_arm64.tar.gz
+bf52f9f560e0aa3ff724df7ad14d4fb8c99f28b0ee6d7dd6431d50220c1439fa  smcp_1.1.0_linux_arm64.tar.gz.sbom.json

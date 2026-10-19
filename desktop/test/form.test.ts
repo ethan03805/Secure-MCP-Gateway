@@ -5,8 +5,9 @@ import { errorsByField, fromValues, toFieldErrors } from "../src/form.ts";
 
 test("form values become the settings the Rust side stores", () => {
   const s = fromValues({ admin_url: " https://127.0.0.1:8444 ", metrics_address: "127.0.0.1:9464\n", ca_file: "" }, false);
-  assert.deepEqual(s, { admin_url: "https://127.0.0.1:8444", metrics_address: "127.0.0.1:9464", ca_file: "", notifications: false, start_at_login: false });
+  assert.deepEqual(s, { admin_url: "https://127.0.0.1:8444", metrics_address: "127.0.0.1:9464", ca_file: "", notifications: false, start_at_login: false, update_checks: true });
   assert.equal(fromValues({ admin_url: "", metrics_address: "", ca_file: "" }, true, true).start_at_login, true);
+  assert.equal(fromValues({ admin_url: "", metrics_address: "", ca_file: "" }, true, false, false).update_checks, false);
 });
 
 test("validation errors land on their fields", () => {

@@ -34,6 +34,7 @@ async function load(): Promise<void> {
   for (const f of FIELDS) input(f).value = view.settings[f];
   input("notifications").checked = view.settings.notifications;
   input("start_at_login").checked = view.settings.start_at_login;
+  input("update_checks").checked = view.settings.update_checks;
   const def = document.getElementById("default_ca_file");
   if (def) def.textContent = view.default_ca_file;
 }
@@ -41,7 +42,7 @@ async function load(): Promise<void> {
 async function save(ev: Event): Promise<void> {
   ev.preventDefault();
   const values = Object.fromEntries(FIELDS.map((f) => [f, input(f).value])) as Record<TextField, string>;
-  const settings: Settings = fromValues(values, input("notifications").checked, input("start_at_login").checked);
+  const settings: Settings = fromValues(values, input("notifications").checked, input("start_at_login").checked, input("update_checks").checked);
   try {
     await invoke<void>("save_settings", { settings });
     show(errorsByField([]));

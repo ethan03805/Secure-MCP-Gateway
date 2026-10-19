@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-updates-upgrade-gateway"
+description = "Enables the updates_upgrade_gateway command without any pre-configured scope."
+commands.allow = ["updates_upgrade_gateway"]
+
+[[permission]]
+identifier = "deny-updates-upgrade-gateway"
+description = "Denies the updates_upgrade_gateway command without any pre-configured scope."
+commands.deny = ["updates_upgrade_gateway"]

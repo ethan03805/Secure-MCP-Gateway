@@ -67,7 +67,7 @@ fn no_gateway_secret_or_control_api_in_the_application() {
 
 /// Each bundled window has one capability granting only its own commands;
 /// the console window has none (SR-2-5).
-const CAPABILITIES: [(&str, &str, &str, &[&str]); 5] = [
+const CAPABILITIES: [(&str, &str, &str, &[&str]); 6] = [
     (
         "settings.json",
         "settings-window",
@@ -121,6 +121,18 @@ const CAPABILITIES: [(&str, &str, &str, &[&str]); 5] = [
             "allow-clients-remove",
         ],
     ),
+    (
+        "updates.json",
+        "updates-window",
+        "updates",
+        &[
+            "allow-updates-get",
+            "allow-updates-check",
+            "allow-updates-open-notes",
+            "allow-updates-install-app",
+            "allow-updates-upgrade-gateway",
+        ],
+    ),
 ];
 
 #[test]
@@ -163,7 +175,8 @@ fn one_capability_per_bundled_window_and_none_for_the_console() {
             "intro-window",
             "status-window",
             "setup-window",
-            "clients-window"
+            "clients-window",
+            "updates-window"
         ])
     );
     for label in [
@@ -172,6 +185,7 @@ fn one_capability_per_bundled_window_and_none_for_the_console() {
         crate::STATUS_LABEL,
         crate::SETUP_LABEL,
         crate::CLIENTS_LABEL,
+        crate::UPDATES_LABEL,
     ] {
         assert_ne!(crate::console::CONSOLE_LABEL, label);
     }
@@ -204,6 +218,7 @@ fn commands_are_declared_and_registered_once() {
     assert_eq!(LIB.matches("only_window(&webview, STATUS_LABEL)").count(), 4);
     assert_eq!(LIB.matches("only_window(&webview, SETUP_LABEL)").count(), 5);
     assert_eq!(LIB.matches("only_window(&webview, CLIENTS_LABEL)").count(), 4);
+    assert_eq!(LIB.matches("only_window(&webview, UPDATES_LABEL)").count(), 5);
 }
 
 #[test]
@@ -239,6 +254,7 @@ fn bundled_pages_are_self_only() {
         "status.html",
         "setup.html",
         "clients.html",
+        "updates.html",
     ] {
         let page = std::fs::read_to_string(dist.join(f)).unwrap();
         assert!(

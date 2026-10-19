@@ -9,6 +9,7 @@ export interface Settings {
   notifications: boolean;
   /** FR-20.14: off after installation. */
   start_at_login: boolean;
+  update_checks: boolean;
 }
 
 export interface SettingsView {
@@ -25,13 +26,14 @@ export const FIELDS = ["admin_url", "metrics_address", "ca_file"] as const;
 export type TextField = (typeof FIELDS)[number];
 
 /** Reads the form values into a Settings object, trimming text fields. */
-export function fromValues(values: Record<TextField, string>, notifications: boolean, startAtLogin = false): Settings {
+export function fromValues(values: Record<TextField, string>, notifications: boolean, startAtLogin = false, updateChecks = true): Settings {
   return {
     admin_url: values.admin_url.trim(),
     metrics_address: values.metrics_address.trim(),
     ca_file: values.ca_file.trim(),
     notifications,
     start_at_login: startAtLogin,
+    update_checks: updateChecks,
   };
 }
 

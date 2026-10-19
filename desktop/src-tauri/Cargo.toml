@@ -33,6 +33,13 @@ serde_json = "=1.0.150"
 url = "=2.5.8"
 rustls-webpki = { version = "=0.103.15", default-features = false, features = ["std", "ring"] }
 rustls-pki-types = { version = "=1.15.1", features = ["std"] }
+# Update check and download (FR-20.11, FR-20.13): HTTPS with the operating
+# system's trust store, no cookies, no compression. Release verification
+# (SR-7-2): minisign signatures, SHA-256 and release version ordering.
+ureq = { version = "=3.4.2", default-features = false, features = ["rustls", "platform-verifier"] }
+minisign-verify = "=0.2.5"
+ring = "=0.17.14"
+semver = "=1.0.28"
 
 [target.'cfg(unix)'.dependencies]
 libc = "=0.2.189"
@@ -54,6 +61,8 @@ webkit2gtk = { version = "=2.0.2", features = ["v2_40"] }
 
 [dev-dependencies]
 rcgen = { version = "=0.14.10", default-features = false, features = ["crypto", "pem", "ring"] }
+# Signs the throwaway test release feed (never the release key).
+minisign = { version = "=0.9.1", default-features = false }
 
 [profile.release]
 codegen-units = 1

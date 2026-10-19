@@ -94,7 +94,14 @@ Windows support is specified for v1.3.0 (SRS FR-21) and is not in any release ye
 - **WSL2 mode:** the Linux Enforced stack runs inside a WSL2 distribution, but any program of the Windows user, the agent included, can run `wsl.exe -u root` and change the Gateway inside it.
 - **Unsigned binaries:** the Windows binaries carry no Authenticode signature until the project has a signing certificate (FR-20.30, deferred). SmartScreen warns about them and Smart App Control blocks them; verify them with minisign and SHA-256.
 
-### 14. Trusted computing base
+### 14. Desktop application updates (planned, not in a release)
+
+The desktop application (SRS FR-20.11 to FR-20.13, planned for v1.3.0) installs an update only after checking the release's minisign signature with the built-in release key, the version, the SHA-256 of each file and, when cosign is installed, the Sigstore bundle (SR-7-2). Two limits remain:
+
+- **macOS and Windows installers read the verified file from disk.** The application verifies the `.pkg`, `.dmg` or `.msi` in a download directory that only your user can read, checks its SHA-256 again immediately before it opens it, and then Installer or Windows Installer reads the file. A program running as your user (an agent included) could replace the file in the moment between that check and the read, and the installer, which runs with administrator rights, would install the replacement. On Linux this window is closed: the packages go to `dpkg` or `rpm` as sealed in-memory copies. Until the macOS and Windows installers are signed (FR-20.29, FR-20.30, deferred) and checked by the operating system, update from a terminal with `install.sh` or the verified package if this matters for your threat model.
+- **Unsigned installers.** The `.pkg`, `.dmg` and `.msi` carry no Developer ID or Authenticode signature yet, so the operating system cannot confirm their origin; the release signatures above are the only check.
+
+### 15. Trusted computing base
 
 The host operating system, its administrator, the Gateway binaries and the trust-anchor store are trusted (ARCH A-4). A person with administrator access to the host can change or disable every control and can delete evidence that has not been exported.
 
