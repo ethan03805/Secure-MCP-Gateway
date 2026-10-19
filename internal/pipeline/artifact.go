@@ -34,7 +34,7 @@ type LaunchArtifact struct {
 // (flags, directories, missing paths) are not part of the address.
 func ContentAddress(command string, args []string) (LaunchArtifact, error) {
 	a := LaunchArtifact{Files: map[string]string{}}
-	if !filepath.IsAbs(command) {
+	if !commandIsAbs(command) {
 		return a, fmt.Errorf("%w: command %q must be an absolute path", ErrUnpinnedLaunch, command)
 	}
 	sum, err := fileDigest(command)

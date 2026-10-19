@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winpath"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
 
 // ServerSpec is what a Launcher needs to start one backend server

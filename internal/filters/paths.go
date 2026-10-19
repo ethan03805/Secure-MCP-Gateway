@@ -41,7 +41,7 @@ func newPathFilter(o PathOptions) (*pathFilter, error) {
 			if !isAbs(r) {
 				return nil, errors.New("granted root " + r + " is not absolute")
 			}
-			c, err := filepath.EvalSymlinks(filepath.Clean(r))
+			c, err := evalPath(filepath.Clean(r))
 			if err != nil {
 				return nil, errors.Join(errNoRoot, err)
 			}
@@ -127,7 +127,7 @@ func narrowRoots(roots []string, project string) ([]string, bool) {
 	if !isAbs(project) {
 		return nil, false
 	}
-	p, err := filepath.EvalSymlinks(filepath.Clean(project))
+	p, err := evalPath(filepath.Clean(project))
 	if err != nil {
 		return nil, false
 	}
@@ -279,7 +279,7 @@ func resolveDepth(p string, hops int) string {
 				}
 			}
 		}
-		r, err := filepath.EvalSymlinks(cur)
+		r, err := evalPath(cur)
 		if err == nil {
 			if rest == "" {
 				return r
