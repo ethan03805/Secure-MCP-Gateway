@@ -1,5 +1,9 @@
 # MCP Gateway documentation changelog
 
+## Unreleased
+
+- ContextForge catalog (E-36, FR-22, planned v1.3.0): `smcpctl catalog` is no longer experimental. The release lock `packaging/contextforge.lock.json` pins ContextForge v1.0.11 (image index and linux/amd64 and linux/arm64 digests, source commit, cosign signer identity, catalog SHA-256 and the starter set `aws-knowledge`, `deepwiki`, `microsoft-learn-docs`) and is compiled into the binaries with the release's catalog file. `smcpctl catalog list`, `show` and `import --dry-run` read that catalog after checking its digest against the lock; an operator file needs `--catalog` and the confirmed `--sha256`, otherwise `CATALOG_DIGEST_MISMATCH` (FR-22.1). Parse refusals carry `CATALOG_INVALID` and name the rule (FR-22.2, verified); entries missing `name`, `provider` or `auth_type` are `unsupported` with that reason (FR-22.3, verified). `contextforge.MapToolNames` derives hosted manifest tool names from ContextForge's `<slug>-<name>` as FR-22.10 states and refuses collisions with `TOOL_NAME_COLLISION`; the hosted draft's `upstream` member now carries the gateway name and slug. `--experimental-contextforge` is accepted and ignored. See `docs/contextforge.md`.
+
 ## v1.2.0 — 2026-10-19
 
 Third release, built to SRS V1.2 and architecture V2.3 from main after the phase-10 work (32 pull requests since v1.1.0). The tag is made by the procedure in `docs/release-checklist.md`, rehearsed with `v1.2.0-rc.1` on the same commit.

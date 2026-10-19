@@ -32,8 +32,8 @@ Offline:
   package          build, sign, verify, install and manage server packages (smcpctl package help)
   trust            enroll, list and remove package signing keys (trust anchors)
   filters          list, export and test the inspection rule sets (rules, export, scan)
-  catalog          EXPERIMENTAL: classify a ContextForge catalog file and print a
-                   draft import (list, import --dry-run; smcpctl catalog -h)
+  catalog          browse the pinned ContextForge catalog and draft imports
+                   (list, show, import --dry-run; smcpctl catalog -h)
   restore          restore an encrypted backup (the Gateway must be stopped)
   install          install as a service: --profile standalone (launchd or systemd
                    user unit) or enforced (Linux, root); idempotent

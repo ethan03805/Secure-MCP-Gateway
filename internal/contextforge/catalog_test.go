@@ -8,13 +8,56 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-// testdata/mcp-catalog-v1.0.11.yml is the unmodified mcp-catalog.yml of
+// FR-22.3: every entry of the pinned catalog gets exactly one class, and
+// fixtures of each unsupported kind carry their named reason.
+func TestClassificationReasons(t *testing.T) {
+	reqtest.Verifies(t, "FR-22.3")
+	c := loadFixture(t)
+	for _, e := range c.Entries {
+		class, reasons := e.Classify()
+		switch class {
+		case ClassLocal, ClassHosted:
+			if len(reasons) != 0 {
+				t.Errorf("%s: %s with reasons %v", e.ID, class, reasons)
+			}
+		case ClassUnsupported:
+			if len(reasons) == 0 {
+				t.Errorf("%s: unsupported without a reason", e.ID)
+			}
+		default:
+			t.Errorf("%s: class %q", e.ID, class)
+		}
+	}
+	base := "    name: N\n    provider: P\n    auth_type: Open\n"
+	cases := map[string]string{
+		"plain http url to a non-loopback host": base + "    url: http://mcp.example.com/sse\n",
+		"needs OAuth 2.1":                       "    name: N\n    provider: P\n    auth_type: OAuth2.1\n    url: https://mcp.example.com/mcp\n",
+		"missing required field name":           "    provider: P\n    auth_type: Open\n    url: https://mcp.example.com/mcp\n",
+		"missing required field provider":       "    name: N\n    auth_type: Open\n    url: https://mcp.example.com/mcp\n",
+		"missing required field auth_type":      "    name: N\n    provider: P\n    repo: https://example.com/r\n    install: npx y@1.0.0\n",
+		"missing or invalid url":                base,
+	}
+	for reason, body := range cases {
+		cat, err := ParseCatalog([]byte("catalog_servers:\n  - id: e\n" + body))
+		if err != nil {
+			t.Fatalf("%s: %v", reason, err)
+		}
+		class, reasons := cat.Entries[0].Classify()
+		if class != ClassUnsupported || !strings.Contains(strings.Join(reasons, "; "), reason) {
+			t.Errorf("%q: %s %v", reason, class, reasons)
+		}
+	}
+}
+
+// release/mcp-catalog-v1.0.11.yml is the unmodified mcp-catalog.yml of
 // IBM ContextForge release v1.0.11 (Apache-2.0), recorded on 2026-10-18 so
 // that no test touches the network.
 const (
-	fixture       = "testdata/mcp-catalog-v1.0.11.yml"
+	fixture       = "release/mcp-catalog-v1.0.11.yml"
 	fixtureSHA256 = "f6be59e31f1017487c8c882fa86b2594214e50b7bcf784773a5a4e0651e91daa"
 )
 
@@ -104,7 +147,7 @@ func TestClassifySynthetic(t *testing.T) {
 		{`url: "ftp://x.example/"`, ClassUnsupported, "neither an install command nor an https url"},
 	}
 	for i, tc := range cases {
-		doc := fmt.Sprintf("catalog_servers:\n  - id: e%d\n    auth_type: \"Open\"\n    %s\n", i, tc.yaml)
+		doc := fmt.Sprintf("catalog_servers:\n  - id: e%d\n    name: E\n    provider: P\n    auth_type: \"Open\"\n    %s\n", i, tc.yaml)
 		c, err := ParseCatalog([]byte(doc))
 		if err != nil {
 			t.Fatalf("case %d: %v", i, err)

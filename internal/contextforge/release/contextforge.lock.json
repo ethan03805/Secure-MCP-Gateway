@@ -1,0 +1,32 @@
+{
+  "lock_version": 1,
+  "contextforge": {
+    "version": "v1.0.11",
+    "released": "2026-09-28",
+    "license": "Apache-2.0",
+    "source": {
+      "repository": "https://github.com/IBM/mcp-context-forge",
+      "tag": "v1.0.11",
+      "commit": "077071bbb43599dd5ab9372ebdbb9a8e686a9816"
+    },
+    "image": {
+      "reference": "ghcr.io/ibm/mcp-context-forge",
+      "index_digest": "sha256:e9639c030162d6cb2f9f188600dd69af8091ec62a7ce307d4a74f4d4f86873df",
+      "platforms": {
+        "linux/amd64": "sha256:1d17a59895ee712a7ae883462dfa8f8d598ea4f3ef28eb2439b1a622555e56d4",
+        "linux/arm64": "sha256:c081736abaf4864af4014a743b2a82447a6de64ec4e6881ea12b77aa1a43554f"
+      }
+    },
+    "signer": {
+      "issuer": "https://token.actions.githubusercontent.com",
+      "subject": "https://github.com/IBM/mcp-context-forge/.github/workflows/docker-multiplatform.yml@refs/tags/v1.0.11"
+    },
+    "wheels": [],
+    "catalog": {
+      "file": "mcp-catalog.yml",
+      "sha256": "f6be59e31f1017487c8c882fa86b2594214e50b7bcf784773a5a4e0651e91daa",
+      "entries": 135
+    },
+    "starter_set": ["aws-knowledge", "deepwiki", "microsoft-learn-docs"]
+  }
+}

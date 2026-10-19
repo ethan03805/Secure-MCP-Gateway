@@ -138,14 +138,17 @@ type Provenance struct {
 	Install             string `json:"install,omitempty"`
 }
 
-// Upstream is the proposed manifest_version 2 member of a hosted package
-// (FR-22.10). It is not in the Appendix J schema yet.
+// Upstream is the manifest_version 2 member of a hosted package
+// (FR-22.10): the hosted endpoint, the catalog entry it came from and the
+// ContextForge gateway name and slug fixed at the probe.
 type Upstream struct {
 	Kind        string `json:"kind"`
 	URL         string `json:"url"`
 	Transport   string `json:"transport"`
 	EntryID     string `json:"catalog_entry_id"`
 	EntrySHA256 string `json:"catalog_entry_sha256"`
+	GatewayName string `json:"gateway_name"`
+	GatewaySlug string `json:"gateway_slug"`
 }
 
 // HostedDraft is a draft hosted-package manifest: every member that can be
@@ -163,13 +166,12 @@ type HostedDraft struct {
 
 // Draft is the dry-run result printed by `smcpctl catalog import --dry-run`.
 type Draft struct {
-	Experimental string   `json:"experimental"`
-	EntryID      string   `json:"entry_id"`
-	Name         string   `json:"name,omitempty"`
-	Provider     string   `json:"provider,omitempty"`
-	AuthType     string   `json:"auth_type,omitempty"`
-	Class        string   `json:"class"`
-	Reasons      []string `json:"unsupported_reasons,omitempty"`
+	EntryID  string   `json:"entry_id"`
+	Name     string   `json:"name,omitempty"`
+	Provider string   `json:"provider,omitempty"`
+	AuthType string   `json:"auth_type,omitempty"`
+	Class    string   `json:"class"`
+	Reasons  []string `json:"unsupported_reasons,omitempty"`
 
 	Proposal *Proposal         `json:"artifact_proposal,omitempty"`
 	Recipe   *packaging.Recipe `json:"recipe,omitempty"`
@@ -195,8 +197,7 @@ func DraftImport(c *Catalog, id string, o ImportOptions) (*Draft, error) {
 	}
 	class, reasons := e.Classify()
 	d := &Draft{
-		Experimental: "contextforge-catalog-import (spike; not a release feature)",
-		EntryID:      e.ID, Name: e.Name, Provider: e.Provider, AuthType: e.AuthType,
+		EntryID: e.ID, Name: e.Name, Provider: e.Provider, AuthType: e.AuthType,
 		Class: class, Reasons: reasons,
 		Provenance: Provenance{
 			CatalogSHA256: c.SHA256, ContextForgeRelease: o.Release,
@@ -204,7 +205,10 @@ func DraftImport(c *Catalog, id string, o ImportOptions) (*Draft, error) {
 			URL: e.URL, Repo: e.Repo, Install: e.Install,
 		},
 	}
-	if o.Release == "" {
+	if o.Release == "" && c.Origin == OriginPinned {
+		d.Provenance.ContextForgeRelease = c.Release
+	}
+	if d.Provenance.ContextForgeRelease == "" {
 		d.OperatorMustSupply = append(d.OperatorMustSupply, "the ContextForge release the catalog file belongs to (--release); FR-22.1 reads it from the release lock")
 	}
 	switch class {
@@ -351,6 +355,7 @@ func draftHosted(d *Draft, e *Entry) {
 		Upstream: Upstream{
 			Kind: "contextforge-hosted", URL: e.URL, Transport: transport,
 			EntryID: e.ID, EntrySHA256: d.Provenance.EntrySHA256,
+			GatewayName: GatewayName(e.ID), GatewaySlug: GatewayName(e.ID),
 		},
 		RiskClass:    "moderate",
 		ToolDefaults: packaging.ToolClass{SideEffect: "external", SourceTrust: "untrusted"},
@@ -376,8 +381,7 @@ func draftHosted(d *Draft, e *Entry) {
 	d.ProvenanceGaps = []string{
 		"a hosted entry has no artifact: no version, digest, license or source can be verified, only the endpoint",
 		"serverInfo name and version and the TLS public key digest are only known after the probe (FR-22.11)",
-		"manifest_version 2 and the upstream member are not in the Appendix J schema yet",
-		"ContextForge prefixes tool names with the gateway slug and a hyphen; Appendix J tool names allow only [A-Za-z0-9_]{1,47}",
+		"ContextForge serves tools as <gateway_slug>-<name>; each tool's manifest name is derived from that backend name at the probe (FR-22.10)",
 	}
-	d.NextSteps = []string{"not implemented: the probe, the trust decision, signing and import need the bundled instance (FR-22.18 onward)"}
+	d.NextSteps = []string{"the probe, the trust decision, signing and import run through the bundled ContextForge instance ([contextforge] bundled = true, FR-22.9, FR-22.22)"}
 }

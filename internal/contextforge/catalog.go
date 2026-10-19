@@ -1,11 +1,12 @@
-// Package contextforge is the EXPERIMENTAL ContextForge catalog reader of
-// the ContextForge spike (docs/contextforge-spike.md). It parses an IBM
-// ContextForge mcp-catalog.yml under the bounds proposed for FR-22.2,
-// classifies entries as proposed for FR-22.3 and maps one entry to a draft
-// packaging recipe (local entries) or a draft hosted-package manifest
-// (hosted entries) for `smcpctl catalog import --dry-run`. Nothing here
-// fetches, installs, runs or signs anything, and none of it is part of a
-// release requirement yet (FR-22 is planned for v1.3.0).
+// Package contextforge is the catalog part of the ContextForge Connector
+// (E-36, SRS FR-22, planned for v1.3.0). It reads an IBM ContextForge
+// mcp-catalog.yml only from the release pinned in the Gateway's release
+// lock or from an operator-supplied file whose SHA-256 the operator
+// confirms (FR-22.1), parses it under the FR-22.2 bounds, classifies
+// entries (FR-22.3), maps tool names of hosted packages (FR-22.10) and
+// drafts the packaging recipe of a local entry or the manifest of a hosted
+// entry. Nothing here fetches, installs or runs anything: a catalog install
+// string is only ever read as text (FR-22.7).
 package contextforge
 
 import (
@@ -22,9 +23,11 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 )
 
-// Bounds proposed by FR-22.2.
+// Bounds of FR-22.2.
 const (
 	MaxCatalogBytes = 4 << 20
 	MaxEntries      = 2000
@@ -44,9 +47,21 @@ const (
 // Catalog is a parsed catalog file.
 type Catalog struct {
 	// SHA256 is the hex SHA-256 of the file bytes.
-	SHA256  string
+	SHA256 string
+	// Origin is OriginPinned for the catalog of the release lock and
+	// OriginOperator for an operator-supplied file (FR-22.1); "" for a
+	// catalog parsed without a source check.
+	Origin string
+	// Release is the ContextForge release of a pinned catalog.
+	Release string
 	Entries []*Entry
 }
+
+// Catalog origins.
+const (
+	OriginPinned   = "pinned"
+	OriginOperator = "operator"
+)
 
 // Entry is one catalog_servers element. Known fields are decoded; Raw is
 // the whole element as a generic value, the input of the canonical digest.
@@ -75,6 +90,14 @@ type Entry struct {
 // than maxDepth, has more than MaxEntries entries, has a string longer than
 // MaxStringChars, or has an entry without a unique string id.
 func ParseCatalog(raw []byte) (*Catalog, error) {
+	c, err := parseCatalog(raw)
+	if err != nil {
+		return nil, packaging.Errf(ReasonCatalogInvalid, "%v", err)
+	}
+	return c, nil
+}
+
+func parseCatalog(raw []byte) (*Catalog, error) {
 	if len(raw) > MaxCatalogBytes {
 		return nil, fmt.Errorf("catalog: %d bytes, more than %d", len(raw), MaxCatalogBytes)
 	}
@@ -274,13 +297,24 @@ func (e *Entry) SHA256() string {
 }
 
 // Classify returns the entry's class and, for an unsupported entry, the
-// reasons (FR-22.3 as proposed): local when it names a repo and an install
+// reasons (FR-22.3): local when it names a repo and an install
 // command; hosted when its url is https and it names no install command;
 // unsupported otherwise, and always when its auth type needs OAuth 2.1
 // (no Gateway-held OAuth client yet) or a plain-http URL points off the
 // host.
 func (e *Entry) Classify() (string, []string) {
 	var reasons []string
+	for _, f := range [][2]string{{"name", e.Name}, {"provider", e.Provider}, {"auth_type", e.AuthType}} {
+		if strings.TrimSpace(f[1]) == "" {
+			reasons = append(reasons, "missing required field "+f[0])
+		}
+	}
+	if len(reasons) > 0 {
+		if e.URL == "" {
+			reasons = append(reasons, "missing required field url")
+		}
+		return ClassUnsupported, reasons
+	}
 	if strings.Contains(strings.ToLower(e.AuthType), "oauth2.1") {
 		reasons = append(reasons, "auth_type "+strconv.Quote(e.AuthType)+" needs OAuth 2.1, which the Gateway cannot hold for a hosted server yet")
 	}
