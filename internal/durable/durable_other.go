@@ -33,3 +33,5 @@ func syncDir(dir string) error {
 	defer d.Close()
 	return d.Sync()
 }
+
+func rename(tmp, dst string) error { return os.Rename(tmp, dst) }

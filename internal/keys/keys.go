@@ -388,8 +388,8 @@ func writePrivatePEM(path, typ string, der []byte) error {
 }
 
 // WriteFileAtomic writes data to a temporary file, syncs it and renames it
-// over path, durably (durable.Replace: the directory is synced, or on
-// Windows the rename is written through, FR-21.23).
+// over path; on Windows the rename is written through (durable.Rename,
+// FR-21.23).
 func WriteFileAtomic(path string, data []byte, mode os.FileMode) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp-*")
 	if err != nil {
@@ -411,7 +411,7 @@ func WriteFileAtomic(path string, data []byte, mode os.FileMode) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return durable.Replace(tmp.Name(), path)
+	return durable.Rename(tmp.Name(), path)
 }
 
 func generateEvidenceKey(stateDir string) error {

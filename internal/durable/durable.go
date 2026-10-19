@@ -54,6 +54,12 @@ func record(op Op) {
 // (File.Sync), over dst and makes the rename durable.
 func Replace(tmp, dst string) error { return replace(tmp, dst) }
 
+// Rename renames tmp over dst as os.Rename does on Linux and macOS (the
+// directory is not synced), and on Windows with MoveFileEx and
+// MOVEFILE_WRITE_THROUGH (FR-21.23). keys.WriteFileAtomic uses it, so that
+// its Linux and macOS behavior stays the plain rename it always was.
+func Rename(tmp, dst string) error { return rename(tmp, dst) }
+
 // CreateNew moves tmp, a flushed file, to dst when dst does not exist and
 // makes the new name durable. It fails with an error satisfying
 // errors.Is(err, fs.ErrExist) when dst exists, and never replaces it.

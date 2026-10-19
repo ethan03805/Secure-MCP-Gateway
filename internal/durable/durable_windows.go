@@ -45,3 +45,5 @@ func syncDir(dir string) error {
 	record(Op{Kind: "syncdir", Path: dir})
 	return nil
 }
+
+func rename(tmp, dst string) error { return replace(tmp, dst) }
