@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-setup-get"
+description = "Enables the setup_get command without any pre-configured scope."
+commands.allow = ["setup_get"]
+
+[[permission]]
+identifier = "deny-setup-get"
+description = "Denies the setup_get command without any pre-configured scope."
+commands.deny = ["setup_get"]

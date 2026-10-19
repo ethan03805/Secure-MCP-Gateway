@@ -17,6 +17,10 @@ fn main() {
             "status_open_console",
             "status_start",
             "status_restart",
+            "setup_get",
+            "setup_run",
+            "setup_progress",
+            "setup_open_console",
         ])),
     )
     .expect("tauri-build failed");

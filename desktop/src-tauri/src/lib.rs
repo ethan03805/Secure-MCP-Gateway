@@ -20,6 +20,7 @@ pub mod intro;
 pub mod notify;
 pub mod service;
 pub mod settings;
+pub mod setup;
 pub mod state;
 pub mod tlspin;
 
@@ -45,7 +46,7 @@ use tauri::{AppHandle, Manager as _, RunEvent, State, WebviewUrl, WebviewWindowB
 use tauri_plugin_notification::NotificationExt;
 
 use crate::console::{Navigation, Page, CONSOLE_LABEL, WINDOW};
-use crate::service::{Action, Host, Manager, SystemRunner};
+use crate::service::{Action, Host, Manager, Runner as _, SystemRunner};
 use crate::settings::{FieldError, Resolved, Settings};
 use crate::state::{Monitor, ServiceStatus, TrayState, TrayView};
 
@@ -54,6 +55,7 @@ use crate::state::{Monitor, ServiceStatus, TrayState, TrayView};
 pub const SETTINGS_LABEL: &str = "settings";
 pub const INTRO_LABEL: &str = "intro";
 pub const STATUS_LABEL: &str = "status";
+pub const SETUP_LABEL: &str = "setup";
 /// The desktop guide, opened in the default browser from Help.
 const GUIDE_URL: &str = "https://github.com/ethan03805/Secure-MCP-Gateway/blob/main/docs/desktop.md";
 /// Where the introduction sends a user for a task this version of the
@@ -182,11 +184,12 @@ struct IntroInfo {
 fn intro_get(webview: tauri::Webview) -> Result<IntroInfo, String> {
     only_window(&webview, INTRO_LABEL)?;
     Ok(IntroInfo {
-        available: vec!["open-console"],
+        available: vec!["setup", "open-console"],
     })
 }
 
-/// Stores how the user left the introduction and closes it (FR-20.41).
+/// Stores how the user left the introduction and closes it (FR-20.41);
+/// first-run setup follows when the Gateway is not set up (FR-20.40).
 #[tauri::command]
 fn intro_close(webview: tauri::Webview, shared: State<'_, Arc<Shared>>, flag: String) -> Result<(), String> {
     only_window(&webview, INTRO_LABEL)?;
@@ -194,6 +197,9 @@ fn intro_close(webview: tauri::Webview, shared: State<'_, Arc<Shared>>, flag: St
     let saved = intro::save(&shared.config_dir, flag).map_err(|e| e.to_string());
     if let Some(w) = webview.app_handle().get_webview_window(INTRO_LABEL) {
         let _ = w.close();
+    }
+    if !setup::configured(&shared.host) {
+        open_setup(webview.app_handle());
     }
     saved
 }
@@ -208,7 +214,8 @@ fn intro_open_console(app: AppHandle, webview: tauri::Webview) -> Result<(), Str
 #[tauri::command]
 fn intro_open_setup(webview: tauri::Webview) -> Result<(), String> {
     only_window(&webview, INTRO_LABEL)?;
-    Err("first-run setup is not in this version; see the desktop guide".into())
+    open_setup(webview.app_handle());
+    Ok(())
 }
 
 #[tauri::command]
@@ -283,6 +290,134 @@ fn status_restart(app: AppHandle, webview: tauri::Webview) -> Result<(), String>
     Ok(())
 }
 
+/// What the setup window needs to offer the profiles (FR-20.8, FR-20.9).
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SetupInfo {
+    os: &'static str,
+    configured: bool,
+    smcpctl: Option<String>,
+    profiles: Vec<ProfileInfo>,
+    progress: setup::Progress,
+}
+
+#[derive(serde::Serialize)]
+struct ProfileInfo {
+    id: setup::Profile,
+    /// The prerequisite check (Enforced on Linux only); none means offered.
+    check: Option<setup::Check>,
+}
+
+/// A refused setup request, by message-catalogue code.
+#[derive(serde::Serialize)]
+struct SetupRefusal {
+    code: &'static str,
+    role: Option<&'static str>,
+}
+
+fn refusal(code: &'static str) -> Vec<SetupRefusal> {
+    vec![SetupRefusal { code, role: None }]
+}
+
+fn smcpctl_path(host: &Host) -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok();
+    setup::find_smcpctl(exe.as_deref().and_then(std::path::Path::parent), host)
+}
+
+fn appimage() -> bool {
+    std::env::var_os("APPIMAGE").is_some()
+}
+
+/// Reads whether the Gateway is set up and, on Linux, runs the Enforced
+/// prerequisite check before the window offers that profile (FR-20.9).
+#[tauri::command]
+async fn setup_get(app: AppHandle, webview: tauri::Webview) -> Result<SetupInfo, String> {
+    only_window(&webview, SETUP_LABEL)?;
+    let shared = app.state::<Arc<Shared>>().inner().clone();
+    let session = app.state::<Arc<setup::Session>>().inner().clone();
+    let smcpctl = smcpctl_path(&shared.host);
+    let mut profiles = Vec::new();
+    for id in setup::profiles(shared.host.os, appimage()) {
+        let check = match (id, smcpctl.as_deref()) {
+            (setup::Profile::Standalone, _) => None,
+            (setup::Profile::Enforced, None) => Some(setup::Check::Failed {
+                detail: "smcpctl was not found".into(),
+            }),
+            (setup::Profile::Enforced, Some(p)) => {
+                let argv = setup::check_argv(p);
+                let r = tauri::async_runtime::spawn_blocking(move || SystemRunner.run(&argv, setup::CHECK_TIMEOUT))
+                    .await
+                    .map_err(|e| e.to_string())?;
+                let c = setup::parse_check(&r);
+                *session.enforced.lock().unwrap_or_else(|e| e.into_inner()) = Some(c.clone());
+                Some(c)
+            }
+        };
+        profiles.push(ProfileInfo { id, check });
+    }
+    let progress = session.progress.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    Ok(SetupInfo {
+        os: shared.host.os,
+        configured: setup::configured(&shared.host),
+        smcpctl: smcpctl.map(|p| p.display().to_string()),
+        profiles,
+        progress,
+    })
+}
+
+/// Starts the installation (FR-20.8). The passwords go only into the two
+/// private files the session deletes when `smcpctl` ends.
+#[tauri::command]
+fn setup_run(
+    app: AppHandle,
+    webview: tauri::Webview,
+    profile: setup::Profile,
+    admin: setup::Secret,
+    approver: setup::Secret,
+) -> Result<(), Vec<SetupRefusal>> {
+    only_window(&webview, SETUP_LABEL).map_err(|_| refusal("SETUP_NOT_ALLOWED"))?;
+    setup::validate(&admin, &approver).map_err(|errs| {
+        errs.into_iter()
+            .map(|e| SetupRefusal {
+                code: e.code,
+                role: Some(e.role),
+            })
+            .collect::<Vec<_>>()
+    })?;
+    let shared = app.state::<Arc<Shared>>().inner().clone();
+    let session = app.state::<Arc<setup::Session>>().inner().clone();
+    if setup::configured(&shared.host) {
+        return Err(refusal("SETUP_ALREADY_CONFIGURED"));
+    }
+    let checked = *session.enforced.lock().unwrap_or_else(|e| e.into_inner()) == Some(setup::Check::Present);
+    if !setup::profiles(shared.host.os, appimage()).contains(&profile)
+        || (profile == setup::Profile::Enforced && !checked)
+    {
+        return Err(refusal("SETUP_PROFILE_UNAVAILABLE"));
+    }
+    let smcpctl = smcpctl_path(&shared.host).ok_or_else(|| refusal("SETUP_SMCPCTL_MISSING"))?;
+    if !session.begin(profile) {
+        return Err(refusal("SETUP_RUNNING"));
+    }
+    std::thread::spawn(move || {
+        session.execute(&smcpctl, profile, admin, approver, &std::env::temp_dir());
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn setup_progress(webview: tauri::Webview, session: State<'_, Arc<setup::Session>>) -> Result<setup::Progress, String> {
+    only_window(&webview, SETUP_LABEL)?;
+    Ok(session.progress.lock().unwrap_or_else(|e| e.into_inner()).clone())
+}
+
+#[tauri::command]
+fn setup_open_console(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, SETUP_LABEL)?;
+    open_console(&app, Page::Home);
+    Ok(())
+}
+
 /// Shows a bundled window, creating it if needed.
 fn open_bundled(app: &AppHandle, label: &str, page: &str, title: &str, size: (f64, f64)) {
     if let Some(w) = app.get_webview_window(label) {
@@ -300,6 +435,12 @@ fn open_bundled(app: &AppHandle, label: &str, page: &str, title: &str, size: (f6
 /// The first-run introduction (FR-20.40), at the first start and from Help.
 fn open_intro(app: &AppHandle) {
     open_bundled(app, INTRO_LABEL, "intro.html", "Introduction", (600.0, 560.0));
+}
+
+/// First-run setup (FR-20.8): after the introduction, at start while the
+/// Gateway is not set up, and from Help.
+fn open_setup(app: &AppHandle) {
+    open_bundled(app, SETUP_LABEL, "setup.html", "Set Up the Gateway", (640.0, 640.0));
 }
 
 /// The Gateway Status window (FR-20.45), from the tray's status lines.
@@ -443,6 +584,7 @@ fn on_menu(app: &AppHandle, id: &str) {
         "settings" => open_settings(app),
         "status" | "help_status" => open_status(app),
         "help_intro" => open_intro(app),
+        "help_setup" => open_setup(app),
         "help_guide" => {
             let _ = tauri_plugin_opener::open_url(GUIDE_URL, None::<&str>);
         }
@@ -475,6 +617,7 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
         true,
         &[
             &item("help_intro", "Introduction", true)?,
+            &item("help_setup", "Set Up the Gateway…", true)?,
             &item("help_status", "Gateway Status", true)?,
             &item("help_guide", "Desktop Guide", true)?,
         ],
@@ -620,7 +763,11 @@ pub fn run() {
             status_get,
             status_open_console,
             status_start,
-            status_restart
+            status_restart,
+            setup_get,
+            setup_run,
+            setup_progress,
+            setup_open_console
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -641,10 +788,14 @@ pub fn run() {
                 last_read: Mutex::new(None),
             });
             app.manage(shared.clone());
+            app.manage(Arc::new(setup::Session::default()));
             build_tray(app.handle(), &shared)?;
             // FR-20.40: the introduction opens at the first start.
             if show_intro {
                 open_intro(app.handle());
+            } else if !setup::configured(&shared.host) {
+                // FR-20.8: no Gateway configuration, so setup is offered.
+                open_setup(app.handle());
             }
             let handle = app.handle().clone();
             std::thread::spawn(move || poll(handle, shared));

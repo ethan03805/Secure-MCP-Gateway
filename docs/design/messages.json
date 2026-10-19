@@ -454,21 +454,62 @@
       "ELEVATION_DENIED": {
         "title": "Permission not given",
         "what": "This operation needs administrator permission, and the permission prompt was cancelled.",
-        "todo": "Select the operation again and enter an administrator's password when macOS asks."
+        "todo": "Select the operation again and enter an administrator's password when the system asks."
       },
       "SETUP_PASSWORDS_DIFFER": {
         "title": "The passwords do not match",
         "what": "The two entries for the {role} password are different.",
         "todo": "Type the same password in both fields."
       },
+      "SETUP_PASSWORD_TOO_SHORT": {
+        "title": "The password is too short",
+        "what": "The {role} password has fewer than 12 characters.",
+        "todo": "Choose a password of 12 or more characters."
+      },
+      "SETUP_PASSWORD_INVALID": {
+        "title": "The password cannot be used",
+        "what": "The {role} password contains a line break or is longer than 1024 characters.",
+        "todo": "Choose a password on one line with 12 to 1024 characters."
+      },
+      "SETUP_SMCPCTL_MISSING": {
+        "title": "The Gateway commands are not installed",
+        "what": "Setup needs the smcpctl command, and it is not beside the desktop app or in /usr/local/bin, /usr/bin, /opt/homebrew/bin or ~/.local/bin.",
+        "why": "The desktop app was installed without the Gateway package, or the commands were removed.",
+        "todo": "Install the Gateway with the installer for this computer, then select Set Up the Gateway again. The desktop guide lists the installers."
+      },
+      "SETUP_PROFILE_UNAVAILABLE": {
+        "title": "This profile cannot be installed here",
+        "what": "The profile you chose is not offered on this computer.",
+        "todo": "Choose the Standalone profile, or install the missing prerequisites and open setup again."
+      },
+      "SETUP_CHECK_FAILED": {
+        "title": "The Enforced profile check did not run",
+        "what": "smcpctl install --profile enforced --check ended without a result, so the Enforced profile is not offered.",
+        "todo": "Choose the Standalone profile, or run the command in a terminal and read its output."
+      },
+      "SETUP_RUNNING": {
+        "title": "Setup is already running",
+        "what": "Another setup started from this app has not finished.",
+        "todo": "Wait for it to finish. Its progress is shown in this window."
+      },
+      "SETUP_ALREADY_CONFIGURED": {
+        "title": "The Gateway is already set up",
+        "what": "A Gateway configuration or service already exists on this computer, so setup did not change anything.",
+        "todo": "Open the console to manage the Gateway. To start over, remove it first with smcpctl uninstall."
+      },
+      "SETUP_NOT_ALLOWED": {
+        "title": "Setup was refused",
+        "what": "The request did not come from the setup window.",
+        "todo": "Open setup from the menu: Help, then Set Up the Gateway."
+      },
       "SETUP_BOOTSTRAP_FAILED": {
         "title": "Setup could not create the Gateway's keys and accounts",
-        "what": "smcpctl bootstrap ended with an error.",
+        "what": "The bootstrap step of smcpctl install, which creates the keys, the configuration and the two accounts, ended with an error.",
         "todo": "Read the output in the details and fix the cause it names, then select Try Again. You can also run the command shown in the details in a terminal."
       },
       "SETUP_INSTALL_FAILED": {
         "title": "Setup could not install the Gateway service",
-        "what": "smcpctl install ended with an error.",
+        "what": "smcpctl install created the keys and the configuration, then ended with an error while installing or starting the service.",
         "todo": "Read the output in the details and fix the cause it names, then select Try Again. You can also run the command shown in the details in a terminal."
       },
       "CLIENT_SETUP_FAILED": {

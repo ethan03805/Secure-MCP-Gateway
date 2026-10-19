@@ -36,7 +36,8 @@ Offline:
                    (list, show, import --dry-run; smcpctl catalog -h)
   restore          restore an encrypted backup (the Gateway must be stopped)
   install          install as a service: --profile standalone (launchd or systemd
-                   user unit) or enforced (Linux, root); idempotent
+                   user unit) or enforced (Linux, root); idempotent; --check
+                   only checks the profile's prerequisites
   upgrade          install a new release with backup, health check and rollback
   uninstall        remove services and binaries, keep evidence (--purge removes all)
   version          print the version (and the running Gateway's label)

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 mkdirSync(join(root, "dist"), { recursive: true });
-for (const f of ["settings.html", "error.html", "intro.html", "status.html", "style.css"]) {
+for (const f of ["settings.html", "error.html", "intro.html", "status.html", "setup.html", "style.css"]) {
   copyFileSync(join(root, "src", f), join(root, "dist", f));
 }
 const messages = JSON.parse(readFileSync(join(root, "..", "docs", "design", "messages.json"), "utf8"));

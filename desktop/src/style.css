@@ -150,3 +150,29 @@ input[aria-invalid="true"] { border-color: var(--bad); }
 .error:empty { display: none; }
 .actions { display: flex; gap: 12px; align-items: center; margin-top: 18px; }
 .actions button[type="submit"] { background: var(--moss); border-color: var(--moss); color: var(--on-moss); }
+
+/* First-run setup window (FR-20.8, FR-20.9). */
+h2[tabindex="-1"]:focus { outline: none; }
+fieldset { margin: 0 0 14px; padding: 10px 0 0; border: 0; border-top: 1px solid var(--rule); }
+legend { padding: 0 8px 0 0; font-weight: 600; font-size: var(--fs-4); }
+.field.choice { display: grid; grid-template-columns: 24px 1fr; gap: 0 6px; align-items: start; }
+.field.choice label { margin: 2px 0 0; }
+.field.choice ul { margin: 4px 0 0; padding-left: 18px; }
+input[type="radio"] { width: 16px; height: 16px; margin: 4px; accent-color: var(--moss); }
+input[type="radio"]:disabled + div label { color: var(--ink-3); }
+input[type="password"] {
+  width: 100%; padding: 5px 8px; font: inherit; font-size: var(--fs-3);
+  border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--surface); color: var(--ink);
+}
+ol.steps { list-style: none; margin: 12px 0; padding: 0; border-top: 1px solid var(--rule); }
+ol.steps li { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid var(--rule); }
+ol.steps .step-status { font-weight: 600; color: var(--ink-2); }
+ol.steps .step-done .step-status { color: var(--ok); }
+ol.steps .step-failed .step-status { color: var(--bad); }
+pre.output, pre.command {
+  margin: 8px 0; padding: 8px 10px; max-height: 14rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+  font-family: var(--mono); font-size: var(--fs-2); background: var(--surface); border: 1px solid var(--rule); color: var(--ink);
+}
+pre.output:focus-visible, pre.command:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+details { margin: 12px 0 0; }
+summary { cursor: pointer; font-weight: 600; }

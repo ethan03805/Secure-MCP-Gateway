@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-setup-open-console"
+description = "Enables the setup_open_console command without any pre-configured scope."
+commands.allow = ["setup_open_console"]
+
+[[permission]]
+identifier = "deny-setup-open-console"
+description = "Denies the setup_open_console command without any pre-configured scope."
+commands.deny = ["setup_open_console"]

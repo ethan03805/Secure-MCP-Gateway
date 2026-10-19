@@ -1,6 +1,6 @@
 # Desktop application (draft)
 
-> **Status: in development for v1.3.0 (SRS FR-20, planned).** This is the first draft of the desktop application guide that SRS FR-20.27 requires. It describes what is built today in `desktop/`: the tray, service control, the console window and approval notifications. First-run setup, client setup, updates, the platform installers and Windows support come in later changes. Until the installers ship, build the application from source as described at the end of this page.
+> **Status: in development for v1.3.0 (SRS FR-20, planned).** This is the first draft of the desktop application guide that SRS FR-20.27 requires. It describes what is built today in `desktop/`: the tray, service control, the console window, approval notifications and first-run setup. Client setup, updates, the platform installers and Windows support come in later changes. Until the installers ship, build the application from source as described at the end of this page.
 
 The Secure MCP Gateway desktop application is a tray (menu-bar) application, built with Tauri 2, that shows the Gateway's health at a glance, starts and stops the `smcpd` service, tells you when tool calls are waiting for approval, and opens the management console in its own window instead of a browser tab. It runs on macOS 14 or later on Apple silicon (there is no Intel build; Intel Macs keep the command-line path) and on Linux with WebKitGTK 4.1 and a tray that supports StatusNotifierItem or AppIndicator. The terminal path (`install.sh`, `smcpctl`) stays fully supported.
 
@@ -18,12 +18,26 @@ The only file of the Gateway installation the application reads is the public CA
 
 ## Introduction
 
-The first time the application starts for a user, it opens a short introduction (SRS FR-20.40): four steps that say what the Gateway does and name the three things a new user does, set up the Gateway, connect an agent, and review calls and decide approvals, each with the control that starts it. Where this version cannot do a task itself yet (first-run setup and client setup), the step says so and opens the guide page with the commands instead.
+The first time the application starts for a user, it opens a short introduction (SRS FR-20.40): four steps that say what the Gateway does and name the three things a new user does, set up the Gateway, connect an agent, and review calls and decide approvals, each with the control that starts it. Where this version cannot do a task itself yet (client setup), the step says so and opens the guide page with the commands instead. When you finish or skip the introduction and the Gateway is not set up yet, first-run setup opens next.
 
 - **Skip** with Skip introduction or the Escape key, from any step. The introduction does not open at start again once you have finished or skipped it.
 - **Reopen** it from the menu: Help, then Introduction.
 - It is packaged with the application, works offline, needs no account and sends nothing. The only thing it stores is whether you finished or skipped it, in the file `introduction` in the application's configuration directory (on macOS, `~/Library/Application Support/com.smcp.desktop/`). Delete that file to see the introduction at the next start.
 - Keyboard and screen readers: focus moves to each step's heading, and VoiceOver reads "Step 2 of 4: Set up the Gateway". With Reduce motion on (System Settings, Accessibility, Display), the step change has no fade.
+
+## First-run setup
+
+When no Gateway is set up on the computer (no configuration file and no `smcpd` service unit), the application opens the **Set Up the Gateway** window after the introduction, or at start once the introduction has been finished or skipped. It is also in the menu under Help. Setup is a front end to the terminal procedure, not a second implementation of it (SRS FR-20.8):
+
+1. **Choose a profile.** Standalone is offered everywhere. On Linux the window first runs `smcpctl install --profile enforced --check`, which checks the FR-13.5 prerequisites as your user and changes nothing; Enforced is offered only when every prerequisite is present, and otherwise the window lists each missing one (FR-20.9). The AppImage offers Standalone only. Before you install, the window states that the Standalone profile is labelled `not enforced` and does not contain MCP servers.
+2. **Set the Administrator and Approver passwords.** Each needs 12 or more characters, the rule `smcpctl` applies.
+3. **Install.** The application runs `smcpctl install --profile <profile> --admin-password-file <file> --approver-password-file <file> --metrics-port 9464 --notify off`. `smcpctl install` performs the `smcpctl bootstrap` step (keys, TLS certificates, configuration, policy and the two accounts) and then installs and starts the service. The passwords are written only to two files of mode 0600 in a new directory of mode 0700 under the temporary directory; the files are overwritten and deleted as soon as the command ends, and no password appears in any process's argument list. Metrics are left on at the CP-51 address `127.0.0.1:9464`, the address the tray reads (FR-20.5). The desktop application raises the approval notifications, so `smcpd`'s own are turned off. For Enforced the command runs through `pkexec`, which asks for an administrator's password and names the command in its prompt; Standalone needs no elevation.
+
+The window shows the two steps (keys, configuration and accounts; then the service) and the command's output as it runs. When a step fails it shows what happened, the full output, the code of the message, and the command to run in a terminal instead (it prompts for the passwords), with a Copy Details button and Try Again.
+
+`smcpctl` is looked for beside the application (the `.dmg` and the AppImage carry it), then in `/usr/local/bin`, `/usr/bin`, `/opt/homebrew/bin` and `~/.local/bin`, never on `PATH`. If none is there, the window says so and names the installers.
+
+After an Enforced installation, the Gateway CA certificate (`/var/lib/smcp/state/tls/ca.crt`) is not readable by your account; copy it to a file you can read and set it in Settings so that the console window can check the admin listener (see [Console window](#console-window)).
 
 ## Tray states
 
@@ -57,7 +71,7 @@ The tray needs the metrics endpoint. `smcpctl bootstrap` enables it on the admin
 | Set Up a Client | Not available yet (shown disabled). Use `smcpctl connect <client>` meanwhile. |
 | Check for Updates | Not available yet (shown disabled). |
 | Settings… | The admin listener address, the metrics endpoint, the CA file and the notification switch. |
-| Help | Introduction (reopens the introduction), Gateway Status, and Desktop Guide (this page, in the default browser). |
+| Help | Introduction (reopens the introduction), Set Up the Gateway (first-run setup), Gateway Status, and Desktop Guide (this page, in the default browser). |
 | Quit | Quits the application. The Gateway keeps running. |
 
 ## Service control
@@ -109,4 +123,4 @@ The macOS bundle is not signed; macOS asks you to approve it in System Settings,
 
 ## Not yet available
 
-First-run setup (FR-20.8, FR-20.9), client setup (FR-20.10), update checks and upgrades (FR-20.11 to FR-20.13), start at login (FR-20.14), deep links (FR-20.28), Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).
+Client setup (FR-20.10), update checks and upgrades (FR-20.11 to FR-20.13), start at login (FR-20.14), deep links (FR-20.28), Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).

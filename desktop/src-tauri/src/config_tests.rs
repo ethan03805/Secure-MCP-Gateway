@@ -34,6 +34,14 @@ fn no_gateway_secret_or_control_api_in_the_application() {
         }
         let src = std::fs::read_to_string(&path).unwrap();
         let code = src.split("#[cfg(test)]\nmod tests").next().unwrap();
+        // First-run setup checks whether a configuration file exists
+        // (FR-20.8) and reads no file at all.
+        let names_config = name == "setup.rs";
+        if names_config {
+            for read in ["fs::read", "read_to_string", "File::open", ".read(true)"] {
+                assert!(!code.contains(read), "setup.rs reads a file ({read})");
+            }
+        }
         for needle in [
             "operator_token",
             "operator.token",
@@ -47,6 +55,9 @@ fn no_gateway_secret_or_control_api_in_the_application() {
             "password_hash",
             "Authorization",
         ] {
+            if names_config && needle == "smcp.toml" {
+                continue;
+            }
             assert!(!code.contains(needle), "{name} mentions {needle}");
         }
         checked += 1;
@@ -56,7 +67,7 @@ fn no_gateway_secret_or_control_api_in_the_application() {
 
 /// Each bundled window has one capability granting only its own commands;
 /// the console window has none (SR-2-5).
-const CAPABILITIES: [(&str, &str, &str, &[&str]); 3] = [
+const CAPABILITIES: [(&str, &str, &str, &[&str]); 4] = [
     (
         "settings.json",
         "settings-window",
@@ -85,6 +96,17 @@ const CAPABILITIES: [(&str, &str, &str, &[&str]); 3] = [
             "allow-status-open-console",
             "allow-status-start",
             "allow-status-restart",
+        ],
+    ),
+    (
+        "setup.json",
+        "setup-window",
+        "setup",
+        &[
+            "allow-setup-get",
+            "allow-setup-run",
+            "allow-setup-progress",
+            "allow-setup-open-console",
         ],
     ),
 ];
@@ -124,9 +146,14 @@ fn one_capability_per_bundled_window_and_none_for_the_console() {
     // The configuration enables exactly these capabilities.
     assert_eq!(
         conf()["app"]["security"]["capabilities"],
-        serde_json::json!(["settings-window", "intro-window", "status-window"])
+        serde_json::json!(["settings-window", "intro-window", "status-window", "setup-window"])
     );
-    for label in [crate::SETTINGS_LABEL, crate::INTRO_LABEL, crate::STATUS_LABEL] {
+    for label in [
+        crate::SETTINGS_LABEL,
+        crate::INTRO_LABEL,
+        crate::STATUS_LABEL,
+        crate::SETUP_LABEL,
+    ] {
         assert_ne!(crate::console::CONSOLE_LABEL, label);
     }
 }
@@ -156,6 +183,7 @@ fn commands_are_declared_and_registered_once() {
     assert_eq!(LIB.matches("only_settings_window(&webview)").count(), 2);
     assert_eq!(LIB.matches("only_window(&webview, INTRO_LABEL)").count(), 6);
     assert_eq!(LIB.matches("only_window(&webview, STATUS_LABEL)").count(), 4);
+    assert_eq!(LIB.matches("only_window(&webview, SETUP_LABEL)").count(), 4);
 }
 
 #[test]
@@ -184,7 +212,7 @@ fn bundled_pages_are_self_only() {
     );
     // The bundled pages reference only packaged files.
     let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../src");
-    for f in ["settings.html", "error.html", "intro.html", "status.html"] {
+    for f in ["settings.html", "error.html", "intro.html", "status.html", "setup.html"] {
         let page = std::fs::read_to_string(dist.join(f)).unwrap();
         assert!(
             !page.contains("http://") && !page.contains("https://") && !page.contains("//cdn"),

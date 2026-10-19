@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set Up the Gateway</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="setup-view.js"></script>
+</head>
+<body>
+<div class="window">
+  <main class="content" aria-labelledby="title">
+    <h1 id="title" tabindex="-1">Set up the Gateway</h1>
+    <div id="stage" aria-busy="true"><p class="muted">Checking this computer.</p></div>
+  </main>
+  <div class="bar" role="group" aria-label="Setup controls">
+    <span class="spacer"></span>
+    <button type="button" id="close">Close</button>
+  </div>
+</div>
+<div class="sr-only" aria-live="polite" id="announce"></div>
+</body>
+</html>

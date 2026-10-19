@@ -12,8 +12,10 @@
 # "present" lines and changes nothing. Keys, configuration, policy and the
 # journal are never touched.
 #
-# Usage: install-enforced.sh [--check] [--bin-dir DIR] [--start] [--no-start]
+# Usage: install-enforced.sh [--check [--host-only]] [--bin-dir DIR] [--start] [--no-start]
 #   --check        verify the prerequisites only
+#   --host-only    with --check: check the host, not that this runs as root
+#                  (the desktop setup checks before it asks for elevation)
 #   --bin-dir DIR  also install smcpd and smcpctl from DIR into /usr/local/bin
 #   --start        start smcp-nftables and smcpd (needs /etc/smcp/smcp.toml)
 #   --no-start     do not start anything (default)
@@ -22,10 +24,11 @@
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-check_only=0 start=0 bin_dir=""
+check_only=0 host_only=0 start=0 bin_dir=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) check_only=1 ;;
+    --host-only) host_only=1 ;;
     --start) start=1 ;;
     --no-start) start=0 ;;
     --bin-dir) bin_dir=${2:?--bin-dir needs a directory}; shift ;;
@@ -34,6 +37,10 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+if [ "$host_only" = 1 ] && [ "$check_only" = 0 ]; then
+  echo "install-enforced: --host-only needs --check" >&2
+  exit 2
+fi
 
 # Identities (CP-46). smcp-core runs smcpd; smcp-srv, in its own group,
 # runs the server containers in its rootless Podman (runtime.run_as).
@@ -49,7 +56,7 @@ missing=()
 need() { command -v "$1" >/dev/null 2>&1 || missing+=("$2"); }
 [ "$(uname -s)" = Linux ] || missing+=("Linux")
 case "$(uname -m)" in x86_64|aarch64|arm64) ;; *) missing+=("x86_64 or arm64 (found $(uname -m))") ;; esac
-[ "$(id -u)" = 0 ] || missing+=("root (run with sudo)")
+[ "$host_only" = 1 ] || [ "$(id -u)" = 0 ] || missing+=("root (run with sudo)")
 kver=$(uname -r)
 kmaj=${kver%%.*}; krest=${kver#*.}; kmin=${krest%%[!0-9]*}
 if [ "${kmaj:-0}" -lt 6 ] || { [ "$kmaj" -eq 6 ] && [ "${kmin:-0}" -lt 8 ]; }; then missing+=("kernel 6.8 or later (found $kver)"); fi

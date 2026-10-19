@@ -58,6 +58,7 @@ func installCmd(args []string, out io.Writer) error {
 	profile := fs.String("profile", "standalone", "platform profile: standalone (macOS, Linux) or enforced (Linux, as root)")
 	binDir := fs.String("bin-dir", "", "directory holding smcpd, smcpctl and smcp-refserver (default: the directory of this smcpctl)")
 	noStart := fs.Bool("no-start", false, "write the service unit but do not load or start it, and skip the health check")
+	check := fs.Bool("check", false, "check the profile's prerequisites (FR-13.5) and the binaries, change nothing, and exit non-zero naming each missing one")
 	wait := fs.Duration("health-timeout", installHealthWait, "how long to wait for the started Gateway to answer")
 	o := bootstrapOpts{}
 	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (mode 0600 or stricter) instead of a prompt")
@@ -79,6 +80,9 @@ func installCmd(args []string, out io.Writer) error {
 	in.noStart, in.healthWait, in.boot = *noStart, *wait, o
 	if *binDir != "" {
 		in.binDir = *binDir
+	}
+	if *check {
+		return in.check(*profile)
 	}
 	switch *profile {
 	case "standalone":
@@ -531,6 +535,58 @@ const (
 	enforcedBackups   = "/var/lib/smcp/backups"
 	enforcedBin       = "/usr/local/bin"
 )
+
+// check reports whether the profile can be installed on this host without
+// changing anything (FR-13.5, FR-20.9). For the Enforced profile it runs the
+// prerequisite check of install-enforced.sh; as a user other than root it
+// checks the host only, because the desktop setup asks for elevation after
+// the check. Each missing prerequisite is printed on a line of its own that
+// starts with "  - ".
+func (in *installer) check(profile string) error {
+	var err error
+	if in.binDir, err = filepath.Abs(in.binDir); err != nil {
+		return err
+	}
+	switch profile {
+	case "standalone":
+		if _, err := in.layout(); err != nil {
+			fmt.Fprintf(in.out, "standalone: prerequisites missing; nothing was changed:\n  - %v\n", err)
+			return errors.New("the Standalone profile cannot be installed on this host")
+		}
+		if err := in.needBinaries("smcpd", "smcp-refserver"); err != nil {
+			fmt.Fprintf(in.out, "standalone: prerequisites missing; nothing was changed:\n  - %v\n", err)
+			return errors.New("the Standalone profile cannot be installed from " + in.binDir)
+		}
+		fmt.Fprintln(in.out, "standalone: all prerequisites present")
+		return nil
+	case "enforced":
+		if in.goos != "linux" {
+			fmt.Fprintf(in.out, "install-enforced: prerequisites missing; nothing was changed:\n  - Linux (this host is %s)\n", in.goos)
+			return errors.New("the Enforced profile needs Linux")
+		}
+		if err := in.needBinaries("smcpd", "smcpctl", "smcp-refserver"); err != nil {
+			fmt.Fprintf(in.out, "install-enforced: prerequisites missing; nothing was changed:\n  - %v\n", err)
+			return errors.New("the Enforced profile cannot be installed from " + in.binDir)
+		}
+		tmp, err := os.MkdirTemp("", "smcp-install-check-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tmp)
+		if err := linuxpkg.Extract(tmp); err != nil {
+			return err
+		}
+		argv := []string{"bash", filepath.Join(tmp, "install-enforced.sh"), "--check"}
+		if in.uid != 0 {
+			argv = append(argv, "--host-only")
+		}
+		if err := in.run(argv...); err != nil {
+			return errors.New("Enforced profile prerequisites are missing (listed above); nothing was changed")
+		}
+		return nil
+	}
+	return fmt.Errorf("--profile must be standalone or enforced, not %q", profile)
+}
 
 func (in *installer) host(p string) string {
 	if in.root == "" {
