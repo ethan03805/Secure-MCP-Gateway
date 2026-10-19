@@ -18,7 +18,8 @@ import (
 func diskOf(dir string) (size, free int64, device, model string) {
 	var st syscall.Statfs_t
 	if err := syscall.Statfs(dir, &st); err == nil {
-		size, free = int64(st.Blocks)*int64(st.Bsize), int64(st.Bavail)*int64(st.Bsize) // #nosec G115 -- file system sizes fit in int64
+		bsize := int64(st.Bsize) //nolint:unconvert // Bsize is int32 on some Linux ports
+		size, free = int64(st.Blocks)*bsize, int64(st.Bavail)*bsize // #nosec G115 -- file system sizes fit in int64
 	}
 	var fi unix.Stat_t
 	if err := unix.Stat(dir, &fi); err != nil {
