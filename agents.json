@@ -24,8 +24,8 @@
     "client": "OpenCode",
     "version": "1.15.13",
     "mode": "ai-gateway",
-    "result": "pass",
-    "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
+    "result": "fail",
+    "detail": "failed: allowed (the agent made no call to ref_echo (agent exit: 1) (after one retry; first attempt: the agent made no call to ref_echo (agent exit: 1))); denied (the agent made no call to ref_time_now (agent exit: 1) (after one retry; first attempt: the agent made no call to ref_time_now (agent exit: 1))); approval (the agent made no call to ref_read_file (agent exit: 1)); ungranted (not proven: the agent made no successful call, so absence of calls shows nothing); journal verify ok"
   },
   {
     "client": "Gemini CLI",
