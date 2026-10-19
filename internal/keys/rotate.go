@@ -463,16 +463,16 @@ func ReadStatus(stateDir string, now time.Time) (Status, error) {
 
 // CertReloader serves the listener certificate from its files and reloads
 // it when the certificate file changes, so a rotated certificate is used
-// for new connections without restarting the listener. The file is checked
-// at most once per second.
+// for new connections without restarting the listener. The certificate
+// file is checked (one stat call) at every handshake: rotation replaces it
+// by an atomic rename, so the first handshake after a rotation, in this
+// process or another (smcpctl), is served the new certificate.
 type CertReloader struct {
 	certFile, keyFile string
 
-	mu      sync.Mutex
-	cert    *tls.Certificate
-	modTime time.Time
-	size    int64
-	checked time.Time
+	mu   sync.Mutex
+	cert *tls.Certificate
+	info os.FileInfo
 }
 
 // NewCertReloader loads the pair once and returns the reloader.
@@ -493,29 +493,31 @@ func (r *CertReloader) load() error {
 	if err != nil {
 		return err
 	}
-	r.cert, r.modTime, r.size = &c, st.ModTime(), st.Size()
+	r.cert, r.info = &c, st
 	return nil
+}
+
+// changed reports whether the certificate file is no longer the one loaded:
+// another file (renamed over it), or a different modification time or size.
+func (r *CertReloader) changed(st os.FileInfo) bool {
+	return !os.SameFile(st, r.info) || !st.ModTime().Equal(r.info.ModTime()) || st.Size() != r.info.Size()
 }
 
 // GetCertificate implements tls.Config.GetCertificate. When a reload fails
 // (for example while the key and certificate are being replaced) the
-// previous certificate is kept.
+// previous certificate is kept and the next handshake tries again.
 func (r *CertReloader) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if now := time.Now(); now.Sub(r.checked) >= time.Second {
-		r.checked = now
-		if st, err := os.Stat(r.certFile); err == nil && (!st.ModTime().Equal(r.modTime) || st.Size() != r.size) {
-			_ = r.load()
-		}
+	if st, err := os.Stat(r.certFile); err == nil && r.changed(st) {
+		_ = r.load()
 	}
 	return r.cert, nil
 }
 
-// Reload forces the next handshake to re-read the files.
+// Reload re-reads the files now.
 func (r *CertReloader) Reload() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.checked = time.Time{}
 	return r.load()
 }
