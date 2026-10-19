@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- v1.1.0 published on 2026-10-18 from main `935dc4d` (release run 39178207151), labelled "enforced". `v1.1.0-rc.1` (main `a5e9b14`) failed the SBOM license check after publishing (the review file was taken for a license file; renamed in #121) and is kept as a pre-release without its Sigstore bundle. `v1.1.0-rc.2`, on the same commit as v1.1.0, passed every check of the release checklist. The `tap` workflow passed for v1.1.0 on macOS and Ubuntu (run 39178720966), and `reference-packages` passed on the tag (run 39178206965). FR-12.1 and FR-12.8 are verified by Inspection records of the v1.1.0 SBOMs and bundle (`docs/verification/inspections.md`), and FR-13.1 has a v1.1.0 record. `docs/install.md`, README, the release checklist (rehearsal results) and the gap list name v1.1.0.
+- Known issue, found by the runbook executions for v1.1.0 (`docs/verification/runbooks/runbook-key-rotation-2026-10-18.md`): after a CA switch (`smcpctl keys rotate ca --finish`, `--overlap 0`, or at `switch_at`), `ca.crt` holds only the new CA at once, but the listeners serve the old certificate for up to one second. `keys.CertReloader` checks the certificate file at most once per second, and the rotation does not call `Reload`. During that second, a client that trusts only the new bundle fails with `x509: certificate signed by unknown authority`. The key-rotation and key-compromise runbooks now say to wait a second before checking a client.
+
 ## v1.1.0 — 2026-10-18
 
 Second release, built to SRS V1.2 and architecture V2.3 from main after the phase-9 work. The tag is made by the procedure in `docs/release-checklist.md`, rehearsed with `v1.1.0-rc.1` on the same commit.

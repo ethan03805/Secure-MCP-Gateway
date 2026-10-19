@@ -659,3 +659,74 @@ Observations:
 - The introduction states that vendor administration consoles were not reachable and that the lines report public documentation (`docs/clients/cloud-agents.md:7`).
 
 Deviation: the OpenAI primary page could not be read in full (HTTP 403); its content is taken from the search excerpt, and the line says so.
+
+## FR-12.1 Open-source components (v1.1.0)
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-12.1 |
+| Commit | `935dc4d0849e118ccb3f033cd577a5e34875e101` |
+| Profile and platform | Not profile-specific; the GitHub Release v1.1.0, inspected on macOS 26.6.2, darwin/arm64 |
+| Date | 2026-10-18 |
+| Executor | Claude Code agent (v1.1.0 release task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: v1.1.0 was tagged on main `935dc4d` and published by the release workflow (run 39178207151), which ran its SBOM license check (`.github/workflows/release.yml:116`) and passed. Downloaded every asset with `gh release download v1.1.0 -R ethan03805/Secure-MCP-Gateway`, checked the minisign signature and the checksums, unpacked the four archives, and ran `go run ./tools/sbomcheck -review packaging/sbom-review.json <linux_amd64>/sbom.spdx.json smcp_1.1.0_*.tar.gz.sbom.json` locally. Then read the license fields of every SBOM entry (`licenseConcluded`, `licenseDeclared`) with a short script.
+
+Observations:
+
+- The SBOM inside the archives (`sbom.spdx.json`, SPDX-2.3, written by `scripts/release-sbom.sh:36` with the module license search on) is the same file in all four archives (SHA-256 `e17002f1...`). It has 51 entries. 44 Go modules carry a concluded license: BSD-3-Clause 19, MIT 16, Apache-2.0 4, BSD-2-Clause 1, and four compound expressions of these. The five npm packages carry a declared license (`react`, `react-dom` and `scheduler` MIT; `@fontsource/ibm-plex-sans` and `@fontsource/ibm-plex-mono` OFL-1.1), as does the console package itself. The only entry without a license is `smcp` 1.1.0, the document's subject (the scanned source), not a component. `tools/sbomcheck`: 50 packages accepted, 0 refused.
+- The per-archive SBOMs (`smcp_1.1.0_<os>_<arch>.tar.gz.sbom.json`, syft over each archive, `.goreleaser.yaml:144`) have 129 entries (darwin) and 135 (linux): the Go modules compiled into each binary, once per binary. Every entry carries a license except the archive itself (the document's subject). `tools/sbomcheck`: 128 and 134 packages accepted per archive, 0 refused.
+- Every license is OSI-approved (`tools/sbomcheck/main.go:39`) or one of the reviewed exceptions in `packaging/sbom-review.json`, each matching the module's own license files: the CC-BY-4.0 documentation license of `github.com/modelcontextprotocol/go-sdk` (`packaging/sbom-review.json:5`), the vendored MCP specification's LICENSE and a test file that syft takes for a NOTICE file in the Gateway's own module (`packaging/sbom-review.json:11`, `packaging/sbom-review.json:17`), and the NOTICE.txt of `github.com/apache/arrow-go/v18` (`packaging/sbom-review.json:23`). None needs a non-OSI license.
+- Compared with v1.0.0, whose inner SBOM had no license for 45 of its 50 entries, every component entry now has one.
+
+Deviation: none for the release. The first candidate, v1.1.0-rc.1, failed this check because syft also took the review file itself (then `packaging/license-review.json`) for a license file of the Gateway's module; it was renamed (PR #121) before v1.1.0-rc.2 and v1.1.0.
+
+## FR-12.8 Release provenance (v1.1.0)
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-12.8 |
+| Commit | `935dc4d0849e118ccb3f033cd577a5e34875e101` |
+| Profile and platform | Not profile-specific; the GitHub Release v1.1.0, inspected on macOS 26.6.2, darwin/arm64 |
+| Date | 2026-10-18 |
+| Executor | Claude Code agent (v1.1.0 release task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: downloaded the v1.1.0 assets (release run 39178207151), verified the checksum file with minisign against the key in `SECURITY.md:33` and with cosign against the release workflow identity, checked every SHA-256, unpacked the four archives, compared the recipe and lockfiles in the archive with the files at the tag (`git show v1.1.0:<path> | shasum -a 256`), read `PROVENANCE.md` and `THIRD_PARTY_NOTICES.txt`, and ran `go version -m` on `smcpd`.
+
+Observations, for each item of the statement:
+
+- Source commit IDs: `PROVENANCE.md` names source commit `935dc4d0849e118ccb3f033cd577a5e34875e101`, its date, the Go toolchain go1.26.9 and the build run (`tools/provenance/main.go:284`). The release workflow refuses an archive whose `PROVENANCE.md` names another commit (`.github/workflows/release.yml:112`). `smcpd` records `vcs.revision=935dc4d0849e118ccb3f033cd577a5e34875e101` and `vcs.modified=false`. The tag v1.1.0 and the Sigstore certificate name the same commit.
+- Artifact digests: `smcp_1.1.0_checksums.txt` (`.goreleaser.yaml:138`) lists the SHA-256 of the four archives and their SBOMs; every line verified. It is signed with minisign (`.goreleaser.yaml:149`; "Signature and comment signature verified") and by cosign keyless ("Verified OK"). `PROVENANCE.md` lists the SHA-256 of each recipe file and lockfile in the archive.
+- Build recipes: `.goreleaser.yaml` and `scripts/release-sbom.sh` are in every archive (`.goreleaser.yaml:128`, `.goreleaser.yaml:129`), byte-identical to the tag, and `PROVENANCE.md` says how to rebuild from them.
+- Dependency lockfiles: `go.mod`, `go.sum` and `console/package-lock.json` are in every archive (`.goreleaser.yaml:130` to `.goreleaser.yaml:132`), byte-identical to the tag.
+- SBOM: `sbom.spdx.json` (SPDX-2.3) in every archive and an SPDX SBOM per archive as a release asset (see the FR-12.1 record above).
+- License notices: `LICENSE` (Apache-2.0, `.goreleaser.yaml:116`) and `THIRD_PARTY_NOTICES.txt` (`tools/provenance/main.go:80`, 1,873 lines) in every archive. The notices hold the license files of the Go standard library, the 23 Go modules linked into the binaries and the five bundled console npm packages, unchanged. Each archive is checked for all these files by the release workflow (`.github/workflows/release.yml:95`).
+
+Deviation: none. v1.0.0 lacked the recipe, the lockfiles and the notices; v1.1.0 is the first release built by the fixed pipeline.
+
+## FR-13.1 Release archives (v1.1.0)
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-13.1 |
+| Commit | `935dc4d0849e118ccb3f033cd577a5e34875e101` |
+| Profile and platform | Not profile-specific; the GitHub Release v1.1.0, inspected on macOS 26.6.2, darwin/arm64 |
+| Date | 2026-10-18 |
+| Executor | Claude Code agent (v1.1.0 release task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: as for FR-12.8 above. In addition, `install.sh` without `--version` was run from `main` into an empty directory, and every installed binary was run with `--version` (`smcpctl version --short`).
+
+Observations:
+
+- Four archives, `smcp_1.1.0_darwin_arm64.tar.gz`, `_darwin_amd64`, `_linux_amd64` and `_linux_arm64` (`.goreleaser.yaml:106`). Each holds `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `smcp-workload`, `LICENSE`, `README.md`, `CHANGELOG.md`, the two ICDs, `sbom.spdx.json`, `PROVENANCE.md`, `THIRD_PARTY_NOTICES.txt`, the recipe and the lockfiles.
+- The checksum file, its `.minisig` and `.sigstore.json`, the four per-archive SBOMs and `release-label.md` are published beside them. The release notes end with the label "enforced" (21 of 21 scenarios in the Enforced profile).
+- `install.sh` resolved the latest release to v1.1.0, verified the minisign signature, the Sigstore bundle and the checksum, and installed six binaries. All six report `1.1.0`, including `smcp-refserver --version` (new in this release).
+- `smcpctl upgrade` from v1.0.0 to the candidate v1.1.0-rc.2 (same commit) reported `release verified`, the backup, `upgrade complete` and version `1.1.0-rc.2`; the journal verified afterwards.
+
+Deviation: none.
