@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T08:14:04Z",
-  "commit": "8efa7f74a8542f4cf5df4c4327beb93ccd01ef3d",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/8efa7f74a8542f4cf5df4c4327beb93ccd01ef3d",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39216343788",
+  "generatedAt": "2026-10-19T15:22:43Z",
+  "commit": "274311990836721383b31b309b60a84a34cd0db3",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/274311990836721383b31b309b60a84a34cd0db3",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39273366728",
   "tests": {
     "total": 1646,
-    "passed": 1630,
-    "failed": 1,
+    "passed": 1631,
+    "failed": 0,
     "skipped": 15,
-    "durationSec": 1516.8,
+    "durationSec": 1556.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -91,8 +91,8 @@
       },
       {
         "name": "internal/acceptance/enforced",
-        "passed": 19,
-        "failed": 1,
+        "passed": 20,
+        "failed": 0,
         "skipped": 1
       },
       {
@@ -554,7 +554,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 91.6
+        "pct": 92
       },
       {
         "name": "internal/backup",
@@ -590,11 +590,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.3
       },
       {
         "name": "internal/egress",
-        "pct": 85
+        "pct": 84.5
       },
       {
         "name": "internal/filterapi",
@@ -784,9 +784,9 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 487,
+    "verified": 490,
     "partial": 39,
-    "failing": 3,
+    "failing": 0,
     "unverified": 1,
     "byElement": [
       {
@@ -953,9 +953,9 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 21,
-        "verified": 15,
+        "verified": 18,
         "partial": 3,
-        "failing": 3
+        "failing": 0
       },
       {
         "element": "E-22",
@@ -4461,7 +4461,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (8efa7f74a854, 2026-10-19T07:43:48Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39216343711"
+          "workflow agents-lockdown at main (274311990836, 2026-10-19T15:09:01Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39273365801"
         ]
       },
       {
@@ -4529,7 +4529,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (8efa7f74a854, 2026-10-19T07:43:46Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39216343711"
+          "workflow agents at main (274311990836, 2026-10-19T15:08:59Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39273365801"
         ]
       },
       {
@@ -6297,7 +6297,7 @@
       {
         "id": "SR-6.4-1",
         "element": "E-21",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT11AuditLinkage",
           "internal/acceptance/enforced.TestAT11AuditLinkage",
@@ -6308,7 +6308,7 @@
       {
         "id": "SR-6.5-1",
         "element": "E-21",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT11AuditLinkage",
           "internal/acceptance/enforced.TestAT11AuditLinkage",
@@ -6440,7 +6440,7 @@
       {
         "id": "SR-6.20-1",
         "element": "E-21",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT11AuditLinkage",
           "internal/acceptance/enforced.TestAT11AuditLinkage",
@@ -6631,7 +6631,7 @@
         ]
       }
     ],
-    "planned": 113,
+    "planned": 147,
     "plannedItems": [
       {
         "id": "FR-5.28",
@@ -7040,6 +7040,195 @@
       {
         "id": "FR-20.52",
         "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.1",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.2",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.3",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.4",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.5",
+        "element": "E-28",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.6",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.7",
+        "element": "E-12",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.8",
+        "element": "E-01",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.9",
+        "element": "E-03",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.10",
+        "element": "E-22",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.11",
+        "element": "E-15",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.12",
+        "element": "E-15",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.13",
+        "element": "E-16",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.14",
+        "element": "E-18",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.15",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.16",
+        "element": "E-33",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.17",
+        "element": "E-33",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.18",
+        "element": "E-27",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.19",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.20",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.21",
+        "element": "E-33",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.22",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.23",
+        "element": "E-05",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.24",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.25",
+        "element": "E-15",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-21.26",
+        "element": "E-23",
         "status": "planned",
         "tests": [],
         "target": "v1.3.0"
@@ -7459,6 +7648,13 @@
         "target": "v1.3.0"
       },
       {
+        "id": "SR-2.8-6",
+        "element": "E-01",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
         "id": "SR-2.9-4",
         "element": "E-24",
         "status": "partial",
@@ -7470,6 +7666,13 @@
       {
         "id": "SR-2.10-2",
         "element": "E-10",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2.13-4",
+        "element": "E-19",
         "status": "planned",
         "tests": [],
         "target": "v1.3.0"
@@ -7517,8 +7720,29 @@
         "target": "v1.3.0"
       },
       {
+        "id": "SR-4.1-3",
+        "element": "E-12",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-4-2",
+        "element": "E-23",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
         "id": "SR-4-3",
         "element": "E-36",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-4.5-3",
+        "element": "E-18",
         "status": "planned",
         "tests": [],
         "target": "v1.3.0"
@@ -7531,8 +7755,22 @@
         "target": "v1.3.0"
       },
       {
+        "id": "SR-4.6-2",
+        "element": "E-16",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
         "id": "SR-4.7-3",
         "element": "E-16",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-4.8-2",
+        "element": "E-15",
         "status": "planned",
         "tests": [],
         "target": "v1.3.0"
@@ -8249,7 +8487,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8284,7 +8522,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39093: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35785: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8401,13 +8639,11 @@
     }
   ],
   "acceptance": {
-    "commit": "8efa7f74a8542f4cf5df4c4327beb93ccd01ef3d",
-    "label": "not enforced",
-    "reasons": [
-      "AT-11 Audit linkage: failed in the Enforced profile"
-    ],
+    "commit": "274311990836721383b31b309b60a84a34cd0db3",
+    "label": "enforced",
+    "reasons": [],
     "total": 21,
-    "enforcedPassed": 20,
+    "enforcedPassed": 21,
     "standalonePassed": 20,
     "scenarios": [
       {
@@ -8757,7 +8993,7 @@
           "SR-6.5-1",
           "SR-6.20-1"
         ],
-        "enforced": "fail",
+        "enforced": "pass",
         "standalone": "pass",
         "tests": [
           {
@@ -8767,7 +9003,7 @@
           },
           {
             "test": "internal/acceptance/enforced.TestAT11AuditLinkage",
-            "result": "fail",
+            "result": "pass",
             "profile": "enforced"
           },
           {
@@ -9095,18 +9331,18 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "8efa7f74a8542f4cf5df4c4327beb93ccd01ef3d",
-    "generatedAt": "2026-10-19T07:49:04Z",
+    "commit": "274311990836721383b31b309b60a84a34cd0db3",
+    "generatedAt": "2026-10-19T14:56:16Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000009700",
-      "memoryBytes": 16765374464,
+      "runner": "GitHub Actions 1000009791",
+      "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90423181312,
+      "diskFreeBytes": 90424160256,
       "diskDevice": "sda1",
       "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
@@ -9130,7 +9366,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.023632,
+        "value": 0.030807,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9143,7 +9379,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 17.871706,
+        "value": 18.585682,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9156,19 +9392,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.6629464999999986,
+        "value": 0.7256795,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.590 ms, mean of 10.469, 10.254, 10.800, 10.200, 10.835, 10.550, 10.962, 10.646) minus disabled (9.927 ms, mean of 10.047, 9.982, 9.774, 10.298, 9.745, 9.817, 9.972, 9.778), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (11.303 ms, mean of 11.022, 10.780, 11.287, 10.888, 12.622, 11.485, 10.995, 11.344) minus disabled (10.577 ms, mean of 11.257, 10.485, 10.118, 10.025, 10.762, 10.344, 10.927, 10.700), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9658081978832,
+        "value": 1999.966138879964,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9180,7 +9416,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 698.564353,
+        "value": 811.373799,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9192,12 +9428,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1547.25390625,
+        "value": 1546.34375,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m19s after start with no traffic: smcpd (119.6 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1427.7 MiB in 2 processes, process 4155 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m19s after start with no traffic: smcpd (117.7 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1428.6 MiB in 2 processes, process 4136 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
