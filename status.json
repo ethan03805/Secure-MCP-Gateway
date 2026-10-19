@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T02:39:46Z",
-  "commit": "2e2e48675af0d6fc4eac9817ca91f39395ef3255",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/2e2e48675af0d6fc4eac9817ca91f39395ef3255",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39187182522",
+  "generatedAt": "2026-10-19T03:35:41Z",
+  "commit": "a07a0a4bee780156078d12caa649fbcc746e7c09",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a07a0a4bee780156078d12caa649fbcc746e7c09",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39190818645",
   "tests": {
-    "total": 1470,
-    "passed": 1455,
+    "total": 1475,
+    "passed": 1460,
     "failed": 0,
     "skipped": 15,
-    "durationSec": 2501.6,
+    "durationSec": 2850.4,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -109,7 +109,7 @@
       },
       {
         "name": "internal/analytics",
-        "passed": 24,
+        "passed": 25,
         "failed": 0,
         "skipped": 0
       },
@@ -223,7 +223,7 @@
       },
       {
         "name": "internal/graph",
-        "passed": 27,
+        "passed": 28,
         "failed": 0,
         "skipped": 0
       },
@@ -385,7 +385,7 @@
       },
       {
         "name": "internal/secrets",
-        "passed": 32,
+        "passed": 33,
         "failed": 0,
         "skipped": 1
       },
@@ -406,6 +406,12 @@
         "passed": 2,
         "failed": 0,
         "skipped": 2
+      },
+      {
+        "name": "internal/versions",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
       },
       {
         "name": "packaging/linux",
@@ -500,7 +506,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 80.2
+        "pct": 80.6
       },
       {
         "name": "internal/anomaly",
@@ -516,7 +522,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 83.9
+        "pct": 84.1
       },
       {
         "name": "internal/authguard",
@@ -532,7 +538,7 @@
       },
       {
         "name": "internal/baseline",
-        "pct": 85.4
+        "pct": 85.1
       },
       {
         "name": "internal/channel",
@@ -572,11 +578,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 83.7
       },
       {
         "name": "internal/gwtest",
-        "pct": 80
+        "pct": 80.8
       },
       {
         "name": "internal/harness",
@@ -676,7 +682,7 @@
       },
       {
         "name": "internal/research",
-        "pct": 83
+        "pct": 82.8
       },
       {
         "name": "internal/sandbox",
@@ -688,7 +694,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 80
+        "pct": 79.7
       },
       {
         "name": "internal/session",
@@ -701,6 +707,10 @@
       {
         "name": "internal/tunnel",
         "pct": 81.1
+      },
+      {
+        "name": "internal/versions",
+        "pct": 82.8
       },
       {
         "name": "packaging/linux",
@@ -742,8 +752,8 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 468,
-    "partial": 57,
+    "verified": 472,
+    "partial": 53,
     "failing": 0,
     "unverified": 4,
     "byElement": [
@@ -759,8 +769,8 @@
         "element": "E-02",
         "name": "Protocol Mediator",
         "total": 43,
-        "verified": 42,
-        "partial": 1,
+        "verified": 43,
+        "partial": 0,
         "failing": 0
       },
       {
@@ -911,8 +921,8 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 21,
-        "verified": 16,
-        "partial": 4,
+        "verified": 17,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -967,16 +977,16 @@
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
-        "verified": 7,
-        "partial": 4,
+        "verified": 8,
+        "partial": 3,
         "failing": 0
       },
       {
         "element": "E-29",
         "name": "Observation Collector",
         "total": 14,
-        "verified": 7,
-        "partial": 7,
+        "verified": 8,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -3613,8 +3623,9 @@
       {
         "id": "FR-10.8",
         "element": "E-29",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/analytics.TestDropAccountingUnderInjectedBackpressure",
           "internal/observe.TestNonBlockingAndDropAccounting"
         ]
       },
@@ -5194,9 +5205,10 @@
       {
         "id": "SR-2-1",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/secrets.TestBrokerLeakDetectionNorthbound"
+          "internal/secrets.TestBrokerLeakDetectionNorthbound",
+          "internal/secrets.TestSecretsNeverNorthbound"
         ]
       },
       {
@@ -6234,11 +6246,12 @@
       {
         "id": "SR-6.10-1",
         "element": "E-21",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT12AuditConsistency",
           "internal/acceptance/enforced.TestAT12AuditConsistency",
           "internal/audit.TestExporterCopiesOnce",
+          "internal/graph.TestMirrorAndExportExactlyOnceAcrossCrashes",
           "internal/graph.TestMirrorExactlyOncePerEventAcrossCrashAndRestart",
           "internal/graph.TestMirrorProjectsCallsSessionsDecisionsAndApprovals",
           "internal/graph.TestNeo4jMirrorExactlyOnceAfterCrash"
@@ -6275,9 +6288,11 @@
       {
         "id": "SR-6.14-1",
         "element": "E-28",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/graph.TestRetentionDeletesExpiredMirrorRecordsOnly"
+          "internal/graph.TestRetentionDeletesExpiredMirrorRecordsOnly",
+          "internal/versions.TestReferenceMatching",
+          "internal/versions.TestReferencedVersionsAreRetained"
         ]
       },
       {
@@ -7184,7 +7199,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7219,7 +7234,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35979: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39579: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7336,7 +7351,7 @@
     }
   ],
   "acceptance": {
-    "commit": "2e2e48675af0d6fc4eac9817ca91f39395ef3255",
+    "commit": "a07a0a4bee780156078d12caa649fbcc746e7c09",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -8024,19 +8039,19 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
-    "commit": "2e2e48675af0d6fc4eac9817ca91f39395ef3255",
-    "generatedAt": "2026-10-19T02:00:03Z",
+    "commit": "a07a0a4bee780156078d12caa649fbcc746e7c09",
+    "generatedAt": "2026-10-19T03:08:01Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000008139"
+      "runner": "GitHub Actions 1000008531"
     },
     "referenceHardware": false,
     "dataset": {
@@ -8053,7 +8068,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.009795,
+        "value": 0.017272,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -8065,7 +8080,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 10.283686,
+        "value": 13.468136,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -8077,18 +8092,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.1761738750000008,
+        "value": 0.3694758749999991,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (5.764 ms, mean of 5.536, 6.048, 5.997, 5.742, 5.595, 5.893, 5.640, 5.658) minus disabled (5.588 ms, mean of 5.456, 5.687, 5.537, 5.640, 5.803, 5.665, 5.328, 5.584), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (8.597 ms, mean of 8.631, 8.373, 8.072, 8.666, 8.839, 8.676, 8.744, 8.777) minus disabled (8.228 ms, mean of 8.328, 8.282, 8.100, 8.572, 8.116, 8.035, 8.013, 8.376), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 448.131705,
+        "value": 635.224857,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -8100,7 +8115,7 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 104.54296875,
+        "value": 103.37890625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
