@@ -186,7 +186,7 @@ func (c Cloudflare) Start(target, logPath string) (int, string, error) {
 	defer logf.Close()
 	cmd := exec.Command(c.Bin, "tunnel", "--no-autoupdate", "--url", "https://"+target, "--no-tls-verify")
 	cmd.Stdout, cmd.Stderr = logf, logf
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	detach(cmd)
 	if err := cmd.Start(); err != nil {
 		return 0, "", err
 	}

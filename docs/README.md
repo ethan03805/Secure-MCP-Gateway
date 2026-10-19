@@ -48,6 +48,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Acceptance scenarios, release label and performance](acceptance.md) | FR-19.3, FR-19.4, FR-11, FR-10.2, FR-10.11 | AT-01 to AT-21 and where they run, the release label, `smcp-workload` and the CI job "perf", stage timing spans |
 | [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)), runbook execution records and the [gap list](verification/gap-list.md) of unverified requirements |
 | [Continuous integration](ci.md) | — | For contributors: the required checks, and which CI jobs a pull request that changes only documentation skips |
+| [Windows port](windows-port.md) | FR-21 (planned v1.3.0) | For contributors: measured Windows build gaps, what fails closed on Windows today, the `windows` CI job, effort and order per FR-21 area, and open questions on the requirements |
 
 ## Client quick starts (FR-18.3)
 

@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -269,13 +268,4 @@ func callTimings(t *testing.T, evs []event) (overhead, decision []float64) {
 		overhead = append(overhead, float64(x.disp.Sub(x.req)+x.del.Sub(x.comp))/float64(time.Millisecond))
 	}
 	return overhead, decision
-}
-
-func freeBytes(t *testing.T, dir string) uint64 {
-	t.Helper()
-	var st syscall.Statfs_t
-	if err := syscall.Statfs(dir, &st); err != nil {
-		t.Fatal(err)
-	}
-	return uint64(st.Bavail) * uint64(st.Bsize) //nolint:gosec,unconvert // Bsize is int64 on Linux, uint32 on macOS
 }

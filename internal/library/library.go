@@ -32,7 +32,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
@@ -179,7 +178,7 @@ func Open(o Options) (*Library, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil { //nolint:gosec // a file descriptor fits in int
+	if err := flockExclusive(f); err != nil {
 		f.Close()
 		return nil, ErrLocked
 	}
@@ -196,7 +195,7 @@ func (l *Library) Close() error {
 	if l.lock == nil {
 		return nil
 	}
-	_ = syscall.Flock(int(l.lock.Fd()), syscall.LOCK_UN) //nolint:gosec // a file descriptor fits in int
+	_ = flockRelease(l.lock)
 	err := l.lock.Close()
 	l.lock = nil
 	return err

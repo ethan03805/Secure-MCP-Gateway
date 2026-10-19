@@ -154,6 +154,9 @@ func (SubprocessLauncher) Confined() bool { return false }
 
 // Launch implements Launcher.
 func (l SubprocessLauncher) Launch(_ context.Context, spec ServerSpec) (Process, error) {
+	if err := subprocessSupported(); err != nil {
+		return nil, err
+	}
 	if err := CheckLaunchSpec(spec); err != nil {
 		return nil, err
 	}
