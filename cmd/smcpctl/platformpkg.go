@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/ethan03805/secure-mcp-gateway/internal/harness"
 )
 
@@ -142,9 +140,6 @@ func binaryWritableFindings(exe string, euid int, enforced bool, writable func(s
 	}
 	return out
 }
-
-// canWritePath reports whether the real user may write p (access(2)).
-func canWritePath(p string) bool { return unix.Access(p, unix.W_OK) == nil }
 
 // doctorBinaryFindings runs binaryWritableFindings for this smcpctl.
 var doctorBinaryFindings = func(enforced bool) []harness.Finding {
