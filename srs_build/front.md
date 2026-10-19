@@ -58,7 +58,7 @@ Per the owner, the Gateway is a local secure MCP gateway on a single computer wh
 
 | Item | Behavior in v1 |
 |---|---|
-| Remote (hosted) MCP servers as backends | Not supported. Every backend is a packaged local server launched by E-15. A manifest naming a remote URL as the server endpoint is rejected (FR-14.4). Planned for v1.3.0: hosted servers imported from the IBM ContextForge catalog, reached only through the bundled ContextForge instance (FR-22). |
+| Remote (hosted) MCP servers as backends | Not supported. Every backend is a packaged local server launched by E-15. A manifest naming a remote URL as the server endpoint is rejected (FR-14.4). Planned for v1.3.0: hosted servers imported from the IBM ContextForge catalog, reached only through the bundled ContextForge instance, which is opt-in (FR-22). |
 | MCP resources and prompts | Not served northbound and not requested southbound. The Gateway relays tools only (FR-1.11, SR-5.6-1). |
 | Sampling, elicitation and roots | Refused unless the MRTR Relay Profile is enabled (Section 1.5). |
 | Windows hosts | Not supported. |

@@ -62,6 +62,7 @@ A package signature shows who packaged a server and that it has not changed sinc
 ### 11. Scope limits
 
 - Remote (hosted) MCP servers cannot be used as backends in v1 (FR-14.4).
+- Planned for v1.3.0 (FR-22, not in this release): hosted servers imported from the IBM ContextForge catalog, reached only through a bundled ContextForge instance that the operator opts into. A hosted server's code cannot be inspected, so the source review and signature binding of SEC 3.1 and SEC 3.2 cannot apply to it. The owner accepted this gap on 2026-10-18 on the terms of SR-3-6: each hosted package carries a recorded trust decision, every tool is labelled `untrusted`, and the risk class is `moderate` or higher. The owner also accepted that a hosted server is probed with access narrowed to its one host through the Egress Broker (SR-3.5-2), instead of the no-network quarantine of SEC 3.5. Its operator sees every argument sent to it, and every hosted package served by the bundled instance shares one containment domain (FR-22.42).
 - Only MCP tools are relayed. Resources and prompts are refused (SR-5.6-1); sampling, elicitation and roots requests from servers are refused (`-32601`, or `-31010` for an `InputRequiredResult`); the MRTR Relay Profile that would relay them is not implemented.
 - Windows is not supported.
 
