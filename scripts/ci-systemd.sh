@@ -341,6 +341,12 @@ else
   (cd "$repo" && env "${vault_env[@]}" go test -v -count=1 -run '^TestIntegrationVaultIsolation$' ./internal/secrets/) || fail "vault isolation"
 fi
 
+# smcpctl doctor as the harness user (this runner account, not in group
+# smcp) on the Enforced host and for a Standalone instance of the same user
+# (FR-15.4), as the Go test cmd/smcpctl.TestDoctorEnforcedHostAsHarnessUser.
+say "smcpctl doctor as the harness user on the Enforced host (FR-15.4)"
+host_test ./cmd/smcpctl/ TestDoctorEnforcedHostAsHarnessUser SMCP_ENFORCED_HOST_TEST || fail "doctor as the harness user"
+
 # Uninstall and purge on this host (FR-13.11 Enforced half, FR-13.12),
 # as the Go test cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost. It
 # removes the installation, so it comes last.
