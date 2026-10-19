@@ -515,6 +515,9 @@ func (l *Library) checkEnable(r *Revision, o EnableOptions) error {
 	if o.Standalone && m.HighestRisk() == "high" {
 		return errf(ReasonProfile, "%s has risk class high; the Standalone profile cannot confine it (SR-4-1)", r.Key())
 	}
+	if err := checkWindowsLaunch(m); err != nil {
+		return err
+	}
 	if m.Stateful {
 		// The manifest schema has no handle contract yet (SR-3.14-1).
 		return errf(ReasonStateful, "%s declares stateful tools without a handle contract", r.Key())
