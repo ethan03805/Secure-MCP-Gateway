@@ -51,6 +51,16 @@ case "$(uname -s)" in
     [ -S "/run/user/$uid/bus" ] || fail "no systemd user manager for $(id -un)"
     export XDG_RUNTIME_DIR="/run/user/$uid"
     export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+    # GitHub's Ubuntu image adds XDG_CONFIG_HOME=/home/runner/.config to
+    # /etc/environment, which stock Ubuntu does not have; sudo's PAM
+    # session hands it to every identity, and releases up to v1.1.0 then
+    # run smcp-srv's Podman against the runner's home. Restore the stock
+    # file so the run is on a clean Ubuntu host (smcpd after v1.1.0 sets
+    # the identity's own XDG directories).
+    if grep -q '^XDG_CONFIG_HOME=' /etc/environment 2>/dev/null; then
+      say "removing XDG_CONFIG_HOME from /etc/environment (not in stock Ubuntu)"
+      sudo -n sed -i '/^XDG_CONFIG_HOME=/d' /etc/environment
+    fi
     ;;
   Darwin) os=darwin ;;
   *) fail "the walkthrough is for macOS and Linux" ;;

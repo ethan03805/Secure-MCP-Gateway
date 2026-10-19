@@ -297,3 +297,37 @@ func TestMapID(t *testing.T) {
 		t.Error("non-numeric runtime.user accepted")
 	}
 }
+
+// TestRunAsEnvNamesTheIdentitysOwnDirectories: the Podman environment of
+// the run_as identity names that identity's home, configuration and data
+// directories, whatever the Gateway's own environment holds, so that
+// sudo's PAM session cannot fill XDG_CONFIG_HOME or XDG_DATA_HOME with
+// another user's directories (found by following the install guide on a
+// clean Ubuntu runner, whose /etc/environment names /home/runner/.config).
+func TestRunAsEnvNamesTheIdentitysOwnDirectories(t *testing.T) {
+	reqtest.Partial(t, "SR-4.1-2")
+	t.Setenv("XDG_CONFIG_HOME", "/home/operator/.config")
+	t.Setenv("XDG_DATA_HOME", "/home/operator/.local/share")
+	t.Setenv("TMPDIR", "/home/operator/tmp")
+	r := runner{podman: "/usr/bin/podman", runAs: &runAsUser{Name: "smcp-srv", UID: 987, GID: 987, Home: "/var/lib/smcp/home/smcp-srv", Sudo: DefaultSudo}}
+	env := map[string]string{}
+	for _, kv := range r.env(nil) {
+		k, v, _ := strings.Cut(kv, "=")
+		env[k] = v
+	}
+	want := map[string]string{
+		"HOME":            "/var/lib/smcp/home/smcp-srv",
+		"XDG_CONFIG_HOME": "/var/lib/smcp/home/smcp-srv/.config",
+		"XDG_DATA_HOME":   "/var/lib/smcp/home/smcp-srv/.local/share",
+		"XDG_RUNTIME_DIR": "/run/user/987",
+		"USER":            "smcp-srv",
+	}
+	for k, v := range want {
+		if env[k] != v {
+			t.Errorf("%s = %q, want %q", k, env[k], v)
+		}
+	}
+	if _, ok := env["TMPDIR"]; ok {
+		t.Error("the Gateway's TMPDIR reached the other identity's Podman")
+	}
+}
