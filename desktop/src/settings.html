@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure MCP Gateway Settings</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="settings.js"></script>
+</head>
+<body>
+<main class="panel">
+  <h1>Settings</h1>
+  <form id="settings" novalidate>
+    <div class="field">
+      <label for="admin_url">Admin listener</label>
+      <input id="admin_url" name="admin_url" type="url" autocomplete="off" spellcheck="false" aria-describedby="admin_url-help admin_url-error">
+      <p id="admin_url-help" class="help">The console's address, as <code>[admin_listener] address</code> in the Gateway configuration (default: port 8444 on 127.0.0.1, over HTTPS).</p>
+      <p id="admin_url-error" class="error" role="alert"></p>
+    </div>
+    <div class="field">
+      <label for="metrics_address">Metrics endpoint</label>
+      <input id="metrics_address" name="metrics_address" type="text" autocomplete="off" spellcheck="false" aria-describedby="metrics_address-help metrics_address-error">
+      <p id="metrics_address-help" class="help">Loopback address of <code>[metrics] address</code> (default 127.0.0.1:9464). The tray reads health from it without a credential.</p>
+      <p id="metrics_address-error" class="error" role="alert"></p>
+    </div>
+    <div class="field">
+      <label for="ca_file">Gateway CA file</label>
+      <input id="ca_file" name="ca_file" type="text" autocomplete="off" spellcheck="false" aria-describedby="ca_file-help ca_file-error">
+      <p id="ca_file-help" class="help">The console window trusts only this CA. Empty means <span id="default_ca_file"></span>.</p>
+      <p id="ca_file-error" class="error" role="alert"></p>
+    </div>
+    <div class="field check">
+      <input id="notifications" name="notifications" type="checkbox">
+      <label for="notifications">Notify me when tool calls wait for approval</label>
+    </div>
+    <p class="help">A notification shows only how many approvals are waiting. Approve or deny in the console, signed in as an Approver.</p>
+    <div class="actions">
+      <button type="submit">Save</button>
+      <p id="status" role="status" aria-live="polite"></p>
+    </div>
+  </form>
+</main>
+</body>
+</html>

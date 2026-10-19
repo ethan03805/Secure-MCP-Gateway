@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "settings-window",
+  "description": "The bundled Settings window reads and saves the desktop preferences. It is the only capability: the console window (label \"console\") is in none, so it has no permission and no command (SRS SR-2-5).",
+  "local": true,
+  "windows": ["settings"],
+  "permissions": ["allow-get-settings", "allow-save-settings"]
+}

@@ -118,3 +118,40 @@ func TestListenRefusesNonLoopback(t *testing.T) {
 		t.Fatal("health values")
 	}
 }
+
+// TestDesktopGauges: smcp_release_enforced and smcp_emergency_stop are
+// gauges without labels, 1 only while the release label is "enforced" or
+// the emergency stop is set, and 0 when their sources are absent (FR-20.5).
+func TestDesktopGauges(t *testing.T) {
+	reqtest.Partial(t, "FR-20.5")
+	enforced, stopped := false, false
+	r := New(nil, Sources{ReleaseEnforced: func() bool { return enforced }, EmergencyStop: func() bool { return stopped }})
+	scrape := func(r *Registry) string {
+		var buf bytes.Buffer
+		r.Write(&buf)
+		return buf.String()
+	}
+	for _, c := range []struct {
+		enforced, stopped bool
+		want              []string
+	}{
+		{false, false, []string{"smcp_release_enforced 0\n", "smcp_emergency_stop 0\n"}},
+		{true, false, []string{"smcp_release_enforced 1\n", "smcp_emergency_stop 0\n"}},
+		{true, true, []string{"smcp_release_enforced 1\n", "smcp_emergency_stop 1\n"}},
+		{false, true, []string{"smcp_release_enforced 0\n", "smcp_emergency_stop 1\n"}},
+	} {
+		enforced, stopped = c.enforced, c.stopped
+		expo := scrape(r)
+		for _, w := range append(c.want, "# TYPE smcp_release_enforced gauge\n", "# TYPE smcp_emergency_stop gauge\n") {
+			if !strings.Contains(expo, w) {
+				t.Errorf("enforced=%v stopped=%v: exposition lacks %q", c.enforced, c.stopped, w)
+			}
+		}
+		if strings.Contains(expo, "smcp_release_enforced{") || strings.Contains(expo, "smcp_emergency_stop{") {
+			t.Error("desktop gauges carry labels")
+		}
+	}
+	if expo := scrape(New(nil, Sources{})); !strings.Contains(expo, "smcp_release_enforced 0\n") || !strings.Contains(expo, "smcp_emergency_stop 0\n") {
+		t.Fatalf("absent sources must report 0:\n%s", expo)
+	}
+}

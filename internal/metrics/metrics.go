@@ -13,6 +13,12 @@
 //	smcp_pending_approvals                                   gauge
 //	smcp_backend_instances_running{server_alias}             gauge
 //
+// and, for the desktop application's tray (FR-20.5), two gauges without
+// labels:
+//
+//	smcp_release_enforced  gauge 1 only while the release label is "enforced"
+//	smcp_emergency_stop    gauge 1 only while the emergency stop is set
+//
 // Call counts and decision latency come from evidence events through an
 // audit.Observer, so they count exactly what the journal recorded; the
 // journal flush histogram is fed by audit.Journal.SetFlushObserver.
@@ -100,6 +106,11 @@ type Sources struct {
 	ActiveSessions  func() int
 	PendingApproval func() int
 	Backends        func() []string // aliases of running instances
+	// ReleaseEnforced reports whether the release label is "enforced";
+	// EmergencyStop whether the emergency stop is set (FR-20.5). Nil
+	// reports false, so the tray never reads "enforced" by default.
+	ReleaseEnforced func() bool
+	EmergencyStop   func() bool
 }
 
 // Registry holds the metric values.
@@ -234,6 +245,14 @@ func (r *Registry) Write(w io.Writer) {
 		n = r.src.PendingApproval()
 	}
 	gauge("smcp_pending_approvals", "Approvals waiting for a decision.", n)
+	flag := func(f func() bool) int {
+		if f != nil && f() {
+			return 1
+		}
+		return 0
+	}
+	gauge("smcp_release_enforced", "1 while the release label is \"enforced\", 0 otherwise.", flag(r.src.ReleaseEnforced))
+	gauge("smcp_emergency_stop", "1 while the emergency stop is set, 0 otherwise.", flag(r.src.EmergencyStop))
 	fmt.Fprintf(w, "# HELP smcp_backend_instances_running Running backend server instances.\n# TYPE smcp_backend_instances_running gauge\n")
 	if r.src.Backends != nil {
 		aliases := r.src.Backends()

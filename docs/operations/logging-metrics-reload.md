@@ -28,6 +28,8 @@ A configuration written by `smcpctl bootstrap` enables the endpoint on the admin
 | `smcp_active_sessions` | gauge | none |
 | `smcp_pending_approvals` | gauge | none; 0 until the Approval Service (E-07) supplies its queue length |
 | `smcp_backend_instances_running` | gauge | `server_alias` |
+| `smcp_release_enforced` | gauge | none; 1 while the release label is `enforced`, 0 otherwise (FR-20.5, read by the desktop tray) |
+| `smcp_emergency_stop` | gauge | none; 1 while the emergency stop is set, 0 otherwise (FR-20.5, read by the desktop tray) |
 
 Call counts are taken from the evidence events the journal accepted, so they match the journal. Example scrape configuration:
 

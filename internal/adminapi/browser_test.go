@@ -288,6 +288,34 @@ func TestBrowserMutationsNeedCSRFAndIfMatch(t *testing.T) {
 	}
 }
 
+// TestDesktopOriginsRefused: the control API gives the desktop application
+// no origin of its own (SR-2.9-4). A signed-in console session's mutation
+// with a valid CSRF token and revision is refused when it carries a Tauri
+// origin, and passes with the admin listener's own origin, which is what
+// the desktop console window sends because it loads the served console.
+func TestDesktopOriginsRefused(t *testing.T) {
+	reqtest.Partial(t, "SR-2.9-4")
+	hash, _ := keys.HashPassword("admin password 12")
+	f := newFixture(t, fmt.Sprintf("password_hash = %q", hash))
+	cookie, csrf, rs := f.browserLogin("")
+	tag := rs.etag
+	stop := map[string]any{"reason": "desktop origin test"}
+	for _, origin := range []string{"tauri://localhost", "http://tauri.localhost", "https://tauri.localhost", "smcp://console"} {
+		got := f.browser("POST", "/admin/v1/stop", stop, browserReq{cookie: cookie, csrf: csrf, ifMatch: tag, extra: map[string]string{"Origin": origin}})
+		if got.status != http.StatusForbidden {
+			t.Errorf("Origin %s: %d, want 403", origin, got.status)
+		}
+	}
+	if f.ctl.stopped {
+		t.Fatal("a mutation with a desktop origin stopped the Gateway")
+	}
+	ok := f.browser("POST", "/admin/v1/stop", stop, browserReq{cookie: cookie, csrf: csrf, ifMatch: tag,
+		extra: map[string]string{"Origin": f.srv.URL, "Sec-Fetch-Site": "same-origin"}})
+	if ok.status != 200 || !f.ctl.stopped {
+		t.Fatalf("same-origin mutation: %d %v", ok.status, ok.body)
+	}
+}
+
 func hasReason(f *fixture, code string) bool {
 	for _, e := range f.rec.Events() {
 		if e.ReasonCode == code {
