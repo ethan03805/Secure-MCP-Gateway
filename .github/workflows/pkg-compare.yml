@@ -75,6 +75,7 @@ jobs:
           version=$(cat build/version)
           chmod +x build/dist/*/*
           bash packaging/installers/macos/build-pkg.sh "$version" build/dist build/mac-pkg
+          set +e # diff exits 1 on differences; report them all
           a=build/mac-pkg/smcp_${version}_darwin_arm64.pkg b=build/linux-pkg/smcp_${version}_darwin_arm64.pkg w=$RUNNER_TEMP/cmp
           mkdir -p "$w"
           pkgutil --expand "$a" "$w/mac"; pkgutil --expand "$b" "$w/linux"
