@@ -42,7 +42,7 @@ Prints `server_ca`, `trust_bundle`, `listener_certificate` (subject, serial, val
 smcpctl keys rotate tls [--offline]
 ```
 
-Issues a new listener certificate from the active CA. The listeners re-read the certificate file at most once per second, so new connections get the new certificate without a restart; open connections and sessions continue (sessions are bearer tokens, not TLS state). `--offline` rotates in the state directory while the Gateway is stopped.
+Issues a new listener certificate from the active CA. The listeners check the certificate file at every TLS handshake, so the first new connection gets the new certificate without a restart; open connections and sessions continue (sessions are bearer tokens, not TLS state). `--offline` rotates in the state directory while the Gateway is stopped.
 
 ### Server CA, with an overlap period
 

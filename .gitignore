@@ -22,6 +22,7 @@ build/
 /smcpd
 /smcpctl
 /smcp-*
+/reqreport
 # Local Gateway instances created with smcpctl bootstrap
 smcp.toml
 /policy.json
