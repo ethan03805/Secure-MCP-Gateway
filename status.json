@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T06:18:06Z",
-  "commit": "197abe313db708d87149424c6002637991bb8803",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/197abe313db708d87149424c6002637991bb8803",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39206440485",
+  "generatedAt": "2026-10-19T06:50:12Z",
+  "commit": "f5e79fc24d85707cd6403fe01180c45de7ed3e4c",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/f5e79fc24d85707cd6403fe01180c45de7ed3e4c",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39206805984",
   "tests": {
-    "total": 1538,
-    "passed": 1523,
-    "failed": 0,
+    "total": 1548,
+    "passed": 1532,
+    "failed": 1,
     "skipped": 15,
-    "durationSec": 1551.2,
+    "durationSec": 1876.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -451,8 +451,8 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 25,
-        "failed": 0,
+        "passed": 24,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -460,11 +460,17 @@
         "passed": 4,
         "failed": 0,
         "skipped": 0
+      },
+      {
+        "name": "tools/uilint",
+        "passed": 10,
+        "failed": 0,
+        "skipped": 0
       }
     ]
   },
   "coverage": {
-    "totalPct": 76,
+    "totalPct": 76.2,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -536,7 +542,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 92.3
+        "pct": 92
       },
       {
         "name": "internal/backup",
@@ -572,11 +578,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.3
+        "pct": 91.2
       },
       {
         "name": "internal/egress",
-        "pct": 84.5
+        "pct": 84.4
       },
       {
         "name": "internal/filterapi",
@@ -588,7 +594,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.8
       },
       {
         "name": "internal/gwtest",
@@ -692,7 +698,7 @@
       },
       {
         "name": "internal/research",
-        "pct": 82.8
+        "pct": 83
       },
       {
         "name": "internal/sandbox",
@@ -704,7 +710,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 80
+        "pct": 79.7
       },
       {
         "name": "internal/session",
@@ -712,7 +718,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 81.6
+        "pct": 79.6
       },
       {
         "name": "internal/tunnel",
@@ -757,15 +763,19 @@
       {
         "name": "tools/sbomcheck",
         "pct": 88.6
+      },
+      {
+        "name": "tools/uilint",
+        "pct": 84.6
       }
     ]
   },
   "requirements": {
     "total": 529,
-    "verified": 488,
-    "partial": 39,
-    "failing": 0,
-    "unverified": 2,
+    "verified": 486,
+    "partial": 38,
+    "failing": 2,
+    "unverified": 3,
     "byElement": [
       {
         "element": "E-01",
@@ -955,9 +965,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 62,
-        "partial": 11,
-        "failing": 0
+        "verified": 60,
+        "partial": 10,
+        "failing": 2
       },
       {
         "element": "E-25",
@@ -4130,10 +4140,8 @@
       {
         "id": "FR-13",
         "element": "E-24",
-        "status": "partial",
-        "tests": [
-          "analysis: 12 of 13 child requirements verified"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-13.1",
@@ -4167,7 +4175,7 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
@@ -4250,7 +4258,7 @@
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
           "cmd/smcpctl.TestInstallStandaloneServiceManager",
@@ -4434,7 +4442,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (f5e79fc24d85, 2026-10-19T06:09:55Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39206805946"
+          "workflow agents-lockdown at main (5eb1107aac66, 2026-10-19T06:32:29Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39209956220"
         ]
       },
       {
@@ -4502,7 +4510,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (f5e79fc24d85, 2026-10-19T06:09:53Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39206805946"
+          "workflow agents at main (5eb1107aac66, 2026-10-19T06:32:26Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39209956220"
         ]
       },
       {
@@ -6622,8 +6630,10 @@
       {
         "id": "FR-20",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "analysis: 1 of 41 child requirements verified"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -6902,8 +6912,10 @@
       {
         "id": "FR-20.51",
         "element": "E-24",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "tools/uilint.TestRepositoryClean"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8104,7 +8116,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:42733: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:34749: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8221,7 +8233,7 @@
     }
   ],
   "acceptance": {
-    "commit": "197abe313db708d87149424c6002637991bb8803",
+    "commit": "f5e79fc24d85707cd6403fe01180c45de7ed3e4c",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -8909,24 +8921,24 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   },
   "performance": {
     "schema": 1,
-    "commit": "197abe313db708d87149424c6002637991bb8803",
-    "generatedAt": "2026-10-19T05:51:48Z",
+    "commit": "f5e79fc24d85707cd6403fe01180c45de7ed3e4c",
+    "generatedAt": "2026-10-19T06:18:52Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000009398",
+      "runner": "GitHub Actions 1000009518",
       "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90421616640,
-      "diskDevice": "nvme0n1p1",
-      "diskModel": "MSFT NVMe Accelerator v1.0",
+      "diskFreeBytes": 90421518336,
+      "diskDevice": "sda1",
+      "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
       "imageVersion": "20261012.334.1"
@@ -8948,7 +8960,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.015693,
+        "value": 0.025396,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -8961,7 +8973,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 22.631618,
+        "value": 18.855501,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -8974,19 +8986,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.36357762500000135,
+        "value": 0.8716247500000005,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (8.347 ms, mean of 8.327, 7.834, 8.022, 8.524, 8.544, 8.916, 8.430, 8.180) minus disabled (7.984 ms, mean of 8.111, 7.859, 7.840, 7.778, 8.034, 8.196, 8.136, 7.914), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (11.241 ms, mean of 10.951, 11.025, 11.513, 11.016, 11.179, 11.203, 11.509, 11.536) minus disabled (10.370 ms, mean of 10.339, 10.369, 10.450, 10.104, 10.471, 10.434, 10.414, 10.377), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9653327409198,
+        "value": 1999.9655579231385,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -8998,7 +9010,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 584.255404,
+        "value": 837.926571,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9010,12 +9022,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1535.9453125,
+        "value": 1550.3671875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m17s after start with no traffic: smcpd (116.6 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1419.3 MiB in 2 processes, process 3894 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m19s after start with no traffic: smcpd (122.1 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1428.2 MiB in 2 processes, process 4170 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
