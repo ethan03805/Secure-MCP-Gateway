@@ -359,6 +359,18 @@ func TestNeo4jQueriesRetentionAndEngineStatus(t *testing.T) {
 	if err != nil || settings["server.http.enabled"] == "" {
 		t.Fatalf("%v %v", settings, err)
 	}
+	// SR-7.4-1: the CI engine is configured as `smcpctl graph config`
+	// prints (the graph job's service settings); its effective settings
+	// raise no SR-7.4-1 finding. Set SMCP_NEO4J_HARDENED=1 only for such
+	// an engine.
+	if os.Getenv("SMCP_NEO4J_HARDENED") == "1" {
+		for _, f := range CheckSettings(settings, Budget{}) {
+			if strings.HasPrefix(f.Reason, "SR-7.4-1") {
+				t.Errorf("hardening finding: %+v", f)
+			}
+		}
+		t.Logf("effective settings: %v", settings)
+	}
 	if h, err := das.HeapUse(ctx); err != nil || h.Used <= 0 || h.Max <= 0 {
 		t.Fatalf("%+v %v", h, err)
 	}

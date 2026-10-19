@@ -6135,7 +6135,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Method | Test |
 | Verification Statement | Connect to the database port as other identities and from a sandbox; confirm refusal. |
 | Source | SEC 4.2 |
-| Rationale | Only the Data Access Service reaches the database. |
+| Rationale | Only the Data Access Service reaches the database. In release 1.x the Data Access Service runs inside `smcpd` (SR-4.1-1), so the identity the rules admit is `smcp-core`; the engine itself runs as `smcp-data`. |
 
 #### SR-4.2-2 — Observation file protection
 
@@ -6148,7 +6148,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Method | Inspection |
 | Verification Statement | Inspect file modes. |
 | Source | SEC 4.2 |
-| Rationale | Store files are not readable by other identities. |
+| Rationale | Store files are not readable by other identities. In release 1.x the Observation Store runs inside `smcpd` (SR-4.1-1), so the Data Server identity that owns its files is `smcp-core`. |
 
 #### SR-4.9-1 — Single MCP endpoint per locked-down client
 
@@ -6841,7 +6841,7 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Verification Method | Test |
 | Verification Statement | Attempt to write checkpoints and read the key as other identities; confirm denial. |
 | Source | SEC 6.12 |
-| Rationale | Tamper evidence independent of the Data Server. |
+| Rationale | Tamper evidence independent of the Data Server. In release 1.x the evidence exporter runs inside `smcpd` (SR-4.1-1), so the evidence-exporter identity is `smcp-core`: the key is readable by `smcp-core` only and the checkpoints are copied to `[evidence] export_dir`, which the Enforced installation sets to the CP-46 directory `exports/`; every other CP-46 identity is denied both. A key held by an identity other than the Data Server's needs the inter-process interface that SR-4.1-1 leaves to a later release. |
 
 #### SR-6.13-1 — Failure spool
 
@@ -7210,7 +7210,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-43 | Adapter credential file | `$XDG_CONFIG_HOME/smcp/credentials.toml` (default `~/.config/smcp/`), mode 0600; refresh at 50% of access-token lifetime | New |
 | CP-44 | Manifest classes | Risk class `low`, `moderate` or `high`; `high` = general SQL, code or shell execution, CAD scripting, browser automation, or process spawning beyond the declared argument vector (SEC 3.13). Side-effect class per tool: `read`, `write`, `external`, `execute`. `source_trust` per tool: `trusted` (content originates from the operator's own data) or `untrusted` (content from the Internet, third parties or other agents) | New |
 | CP-45 | Approval hold | Hold bound 120 s (`[limits] approval_hold`, configurable 0 to 600 s; 0 disables hold); keep-alive interval 10 s (`[approvals] keepalive`); approval URL `https://<CP-03 admin listener>/approvals/<approvalId>`, or `[approvals] console_url` followed by `/approvals/<approvalId>` when set | New |
-| CP-46 | Directories and service identities | **Enforced:** configuration `/etc/smcp` (root:smcp, 0750); state `/var/lib/smcp` with `policy/`, `registry/`, `artifacts/` (owner `smcp-core`, 0700), `journal/` (owner `smcp-evidence`, 0700), `keys/` (owner `smcp-keys`, 0700), `vault/` (owner `smcp-vault`, 0700), `exports/` (owner `smcp-core`, 0750); runtime `/run/smcp` (0750); logs `/var/log/smcp` (0750). Identities `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, and `smcp-srv` with a subordinate range of 65,536 UIDs and GIDs for rootless Podman. **Standalone macOS:** `~/Library/Application Support/smcp-gateway/` with `config/` and `state/`, logs `~/Library/Logs/smcp-gateway/`, all 0700. **Standalone Linux:** configuration `$XDG_CONFIG_HOME/smcp-gateway` (default `~/.config/smcp-gateway`), state `$XDG_STATE_HOME/smcp-gateway` (default `~/.local/state/smcp-gateway`) including `log/`, runtime `$XDG_RUNTIME_DIR/smcp-gateway`, all 0700 | New |
+| CP-46 | Directories and service identities | **Enforced:** configuration `/etc/smcp` (root:smcp, 0750); state `/var/lib/smcp` (root:smcp, 0755) with `state/`, the Gateway's state directory (owner `smcp-core`, 0700), `policy/`, `registry/`, `artifacts/` (owner `smcp-core`, 0700), `journal/` (owner `smcp-evidence`, 0700), `keys/` (owner `smcp-keys`, 0700), `vault/` (owner `smcp-vault`, 0700), `exports/` (owner `smcp-core`, 0750; the evidence export, `[evidence] export_dir`); runtime `/run/smcp` (owner `smcp-core`, 0750); logs `/var/log/smcp` (owner `smcp-core`, 0750). Release 1.x runs the evidence exporter, the key manager, the vault and secret broker and the package library inside `smcpd` as `smcp-core` (SR-4.1-1), and SR-2.13-3 denies `smcp-vault` the vault; so the evidence journal and anchor, the keys, the vault, the registry and the artifacts are kept below `state/` (directories 0700, key files 0600), the policy file in `policy/`, and `journal/`, `keys/`, `vault/`, `registry/` and `artifacts/` are created with the owners above and stay empty until a release runs those components under their own identities. Identities `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, and `smcp-srv` with a subordinate range of 65,536 UIDs and GIDs for rootless Podman. **Standalone macOS:** `~/Library/Application Support/smcp-gateway/` with `config/` and `state/`, logs `~/Library/Logs/smcp-gateway/`, all 0700. **Standalone Linux:** configuration `$XDG_CONFIG_HOME/smcp-gateway` (default `~/.config/smcp-gateway`), state `$XDG_STATE_HOME/smcp-gateway` (default `~/.local/state/smcp-gateway`) including `log/`, runtime `$XDG_RUNTIME_DIR/smcp-gateway`, all 0700 | New |
 | CP-47 | Upgrade bounds | Health wait after start 60 s; migration time limit 120 s | New |
 | CP-48 | Remote listener | The first of `127.0.0.1:8444` and `127.0.0.1:8445` that the CP-03 admin listener does not use (`127.0.0.1:8445` with the default admin listener; `[remote] address` overrides); TLS, Remote Access Profile only; public name set by the operator | New |
 | CP-49 | Remote limits | Calls 30/min per client ID, burst 5; OAuth endpoints 10 req/s per source address, burst 20; lockout after 5 consecutive failed sign-ins or token requests, for 15 min; body 256 KiB; headers 8 KiB; concurrency 4 per client, 16 total; remote session maximum lifetime 2 h, idle timeout 15 min; pending dynamic registrations at most 32 in total and 4 per source address (IPv6: per /64), each kept 24 h | New |

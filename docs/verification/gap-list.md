@@ -87,7 +87,6 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 
 ## E-21 Audit & Evidence Service
 
-- SR-6.12-1 external: the evidence key and checkpoint directory permissions depend on the Enforced installation's identities; not exercised.
 
 ## E-22 Key & Trust Anchor Manager
 
@@ -109,7 +108,7 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 ## E-28 Data Lifecycle & Memory Manager
 
 - FR-11.9 external: the CI job `perf` samples the idle `smcpd` resident memory 10 minutes after start (partial claim; 103 MiB at `788c8b4`, 102 MiB at `1a96b1c`, budget 4 GiB); not on recorded reference hardware.
-- FR-12.4 external: CP-46 directories, owners and modes have not been inspected on installed Enforced and Standalone hosts.
+- FR-12.4 partial: CP-46 (narrowed on 2026-10-18 for release 1.x) is checked on the installed Enforced host (`cmd/smcpctl.TestEnforcedLayoutOnHost`, job linux-integration) and on the Standalone installs on macOS and Ubuntu (`scripts/ci-install-standalone.sh`, job install-standalone); the Inspection record of a CI run is missing.
 
 ## E-29 Observation Collector
 

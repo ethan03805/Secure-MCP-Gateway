@@ -48,6 +48,7 @@ unavailable() {
   exit 0
 }
 mode_of() { if [ "$(uname -s)" = Darwin ]; then stat -f '%Lp' "$1"; else stat -c '%a' "$1"; fi; }
+owner_of() { if [ "$(uname -s)" = Darwin ]; then stat -f '%Su' "$1"; else stat -c '%U' "$1"; fi; }
 sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 
 uid=$(id -u)
@@ -94,8 +95,18 @@ grep -q "^created configuration $cfg" "$work/install1.log" || fail "the install 
 grep -q '^health: degraded' "$work/install1.log" || fail "the install did not report health degraded"
 grep -q 'This installation is not enforced (Standalone profile)' "$work/install1.log" || fail "the install did not print the not-enforced notice"
 grep -q '^mode = "standalone"' "$cfg" || fail "$cfg does not set profile mode standalone"
-for d in "$cfg_dir" "$state_dir"; do
+# CP-46 (Standalone): every directory is the installing user's, mode 0700.
+cp46_dirs=("$cfg_dir" "$state_dir" "$(dirname "$log_file")")
+case "$os" in
+  darwin) cp46_dirs+=("$HOME/Library/Application Support/smcp-gateway") ;;
+  linux) cp46_dirs+=("$XDG_RUNTIME_DIR/smcp-gateway") ;;
+esac
+say "CP-46 directories (FR-12.4)"
+for d in "${cp46_dirs[@]}"; do
+  [ -d "$d" ] || fail "$d missing"
   [ "$(mode_of "$d")" = 700 ] || fail "$d has mode $(mode_of "$d"), not 700"
+  [ "$(owner_of "$d")" = "$(id -un)" ] || fail "$d is owned by $(owner_of "$d"), not $(id -un)"
+  echo "$d $(owner_of "$d") $(mode_of "$d")"
 done
 [ -f "$unit" ] || fail "$unit missing"
 

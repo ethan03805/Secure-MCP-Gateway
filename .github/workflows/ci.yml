@@ -483,7 +483,9 @@ jobs:
         env:
           NEO4J_AUTH: neo4j/smcp-ci-graph-password
           NEO4J_server_http_enabled: "false"
+          NEO4J_server_https_enabled: "false"
           NEO4J_dbms_usage__report_enabled: "false"
+          NEO4J_dbms_security_allow__csv__import__from__file__urls: "false"
           NEO4J_server_memory_heap_max__size: 512m
           NEO4J_server_memory_pagecache_size: 128m
         ports:
@@ -502,11 +504,27 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
           cache-dependency-path: go.sum
+      # SR-7.4-1 (Inspection): no plugins and no procedures outside the
+      # built-in namespaces; the effective settings are checked by
+      # TestNeo4jQueriesRetentionAndEngineStatus (SMCP_NEO4J_HARDENED).
+      - name: Graph engine plugins and procedures (SR-7.4-1)
+        env:
+          NEO4J_CONTAINER: ${{ job.services.neo4j.id }}
+        run: |
+          plugins=$(docker exec "$NEO4J_CONTAINER" sh -c 'ls -A /var/lib/neo4j/plugins 2>/dev/null || true')
+          echo "plugins directory: ${plugins:-(empty)}"
+          [ -z "$plugins" ] || { echo "the graph engine has plugins installed"; exit 1; }
+          docker exec "$NEO4J_CONTAINER" cypher-shell -u neo4j -p smcp-ci-graph-password --format plain \
+            "SHOW PROCEDURES YIELD name WHERE NOT (name STARTS WITH 'db.' OR name STARTS WITH 'dbms.' OR name STARTS WITH 'tx.') RETURN count(*) AS other" | tee "$RUNNER_TEMP/procs.txt"
+          [ "$(tail -n 1 "$RUNNER_TEMP/procs.txt")" = 0 ] || { echo "procedures outside db., dbms. and tx. are installed"; exit 1; }
+          docker exec "$NEO4J_CONTAINER" cypher-shell -u neo4j -p smcp-ci-graph-password --format plain \
+            "CALL dbms.listConfig() YIELD name, value WHERE name IN ['server.http.enabled', 'server.https.enabled', 'dbms.usage_report.enabled', 'dbms.security.allow_csv_import_from_file_urls', 'dbms.security.procedures.unrestricted'] RETURN name, value"
       - name: Graph tests against Neo4j
         env:
           SMCP_NEO4J_URL: bolt://127.0.0.1:7687
           SMCP_NEO4J_USER: neo4j
           SMCP_NEO4J_PASSWORD: smcp-ci-graph-password
+          SMCP_NEO4J_HARDENED: "1"
         run: |
           mkdir -p build
           rc=0
