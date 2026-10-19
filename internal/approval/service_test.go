@@ -19,6 +19,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 type fakeNotifier struct {
@@ -328,10 +329,7 @@ func TestRecordsSurviveRestart(t *testing.T) {
 	if err := f.svc.Decide(context.Background(), id, true, "admin:admin", ""); err != nil {
 		t.Fatal(err)
 	}
-	st, err := os.Stat(filepath.Join(f.dir, StoreDir, id+".json"))
-	if err != nil || st.Mode().Perm() != 0o600 {
-		t.Fatalf("record file %v %v", st, err)
-	}
+	testperm.Equal(t, filepath.Join(f.dir, StoreDir, id+".json"), 0o600)
 	// A second service over the same state directory.
 	svc2, err := New(Options{Config: f.cfg, Log: diag.Discard(), Notifier: Off{}})
 	if err != nil {

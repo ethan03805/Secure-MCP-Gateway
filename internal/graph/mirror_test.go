@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,6 +16,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 func TestMigrationsApplyInOrderAndRefuseNewer(t *testing.T) {
@@ -372,7 +375,7 @@ func TestResolveDefaultsAndBounds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Enabled || s.URI != DefaultURI || s.PasswordFile != "/var/lib/smcp/graph/password" || s.Retention != DefaultRetention ||
+	if s.Enabled || s.URI != DefaultURI || s.PasswordFile != filepath.Join("/var/lib/smcp", "graph", "password") || s.Retention != DefaultRetention ||
 		s.RetentionInterval != 24*time.Hour || s.MemoryInterval != 5*time.Second || s.Budget.HeapBytes != 1<<30 {
 		t.Fatalf("%+v", s)
 	}
@@ -402,10 +405,23 @@ func TestPasswordFileMustBePrivate(t *testing.T) {
 	if err := os.WriteFile(p, []byte("secret\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if runtime.GOOS == "windows" {
+		// The Windows counterpart of mode 0644: the Users group may read.
+		if err := winsec.SecureOwnerOnly(p); err != nil {
+			t.Fatal(err)
+		}
+		if err := winsec.Grant(p, winsec.SIDUsers, winsec.Read); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err := readPassword(p); err == nil {
 		t.Fatal("world-readable password file accepted")
 	}
-	if err := os.Chmod(p, 0o600); err != nil {
+	if runtime.GOOS == "windows" {
+		if err := winsec.Revoke(p, winsec.SIDUsers); err != nil {
+			t.Fatal(err)
+		}
+	} else if err := os.Chmod(p, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if pw, err := readPassword(p); err != nil || pw != "secret" {

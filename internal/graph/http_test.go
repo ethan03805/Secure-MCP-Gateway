@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -45,7 +46,7 @@ func newAPI(t *testing.T, enabled bool) *apiFixture {
 	if err := keys.Ensure(e.dir); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := config.Parse([]byte("[admin_listener]\naddress = \"127.0.0.1:8444\"\n[state]\ndir = \"" + e.dir + "\"\n[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$x\"\n"))
+	cfg, err := config.Parse([]byte("[admin_listener]\naddress = \"127.0.0.1:8444\"\n[state]\ndir = " + strconv.Quote(e.dir) + "\n[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$x\"\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

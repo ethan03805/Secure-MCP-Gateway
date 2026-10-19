@@ -166,6 +166,7 @@ func callText(t *testing.T, s *mcp.ClientSession, tool string, args map[string]a
 }
 
 func TestPodmanArgsCarryTheSandboxProfile(t *testing.T) {
+	linuxOnly(t)
 	// SR-4.7-1 asks for inspection of the effective container
 	// configuration; this checks the configuration the Gateway requests.
 	// The Linux integration test inspects a real container.
@@ -213,6 +214,7 @@ func TestPodmanArgsCarryTheSandboxProfile(t *testing.T) {
 }
 
 func TestBuildWithImageAndEgress(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.37", "FR-5.9")
 	rt := testRuntime()
 	img := "registry.local/fs@sha256:" + strings.Repeat("a", 64)
@@ -243,6 +245,7 @@ func TestBuildWithImageAndEgress(t *testing.T) {
 // SecretDir and the file-path variables are rewritten to match (Appendix L
 // HF-08 in the enforced profile).
 func TestSecretFilesReachTheSandbox(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-6.8")
 	rt := testRuntime()
 	img := "registry.local/fs@sha256:" + strings.Repeat("a", 64)
@@ -282,6 +285,7 @@ func TestSecretFilesReachTheSandbox(t *testing.T) {
 }
 
 func TestLaunchRefusesUnsafeInput(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "SR-4.6-1", "SR-4.7-1", "SR-3.6-1")
 	rt := testRuntime()
 	exe, _ := os.Executable()
@@ -329,6 +333,7 @@ func TestLaunchRefusesUnsafeInput(t *testing.T) {
 }
 
 func TestLaunchRunsServerThroughPodmanWithoutShell(t *testing.T) {
+	linuxOnly(t)
 	// SR-4.8-1: launch input reaches the server as an argument vector; the
 	// environment travels by name. Both launchers use exec, never a shell.
 	reqtest.Verifies(t, "SR-4.8-1")
@@ -399,6 +404,7 @@ func TestLaunchRunsServerThroughPodmanWithoutShell(t *testing.T) {
 }
 
 func TestBackendRegistryUsesConfinedLauncher(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.9", "SR-4-1")
 	h := newHarness(t, testRuntime())
 	caps := pipeline.NewCapabilities(time.Minute)
@@ -421,6 +427,7 @@ func TestBackendRegistryUsesConfinedLauncher(t *testing.T) {
 }
 
 func TestMonitorKillsOnMemoryBreachWithinOneSecond(t *testing.T) {
+	linuxOnly(t)
 	// The kernel enforces the cgroup limit; the monitor sees the OOM kill
 	// counter and kills the instance. Measured from the counter change.
 	reqtest.Partial(t, "FR-5.35", "FR-5.33", "SR-4.7-2")
@@ -452,6 +459,7 @@ func TestMonitorKillsOnMemoryBreachWithinOneSecond(t *testing.T) {
 }
 
 func TestMonitorKillsOnPidsBreach(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.35", "SR-4.7-2")
 	h := newHarness(t, testRuntime())
 	p, err := h.l.Launch(context.Background(), h.spec("pids"))
@@ -471,6 +479,7 @@ func TestMonitorKillsOnPidsBreach(t *testing.T) {
 // startup) is a breach: the counters of the instance's fresh cgroup start
 // at zero, so the first sample is not taken as the baseline.
 func TestMonitorKillsOnPidsBreachBeforeFirstSample(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.35", "SR-4.7-2")
 	h := newHarness(t, testRuntime(), func(o *Options) { o.PodmanEnv["SMCP_FAKE_PIDS_MAX"] = "1" })
 	p, err := h.l.Launch(context.Background(), h.spec("pids"))
@@ -484,6 +493,7 @@ func TestMonitorKillsOnPidsBreachBeforeFirstSample(t *testing.T) {
 }
 
 func TestMonitorUndeclaredProcessAlertsOrKills(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.33", "FR-5.34", "FR-5.35")
 	for _, rule := range []string{ActionAlert, ActionKill} {
 		t.Run(rule, func(t *testing.T) {
@@ -519,6 +529,7 @@ func TestMonitorUndeclaredProcessAlertsOrKills(t *testing.T) {
 }
 
 func TestMonitorExecEventIsDeviation(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.33", "FR-5.34")
 	rt := testRuntime()
 	rt.Servers = []config.RuntimeServer{{Alias: "ex", OnDeviation: ActionKill}}
@@ -548,6 +559,7 @@ func TestMonitorExecEventIsDeviation(t *testing.T) {
 }
 
 func TestUnexpectedExitIsRecorded(t *testing.T) {
+	linuxOnly(t)
 	// The exit evidence of FR-5.12; the restart and the suspension after
 	// three exits in five minutes are internal/backend TestCrashRestartAndSuspension.
 	reqtest.Partial(t, "FR-5.12")
@@ -585,6 +597,7 @@ func atoi(s string) int {
 }
 
 func TestShutdownSequenceEscalates(t *testing.T) {
+	linuxOnly(t)
 	// FR-5.27 at a scaled interval (300 ms instead of 5 s); the default is
 	// checked below.
 	reqtest.Partial(t, "FR-5.27")
@@ -653,6 +666,7 @@ func (r *recordingEgress) Attach(_ context.Context, req pipeline.EgressRequest) 
 // broker variables reach the container; servers without egress keep
 // network none and are never attached.
 func TestEgressAttachesSandboxNetwork(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "SR-4.5-1", "FR-5.37")
 	var _ pipeline.EgressAware = (*Launcher)(nil)
 	rt := testRuntime()
@@ -790,6 +804,7 @@ func TestEgressRules(t *testing.T) {
 }
 
 func TestBuildEgressEnvNames(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.37")
 	rt := testRuntime()
 	srv := config.RuntimeServer{Alias: "web", Image: "registry.local/fs@sha256:" + strings.Repeat("a", 64), Network: "egress"}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 var t0 = time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
@@ -430,10 +431,7 @@ func TestSnapshotTriggersAndImmutability(t *testing.T) {
 	if string(before) != string(after) {
 		t.Fatal("stored snapshot changed")
 	}
-	info, _ := os.Stat(filepath.Join(dir, snap.ID+".json"))
-	if info.Mode().Perm() != 0o400 {
-		t.Fatalf("snapshot file mode %v", info.Mode().Perm())
-	}
+	testperm.Equal(t, filepath.Join(dir, snap.ID+".json"), 0o400)
 	if err := m.Store().Save(snap); err == nil {
 		t.Fatal("snapshot overwritten")
 	}

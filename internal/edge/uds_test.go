@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -57,6 +58,9 @@ func udsGroup(t *testing.T) (string, int) {
 // peer with the given UID and template, and serves the socket.
 func udsHarness(t *testing.T, o harnessOpts, uid int, template string) (*harness, string) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the UDS Harness Profile is refused on Windows (TestWindowsUDSRefused); its transport there is the named pipe (FR-21.8)")
+	}
 	path := filepath.Join(testport.SocketDir(t), "h.sock")
 	group, _ := udsGroup(t)
 	o.toml = fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = %q\n[[uds.peer]]\nuid = %d\nprincipal = \"cc\"\nkey_hash = %q\ntemplate = %q\n",

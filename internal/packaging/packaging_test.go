@@ -35,6 +35,9 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	refserver = filepath.Join(dir, "smcp-refserver")
+	if runtime.GOOS == "windows" {
+		refserver += ".exe"
+	}
 	cmd := exec.Command("go", "build", "-o", refserver, "github.com/ethan03805/secure-mcp-gateway/cmd/smcp-refserver")
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

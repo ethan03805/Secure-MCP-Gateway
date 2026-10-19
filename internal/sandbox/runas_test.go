@@ -45,6 +45,7 @@ func runAsHarness(t *testing.T, rt config.Runtime, adjust ...func(*Options)) (*h
 // directory is closed to that identity). The instance still receives its
 // environment values through Podman.
 func TestRunAsRunsPodmanAsServerIdentity(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "SR-4.1-2")
 	h, shared := runAsHarness(t, testRuntime())
 	if h.l.RunAs() != "smcp-srv" {
@@ -163,6 +164,7 @@ func (g *grantRecorder) has(path string, uid int, perm uint16) bool {
 // search on the directory and its Gateway-owned ancestors before the
 // container is created, so that its Podman can resolve the mount source.
 func TestSecretFilesForAnotherUID(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-6.8", "SR-4.1-2")
 	secrets := t.TempDir()
 	if err := os.WriteFile(filepath.Join(secrets, "token"), []byte("x"), 0o600); err != nil {
@@ -305,6 +307,7 @@ func TestMapID(t *testing.T) {
 // another user's directories (found by following the install guide on a
 // clean Ubuntu runner, whose /etc/environment names /home/runner/.config).
 func TestRunAsEnvNamesTheIdentitysOwnDirectories(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "SR-4.1-2")
 	t.Setenv("XDG_CONFIG_HOME", "/home/operator/.config")
 	t.Setenv("XDG_DATA_HOME", "/home/operator/.local/share")

@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"runtime"
 	"slices"
 	"testing"
 	"time"
@@ -51,7 +52,7 @@ func TestDecisionRecordFields(t *testing.T) {
 		req.Server, req.Tool = c.server, c.tool
 		dec := d.Decide(req)
 		if dec.ID == "" || dec.Outcome != c.outcome || dec.ReasonCode != c.reason || dec.Route != c.route || dec.PolicyRevision != "rec1" ||
-			dec.BaselineSnapshot != snapshot || dec.Duration <= 0 || (c.outcome == Permit && dec.Duration < time.Millisecond) {
+			dec.BaselineSnapshot != snapshot || dec.Duration < minDuration || (c.outcome == Permit && dec.Duration < time.Millisecond) {
 			t.Errorf("%s: %+v", c.name, dec)
 		}
 		if !slices.Equal(dec.ConsideredRules, all) || !slices.Equal(dec.ApplicableRules, c.applicable) || !slices.Equal(dec.DecisiveRules, c.decisive) {
@@ -73,3 +74,13 @@ func TestDecisionRecordFields(t *testing.T) {
 		t.Fatalf("%+v %+v", a, b)
 	}
 }
+
+// minDuration is the least duration a decision record may show: positive,
+// except on Windows, whose monotonic clock advances in timer-interrupt
+// steps (0.5 to 15.6 ms), so a fast decision measures as zero.
+var minDuration = func() time.Duration {
+	if runtime.GOOS == "windows" {
+		return 0
+	}
+	return time.Nanosecond
+}()

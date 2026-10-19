@@ -10,9 +10,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 // Credentials is the CP-43 credential file. Only the adapter reads and
@@ -82,12 +85,31 @@ func DefaultPath() string {
 // writable by other users.
 var ErrPermissions = errors.New("credential file is readable or writable by other users; run chmod 600 on it")
 
+// aclError is the Windows form of ErrPermissions: the file's DACL grants
+// access to an account other than the user, SYSTEM and Administrators.
+type aclError struct{ path, detail string }
+
+func (e *aclError) Error() string {
+	return e.path + ": credential file is readable or writable by other accounts (" + e.detail +
+		"); it may grant access only to your account, SYSTEM and Administrators (smcp-session login writes it that way)"
+}
+
+func (e *aclError) Is(target error) bool { return target == ErrPermissions }
+
 // CheckMode refuses a credential file that group or other users can read
-// or write (SR-2.3-2).
+// or write (SR-2.3-2). On Windows, which has no POSIX modes, it refuses a
+// file whose DACL grants any account other than the user, SYSTEM and
+// Administrators (CP-43, FR-21.16).
 func CheckMode(path string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return err
+	}
+	if runtime.GOOS == "windows" {
+		if err := winsec.CheckOwnerOnly(path); err != nil {
+			return &aclError{path: path, detail: err.Error()}
+		}
+		return nil
 	}
 	if fi.Mode().Perm()&0o066 != 0 {
 		return fmt.Errorf("%s (mode %04o): %w", path, fi.Mode().Perm(), ErrPermissions)
@@ -147,6 +169,14 @@ func (c *Credentials) Save() error {
 	if err := tmp.Chmod(0o600); err != nil {
 		tmp.Close()
 		return err
+	}
+	if runtime.GOOS == "windows" {
+		// CP-43: a protected DACL for the user, SYSTEM and Administrators,
+		// set before the secrets are written; the rename keeps it.
+		if err := winsec.SecureOwnerOnly(name); err != nil {
+			tmp.Close()
+			return err
+		}
 	}
 	header := "# Secure MCP Gateway adapter credentials (CP-43). Keep this file mode 0600.\n"
 	if _, err := tmp.WriteString(header); err != nil {

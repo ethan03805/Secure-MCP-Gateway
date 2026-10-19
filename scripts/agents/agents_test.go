@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 // TestReferenceRun bootstraps a real Gateway and runs every scenario with the
@@ -344,9 +345,7 @@ func TestDNSOnlyCA(t *testing.T) {
 			t.Errorf("%s: %v", host, err)
 		}
 	}
-	if st, _ := os.Stat(filepath.Join(dir, "tls", "ca.key")); st.Mode().Perm() != 0o600 {
-		t.Fatalf("ca.key mode %v", st.Mode())
-	}
+	testperm.Equal(t, filepath.Join(dir, "tls", "ca.key"), 0o600)
 }
 
 func TestConfigAppendix(t *testing.T) {

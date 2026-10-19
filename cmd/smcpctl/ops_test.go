@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -262,7 +263,7 @@ func TestUpgradeAndRollback(t *testing.T) {
 	goTool, _ := exec.LookPath("go")
 	newBins := map[string][]byte{}
 	for _, pkg := range []string{"smcpd", "smcpctl"} {
-		cmd := exec.Command(goTool, "build", "-ldflags", "-X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version=9.9.9", "-o", filepath.Join(built, pkg), "../"+pkg)
+		cmd := exec.Command(goTool, "build", "-ldflags", "-X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version=9.9.9", "-o", filepath.Join(built, exeName(runtime.GOOS, pkg)), "../"+pkg)
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			t.Fatal(err)

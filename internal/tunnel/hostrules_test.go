@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -16,6 +17,9 @@ import (
 // addresses (sorted, deduplicated), the only accept is for loopback, and
 // Install checks before it loads.
 func TestHostRulesRuleset(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the SR-4.14-1 host rules are nftables rules, Linux only (the fake nft is a shell script)")
+	}
 	reqtest.Partial(t, "SR-4.14-1")
 	ports := HostRulePorts("127.0.0.1:8443", "127.0.0.1:8444", "", "127.0.0.1:8445", "bad", "127.0.0.1:8443", "127.0.0.1:9464")
 	if !slices.Equal(ports, []int{8443, 8444, 8445, 9464}) {

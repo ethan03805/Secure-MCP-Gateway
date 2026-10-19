@@ -21,6 +21,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 const testPolicy = `{"revision":"r1","framework_profiles":{"dev":{"templates":["ro"],"default_template":"ro"}},
@@ -120,9 +121,7 @@ func TestDirectory(t *testing.T) {
 	if strings.Contains(string(raw), secret) {
 		t.Fatal("secret stored in clear")
 	}
-	if st, _ := os.Stat(filepath.Join(cfg.State.Dir, File)); st.Mode().Perm() != 0o600 {
-		t.Fatalf("mode %v", st.Mode().Perm())
-	}
+	testperm.Equal(t, filepath.Join(cfg.State.Dir, File), 0o600)
 	d2, err := Open(cfg)
 	if err != nil {
 		t.Fatal(err)

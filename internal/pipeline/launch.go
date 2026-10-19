@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winpath"
 )
 
 // ServerSpec is what a Launcher needs to start one backend server
@@ -161,7 +162,7 @@ func CheckLaunchSpec(spec ServerSpec) error {
 	if spec.URL != "" {
 		return ErrNoHTTPTransport
 	}
-	if !filepath.IsAbs(spec.Command) {
+	if !commandIsAbs(spec.Command) {
 		return fmt.Errorf("%w: command %q must be an absolute path", ErrUnpinnedLaunch, spec.Command)
 	}
 	if launchGOOS == "windows" {
@@ -192,6 +193,16 @@ func CheckLaunchSpec(spec ServerSpec) error {
 		}
 	}
 	return nil
+}
+
+// commandIsAbs reports whether a server command is an absolute path. On
+// Windows that follows SRS FR-21.25: a drive letter or a leading separator,
+// and never a device prefix, UNC host, stream or reserved device name.
+func commandIsAbs(p string) bool {
+	if runtime.GOOS == "windows" {
+		return winpath.IsAbs(p) && winpath.Refused(p) == ""
+	}
+	return filepath.IsAbs(p)
 }
 
 // SubprocessSupported reports whether SubprocessLauncher can start server

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -34,7 +35,7 @@ func buildItestClient(t *testing.T) string {
 			itestErr = err
 			return
 		}
-		itestClient = filepath.Join(binDir, "itest-client")
+		itestClient = filepath.Join(binDir, exeName(runtime.GOOS, "itest-client"))
 		out, err := exec.Command(goTool, "build", "-o", itestClient, "../../scripts/itest-client").CombinedOutput()
 		if err != nil {
 			itestErr = err

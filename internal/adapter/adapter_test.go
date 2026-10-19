@@ -16,6 +16,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -27,7 +28,9 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/gwtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 func writeCreds(t *testing.T, g *gwtest.Gateway, mode os.FileMode) string {
@@ -57,10 +60,16 @@ func TestCredentialFileMode(t *testing.T) {
 	if err := c.Save(); err != nil {
 		t.Fatal(err)
 	}
-	if fi, _ := os.Stat(path); fi.Mode().Perm() != 0o600 {
-		t.Fatalf("saved with mode %v", fi.Mode())
-	}
-	if err := os.Chmod(path, 0o644); err != nil {
+	testperm.Equal(t, path, 0o600)
+	fix := "chmod 600"
+	if runtime.GOOS == "windows" {
+		// The Windows counterpart of mode 0644: the Users group may read.
+		reqtest.Partial(t, "FR-21.16")
+		if err := winsec.Grant(path, winsec.SIDUsers, winsec.Read); err != nil {
+			t.Fatal(err)
+		}
+		fix = "only to your account, SYSTEM and Administrators"
+	} else if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for name, run := range map[string]func(stderr io.Writer) int{
@@ -73,7 +82,7 @@ func TestCredentialFileMode(t *testing.T) {
 		},
 	} {
 		var stderr bytes.Buffer
-		if code := run(&stderr); code == 0 || !strings.Contains(stderr.String(), path) || !strings.Contains(stderr.String(), "chmod 600") {
+		if code := run(&stderr); code == 0 || !strings.Contains(stderr.String(), path) || !strings.Contains(stderr.String(), fix) {
 			t.Errorf("%s: exit %d, stderr %q", name, code, stderr.String())
 		}
 	}
@@ -335,6 +344,9 @@ func TestStdioBridgeRawEquivalence(t *testing.T) {
 // socket and relays newline-delimited messages unchanged in both
 // directions (FR-12.13 with the UDS Harness Profile).
 func TestRelayUnixSocket(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the UDS Harness Profile is refused on Windows; its transport there is the named pipe (FR-21.8)")
+	}
 	reqtest.Partial(t, "FR-12.13")
 	dir := testport.SocketDir(t)
 	sock := filepath.Join(dir, "h.sock")

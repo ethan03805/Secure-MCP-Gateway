@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -375,4 +376,16 @@ func fakeUnshare(dir string, args []string) int {
 	}
 	_ = os.WriteFile(filepath.Join(dir, "rules.nft"), in, 0o600)
 	return 0
+}
+
+// linuxOnly skips a test of the rootless Podman sandbox on Windows: the
+// fake podman re-executes itself in the container's place (syscall.Exec),
+// and on Windows `[runtime] sandbox = "podman"` fails its essential os
+// check, so the sandbox never runs there (docs/windows-port.md). The
+// Windows sandbox has its own tests.
+func linuxOnly(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the Podman sandbox is not used on Windows")
+	}
 }

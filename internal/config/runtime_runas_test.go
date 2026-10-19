@@ -1,6 +1,7 @@
 package config
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -9,6 +10,9 @@ import (
 // needs the Podman sandbox and a shared directory outside the state
 // directory; sudo and shared_dir without run_as are refused.
 func TestRuntimeRunAs(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("run_as runs Podman through sudo, Linux only; the POSIX paths are not absolute on Windows")
+	}
 	const base = "[runtime]\nsandbox = \"podman\"\n"
 	cfg, err := Parse([]byte(withBefore(base + "run_as = \"smcp-srv\"\nshared_dir = \"/var/lib/smcp/srv\"\nsudo = \"/usr/bin/sudo\"\n")))
 	if err != nil {

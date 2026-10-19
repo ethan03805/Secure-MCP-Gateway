@@ -8,10 +8,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winpath"
 )
 
 // PathOptions configure path-canonicalize (SR-1.8-4).
@@ -36,7 +38,7 @@ func newPathFilter(o PathOptions) (*pathFilter, error) {
 	canon := func(list []string) ([]string, error) {
 		var out []string
 		for _, r := range list {
-			if !filepath.IsAbs(r) {
+			if !isAbs(r) {
 				return nil, errors.New("granted root " + r + " is not absolute")
 			}
 			c, err := filepath.EvalSymlinks(filepath.Clean(r))
@@ -122,7 +124,7 @@ func narrowRoots(roots []string, project string) ([]string, bool) {
 	if project == "" {
 		return roots, true
 	}
-	if !filepath.IsAbs(project) {
+	if !isAbs(project) {
 		return nil, false
 	}
 	p, err := filepath.EvalSymlinks(filepath.Clean(project))
@@ -153,14 +155,38 @@ func within(p, root string) bool {
 }
 
 var pathRuleText = map[string]string{
-	"nul-byte":              "contains a NUL byte",
-	"encoded-separator":     "contains a percent-encoded separator or dot",
-	"backslash-dots":        "contains a backslash traversal",
-	"home-relative":         "starts with ~ and would be expanded by the server",
-	"bad-file-url":          "is a file URL that cannot be parsed or names a host",
-	"outside-roots":         "resolves outside the granted roots",
-	"project-outside-roots": "cannot be used: the session's project root is not inside the granted roots",
-	"relative-no-root":      "is relative and escapes the working directory",
+	"nul-byte":                "contains a NUL byte",
+	"encoded-separator":       "contains a percent-encoded separator or dot",
+	"backslash-dots":          "contains a backslash traversal",
+	"home-relative":           "starts with ~ and would be expanded by the server",
+	"bad-file-url":            "is a file URL that cannot be parsed or names a host",
+	"outside-roots":           "resolves outside the granted roots",
+	"project-outside-roots":   "cannot be used: the session's project root is not inside the granted roots",
+	"relative-no-root":        "is relative and escapes the working directory",
+	winpath.RuleStream:        "names an alternate data stream",
+	winpath.RuleDeviceName:    "names a reserved Windows device",
+	winpath.RuleDevicePrefix:  "uses a Windows device path prefix",
+	winpath.RuleUNC:           "names a network share",
+	winpath.RuleDriveRelative: "is relative to a drive's current directory",
+}
+
+// isAbs is filepath.IsAbs, and on Windows the FR-21.25 rule: a drive
+// letter or a leading separator makes a path absolute, so "/etc/passwd" is
+// never joined to a root or the working directory.
+func isAbs(p string) bool {
+	if runtime.GOOS == "windows" {
+		return winpath.IsAbs(p)
+	}
+	return filepath.IsAbs(p)
+}
+
+// inRoot reports whether the canonical path c is the root r or below it;
+// on Windows case-insensitively (FR-21.25).
+func inRoot(c, r string) bool {
+	if runtime.GOOS == "windows" {
+		return winpath.Within(c, r)
+	}
+	return c == r || strings.HasPrefix(c, strings.TrimSuffix(r, string(filepath.Separator))+string(filepath.Separator))
 }
 
 // CanonicalPath resolves p against roots: a relative path is joined to the
@@ -189,6 +215,10 @@ func CanonicalPath(p string, roots []string) (string, string) {
 			return "", "bad-file-url"
 		}
 		p = u.Path
+		// file:///C:/x names C:/x on Windows.
+		if runtime.GOOS == "windows" && len(p) >= 4 && p[0] == '/' && p[2] == ':' && (p[3] == '/' || p[3] == '\\') {
+			p = p[1:]
+		}
 	}
 	if strings.Contains(p, `..\`) || strings.Contains(p, `\..`) {
 		return "", "backslash-dots"
@@ -196,7 +226,14 @@ func CanonicalPath(p string, roots []string) (string, string) {
 	if strings.HasPrefix(p, "~") && len(roots) > 0 {
 		return "", "home-relative"
 	}
-	if !filepath.IsAbs(p) {
+	if runtime.GOOS == "windows" {
+		// FR-21.25: streams, device names, device prefixes, UNC hosts
+		// and drive-relative forms are refused outright.
+		if rule := winpath.Refused(p); rule != "" {
+			return "", rule
+		}
+	}
+	if !isAbs(p) {
 		if len(roots) == 0 {
 			c := filepath.Clean(p)
 			if c == ".." || strings.HasPrefix(c, "../") {
@@ -211,7 +248,7 @@ func CanonicalPath(p string, roots []string) (string, string) {
 		return c, ""
 	}
 	for _, r := range roots {
-		if c == r || strings.HasPrefix(c, strings.TrimSuffix(r, string(filepath.Separator))+string(filepath.Separator)) {
+		if inRoot(c, r) {
 			return c, ""
 		}
 	}
@@ -231,7 +268,7 @@ func resolveDepth(p string, hops int) string {
 		if fi, err := os.Lstat(cur); err == nil && fi.Mode()&fs.ModeSymlink != 0 && hops < 40 {
 			if _, err := os.Stat(cur); errors.Is(err, fs.ErrNotExist) {
 				if t, err := os.Readlink(cur); err == nil {
-					if !filepath.IsAbs(t) {
+					if !isAbs(t) {
 						t = filepath.Join(filepath.Dir(cur), t)
 					}
 					r := resolveDepth(filepath.Clean(t), hops+1)

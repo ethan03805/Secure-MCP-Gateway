@@ -20,6 +20,7 @@ import (
 // and is no deviation. (internal/library passes the manifest's
 // declaration with the launch: TestManifestBehaviorReachesTheLaunch.)
 func TestDeclaredBehaviorRules(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Verifies(t, "FR-5.34")
 	for _, declared := range []bool{false, true} {
 		rt := testRuntime()
