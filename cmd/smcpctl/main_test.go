@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -32,7 +33,7 @@ func TestMain(m *testing.M) {
 		panic("go tool: " + err.Error())
 	}
 	for _, pkg := range []string{"smcpctl", "smcpd", "smcp-refserver"} {
-		cmd := exec.Command(goTool, "build", "-o", filepath.Join(dir, pkg), "../"+pkg)
+		cmd := exec.Command(goTool, "build", "-o", filepath.Join(dir, exeName(runtime.GOOS, pkg)), "../"+pkg)
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			os.RemoveAll(dir)

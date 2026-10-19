@@ -51,7 +51,7 @@ func main() {
 		fmt.Println(versionLine())
 		return
 	}
-	if err := run(*cfgPath, *logLevel); err != nil {
+	if err := platformRun(*cfgPath, *logLevel); err != nil {
 		fmt.Fprintln(os.Stderr, "smcpd:", err)
 		os.Exit(1)
 	}
@@ -110,7 +110,11 @@ func notifyMode(m string) string {
 	return m
 }
 
-func run(cfgPath, level string) error {
+// run starts the Gateway and serves until parent is cancelled, SIGINT or
+// SIGTERM arrives, or a listener fails. platformRun calls it: with
+// context.Background() on Linux and macOS, and on Windows with the context
+// of the service or of the per-user stop event (main_windows.go).
+func run(parent context.Context, cfgPath, level string) error {
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
 		return fmt.Errorf("configuration: %w", err)
@@ -124,7 +128,7 @@ func run(cfgPath, level string) error {
 		return err
 	}
 	defer logFile.Close()
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	prep, err := ops.Prepare(cfg) // E-22: finish interrupted rotations
@@ -231,6 +235,7 @@ func run(cfgPath, level string) error {
 		return err
 	}
 	defer a.Close()
+	watchConsoleClose(a, log) // FR-21.7: no-op off Windows
 	if obs.Scorer != nil {
 		a.Decider.SetBaseline(obs.Scorer.SnapshotID) // FR-3.11
 	}

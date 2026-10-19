@@ -125,6 +125,7 @@ type App struct {
 	udsLn     net.Listener // UDS Harness Profile socket; nil unless [uds] enabled
 	prebound  *Listeners
 	closeOnce sync.Once
+	stopOnce  sync.Once // the stop event is written once (Close or RecordStop)
 }
 
 func listenerNames(cfg *config.Config) []string {
@@ -450,16 +451,30 @@ func (a *App) Close() {
 				a.log.Error("package registry close failed", "err", err)
 			}
 		}
-		if a.Evidence != nil {
-			if err := a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "stopped", PolicyStatus: "not_evaluated"}); err != nil {
-				a.log.Error("evidence write failed at shutdown", "err", err)
-			}
-			a.Evidence.Close()
-		}
-		if a.Journal != nil {
-			if err := a.Journal.Close(); err != nil {
-				a.log.Error("journal close failed", "err", err)
-			}
-		}
+		a.stopOnce.Do(func() { a.recordStop(nil) })
 	})
+}
+
+// recordStop commits the stop event and closes the Evidence Journal.
+func (a *App) recordStop(detail any) {
+	if a.Evidence != nil {
+		if err := a.Evidence.Commit(audit.Event{Class: "gateway", Origin: "E-23", Outcome: "stopped", PolicyStatus: "not_evaluated", Detail: detail}); err != nil {
+			a.log.Error("evidence write failed at shutdown", "err", err)
+		}
+		a.Evidence.Close()
+	}
+	if a.Journal != nil {
+		if err := a.Journal.Close(); err != nil {
+			a.log.Error("journal close failed", "err", err)
+		}
+	}
+}
+
+// RecordStop commits the Gateway's stop event to the Evidence Journal and
+// closes the journal now, ahead of Close, for a process that has seconds
+// left: on Windows a console close, logoff or shutdown event ends the
+// process about 5 seconds later whatever it does (FR-21.7). Close then
+// stops the rest without writing the stop event again.
+func (a *App) RecordStop(reason string) {
+	a.stopOnce.Do(func() { a.recordStop(map[string]any{"reason": reason}) })
 }

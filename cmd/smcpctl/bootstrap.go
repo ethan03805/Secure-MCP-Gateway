@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
@@ -170,7 +172,7 @@ const examplePolicy = `{
 // refused.
 func findRefserver() (string, error) {
 	if exe, err := os.Executable(); err == nil {
-		p := filepath.Join(filepath.Dir(exe), "smcp-refserver")
+		p := filepath.Join(filepath.Dir(exe), exeName(runtime.GOOS, "smcp-refserver"))
 		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() {
 			return p, nil
 		}
@@ -192,6 +194,7 @@ type bootstrapOpts struct {
 	adminFile, approverFile string
 	useToken                bool
 	sandbox, refserver      string
+	noRefServer             bool // configure no backend server (Windows until FR-21.11)
 	port, adminPort         int
 	metricsPort             int
 	notify                  string
@@ -277,7 +280,7 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 		if approverHash, err = keys.HashPassword(apw); err != nil {
 			return r, err
 		}
-		if o.refserver == "" {
+		if o.refserver == "" && !o.noRefServer {
 			if o.refserver, err = findRefserver(); err != nil {
 				return r, err
 			}
@@ -311,9 +314,11 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 	}
 	listen := fmt.Sprintf("127.0.0.1:%d", o.port)
 	if writeCfg {
-		refSHA, err := bootstrapRefPackage(stateDir, o.refserver, out)
-		if err != nil {
-			return r, err
+		var refSHA string
+		if !o.noRefServer {
+			if refSHA, err = bootstrapRefPackage(stateDir, o.refserver, out); err != nil {
+				return r, err
+			}
 		}
 		mport := o.metricsPort
 		if mport < 0 {
@@ -325,6 +330,9 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 		}
 		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", o.adminPort), adminLine, approverHash, RefPackageID, refSHA, o.sandbox,
 			o.notify, mport != 0, maddr, stateValue, policyValue, o.extraConfig)
+		if o.noRefServer {
+			body = withoutRefServer(body)
+		}
 		if err := os.WriteFile(cfgPath, []byte(body), 0o600); err != nil {
 			return r, err
 		}
@@ -386,4 +394,15 @@ Next steps:
   4. Check health:              smcpctl health --config %s
 `, stateDir, cfgPath, filepath.Join(stateDir, keys.CACertFile), cfg.ResourceURI(), cfgPath)
 	return r, nil
+}
+
+// refServerBlock is the reference server's [[server]] table in
+// exampleConfig, with the comment above it.
+var refServerBlock = regexp.MustCompile(`(?m)^# Backend MCP servers\..*\n(?:#.*\n)*\[\[server\]\]\nalias = "ref"\n(?:[a-z0-9_]+ = .*\n)+`)
+
+// withoutRefServer replaces the reference server's table with a comment,
+// for a host where server instances cannot be started yet (Windows until
+// the FR-21.11 launcher exists).
+func withoutRefServer(body string) string {
+	return refServerBlock.ReplaceAllString(body, "# No server is configured: server instances cannot be started on this\n# platform yet (Windows: SRS FR-21.11). Add [[server]] tables when they can.\n")
 }

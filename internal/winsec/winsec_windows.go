@@ -366,3 +366,27 @@ func ReplaceFile(src, dst string) error {
 	}
 	return nil
 }
+
+// CheckOwnerOnly refuses a file or directory whose DACL grants access to
+// an account other than the one running this process, SYSTEM and
+// Administrators: the Windows counterpart of "mode 0600 or stricter" for
+// password files, credential files and private keys. Inheritance is
+// allowed; the inherited entries are checked like explicit ones.
+func CheckOwnerOnly(path string) error {
+	user, err := ProcessUserSID()
+	if err != nil {
+		return err
+	}
+	return CheckDACL(path, false, user, SIDSystem, SIDAdministrators)
+}
+
+// SecureOwnerOnly gives path the CP-46 per-user DACL: inheritance disabled
+// and full control for the account running this process, SYSTEM and
+// Administrators.
+func SecureOwnerOnly(path string) error {
+	user, err := ProcessUserSID()
+	if err != nil {
+		return err
+	}
+	return SetProtectedDACL(path, OwnerEntries(user))
+}

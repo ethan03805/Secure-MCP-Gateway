@@ -66,13 +66,17 @@ func unitFiles() []unitFile {
 		add(filepath.Join("/etc/systemd/system", systemdUnit), "systemd-system")
 		add(filepath.Join("/etc/systemd/system", nftUnit), "systemd-aux")
 		add("/etc/smcp/smcp.nft", "nft-ruleset")
+	case "windows":
+		if cfg := standaloneConfigPath(); cfg != "" {
+			out = append(out, winUnitFiles(filepath.Dir(cfg))...)
+		}
 	}
 	return out
 }
 
 func installedUnit() *unitFile {
 	for _, u := range unitFiles() {
-		if u.exists && (u.kind == "launchd" || u.kind == "systemd-user" || u.kind == "systemd-system") {
+		if u.exists && (u.kind == "launchd" || u.kind == "systemd-user" || u.kind == "systemd-system" || isWinUnit(u.kind)) {
 			return &u
 		}
 	}
@@ -115,6 +119,13 @@ func (s service) do(action string) error {
 	u := installedUnit()
 	if u == nil {
 		return errNoManager
+	}
+	if isWinUnit(u.kind) {
+		exe, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		return winServiceDo(u, action, filepath.Dir(exe))
 	}
 	argv := managerCmd(u, action)
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)

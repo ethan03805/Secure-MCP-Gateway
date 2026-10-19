@@ -113,6 +113,7 @@ func doctorCmd(args []string, out io.Writer) error {
 	r := harness.Doctor(e, only, doctorPrereq(cfg))
 	r.Findings = append(notes, r.Findings...)
 	r.Findings = append(r.Findings, doctorBinaryFindings(cfg.Profile.Mode == "enforced")...)
+	r.Findings = append(r.Findings, platformDoctorFindings(cfg)...) // Windows: FR-21.5, FR-21.10, SR-4-2
 	if *asJSON {
 		printJSON(out, r)
 	} else {

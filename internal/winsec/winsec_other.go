@@ -36,3 +36,9 @@ func FreeBytes(string) (uint64, error) { return 0, ErrNotWindows }
 
 // ReplaceFile returns ErrNotWindows.
 func ReplaceFile(string, string) error { return ErrNotWindows }
+
+// CheckOwnerOnly returns ErrNotWindows.
+func CheckOwnerOnly(string) error { return ErrNotWindows }
+
+// SecureOwnerOnly returns ErrNotWindows.
+func SecureOwnerOnly(string) error { return ErrNotWindows }

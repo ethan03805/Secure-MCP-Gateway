@@ -49,6 +49,7 @@ keeps today's behavior, and test the default.
 | `config` | all | TOML configuration validated against `config.schema.json`; Appendix A defaults by key presence. |
 | `diag` | all | Diagnostic logger (slog); daemon logger with rotating JSON Lines file and redaction of sensitive attribute names. Not evidence; never logs secrets, tokens or arguments. |
 | `winsec` | E-22, E-24 (Windows, FR-21) | Windows security primitives: account SIDs, protected DACLs and their check (FR-21.5, CP-46), `Grant` and `Revoke` for the Windows sandbox, DPAPI `Protect` and `Unprotect` (FR-21.10, SR-2.13-4), free space (FR-21.26). Stubs returning `ErrNotWindows` elsewhere. See `docs/windows-port.md`. |
+| `winsvc` | E-24 (Windows, FR-21) | Windows service plumbing shared by `smcpd` and `smcpctl`: the FR-21.1 version rule, the per-user Task Scheduler definition and Run-key fallback, the named stop event, the `smcpd -supervise` restart loop in a kill-on-close Job Object, C runtime command-line quoting. |
 | `durable` | E-05, E-14, E-28 (support) | Durable file replacement: rename and directory `fsync` on Linux and macOS, `MoveFileEx` with write-through and no directory handle on Windows (FR-21.23); an observer hook for tests. |
 | `ids` | all | UUIDv7 identifiers and 256-bit secrets. |
 | `reqtest` | FR-12.10, FR-19.4 | `Verifies` and `Partial` requirement claims and `Scenario` acceptance-scenario claims in tests. |
