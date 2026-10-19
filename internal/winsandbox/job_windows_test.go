@@ -347,13 +347,25 @@ func TestWindowsJobProcessLimit(t *testing.T) {
 	}
 	line := readLine(t, out)
 	var n int
-	// The limit counts the backend and its console host, so two or three
-	// children fit.
+	// The limit counts the backend but not its console host, so three
+	// children fit (two is accepted in case a Windows build counts it).
 	if _, err := fmt.Sscanf(line, "started %d", &n); err != nil || n < 2 || n > 3 {
 		t.Fatalf("fork bomb under a limit of 4 processes: %q", line)
 	}
-	if acc, _ := job.Accounting(); acc.ActiveProcesses > 4 {
-		t.Fatalf("%d active processes under a limit of 4", acc.ActiveProcesses)
+	// The console host is listed in the job but not counted against the
+	// limit; every other process is.
+	ps, err := job.PIDs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	counted := 0
+	for _, pid := range ps {
+		if !strings.EqualFold(imageName(pid), "conhost.exe") {
+			counted++
+		}
+	}
+	if counted > 4 {
+		t.Fatalf("%d processes besides the console host under a limit of 4 (%v)", counted, ps)
 	}
 	waitViolation(t, job, ViolationProcesses)
 	in.Close()
