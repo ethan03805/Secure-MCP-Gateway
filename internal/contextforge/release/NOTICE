@@ -1,0 +1,10 @@
+mcp-catalog-v1.0.11.yml is the unmodified mcp-catalog.yml of IBM ContextForge
+release v1.0.11 (https://github.com/IBM/mcp-context-forge, tag v1.0.11,
+commit 077071bbb43599dd5ab9372ebdbb9a8e686a9816), recorded on 2026-10-18.
+
+ContextForge is licensed under the Apache License, Version 2.0:
+https://www.apache.org/licenses/LICENSE-2.0
+
+The Secure MCP Gateway compiles this file into smcpd and smcpctl so that the
+catalog of the pinned release is read without network access (SRS FR-22.1).
+contextforge.lock.json is a copy of packaging/contextforge.lock.json.

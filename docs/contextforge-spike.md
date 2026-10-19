@@ -2,6 +2,8 @@
 
 A de-risking spike for the IBM ContextForge integration that the owner chose for v1.3.0 (SRS FR-22, `srs_build/req8-contextforge.txt`). It answers four questions before implementation starts: can ContextForge run as a loopback-only backend; can `smcpd` mediate calls through it today; what can a catalog import really prove about provenance; which FR-22 requirements need changing. Everything described here was run on 2026-10-18 on macOS arm64 (Docker Desktop, Standalone profile). Nothing in this spike changes a release requirement or ships ContextForge; the FR-22 corrections it proposed were applied to the planned v1.3.0 requirements afterwards (see Requirements to adjust).
 
+The catalog code and `smcpctl catalog` have since left the experimental state; the current behavior is in [ContextForge catalog and connector](contextforge.md).
+
 What this pull request adds:
 
 | Item | Where | Status |

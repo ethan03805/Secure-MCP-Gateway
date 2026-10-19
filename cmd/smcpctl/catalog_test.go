@@ -7,11 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 )
 
-// The recorded ContextForge v1.0.11 catalog (see internal/contextforge).
+// The catalog of the pinned ContextForge v1.0.11 release (see
+// internal/contextforge/release).
 var (
-	cfFixture       = filepath.Join(repoRoot, "internal", "contextforge", "testdata", "mcp-catalog-v1.0.11.yml")
+	cfFixture       = filepath.Join(repoRoot, "internal", "contextforge", "release", "mcp-catalog-v1.0.11.yml")
 	cfFixtureSHA256 = "f6be59e31f1017487c8c882fa86b2594214e50b7bcf784773a5a4e0651e91daa"
 )
 
@@ -22,41 +25,55 @@ func runCatalog(t *testing.T, args ...string) (string, string, int) {
 	return out.String(), errb.String(), code
 }
 
-func TestCatalogNeedsExperimentalFlag(t *testing.T) {
-	_, stderr, code := runCatalog(t, "list", "--catalog", cfFixture)
-	if code == 0 || !strings.Contains(stderr, "--experimental-contextforge") {
+func TestCatalogPinnedByDefault(t *testing.T) {
+	out, stderr, code := runCatalog(t, "list", "--class", "local")
+	if code != 0 {
 		t.Fatalf("code %d stderr %q", code, stderr)
+	}
+	if !strings.Contains(out, "ContextForge v1.0.11 catalog (pinned, sha256 "+cfFixtureSHA256+"), 4 of 135 entries") || !strings.Contains(out, "npx -y @azure-devops/mcp") {
+		t.Fatalf("list output:\n%s", out)
+	}
+	// The flag of the v1.2 experiment is still accepted.
+	if _, stderr, code := runCatalog(t, "list", "--experimental-contextforge"); code != 0 {
+		t.Fatalf("old flag: code %d stderr %q", code, stderr)
 	}
 }
 
 func TestCatalogImportOnlyDryRun(t *testing.T) {
-	_, stderr, code := runCatalog(t, "import", "--experimental-contextforge", "--catalog", cfFixture, "deepwiki")
+	_, stderr, code := runCatalog(t, "import", "deepwiki")
 	if code == 0 || !strings.Contains(stderr, "only --dry-run") {
 		t.Fatalf("code %d stderr %q", code, stderr)
 	}
 }
 
-func TestCatalogSHA256Pin(t *testing.T) {
-	_, stderr, code := runCatalog(t, "list", "--experimental-contextforge", "--catalog", cfFixture, "--sha256", strings.Repeat("0", 64))
-	if code == 0 || !strings.Contains(stderr, cfFixtureSHA256) {
-		t.Fatalf("code %d stderr %q", code, stderr)
+func TestCatalogOperatorFileNeedsConfirmedDigest(t *testing.T) {
+	for _, extra := range [][]string{nil, {"--sha256", strings.Repeat("0", 64)}} {
+		_, stderr, code := runCatalog(t, append([]string{"list", "--catalog", cfFixture}, extra...)...)
+		if code == 0 || !strings.Contains(stderr, "CATALOG_DIGEST_MISMATCH") {
+			t.Fatalf("%v: code %d stderr %q", extra, code, stderr)
+		}
 	}
-	out, stderr, code := runCatalog(t, "list", "--experimental-contextforge", "--catalog", cfFixture, "--sha256", cfFixtureSHA256, "--class", "local")
+	if _, stderr, code := runCatalog(t, "list", "--sha256", cfFixtureSHA256); code == 0 || !strings.Contains(stderr, "--catalog") {
+		t.Fatalf("--sha256 alone: code %d stderr %q", code, stderr)
+	}
+	out, stderr, code := runCatalog(t, "list", "--catalog", cfFixture, "--sha256", cfFixtureSHA256, "--class", "local")
 	if code != 0 {
 		t.Fatalf("code %d stderr %q", code, stderr)
 	}
-	if !strings.Contains(out, "(confirmed), 4 of 135 entries") || !strings.Contains(out, "npx -y @azure-devops/mcp") {
+	if !strings.Contains(out, "operator catalog (sha256 "+cfFixtureSHA256+", confirmed), 4 of 135 entries") {
 		t.Fatalf("list output:\n%s", out)
 	}
 }
 
 func TestCatalogListJSON(t *testing.T) {
-	out, stderr, code := runCatalog(t, "list", "--experimental-contextforge", "--catalog", cfFixture, "--json")
+	out, stderr, code := runCatalog(t, "list", "--json")
 	if code != 0 {
 		t.Fatalf("code %d stderr %q", code, stderr)
 	}
 	var doc struct {
 		SHA256  string `json:"catalog_sha256"`
+		Origin  string `json:"origin"`
+		Release string `json:"release"`
 		Entries []struct {
 			ID, Class string
 		} `json:"entries"`
@@ -64,14 +81,37 @@ func TestCatalogListJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &doc); err != nil {
 		t.Fatal(err)
 	}
-	if doc.SHA256 != cfFixtureSHA256 || len(doc.Entries) != 135 {
-		t.Fatalf("sha %s entries %d", doc.SHA256, len(doc.Entries))
+	if doc.SHA256 != cfFixtureSHA256 || len(doc.Entries) != 135 || doc.Origin != "pinned" || doc.Release != "v1.0.11" {
+		t.Fatalf("sha %s entries %d origin %s release %s", doc.SHA256, len(doc.Entries), doc.Origin, doc.Release)
+	}
+}
+
+func TestCatalogShow(t *testing.T) {
+	out, stderr, code := runCatalog(t, "show", "playwright-mcp")
+	if code != 0 {
+		t.Fatalf("code %d stderr %q", code, stderr)
+	}
+	for _, want := range []string{"class                local", "install (text only)  npx @playwright/mcp@latest", "proposed artifact", "is not exact"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("show output lacks %q:\n%s", want, out)
+		}
+	}
+	out, _, code = runCatalog(t, "show", "deepwiki", "--json")
+	var doc struct {
+		Class string         `json:"class"`
+		Entry map[string]any `json:"entry"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &doc) != nil || doc.Class != "hosted" || doc.Entry["url"] != "https://mcp.deepwiki.com/mcp" {
+		t.Fatalf("show --json: %d %s", code, out)
+	}
+	if _, stderr, code := runCatalog(t, "show", "no-such"); code == 0 || !strings.Contains(stderr, "no such catalog entry") {
+		t.Fatalf("unknown entry: %d %q", code, stderr)
 	}
 }
 
 func TestCatalogImportDryRunHosted(t *testing.T) {
 	// Flags after the entry ID are accepted.
-	out, stderr, code := runCatalog(t, "import", "--experimental-contextforge", "--catalog", cfFixture, "deepwiki", "--dry-run", "--release", "v1.0.11")
+	out, stderr, code := runCatalog(t, "import", "deepwiki", "--dry-run")
 	if code != 0 {
 		t.Fatalf("code %d stderr %q", code, stderr)
 	}
@@ -80,7 +120,10 @@ func TestCatalogImportDryRunHosted(t *testing.T) {
 		Hosted struct {
 			ManifestVersion int `json:"manifest_version"`
 			Upstream        struct {
-				Kind, URL string
+				Kind        string `json:"kind"`
+				URL         string `json:"url"`
+				GatewayName string `json:"gateway_name"`
+				GatewaySlug string `json:"gateway_slug"`
 			} `json:"upstream"`
 		} `json:"hosted_manifest"`
 		Provenance struct {
@@ -91,22 +134,20 @@ func TestCatalogImportDryRunHosted(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &d); err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
-	if d.Class != "hosted" || d.Hosted.ManifestVersion != 2 || d.Hosted.Upstream.Kind != "contextforge-hosted" || d.Hosted.Upstream.URL != "https://mcp.deepwiki.com/mcp" {
+	u := d.Hosted.Upstream
+	if d.Class != "hosted" || d.Hosted.ManifestVersion != 2 || u.Kind != "contextforge-hosted" || u.URL != "https://mcp.deepwiki.com/mcp" || u.GatewayName != "smcp-deepwiki" || u.GatewaySlug != u.GatewayName {
 		t.Fatalf("draft %+v", d)
 	}
+	// The pinned catalog supplies the release.
 	if d.Provenance.CatalogSHA256 != cfFixtureSHA256 || d.Provenance.Release != "v1.0.11" {
 		t.Fatalf("provenance %+v", d.Provenance)
 	}
 }
 
 func TestCatalogImportDryRunLocalWritesNothing(t *testing.T) {
-	abs, err := filepath.Abs(cfFixture)
-	if err != nil {
-		t.Fatal(err)
-	}
 	dir := t.TempDir()
 	t.Chdir(dir)
-	out, stderr, code := runCatalog(t, "import", "--dry-run", "--experimental-contextforge", "--catalog", abs, "--version", "2.2.0", "--artifact-sha256", strings.Repeat("ab", 32), "azure-devops-mcp")
+	out, stderr, code := runCatalog(t, "import", "--dry-run", "--version", "2.2.0", "--artifact-sha256", strings.Repeat("ab", 32), "azure-devops-mcp")
 	if code != 0 {
 		t.Fatalf("code %d stderr %q", code, stderr)
 	}
@@ -116,7 +157,7 @@ func TestCatalogImportDryRunLocalWritesNothing(t *testing.T) {
 	if ents, _ := os.ReadDir(dir); len(ents) != 0 {
 		t.Fatalf("dry run wrote %v", ents)
 	}
-	_, stderr, code = runCatalog(t, "import", "--dry-run", "--experimental-contextforge", "--catalog", abs, "--artifact-sha256", "XYZ", "azure-devops-mcp")
+	_, stderr, code = runCatalog(t, "import", "--dry-run", "--artifact-sha256", "XYZ", "azure-devops-mcp")
 	if code == 0 || !strings.Contains(stderr, "64 lowercase hex") {
 		t.Fatalf("bad digest accepted: %q", stderr)
 	}
@@ -124,11 +165,13 @@ func TestCatalogImportDryRunLocalWritesNothing(t *testing.T) {
 
 func TestCatalogRefusesHostileFile(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "c.yml")
-	if err := os.WriteFile(f, []byte("x: &a [1]\ncatalog_servers:\n  - id: y\n    tags: *a\n"), 0o600); err != nil {
+	raw := []byte("x: &a [1]\ncatalog_servers:\n  - id: y\n    tags: *a\n")
+	if err := os.WriteFile(f, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, stderr, code := runCatalog(t, "list", "--experimental-contextforge", "--catalog", f)
-	if code == 0 || !strings.Contains(stderr, "not allowed") {
+	sum := packaging.SHA256Hex(raw)
+	_, stderr, code := runCatalog(t, "list", "--catalog", f, "--sha256", sum)
+	if code == 0 || !strings.Contains(stderr, "CATALOG_INVALID") || !strings.Contains(stderr, "not allowed") {
 		t.Fatalf("code %d stderr %q", code, stderr)
 	}
 }
