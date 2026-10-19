@@ -72,6 +72,18 @@ An Administrator enrolls the catalog import key once, as `docs/api/contextforge.
 
 With `[runtime] sandbox = "podman"` the Connector cannot sandbox the import probe yet and refuses with `SANDBOXED_PROBE_UNAVAILABLE`; build the recipe from `smcpctl catalog import --dry-run` with `smcpctl package build --sandbox podman` there.
 
+## The bundled instance
+
+With `[contextforge] bundled = true` and a Secret Vault (`[secrets]`), `smcpctl contextforge start` (or the control API) starts the bundled ContextForge instance. Nothing starts it automatically yet; hosted packages, which will start it on demand (FR-22.23), are not built.
+
+- **Verification (FR-22.19, SR-3.2-2).** Before the first start and after an image change, the Gateway runs `cosign verify` and `cosign verify-attestation --type spdxjson` on the image index of the release lock for its signer identity (the `docker-multiplatform.yml` workflow at the release tag), pulls the platform image by digest and checks that the local copy carries that digest. The result is kept in `<state>/contextforge/verified.json`; later starts check only the local digest. The verified source-to-image binding is a journal event (`contextforge`, outcome `image_verified`). A failure is `CONTEXTFORGE_UNVERIFIED`.
+- **Configuration (FR-22.27, FR-22.37).** Generated, never edited: the admin UI, catalog, plugins, LLM chat, A2A, reverse proxy, WebSocket relay, direct proxy, MCP Apps, stdio transport, bulk import, tool preview, gRPC, elicitation, public registration, every SSO provider, observability and every OpenTelemetry exporter, SMTP, DCR, password reset and CORS are off; email authentication, `AUTH_REQUIRED`, `REQUIRE_JTI`, `REQUIRE_TOKEN_EXPIRATION` and SSRF protection are on; one gunicorn worker, separator `-`, no allowed origin, an SSRF allowlist that holds only E-18 endpoint networks (none yet), and tool timeout, rate and concurrency limits twice the Gateway's CP-13, CP-11 and CP-10. A start whose configuration differs is refused with `CONTEXTFORGE_CONFIG_REFUSED` naming the key.
+- **Credentials (FR-22.28).** `JWT_SECRET_KEY`, `AUTH_ENCRYPTION_SECRET`, `BASIC_AUTH_PASSWORD`, `PLATFORM_ADMIN_PASSWORD` and `DEFAULT_USER_PASSWORD` are generated (256 random bits each) into the vault as `component.contextforge.*` entries, delivered only to the Connector by the Secret Broker (a `secret_use` event per start) and passed to the container engine through its environment: never a file, an argument or a log line. The `component.` namespace cannot be created through the vault API or bound to a server. A credential that is empty, a published ContextForge default or shorter than 43 characters stops the start (`CONTEXTFORGE_WEAK_CREDENTIAL`).
+- **Container (FR-22.26, FR-22.24 in part).** Podman (preferred) or Docker runs the digest-pinned image with its listener published on `127.0.0.1` on a port chosen at each start, a read-only root filesystem, one private volume for D-16, all capabilities dropped, `no-new-privileges`, 1 GiB memory, 2 CPUs and 256 PIDs. The Enforced-profile parts (rootless Podman under the E-16 profile, the network namespace limited to E-18 endpoints, the firewall rule for the Gateway identity) are not built yet; until then the health report shows `contextforge_unconfined` whenever the instance runs.
+- **Health (FR-22.30).** The instance is `starting` until `/health` first answers; with no answer within 60 s it is restarted. While it runs, `/health` is checked every 10 s, and after three failures it is restarted and reported `unhealthy` (`contextforge_unhealthy`), without affecting other servers.
+
+The measured start on macOS arm64 with Docker was 8 to 9 s to the first healthy answer.
+
 ## Configuration
 
 | Key | Default | Meaning |
@@ -79,7 +91,8 @@ With `[runtime] sandbox = "podman"` the Connector cannot sandbox the import prob
 | `[contextforge] bundled` | `false` | Run the bundled ContextForge instance (FR-22.22). While false, hosted entries are refused with `CONTEXTFORGE_DISABLED` |
 | `[contextforge] catalog_file`, `catalog_sha256` | none | Read this catalog instead of the pinned one; both or neither. A wrong digest is reported by `smcpctl catalog status` and the health report's element list, and the Gateway keeps running without a catalog |
 | `[contextforge] npm_registry`, `pypi_index` | the public registries | Where a local import fetches the pinned artifact |
+| `[contextforge] engine`, `cosign` | from `PATH` (podman before docker) | Absolute paths of the container engine and of cosign |
 
 ## Not built yet
 
-The console view G-15, the bundled ContextForge instance and its lifecycle, hosted-entry import (probe, `manifest_version` 2), per-package isolation, reconciliation, and the hostile fixtures HFC-01 to HFC-14.
+The console view G-15, start on demand and upgrade, uninstall and the managed-process form of the bundled instance, its Enforced-profile containment, hosted-entry import (probe, `manifest_version` 2), per-package isolation and its self-check, reconciliation, and the hostile fixtures HFC-01 to HFC-14.

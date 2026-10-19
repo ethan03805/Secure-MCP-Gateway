@@ -2595,6 +2595,100 @@
     ]
    }
   },
+  "/api/v1/contextforge/instance/start": {
+   "post": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "postContextforgeInstanceStart",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Verify the pinned image if needed and start the bundled ContextForge instance",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator"
+    ]
+   }
+  },
+  "/api/v1/contextforge/instance/stop": {
+   "post": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "postContextforgeInstanceStop",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Stop the bundled ContextForge instance",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator"
+    ]
+   }
+  },
   "/api/v1/contextforge/proposals": {
    "get": {
     "description": "Reference: docs/api/contextforge.md",

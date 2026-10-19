@@ -23,6 +23,24 @@ func (c *Connector) RegisterRoutes(s *adminapi.Server) {
 	s.Handle("GET /api/v1/contextforge/proposals", c.apiProposals)
 	s.Handle("GET /api/v1/contextforge/proposals/{id}", c.apiProposal)
 	s.Handle("POST /api/v1/contextforge/proposals/{id}/decision", c.apiDecide)
+	s.Handle("POST /api/v1/contextforge/instance/start", c.apiInstance(true))
+	s.Handle("POST /api/v1/contextforge/instance/stop", c.apiInstance(false))
+}
+
+func (c *Connector) apiInstance(start bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		if start {
+			err = c.StartInstance(r.Context(), adminapi.Actor(r))
+		} else {
+			err = c.StopInstance(r.Context(), adminapi.Actor(r))
+		}
+		if err != nil {
+			writeRefusal(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"instance": c.Instance()})
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -121,15 +139,16 @@ func (c *Connector) List(f Filter) ([]EntryView, error) {
 
 // Status is the Connector's state for G-15 and `smcpctl catalog status`.
 type Status struct {
-	Bundled        bool     `json:"bundled"`
-	CatalogOrigin  string   `json:"catalog_origin,omitempty"`
-	CatalogRelease string   `json:"catalog_release,omitempty"`
-	CatalogSHA256  string   `json:"catalog_sha256,omitempty"`
-	CatalogEntries int      `json:"catalog_entries"`
-	CatalogError   string   `json:"catalog_error,omitempty"`
-	CatalogReason  string   `json:"catalog_reason_code,omitempty"`
-	Lock           LockView `json:"release_lock"`
-	ImportKey      KeyView  `json:"import_key"`
+	Bundled        bool         `json:"bundled"`
+	CatalogOrigin  string       `json:"catalog_origin,omitempty"`
+	CatalogRelease string       `json:"catalog_release,omitempty"`
+	CatalogSHA256  string       `json:"catalog_sha256,omitempty"`
+	CatalogEntries int          `json:"catalog_entries"`
+	CatalogError   string       `json:"catalog_error,omitempty"`
+	CatalogReason  string       `json:"catalog_reason_code,omitempty"`
+	Lock           LockView     `json:"release_lock"`
+	ImportKey      KeyView      `json:"import_key"`
+	Instance       InstanceView `json:"instance"`
 }
 
 // LockView summarizes the release lock.
@@ -160,6 +179,7 @@ func (c *Connector) Status() Status {
 	}
 	enrolled, classes := c.keyEnrolled()
 	st.ImportKey = KeyView{KeyID: c.KeyID(), PublicKey: strings.TrimSpace(string(c.pub)), Enrolled: enrolled, Classes: classes}
+	st.Instance = c.Instance()
 	return st
 }
 

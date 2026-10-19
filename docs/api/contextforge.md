@@ -11,6 +11,10 @@ Control API routes of the ContextForge Connector (E-36, SRS FR-22, planned for v
 | `GET /api/v1/contextforge/proposals` | Administrator, Operator, Auditor | Proposals of this run, newest first |
 | `GET /api/v1/contextforge/proposals/{id}` | Administrator, Operator, Auditor | One proposal: `building`, `ready` with its `decision`, `failed` with `reason_code` and `error`, or `decided` with `outcome` |
 | `POST /api/v1/contextforge/proposals/{id}/decision` | Administrator, Operator | `{"accept": true, "presented_sha256": "<decision.sha256>"}` or `{"accept": false}` |
+| `POST /api/v1/contextforge/instance/start` | Administrator, Operator | Verify the pinned image if it was not verified yet, then start the bundled instance; answers the `instance` view |
+| `POST /api/v1/contextforge/instance/stop` | Administrator, Operator | Stop the bundled instance; its data volume stays |
+
+`GET /api/v1/contextforge/status` carries `instance`: `state` (`disabled`, `unavailable` with `reason_code`, `stopped`, `starting`, `healthy`, `unhealthy`), `detail`, `version`, `image`, `verified` (time of the image verification), `restarts`, `started_at` and `unconfined`.
 
 Catalog text is third-party data: show it as inert text and never load `logo_url` (FR-22.4).
 

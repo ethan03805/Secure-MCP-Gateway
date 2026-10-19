@@ -317,6 +317,8 @@ func reasonFor(err error) string {
 		return ReasonExpired
 	case errors.Is(err, ErrRetired):
 		return ReasonVersionRetired
+	case errors.Is(err, ErrComponentName):
+		return ReasonNotGranted
 	}
 	return ReasonUnavailable
 }

@@ -34,8 +34,9 @@ Offline:
   package          build, sign, verify, install and manage server packages (smcpctl package help)
   trust            enroll, list and remove package signing keys (trust anchors)
   filters          list, export and test the inspection rule sets (rules, export, scan)
-  catalog          browse the pinned ContextForge catalog and draft imports
-                   (list, show, import --dry-run; smcpctl catalog -h)
+  catalog          browse the ContextForge catalog and import local entries
+                   (list, show, import, decide, status; smcpctl catalog -h)
+  contextforge     status, start and stop the bundled ContextForge instance
   restore          restore an encrypted backup (the Gateway must be stopped)
   install          install as a service: --profile standalone (launchd or systemd
                    user unit) or enforced (Linux, root); idempotent; --check
@@ -102,6 +103,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = filtersCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "catalog":
 		err = catalogCmd(args[1:], stdout)
+	case args[0] == "contextforge":
+		err = contextforgeCmd(args[1:], stdout)
 	case args[0] == "health":
 		err = healthCmd(args[1:], stdout)
 	case args[0] == "reload":

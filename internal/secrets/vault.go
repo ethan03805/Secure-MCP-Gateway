@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,13 +61,16 @@ var namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,63}$`)
 
 // Errors returned by the vault. Their texts never contain a value.
 var (
-	ErrNotFound        = errors.New("secret not found")
-	ErrExists          = errors.New("secret already exists")
-	ErrExpired         = errors.New("secret expired")
-	ErrRetired         = errors.New("secret version retired")
-	ErrNoEvidence      = errors.New("vault has no evidence recorder")
-	ErrNotInitialized  = errors.New("vault not initialized (run `smcpctl secrets init`)")
-	ErrInvalidName     = errors.New("secret name must match ^[a-z0-9][a-z0-9._-]{0,63}$")
+	ErrNotFound       = errors.New("secret not found")
+	ErrExists         = errors.New("secret already exists")
+	ErrExpired        = errors.New("secret expired")
+	ErrRetired        = errors.New("secret version retired")
+	ErrNoEvidence     = errors.New("vault has no evidence recorder")
+	ErrNotInitialized = errors.New("vault not initialized (run `smcpctl secrets init`)")
+	ErrInvalidName    = errors.New("secret name must match ^[a-z0-9][a-z0-9._-]{0,63}$")
+	// ErrComponentName refuses a secret name in the component namespace
+	// outside the component delivery (component.go).
+	ErrComponentName   = errors.New("secret names starting with " + ComponentPrefix + " belong to Gateway components and cannot be created or delivered to servers")
 	ErrInvalidValue    = fmt.Errorf("secret value must have %d to %d bytes", MinValueBytes, MaxValueBytes)
 	ErrInvalidType     = errors.New("secret type must be one of api_key, token, password, certificate, connection_string, generic")
 	ErrInvalidOverlap  = errors.New("rotation overlap must be between 0s and 24h (CP-15)")
@@ -456,6 +460,14 @@ func checkValue(b []byte) error {
 
 // Create stores a new secret as version 1.
 func (v *Vault) Create(actor string, p CreateParams) (Meta, error) {
+	if strings.HasPrefix(p.Name, ComponentPrefix) {
+		wipe(p.Value)
+		return Meta{}, ErrComponentName
+	}
+	return v.create(actor, p)
+}
+
+func (v *Vault) create(actor string, p CreateParams) (Meta, error) {
 	defer wipe(p.Value)
 	if !namePattern.MatchString(p.Name) {
 		return Meta{}, ErrInvalidName
@@ -700,6 +712,15 @@ type opened struct {
 // when version is 0, else the named version while it is current or within
 // its overlap. Only the broker calls it (SR-2.13-3).
 func (v *Vault) open(name string, version int) (opened, error) {
+	if strings.HasPrefix(name, ComponentPrefix) {
+		return opened{Name: name}, ErrComponentName
+	}
+	return v.openAny(name, version)
+}
+
+// openAny is open without the component-name guard; only the component
+// delivery (component.go) calls it.
+func (v *Vault) openAny(name string, version int) (opened, error) {
 	v.mu.Lock()
 	r := v.find(name)
 	if r == nil {

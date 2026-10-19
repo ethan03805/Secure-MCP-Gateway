@@ -503,7 +503,9 @@
         "catalog_file": { "type": "string", "minLength": 1 },
         "catalog_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "npm_registry": { "type": "string", "pattern": "^https?://" },
-        "pypi_index": { "type": "string", "pattern": "^https?://" }
+        "pypi_index": { "type": "string", "pattern": "^https?://" },
+        "engine": { "type": "string", "pattern": "^/" },
+        "cosign": { "type": "string", "pattern": "^/" }
       }
     },
     "packages": {

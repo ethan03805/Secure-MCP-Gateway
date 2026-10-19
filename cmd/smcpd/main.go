@@ -285,7 +285,7 @@ func run(parent context.Context, cfgPath, level string) error {
 	}
 	defer rs.Close()
 	rs.Register(a.Admin)
-	cf, err := attachContextForge(ctx, cfg, pkgs, a, log) // E-36 (planned v1.3.0): catalog and local-entry import
+	cf, err := attachContextForge(ctx, cfg, pkgs, a, sec, mon, log) // E-36 (planned v1.3.0): catalog and local-entry import
 	if err != nil {
 		return err
 	}
