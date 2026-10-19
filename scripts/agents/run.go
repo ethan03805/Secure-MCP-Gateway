@@ -170,7 +170,8 @@ func runClient(ctx context.Context, c *client, e *runEnv, r *clientReport, appro
 	add(verdict(scnCatalog, start, err, exit))
 
 	// Allowed call.
-	s := runChecked(ctx, c, e, ps[scnAllowed], timeout, sess.SessionID, nil, checkAllowed)
+	s := runChecked(ctx, c, e, ps[scnAllowed], timeout, sess.SessionID, nil,
+		func(evs, _ []audit.Event) error { return checkAllowed(evs) })
 	allowedOK := s.Result == resultPass
 	add(s)
 
@@ -178,9 +179,17 @@ func runClient(ctx context.Context, c *client, e *runEnv, r *clientReport, appro
 	// rate-limited tool with this session's token, so the agent's call is
 	// refused by the policy decision with RATE_LIMITED. It fills it again
 	// before a retry, whose call may come after the first window ended.
-	fill := func() { _, _, _ = pr.call(pctx, publicName(toolLimited), map[string]any{}) }
-	fill()
-	add(runChecked(ctx, c, e, ps[scnDenied], timeout, sess.SessionID, fill, checkDenied))
+	// fillWindow asserts each fill from the journal: until 2026-10-19 the
+	// fill used the probe's 30-second connect context and ignored errors,
+	// so the fill before a retry several minutes later never reached the
+	// Gateway, the window was empty, and the agent's call was rightly
+	// permitted (Real agents run 39279945533, Codex CLI).
+	fill := func() error { return fillWindow(ctx, pr, e.g, sess.SessionID) }
+	if err := fill(); err != nil {
+		add(scenarioResult{Scenario: scnDenied, Result: resultFail, Detail: "harness: deny precondition not established: " + err.Error()})
+	} else {
+		add(runChecked(ctx, c, e, ps[scnDenied], timeout, sess.SessionID, fill, checkDenied))
+	}
 
 	// Approval-obligated call, approved with smcpctl while it is held.
 	mark := eventCount(e.g)
@@ -245,16 +254,30 @@ func runClient(ctx context.Context, c *client, e *runEnv, r *clientReport, appro
 // checked too: they hold no call to the tool, which is what errNoCall
 // asserts. The result records the retry; any other failure, and a second
 // errNoCall, fails the scenario.
+//
+// errWindowOpen (checkDenied) is retried the same way: the agent called the
+// rate-limited tool more than a minute after the probe filled its window,
+// so the deny precondition did not hold and the attempt tested nothing.
+// before re-establishes the precondition and returns an error when it
+// cannot, which fails the scenario as a harness failure without a retry.
+//
+// check receives the session's events since the attempt started and the
+// session's events before that.
 func runChecked(ctx context.Context, c *client, e *runEnv, s scenario, timeout time.Duration, sessionID string,
-	before func(), check func([]audit.Event) error) scenarioResult {
+	before func() error, check func(evs, prior []audit.Event) error) scenarioResult {
 	attempt := func(s scenario) (string, error) {
 		mark := eventCount(e.g)
 		exit := runAgent(ctx, c, e, s, timeout)
-		return exit, withEvents(e.g, func(evs []audit.Event) error { return check(sessionEvents(evs, mark, sessionID)) })
+		return exit, withEvents(e.g, func(evs []audit.Event) error {
+			if mark > len(evs) {
+				mark = len(evs)
+			}
+			return check(sessionEvents(evs, mark, sessionID), sessionEvents(evs[:mark], 0, sessionID))
+		})
 	}
 	start := time.Now()
 	exit, err := attempt(s)
-	if err == nil || !errors.Is(err, errNoCall) {
+	if err == nil || !(errors.Is(err, errNoCall) || errors.Is(err, errWindowOpen)) {
 		return verdict(s.ID, start, err, exit)
 	}
 	first := err.Error()
@@ -262,7 +285,11 @@ func runChecked(ctx context.Context, c *client, e *runEnv, s scenario, timeout t
 		first += " (agent exit: " + exit + ")"
 	}
 	if before != nil {
-		before()
+		if berr := before(); berr != nil {
+			r := verdict(s.ID, start, fmt.Errorf("harness: deny precondition not re-established before the retry: %w", berr), "")
+			r.Detail += " (first attempt: " + first + ")"
+			return r
+		}
 	}
 	retry := s
 	retry.Retry = true
@@ -275,6 +302,78 @@ func runChecked(ctx context.Context, c *client, e *runEnv, s scenario, timeout t
 		r.Detail += " (after one retry; first attempt: " + first + ")"
 	}
 	return r
+}
+
+// fillWindow fills the session's one-call-per-minute window of the
+// rate-limited tool with the probe, so that the agent's call that follows
+// soon after is refused, and asserts from the journal that it did. A fill
+// refused with RATE_LIMITED means an earlier window is still full; with at
+// least minWindowLeft of it left that will do, otherwise it waits for the
+// window to end and fills a fresh one. Each call has its own deadline,
+// derived from ctx.
+func fillWindow(ctx context.Context, pr *probe, g *gateway, sessionID string) error {
+	giveUp := time.Now().Add(rateWindow + 30*time.Second)
+	for {
+		mark := eventCount(g)
+		cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		// A refusal is a JSON-RPC error, so callErr alone decides nothing;
+		// the journal does.
+		_, _, callErr := pr.call(cctx, publicName(toolLimited), map[string]any{})
+		cancel()
+		var outcome string
+		var last time.Time
+		err := withEvents(g, func(evs []audit.Event) error {
+			var err error
+			outcome, err = fillOutcome(sessionEvents(evs, mark, sessionID))
+			last = lastPermit(sessionEvents(evs, 0, sessionID))
+			return err
+		})
+		if err != nil {
+			if callErr != nil {
+				err = fmt.Errorf("%w (probe call: %w)", err, callErr)
+			}
+			return err
+		}
+		if outcome == fillPermitted {
+			return nil
+		}
+		// Refused: the window is full until the session's last permitted
+		// call is a minute old. Enough of it left is as good as a fill.
+		left := time.Until(last.Add(rateWindow))
+		if !last.IsZero() && left >= minWindowLeft {
+			return nil
+		}
+		if time.Now().After(giveUp) {
+			return fmt.Errorf("the probe's calls to %s were refused with RATE_LIMITED for over a minute, so no fresh window could be filled", publicName(toolLimited))
+		}
+		wait := left + windowSlack
+		if wait <= 0 || wait > rateWindow {
+			wait = 5 * time.Second
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(wait):
+		}
+	}
+}
+
+// minWindowLeft is how much of a full rate window fillWindow accepts in
+// place of a fresh one. An agent that calls later than that is caught by
+// checkDenied as errWindowOpen, never passed or failed on an empty window.
+const minWindowLeft = 40 * time.Second
+
+// lastPermit returns the time of the latest permit decision among evs.
+func lastPermit(evs []audit.Event) time.Time {
+	var last time.Time
+	for _, e := range evs {
+		if e.Class == "decision" && e.Phase == audit.PhaseAuthorized && e.Outcome == "permit" {
+			if t, err := time.Parse(time.RFC3339Nano, e.Time); err == nil && t.After(last) {
+				last = t
+			}
+		}
+	}
+	return last
 }
 
 func verdict(name string, start time.Time, err error, exit string) scenarioResult {
