@@ -479,7 +479,7 @@ R: Continuous verification of protocol conformance.
 
 @FR-12.10 | Requirement-tagged tests
 P: FR-12
-S: Each automated test SHALL declare each requirement it claims as a full or a partial claim, and the build SHALL produce a report that lists every requirement of this SRS with the status verified, partial, failing or unverified as defined in Section 2.6, together with the claiming tests.
+S: Each automated test SHALL declare each requirement it claims as a full or a partial claim, and the build SHALL produce a report that lists every requirement of this SRS with the status verified, partial, failing or unverified as defined in Section 2.6, and each requirement planned for a later release as planned unless a claim verifies it or fails (Section 2.8), together with the claiming tests.
 A: E-01; E-24
 V: Inspection | Run the report on the release commit; confirm it lists exactly the requirements of Appendix H, that every requirement without a claim is listed as unverified, that a requirement with only partial claims is listed as partial, and that the totals match the published status data.
 SRC: SEC 10.3; SEC 10.6; REVIEW (C7)

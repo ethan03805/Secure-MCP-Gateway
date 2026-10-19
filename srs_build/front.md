@@ -7,7 +7,7 @@
 | Date | 2026-10-16 (America/Chicago) |
 | Owner | netrisk |
 | System of Interest | Secure MCP Gateway (local, single computer) |
-| Architecture | `ArchitectureV2.md` V2.3 draft — elements E-01…E-33, functions F-01…F-99, interfaces X-01…X-17 and I-01…I-39, GUI modules G-01…G-14, data stores D-01…D-15 |
+| Architecture | `ArchitectureV2.md` V2.4 draft — elements E-01…E-35 (E-34 and E-35 planned for v1.3.0), functions F-01…F-106, interfaces X-01…X-18 and I-01…I-42, GUI modules G-01…G-14, data stores D-01…D-15 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
 | Skill | `Skills.md` (INCOSE GtWR + project rules) |
@@ -20,20 +20,21 @@
 3. Recommended technology stack (open source only)
 4. Functional requirements (FR-1 … FR-19)
 5. Security requirements (SR, parented to `SEC` MUSTs)
-6. Appendix A — Controlled parameters (CP)
-7. Appendix B — Gateway error codes and reason codes
-8. Appendix C — Application role matrix
-9. Appendix D — Graph data model (mirror)
-10. Appendix E — Security-control coverage (SEC → SR)
-11. Appendix F — Allocation matrix (element → requirements)
-12. Appendix G — Architecture coverage (functions, interfaces, data stores, GUI modules)
-13. Appendix H — Requirement index
-14. Appendix I — Requirement-set checks
-15. Appendix J — Server package manifest schema
-16. Appendix K — Client matrix
-17. Appendix L — Hostile backend fixture suite
-18. Appendix M — Acceptance scenarios and the enforced label
-19. Appendix N — Requirements deferred from release 1.0
+6. Requirements planned for later releases (FR-20 onward and their SRs; Section 2.8)
+7. Appendix A — Controlled parameters (CP)
+8. Appendix B — Gateway error codes and reason codes
+9. Appendix C — Application role matrix
+10. Appendix D — Graph data model (mirror)
+11. Appendix E — Security-control coverage (SEC → SR)
+12. Appendix F — Allocation matrix (element → requirements)
+13. Appendix G — Architecture coverage (functions, interfaces, data stores, GUI modules)
+14. Appendix H — Requirement index
+15. Appendix I — Requirement-set checks
+16. Appendix J — Server package manifest schema
+17. Appendix K — Client matrix
+18. Appendix L — Hostile backend fixture suite
+19. Appendix M — Acceptance scenarios and the enforced label
+20. Appendix N — Requirements deferred from release 1.0
 
 ## 1. Purpose, scope and intended use
 
@@ -49,7 +50,7 @@ Per the owner, the Gateway is a local secure MCP gateway on a single computer wh
 
 ### 1.3 Scope
 
-**In scope:** all elements E-01…E-33 of `ArchitectureV2.md` and their interfaces, on the platforms of Section 1.6.
+**In scope:** all elements E-01…E-33 of `ArchitectureV2.md` and their interfaces, on the platforms of Section 1.6. The Desktop Application (E-34) and the Platform Installers (E-35) are in scope for release v1.3.0 (FR-20, Section 2.8).
 
 **Outside the SoI (interfaces only):** an external MCP Curation System, when one is used instead of the packaging command (X-02), package registries (X-17), agentic frameworks (X-12), tunnel providers (X-13), offline analytics tools (X-11), and the host platform (X-07). The reference harness adapters and harness tooling (E-33) and the packaging command (F-96) are inside the SoI and are delivered with the release.
 
@@ -114,6 +115,14 @@ A **platform profile** is always active; exactly one of the two applies to an in
 
 The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The supported client matrix is Appendix K.
 
+Planned for v1.3.0 (FR-20): native installers and a desktop tray application, distributed as GitHub Release assets beside the archives and covered by the same signed checksum file (FR-20.23).
+
+| Platform | Installers (E-35) | Desktop application (E-34) |
+|---|---|---|
+| macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView |
+| Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
+| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is specified in `srs_build/req7-windows.txt` | Tauri 2, WebView2 |
+
 ## 2. Conventions and traceability rules
 
 ### 2.1 Imperatives
@@ -134,7 +143,7 @@ IDs are stable. Later revisions retire IDs rather than reuse them.
 
 ### 2.3 Record fields
 
-Every requirement record carries: **ID**, **Parent ID**, **Statement**, **Allocation** (element E-xx; function F-xx; interface X-xx/I-xx; data store D-xx where relevant), **Verification Method** (Inspection, Analysis, Demonstration or Test), **Verification Statement**, **Source** and **Rationale**.
+Every requirement record carries: **ID**, **Parent ID**, **Statement**, **Allocation** (element E-xx; function F-xx; interface X-xx/I-xx; data store D-xx where relevant), **Verification Method** (Inspection, Analysis, Demonstration or Test), **Verification Statement**, **Source** and **Rationale**. A planned requirement also carries a **Target release** (Section 2.8); a deferred one a **Deferral** (Section 2.7).
 
 ### 2.4 Source citations
 
@@ -150,6 +159,8 @@ Every requirement record carries: **ID**, **Parent ID**, **Statement**, **Alloca
 | `OWNER` | Owner direction in the tasking for this SRS, including the owner decisions of 2026-10-16 recorded in `CHANGELOG.md` |
 | `REVIEW` | A gap found by the V1.1 completeness review and closed in V1.2 (`CHANGELOG.md`) |
 
+`OWNER` also covers the owner decisions of 2026-10-18 on the desktop application and platform installers (FR-20).
+
 ### 2.5 Subjects
 
 Each statement names its allocated element as the subject, for example *"The Session Manager (E-04) SHALL …"*. Requirements on the release, rather than on run-time behavior, name *"The Gateway release"* or the delivered command.
@@ -161,6 +172,16 @@ A requirement is **verified** only when at least one passing automated test clai
 ### 2.7 Deferred requirements
 
 A requirement record that carries a deferral rationale is **deferred from release 1.0**. It keeps its ID and text, and Appendix N lists it with the reason it is deferred and what release 1.0 does instead. A deferred requirement is not part of the requirement set of release 1.0: Appendices E to I, the requirement report (FR-12.10) and the release label (FR-19.3) leave it out. No requirement of release 1.0 has a deferred parent. Deferring a requirement, or restoring one, is a controlled change recorded in `CHANGELOG.md`.
+
+### 2.8 Planned requirements
+
+A requirement record that carries a **target release** (a `TARGET: vMAJOR.MINOR.PATCH` line in `srs_build/`) is **planned** for that release. It is a complete requirement: it is validated, allocated, rendered where it stands with its target release, and tests and records may claim it. Until its target release is the release being built, it is not part of the current requirement set:
+
+- Appendix I counts it apart from the requirements of the current release, and Appendices F, G and H mark it `(planned vX.Y.Z)`;
+- the requirement report (FR-12.10) lists it as `planned`, not `unverified`, keeps it out of the totals, the per-element roll-up and the items of the status data, and publishes it in a separate `plannedItems` array with its target release; a planned requirement that a test verifies is reported verified there, and one with a failing claim is counted as failing, because a failing test is never hidden;
+- it does not hold back a parent of the current release that is verified by the review of its children, and the release label (FR-19.3) does not depend on it.
+
+A requirement of the current release has no planned parent, and a record is never both planned and deferred. When the target release is being built, the target line is removed from each of its records in one controlled change recorded in `CHANGELOG.md`, and the requirements count from then on like any other.
 
 ## 3. Recommended technology stack (open source only)
 
@@ -200,6 +221,8 @@ All selections carry OSI-approved licenses. Exact versions, digests and transiti
 | Testing | Go `testing`; Playwright (GUI end-to-end and accessibility with `axe-core`); `vegeta` (load) | BSD-3; Apache-2.0; MPL-2.0; MIT | All | Requirement-tagged automated verification (FR-12.10) |
 | Supply chain | Syft (SBOM), Grype and `govulncheck` (vulnerabilities), minisign (release signing) | Apache-2.0; Apache-2.0; BSD-3; ISC | Release | FR-12.8 provenance |
 | Distribution | GitHub Releases, `install.sh`, a Homebrew tap | — | Release | Owner decision (FR-13) |
+| Desktop application (planned, v1.3.0) | **Tauri** 2 with the tray, notification, single-instance and deep-link plugins; the operating system's webview (WKWebView, WebKitGTK 4.1, WebView2) | MIT or Apache-2.0; LGPL-2.1+ (WebKitGTK); proprietary (WKWebView, WebView2 runtime) | E-34 | Small native shell around the existing console with a Rust core and an explicit capability model (FR-20.1, SR-2-5) |
+| Platform installers (planned, v1.3.0) | Tauri bundler (`.dmg`, `.deb`, `.rpm`, AppImage, `.msi` through WiX Toolset 3); `pkgbuild` and `productbuild` (`.pkg`); nFPM through GoReleaser (`smcp` `.deb` and `.rpm`) | MIT or Apache-2.0; part of macOS; MS-RL (WiX); MIT (nFPM) | E-35 | Native packages for each platform from the existing release pipeline (FR-20.17 to FR-20.20) |
 
 ### 3.2 Explicitly excluded
 

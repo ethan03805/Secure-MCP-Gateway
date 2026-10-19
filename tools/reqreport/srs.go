@@ -25,7 +25,16 @@ type Requirement struct {
 	// release 1.0 (SRS Section 2.7, Appendix N) and is not part of the
 	// requirement set the report covers.
 	Deferred bool
+	// Target is set by a TARGET: line (SRS Section 2.8): the release, such
+	// as "v1.3.0", that the requirement is planned for. A planned
+	// requirement is loaded and claimed like any other, but the report
+	// keeps it out of the totals of the current requirement set and lists
+	// it as planned until a test or record verifies it.
+	Target string
 }
+
+// Planned reports whether the requirement is planned for a later release.
+func (r Requirement) Planned() bool { return r.Target != "" }
 
 // Element returns the primary element: the first E-xx in the allocation.
 func (r Requirement) Element() string {
@@ -43,7 +52,8 @@ var (
 // loadRequirements parses every req*.txt in dir. The record format is
 // documented in srs_build/README.md: "@ID | Title", then KEY: value lines,
 // ending at a blank line. "@DISP" lines are SEC dispositions, not
-// requirements. Records with a DEFER: line are deferred and left out.
+// requirements. Records with a DEFER: line are deferred and left out;
+// records with a TARGET: line are loaded with Target set.
 func loadRequirements(dir string) ([]Requirement, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "req*.txt"))
 	if err != nil {
@@ -83,6 +93,8 @@ func loadRequirements(dir string) ([]Requirement, error) {
 				flush()
 			case cur != nil && strings.HasPrefix(line, "DEFER: "):
 				cur.Deferred = true
+			case cur != nil && strings.HasPrefix(line, "TARGET: "):
+				cur.Target = strings.TrimSpace(line[len("TARGET: "):])
 			case cur != nil && strings.HasPrefix(line, "P: "):
 				if p := strings.TrimSpace(line[3:]); idPattern.MatchString(p) {
 					cur.Parent = p

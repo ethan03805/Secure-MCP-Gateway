@@ -535,7 +535,8 @@ tr:target td {
   color: var(--ink);
   font-weight: 500;
 }
-.rb-unverified svg {
+.rb-unverified svg,
+.rb-planned svg {
   stroke: var(--rule-strong);
 }
 .ibadge svg {
@@ -679,7 +680,8 @@ dl.facts dd {
 .seg-failing {
   fill: var(--st-failing);
 }
-.seg-unverified {
+.seg-unverified,
+.seg-planned {
   fill: var(--st-track);
 }
 .ln {

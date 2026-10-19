@@ -76,6 +76,7 @@ const GLYPH: Record<ReqStatus, ReactNode> = {
   ),
   failing: <path d="M1.5 1.5 L8.5 8.5 M8.5 1.5 L1.5 8.5" fill="none" strokeWidth="2" />,
   unverified: <rect x="1.5" y="1.5" width="7" height="7" fill="none" strokeWidth="1" />,
+  planned: <rect x="1.5" y="1.5" width="7" height="7" fill="none" strokeWidth="1" strokeDasharray="2 1.5" />,
 };
 
 /** Requirement status as glyph plus word. The word carries the meaning; color and glyph repeat it. */

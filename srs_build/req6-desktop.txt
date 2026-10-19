@@ -1,0 +1,389 @@
+## 6. Requirements planned for later releases
+
+TEXT: The requirements of this section are planned for the release named in each record's **Target release** field (Section 2.8). They are complete requirements, allocated and verified like the others, but they are not part of the requirement set of the current release: Appendix I counts them separately, the matrices mark them, and the requirement report lists them as planned instead of unverified until a test or record verifies them. Security requirements for planned elements are kept here with their functional requirements, under the same `SR-<SEC id>-k` IDs and parent rules as Section 5.
+
+### FR-20 Desktop application and platform installers
+
+TEXT: Owner decision of 2026-10-18: the product gets a desktop application and native installers so that a person can install, run and operate the Gateway without a terminal. The Desktop Application (E-34) is a Tauri 2 tray application for macOS, Linux and Windows; the Platform Installers (E-35) are a macOS `.pkg` and `.dmg`, Linux `.deb`, `.rpm` and AppImage packages, and a Windows `.msi`. Installers are verified with the project's minisign signature, Sigstore bundle and SHA-256 checksums; platform code signing, notarization and MSIX are deferred (Appendix N) and are additive when enabled. The Windows runtime of `smcpd` itself (service, paths, listeners) is specified separately in `srs_build/req7-windows.txt`; this section relies on it for Windows and does not restate it. The desktop application holds no more authority than the console: every control-API operation is performed in the console window under the user's own console sign-in.
+
+@FR-20 | Desktop application and platform installers
+P: —
+S: The Gateway release SHALL include the Desktop Application (E-34) and the Platform Installers (E-35) specified by the requirements of this section.
+A: E-34; E-35; F-100; F-105; X-16; X-18
+V: Analysis | Review the verification results of every FR-20 child requirement; confirm each has passed on macOS arm64, on Ubuntu x86_64 and on Windows 11 x86_64.
+SRC: OWNER (desktop app and automated installers on all three platforms, 2026-10-18)
+R: A user-friendly product starts from an installer the user already knows how to run and an icon the user can click. The terminal remains supported; it stops being required.
+TARGET: v1.3.0
+
+@FR-20.1 | Desktop application platforms
+P: FR-20
+S: The Desktop Application (E-34) SHALL be built with Tauri 2 from source in the Gateway repository and SHALL run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 10 22H2 or later and Windows 11 on x86_64 (WebView2), where it controls the Windows service defined in `srs_build/req7-windows.txt`.
+A: E-34; F-100; X-07
+V: Test | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens.
+SRC: OWNER (Tauri v2 tray app on macOS, Linux and Windows)
+R: One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon.
+TARGET: v1.3.0
+
+@FR-20.2 | Tray icon and menu
+P: FR-20
+S: The Desktop Application (E-34) SHALL show a tray (menu-bar) icon whose image and accessible name state one of `healthy`, `degraded`, `fail-closed`, `emergency stop`, `stopped` or `unreachable`, and a menu with the items Open Console, Approvals (with the pending count), Start, Stop, Restart, Set Up a Client, Check for Updates, Settings and Quit, where Start is enabled only while the service is stopped and Stop and Restart only while it runs.
+A: E-34; F-100; I-40
+V: Test | Drive the Gateway through each of the six states with a test harness; confirm the icon and accessible name for each and the enabled state of Start, Stop and Restart; open each menu item and confirm its action.
+SRC: OWNER (start/stop/status of smcpd, health at a glance)
+R: The tray is where the user looks first; it must say what state the Gateway is in without opening anything.
+TARGET: v1.3.0
+
+@FR-20.3 | Service control
+P: FR-20
+S: The Desktop Application (E-34) SHALL start, stop and restart the installed `smcpd` service only through the platform service manager (the launchd user agent on macOS, the systemd user or system unit on Linux, the Service Control Manager on Windows), SHALL request operating-system elevation only for a system-wide service, and SHALL report within 30 seconds whether the operation succeeded together with the service manager's error text when it did not.
+A: E-34; F-100; X-07
+V: Test | On each platform, start, stop and restart the service from the menu; confirm the service manager's state after each and the reported outcome; make the unit fail to start and confirm the error text is shown within 30 seconds; on a Linux Enforced host confirm one polkit prompt per operation and none for a user unit.
+SRC: OWNER (start/stop/status of smcpd)
+R: Stopping the service is not the emergency stop. The emergency stop (FR-3) refuses calls while the Gateway keeps its evidence path running and is done in the console, signed in; service control only starts and stops the process.
+TARGET: v1.3.0
+
+@FR-20.4 | Health at a glance
+P: FR-20
+S: The Desktop Application (E-34) SHALL read the CP-51 loopback metrics endpoint at least every 5 seconds while the service runs, SHALL show the tray state of FR-20.2 within 10 seconds of a change in the Gateway's health state, emergency stop or pending-approval count, SHALL show `unreachable` when no exposition has been read for 15 seconds, and SHALL show the label `not enforced` beside the state unless the exposition reports the release label `enforced`.
+A: E-34; F-100; I-40; X-15
+V: Test | Against a running Gateway, change the health state, set and clear the emergency stop and create an approval; confirm each tray change within 10 seconds; stop the metrics listener and confirm `unreachable` within 15 seconds and never `healthy`; confirm the `not enforced` label on a Standalone installation.
+SRC: OWNER (health at a glance); ARCH §4 E-34
+R: The metrics endpoint needs no credential and carries no arguments, principals or sessions (security review RR-06), so the tray can show health without holding any authority. Stale data must never read as healthy.
+TARGET: v1.3.0
+
+@FR-20.5 | Desktop health metrics
+P: FR-20
+S: The metrics endpoint SHALL expose, in addition to the FR-17.5 metric set, a gauge `smcp_release_enforced` whose value is 1 only while the release label is `enforced` and 0 otherwise and a gauge `smcp_emergency_stop` whose value is 1 only while the emergency stop is set, both without labels, and the first-run setup of FR-20.8 SHALL leave metrics enabled on the CP-51 address.
+A: E-23; F-61; X-15
+V: Test | Scrape the endpoint on an Enforced and a Standalone installation and with the emergency stop set and cleared; confirm both gauges and their values; run the first-run setup and confirm metrics are enabled on the CP-51 address.
+SRC: OWNER (health at a glance)
+R: The tray needs the release label and the emergency stop, which the existing metric set does not carry, and must not need the operator token to read them.
+TARGET: v1.3.0
+
+@FR-20.6 | Console in a native window
+P: FR-20
+S: The Desktop Application (E-34) SHALL show the console that `smcpd` serves on the CP-03 admin listener in one native window, loaded from that listener's configured URL rather than from a copy bundled with the application, SHALL use the console's own sign-in and roles, and SHALL open any link to another origin in the user's default browser instead of in the window.
+A: E-34; F-102; I-41; X-04
+V: Test | Open the console window; confirm the URL is the admin listener's, that the sign-in page appears, and that a console operation succeeds only for a role Appendix C permits; open a documentation link to another origin and confirm it opens in the default browser; open the window twice and confirm one window is focused.
+SRC: OWNER (the existing web console shown in a native window instead of a browser tab)
+R: Loading the served console keeps one console, one authentication path and one set of verified console requirements (FR-8). A bundled copy would drift from the daemon's version.
+TARGET: v1.3.0
+
+@FR-20.7 | Approval notifications
+P: FR-20
+S: When the pending-approval count read under FR-20.4 increases and notifications are on in Settings, the Desktop Application (E-34) SHALL raise one native notification within 10 seconds whose text is fixed except for the pending count, SHALL open the console window at the Approvals view (G-13) when the user activates it, and SHALL raise no notification when notifications are off.
+A: E-34; F-101; I-40; X-14
+V: Test | Create one and then three approvals with notifications on; confirm one notification per increase within 10 seconds with the count and no tool name, alias or argument; activate it and confirm the console opens at G-13; turn notifications off and confirm none is raised.
+SRC: OWNER (native notifications for pending approvals, respecting approval roles); FR-3.23
+R: In the Enforced profile `smcpd` runs as a system identity and cannot reach the user's desktop; the application can. The count is all it knows without signing in, and it is enough to send the user to the console, where the approval is shown with its binding (FR-3).
+TARGET: v1.3.0
+
+@FR-20.8 | First-run setup
+P: FR-20
+S: When no Gateway configuration exists, the Desktop Application (E-34) SHALL offer a setup window that collects the Administrator and Approver passwords, runs `smcpctl bootstrap` with the passwords passed on standard input or in files of mode 0600 that it deletes when the command ends, then runs `smcpctl install` for the selected profile, and SHALL show each command's outcome and, when a step fails, its output and the command the user can run in a terminal to retry it.
+A: E-34; F-103; I-42; F-97
+V: Test | On clean macOS, Ubuntu and Windows runners, complete the setup; confirm the configuration, keys and service exist as after the terminal procedure (FR-13.6), that no password appears in any process argument list (sampled every 100 ms during setup) or remains in a file afterwards; inject a failing install and confirm the output and retry command are shown.
+SRC: OWNER (first-run setup wraps smcpctl bootstrap/install); SEC 7.5
+R: The setup is a front end to the verified terminal procedure, not a second implementation of it, so FR-13 keeps verifying the installation itself. Process argument lists are readable by other local accounts.
+TARGET: v1.3.0
+
+@FR-20.9 | Profile choice in setup
+P: FR-20
+S: On Linux, the first-run setup SHALL run the FR-13.5 prerequisite check before offering a profile, SHALL offer the Enforced profile only when every prerequisite is present, SHALL name each missing prerequisite otherwise, and SHALL state before installation, on every platform, that the Standalone profile is labelled `not enforced` and does not contain servers.
+A: E-34; F-103; I-42; F-97
+V: Test | Run the setup on an Ubuntu runner with all Enforced prerequisites and on one without rootless Podman; confirm Enforced is offered on the first and refused with the missing prerequisite named on the second; confirm the Standalone statement on macOS, Linux and Windows.
+SRC: OWNER (platform profiles); FR-13.9; FR-13.10
+R: A friendly installer must not hide the difference that matters most for security.
+TARGET: v1.3.0
+
+@FR-20.10 | Client setup
+P: FR-20
+S: The Desktop Application (E-34) SHALL list the Appendix K clients that `smcpctl clients setup` supports and that it detects on the host, SHALL show the changes `smcpctl clients setup <client> --dry-run` reports before applying them, SHALL apply them only after the user confirms, and SHALL offer the client's lockdown profile (FR-15.1) and removal (`--remove`) in the same window.
+A: E-34; F-103; I-42; E-33; F-98
+V: Test | With Claude Code and Codex CLI installed on a runner, open client setup; confirm both are listed with their dry-run changes; confirm nothing is written before confirmation; apply, connect each client and list tools through the Gateway; remove and confirm the client's settings are restored.
+SRC: OWNER (client setup wraps smcpctl client setup for agents); FR-12.7
+R: Connecting an agent is the step most users get wrong by hand, and the dry run lets them see what will change in their client's files.
+TARGET: v1.3.0
+
+@FR-20.11 | Update check
+P: FR-20
+S: The Desktop Application (E-34) SHALL check the project's GitHub Releases for a newer stable release at most once every 24 hours and when the user selects Check for Updates, SHALL send no data in that request other than what an anonymous HTTPS GET of the releases document requires, SHALL report a newer release with its version and release notes link, and SHALL make no automatic check when automatic checks are off in Settings.
+A: E-34; F-104; X-16
+V: Test | Point the application at a test release feed; confirm one request in 24 hours, a request on demand, the reported version, no request with automatic checks off, and, by capturing the request, no identifier, cookie or installation data in it; disconnect the network and confirm no error loop and a single "could not check" message on demand.
+SRC: OWNER (update checks using the existing signed release verification); FR-12.2
+R: An update check is the only network request the desktop application makes on its own; it must be infrequent, anonymous and switchable off for offline hosts.
+TARGET: v1.3.0
+
+@FR-20.12 | Gateway upgrade from the desktop
+P: FR-20
+S: When the user accepts a newer release, the Desktop Application (E-34) SHALL upgrade the Gateway only by running `smcpctl upgrade` for that release (FR-13.7, FR-13.8), SHALL show its progress and outcome, and SHALL report a rollback as a failed upgrade with the version that is running afterwards.
+A: E-34; F-104; I-42; F-97
+V: Test | Upgrade from the previous release to a candidate from the menu; confirm `smcpctl upgrade` ran and the new version reports healthy; repeat with a fault-injected release whose migration fails and confirm the rollback is reported with the previous version running.
+SRC: OWNER (update checks using smcpctl upgrade)
+R: The upgrade path with backup and rollback is already specified and verified; the desktop application must reuse it.
+TARGET: v1.3.0
+
+@FR-20.13 | Desktop application update
+P: FR-20
+S: When the user accepts a newer release, the Desktop Application (E-34) SHALL download the release's platform installer of the kind that installed it (FR-20.17 to FR-20.20), SHALL verify it as SR-7-2 requires, and SHALL then start that installer, and it SHALL NOT use the Tauri updater plugin or any update channel other than the release's signed checksum file.
+A: E-34; F-104; X-16; X-18
+V: Test | Update from the previous release's application through a test feed; confirm the installer was verified and started and the new version runs; inspect the application's Cargo manifest and capability files and confirm the updater plugin is absent.
+SRC: OWNER (update checks using the existing signed release verification); ARCH §4 E-34
+R: The Tauri updater verifies against its own key and manifest; using it would add a second trust root beside the release key that `install.sh` and `smcpctl upgrade` already rely on.
+TARGET: v1.3.0
+
+@FR-20.14 | Single instance and start at login
+P: FR-20
+S: The Desktop Application (E-34) SHALL run at most one instance per user session, focusing the existing instance when started again, and SHALL start at login only when the user turns that on in Settings, which is off after installation.
+A: E-34; F-100
+V: Test | Start the application twice; confirm one process and that the second start focuses the first; confirm start at login is off after installation and, when turned on, that the application starts after a fresh login on each platform.
+SRC: OWNER (tray app)
+R: Two instances would raise duplicate notifications and race on service control.
+TARGET: v1.3.0
+
+@FR-20.15 | Desktop accessibility
+P: FR-20
+S: The setup, client setup, update and settings windows of the Desktop Application (E-34) SHALL meet WCAG 2.2 level AA and be operable by keyboard alone, and every tray menu item SHALL have an accessible name that the platform screen reader (VoiceOver, Orca, Narrator) announces.
+A: E-34; F-100; F-103
+V: Test | Run axe-core against each bundled window in the application's webview test build and confirm no WCAG 2.2 AA violation; complete setup, client setup and an update by keyboard alone; with VoiceOver, Orca and Narrator, confirm each tray menu item is announced by name and record the result under `docs/verification/`.
+SRC: OWNER (user-friendly product); FR-8.30
+R: The console already meets WCAG 2.2 AA; the windows around it must not be the part that excludes users.
+TARGET: v1.3.0
+
+@FR-20.16 | First-run usability
+P: FR-20
+S: The Desktop Application (E-34) and the Platform Installers (E-35) SHALL allow a first-time user who has the in-application help to install the Gateway from the platform installer, complete first-run setup and connect Claude Code through the Gateway within 15 minutes, without using a terminal.
+A: E-34; E-35; F-103; F-106
+V: Demonstration | Run a timed task with three first-time users on each of macOS, Linux and Windows, starting from the downloaded installer; confirm at least two per platform complete within 15 minutes without a terminal, and record the times under `docs/verification/`.
+SRC: OWNER (a more user-friendly product); FR-8.24
+R: Makes "user friendly" measurable for the whole first-run path, as FR-8.24 does for the workbench.
+TARGET: v1.3.0
+
+@FR-20.17 | macOS installers
+P: FR-20
+S: The Gateway release SHALL publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` built with `pkgbuild` and `productbuild` that installs the application bundle in `/Applications` and links those five commands into `/usr/local/bin`.
+A: E-35; F-105; F-106; X-18
+V: Test | On a GitHub-hosted macOS arm64 runner, install the `.pkg`; confirm the application bundle, the five links and that each command prints the release version; mount the `.dmg`, copy the application, and confirm it starts and finds its bundled commands.
+SRC: OWNER (macOS .pkg/.dmg)
+R: The `.pkg` puts the commands on the path and the application where users expect it; the `.dmg` is the drag-to-install form many users prefer and needs no administrator password.
+TARGET: v1.3.0
+
+@FR-20.18 | Linux packages
+P: FR-20
+S: The Gateway release SHALL publish, for linux-amd64 and linux-arm64, a `.deb` and an `.rpm` package `smcp` built with nFPM through GoReleaser that installs `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` in `/usr/bin` with no graphical dependency, and a `.deb` and an `.rpm` package `smcp-desktop` built by the Tauri bundler that installs the Desktop Application and depends on `smcp` of the same version.
+A: E-35; F-105; F-106; X-18
+V: Test | On Ubuntu 24.04 and Fedora containers for both architectures, install `smcp` alone and confirm the commands and that no graphical library was pulled in; install `smcp-desktop` and confirm the application starts and that installing it with a different `smcp` version is refused by the package manager.
+SRC: OWNER (Linux .deb/.rpm)
+R: Enforced hosts are often headless; splitting the packages keeps WebKitGTK off them, and the version dependency keeps the application and the daemon in step.
+TARGET: v1.3.0
+
+@FR-20.19 | Linux AppImage
+P: FR-20
+S: The Gateway release SHALL publish, for linux-amd64 and linux-arm64, an AppImage of the Desktop Application containing `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect`, whose first-run setup SHALL offer the Standalone profile only, and the release SHALL NOT publish a Flatpak.
+A: E-35; E-34; F-105; F-103
+V: Test | Run the AppImage on Ubuntu 24.04 and on a distribution without `.deb` or `.rpm` tooling; confirm the application starts, setup offers only Standalone and installs a systemd user unit; inspect the release assets and confirm there is no Flatpak.
+SRC: OWNER (AppImage or Flatpak if justified)
+R: An AppImage serves distributions the packages do not, without root. A Flatpak sandbox would block the service-manager, Podman and nftables access the Gateway needs, so it is not justified. The Enforced profile needs system packages and root, so the AppImage does not offer it.
+TARGET: v1.3.0
+
+@FR-20.20 | Windows installer
+P: FR-20
+S: The Gateway release SHALL publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries and service defined in `srs_build/req7-windows.txt` per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime.
+A: E-35; F-105; F-106; X-18
+V: Test | On a GitHub-hosted Windows runner with networking blocked, install the `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that the application starts and that installation succeeded without network access; uninstall from Settings and confirm removal.
+SRC: OWNER (Windows MSI/MSIX)
+R: MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 10 and 11 ship the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB.
+TARGET: v1.3.0
+
+@FR-20.21 | Installers place files only
+P: FR-20
+S: Installing any Platform Installer (E-35) package SHALL create no Gateway configuration, state, keys, service unit or account and start no service, and SHALL leave every existing configuration, state directory, Evidence Journal and backup byte-for-byte unchanged.
+A: E-35; F-106; X-18; D-06; D-15
+V: Test | Install each package on a clean host and confirm no CP-46 directory, unit or account exists afterwards; install each over an existing installation of the previous release and confirm digests of configuration, keys, policy, journal and backups are unchanged.
+SRC: OWNER (automated installers); FR-13.4
+R: Configuration, keys and services are created by `smcpctl install`, which is idempotent and verified (FR-13.4 to FR-13.6). A second, package-script install path would need its own verification and could rotate keys on upgrade.
+TARGET: v1.3.0
+
+@FR-20.22 | Package removal keeps evidence
+P: FR-20
+S: Removing a Platform Installer (E-35) package with the platform's package manager SHALL remove the files the package installed, SHALL stop and remove a system-wide `smcpd` service that `smcpctl install` created, and SHALL keep the configuration, the Evidence Journal, the evidence public key and the backup archives, and the documentation SHALL state the command that removes per-user services and the `smcpctl uninstall --purge` command.
+A: E-35; F-106; X-18; D-06; D-15
+V: Test | On each platform, install, set up, create journal entries and a backup, then remove the package; confirm the package files and the system service are gone and that `smcpctl journal verify` from a fresh install, pointed at the kept journal and key, succeeds; inspect `docs/install.md` for both commands.
+SRC: OWNER (automated installers); FR-13.11
+R: Evidence outlives the installation that produced it, whichever tool removed it.
+TARGET: v1.3.0
+
+@FR-20.23 | Installer release assets
+P: FR-20
+S: The Gateway release SHALL list every Platform Installer (E-35) file in the same SHA-256 checksum file as the archives of FR-13.1, so that the checksum file's minisign signature and its Sigstore bundle cover each installer.
+A: E-35; F-105; X-16
+V: Inspection | Inspect a release; confirm each `.pkg`, `.dmg`, `.deb`, `.rpm`, AppImage and `.msi` appears in the checksum file with a matching digest, and that `minisign -Vm` with the `SECURITY.md` key and `cosign verify-blob` with the release workflow identity both verify the checksum file.
+SRC: OWNER (installers verified with minisign + cosign signatures and SHA-256 checksums); SEC 10.7
+R: Until platform signing is enabled, the release signatures are the only way a user can tell an installer came from the project.
+TARGET: v1.3.0
+
+@FR-20.24 | Installer build and smoke test in CI
+P: FR-20
+S: The release workflow SHALL build every Platform Installer (E-35) on GitHub-hosted macOS arm64, Ubuntu x86_64 and arm64, and Windows x86_64 runners from the tagged commit, and SHALL publish the release only when each installer has installed, started the Desktop Application, run `smcpctl version` and been removed on a runner of its platform.
+A: E-35; F-105; F-106
+V: Test | Inspect the release workflow run of a candidate tag; confirm one build and one smoke-test job per installer and that a deliberately broken installer stops publication.
+SRC: OWNER (automated installers on all three platforms)
+R: An installer that was never installed by CI is untested release output.
+TARGET: v1.3.0
+
+@FR-20.25 | Unsigned installer guidance
+P: FR-20
+S: Until FR-20.29 and FR-20.30 are met, the installation guide SHALL show, before the download links, how to verify an installer with `sha256sum` or `shasum -a 256`, `minisign -Vm` and `cosign verify-blob`, and SHALL show and explain the prompts users see for an unsigned installer: on macOS 15 and later the "Not Opened" dialog and the System Settings, Privacy & Security, Open Anyway path; on Windows the SmartScreen "Windows protected your PC" dialog with More info and Run anyway, the Unknown publisher in the User Account Control prompt, and that Smart App Control blocks unsigned installers without an override.
+A: E-35; E-24; F-106
+V: Inspection | Follow the guide on macOS 15, Windows 11 with SmartScreen on and Windows 11 with Smart App Control on; confirm each prompt matches the guide's description and screenshots and that the verification commands succeed on the release.
+SRC: OWNER (document the Gatekeeper/SmartScreen prompts users will see meanwhile)
+R: Users told to click through a warning should first be given a way to check what they are running, and an exact description of the warning so a different one stands out.
+TARGET: v1.3.0
+
+@FR-20.26 | Ad-hoc signature on macOS
+P: FR-20
+S: The macOS application bundle and every executable inside it SHALL carry an ad-hoc code signature, and the `.pkg` and `.dmg` SHALL carry none other than what FR-20.29 adds when it is met.
+A: E-35; F-105
+V: Test | Run `codesign -dv` on the bundle and each executable from a release `.dmg`; confirm an ad-hoc signature (`Signature=adhoc`) on each; confirm the application starts on Apple silicon after the Open Anyway approval.
+SRC: OWNER (not code-signed with platform certificates for now)
+R: macOS on Apple silicon runs no completely unsigned code; an ad-hoc signature is free, needs no certificate and is replaced when Developer ID signing is enabled.
+TARGET: v1.3.0
+
+@FR-20.27 | Desktop application documentation
+P: FR-20
+S: The documentation SHALL include a desktop application guide covering installation from each Platform Installer, first-run setup, the tray states, approval notifications and their limits, client setup, updates and their verification, and removal, and SHALL state that the desktop application holds no authority beyond the user's console sign-in.
+A: E-34; E-35; E-24
+V: Inspection | Follow the guide on macOS, Linux and Windows; confirm each topic and the authority statement.
+SRC: OWNER (a more user-friendly product); FR-18
+R: The guide is where users learn that a notification is not an approval and that the tray state is advisory.
+TARGET: v1.3.0
+
+@FR-20.28 | Deep links
+P: FR-20
+S: When the Desktop Application (E-34) registers a URL scheme, it SHALL register only `smcp`, SHALL accept only `smcp://console`, `smcp://approvals` and `smcp://approvals/<approval ID>` where the ID is a UUID, SHALL act on an accepted link only by focusing the console window at the console page it names, and SHALL ignore every other link without a request to the Gateway.
+A: E-34; F-102; X-07
+V: Test | Open each accepted link and confirm the console page; open links with another path, a query string, an approval ID that is not a UUID and a 64 KiB link; confirm each is ignored, the console window is not navigated and no request reaches the admin listener.
+SRC: OWNER (deep-link handling); SEC 8.9
+R: Any web page can open a registered scheme, so a deep link must never carry an action, only a place in the console where the user still signs in and decides.
+TARGET: v1.3.0
+
+@FR-20.29 | macOS signing and notarization
+P: FR-20
+S: The release workflow SHALL sign the macOS application bundle and its executables with a Developer ID Application certificate and the hardened runtime, sign the `.pkg` with a Developer ID Installer certificate, notarize the `.pkg` and `.dmg` with the Apple notary service and staple the tickets, using the repository secrets `APPLE_CERTIFICATE` (base64 `.p12` of the Developer ID Application certificate), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_INSTALLER_CERTIFICATE`, `APPLE_INSTALLER_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID`, and either `APPLE_API_KEY`, `APPLE_API_ISSUER` and `APPLE_API_KEY_P8` (App Store Connect API key) or `APPLE_ID` and `APPLE_PASSWORD` (app-specific password).
+A: E-35; F-105
+V: Test | On a release built with the secrets, run `spctl -a -vv -t install` on the `.pkg` and `spctl -a -vv` on the application, and `xcrun stapler validate` on both; confirm acceptance as Notarized Developer ID; confirm the FR-20.23 checksums still cover the signed files.
+SRC: OWNER (platform signing/notarization is a later, additive step)
+R: Notarization removes the Open Anyway step. It is additive: the minisign and Sigstore verification of FR-20.23 stays, and the checksums are computed over the signed files.
+DEFER: Deferred by owner decision of 2026-10-18: the project has no Apple Developer ID yet. Release v1.3.0 ships the macOS installers with an ad-hoc signature only (FR-20.26), verified with the release's minisign signature, Sigstore bundle and SHA-256 checksums (FR-20.23), and the installation guide describes the Gatekeeper prompts (FR-20.25). Enabling this requirement needs only the listed secrets and a signing step in the release workflow.
+
+@FR-20.30 | Windows Authenticode signing
+P: FR-20
+S: The release workflow SHALL Authenticode-sign the Desktop Application executable, the Windows Gateway binaries and the `.msi` with SHA-256 and an RFC 3161 timestamp, using either the repository secrets `WINDOWS_CERTIFICATE` (base64 `.pfx` of an OV or EV code-signing certificate) and `WINDOWS_CERTIFICATE_PASSWORD`, or Azure Trusted Signing with `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TRUSTED_SIGNING_ENDPOINT`, `AZURE_TRUSTED_SIGNING_ACCOUNT` and `AZURE_TRUSTED_SIGNING_PROFILE`.
+A: E-35; F-105
+V: Test | On a release built with the secrets, run `signtool verify /pa /v` on each signed file; confirm a valid chain and timestamp; confirm the FR-20.23 checksums cover the signed files.
+SRC: OWNER (platform signing is a later, additive step)
+R: A signature names the publisher in the User Account Control prompt and lets SmartScreen build reputation; Smart App Control requires it.
+DEFER: Deferred by owner decision of 2026-10-18: the project has no Authenticode certificate yet. Release v1.3.0 ships an unsigned `.msi`, verified with the release's minisign signature, Sigstore bundle and SHA-256 checksums (FR-20.23), and the installation guide describes the SmartScreen and Smart App Control behavior (FR-20.25). Enabling this requirement needs only the listed secrets and a signing step in the release workflow.
+
+@FR-20.31 | Windows MSIX package
+P: FR-20
+S: The Gateway release SHALL publish, for windows-amd64, an MSIX package of the Desktop Application signed with the certificate of FR-20.30, in addition to the `.msi`.
+A: E-35; F-105; F-106; X-18
+V: Test | Install the MSIX on Windows 11 with `Add-AppxPackage`; confirm the application starts and controls the Windows service; confirm the package signature verifies.
+SRC: OWNER (Windows MSI/MSIX)
+R: MSIX gives clean per-user installs and removal, but Windows installs an MSIX only when its signature chains to a trusted root, so it cannot ship before Authenticode signing.
+DEFER: Deferred with Windows Authenticode signing (FR-20.30): an unsigned MSIX cannot be installed outside developer mode. Release v1.3.0 ships the `.msi` of FR-20.20 instead. The Tauri bundler builds MSI and NSIS installers but not MSIX, so this also needs a separate packaging step.
+
+### Security requirements for the desktop application and installers
+
+TEXT: Parents are the MUSTs of `MCP_Gateway_Security_SRS.md` whose controls the desktop application or the installers could weaken. They keep the desktop application at or below the authority of a signed-in console user and keep installed code out of the agent's reach.
+
+@SR-2-3 | Desktop authority ceiling
+P: SEC-2
+S: The Desktop Application (E-34) process SHALL NOT read the operator token, the Secret Vault, the key store, the Evidence Journal or the password hashes in the configuration, SHALL send no request to the control API itself, and SHALL perform control-API operations only inside the console window under the user's console session, its child processes being limited to the `smcpctl` operations of FR-20.8 to FR-20.12 and the platform service manager.
+A: E-34; F-100; F-103; I-41; I-42
+V: Test | Run the application through every menu item and window under a file-access tracer (`fs_usage` on macOS, `strace -f` on Linux, Process Monitor on Windows) and a loopback capture; confirm no open of the operator token, vault, key, journal or configuration file by the application process, no control-API request from it outside the console window's webview, and no child process other than the listed `smcpctl` operations and the service manager.
+SRC: SEC 2; OWNER (the desktop app gets no more privilege than the console)
+R: The operator token acts as the Administrator. A tray application that read it would give every user of the desktop Administrator authority without a sign-in and would turn the application into a target.
+TARGET: v1.3.0
+
+@SR-2-4 | No stored console credentials
+P: SEC-2
+S: The Desktop Application (E-34) SHALL keep console session cookies and console passwords out of persistent storage by giving the console window a non-persistent (incognito) web data store, SHALL write setup passwords only to the 0600 files of FR-20.8 for the duration of the command, and SHALL keep any credential it needs to persist only in the operating system's credential store (macOS Keychain, Secret Service, Windows Credential Manager).
+A: E-34; F-102; F-103
+V: Test | Sign in to the console window, quit the application and search its data directories, the webview data directories and the temporary directory for the session cookie value and the password; confirm none is found; restart and confirm the console asks for a sign-in.
+SRC: SEC 2; OWNER (the app never stores console credentials in plaintext)
+R: A persisted cookie would let anything that reads the user's profile resume an administrator session within CP-29.
+TARGET: v1.3.0
+
+@SR-2-5 | Minimal IPC surface
+P: SEC-2
+S: The Desktop Application (E-34) SHALL grant the console window no Tauri capability and no IPC command, SHALL list no remote URL in any capability, SHALL grant its bundled windows only the commands their operations need, and SHALL include no shell plugin permission that runs a program or argument not fixed at build time.
+A: E-34; F-102; F-103; I-41; I-42
+V: Test | Check the capability files, the generated permission manifest and the command registrations in CI and confirm the console window has none, no `remote` entry exists and each command is used by a bundled window; from the console window's script context, invoke each registered command and a sidecar execution and confirm each is refused.
+SRC: SEC 2; OWNER (IPC surface minimized)
+R: The console renders content that came from servers and agents (SR-6.17-1). If that window could reach the IPC bridge, an injection in the console would become code execution on the desktop.
+TARGET: v1.3.0
+
+@SR-2-6 | No remote content in the desktop application
+P: SEC-2
+S: The Desktop Application (E-34) SHALL load its bundled windows only from assets packaged in the application under a Content Security Policy whose `default-src` is `'self'`, SHALL allow the console window to load and navigate only within the configured admin listener origin, and SHALL load no script, style, font or frame from any other origin in any window.
+A: E-34; F-102
+V: Test | Inspect the bundled CSP; with a network capture, exercise every window and confirm no request leaves loopback except the update check of FR-20.11; inject a remote script reference into a bundled page in a test build and confirm the CSP blocks it; navigate the console window to another origin and confirm it is refused and opened in the default browser instead.
+SRC: SEC 2; SEC 8.8; OWNER (no remote content loaded)
+R: A desktop shell that loads remote code inherits the trust of everything it loads.
+TARGET: v1.3.0
+
+@SR-2-7 | Desktop elevation limits
+P: SEC-2
+S: The Desktop Application (E-34) SHALL run as the logged-in user without elevation, SHALL request operating-system elevation (polkit, macOS authorization, User Account Control) only to install, start, stop or remove a system-wide `smcpd` service and to run a downloaded installer, and SHALL name the command and its arguments in the elevation prompt where the platform shows them.
+A: E-34; F-100; F-103; F-104; X-07
+V: Test | Exercise every menu item and window on each platform; confirm the application process never runs elevated and that elevation is requested only for the listed operations, with the command named in the polkit and macOS prompts.
+SRC: SEC 2; SEC 4.1
+R: Elevation granted for one fixed command is auditable; an elevated tray application would be root on the desktop.
+TARGET: v1.3.0
+
+@SR-2.6-2 | Notifications never approve
+P: SEC-2.6
+S: The Desktop Application (E-34) SHALL offer no approve, deny or reply action in any notification, SHALL decide no approval itself, and SHALL bring the user to the Approvals view (G-13) only through the console window, where a decision requires a console session of the Approver or Administrator role.
+A: E-34; F-101; I-41; X-14
+V: Test | Raise an approval notification on each platform; confirm it has no action buttons or reply field; activate it while signed out and confirm the console shows the sign-in page; sign in as an Operator and confirm the decision is refused; sign in as an Approver and confirm the decision succeeds.
+SRC: SEC 2.6; SEC 1.18; OWNER (a notification never lets the user approve without the console's authentication)
+R: Notification centers are reachable by anyone at the unlocked desktop and by other applications on some platforms; an approval needs an authenticated approver and its binding (SR-1.18-2).
+TARGET: v1.3.0
+
+@SR-2.8-5 | Desktop TLS validation
+P: SEC-2.8
+S: The Desktop Application (E-34) SHALL accept the console window's connection to the admin listener only when the listener presents a certificate that chains to the Gateway server CA of the installation and names the configured host, SHALL show an error page instead of console content otherwise, and SHALL offer no option to proceed past a certificate error.
+A: E-34; F-102; I-41; X-04
+V: Test | Point the console window at a test listener presenting a certificate from another CA, an expired certificate and a certificate for another name; confirm an error page with no console content and no proceed option in each case; confirm the installation's own listener loads.
+SRC: SEC 2.8
+R: The console window carries an administrator session; a loopback listener impersonated by another local process must not receive it.
+TARGET: v1.3.0
+
+@SR-2.9-4 | No widened origins for the desktop
+P: SEC-2.9
+S: The Management Console & Control API (E-24) SHALL serve the Desktop Application's console window with the same Origin, Host and `Sec-Fetch-Site` checks it applies to a browser, SHALL NOT accept a Tauri or other custom-scheme origin, and the Desktop Application (E-34) SHALL require no change to those checks or to the console's Content Security Policy.
+A: E-24; E-34; F-63; I-41; X-04
+V: Test | Send control-API mutations with the origins `tauri://localhost`, `http://tauri.localhost` and `https://tauri.localhost`; confirm each is refused; complete a console mutation from the console window and confirm it carries the admin listener's own origin and passes unchanged checks.
+SRC: SEC 2.9; SEC 8.9
+R: Allowing the application's own origin would let any page of that origin, including an injected one, make authenticated control-API requests.
+TARGET: v1.3.0
+
+@SR-4.11-2 | Installed code outside the agent's reach
+P: SEC-4.11
+S: The `.pkg`, `.deb`, `.rpm` and `.msi` Platform Installers (E-35) SHALL install the Gateway binaries and the Desktop Application owned by root (macOS, Linux) or with Administrators-only write access (Windows), not writable by the installing user, and `smcpctl doctor` SHALL report a Gateway binary or application bundle that the user running it can write, which includes the `.dmg` and AppImage forms.
+A: E-35; F-106; E-33; F-98; X-18
+V: Test | Install each of the four packages; confirm owner and modes (macOS, Linux) or ACLs (Windows) of every installed file and that a write as the installing user fails; install from the `.dmg` and the AppImage and confirm `smcpctl doctor` reports the writable binaries.
+SRC: SEC 4.11
+R: An agent runs as the user. If it can replace `smcpd` or the desktop application, it can remove every control; the system packages put the code beyond its write access, and doctor says when the drag-install forms do not.
+TARGET: v1.3.0
+
+@SR-7-2 | Verified updates
+P: SEC-7
+S: The Desktop Application (E-34) SHALL start a downloaded installer or upgrade only after verifying the release checksum file's minisign signature with the release public key embedded in the application at build time (the key of `SECURITY.md` and `install.sh`), the installer's SHA-256 against that file and, when `cosign` is installed, the checksum file's Sigstore bundle against the release workflow identity, and SHALL refuse an installer whose version is not newer than the installed one, installing nothing and naming the failed check when any check fails.
+A: E-34; F-104; X-16
+V: Test | Through a test feed, offer an installer with a modified byte, a checksum file with a modified line, a checksum file signed by another key, a bad Sigstore bundle with cosign installed, and an older correctly signed release; confirm each is refused with the failed check named and nothing installed; confirm a correct newer release is verified and started.
+SRC: SEC 7; SEC 10.7; OWNER (update verification uses the release key)
+R: An update channel is a code-execution path into the operator's machine. It must trust exactly the key and workflow identity that the other install paths trust, and never accept a rollback to a release with known flaws.
+TARGET: v1.3.0

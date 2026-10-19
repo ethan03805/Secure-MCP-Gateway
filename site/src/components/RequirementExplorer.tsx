@@ -15,7 +15,7 @@ type Props = {
 };
 
 const METHODS = ["Test", "Inspection", "Demonstration", "Analysis"];
-const STATUSES: ReqStatus[] = ["verified", "partial", "failing", "unverified"];
+const STATUSES: ReqStatus[] = ["verified", "partial", "failing", "unverified", "planned"];
 
 export default function RequirementExplorer({ reqs, sections, elementNames, secNames, statusById }: Props) {
   const [q, setQ] = useState("");
@@ -70,7 +70,7 @@ export default function RequirementExplorer({ reqs, sections, elementNames, secN
   }, [reqs, q, kind, root, element, method, status, statusById]);
 
   const counts = useMemo(() => {
-    const c: Record<ReqStatus, number> = { verified: 0, partial: 0, failing: 0, unverified: 0 };
+    const c: Record<ReqStatus, number> = { verified: 0, partial: 0, failing: 0, unverified: 0, planned: 0 };
     for (const r of filtered) c[statusById[r.id]?.s ?? "unverified"]++;
     return c;
   }, [filtered, statusById]);

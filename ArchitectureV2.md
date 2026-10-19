@@ -1,8 +1,8 @@
 # Secure MCP Gateway — Architecture V2 (Logical Decomposition)
 
 **Document:** `ArchitectureV2.md`
-**Revision:** V2.3 draft (proposed)
-**Date:** 2026-10-16 (America/Chicago)
+**Revision:** V2.4 draft (proposed)
+**Date:** 2026-10-18 (America/Chicago)
 **Owner:** netrisk
 **Inputs:** `architecture.md` rev 2.0 (problem-space analysis), `MCP_Gateway_Security_SRS.md` V1 (security-control set; renamed from `MCP_Gateway_SRS.md`), `Secure-MCP-Gateway-Research-Brief.md`
 **Intended consumer:** SRS V2. This document gives the elements, functions and interfaces that SRS V2 allocates requirements to.
@@ -117,7 +117,7 @@ flowchart LR
 
 ## 3. Decomposition overview
 
-The SoI decomposes into **ten subsystems** and **thirty-three elements**. Element IDs are stable. Later revisions retire IDs instead of reusing them.
+The SoI decomposes into **ten subsystems** and **thirty-five elements**. E-34 and E-35 are planned for release v1.3.0 (SRS FR-20, Section 2.8 of the SRS); they are specified here so that requirements can be allocated to them before they are built. Element IDs are stable. Later revisions retire IDs instead of reusing them.
 
 | Subsystem | Elements |
 |---|---|
@@ -128,7 +128,7 @@ The SoI decomposes into **ten subsystems** and **thirty-three elements**. Elemen
 | **SS-5 Server Trust & Execution** | E-13 Library Trust Verifier · E-14 Local Server Registry · E-15 Server Runtime Manager · E-16 Execution Sandbox · E-17 Runtime Monitor · E-18 Egress Broker |
 | **SS-6 Secrets** | E-19 Secret Vault · E-20 Secret Broker |
 | **SS-7 Assurance** | E-21 Audit & Evidence Service · E-22 Key & Trust Anchor Manager · E-23 Health & Safety Monitor |
-| **SS-8 Management** | E-24 Management Console & Control API (with GUI view modules G-01…G-14) |
+| **SS-8 Management** | E-24 Management Console & Control API (with GUI view modules G-01…G-14) · E-34 Desktop Application (planned) · E-35 Platform Installers (planned) |
 | **SS-9 Data Server** | E-25 Graph Database Engine · E-26 Data Access Service · E-27 Observation Store · E-28 Data Lifecycle & Memory Manager |
 | **SS-10 Observation & Analytics** | E-29 Observation Collector · E-30 Behavior Baseline Engine · E-31 Anomaly Scorer · E-32 Research Dataset Service |
 
@@ -451,6 +451,42 @@ Trust levels: **T0** = TCB, compromise defeats the security guarantee; **T1** = 
 | G-13 | Approvals | Approver | Pending approvals with bound request and anomaly evidence |
 | G-14 | Audit Investigation | Auditor | Graph-led investigation of decisions, events, rules and servers (rev 2.0 §7.2) |
 
+#### E-34 Desktop Application — T1 (planned for v1.3.0)
+- **Purpose:** A native tray (menu-bar) application for macOS, Linux and Windows, built with Tauri 2, that makes the Gateway usable without a terminal: it starts, stops and restarts the `smcpd` service through the platform service manager, shows health at a glance from the loopback metrics endpoint, raises native notifications when tool-call approvals are pending, shows the existing console (E-24) in a native window instead of a browser tab, runs first-run setup and client setup by invoking `smcpctl` with fixed argument vectors, and checks for updates that it verifies with the project's release key. It holds **no more authority than the console**: every control-API operation happens inside the console window under the user's own console sign-in and role (SRS Appendix C), and the application itself never reads the operator token, the vault or the key store.
+- **Functions:** F-100 Present desktop status and service control; F-101 Raise desktop approval notices; F-102 Host the console in a native window; F-103 Guide first-run and client setup; F-104 Check, verify and apply updates.
+- **Interfaces:** I-40, I-41, I-42, X-14, X-16, X-07 (service manager, OS notification service, OS credential store).
+- **Owned data:** desktop preferences (notification and update-check switches, start at login, window geometry); no credentials.
+- **Allocation targets:** supported platforms and webview engines; tray states and menu; service control through launchd, systemd or the Windows Service Control Manager (Windows runtime: SRS FR 21, specified separately); health display that never shows `healthy` from stale data; notifications that carry no tool arguments and offer no approve or deny action; console window loaded only from the configured admin listener with TLS validated against the Gateway server CA, a non-persistent web data store and no IPC access; minimal Tauri capability set and no remote content; deep-link allowlist; first-run setup passing passwords without command-line arguments; update verification with minisign, SHA-256 and the Sigstore bundle; accessibility and a timed first-run usability measure.
+
+#### E-35 Platform Installers — T1 (planned for v1.3.0)
+- **Purpose:** The native installation packages of a release: a macOS `.pkg` and `.dmg`, Linux `.deb` and `.rpm` packages (and an AppImage of the desktop application), and a Windows `.msi`. Each installs the Gateway binaries and E-34 into locations the user's agent cannot write, creates no Gateway state and starts no service (first-run setup or `smcpctl install` does that, F-97), is listed in the signed checksum file of the release, and keeps evidence when removed. The packages are **not** signed with platform certificates in v1.3.0; they are verified with the release's minisign signature, Sigstore bundle and SHA-256 checksums, and platform signing and notarization are a later, additive step.
+- **Functions:** F-105 Build platform installers; F-106 Install and remove platform packages.
+- **Interfaces:** X-16, X-18, X-07.
+- **Owned data:** package metadata, maintainer scripts, the WiX source and the Tauri bundle configuration.
+- **Allocation targets:** formats per platform and architecture; install locations and ownership; no state creation or service start at package install; evidence kept on removal; checksum, minisign and Sigstore coverage of every installer; CI build and smoke test on GitHub-hosted macOS, Ubuntu and Windows runners; documentation of the Gatekeeper and SmartScreen prompts users see for unsigned installers; deferred platform signing, notarization and MSIX.
+
+#### Desktop application design (planned for v1.3.0)
+
+The desktop application is a client of the running Gateway, never a second control path. It reads the unauthenticated loopback metrics endpoint (X-15) for the tray state and the pending-approval count (I-40), which already exposes no arguments, principals or sessions (security review RR-06). It shows the console that `smcpd` serves on the admin listener in a native webview (I-41), so the console's own authentication, CSRF protection, `If-Match` preconditions, role matrix and Content Security Policy apply unchanged; the webview's IPC bridge is not exposed to that window. It runs `smcpctl` for setup, client setup and upgrade as a child process with fixed argument vectors (I-42), asks the operating system for elevation only for the Enforced install and per-machine package changes, and controls the service through the platform service manager (X-07). Emergency stop and every other control-API operation are done in the console window, signed in. Updates are found through the release feed (X-16) and verified with the release key embedded in the application before anything is installed. The installers (E-35) only place files; configuration, keys and services are still created by the idempotent `smcpctl install` (F-97), so there is one install path to verify.
+
+```mermaid
+flowchart LR
+  USER([User]) --> TRAY
+  subgraph E34[E-34 Desktop Application]
+    TRAY[Tray<br/>F-100]
+    NOTE[Approval notices<br/>F-101]
+    WIN[Console window<br/>F-102, no IPC]
+    SETUP[Setup and updates<br/>F-103, F-104]
+  end
+  TRAY -->|I-40| E23[E-23 metrics<br/>X-15, loopback]
+  TRAY -->|start, stop| SVC[(Service manager)]
+  NOTE -->|X-14, count only| OSN[(OS notices)]
+  OSN -.opens G-13.-> WIN
+  WIN -->|I-41, user's sign-in| E24[E-24 console<br/>admin listener]
+  SETUP -->|I-42, fixed argv| CTL[smcpctl]
+  SETUP -->|X-16, verified| REL[(Releases:<br/>E-35 installers)]
+```
+
 ### SS-9 Data Server
 
 The Data Server is a subsystem of several cooperating components. A **graph database** holds a **mirror** of policy, registry, sessions and audit relationships, and it is the system of record for the behavior model, because those are highly connected and queried by relationship (who called what, under which rule, against which baseline). High-volume per-call observation records go to a companion **columnar Observation Store**. Graph engines are fast at traversals and point lookups but slow at wide aggregations over millions of rows, and the columnar store keeps those aggregations fast. **Enforcement does not depend on the Data Server** (A-9). Policy authority is the signed revision in the Policy Store (D-01) held by E-05; evidence authority is the Evidence Journal (D-06). Both are files on the Gateway host. The Data Server is written asynchronously from those sources, can be rebuilt from them, and its loss degrades graph views, research and analytics only. Policy and baseline snapshots are compiled into memory (E-06, E-31), so the hot path makes no database round-trip.
@@ -649,6 +685,13 @@ Each function has exactly one **owning element**, which is the allocation target
 | F-97 | Install, upgrade and remove the Gateway | E-24 | M | Idempotent install per platform profile; upgrade with backup and rollback on failed health; uninstall preserving evidence |
 | F-98 | Diagnose and lock down harness configuration | E-33 | M | Report non-Gateway MCP servers and readable Gateway state paths; write per-client lockdown profiles |
 | F-99 | Track session taint | E-04 | A | Mark a session tainted after output from an untrusted-source tool; restrict-only |
+| F-100 | Present desktop status and service control | E-34 | M | Tray state from the loopback metrics; start, stop and restart `smcpd` through the platform service manager (planned, v1.3.0) |
+| F-101 | Raise desktop approval notices | E-34 | M | Native notification of a pending-approval count with no arguments and no approve action; opens G-13 (planned, v1.3.0) |
+| F-102 | Host the console in a native window | E-34 | M | Show the E-24 console from the admin listener in a webview with TLS pinned to the Gateway CA, no IPC and no persistent web data (planned, v1.3.0) |
+| F-103 | Guide first-run and client setup | E-34 | M | Wrap `smcpctl bootstrap`, `install` and `clients setup` with fixed argument vectors; elevation only where the profile needs it (planned, v1.3.0) |
+| F-104 | Check, verify and apply updates | E-34 | M | Find a newer release, verify minisign, SHA-256 and Sigstore before installing; Gateway upgrades through `smcpctl upgrade` (planned, v1.3.0) |
+| F-105 | Build platform installers | E-35 | M | Build pkg, dmg, deb, rpm, AppImage and msi in CI, list them in the signed checksum file and smoke-test each (planned, v1.3.0) |
+| F-106 | Install and remove platform packages | E-35 | M | Place binaries and the desktop application in non-user-writable locations; create no state; keep evidence on removal (planned, v1.3.0) |
 
 ### 5.1 Control-point view (owner's three phases plus observation)
 
@@ -681,9 +724,10 @@ Each function has exactly one **owning element**, which is the allocation target
 | **X-11** | Research Dataset Export | E-32 → offline analytics tools / researcher media | Outbound; researcher-authenticated | Dataset files (Parquet/CSV/JSONL/GraphML), data dictionary, provenance manifest | Formats; schema stability; pseudonymization; export authorization and audit |
 | **X-12** | Framework Adapter Interface | Agentic framework ↔ E-33 | Local; framework **untrusted** | The framework's own MCP configuration hooks: stdio `command` for `smcp-stdio`; header-helper command output (a JSON object of headers) from `smcp-session`; environment variables naming the Gateway URL and credential file; the framework's settings files that the lockdown profiles write and `smcpctl doctor` reads | Hook contract per supported framework; credential file location and mode; failure behavior (no session means no tools); no framework-specific logic inside the Gateway; lockdown profile per client |
 | **X-13** | Remote Access Interface | Tunnel provider connector on the user's computer ↔ E-01 remote listener; cloud agent ↔ tunnel provider | Inbound; agent and tunnel provider **untrusted** | MCP JSON-RPC and OAuth 2.1 (with operator-approved Dynamic Client Registration) carried by Cloudflare Tunnel, Tailscale Funnel or a vendor-provided MCP tunnel; public TLS terminated by the provider | Enabled only under the Remote Access profile; separate loopback listener; strict rate limits and lockout; request bounds; remote origin recorded on every event; documented provider visibility of traffic |
-| **X-14** | Desktop Notification | E-07 → OS notification service | Outbound, local | Approval notice: public tool name, server alias, approval ID and console link; no arguments | macOS `osascript` or `terminal-notifier`; Linux `notify-send`; failure never blocks the approval flow |
+| **X-14** | Desktop Notification | E-07 or E-34 → OS notification service | Outbound, local | E-07: approval notice with public tool name, server alias, approval ID and console link; E-34: pending-approval count only. No arguments | macOS `osascript` or `terminal-notifier`; Linux `notify-send`; E-34 through the Tauri notification plugin (planned, v1.3.0); failure never blocks the approval flow |
 | **X-15** | Operational Metrics | Local scraper → E-23 | Inbound, loopback only | Prometheus text exposition of counters, gauges and histograms | Loopback binding; no arguments, results, secrets or principal display names in labels; bounded label cardinality |
-| **X-16** | Release Distribution | GitHub Releases, Homebrew tap → installer (F-97) | Inbound; content **untrusted until verified** | Release archives for darwin and linux on amd64 and arm64, checksums, minisign signatures, `install.sh`, Homebrew formula | Signature verification before install; idempotent install; versioned configuration schema |
+| **X-16** | Release Distribution | GitHub Releases, Homebrew tap → installer (F-97) and E-34 update check (F-104) | Inbound; content **untrusted until verified** | Release archives for darwin and linux on amd64 and arm64, checksums, minisign signatures, Sigstore bundle, `install.sh`, Homebrew formula; from v1.3.0 also the E-35 platform installers | Signature verification before install; idempotent install; versioned configuration schema; no downgrade |
+| **X-18** | Platform Package Installation | E-35 packages → OS installer (macOS Installer, dpkg/APT, RPM/DNF, Windows Installer) and back to the host | Inbound to the host; content **untrusted until verified** by the user (checksum and signature) or, later, by the platform's code-signing check | `.pkg`, `.dmg`, `.deb`, `.rpm`, AppImage, `.msi` (planned, v1.3.0) | Install locations not writable by the user; no state creation or service start; evidence kept on removal; unsigned until platform signing is enabled |
 | **X-17** | Package Sources | npm, PyPI, OCI registries, release URLs → packaging command (F-96) | Inbound at packaging time only; content **untrusted** | Package tarballs, wheels, images and binaries addressed by digest | Digest pinning; no floating versions; never contacted by the running daemon |
 
 ### 6.2 Internal interfaces
@@ -729,6 +773,9 @@ Each function has exactly one **owning element**, which is the allocation target
 | I-37 | E-26 ↔ E-27 | Observation Store protocol | Batched appends; aggregate queries |
 | I-38 | E-28 → E-25/E-27/E-29/E-31 | Memory and lifecycle control | Budgets, cache sizes, sampling-down commands, tier migration |
 | I-39 | E-30 → E-31 | Baseline snapshot distribution | Promoted snapshot (statistics per context/feature), snapshot ID, signature/digest |
+| I-40 | E-23 → E-34 | Desktop health read (planned, v1.3.0) | The X-15 exposition read on loopback: health state, pending approvals, enforced flag, emergency stop; no credential |
+| I-41 | E-34 ↔ E-24 | Console in a native window (planned, v1.3.0) | The X-04 console and control API in a webview; TLS validated against the Gateway server CA; the user's own cookie session and role |
+| I-42 | E-34 → E-24 (`smcpctl`) | Setup, client setup and upgrade commands (planned, v1.3.0) | Child process with a fixed argument vector per operation; passwords on standard input, never as arguments; exit status and output shown to the user |
 
 ### 6.3 Server package manifest (data item crossing X-03)
 
@@ -1032,7 +1079,7 @@ flowchart TB
     T0N["E-03 E-05 E-06 E-08 E-12 E-13<br/>E-19 E-20 E-21 E-22"]
   end
   subgraph ENF[Security-enforcing: T1]
-    T1N["E-01 E-02 E-04 E-07 E-09 E-10 E-11 E-14<br/>E-15 E-16 E-17 E-18 E-24 E-29 E-30 E-31 E-33"]
+    T1N["E-01 E-02 E-04 E-07 E-09 E-10 E-11 E-14<br/>E-15 E-16 E-17 E-18 E-24 E-29 E-30 E-31 E-33<br/>E-34 E-35 (planned)"]
   end
   subgraph SUP[Security-supporting: T2]
     T2N["E-23 E-25 E-26 E-27 E-28 E-32"]
@@ -1371,6 +1418,7 @@ E-13 processes a revocation entry (F-35). E-14 suspends the server revision. E-1
 
 | Revision | Date | Change |
 |---|---|---|
+| V2.4 draft | 2026-10-18 | Desktop application and platform installers, planned for v1.3.0 (owner decision 2026-10-18): E-34 Desktop Application and E-35 Platform Installers in SS-8, functions F-100–F-106, interface X-18 and internal interfaces I-40–I-42; X-14 and X-16 extended. Function IDs now have two or three digits; the site and the SRS build parse both. The Windows runtime of `smcpd` is specified separately. |
 | V2.3 draft | 2026-10-16 | Re-baseline for a shippable v1. Authority decoupled from the graph (A-9, OD-15): the signed Policy Store (D-01) and the Evidence Journal (D-06) are authorities; E-25 and E-26 move from T0 to T2 and hold mirrors. Platform profiles (A-8, OD-14). Operator self-curation: packaging command F-96 on E-13, X-02 inside the SoI, X-17 package sources, OD-1 and OD-7 decided. Approval hold mode and notification (F-17 extended, X-14; OD-5 decided). Session taint (F-99) and tool-metadata scanning (F-34 extended). Remote Access profile for cloud agents (A-10, X-13; dynamic registration under F-59, `smcp-connect` under F-95; OD-16). Installation and upgrade (F-97, X-16), harness doctor and lockdown profiles (F-98), diagnostic log and metrics (F-61 extended, X-15, D-14), encrypted backup archives (D-15). Function IDs stay within two digits so that existing tools that parse `F-dd` keep working. Scope: tools only and local backends only (A-11). |
 | V2.0 draft | 2026-10-14 | First logical decomposition: 8 subsystems, 24 elements, 65 functions, 10 external and 28 internal interfaces, 8 data stores; session Allow-policy model; secrets design; V1 traceability. |
 | V2.2 draft | 2026-10-16 | Harness interface revised to match shipping clients (`Client-Compatibility-Brief.md`): OAuth 2.1 becomes the baseline framework credential and session mechanism (OD-2 decided, X-01 content revised, E-03 allocation targets); both protocol eras are served in the baseline; reference adapters enter the SoI as E-33 Harness Adapter Kit with functions F-94–F-95 and interface X-12; A-2 revised accordingly. Fixed the Section 8.3 sequence diagram note that did not parse. |

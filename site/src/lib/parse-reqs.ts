@@ -16,6 +16,8 @@ export type Requirement = {
   vstmt: string;
   src: string;
   rat: string;
+  /** Target release of a planned requirement (SRS Section 2.8); empty for the current release. */
+  target: string;
 };
 
 export type Disposition = { secId: string; text: string };
@@ -33,6 +35,7 @@ const KEYMAP: Record<string, keyof Requirement | "ver"> = {
   V: "ver",
   SRC: "src",
   R: "rat",
+  TARGET: "target",
 };
 
 export function loadRequirements(): ReqData {
@@ -89,6 +92,7 @@ export function loadRequirements(): ReqData {
             vstmt: (vstmt ?? "").trim(),
             src: r.src ?? "",
             rat: r.rat ?? "",
+            target: r.target ?? "",
           });
           cur = null;
           continue;

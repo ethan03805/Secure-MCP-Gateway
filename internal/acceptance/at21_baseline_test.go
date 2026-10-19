@@ -17,23 +17,29 @@ import (
 const repoRoot = "../.."
 
 // srsRequirementIDs counts the requirements of srs_build/req*.txt the way
-// the SRS defines the set: every "@ID | title" record without a DEFER: line,
-// excluding "@DISP" dispositions.
-func srsRequirementIDs(t *testing.T) map[string]bool {
+// the SRS defines the set of the current release: every "@ID | title" record
+// without a DEFER: line (Section 2.7) or a TARGET: line (Section 2.8),
+// excluding "@DISP" dispositions. planned holds the records with a TARGET:
+// line, which the report lists apart.
+func srsRequirementIDs(t *testing.T) (ids, planned map[string]bool) {
 	t.Helper()
 	files, _ := filepath.Glob(filepath.Join(repoRoot, "srs_build", "req*.txt"))
-	ids := map[string]bool{}
+	ids, planned = map[string]bool{}, map[string]bool{}
 	for _, fn := range files {
 		f, err := os.Open(fn)
 		if err != nil {
 			t.Fatal(err)
 		}
-		cur, deferred := "", false
+		cur, deferred, target := "", false, false
 		flush := func() {
-			if cur != "" && !deferred {
+			switch {
+			case cur == "" || deferred:
+			case target:
+				planned[cur] = true
+			default:
 				ids[cur] = true
 			}
-			cur, deferred = "", false
+			cur, deferred, target = "", false, false
 		}
 		sc := bufio.NewScanner(f)
 		sc.Buffer(make([]byte, 1<<16), 1<<22)
@@ -47,12 +53,14 @@ func srsRequirementIDs(t *testing.T) map[string]bool {
 				cur, _, _ = strings.Cut(line[1:], " | ")
 			case strings.HasPrefix(line, "DEFER:"):
 				deferred = true
+			case strings.HasPrefix(line, "TARGET:"):
+				target = true
 			}
 		}
 		flush()
 		f.Close()
 	}
-	return ids
+	return ids, planned
 }
 
 // TestAT21VersionBaseline is acceptance scenario AT-21:
@@ -102,8 +110,8 @@ func TestAT21VersionBaseline(t *testing.T) {
 	}
 	var st struct {
 		Requirements struct {
-			Total, Verified, Partial, Failing, Unverified int
-			Items                                         []struct {
+			Total, Verified, Partial, Failing, Unverified, Planned int
+			Items, PlannedItems                                    []struct {
 				ID, Status string
 				Tests      []string
 			}
@@ -118,9 +126,17 @@ func TestAT21VersionBaseline(t *testing.T) {
 	if err := json.Unmarshal(raw, &st); err != nil {
 		t.Fatal(err)
 	}
-	want := srsRequirementIDs(t)
+	want, planned := srsRequirementIDs(t)
 	if st.Requirements.Total != len(want) || len(st.Requirements.Items) != len(want) {
 		t.Fatalf("report lists %d requirements, the SRS has %d", st.Requirements.Total, len(want))
+	}
+	if st.Requirements.Planned != len(planned) || len(st.Requirements.PlannedItems) != len(planned) {
+		t.Fatalf("report lists %d planned requirements, the SRS has %d", st.Requirements.Planned, len(planned))
+	}
+	for _, it := range st.Requirements.PlannedItems {
+		if !planned[it.ID] || (it.Status != "planned" && len(it.Tests) == 0 && it.Status != "verified") {
+			t.Fatalf("planned item %s is %s", it.ID, it.Status)
+		}
 	}
 	for _, it := range st.Requirements.Items {
 		if !want[it.ID] {

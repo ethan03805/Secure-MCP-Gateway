@@ -14,6 +14,10 @@ const (
 	StatusPartial    = "partial"
 	StatusFailing    = "failing"
 	StatusUnverified = "unverified"
+	// StatusPlanned is an unverified requirement whose record carries a
+	// TARGET: line (SRS Section 2.8): it is planned for a later release
+	// and is not counted as unverified in the current requirement set.
+	StatusPlanned = "planned"
 )
 
 // ClaimRef is one test claiming one requirement.
@@ -25,13 +29,16 @@ type ClaimRef struct {
 
 // ReqResult is the computed status of one requirement.
 type ReqResult struct {
-	ID       string     `json:"id"`
-	Title    string     `json:"title,omitempty"`
-	Element  string     `json:"element"`
-	Elements []string   `json:"elements,omitempty"`
-	Status   string     `json:"status"`
-	InSRS    bool       `json:"inSrs"`
-	Claims   []ClaimRef `json:"claims"`
+	ID       string   `json:"id"`
+	Title    string   `json:"title,omitempty"`
+	Element  string   `json:"element"`
+	Elements []string `json:"elements,omitempty"`
+	Status   string   `json:"status"`
+	InSRS    bool     `json:"inSrs"`
+	// Target is the release a planned requirement is targeted at (SRS
+	// Section 2.8); empty for requirements of the current release.
+	Target string     `json:"target,omitempty"`
+	Claims []ClaimRef `json:"claims"`
 }
 
 // computeStatus applies the contract rules: failing when any claiming test
@@ -69,7 +76,7 @@ func buildResults(reqs []Requirement, log *TestLog, module string) []*ReqResult 
 	byID := map[string]*ReqResult{}
 	var out []*ReqResult
 	for _, r := range reqs {
-		rr := &ReqResult{ID: r.ID, Title: r.Title, Element: r.Element(), Elements: r.Elements, InSRS: true, Claims: []ClaimRef{}}
+		rr := &ReqResult{ID: r.ID, Title: r.Title, Element: r.Element(), Elements: r.Elements, InSRS: true, Target: r.Target, Claims: []ClaimRef{}}
 		byID[r.ID] = rr
 		out = append(out, rr)
 	}
@@ -99,6 +106,19 @@ func buildResults(reqs []Requirement, log *TestLog, module string) []*ReqResult 
 	}
 	sort.SliceStable(out, func(i, j int) bool { return lessID(out[i].ID, out[j].ID) })
 	return out
+}
+
+// markPlanned gives every planned requirement (a TARGET: line, SRS Section
+// 2.8) that is still unverified after tests, records and child analysis the
+// status planned. A planned requirement that a test or record verified keeps
+// that status; one with a failing claim stays failing, because a failing
+// test is never hidden.
+func markPlanned(results []*ReqResult) {
+	for _, rr := range results {
+		if rr.Target != "" && rr.Status == StatusUnverified {
+			rr.Status = StatusPlanned
+		}
+	}
 }
 
 // testLabel is the package path relative to the module plus the full test
@@ -156,6 +176,13 @@ type ReqSummary struct {
 	Unverified int           `json:"unverified"`
 	ByElement  []ElementRoll `json:"byElement"`
 	Items      []ReqItem     `json:"items"`
+	// Planned counts the requirements planned for a later release (SRS
+	// Section 2.8). They are not in Total, Verified, Partial, Unverified,
+	// ByElement or Items; PlannedItems lists them with their status and
+	// target release. A planned requirement with a failing claim is also
+	// counted in Failing.
+	Planned      int       `json:"planned"`
+	PlannedItems []ReqItem `json:"plannedItems"`
 }
 
 type ElementRoll struct {
@@ -172,6 +199,7 @@ type ReqItem struct {
 	Element string   `json:"element"`
 	Status  string   `json:"status"`
 	Tests   []string `json:"tests"`
+	Target  string   `json:"target,omitempty"`
 }
 
 type CIInfo struct {
@@ -209,7 +237,7 @@ func summarizeTests(log *TestLog) TestsSummary {
 }
 
 func summarizeRequirements(results []*ReqResult, els []ElementInfo) ReqSummary {
-	s := ReqSummary{ByElement: []ElementRoll{}, Items: []ReqItem{}}
+	s := ReqSummary{ByElement: []ElementRoll{}, Items: []ReqItem{}, PlannedItems: []ReqItem{}}
 	rolls := map[string]*ElementRoll{}
 	for _, e := range els {
 		rolls[e.ID] = &ElementRoll{Element: e.ID, Name: e.Name}
@@ -218,11 +246,19 @@ func summarizeRequirements(results []*ReqResult, els []ElementInfo) ReqSummary {
 		if !r.InSRS {
 			continue
 		}
-		s.Total++
 		tests := make([]string, 0, len(r.Claims))
 		for _, c := range r.Claims {
 			tests = append(tests, c.Test)
 		}
+		if r.Target != "" {
+			s.Planned++
+			s.PlannedItems = append(s.PlannedItems, ReqItem{ID: r.ID, Element: r.Element, Status: r.Status, Tests: tests, Target: r.Target})
+			if r.Status == StatusFailing {
+				s.Failing++
+			}
+			continue
+		}
+		s.Total++
 		s.Items = append(s.Items, ReqItem{ID: r.ID, Element: r.Element, Status: r.Status, Tests: tests})
 		roll := rolls[r.Element]
 		if roll == nil && r.Element != "" {
@@ -336,6 +372,9 @@ func renderMarkdown(st Status, results []*ReqResult) string {
 	}
 	fmt.Fprintf(&b, "| Requirements | Verified | Partial | Failing | Unverified |\n|---|---|---|---|---|\n| %d | %d | %d | %d | %d |\n\n",
 		rs.Total, rs.Verified, rs.Partial, rs.Failing, rs.Unverified)
+	if rs.Planned > 0 {
+		fmt.Fprintf(&b, "Planned for a later release (SRS Section 2.8, not counted above): %d.\n\n", rs.Planned)
+	}
 	t := st.Tests
 	fmt.Fprintf(&b, "Tests: %d passed, %d failed, %d skipped (%d total, %.1f s). Statement coverage: %.1f%%.\n\n",
 		t.Passed, t.Failed, t.Skipped, t.Total, t.DurationSec, st.Coverage.TotalPct)
@@ -401,7 +440,7 @@ func renderMarkdown(st Status, results []*ReqResult) string {
 	byEl := map[string][]string{}
 	var order []string
 	for _, r := range results {
-		if r.InSRS && r.Status == StatusUnverified {
+		if r.InSRS && r.Target == "" && r.Status == StatusUnverified {
 			if _, ok := byEl[r.Element]; !ok {
 				order = append(order, r.Element)
 			}
@@ -418,6 +457,12 @@ func renderMarkdown(st Status, results []*ReqResult) string {
 			label = "(no element)"
 		}
 		fmt.Fprintf(&b, "- %s (%d): %s\n", label, len(byEl[e]), strings.Join(byEl[e], ", "))
+	}
+	if len(rs.PlannedItems) > 0 {
+		b.WriteString("\n## Planned for later releases\n\n| Requirement | Element | Target | Status |\n|---|---|---|---|\n")
+		for _, p := range rs.PlannedItems {
+			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n", p.ID, p.Element, p.Target, p.Status)
+		}
 	}
 	return b.String()
 }
