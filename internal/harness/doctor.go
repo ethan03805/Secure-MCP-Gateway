@@ -15,8 +15,11 @@ const (
 	KindReadable = "readable-path"      // FR-15.4
 	KindWritable = "settings-writable"  // SR-4.11-1
 	KindPrereq   = "prerequisite"       // enforced-profile prerequisite
-	KindWarning  = "warning"
-	KindInfo     = "info"
+	// KindBinaryWritable: a Gateway binary the user can write (SR-4.11-2,
+	// reported by smcpctl doctor).
+	KindBinaryWritable = "binary-writable"
+	KindWarning        = "warning"
+	KindInfo           = "info"
 )
 
 // Finding is one doctor result.

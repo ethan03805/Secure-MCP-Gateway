@@ -135,9 +135,81 @@ archives:
         info:
           mode: 0644
 
+# Linux packages `smcp` (E-35, SRS FR-20.18, FR-20.21, FR-20.22,
+# SR-4.11-2): the binaries in /usr/bin, owned by root and not writable by
+# users, the documentation, license, SBOM and provenance in
+# /usr/share/doc/smcp, and the marker /usr/lib/smcp/package-format that
+# tells smcpctl uninstall and upgrade the binaries belong to the package.
+# No dependency (nothing graphical), no configuration, unit or account, and
+# one maintainer script: the pre-removal script that stops a system smcpd
+# service on removal. TestLinuxPackageConfig (cmd/smcpctl) audits this
+# block; .github/workflows/installers.yml installs and removes the packages.
+# The release workflow builds them there, before publishing, and passes
+# --skip=nfpm with the smoke-tested files in build/installers/ instead.
+nfpms:
+  - id: smcp
+    package_name: smcp
+    ids: [smcpd, smcpctl, smcp-session, smcp-stdio, smcp-connect, smcp-refserver]
+    formats: [deb, rpm]
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Secure MCP Gateway project
+    homepage: https://github.com/ethan03805/Secure-MCP-Gateway
+    maintainer: Secure MCP Gateway project <ethan03805@users.noreply.github.com>
+    description: |-
+      Local reference monitor between AI agent harnesses and MCP servers.
+      Installs the binaries only; run smcpctl install to create the
+      configuration, keys and service.
+    license: Apache-2.0
+    section: admin
+    priority: optional
+    bindir: /usr/bin
+    mtime: "{{ .CommitDate }}"
+    contents:
+      # The package owns its two directories, so rpm removes them too.
+      - dst: /usr/lib/smcp
+        type: dir
+        file_info: { mode: 0755, owner: root, group: root }
+      - dst: /usr/share/doc/smcp
+        type: dir
+        file_info: { mode: 0755, owner: root, group: root }
+      - src: packaging/installers/linux/package-format.deb
+        dst: /usr/lib/smcp/package-format
+        packager: deb
+        file_info: { mode: 0644, owner: root, group: root }
+      - src: packaging/installers/linux/package-format.rpm
+        dst: /usr/lib/smcp/package-format
+        packager: rpm
+        file_info: { mode: 0644, owner: root, group: root }
+      - src: README.md
+        dst: /usr/share/doc/smcp/README.md
+        file_info: { mode: 0644, owner: root, group: root }
+      - src: CHANGELOG.md
+        dst: /usr/share/doc/smcp/CHANGELOG.md
+        file_info: { mode: 0644, owner: root, group: root }
+      - src: LICENSE
+        dst: /usr/share/doc/smcp/LICENSE
+        file_info: { mode: 0644, owner: root, group: root }
+      - src: build/sbom/sbom.spdx.json
+        dst: /usr/share/doc/smcp/sbom.spdx.json
+        file_info: { mode: 0644, owner: root, group: root }
+      - src: build/provenance/PROVENANCE.md
+        dst: /usr/share/doc/smcp/PROVENANCE.md
+        file_info: { mode: 0644, owner: root, group: root }
+      - src: build/provenance/THIRD_PARTY_NOTICES.txt
+        dst: /usr/share/doc/smcp/THIRD_PARTY_NOTICES.txt
+        file_info: { mode: 0644, owner: root, group: root }
+    scripts:
+      preremove: packaging/installers/linux/prerm.sh
+
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
   algorithm: sha256
+  # Installers built outside GoReleaser (the macOS .pkg; in the release
+  # workflow also the smoke-tested .deb and .rpm) are listed in the same
+  # checksum file, so its minisign signature and Sigstore bundle cover them
+  # (FR-20.23).
+  extra_files:
+    - glob: build/installers/*
 
 # SBOMs for each archive, generated with syft when it is installed (the
 # release workflow installs it). Snapshot builds without syft skip them.
@@ -201,7 +273,11 @@ brews:
       assert_match "usage: smcpctl", shell_output("#{bin}/smcpctl 2>&1", 2)
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
+  # "-snapshot.<commit>", not "+<commit>": smcpctl bootstrap packages the
+  # reference server under the binary's version, and a package version
+  # must be exact (FR-14.2), which build metadata is not. The package
+  # smoke test (scripts/package-smoke.sh) runs bootstrap on snapshots.
+  version_template: "{{ incpatch .Version }}-snapshot.{{ .ShortCommit }}"
 
 changelog:
   use: github
@@ -215,6 +291,8 @@ release:
   github:
     owner: ethan03805
     name: Secure-MCP-Gateway
+  extra_files:
+    - glob: build/installers/*
   draft: false
   prerelease: auto
   mode: replace

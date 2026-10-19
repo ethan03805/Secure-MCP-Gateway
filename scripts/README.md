@@ -18,6 +18,7 @@ directory inside the repository.
 | `npm-audit-gate.sh` | CI job `security`, `make vuln` | `npm audit` at high severity with the reviewed allowlist in `.github/npm-audit-allowlist.json` |
 | `render-brew-formula.sh` | release maintainers | Render `packaging/homebrew/smcp.rb.tmpl` for a release |
 | `release-sbom.sh` | GoReleaser before hook | Write `build/sbom/sbom.spdx.json`, the SBOM placed in every release archive (FR-13.1) |
+| `package-smoke.sh` | `installers.yml` (CI and release) | Install one platform installer (`.deb`, `.rpm` or macOS `.pkg`), check its files, owners and versions, run bootstrap, smcpd, a backup and doctor with temporary state, remove it and check that the evidence is kept (FR-20.21, FR-20.22, FR-20.24, SR-4.11-2) |
 | `ci-systemd.sh` | `ci-integration.sh` (enforced section) | `smcpctl install --profile enforced` twice, then smcpd.service under systemd with servers as `smcp-srv` |
 | `ci-install-standalone.sh` | CI job `install-standalone` | `smcpctl install` with the runner's systemd user manager or launchd, a second install, uninstall |
 

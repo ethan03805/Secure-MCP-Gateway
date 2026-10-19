@@ -609,6 +609,18 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Platform installers (E-35, FR-20.24): build the .deb, .rpm and macOS
+  # .pkg as snapshots and install, exercise and remove each one
+  # (installers.yml, which the release workflow also runs before
+  # publishing). Heavy; not a required check.
+  installers:
+    name: installers
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    uses: ./.github/workflows/installers.yml
+    permissions:
+      contents: read
+
   # Management console (E-24): typecheck and build console/, check that the
   # committed console/dist (embedded into smcpd) matches the sources, audit
   # its npm dependencies and run the Playwright acceptance tests against a

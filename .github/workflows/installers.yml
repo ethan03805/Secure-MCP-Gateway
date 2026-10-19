@@ -1,0 +1,201 @@
+# Platform installers (E-35; SRS FR-20.17, FR-20.18, FR-20.21 to FR-20.24,
+# FR-20.26, SR-4.11-2): builds the Linux .deb and .rpm packages `smcp`
+# (GoReleaser nFPM) and the macOS command-line .pkg (pkgbuild and
+# productbuild), then installs, exercises and removes each one on a runner
+# of its platform with scripts/package-smoke.sh.
+#
+# A reusable workflow with two callers:
+#   - ci.yml, job installers, behind the changes job (docs/ci.md), with no
+#     tag: snapshot packages. Not a required check.
+#   - release.yml, job installers, with the release tag: the release job
+#     needs it, downloads the artifacts installers-linux and
+#     installers-macos into build/installers and publishes exactly those
+#     files, listed in the signed checksum file (FR-20.23). A failed smoke
+#     test stops the release before anything is published (FR-20.24).
+#
+# The desktop application packages (smcp-desktop .deb/.rpm, the .dmg, the
+# AppImage and the .msi) are not built yet.
+name: installers
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag (v1.3.0); empty builds snapshot packages
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26.x"
+  GORELEASER_VERSION: v2.18.2
+
+jobs:
+  build-linux:
+    name: build .deb and .rpm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Install syft (SBOM in /usr/share/doc/smcp)
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      # As in release.yml: the notices of a release copy the console's npm
+      # license files (FR-12.8).
+      - name: Install the console's production npm packages (license notices)
+        if: inputs.tag != ''
+        working-directory: console
+        run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+      - name: GoReleaser (nFPM packages only)
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: ${{ env.GORELEASER_VERSION }}
+          args: release --clean --skip=publish,sign,homebrew,archive,sbom,announce ${{ inputs.tag == '' && '--snapshot' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
+          SMCP_BUILD_REFSERVER: "1"
+          SMCP_SBOM: ${{ inputs.tag != '' && '1' || '' }}
+      - name: Version
+        id: version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version=$(jq -r .version build/dist/metadata.json)
+          if [ -n "$TAG" ] && [ "$version" != "${TAG#v}" ]; then echo "::error::packages have version $version, not ${TAG#v}"; exit 1; fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          ls -l build/dist/*.deb build/dist/*.rpm
+          n=$(find build/dist -maxdepth 1 \( -name '*.deb' -o -name '*.rpm' \) | wc -l | tr -d ' ')
+          [ "$n" = 4 ] || { echo "::error::expected 4 packages (deb and rpm, amd64 and arm64), found $n"; exit 1; }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-linux
+          path: |
+            build/dist/*.deb
+            build/dist/*.rpm
+          if-no-files-found: error
+          retention-days: 14
+
+  build-macos:
+    name: build .pkg
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Install syft (SBOM in /usr/local/share/doc/smcp)
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - name: Install the console's production npm packages (license notices)
+        if: inputs.tag != ''
+        working-directory: console
+        run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+      - name: GoReleaser (darwin-arm64 binaries)
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: ${{ env.GORELEASER_VERSION }}
+          args: build --clean --single-target ${{ inputs.tag == '' && '--snapshot' || '' }}
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+          GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
+          SMCP_BUILD_REFSERVER: "1"
+          SMCP_SBOM: ${{ inputs.tag != '' && '1' || '' }}
+      - name: pkgbuild and productbuild
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          version=$(jq -r .version build/dist/metadata.json)
+          if [ -n "$TAG" ] && [ "$version" != "${TAG#v}" ]; then echo "::error::binaries have version $version, not ${TAG#v}"; exit 1; fi
+          bash packaging/installers/macos/build-pkg.sh "$version" build/dist build/installers
+          pkgutil --payload-files build/installers/*.pkg
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-macos
+          path: build/installers/*.pkg
+          if-no-files-found: error
+          retention-days: 14
+
+  smoke-linux:
+    name: smoke ${{ matrix.format }} (${{ matrix.arch }})
+    needs: build-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { format: deb, arch: amd64, runner: ubuntu-24.04, file: "smcp_*_amd64.deb" }
+          - { format: deb, arch: arm64, runner: ubuntu-24.04-arm, file: "smcp_*_arm64.deb" }
+          - { format: rpm, arch: amd64, runner: ubuntu-24.04, file: "smcp-*.x86_64.rpm" }
+          - { format: rpm, arch: arm64, runner: ubuntu-24.04-arm, file: "smcp-*.aarch64.rpm" }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: installers-linux
+          path: build/installers
+      # Ubuntu: on the runner itself, with systemd, so that removal of the
+      # system smcpd service is exercised (FR-20.22).
+      - name: Install, exercise and remove the .deb
+        if: matrix.format == 'deb'
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+        run: |
+          # shellcheck disable=SC2086 # FILE is a glob
+          set -- build/installers/$FILE
+          bash scripts/package-smoke.sh "$1" "$VERSION"
+      # Fedora: in a container, as root; the script does the user's part as
+      # an unprivileged user. No systemd, so the service check is skipped.
+      - name: Install, exercise and remove the .rpm (Fedora container)
+        if: matrix.format == 'rpm'
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+        run: |
+          # shellcheck disable=SC2086 # FILE is a glob
+          set -- build/installers/$FILE
+          docker run --rm -v "$PWD:/w:ro" -w /w -e VERSION -e PKG="$1" fedora:44 bash -c \
+            'dnf install -y -q procps-ng util-linux shadow-utils findutils >/dev/null && bash scripts/package-smoke.sh "$PKG" "$VERSION"'
+
+  smoke-macos:
+    name: smoke pkg (arm64)
+    needs: [build-linux, build-macos]
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: installers-macos
+          path: build/installers
+      - name: Install with installer, exercise, remove as docs/install.md says
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+        run: |
+          set -- build/installers/smcp_*_darwin_arm64.pkg
+          bash scripts/package-smoke.sh "$1" "$VERSION"

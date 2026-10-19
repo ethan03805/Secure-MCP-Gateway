@@ -143,8 +143,17 @@ check: srs-check build vet fmt-check tidy-check race lint site-typecheck ## Ever
 .PHONY: check-full
 check-full: check site vuln integration console-check console-e2e ## check plus site build, vulnerability scans, the integration run and the console job
 
+.PHONY: installer-pkg
+installer-pkg: ## Build the macOS .pkg into build/installers (macOS only; release-snapshot runs it)
+	rm -rf build/installers
+	SMCP_BUILD_REFSERVER=1 GOOS=darwin GOARCH=arm64 \
+	GORELEASER_CURRENT_TAG=$$(git tag -l 'v*' --sort=-version:refname | head -n1 | grep . || echo v0.0.0) \
+	$(GORELEASER) build --snapshot --clean --single-target
+	bash packaging/installers/macos/build-pkg.sh "$$(sed -n 's/.*"version":"\([^"]*\)".*/\1/p' build/dist/metadata.json)" build/dist build/installers
+
 .PHONY: release-snapshot
-release-snapshot: ## Build release archives locally into build/dist (no publishing)
+release-snapshot: ## Build release archives, .deb, .rpm and (on macOS) .pkg into build/dist (no publishing)
+	@if [ "$$(uname -s)" = Darwin ]; then $(MAKE) installer-pkg; else rm -rf build/installers; fi
 	SMCP_BUILD_REFSERVER=$$( [ -d cmd/smcp-refserver ] && echo 1 || echo 0 ) \
 	GORELEASER_CURRENT_TAG=$$(git tag -l 'v*' --sort=-version:refname | head -n1 | grep . || echo v0.0.0) \
 	$(GORELEASER) release --snapshot --clean $$( [ -n "$${MINISIGN_KEY_FILE:-}" ] || echo --skip=sign )

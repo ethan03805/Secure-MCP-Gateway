@@ -76,6 +76,16 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 	purge := fs.Bool("purge", false, "also delete configuration, state, keys, the journal and the service identities (asks for the installation ID)")
 	binDir := fs.String("bin-dir", "", "directory of the installed binaries (default: the directory of this smcpctl)")
 	stopCmd := fs.String("stop-cmd", "", "shell command that stops the Gateway (default: the installed launchd or systemd unit)")
+	pkgRemoval := fs.Bool("package-removal", false, "run by the .deb and .rpm pre-removal script as root: stop and remove only the system smcpd service, keep everything else (FR-20.22)")
+	for _, a := range args {
+		if a == "--package-removal" || a == "-package-removal" {
+			if len(args) != 1 {
+				return errors.New("--package-removal takes no other arguments")
+			}
+			return packageRemoval(out, runtime.GOOS, func(argv ...string) error { return runQuiet(asRoot(argv...)...) })
+		}
+	}
+	_ = pkgRemoval
 	args = withInstalledConfig(args)
 	cfg, cfgPath, err := loadCfg(fs, args)
 	if err != nil {
@@ -168,7 +178,16 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 			fmt.Fprintln(out, line)
 		}
 	}
+	// Binaries a platform package installed belong to the package manager
+	// (FR-20.22): it removes them, and they are not writable here anyway.
+	pkgFormat := packageFormat(*binDir)
+	if pkgFormat != "" {
+		fmt.Fprintf(out, "kept: binaries in %s, installed by the smcp %s package; remove them with %s\n", *binDir, pkgFormat, packageRemoveHint(pkgFormat))
+	}
 	for _, name := range releaseBinaries {
+		if pkgFormat != "" {
+			break
+		}
 		for _, p := range []string{filepath.Join(*binDir, name), filepath.Join(*binDir, name+".prev")} {
 			if err := os.Remove(p); err == nil {
 				fmt.Fprintf(out, "removed %s\n", p)
