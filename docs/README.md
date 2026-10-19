@@ -34,6 +34,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Server sandbox](sandbox.md) | FR-12.3, FR-13.5, SR-4.5-1 to SR-4.7-2 | Enforced-profile prerequisites, Linux installer, `[runtime]`, sandbox profile, Runtime Monitor, `smcpctl runtime` |
 | [Egress Broker](egress.md) | E-18 | Grants, DNS and address checks, limits, evidence, `smcpctl egress` |
 | [Management console](console.md), [console visual rules](console-style.md), [first-run audit](design/console-audit.md) | FR-8 | Views, sign-in, roles |
+| [Writing style guide](design/writing.md), [visual design guide](design/visual.md) | FR-20.48 to FR-20.51 (planned v1.3.0) | Normative rules for UI text and look of the console, desktop app and site; banned words and visual patterns; `tools/uilint` and its allowlist |
 | [Graph mirror](graph.md) | FR-9.1 to FR-9.3, FR-9.18 | Neo4j mirror, catch-up and rebuild, canned queries, `smcpctl graph` |
 | [Observation and analytics](observation.md) | FR-10, FR-11 | Collector, store, baselines, anomaly scoring, research exports, `smcpctl observe` |
 | [Operations](operations/README.md) | FR-7.11 to FR-7.14, FR-13.7 to FR-13.13, FR-17 | Health, logs, metrics, reload, keys, backup, upgrade, uninstall |

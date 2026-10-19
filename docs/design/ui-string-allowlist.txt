@@ -1,0 +1,17 @@
+# Allowlist for tools/uilint (SRS FR-20.51, planned v1.3.0).
+#
+# Format, one entry per line:
+#
+#   path  rule  matched text  # reason
+#
+# path is relative to the repository root, rule is a rule name printed by the
+# lint (banned-word, exclamation, emoji, em-dash, css-gradient,
+# css-backdrop-filter, css-text-shadow, css-box-shadow, css-filter,
+# css-radius, css-animation), and the matched text is what the lint printed
+# after the rule (compared ignoring case and runs of white space). The
+# reason after " # " is required. An entry covers every finding of that rule
+# and text in that file. An entry that matches nothing fails the lint, so
+# remove it with the string it excused. Rules: docs/design/writing.md.
+
+console/src/views/Observations.tsx banned-word robust  # statistics term: the feature option scores with robust statistics (median and MAD); not marketing
+console/src/views/Observations.tsx em-dash —  # preset name "Research — full capture" is fixed by SRS FR-8.8 and asserted in console/e2e/views.spec.ts; change it with the SRS

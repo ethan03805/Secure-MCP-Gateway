@@ -2,6 +2,8 @@
 
 Checklist for the management console (E-24). Each view is inspected against it before release (SRS FR-8.35). The rules follow the owner's direction: dense, stark, typographic, tables over cards.
 
+The [writing style guide](design/writing.md) and the [visual design guide](design/visual.md) extend these rules to every UI string and to the desktop application and the site (FR-20.49, FR-20.50).
+
 | Rule | Check |
 |---|---|
 | Lists are tables | Every collection (sessions, servers, approvals, decisions, events, policy revisions) is a `<table>` with a header row and sortable column headers. No card grids. |
