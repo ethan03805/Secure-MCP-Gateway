@@ -321,9 +321,13 @@ func take(out *windows.DataBlob, wipe bool) []byte {
 	return b
 }
 
+// empty backs the DATA_BLOB of empty input: CryptProtectData refuses a
+// NULL pbData even with cbData 0.
+var empty [1]byte
+
 func blob(b []byte) (windows.DataBlob, error) {
 	if len(b) == 0 {
-		return windows.DataBlob{}, nil
+		return windows.DataBlob{Size: 0, Data: &empty[0]}, nil
 	}
 	if uint64(len(b)) > math.MaxUint32 {
 		return windows.DataBlob{}, errors.New("winsec: data too large for DPAPI")
