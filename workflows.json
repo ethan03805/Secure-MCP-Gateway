@@ -1,5 +1,16 @@
 [
   {
+    "workflow": "agents",
+    "requirements": [
+      "FR-15.8"
+    ],
+    "ref": "main",
+    "commit": "d9dde78d5b44c739fdad3aa009935ea3db165b4d",
+    "conclusion": "success",
+    "date": "2026-10-19T04:08:49Z",
+    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39197508520"
+  },
+  {
     "workflow": "reference-packages",
     "requirements": [
       "FR-14.9"
