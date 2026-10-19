@@ -382,6 +382,56 @@ func TestMacPkgBuildScript(t *testing.T) {
 	}
 }
 
+// TestMacPkgLinuxBuildScript inspects build-pkg-linux.sh, which builds the
+// released .pkg on Linux (docs/ci.md, "macOS runners"): the same binaries,
+// links, identifier and Distribution as build-pkg.sh, every payload and Bom
+// entry owned by 0:0 (root:wheel, SR-4.11-2), an rcodesign ad-hoc
+// signature on each binary and none on the .pkg (FR-20.26), no scripts
+// (FR-20.21); installers.yml builds the .pkg with it, and the release
+// lists the held-back .pkg in the checksum file (FR-20.23).
+func TestMacPkgLinuxBuildScript(t *testing.T) {
+	reqtest.Partial(t, "FR-20.17", "FR-20.26", "FR-20.21", "SR-4.11-2")
+	read := func(rel string) string {
+		b, err := os.ReadFile(filepath.Join(repoRoot, rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	s := read("packaging/installers/macos/build-pkg-linux.sh")
+	for _, want := range []string{
+		"binaries=(smcpd smcpctl smcp-session smcp-stdio smcp-connect smcp-refserver)",
+		"identifier=io.github.ethan03805.smcp", `ln -s "../lib/smcp/$b" "$root/usr/local/bin/$b"`,
+		`"$RCODESIGN" sign --binary-identifier`, "CodeSignatureFlags(ADHOC)",
+		`"$LS4MKBOM" -u 0 -g 0`, `"$MKBOM" -i`, "octal(0, 6) + octal(0, 6)", // uid, gid 0
+		`overwrite-permissions="false"`, `postinstall-action="none"`, `hostArchitectures="arm64"`,
+		`install-location="/"`, `auth="root"`, "#smcp-component.pkg",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("build-pkg-linux.sh lacks %q", want)
+		}
+	}
+	for _, bad := range []string{"Scripts", "productsign", "/Library/LaunchDaemons", "/Library/LaunchAgents"} {
+		if strings.Contains(s, bad) {
+			t.Errorf("build-pkg-linux.sh contains %q", bad)
+		}
+	}
+	if w := read(".github/workflows/installers.yml"); !strings.Contains(w, "bash packaging/installers/macos/build-pkg-linux.sh") ||
+		!strings.Contains(w, "uses: ./.github/workflows/installers-macos-smoke.yml") {
+		t.Error("installers.yml does not build the .pkg with build-pkg-linux.sh and smoke-test it on macOS")
+	}
+	if !strings.Contains(goreleaserBlock(t, "checksum"), "glob: build/installers-pending/*") {
+		t.Error("the checksum file does not list build/installers-pending/*")
+	}
+	if strings.Contains(goreleaserBlock(t, "release"), "installers-pending") {
+		t.Error("GoReleaser uploads the .pkg before its macOS smoke test")
+	}
+	if r := read(".github/workflows/release.yml"); !strings.Contains(r, `if: always() && needs.release.result == 'success'`) ||
+		!strings.Contains(r, `grep -qx "$want  $pkg" "build/sums/$sums"`) {
+		t.Error("release.yml does not upload the .pkg after its smoke test against the signed checksum file")
+	}
+}
+
 // TestDoctorReportsWritableBinaries: `smcpctl doctor` reports a Gateway
 // binary or its directory that the user running it can write (SR-4.11-2):
 // a failing finding in the Enforced profile, a warning in Standalone, and

@@ -10,11 +10,19 @@
 # the repository variable SMCP_COSIGN to "false" to skip it.
 #
 # Platform installers (E-35, FR-20.23, FR-20.24): the installers job
-# (installers.yml) builds the .deb, .rpm and macOS .pkg from the tag and
-# installs, exercises and removes each on a runner of its platform. The
-# release job needs it, so a failed smoke test publishes nothing; it then
-# publishes exactly the tested files (GoReleaser --skip=nfpm with the files
-# in build/installers/), listed in the signed checksum file.
+# (installers.yml) builds the .deb, .rpm and macOS .pkg from the tag, all
+# on Linux, and installs, exercises and removes the .deb and .rpm on
+# Ubuntu and Fedora. The release job needs it, so a failed Linux smoke test
+# publishes nothing; it then publishes exactly the tested .deb and .rpm
+# (GoReleaser --skip=nfpm with the files in build/installers/) and lists
+# them and the .pkg (build/installers-pending/) in the signed checksum
+# file. The .pkg is smoke-tested on a macOS runner after that
+# (smoke-macos, installers-macos-smoke.yml) so that a shortage of macOS
+# runners cannot hold up the release, and the macos-pkg job uploads it
+# only when that test passed, after checking its digest against the signed
+# checksum file. A failed test leaves the .pkg off the release and opens
+# an issue; a test that never ran opens an issue saying to re-run it
+# (docs/ci.md, "macOS runners"; docs/release-checklist.md).
 name: release
 
 on:
@@ -34,6 +42,7 @@ jobs:
     uses: ./.github/workflows/installers.yml
     with:
       tag: ${{ github.ref_name }}
+      macos-smoke: false
     permissions:
       contents: read
 
@@ -84,12 +93,20 @@ jobs:
         run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
       # The smoke-tested installers; GoReleaser lists them in the checksum
       # file and uploads them (checksum.extra_files, release.extra_files).
+      # The macOS .pkg goes to build/installers-pending/: listed in the
+      # checksum file, uploaded by the macos-pkg job once its macOS smoke
+      # test passed.
       - name: Download the smoke-tested installers (FR-20.23, FR-20.24)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: installers-*
           merge-multiple: true
           path: build/installers
+      - name: Hold back the .pkg until its macOS smoke test passes
+        run: |
+          mkdir -p build/installers-pending
+          mv build/installers/*.pkg build/installers-pending/
+          ls -l build/installers build/installers-pending
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
@@ -139,14 +156,14 @@ jobs:
           version=${GITHUB_REF_NAME#v}
           sums=build/dist/smcp_${version}_checksums.txt
           n=0
-          for f in build/installers/*; do
+          for f in build/installers/* build/installers-pending/*; do
             b=$(basename "$f")
             want=$(sha256sum "$f" | cut -d' ' -f1)
             grep -qx "$want  $b" "$sums" || { echo "::error::$b is not in $sums with digest $want"; exit 1; }
             n=$((n + 1))
           done
           for pattern in "smcp_${version}_amd64.deb" "smcp_${version}_arm64.deb" "smcp-${version}-1.x86_64.rpm" "smcp-${version}-1.aarch64.rpm" "smcp_${version}_darwin_arm64.pkg"; do
-            [ -f "build/installers/$pattern" ] || echo "::warning::no installer named $pattern"
+            [ -f "build/installers/$pattern" ] || [ -f "build/installers-pending/$pattern" ] || echo "::warning::no installer named $pattern"
           done
           echo "$n installers listed in $sums" >> "$GITHUB_STEP_SUMMARY"
           [ "$n" -ge 5 ] || { echo "::error::expected at least 5 installers, found $n"; exit 1; }
@@ -236,3 +253,79 @@ jobs:
           if [ "$pre" = 1 ] && [ "$TAP_PRERELEASE" != true ]; then echo "pre-release: no formula was pushed"; exit 0; fi
           gh workflow run tap.yml -R "$GITHUB_REPOSITORY" --ref main -f tag="$GITHUB_REF_NAME"
           echo "Started the tap workflow for $GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+
+  # The .pkg on a real Mac, after the release is published; never blocks
+  # (installers-macos-smoke.yml: outcome passed, unavailable or failed).
+  smoke-macos:
+    name: smoke-macos
+    needs: [installers, release]
+    uses: ./.github/workflows/installers-macos-smoke.yml
+    with:
+      version: ${{ needs.installers.outputs.version }}
+    permissions:
+      contents: read
+
+  # Uploads the .pkg when its smoke test passed: the artifact's digest must
+  # be the one in the published, minisign-signed checksum file. Otherwise
+  # it opens an issue; a real failure also fails this job and adds a note
+  # to the release.
+  macos-pkg:
+    name: macos-pkg
+    needs: [installers, release, smoke-macos]
+    if: always() && needs.release.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # upload the .pkg, edit the release notes
+      issues: write # report a failed or missing smoke test
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OUTCOME: ${{ needs.smoke-macos.outputs.outcome }}
+      VERSION: ${{ needs.installers.outputs.version }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: installers-macos
+          path: build/pkg
+      - name: Upload the tested .pkg, or report
+        run: |
+          pkg=smcp_${VERSION}_darwin_arm64.pkg
+          issue() { # <title> <body>
+            n=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$1\" in:title" --json number -q '.[0].number // empty')
+            if [ -n "$n" ]; then gh issue comment "$n" -R "$GITHUB_REPOSITORY" --body "$2"; else gh issue create -R "$GITHUB_REPOSITORY" --title "$1" --body "$2"; fi
+          }
+          case "$OUTCOME" in
+            passed)
+              sudo apt-get update -qq && sudo apt-get install -y -qq minisign >/dev/null
+              sums=smcp_${VERSION}_checksums.txt
+              gh release download "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" -p "$sums" -p "$sums.minisig" -D build/sums
+              key=$(sed -n 's/^PUBKEY="\(.*\)"$/\1/p' install.sh)
+              minisign -V -P "$key" -m "build/sums/$sums" -x "build/sums/$sums.minisig"
+              want=$(sha256sum "build/pkg/$pkg" | cut -d' ' -f1)
+              grep -qx "$want  $pkg" "build/sums/$sums" || { echo "::error::$pkg (sha256 $want) is not the file in the signed $sums"; exit 1; }
+              if gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep -qx "$pkg"; then
+                echo "$pkg is already on the release"
+              else
+                gh release upload "$GITHUB_REF_NAME" "build/pkg/$pkg" -R "$GITHUB_REPOSITORY"
+              fi
+              echo "Uploaded $pkg (sha256 $want, in the signed checksum file) after its macOS smoke test passed" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            unavailable)
+              issue "$GITHUB_REF_NAME: macOS .pkg not published yet (smoke test did not run)" \
+                "No macOS runner ran the .pkg smoke test of $GITHUB_REF_NAME ($RUN_URL), so \`$pkg\` is not on the release yet; it is listed in the signed checksum file. Re-run the job **smoke-macos / smoke pkg (arm64)** of that run (the job's re-run button, or \`gh run rerun <run id> --job <job id>\`); its dependent jobs re-run with it and upload the .pkg when the test passes (docs/release-checklist.md)."
+              echo "::warning::the macOS smoke test did not run; $pkg is not uploaded (issue opened)"
+              ;;
+            *)
+              issue "$GITHUB_REF_NAME: macOS .pkg smoke test failed" \
+                "The macOS .pkg smoke test of $GITHUB_REF_NAME failed ($RUN_URL; outcome '${OUTCOME:-unknown}'). \`$pkg\` was not uploaded to the release. Fix the package and publish a new release; see docs/release-checklist.md."
+              gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json body -q .body > build/notes.md
+              printf '\n\n**macOS .pkg withheld:** its smoke test on macOS failed (%s). Install on macOS with install.sh or the darwin archive.\n' "$RUN_URL" >> build/notes.md
+              gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --notes-file build/notes.md
+              echo "::error::the macOS smoke test failed; $pkg is not uploaded (issue opened, release notes marked)"
+              exit 1
+              ;;
+          esac

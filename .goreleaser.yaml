@@ -207,9 +207,12 @@ checksum:
   # Installers built outside GoReleaser (the macOS .pkg; in the release
   # workflow also the smoke-tested .deb and .rpm) are listed in the same
   # checksum file, so its minisign signature and Sigstore bundle cover them
-  # (FR-20.23).
+  # (FR-20.23). build/installers-pending/ holds the macOS .pkg in the
+  # release workflow: listed here, uploaded by release.yml only after its
+  # smoke test on macOS passed (docs/ci.md, "macOS runners").
   extra_files:
     - glob: build/installers/*
+    - glob: build/installers-pending/*
 
 # SBOMs for each archive, generated with syft when it is installed (the
 # release workflow installs it). Snapshot builds without syft skip them.

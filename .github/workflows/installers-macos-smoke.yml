@@ -1,0 +1,95 @@
+# The macOS .pkg smoke test (E-35, FR-20.24): installs the .pkg of the
+# artifact installers-macos with `installer` on a macOS arm64 runner,
+# exercises and removes it as docs/install.md says
+# (scripts/package-smoke.sh). The .pkg itself is built on Linux
+# (installers.yml, build-macos).
+#
+# macOS runners are sometimes not available for hours (GitHub capacity:
+# "The job was not acquired by Runner of type hosted even after multiple
+# attempts"). This workflow therefore never blocks on the runner and tells
+# the two cases apart (docs/ci.md, "macOS runners"):
+#   - smoke has continue-on-error, so its failure alone fails nothing;
+#   - result classifies it: passed; unavailable (the job never ran its
+#     first step, or was cancelled), a warning; failed (the test ran and
+#     failed), which fails this job and so the run.
+# The output outcome (passed, unavailable or failed) is what release.yml
+# acts on: it uploads the .pkg only when the outcome is passed.
+#
+# Callers: installers.yml (CI) and release.yml (after publishing).
+name: installers-macos-smoke
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version of the .pkg (smcp_<version>_darwin_arm64.pkg)
+        type: string
+        required: true
+    outputs:
+      outcome:
+        description: passed, unavailable or failed
+        value: ${{ jobs.result.outputs.outcome }}
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: smoke pkg (arm64)
+    runs-on: macos-15
+    timeout-minutes: 20
+    continue-on-error: true
+    outputs:
+      started: ${{ steps.start.outputs.started }}
+      passed: ${{ steps.done.outputs.passed }}
+    steps:
+      - name: Runner acquired
+        id: start
+        run: echo "started=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: installers-macos
+          path: build/installers
+      - name: Install with installer, exercise, remove as docs/install.md says
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          pkg=build/installers/smcp_${VERSION}_darwin_arm64.pkg
+          shasum -a 256 "$pkg" | tee -a "$GITHUB_STEP_SUMMARY"
+          bash scripts/package-smoke.sh "$pkg" "$VERSION"
+      - name: Passed
+        id: done
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  result:
+    name: smoke pkg result
+    needs: smoke
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      outcome: ${{ steps.classify.outputs.outcome }}
+    steps:
+      - name: Classify the macOS smoke test
+        id: classify
+        env:
+          RESULT: ${{ needs.smoke.result }}
+          STARTED: ${{ needs.smoke.outputs.started }}
+          PASSED: ${{ needs.smoke.outputs.passed }}
+        run: |
+          if [ "$PASSED" = true ]; then
+            outcome=passed
+          elif [ "$RESULT" = cancelled ] || [ "$STARTED" != true ]; then
+            outcome=unavailable
+          else
+            outcome=failed
+          fi
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          echo "macOS .pkg smoke test: **$outcome** (job result $RESULT; docs/ci.md, macOS runners)" >> "$GITHUB_STEP_SUMMARY"
+          case "$outcome" in
+            unavailable) echo "::warning::the macOS .pkg smoke test did not run (no macOS runner, or cancelled); re-run the job 'smoke pkg (arm64)'" ;;
+            failed) echo "::error::the macOS .pkg smoke test failed"; exit 1 ;;
+          esac

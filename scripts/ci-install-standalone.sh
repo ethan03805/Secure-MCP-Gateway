@@ -7,7 +7,7 @@
 # uninstalls and checks that the unit is gone and the journal is kept.
 #
 # Used by the CI job install-standalone (ubuntu-24.04 without Podman and
-# macos-latest) through cmd/smcpctl.TestInstallStandaloneServiceManager.
+# macos-26) through cmd/smcpctl.TestInstallStandaloneServiceManager.
 # It changes the current user's service manager and home directory: run it
 # on a disposable machine or account.
 #
