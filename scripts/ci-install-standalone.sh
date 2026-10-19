@@ -139,5 +139,13 @@ else
   if launchctl print "gui/$uid/com.smcp.gateway" >/dev/null 2>&1; then fail "com.smcp.gateway still loaded after uninstall"; fi
 fi
 [ -d "$state_dir/journal" ] || fail "uninstall removed the journal"
+[ -f "$state_dir/keys/evidence-genesis.pub" ] || fail "uninstall removed the evidence public key"
 "$work/smcpctl-keep" journal verify --config "$cfg" || fail "journal verify after uninstall"
-say "passed"
+# Another installation's smcpctl (a fresh copy of the build), pointed at
+# the kept journal and key only (FR-13.11).
+cp "$work/smcpctl-keep" "$work/smcpctl-fresh"
+"$work/smcpctl-fresh" journal verify --dir "$state_dir/journal" --key "$state_dir/keys/evidence-genesis.pub" --strict > "$work/verify-kept.log" 2>&1 \
+  || { cat "$work/verify-kept.log"; fail "journal verify of the kept journal and key"; }
+cat "$work/verify-kept.log"
+grep -q 'journal OK' "$work/verify-kept.log" || fail "journal verify of the kept journal did not report OK"
+say "passed ($os)"
