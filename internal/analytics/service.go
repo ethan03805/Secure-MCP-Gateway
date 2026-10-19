@@ -80,6 +80,10 @@ type Service struct {
 	sources  MetricSources // guarded by mu
 	live     atomic.Pointer[Settings]
 	scanner  atomic.Pointer[func([]byte) int] // secret fingerprints (FR-6.10)
+	// retainMu serializes retention runs: the start-up run of loop and a
+	// direct call must not remove the same dataset at once, where one run
+	// removed it and the other returned before its audit event was written.
+	retainMu sync.Mutex
 
 	mu        sync.Mutex
 	rec       audit.Recorder
@@ -468,6 +472,8 @@ func (s *Service) retain() {
 	if s.Store == nil {
 		return
 	}
+	s.retainMu.Lock()
+	defer s.retainMu.Unlock()
 	removed, err := s.Store.Retain(s.now(), s.cur().Retention)
 	if err != nil {
 		s.log.Warn("observation retention failed", "err", err)

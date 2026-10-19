@@ -528,6 +528,7 @@ const (
 	enforcedSandbox   = "/srv/smcp/sandbox"
 	enforcedLog       = "/var/log/smcp/smcpd.log"
 	enforcedExports   = "/var/lib/smcp/exports"
+	enforcedBackups   = "/var/lib/smcp/backups"
 	enforcedBin       = "/usr/local/bin"
 )
 
@@ -649,7 +650,12 @@ file = %q
 # segment and the signed anchor here (SR-6.12-1). Copy it off the machine
 # as well (FR-7.14).
 export_dir = %q
-`, sandbox, in.host(enforcedLog), in.host(enforcedExports))
+
+# Pre-upgrade and scheduled backups: smcpd cannot write next to this file
+# (the unit's ProtectSystem=strict), and purge keeps this directory.
+[backup]
+dir = %q
+`, sandbox, in.host(enforcedLog), in.host(enforcedExports), in.host(enforcedBackups))
 	res, err := runBootstrap(o, in.out)
 	if err != nil {
 		return err

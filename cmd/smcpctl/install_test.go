@@ -363,6 +363,17 @@ func TestInstallEnforcedFake(t *testing.T) {
 		cfg.Policy.File != filepath.Join(root, enforcedPolicyDir, "policy.json") {
 		t.Fatalf("profile %q sandbox %q state %q policy %q", cfg.Profile.Mode, cfg.Runtime.Sandbox, cfg.State.Dir, cfg.Policy.File)
 	}
+	// Backups go where smcpd can write and purge does not delete
+	// (/var/lib/smcp/backups, created by install-enforced.sh), not next
+	// to the read-only configuration (found by the install-guide job:
+	// the upgrade's backup failed on /etc/smcp/backups).
+	if cfg.Backup.Dir != filepath.Join(root, enforcedBackups) {
+		t.Fatalf("backup dir %q", cfg.Backup.Dir)
+	}
+	script, _ := os.ReadFile(filepath.Join("..", "..", "packaging", "linux", "install-enforced.sh"))
+	if !strings.Contains(string(script), "ensure_dir "+enforcedBackups+" smcp-core") {
+		t.Fatal("install-enforced.sh does not create the backup directory for smcp-core")
+	}
 	if st, _ := os.Stat(cfgPath); st.Mode().Perm() != 0o640 {
 		t.Fatalf("config mode %v", st.Mode())
 	}

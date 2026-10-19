@@ -183,7 +183,7 @@ It ends by printing that the installation is not enforced. The unit runs the `sm
 sudo smcpctl install --profile enforced --admin-password-file a.pw --approver-password-file b.pw
 ```
 
-It runs the copy of `packaging/linux/install-enforced.sh` embedded in `smcpctl` with `--bin-dir` set to the directory of `smcpctl` (which must also hold `smcpd` and `smcp-refserver`). That script checks every Section 1.5.1 prerequisite before changing the host and stops naming the missing ones; then it creates the CP-46 service identities and subordinate ranges, the directories, the nftables table, the AppArmor profile (when AppArmor is enabled) and the systemd units, and installs the binaries into `/usr/local/bin`. `smcpctl install` then bootstraps the state into `/var/lib/smcp/state` and the policy into `/var/lib/smcp/policy` (owned by `smcp-core`), writes `/etc/smcp/smcp.toml` (root:smcp 0640) with `[profile] mode = "enforced"`, `[runtime] sandbox = "podman"`, `cgroup_manager = "cgroupfs"`, a mount of `/srv/smcp/sandbox` for the reference server and `[log] file = "/var/log/smcp/smcpd.log"`, starts `smcp-nftables.service` and `smcpd.service`, and checks health.
+It runs the copy of `packaging/linux/install-enforced.sh` embedded in `smcpctl` with `--bin-dir` set to the directory of `smcpctl` (which must also hold `smcpd` and `smcp-refserver`). That script checks every Section 1.5.1 prerequisite before changing the host and stops naming the missing ones; then it creates the CP-46 service identities and subordinate ranges, the directories, the nftables table, the AppArmor profile (when AppArmor is enabled) and the systemd units, and installs the binaries into `/usr/local/bin`. `smcpctl install` then bootstraps the state into `/var/lib/smcp/state` and the policy into `/var/lib/smcp/policy` (owned by `smcp-core`), writes `/etc/smcp/smcp.toml` (root:smcp 0640) with `[profile] mode = "enforced"`, `[runtime] sandbox = "podman"`, `cgroup_manager = "cgroupfs"`, a mount of `/srv/smcp/sandbox` for the reference server `[log] file = "/var/log/smcp/smcpd.log"` and `[backup] dir = "/var/lib/smcp/backups"` (smcpd cannot write next to the configuration; installations made by v1.1.0 or earlier lack this line, see the Enforced walkthrough below), starts `smcp-nftables.service` and `smcpd.service`, and checks health.
 
 Remove either installation with `smcpctl uninstall` (below); without `--config` it finds the configuration that install wrote.
 
@@ -250,6 +250,91 @@ smcpctl uninstall --config ~/smcp/smcp.toml --purge   # also configuration, stat
 ```
 
 Without `--purge` the configuration, the state directory and the evidence journal stay, so `smcpctl journal verify` still works afterwards. `--purge` asks for the installation ID (`smcpctl keys status` shows it) before deleting. On the Enforced profile it also removes the service identities. Each profile removes only what its own install created: an installation whose configuration selects `[profile] mode = "enforced"` removes the system units, the nftables table `inet smcp`, the AppArmor profiles and the `smcp-srv` setup; any other installation removes only your launchd agent or systemd user unit, so a Standalone uninstall on a host that also has an Enforced installation leaves the Enforced one running. Homebrew installs are removed with `brew uninstall smcp` after `smcpctl uninstall`. Binaries installed by a platform package stay in place (`smcpctl uninstall` says so); remove them as in [Remove a Linux package](#remove-a-linux-package) or [Remove the macOS package](#remove-the-macos-package).
+
+## Walkthrough: Standalone, from install to uninstall
+
+The commands below take a clean macOS or Linux account through the whole life of a Standalone installation: install v1.0.0 with `install.sh` (signature and checksum checks), install the service, upgrade to v1.1.0 from the downloaded release files, and uninstall while keeping the evidence. Run them in an empty directory. CI runs this block as written on macOS arm64 and Ubuntu (`scripts/ci-install-guide.sh`, job `install-guide`) and fails when a step no longer works. On Linux a CI runner has no login session, so the script first enables lingering and sets `XDG_RUNTIME_DIR`, as a desktop session does.
+
+<!-- ci-install-guide: standalone -->
+```sh
+# 1. Install v1.0.0 with install.sh. It verifies the minisign signature of the
+#    checksum file and the archive's SHA-256 before it installs anything.
+if [ "$(uname -s)" = Darwin ]; then brew install minisign; fi
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version v1.0.0
+export PATH="$HOME/.local/bin:$PATH"
+smcpctl version --short
+
+# 2. Passwords of the administrator, the Session Approver and the pre-upgrade backup.
+(umask 077 && openssl rand -hex 16 > admin.pw && openssl rand -hex 16 > approver.pw && openssl rand -hex 16 > backup.pw)
+
+# 3. Install the service: a launchd user agent on macOS, a systemd user unit on Linux.
+smcpctl install --admin-password-file admin.pw --approver-password-file approver.pw
+case "$(uname -s)" in
+  Darwin) cfg="$HOME/Library/Application Support/smcp-gateway/config/smcp.toml" ;;
+  *) cfg="${XDG_CONFIG_HOME:-$HOME/.config}/smcp-gateway/smcp.toml" ;;
+esac
+smcpctl health --config "$cfg"
+
+# 4. Upgrade to v1.1.0 from the release files (checked as install.sh does,
+#    backed up first, rolled back automatically if the new version fails).
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+mkdir -p release
+for f in smcp_1.1.0_checksums.txt smcp_1.1.0_checksums.txt.minisig "smcp_1.1.0_${os}_${arch}.tar.gz"; do
+  curl -fsSL -o "release/$f" "https://github.com/ethan03805/Secure-MCP-Gateway/releases/download/v1.1.0/$f"
+done
+smcpctl upgrade --config "$cfg" --release release --passphrase-file backup.pw
+smcpctl version --short
+smcpctl health --config "$cfg"
+
+# 5. Uninstall. The service and binaries go; the configuration, state and
+#    journal stay. uninstall removes smcpctl too, so keep a copy to verify the journal.
+cp "$HOME/.local/bin/smcpctl" smcpctl-kept
+smcpctl uninstall --config "$cfg"
+./smcpctl-kept journal verify --config "$cfg"
+```
+
+## Walkthrough: Enforced on Ubuntu, from install to uninstall
+
+The same life cycle in the Enforced profile, on a Linux host that has the prerequisites of the table above (Ubuntu 24.04 with Podman, crun, uidmap, nftables and AppArmor) and an account with sudo. Run it in an empty directory. CI runs this block as written on Ubuntu (job `install-guide`).
+
+<!-- ci-install-guide: enforced -->
+```sh
+# 1. Install v1.0.0 with install.sh (signature and checksum checks) into ./bin.
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version v1.0.0 --dir "$PWD/bin"
+
+# 2. Passwords of the administrator, the Session Approver and the pre-upgrade backup.
+(umask 077 && openssl rand -hex 16 > admin.pw && openssl rand -hex 16 > approver.pw && openssl rand -hex 16 > backup.pw)
+
+# 3. Install the Enforced profile: identities, directories, nftables table,
+#    AppArmor profiles, systemd units, binaries in /usr/local/bin, smcpd.service started.
+sudo bin/smcpctl install --profile enforced --admin-password-file admin.pw --approver-password-file approver.pw
+sudo -u smcp-core smcpctl health --config /etc/smcp/smcp.toml
+
+# 4. Upgrade to v1.1.0 from the release files.
+arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+mkdir -p release
+for f in smcp_1.1.0_checksums.txt smcp_1.1.0_checksums.txt.minisig "smcp_1.1.0_linux_${arch}.tar.gz"; do
+  curl -fsSL -o "release/$f" "https://github.com/ethan03805/Secure-MCP-Gateway/releases/download/v1.1.0/$f"
+done
+#    Installations made by v1.1.0 or earlier keep backups next to the
+#    read-only configuration; give them a writable backup directory once.
+if ! sudo grep -q '^\[backup\]' /etc/smcp/smcp.toml; then
+  sudo install -d -o smcp-core -g smcp -m 0700 /var/lib/smcp/backups
+  printf '\n[backup]\ndir = "/var/lib/smcp/backups"\n' | sudo tee -a /etc/smcp/smcp.toml >/dev/null
+  sudo systemctl restart smcpd.service
+  until sudo -u smcp-core smcpctl health --config /etc/smcp/smcp.toml >/dev/null 2>&1; do sleep 1; done
+fi
+sudo smcpctl upgrade --config /etc/smcp/smcp.toml --release release --passphrase-file backup.pw
+smcpctl version --short
+sudo -u smcp-core smcpctl health --config /etc/smcp/smcp.toml
+
+# 5. Uninstall: services, units, nftables table, AppArmor profiles and
+#    binaries go; the journal and the evidence key stay. The v1.0.0 smcpctl
+#    kept in ./bin verifies the journal.
+sudo smcpctl uninstall --config /etc/smcp/smcp.toml --bin-dir /usr/local/bin
+sudo bin/smcpctl journal verify --dir /var/lib/smcp/state/journal --key /var/lib/smcp/state/keys/evidence-genesis.pub
+```
 
 ## Verify an installation
 

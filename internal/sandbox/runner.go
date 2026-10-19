@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"sort"
 	"strconv"
 )
@@ -93,11 +94,15 @@ func (r runner) env(instance map[string]string) []string {
 	}
 	if u := r.runAs; u != nil {
 		// The Gateway's own per-user locations must not reach the other
-		// identity's Podman.
-		for _, k := range []string{"XDG_CONFIG_HOME", "XDG_DATA_HOME", "TMPDIR"} {
-			delete(env, k)
-		}
+		// identity's Podman. XDG_CONFIG_HOME and XDG_DATA_HOME are set to
+		// the identity's own: left unset, sudo's PAM session fills them
+		// from /etc/environment (GitHub's Ubuntu images name
+		// /home/runner/.config there), and Podman then fails on a
+		// directory the identity cannot read.
+		delete(env, "TMPDIR")
 		env["HOME"], env["USER"], env["LOGNAME"] = u.Home, u.Name, u.Name
+		env["XDG_CONFIG_HOME"] = filepath.Join(u.Home, ".config")
+		env["XDG_DATA_HOME"] = filepath.Join(u.Home, ".local", "share")
 		env["XDG_RUNTIME_DIR"] = u.runtimeDir()
 		env["DBUS_SESSION_BUS_ADDRESS"] = "unix:path=" + u.runtimeDir() + "/bus"
 	}

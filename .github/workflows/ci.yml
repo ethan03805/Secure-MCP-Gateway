@@ -390,6 +390,49 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # The install guide followed as written (FR-18.1): the walkthrough
+  # blocks of docs/install.md, run unchanged by scripts/ci-install-guide.sh
+  # (Standalone on clean macOS arm64 and Ubuntu runners, then Enforced on
+  # Ubuntu: install.sh v1.0.0, smcpctl install, upgrade to v1.1.0,
+  # uninstall). It
+  # fails when the guide drifts from what works. The Go test writes its
+  # events to build/install-guide-<os>-test.json for the status job. Not a
+  # required check.
+  install-guide:
+    name: install-guide (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Follow the install guide (TestInstallGuideWalkthrough)
+        env:
+          SMCP_INSTALL_GUIDE_TEST: "1"
+        run: |
+          set -o pipefail
+          mkdir -p build
+          os=$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')
+          go test -json -count=1 -timeout 15m -run '^TestInstallGuideWalkthrough$' ./cmd/smcpctl \
+            | tee "build/install-guide-$os-test.json" | jq -rj 'select(.Action == "output") | .Output'
+      - name: Upload the results of the Go test
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: install-guide-results-${{ matrix.os }}
+          path: build/install-guide-*-test.json
+          if-no-files-found: warn
+          retention-days: 14
+
   # Windows (FR-21.2, FR-21.19, planned for v1.3.0; docs/windows-port.md).
   # Not a required check. Builds every package for windows/amd64 and
   # windows/arm64 with CGO_ENABLED=0 (the release setting, FR-21.18), runs
@@ -1189,7 +1232,7 @@ jobs:
     if: >-
       always() && github.event_name != 'pull_request' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration, install-standalone, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop]
+    needs: [srs, go, lint, site, security, linux-integration, install-standalone, install-guide, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -1260,6 +1303,12 @@ jobs:
           pattern: desktop-results-*
           merge-multiple: true
           path: build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          pattern: install-guide-results-*
+          merge-multiple: true
+          path: build
       - name: Fetch the results of the separate verification workflows (site-data/workflows.json; FR-13.3 tap, FR-14.9 reference packages)
         run: |
           if git fetch --quiet --depth=1 origin refs/heads/site-data 2>/dev/null &&
@@ -1318,6 +1367,13 @@ jobs:
               echo "no $f"
             fi
           done
+          # The install guide followed on both runners (FR-18.1).
+          if [ -s build/install-guide-macos-test.json ] && [ -s build/install-guide-linux-test.json ]; then
+            cat build/install-guide-macos-test.json build/install-guide-linux-test.json >> build/all-test.json
+            merged=1
+          else
+            echo "install-guide results missing for one runner; not merged"
+          fi
           for f in perf-test acceptance-enforced-test offline-test offline-enforced-test linux-integration-test; do
             if [ -s "build/$f.json" ]; then
               cat "build/$f.json" >> build/all-test.json
