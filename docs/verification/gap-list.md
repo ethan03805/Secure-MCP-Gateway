@@ -106,6 +106,7 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 
 ## E-28 Data Lifecycle & Memory Manager
 
+- FR-12.7 partial: `internal/acceptance.TestAdminCLIDemonstration` exercises 20 of the 23 subcommands on one installation in the Standalone profile (go job) and the Enforced profile (acceptance-enforced job) and uploads the steps (`build/admin-cli/<profile>.json`). `install`, `upgrade` and `uninstall` change the host and are exercised separately: `TestInstallStandaloneServiceManager` (install-standalone job, Standalone only), `TestUpgradeAndRollback` (test releases under a temporary root) and `TestEnforcedUninstallAndPurgeOnHost` (Enforced host). Missing: `install --profile enforced` and `upgrade` on a real Enforced installation, and a Demonstration record of a release build.
 
 ## E-29 Observation Collector
 

@@ -154,6 +154,8 @@ jobs:
         id: test
         env:
           GO_MODE: ${{ needs.changes.outputs.go }}
+          # FR-12.7: the smcpctl subcommand steps of TestAdminCLIDemonstration.
+          SMCP_ADMIN_CLI_EVIDENCE: ${{ github.workspace }}/build/admin-cli
         run: |
           mkdir -p build
           rc=0
@@ -188,6 +190,7 @@ jobs:
             build/status.json
             build/go-test.json
             build/cover.out
+            build/admin-cli/*.json
           if-no-files-found: warn
           retention-days: 14
       - name: Spike modules still build
@@ -814,6 +817,7 @@ jobs:
       - name: Acceptance scenarios in the Enforced profile
         env:
           SMCP_ACCEPTANCE_PROFILE: enforced
+          SMCP_ADMIN_CLI_EVIDENCE: ${{ github.workspace }}/build/admin-cli
           SMCP_NEO4J_URL: bolt://127.0.0.1:7687
           SMCP_NEO4J_USER: neo4j
           SMCP_NEO4J_PASSWORD: smcp-ci-graph-password
@@ -824,7 +828,7 @@ jobs:
           export TMPDIR="$RUNNER_TEMP/acceptance"
           mkdir -p build
           rc=0
-          go test -count=1 -json -timeout 35m -run 'TestAT|TestEnforcedSecretDelivery' ./internal/acceptance/ > build/acceptance-raw.json || rc=$?
+          go test -count=1 -json -timeout 35m -run 'TestAT|TestEnforcedSecretDelivery|TestAdminCLIDemonstration' ./internal/acceptance/ > build/acceptance-raw.json || rc=$?
           jq -c 'if .Package then .Package += "/enforced" else . end' build/acceptance-raw.json > build/acceptance-enforced-test.json
           jq -r 'select(.Action == "fail" and .Test != null) | "FAIL \(.Test)"' build/acceptance-enforced-test.json || true
           if [ "$rc" != 0 ]; then echo "::warning::acceptance scenarios failed in the Enforced profile; see build/acceptance-enforced-test.json"; fi
@@ -833,7 +837,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: acceptance-enforced-results
-          path: build/acceptance-enforced-test.json
+          path: |
+            build/acceptance-enforced-test.json
+            build/admin-cli/*.json
           if-no-files-found: warn
           retention-days: 14
 
