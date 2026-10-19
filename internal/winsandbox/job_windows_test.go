@@ -39,6 +39,7 @@ func helper(mode string, args []string) int {
 	case "args":
 		b, _ := json.Marshal(args)
 		fmt.Println(string(b))
+		_, _ = io.Copy(io.Discard, os.Stdin)
 		return 0
 	case "sleep":
 		_, _ = io.Copy(io.Discard, os.Stdin)
@@ -229,16 +230,49 @@ func TestWindowsArgumentsAndJobFromCreation(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("arguments\n got  %q\n want %q", got, want)
 	}
+	onlyBackend(t, job, p.Pid)
+	in.Close()
 	if _, err := p.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	acc, err := job.Accounting()
+}
+
+// onlyBackend checks that the job holds the backend and otherwise only the
+// console host Windows starts for a console program without a window.
+func onlyBackend(t *testing.T, job *Job, pids ...int) {
+	t.Helper()
+	ps, err := job.PIDs()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if acc.TotalProcesses != 1 {
-		t.Fatalf("job accounting: %d processes, want exactly the backend", acc.TotalProcesses)
+	for _, want := range pids {
+		if !slices.Contains(ps, uint32(want)) {
+			t.Errorf("process %d not in the job (%v)", want, ps)
+		}
 	}
+	for _, pid := range ps {
+		if slices.Contains(pids, int(pid)) {
+			continue
+		}
+		if img := imageName(pid); !strings.EqualFold(img, "conhost.exe") {
+			t.Errorf("unexpected process %d (%s) in the job", pid, img)
+		}
+	}
+}
+
+func imageName(pid uint32) string {
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return "?"
+	}
+	defer windows.CloseHandle(h)
+	buf := make([]uint16, windows.MAX_PATH)
+	n := uint32(len(buf))
+	if err := windows.QueryFullProcessImageName(h, 0, &buf[0], &n); err != nil {
+		return "?"
+	}
+	p := windows.UTF16ToString(buf[:n])
+	return p[strings.LastIndexAny(p, `\/`)+1:]
 }
 
 // TestWindowsStartRefusesInterpreters: Start itself refuses the SR-4.8-2
@@ -272,13 +306,24 @@ func TestWindowsJobMemoryLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer in.Close()
-	b, _ := io.ReadAll(out)
-	st, err := p.Wait()
-	if err != nil {
+	outc := make(chan []byte, 1)
+	go func() {
+		b, _ := io.ReadAll(out)
+		outc <- b
+	}()
+	// The process either dies at the limit or is stuck failing to commit;
+	// either way the job reports the violation, and terminating the job
+	// ends it.
+	waitViolation(t, job, ViolationMemory)
+	_ = job.Terminate(1)
+	if _, err := p.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	if st.Success() {
-		t.Fatalf("allocation beyond the limit succeeded:\n%s", b)
+	var b []byte
+	select {
+	case b = <-outc:
+	case <-time.After(10 * time.Second):
+		t.Fatal("output did not end after the job was terminated")
 	}
 	last := 0
 	for _, l := range strings.Split(string(b), "\n") {
@@ -289,7 +334,6 @@ func TestWindowsJobMemoryLimit(t *testing.T) {
 	if last > 96 {
 		t.Fatalf("allocated %d MiB under a 96 MiB limit", last)
 	}
-	waitViolation(t, job, ViolationMemory)
 }
 
 // TestWindowsJobProcessLimit: a fork bomb stops at the active-process limit
@@ -303,14 +347,19 @@ func TestWindowsJobProcessLimit(t *testing.T) {
 	}
 	line := readLine(t, out)
 	var n int
-	if _, err := fmt.Sscanf(line, "started %d", &n); err != nil || n != 3 {
+	// The limit counts the backend and its console host, so two or three
+	// children fit.
+	if _, err := fmt.Sscanf(line, "started %d", &n); err != nil || n < 2 || n > 3 {
 		t.Fatalf("fork bomb under a limit of 4 processes: %q", line)
+	}
+	if acc, _ := job.Accounting(); acc.ActiveProcesses > 4 {
+		t.Fatalf("%d active processes under a limit of 4", acc.ActiveProcesses)
 	}
 	waitViolation(t, job, ViolationProcesses)
 	in.Close()
 
 	job2 := newJob(t, Limits{MemoryBytes: 512 << 20, Processes: 4})
-	_, out2, in2, err := startHelper(job2, "breakaway", nil)
+	p2, out2, in2, err := startHelper(job2, "breakaway", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,9 +367,7 @@ func TestWindowsJobProcessLimit(t *testing.T) {
 	if line := readLine(t, out2); line == "breakaway err=<nil>" {
 		t.Fatal("a child broke away from the job")
 	}
-	if acc, _ := job2.Accounting(); acc.TotalProcesses != 1 {
-		t.Fatalf("job processes = %d", acc.TotalProcesses)
-	}
+	onlyBackend(t, job2, p2.Pid)
 }
 
 // TestWindowsJobCPURate: a backend that spins every processor is held to
