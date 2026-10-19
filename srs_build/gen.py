@@ -266,6 +266,11 @@ gmention = collections.Counter()
 for r in reqs.values():
     for g in set(re.findall(r'\bG-\d\d\b', r["stmt"] + r["title"])):
         gmention[g] += 1
+# A view module named only by planned requirements is covered by them
+# (Appendix G marks them planned), not a coverage gap.
+for r in planned.values():
+    for g in set(re.findall(r'\bG-\d\d\b', r["stmt"] + r["title"])):
+        gmention[g] += 1
 CONTEXT_ONLY = set()  # X-02 entered the SoI in V1.2 (packaging command F-96)
 arch_gaps = {k: sorted((x for x in arch[k] if alloc_count[x] == 0 and x not in CONTEXT_ONLY), key=natkey) for k in ["E", "F", "I", "X", "D"]}
 arch_gaps["G"] = sorted((x for x in arch["G"] if gmention[x] == 0), key=natkey)
@@ -374,6 +379,7 @@ cov_table("D", "G.4 Data stores")
 out.append("### G.5 GUI view modules\n\n| ID | Requirements naming the module |\n|---|---|\n")
 for g in sorted(arch["G"]):
     rs = [r["id"] for r in reqs.values() if re.search(rf'\b{g}\b', r["stmt"] + r["title"])]
+    rs += [f"{r['id']} (planned {r['target']})" for r in planned.values() if re.search(rf'\b{g}\b', r["stmt"] + r["title"])]
     out.append(f"| {g} | {', '.join(rs) or '**none**'} |\n")
 out.append("\n")
 

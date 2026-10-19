@@ -7,7 +7,7 @@
 | Date | 2026-10-16 (America/Chicago) |
 | Owner | netrisk |
 | System of Interest | Secure MCP Gateway (local, single computer) |
-| Architecture | `ArchitectureV2.md` V2.4 draft — elements E-01…E-35 (E-34 and E-35 planned for v1.3.0), functions F-01…F-106, interfaces X-01…X-18 and I-01…I-42, GUI modules G-01…G-14, data stores D-01…D-15 |
+| Architecture | `ArchitectureV2.md` V2.5 draft — elements E-01…E-36 (E-34 to E-36 planned for v1.3.0), functions F-01…F-109, interfaces X-01…X-20 and I-01…I-43, GUI modules G-01…G-15, data stores D-01…D-16 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
 | Skill | `Skills.md` (INCOSE GtWR + project rules) |
@@ -58,7 +58,7 @@ Per the owner, the Gateway is a local secure MCP gateway on a single computer wh
 
 | Item | Behavior in v1 |
 |---|---|
-| Remote (hosted) MCP servers as backends | Not supported. Every backend is a packaged local server launched by E-15. A manifest naming a remote URL as the server endpoint is rejected (FR-14.4). |
+| Remote (hosted) MCP servers as backends | Not supported. Every backend is a packaged local server launched by E-15. A manifest naming a remote URL as the server endpoint is rejected (FR-14.4). Planned for v1.3.0: hosted servers imported from the IBM ContextForge catalog, reached only through the bundled ContextForge instance (FR-22). |
 | MCP resources and prompts | Not served northbound and not requested southbound. The Gateway relays tools only (FR-1.11, SR-5.6-1). |
 | Sampling, elicitation and roots | Refused unless the MRTR Relay Profile is enabled (Section 1.5). |
 | Windows hosts | Not supported. |
@@ -158,6 +158,7 @@ Every requirement record carries: **ID**, **Parent ID**, **Statement**, **Alloca
 | `CP-nn` | Appendix A controlled parameter |
 | `OWNER` | Owner direction in the tasking for this SRS, including the owner decisions of 2026-10-16 recorded in `CHANGELOG.md` |
 | `REVIEW` | A gap found by the V1.1 completeness review and closed in V1.2 (`CHANGELOG.md`) |
+| `CF:` | IBM ContextForge (`github.com/IBM/mcp-context-forge`) at release v1.0.11: a file, configuration key or published security advisory (GHSA ID) of that repository, read on 2026-10-18 |
 
 `OWNER` also covers the owner decisions of 2026-10-18 on the desktop application and platform installers (FR-20).
 

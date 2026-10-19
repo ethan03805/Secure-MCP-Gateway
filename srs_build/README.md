@@ -8,6 +8,7 @@
 | `req1.txt` … `req4.txt` | Functional requirements FR-1 … FR-19 |
 | `req5.txt` | Security requirements (SR) and SEC dispositions (`@DISP`) |
 | `req6-desktop.txt` | Section 6, requirements planned for later releases: FR-20 desktop application and platform installers (v1.3.0) and their SRs |
+| `req8-contextforge.txt` | ContextForge integration, FR-22 and its SR children, planned for v1.3.0 (`TARGET:`) |
 | `appendix.md` | Appendices A–D (controlled parameters, error and reason codes, roles, graph data model) |
 | `appendix2.md` | Appendices J–M (manifest schema summary, client matrix, hostile fixture suite, acceptance scenario mapping), emitted after the generated appendices |
 | `gen.py` | Validator and generator; also produces Appendices E–I |

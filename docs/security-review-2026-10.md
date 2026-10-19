@@ -63,6 +63,18 @@ Not fixed in the first review; recorded so that they are tracked. Later changes 
 | RR-11 | Low | `internal/secrets`, `internal/egress`, `internal/pipeline` | Copies of secret values that Go cannot overwrite: the S4 environment string and the `NAME=value` entry built for the child process, the S1 header string set on each outbound request, and the age library's decryption buffers. They stay in the Gateway's memory until the garbage collector reuses it. | Accepted for 1.0 (SR-2.13-2 narrowed). Prefer S1, S2 or S3 over S4; S4 already needs a waiver in the Secret Use Policy. |
 | RR-12 | Low | `internal/backend` (command servers) | The content address of a command-configured server covers the command file and absolute file arguments only; modules an interpreter loads from a search path, and files the server reads later, are not covered. | Accepted for 1.0: package servers (`smcpctl package build`), whose whole tree is content-addressed and re-verified before each launch, or set `[packages] require_signed = true`. |
 
+## Planned integration reviewed at design time: ContextForge (v1.3.0)
+
+The owner decided on 2026-10-18 to integrate IBM ContextForge (catalog import and a bundled instance). It is specified as FR-22 and twelve SRs, planned for v1.3.0 (SRS Appendix O); nothing is implemented. The design-time threat notes are in `ArchitectureV2.md` Section 12 (boundary B-9). Risks recorded for the implementation:
+
+| ID | Risk | Specified response |
+|---|---|---|
+| CF-R1 | ContextForge has a dense advisory history (19 GitHub advisories in 2026, among them forged administrator tokens through default JWT keys, SSRF bypasses through redirects and DNS, server-side template injection and a sandbox escape in a sample server). | One pinned, signature-verified release with no unfixed high or critical advisory (FR-22.18, FR-22.19); generated credentials (FR-22.28); every unused feature off (FR-22.27); containment and per-package egress (FR-22.24, SR-4.5-4); start on demand (FR-22.23). |
+| CF-R2 | All hosted packages share one ContextForge instance, so a compromised instance can swap or alter results between them. | Accepted as a stated limitation (FR-22.42); every hosted tool is `source_trust: untrusted` and taints the session; results are server-asserted (SR-6.18-2); no upstream credential is held by the instance (FR-22.15). |
+| CF-R3 | Hosted servers cannot be inspected, which SEC 3.1 and 3.2 require. | Admission only with a recorded operator trust decision, risk class at least `moderate` (SR-3-6). |
+| CF-R4 | Outside the Enforced profile, other processes of the same user can reach the bundled instance's loopback listener and memory. | Health `degraded` with cause `contextforge_unconfined` (FR-22.25); tokens required on every route; stated limitation (FR-22.42). |
+| CF-R5 | Catalog install commands are floating and executable (`npx -y`, `@latest`). | Never executed; local entries are built only from operator-pinned references (FR-22.6, FR-22.7). |
+
 ## Areas reviewed without findings
 
 - OAuth 2.1 (local and remote): PKCE S256 only, 43-character challenge, verifier length checked, constant-time comparison; exact redirect URI match with the RFC 8252 loopback port exception only for `http` loopback hosts; codes 256-bit, one use, bound to client, redirect URI and challenge, 10-minute lifetime; refresh-token rotation with reuse detection that ends the session; tokens stored as SHA-256 digests; client secrets and passwords as Argon2id; dynamic registrations pending until an operator approves and bound to one principal; a remote refresh of a local session is refused and ends it.
