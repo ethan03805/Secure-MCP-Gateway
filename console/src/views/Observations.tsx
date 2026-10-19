@@ -64,7 +64,7 @@ export interface ObsStatus {
   baseline?: { contexts: number; characterized: number; learned: number; snapshots: number; promoted?: string };
   thresholds?: Record<string, number>;
   contexts?: string[];
-  store?: { backend: string; dir: string; bytes: number; files: number; rows_written?: Record<string, number> };
+  store?: { backend: string; dir: string; bytes: number; files: number; rows_written?: Record<string, number>; memory?: { used_bytes: number; limit_bytes: number } };
   store_error?: string;
   /** Degradation stage of the observation path (FR-9.12). */
   degradation?: { stage: number; name: string; reason: string; backpressure: boolean };

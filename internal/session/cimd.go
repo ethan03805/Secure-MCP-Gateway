@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/cachestats"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 )
 
@@ -48,6 +49,10 @@ type cimdEntry struct {
 	doc     cimdDocument
 	expires time.Time
 }
+
+// cimdCacheStats counts the lookups of every fetcher's cache for G-08
+// (FR-8.16).
+var cimdCacheStats = cachestats.Register("client_metadata_documents", "Client ID Metadata Documents, kept 24 hours (CP-52)", nil)
 
 // cimdFetcher fetches and caches Client ID Metadata Documents.
 type cimdFetcher struct {
@@ -118,8 +123,10 @@ func (f *cimdFetcher) get(ctx context.Context, u string) (cimdDocument, error) {
 	f.mu.Lock()
 	if e, ok := f.cache[u]; ok && f.now().Before(e.expires) {
 		f.mu.Unlock()
+		cimdCacheStats.Hit()
 		return e.doc, nil
 	}
+	cimdCacheStats.Miss()
 	f.fetches++
 	f.mu.Unlock()
 	doc, err := f.fetch(ctx, u)

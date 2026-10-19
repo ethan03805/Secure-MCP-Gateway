@@ -765,7 +765,8 @@ jobs:
           retention-days: 7
 
   # AT-07 in the Enforced profile (FR-19.3): the console's inert-evidence
-  # tests (console/e2e/inert.spec.ts) on Chromium against a Gateway whose
+  # tests (console/e2e/inert.spec.ts), and the keyboard kill of a real
+  # sandboxed instance (FR-8.33), on Chromium against a Gateway whose
   # reference server runs in rootless Podman (SMCP_E2E_PROFILE=enforced).
   # The claims go to build/console-chromium-enforced-test.json (package
   # console/e2e/chromium/enforced), which the status job merges. Not a
@@ -810,13 +811,15 @@ jobs:
           mkdir -p build/e2e-bin
           go build -o build/e2e-bin/ ./cmd/smcpd ./cmd/smcpctl ./scripts/itest-client
           CGO_ENABLED=0 go build -trimpath -o build/e2e-bin/ ./cmd/smcp-refserver
-      - name: AT-07 inert evidence display in the Enforced profile (Chromium)
+      # The Runtime kill with the keyboard on a real sandboxed instance
+      # (FR-8.33, console/e2e/keyboard.spec.ts) runs in the same Gateway.
+      - name: AT-07 inert evidence display and the keyboard kill of a real instance in the Enforced profile (Chromium)
         env:
           CI: "1"
           SMCP_E2E_BIN: ${{ github.workspace }}/build/e2e-bin
           SMCP_E2E_PROFILE: enforced
           SMCP_E2E_PROJECT: chromium-enforced
-        run: npx --no-install playwright test --project=chromium e2e/inert.spec.ts
+        run: npx --no-install playwright test --project=chromium e2e/inert.spec.ts e2e/keyboard.spec.ts --grep "inert|256 KiB|real sandboxed instance"
         working-directory: console
       - name: Upload the requirement claims
         if: always()
@@ -839,6 +842,94 @@ jobs:
 
   # Graph mirror integration tests (E-25, E-26, E-28) against Neo4j
   # Community Edition in a service container. Not a required check.
+  # FR-8.30, previous browser builds: the console suite on the browser
+  # builds of the Playwright release before the pinned one (1.63.0:
+  # Chromium 153, Firefox 155, WebKit 26.6), each against a fresh Gateway as
+  # in the console job. It shows that the console works on the browser
+  # builds before the current ones; it is not a run on the previous major
+  # release of each browser product (Playwright ships one build of each
+  # engine per release, and WebKit is not Safari), so it feeds no claim and
+  # is not a required check. Every trigger except pull requests.
+  console-previous-browsers:
+    name: console-previous-browsers
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    services:
+      neo4j:
+        image: neo4j:2026.05.0-community
+        env:
+          NEO4J_AUTH: neo4j/smcp-ci-graph-password
+          NEO4J_server_http_enabled: "false"
+          NEO4J_dbms_usage__report_enabled: "false"
+          NEO4J_server_memory_heap_max__size: 512m
+          NEO4J_server_memory_pagecache_size: 128m
+        ports:
+          - 7687:7687
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p smcp-ci-graph-password 'RETURN 1'"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 30
+    env:
+      PREVIOUS_PLAYWRIGHT: "1.63.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: console/package-lock.json
+      - name: Install, with the previous Playwright release in place of the pinned one
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save --no-audit --no-fund "@playwright/test@${PREVIOUS_PLAYWRIGHT}" "playwright@${PREVIOUS_PLAYWRIGHT}" "playwright-core@${PREVIOUS_PLAYWRIGHT}"
+          test "$(npx --no-install playwright --version)" = "Version ${PREVIOUS_PLAYWRIGHT}"
+        working-directory: console
+      - name: Playwright browsers of that release
+        run: |
+          npx --no-install playwright install --with-deps chromium firefox webkit
+          node -e 'const b=require("playwright-core/browsers.json").browsers.filter(x=>["chromium","firefox","webkit"].includes(x.name)); for (const x of b) console.log(x.name, x.browserVersion)'
+        working-directory: console
+      - name: Build the Gateway binaries once for the three runs
+        run: |
+          mkdir -p build/e2e-bin
+          go build -o build/e2e-bin/ ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver ./scripts/itest-client ./scripts/evidence-fixture
+      - name: Acceptance tests on the previous browser builds (Chromium, Firefox, WebKit)
+        env:
+          CI: "1"
+          SMCP_E2E_BIN: ${{ github.workspace }}/build/e2e-bin
+          SMCP_NEO4J_URL: bolt://127.0.0.1:7687
+          SMCP_NEO4J_USER: neo4j
+          SMCP_NEO4J_PASSWORD: smcp-ci-graph-password
+        run: npm run test:e2e
+        working-directory: console
+      - name: Upload the per-browser results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: console-previous-browsers-results
+          path: build/console-*-test.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: console-previous-browsers-playwright
+          path: |
+            console/playwright-report
+            console/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
   graph:
     name: graph
     needs: changes

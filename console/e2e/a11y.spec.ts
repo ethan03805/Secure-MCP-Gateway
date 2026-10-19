@@ -3,6 +3,7 @@
 // covers, so this is a partial claim of FR-8.32; keyboard operation is
 // exercised in console.spec.ts.
 import AxeBuilder from "@axe-core/playwright";
+import { wcag22aa } from "./axe";
 import { expect, test } from "@playwright/test";
 import { info } from "./gateway";
 
@@ -40,7 +41,7 @@ for (const scheme of ["light", "dark"] as const) {
     test.info().annotations.push({ type: "requirement-partial", description: "FR-8.32" });
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
     await page.goto(g.adminURL + "/");
-    const signin = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+    const signin = await new AxeBuilder({ page }).withTags(wcag22aa).analyze();
     expect(signin.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
     await page.getByLabel("Password").fill(g.adminPassword);
     await page.getByRole("button", { name: "Sign in" }).click();
@@ -51,7 +52,7 @@ for (const scheme of ["light", "dark"] as const) {
         dispatchEvent(new PopStateEvent("popstate"));
       }, p);
       await expect(page.locator(".loading")).toHaveCount(0, { timeout: 20_000 });
-      const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+      const r = await new AxeBuilder({ page }).withTags(wcag22aa).analyze();
       expect(r.violations.map((v) => `${p} ${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
     }
   });

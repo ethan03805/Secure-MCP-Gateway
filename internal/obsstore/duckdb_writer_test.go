@@ -5,6 +5,8 @@ package obsstore
 import (
 	"database/sql"
 	"testing"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
 // TestBatchesUseSingleThreadedInstance: store batches are copied to Parquet
@@ -42,5 +44,40 @@ func TestBatchesUseSingleThreadedInstance(t *testing.T) {
 	}
 	if n != len(rows) {
 		t.Fatalf("read back %d rows, want %d", n, len(rows))
+	}
+}
+
+// TestStatsReportMemoryAgainstBudget: the DuckDB store reports its memory
+// in use and the limit its instances run with, and the limits add up to
+// the configured budget exactly (FR-8.16, CP-33).
+func TestStatsReportMemoryAgainstBudget(t *testing.T) {
+	reqtest.Partial(t, "FR-8.16")
+	for _, budget := range []int64{192 << 20, 512 << 20} {
+		st, err := Open(Options{Dir: t.TempDir(), Backend: "duckdb", Tables: []Table{recordsV1}, MemoryLimit: budget})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := st.Append("records", fixture(200, 3)); err != nil {
+			t.Fatal(err)
+		}
+		if err := st.Scan("records", Filter{}, func(Row) error { return nil }); err != nil {
+			t.Fatal(err)
+		}
+		s, err := st.Stats()
+		st.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.Memory == nil || s.Memory.LimitBytes != budget || s.Memory.UsedBytes < 0 || s.Memory.UsedBytes > budget {
+			t.Fatalf("budget %d: memory %+v", budget, s.Memory)
+		}
+	}
+	for in, want := range map[string]int64{"192.0 MiB": 192 << 20, "1.5 GiB": 3 << 29, "0 bytes": 0, "2.0 KB": 2000} {
+		if got, err := parseDuckSize(in); err != nil || got != want {
+			t.Errorf("parseDuckSize(%q) = %d, %v; want %d", in, got, err, want)
+		}
+	}
+	if _, err := parseDuckSize("12 parsecs"); err == nil {
+		t.Error("unknown unit accepted")
 	}
 }

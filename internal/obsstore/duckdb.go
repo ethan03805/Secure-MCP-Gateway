@@ -61,7 +61,9 @@ func openDuckDB(o Options) (Store, error) {
 	open := func(threads int, mem int64, extra string) (*sql.DB, error) {
 		dsn := "?threads=" + strconv.Itoa(threads) + "&" + opts + extra
 		if mem > 0 {
-			dsn += "&memory_limit=" + strconv.FormatInt(mem>>20, 10) + "MB"
+			// MiB, not MB: DuckDB reads MB as 10^6 bytes, which set
+			// each instance about 5% below its share of the budget.
+			dsn += "&memory_limit=" + strconv.FormatInt(mem>>20, 10) + "MiB"
 		}
 		db, err := sql.Open("duckdb", dsn)
 		if err != nil {
@@ -626,7 +628,53 @@ func (s *duckStore) finishCompactions() error {
 	return nil
 }
 
-func (s *duckStore) Stats() (Stats, error) { return s.stats("duckdb") }
+func (s *duckStore) Stats() (Stats, error) {
+	st, err := s.stats("duckdb")
+	if err != nil {
+		return st, err
+	}
+	var m Memory
+	for _, db := range []*sql.DB{s.db, s.w, s.c} {
+		used, limit, err := duckMemory(db)
+		if err != nil {
+			return st, err
+		}
+		m.UsedBytes += used
+		m.LimitBytes += limit
+	}
+	st.Memory = &m
+	return st, nil
+}
+
+// duckMemory reads an instance's memory in use (the buffer manager's
+// allocations, all tags) and the memory limit it runs with.
+func duckMemory(db *sql.DB) (used, limit int64, err error) {
+	var u sql.NullInt64
+	if err := db.QueryRow("SELECT sum(memory_usage_bytes) FROM duckdb_memory()").Scan(&u); err != nil {
+		return 0, 0, fmt.Errorf("duckdb memory: %w", err)
+	}
+	var l string
+	if err := db.QueryRow("SELECT current_setting('memory_limit')").Scan(&l); err != nil {
+		return 0, 0, fmt.Errorf("duckdb memory limit: %w", err)
+	}
+	limit, err = parseDuckSize(l)
+	return u.Int64, limit, err
+}
+
+// parseDuckSize parses a DuckDB size setting such as "192.0 MiB".
+func parseDuckSize(v string) (int64, error) {
+	num, unit, _ := strings.Cut(strings.TrimSpace(v), " ")
+	f, err := strconv.ParseFloat(num, 64)
+	if err != nil {
+		return 0, fmt.Errorf("duckdb size %q: %w", v, err)
+	}
+	mult := map[string]float64{"bytes": 1, "": 1, "KiB": 1 << 10, "MiB": 1 << 20, "GiB": 1 << 30, "TiB": 1 << 40,
+		"KB": 1e3, "MB": 1e6, "GB": 1e9, "TB": 1e12}[unit]
+	if mult == 0 {
+		return 0, fmt.Errorf("duckdb size %q: unknown unit", v)
+	}
+	return int64(f*mult + 0.5), nil
+}
 
 func (s *duckStore) Close() error {
 	werr := errors.Join(s.w.Close(), s.c.Close())

@@ -1,5 +1,6 @@
 // G-08 Data server & memory (FR-8.16): graph mirror memory against its
-// budget, store sizes and counts, observation queue use and degradation
+// budget, Observation Store memory against its budget, cache hit ratios,
+// store sizes and counts, observation queue use and degradation
 // stage, storage quota levels, the last backups and taking one, and the key
 // inventory with rotation. Routes: /api/v1/graph/status,
 // /api/v1/graph/rebuild, /api/v1/observations/status,
@@ -176,11 +177,55 @@ function ObservationStore() {
                   ],
                 ]}
               />
+              {s.store?.memory && <Meter label="Memory in use against the budget in force" used={s.store.memory.used_bytes} budget={s.store.memory.limit_bytes} format={bytes} />}
               {s.collector && <Meter label="Collector queue" used={s.collector.queue_depth} budget={s.collector.queue_capacity} />}
             </>
           )
         }
       </Loaded>
+    </Section>
+  );
+}
+
+interface CacheStat {
+  name: string;
+  description: string;
+  hits: number;
+  misses: number;
+  hit_ratio: number | null;
+  entries?: number;
+}
+
+/** Hit ratios of the in-process caches since smcpd started (FR-8.16). */
+function Caches() {
+  const res = useResource<{ info?: { caches?: CacheStat[] } }>("/api/v1/health/status");
+  return (
+    <Section title="Caches">
+      <Loaded res={res} what="the cache counts" route="/api/v1/health/status">
+        {(h) => (
+          <DataTable
+            caption="Cache hit ratios"
+            rows={h.info?.caches ?? []}
+            rowKey={(c) => c.name}
+            initialSort="name"
+            empty="No cache is reported."
+            columns={[
+              { key: "name", label: "Cache", sort: (c) => c.name, render: (c) => <><Mono>{c.name}</Mono> <span className="muted small">{c.description}</span></> },
+              {
+                key: "ratio",
+                label: "Hit ratio",
+                sort: (c) => c.hit_ratio ?? -1,
+                render: (c) => (c.hit_ratio === null ? <span className="muted">no lookups</span> : <Mono>{`${(c.hit_ratio * 100).toFixed(1)}%`}</Mono>),
+                className: "num",
+              },
+              { key: "hits", label: "Hits", sort: (c) => c.hits, render: (c) => <Mono>{compact(c.hits)}</Mono>, className: "num" },
+              { key: "misses", label: "Misses", sort: (c) => c.misses, render: (c) => <Mono>{compact(c.misses)}</Mono>, className: "num" },
+              { key: "entries", label: "Entries", sort: (c) => c.entries ?? -1, render: (c) => (c.entries === undefined ? <span className="muted">not counted</span> : <Mono>{compact(c.entries)}</Mono>), className: "num" },
+            ]}
+          />
+        )}
+      </Loaded>
+      <p className="small">Counted since smcpd started.</p>
     </Section>
   );
 }
@@ -336,7 +381,7 @@ export function DataServer() {
   return (
     <>
       <PageHeader code="G-08" title="Data server and memory">
-        <p>Memory use against budget, store sizes, queue use, degradation stage, quota levels, backups and keys.</p>
+        <p>Memory use against budget, cache hit ratios, store sizes, queue use, degradation stage, quota levels, backups and keys.</p>
       </PageHeader>
       <Help>
         <p>
@@ -348,6 +393,7 @@ export function DataServer() {
       {perm.can("GET /api/v1/graph/status") && <Graph />}
       {perm.can("GET /api/v1/observations/status") && <ObservationStore />}
       {perm.can("GET /api/v1/observations/objects") && <MemoryBudget />}
+      {perm.can("GET /api/v1/health/status") && <Caches />}
       {perm.can("GET /api/v1/health/status") && <Quotas />}
       {perm.can("GET /api/v1/backup") && <Backups />}
       {perm.can("GET /api/v1/keys") && <Keys />}
