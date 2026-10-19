@@ -11,6 +11,8 @@ Neo4j Community Edition **2026.05.0** (GPLv3). No Enterprise, Aura or plugin fea
 - macOS: `brew install neo4j` (Homebrew ships 2026.05.0 at the time of writing; check with `brew list --versions neo4j`), then `brew services start neo4j`.
 - Linux or CI: the container image `neo4j:2026.05.0-community`.
 
+In the Enforced profile, run the engine as the CP-46 identity `smcp-data` with Bolt on `127.0.0.1:7687`. The nftables table `inet smcp` then admits only `smcp-core` (smcpd and its Data Access Service) to port 7687 and rejects every new connection that `smcp-data` opens (SR-4.2-1, SR-7.4-1; [sandbox.md](sandbox.md), "nftables table `inet smcp`"). Because `smcp-data` has no outbound network, load the engine's image or archive into its storage from a file instead of pulling it as `smcp-data`.
+
 ## Setting up the database
 
 1. Apply the hardening and memory settings. `smcpctl graph config` prints the `neo4j.conf` lines for the configured budget:
@@ -154,7 +156,7 @@ See [api/graph.md](api/graph.md).
 
 ## Not covered yet
 
-- nftables rules that admit only the Data Server identity to the engine port, and outbound network denial for the engine (SR-4.2-1, SR-7.4-1, Linux Enforced profile).
+- The engine is not run as `smcp-data` on the Enforced CI host; the nftables rules for its identity are exercised there with stand-in processes (`cmd/smcpctl.TestGraphPortFirewallOnHost`).
 - Unix-socket peer-credential authentication of calling elements and a per-element operation allowlist (SR-4.3-1); the Data Access Service runs inside `smcpd`.
 - Write priority classes (FR-9.4) are deferred from release 1.0 (SRS Appendix N); observation batching and backpressure (FR-9.5, FR-9.6) are in the Observation Store and Collector ([observation.md](observation.md)).
 - Page cache use is not measured (Community Edition exposes no page-cache JMX bean); only the configured size is reported. Memory budgets of the other components and the degradation order (FR-9.12) are applied by the observation stack ([observation.md](observation.md)).

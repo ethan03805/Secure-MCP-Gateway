@@ -138,7 +138,7 @@ cat > "$work/systemd-policy.json" <<'EOF'
       "description": "Reference server and the sandbox probe",
       "rules": [
         { "id": "ref", "server": "ref", "tools": ["echo", "time_now", "list_files", "read_file"] },
-        { "id": "probe", "server": "probe", "tools": ["read_file", "file_sha256", "identity"] }
+        { "id": "probe", "server": "probe", "tools": ["read_file", "file_sha256", "identity", "net_connect"] }
       ]
     }
   }
@@ -278,6 +278,39 @@ if [ -d /sys/kernel/security/apparmor ]; then
   sudo -n journalctl -k --no-pager -g 'apparmor="DENIED".*profile="smcp-server"' | tail -n 3 || true
 fi
 
+say "runtime directory /run/smcp (CP-46)"
+[ "$(sudo -n stat -c '%U:%G %a' /run/smcp)" = "smcp-core:smcp 750" ] || fail "/run/smcp is $(sudo -n stat -c '%U:%G %a' /run/smcp), not smcp-core:smcp 750"
+echo "/run/smcp $(sudo -n stat -c '%U:%G %a' /run/smcp)"
+
+say "graph engine port refused from a sandbox (SR-4.2-1)"
+# A stand-in for the graph engine on the Bolt port; smcp-core reaches it,
+# the probe (a server container of smcp-srv) does not.
+python3 -c 'import socket,time
+s=socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(("127.0.0.1", 7687)); s.listen(8)
+time.sleep(60)' &
+standin=$!
+sleep 1
+as_core timeout 5 bash -c 'exec 3<>/dev/tcp/127.0.0.1/7687' || fail "smcp-core cannot reach the graph port stand-in"
+probe_call probe_net_connect '{"address":"127.0.0.1:7687"}' "blocked:"
+kill "$standin" 2>/dev/null || true
+wait "$standin" 2>/dev/null || true
+
+# host_test PKG TEST VAR: runs one Go test of this repository that inspects
+# the installation, with VAR=1, and adds its events to SMCP_ITEST_RESULTS.
+host_test() {
+  local repo
+  repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+  if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
+    (cd "$repo" && env "$3=1" go test -json -count=1 -run "^$2\$" "$1") \
+      | tee -a "$SMCP_ITEST_RESULTS" | jq -rj 'select(.Action == "output") | .Output'
+    return "${PIPESTATUS[0]}"
+  fi
+  (cd "$repo" && env "$3=1" go test -v -count=1 -run "^$2\$" "$1")
+}
+
+say "graph engine port admits only smcp-core; smcp-data opens no connections (SR-4.2-1, SR-7.4-1)"
+host_test ./cmd/smcpctl/ TestGraphPortFirewallOnHost SMCP_ENFORCED_FIREWALL_TEST || fail "graph port firewall"
+
 say "unit hardening in effect"
 systemctl show smcpd.service -p User -p ProtectSystem -p ProtectHome -p PrivateTmp -p NoNewPrivileges \
   -p RestrictSUIDSGID -p ProtectKernelTunables -p ProtectControlGroups -p AppArmorProfile -p Delegate --no-pager
@@ -291,6 +324,10 @@ if sudo -n systemctl is-active --quiet smcpd.service; then fail "smcpd.service s
 as_core /usr/local/bin/smcpctl journal verify --config "$cfg" || fail "journal verify after stop"
 sudo -n grep -rqs '"instance_launched"' "$state_root/journal" || fail "no instance_launched evidence in the journal"
 sudo -n systemctl disable --quiet smcpd.service
+
+say "CP-46 directories, owners and modes; evidence key and checkpoint copies (FR-12.4, SR-6.12-1, SR-4.2-2)"
+sudo -n ls -ld /etc/smcp /var/lib/smcp /var/lib/smcp/* /var/log/smcp "$state_root"/keys "$state_root"/journal "$state_root"/observation || true
+host_test ./cmd/smcpctl/ TestEnforcedLayoutOnHost SMCP_ENFORCED_LAYOUT_TEST || fail "CP-46 layout and evidence key custody"
 
 # SR-2.13-3 while the installation exists: the vault (one secret, stored
 # above) and its passphrase file are read as every CP-46 identity other

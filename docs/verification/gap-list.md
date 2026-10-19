@@ -87,7 +87,6 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 
 ## E-21 Audit & Evidence Service
 
-- SR-6.12-1 external: the evidence key and checkpoint directory permissions depend on the Enforced installation's identities; not exercised.
 
 ## E-22 Key & Trust Anchor Manager
 
@@ -102,6 +101,8 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 
 ## E-25 Graph Database Engine
 
+- SR-7.4-1 partial: the graph job checks the engine's effective settings (no SR-7.4-1 finding), its plugin archives and its procedures. On the Enforced host the nftables rule that rejects new connections from `smcp-data` is checked with stand-in processes (`cmd/smcpctl.TestGraphPortFirewallOnHost`). Missing: an Enforced host that runs the engine itself as `smcp-data`, with its effective configuration and firewall rules inspected together.
+
 
 ## E-26 Data Access Service
 
@@ -109,7 +110,6 @@ Updated on 2026-10-18 by the console partials work (part B): FR-8.22, FR-8.23, F
 ## E-28 Data Lifecycle & Memory Manager
 
 - FR-11.9 external: the CI job `perf` samples the idle `smcpd` resident memory 10 minutes after start (partial claim; 103 MiB at `788c8b4`, 102 MiB at `1a96b1c`, budget 4 GiB); not on recorded reference hardware.
-- FR-12.4 external: CP-46 directories, owners and modes have not been inspected on installed Enforced and Standalone hosts.
 
 ## E-29 Observation Collector
 

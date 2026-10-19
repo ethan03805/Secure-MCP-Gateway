@@ -725,7 +725,7 @@ S: The Graph Database Engine (E-25) SHALL listen only on loopback, with nftables
 A: E-25; E-26; I-36; X-07
 V: Test | Connect to the database port as other identities and from a sandbox; confirm refusal.
 SRC: SEC 4.2
-R: Only the Data Access Service reaches the database.
+R: Only the Data Access Service reaches the database. In release 1.x the Data Access Service runs inside `smcpd` (SR-4.1-1), so the identity the rules admit is `smcp-core`; the engine itself runs as `smcp-data`.
 
 @SR-4.2-2 | Observation file protection
 P: SEC-4.2
@@ -733,7 +733,7 @@ S: The Observation Store (E-27) SHALL keep its files owned by the Data Server id
 A: E-27; I-37
 V: Inspection | Inspect file modes.
 SRC: SEC 4.2
-R: Store files are not readable by other identities.
+R: Store files are not readable by other identities. In release 1.x the Observation Store runs inside `smcpd` (SR-4.1-1), so the Data Server identity that owns its files is `smcp-core`.
 
 @SR-4.3-1 | Caller allowlist
 P: SEC-4.3
@@ -1215,7 +1215,7 @@ S: The Audit & Evidence Service (E-21) SHALL sign journal segments with a key ac
 A: E-21; E-22; F-55; D-06
 V: Test | Attempt to write checkpoints and read the key as other identities; confirm denial.
 SRC: SEC 6.12
-R: Tamper evidence independent of the Data Server.
+R: Tamper evidence independent of the Data Server. In release 1.x the evidence exporter runs inside `smcpd` (SR-4.1-1), so the evidence-exporter identity is `smcp-core`: the key is readable by `smcp-core` only and the checkpoints are copied to `[evidence] export_dir`, which the Enforced installation sets to the CP-46 directory `exports/`; every other CP-46 identity is denied both. A key held by an identity other than the Data Server's needs the inter-process interface that SR-4.1-1 leaves to a later release.
 
 @SR-6.13-1 | Failure spool
 P: SEC-6.13

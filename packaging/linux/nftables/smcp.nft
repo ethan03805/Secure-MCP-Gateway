@@ -8,10 +8,16 @@
 # profile add their rules to:
 #   - set gateway_ports: the harness (CP-02) and control (CP-03) listener
 #     ports; connections to them from anything but loopback are dropped
+#   - set graph_ports: the graph engine's Bolt port (SR-4.2-1); only
+#     loopback connections from smcp-core, the identity smcpd and its Data
+#     Access Service (E-26) run as, reach it
+#   - the graph engine runs as smcp-data and opens no connections of its
+#     own (SR-7.4-1); it still answers the connections made to it
 #   - chain egress: empty here; the Egress Broker adds per-instance rules
 #
 # Loading the file replaces the table atomically, so it is safe to load
-# again.
+# again. It names the CP-46 users smcp-core and smcp-data, which
+# install-enforced.sh creates before it loads the file.
 
 table inet smcp
 delete table inet smcp
@@ -22,10 +28,16 @@ table inet smcp {
 		elements = { 8443, 8444 }
 	}
 
+	set graph_ports {
+		type inet_service
+		elements = { 7687 }
+	}
+
 	chain input {
 		type filter hook input priority filter; policy accept;
 		iifname "lo" accept
 		tcp dport @gateway_ports counter drop comment "Gateway listeners are loopback-only"
+		tcp dport @graph_ports counter drop comment "Graph engine is loopback-only (SR-4.2-1)"
 	}
 
 	chain egress {
@@ -34,6 +46,8 @@ table inet smcp {
 
 	chain output {
 		type filter hook output priority filter; policy accept;
+		tcp dport @graph_ports meta skuid != "smcp-core" counter reject with tcp reset comment "Only the Data Access Service (smcp-core) connects to the graph engine (SR-4.2-1)"
+		meta skuid "smcp-data" ct state new counter reject comment "The graph engine (smcp-data) opens no connections (SR-7.4-1)"
 		jump egress
 	}
 }

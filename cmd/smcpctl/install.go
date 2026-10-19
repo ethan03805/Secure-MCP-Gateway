@@ -527,6 +527,7 @@ const (
 	enforcedPolicyDir = "/var/lib/smcp/policy"
 	enforcedSandbox   = "/srv/smcp/sandbox"
 	enforcedLog       = "/var/log/smcp/smcpd.log"
+	enforcedExports   = "/var/lib/smcp/exports"
 	enforcedBin       = "/usr/local/bin"
 )
 
@@ -642,7 +643,13 @@ source = %q
 
 [log]
 file = %q
-`, sandbox, in.host(enforcedLog))
+
+[evidence]
+# CP-46 exports/ (smcp-core, 0750): smcpd copies each closed journal
+# segment and the signed anchor here (SR-6.12-1). Copy it off the machine
+# as well (FR-7.14).
+export_dir = %q
+`, sandbox, in.host(enforcedLog), in.host(enforcedExports))
 	res, err := runBootstrap(o, in.out)
 	if err != nil {
 		return err
