@@ -80,10 +80,12 @@ func TestPasswordPromptAndInstallSources(t *testing.T) {
 
 	// bootstrap: both passwords at the prompt; the configuration verifies them.
 	dir := t.TempDir()
-	out, err = ctlTerminal(t, nil, admin+"\n"+admin+"\n"+approver+"\n"+approver+"\n",
+	// The last line answers the bundled ContextForge question (FR-22.44)
+	// with the default, no.
+	out, err = ctlTerminal(t, nil, admin+"\n"+admin+"\n"+approver+"\n"+approver+"\n\n",
 		"bootstrap", "--dir", dir, "--refserver", filepath.Join(binDir, "smcp-refserver"),
 		"--port", freePort(t), "--admin-port", freePort(t), "--metrics-port", "0", "--notify", "off")
-	if err != nil || !strings.Contains(out, "Administrator password") || !strings.Contains(out, "Session Approver password") {
+	if err != nil || !strings.Contains(out, "Administrator password") || !strings.Contains(out, "Session Approver password") || !strings.Contains(out, "Enable it? [y/N]") {
 		t.Fatalf("bootstrap at the prompt: %v\n%s", err, out)
 	}
 	cfg, err := config.Load(filepath.Join(dir, "smcp.toml"))
@@ -172,7 +174,7 @@ func TestPasswordPromptAndInstallSources(t *testing.T) {
 	}
 
 	h, env = home()
-	out, err = ctlTerminal(t, env, admin+"\n"+admin+"\n"+approver+"\n"+approver+"\n", installArgs()...)
+	out, err = ctlTerminal(t, env, admin+"\n"+admin+"\n"+approver+"\n"+approver+"\n\n", installArgs()...)
 	if err != nil || !strings.Contains(out, "Administrator password") || !installed(h) {
 		t.Fatalf("install at the prompt: %v\n%s", err, out)
 	}

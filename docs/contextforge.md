@@ -72,6 +72,10 @@ An Administrator enrolls the catalog import key once, as `docs/api/contextforge.
 
 With `[runtime] sandbox = "podman"` the Connector cannot sandbox the import probe yet and refuses with `SANDBOXED_PROBE_UNAVAILABLE`; build the recipe from `smcpctl catalog import --dry-run` with `smcpctl package build --sandbox podman` there.
 
+## Choosing the bundled instance at setup
+
+`smcpctl bootstrap` and `smcpctl install` ask on a terminal whether to enable the bundled ContextForge instance, with what it adds and its risk, and the default is no (FR-22.44). `--with-contextforge` answers yes without asking; without a terminal and without the flag the answer is no. The answer is written as `[contextforge] bundled`. A yes also fetches the pinned image for this machine when Podman or Docker is installed; a no fetches nothing (FR-22.22). The desktop application's first-run setup is not wired to this choice yet.
+
 ## The bundled instance
 
 With `[contextforge] bundled = true` and a Secret Vault (`[secrets]`), `smcpctl contextforge start` (or the control API) starts the bundled ContextForge instance. Nothing starts it automatically yet; hosted packages, which will start it on demand (FR-22.23), are not built.
