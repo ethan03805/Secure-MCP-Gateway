@@ -7756,8 +7756,8 @@
       "client": "Codex CLI",
       "version": "0.142.2",
       "mode": "ai-gateway",
-      "result": "fail",
-      "detail": "failed: denied (call 01a152b9-bc46-7e0e-8124-e2da6b5243d6 to ref_time_now was dispatched; want a refusal (after one retry; first attempt: the agent made no call to ref_time_now (agent exit: 1))); journal verify ok"
+      "result": "pass",
+      "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
     },
     {
       "client": "Hermes Agent",
