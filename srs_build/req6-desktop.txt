@@ -294,6 +294,127 @@ SRC: OWNER (Windows MSI/MSIX)
 R: MSIX gives clean per-user installs and removal, but Windows installs an MSIX only when its signature chains to a trusted root, so it cannot ship before Authenticode signing.
 DEFER: Deferred with Windows Authenticode signing (FR-20.30): an unsigned MSIX cannot be installed outside developer mode. Release v1.3.0 ships the `.msi` of FR-20.20 instead. The Tauri bundler builds MSI and NSIS installers but not MSIX, so this also needs a separate packaging step.
 
+### Desktop user experience
+
+TEXT: Owner direction of 2026-10-18: the desktop application must be user friendly in ways that can be checked: a first-run introduction that tells a new user what the Gateway is and the three things to do, an explanation of every tray state, empty states and errors that name the next action, and a writing guide and a visual guide that reviewers and tests check, so that neither the wording nor the design falls back on the generic patterns of AI products. The two guides and the message catalogue also govern the console (E-24) and the project site.
+
+@FR-20.40 | First-run introduction
+P: FR-20
+S: The Desktop Application (E-34) SHALL show, on its first start for a user and before the first-run setup of FR-20.8, an introduction of at most five steps that states in one plain sentence what the Gateway is, states what it does for the user (it checks each tool call an agent makes against the user's policy, records the call in the Evidence Journal and holds a call that needs approval until a person decides), names the three things a new user does, each with the control that starts it: set up the Gateway (first-run setup, FR-20.8), connect an agent (Set Up a Client, FR-20.10) and review what agents did and decide approvals (Open Console and Approvals, FR-20.6 and FR-20.7), and makes no statement of protection that the installed profile does not provide.
+A: E-34; F-103
+V: Test | Start the application under a new user profile; confirm the introduction opens before setup, has at most five steps, contains the one-sentence description and the three tasks, and that each task's control opens first-run setup, client setup and the console respectively; inspect every string against `docs/design/writing.md` and confirm that no step claims enforcement on a Standalone installation.
+SRC: OWNER (a tutorial introduction to the app so users know what to do, 2026-10-18); FR-20.16
+R: A user who installed a security tool from a download page may not know what an MCP gateway is. The introduction names the job in the user's words and points at the three controls that do it, so the first-run path of FR-20.16 starts with a plan instead of a menu.
+TARGET: v1.3.0
+
+@FR-20.41 | Introduction skip and reopen
+P: FR-20
+S: The Desktop Application (E-34) SHALL let the user leave the introduction from every step with a Skip control and with the Escape key, SHALL record in its desktop preferences only that the introduction was completed or skipped and SHALL then not show it at start again, and SHALL reopen it at the first step when the user selects Introduction in a Help submenu that the tray menu shows in addition to the items of FR-20.2.
+A: E-34; F-103; F-100
+V: Test | Unit-test the introduction state machine for start, next, back, skip, finish and reopen from every step; in the application, skip at each step with the control and with Escape and confirm the next window (setup or none) follows and that a restart does not show the introduction; select Help, Introduction in the tray menu and confirm the introduction opens at step one.
+SRC: OWNER (skippable, re-openable from the tray or Help)
+R: Experienced operators must not be held by a tour, and anyone who skipped it must be able to find it again where help is expected.
+TARGET: v1.3.0
+
+@FR-20.42 | Introduction offline and private
+P: FR-20
+S: The introduction of FR-20.40 SHALL be packaged with the Desktop Application (E-34), SHALL display every step completely with no network access, and SHALL require no account, send no request off the host and record no usage data, its only stored state being the flag of FR-20.41.
+A: E-34; F-103
+V: Test | With the network disabled and a packet capture running, open the introduction and go through every step; confirm each step renders its text and images and that no packet leaves the host; inspect the desktop preferences file and confirm that the only entry the introduction wrote is the completed-or-skipped flag.
+SRC: OWNER (works offline, no account or telemetry); SEC 8.8; FR-8.26
+R: The Gateway is a local product for hosts that may be offline (FR-8.26); a tutorial that needed the network or reported its use would be the only part of the product that does.
+TARGET: v1.3.0
+
+@FR-20.43 | Introduction accessibility
+P: FR-20
+S: The introduction of FR-20.40 SHALL meet WCAG 2.2 level AA, SHALL be operable by keyboard alone with focus moved to the step's heading at each change of step, SHALL announce to screen readers the step number, the number of steps and the step title (for example "Step 2 of 4: Connect an agent"), and SHALL run no animation while the operating system's reduce-motion setting is on.
+A: E-34; F-103
+V: Test | Run axe-core with the WCAG 2.2 A and AA rule sets on each step in the light and dark schemes and confirm no violation; go through every step and skip with keyboard events only and confirm a visible focus indicator and focus on the heading after each change; confirm the announced text of each step; emulate reduced motion and confirm that no transition or animation runs. Record a VoiceOver pass through the introduction under `docs/verification/`.
+SRC: OWNER (accessible: keyboard, screen reader, reduced motion); FR-20.15
+R: FR-20.15 covers the setup, client setup, update and settings windows; the introduction is the first window a user sees and must not be the one that excludes them.
+TARGET: v1.3.0
+
+@FR-20.44 | Introduction effectiveness
+P: FR-20
+S: The introduction of the Desktop Application (E-34) SHALL enable at least two of the three first-time users per platform of the FR-20.16 timed task, which starts with the introduction, to name without help, after the introduction and before setup, the three things a new user does as FR-20.40 lists them, and to finish the task without asking the observer what to do next.
+A: E-34; F-103
+V: Demonstration | During the FR-20.16 timed task, start each user at the introduction; after it, ask the user what they will do next and record the answer; record every question the user asks the observer; confirm at least two users per platform name the three tasks and ask no next-step question; record the answers and questions with the FR-20.16 times under `docs/verification/`.
+SRC: OWNER (tutorial measured against the 15-minute first-run target); FR-20.16
+R: The introduction is judged by whether users know what to do after reading it, not by whether it exists; FR-20.16 already gathers the users, so the measure costs one question.
+TARGET: v1.3.0
+
+@FR-20.45 | Tray state explanations
+P: FR-20
+S: For each of the six tray states of FR-20.2, the Desktop Application (E-34) SHALL show in the tray menu a status line with the state's name and one sentence saying what the state means for the tool calls of the user's agents, and in a status window opened from that line the same sentence, the next action and a control that performs it where the application has one (Start for `stopped`, Open Console for `fail-closed`, `emergency stop` and `degraded`), the time of the last metrics reading for `unreachable`, and, on an installation not labelled `enforced`, the `not enforced` label with a sentence saying what it means.
+A: E-34; F-100
+V: Test | Drive the Gateway through each of the six states with the FR-20.2 test harness; confirm the status line's name and sentence, and the window's sentence, next action and control, against the message catalogue of FR-20.48; activate each control and confirm its action; confirm the last-reading time for `unreachable` and the `not enforced` explanation on a Standalone installation.
+SRC: OWNER (status explanations for each tray state: what it means, what to do)
+R: A state name alone does not tell a new user whether their agents' calls are being refused or what to do about it. `fail-closed` means calls are refused on purpose, and the user needs to read that, not infer it from a color.
+TARGET: v1.3.0
+
+@FR-20.46 | Desktop empty states and in-context help
+P: FR-20
+S: Each bundled window of the Desktop Application (E-34) SHALL show, when it has nothing to list (no detected client, no connected client, no pending approval, no newer release), an empty state that says why the list is empty and names the next action with the control or the step that performs it, and SHALL give every setting, profile choice and client setup change a help text of at most two sentences, packaged with the application, that says what it does and when to choose it.
+A: E-34; F-100; F-103; F-104
+V: Test | Open each bundled window with an empty fixture for each listed case; confirm the empty state's reason, next action and working control; inspect every setting, profile choice and client setup change for its help text and confirm the help displays with the network disabled.
+SRC: OWNER (empty states and in-context help that name the next action); FR-8.29; FR-8.25
+R: As in the console (FR-8.29), an empty window must be told apart from a broken one and must say what fills it.
+TARGET: v1.3.0
+
+@FR-20.47 | Plain-language desktop errors
+P: FR-20
+S: Every error the Desktop Application (E-34) shows, including those of service control, first-run setup, client setup, the update check, update verification, the metrics reading and the console connection, SHALL state, in plain sentences taken from the message catalogue of FR-20.48, what happened in one sentence, why in at most one sentence when the cause is known, and what the user can do next in at most two sentences, SHALL show the catalogue's code and any underlying output (the service manager's error text, `smcpctl` output) in a details area with a copy control, and SHALL show no stack trace and no exit status without an explanation.
+A: E-34; F-100; F-102; F-103; F-104
+V: Test | Inject each catalogued desktop failure, at least a unit that fails to start, a failing `smcpctl install`, an unreachable release feed, a failed signature check, a stopped metrics listener and a certificate error on the admin listener; confirm each message is the catalogue's text with its parts within those sentence limits, that the code and the underlying output are shown and copied by the copy control, and that no stack trace appears.
+SRC: OWNER (plain-language error messages: what happened, why, what to do); FR-1.51; FR-20.3; FR-20.8
+R: The output that FR-20.3 and FR-20.8 require is needed for diagnosis but is not an explanation. The user needs the explanation first and the output for a bug report.
+TARGET: v1.3.0
+
+@FR-20.48 | Shared message catalogue
+P: FR-20
+S: The Gateway source SHALL keep one machine-readable message catalogue, `docs/design/messages.json`, that maps every Appendix B reason code to its Table B.2 `data.message` text, and every Desktop Application error and tray state to a title, a what-happened sentence, an optional why sentence and a what-to-do sentence, and the Management Console & Control API (E-24) and the Desktop Application (E-34) SHALL take the text they show for a reason code, a desktop error or a tray state from that catalogue at build time.
+A: E-24; E-34; F-65; F-100; F-103
+V: Test | In CI, confirm that the catalogue holds every reason code of Table B.2 with identical text and every reason code the error builder of FR-1.51 emits; confirm that every desktop error code raised in the application source and each of the six tray states has an entry with the required parts; confirm that the console and desktop builds import their reason-code, error and state text from the catalogue and hold no differing copy.
+SRC: OWNER (a reason-code to message catalogue shared by desktop and console); FR-1.51; FR-18.7
+R: Three copies of the same message (on the wire, in the console, in the desktop application) drift. One catalogue checked against Appendix B keeps what the agent's user, the operator and the desktop user read the same.
+TARGET: v1.3.0
+
+@FR-20.49 | Writing style guide
+P: FR-20
+S: The Gateway source SHALL include a writing style guide, `docs/design/writing.md`, that is the normative reference for every string the console, the Desktop Application (E-34) and the project site show, and that defines at least: plain, specific wording with concrete verbs; terminology consistent with the element, role and profile names of this SRS and `ArchitectureV2.md`; sentence-case labels and buttons named by their action; security-accurate statements that never claim protection beyond the active profile; the error, empty-state and help-text patterns of FR-20.46 to FR-20.48; and a list of banned words, phrases and characters, including marketing intensifiers, vague reassurance, hedging filler, exclamation marks, emoji and AI-product framing, each with the wording to use instead.
+A: E-24; E-34; F-65; F-100; F-103
+V: Inspection | Inspect the guide for each listed topic and for the banned list with replacements; inspect a sample of 30 strings across the console, the desktop windows and the site against the guide; record the result under `docs/verification/`.
+SRC: OWNER (clarity; avoid generally recognized AI design patterns in wording, 2026-10-18); FR-8.35
+R: "User friendly" needs a reference that a reviewer and a test can check against. Without one, each surface invents its own voice, and the easy default is the generic voice of AI products, which users have learned to skim.
+TARGET: v1.3.0
+
+@FR-20.50 | Visual design guide
+P: FR-20
+S: The Gateway source SHALL include a visual design guide, `docs/design/visual.md`, that is the normative reference for the console, the bundled windows of the Desktop Application (E-34) and the project site, that extends the console rules of `docs/console-style.md`, and that defines at least: the color tokens of the light and dark schemes; one typeface family with a fixed type scale; dense, left-aligned layout; WCAG 2.2 AA contrast and a visible focus indicator; state colors that always carry a text label and a shape, including the six tray states; motion limited to showing a change of state and removed under reduced motion; and a list of banned visual patterns, including decorative gradients, glassmorphism, sparkle icons, decorative glow and shadow, oversized rounded cards and card grids, decorative shapes, stock or 3D illustration, centered-everything layouts and decorative animation, each with what to do instead.
+A: E-24; E-34; F-65; F-100; F-103
+V: Inspection | Inspect the guide for each listed topic and for the banned list; inspect each bundled desktop window, five console views and the site's home and install pages against it in the light and dark schemes; record the result under `docs/verification/`.
+SRC: OWNER (visual fidelity and style; avoid generally recognized AI design patterns in the user interface, 2026-10-18); FR-8.35
+R: The console's stark rules (FR-8.35) were written for one surface. The desktop windows and the site sit beside it, and a user moving between them should see one product.
+TARGET: v1.3.0
+
+@FR-20.51 | UI string lint
+P: FR-20
+S: The Gateway source SHALL include a lint, run by the CI `lint` job on every pull request, that extracts the user-visible strings of `console/src`, `desktop/` and `site/src`, fails on each word, phrase or character that the writing guide of FR-20.49 bans, names the file, line and rule of each finding, accepts an exception only from an allowlist file in which every entry gives a reason, and fails on an allowlist entry that no longer matches a finding.
+A: E-24; E-34; F-65; F-100
+V: Test | Unit-test the lint with fixtures: a banned word in a user-visible string fails, the same word in an identifier, import path or class name passes, an allowlisted finding passes, and a stale allowlist entry fails; confirm that the CI `lint` job runs the lint and that the repository passes it at the release commit.
+SRC: OWNER (tests can check the guides, for example a lint over UI strings)
+R: A guide nobody checks decays. The lint catches the cheap, recognizable failures so that review can spend its time on clarity.
+TARGET: v1.3.0
+
+@FR-20.52 | Desktop color scheme and motion
+P: FR-20
+S: The bundled windows and the tray icon of the Desktop Application (E-34) SHALL follow the operating system's light or dark appearance and change within 2 seconds of a change to it, and the bundled windows SHALL run no animation other than an opacity transition of at most 150 ms, and none while the reduce-motion setting is on.
+A: E-34; F-100; F-103
+V: Test | In the webview test build, emulate each color scheme and confirm each bundled window's colors and an axe-core contrast pass; switch the operating system appearance with the application running and confirm the windows and the tray icon change within 2 seconds; emulate reduced motion and confirm computed transition and animation durations of zero.
+SRC: OWNER (light and dark following the OS; reduced motion)
+R: A window that ignores dark mode is glaring next to the console, which already follows it, and motion that cannot be turned off excludes users with vestibular disorders (WCAG 2.2 success criterion 2.3.3).
+TARGET: v1.3.0
+
 ### Security requirements for the desktop application and installers
 
 TEXT: Parents are the MUSTs of `MCP_Gateway_Security_SRS.md` whose controls the desktop application or the installers could weaken. They keep the desktop application at or below the authority of a signed-in console user and keep installed code out of the agent's reach.

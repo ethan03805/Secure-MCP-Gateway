@@ -7597,6 +7597,192 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 | Rationale | Any web page can open a registered scheme, so a deep link must never carry an action, only a place in the console where the user still signs in and decides. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
+### Desktop user experience
+
+Owner direction of 2026-10-18: the desktop application must be user friendly in ways that can be checked: a first-run introduction that tells a new user what the Gateway is and the three things to do, an explanation of every tray state, empty states and errors that name the next action, and a writing guide and a visual guide that reviewers and tests check, so that neither the wording nor the design falls back on the generic patterns of AI products. The two guides and the message catalogue also govern the console (E-24) and the project site.
+
+#### FR-20.40 — First-run introduction
+
+| Field | Value |
+|---|---|
+| ID | FR-20.40 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** show, on its first start for a user and before the first-run setup of FR-20.8, an introduction of at most five steps that states in one plain sentence what the Gateway is, states what it does for the user (it checks each tool call an agent makes against the user's policy, records the call in the Evidence Journal and holds a call that needs approval until a person decides), names the three things a new user does, each with the control that starts it: set up the Gateway (first-run setup, FR-20.8), connect an agent (Set Up a Client, FR-20.10) and review what agents did and decide approvals (Open Console and Approvals, FR-20.6 and FR-20.7), and makes no statement of protection that the installed profile does not provide. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-103 |
+| Verification Method | Test |
+| Verification Statement | Start the application under a new user profile; confirm the introduction opens before setup, has at most five steps, contains the one-sentence description and the three tasks, and that each task's control opens first-run setup, client setup and the console respectively; inspect every string against `docs/design/writing.md` and confirm that no step claims enforcement on a Standalone installation. |
+| Source | OWNER (a tutorial introduction to the app so users know what to do, 2026-10-18); FR-20.16 |
+| Rationale | A user who installed a security tool from a download page may not know what an MCP gateway is. The introduction names the job in the user's words and points at the three controls that do it, so the first-run path of FR-20.16 starts with a plan instead of a menu. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.41 — Introduction skip and reopen
+
+| Field | Value |
+|---|---|
+| ID | FR-20.41 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** let the user leave the introduction from every step with a Skip control and with the Escape key, **SHALL** record in its desktop preferences only that the introduction was completed or skipped and **SHALL** then not show it at start again, and **SHALL** reopen it at the first step when the user selects Introduction in a Help submenu that the tray menu shows in addition to the items of FR-20.2. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-103, F-100 |
+| Verification Method | Test |
+| Verification Statement | Unit-test the introduction state machine for start, next, back, skip, finish and reopen from every step; in the application, skip at each step with the control and with Escape and confirm the next window (setup or none) follows and that a restart does not show the introduction; select Help, Introduction in the tray menu and confirm the introduction opens at step one. |
+| Source | OWNER (skippable, re-openable from the tray or Help) |
+| Rationale | Experienced operators must not be held by a tour, and anyone who skipped it must be able to find it again where help is expected. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.42 — Introduction offline and private
+
+| Field | Value |
+|---|---|
+| ID | FR-20.42 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The introduction of FR-20.40 **SHALL** be packaged with the Desktop Application (E-34), **SHALL** display every step completely with no network access, and **SHALL** require no account, send no request off the host and record no usage data, its only stored state being the flag of FR-20.41. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-103 |
+| Verification Method | Test |
+| Verification Statement | With the network disabled and a packet capture running, open the introduction and go through every step; confirm each step renders its text and images and that no packet leaves the host; inspect the desktop preferences file and confirm that the only entry the introduction wrote is the completed-or-skipped flag. |
+| Source | OWNER (works offline, no account or telemetry); SEC 8.8; FR-8.26 |
+| Rationale | The Gateway is a local product for hosts that may be offline (FR-8.26); a tutorial that needed the network or reported its use would be the only part of the product that does. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.43 — Introduction accessibility
+
+| Field | Value |
+|---|---|
+| ID | FR-20.43 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The introduction of FR-20.40 **SHALL** meet WCAG 2.2 level AA, **SHALL** be operable by keyboard alone with focus moved to the step's heading at each change of step, **SHALL** announce to screen readers the step number, the number of steps and the step title (for example "Step 2 of 4: Connect an agent"), and **SHALL** run no animation while the operating system's reduce-motion setting is on. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-103 |
+| Verification Method | Test |
+| Verification Statement | Run axe-core with the WCAG 2.2 A and AA rule sets on each step in the light and dark schemes and confirm no violation; go through every step and skip with keyboard events only and confirm a visible focus indicator and focus on the heading after each change; confirm the announced text of each step; emulate reduced motion and confirm that no transition or animation runs. Record a VoiceOver pass through the introduction under `docs/verification/`. |
+| Source | OWNER (accessible: keyboard, screen reader, reduced motion); FR-20.15 |
+| Rationale | FR-20.15 covers the setup, client setup, update and settings windows; the introduction is the first window a user sees and must not be the one that excludes them. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.44 — Introduction effectiveness
+
+| Field | Value |
+|---|---|
+| ID | FR-20.44 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The introduction of the Desktop Application (E-34) **SHALL** enable at least two of the three first-time users per platform of the FR-20.16 timed task, which starts with the introduction, to name without help, after the introduction and before setup, the three things a new user does as FR-20.40 lists them, and to finish the task without asking the observer what to do next. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-103 |
+| Verification Method | Demonstration |
+| Verification Statement | During the FR-20.16 timed task, start each user at the introduction; after it, ask the user what they will do next and record the answer; record every question the user asks the observer; confirm at least two users per platform name the three tasks and ask no next-step question; record the answers and questions with the FR-20.16 times under `docs/verification/`. |
+| Source | OWNER (tutorial measured against the 15-minute first-run target); FR-20.16 |
+| Rationale | The introduction is judged by whether users know what to do after reading it, not by whether it exists; FR-20.16 already gathers the users, so the measure costs one question. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.45 — Tray state explanations
+
+| Field | Value |
+|---|---|
+| ID | FR-20.45 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | For each of the six tray states of FR-20.2, the Desktop Application (E-34) **SHALL** show in the tray menu a status line with the state's name and one sentence saying what the state means for the tool calls of the user's agents, and in a status window opened from that line the same sentence, the next action and a control that performs it where the application has one (Start for `stopped`, Open Console for `fail-closed`, `emergency stop` and `degraded`), the time of the last metrics reading for `unreachable`, and, on an installation not labelled `enforced`, the `not enforced` label with a sentence saying what it means. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100 |
+| Verification Method | Test |
+| Verification Statement | Drive the Gateway through each of the six states with the FR-20.2 test harness; confirm the status line's name and sentence, and the window's sentence, next action and control, against the message catalogue of FR-20.48; activate each control and confirm its action; confirm the last-reading time for `unreachable` and the `not enforced` explanation on a Standalone installation. |
+| Source | OWNER (status explanations for each tray state: what it means, what to do) |
+| Rationale | A state name alone does not tell a new user whether their agents' calls are being refused or what to do about it. `fail-closed` means calls are refused on purpose, and the user needs to read that, not infer it from a color. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.46 — Desktop empty states and in-context help
+
+| Field | Value |
+|---|---|
+| ID | FR-20.46 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | Each bundled window of the Desktop Application (E-34) **SHALL** show, when it has nothing to list (no detected client, no connected client, no pending approval, no newer release), an empty state that says why the list is empty and names the next action with the control or the step that performs it, and **SHALL** give every setting, profile choice and client setup change a help text of at most two sentences, packaged with the application, that says what it does and when to choose it. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100, F-103, F-104 |
+| Verification Method | Test |
+| Verification Statement | Open each bundled window with an empty fixture for each listed case; confirm the empty state's reason, next action and working control; inspect every setting, profile choice and client setup change for its help text and confirm the help displays with the network disabled. |
+| Source | OWNER (empty states and in-context help that name the next action); FR-8.29; FR-8.25 |
+| Rationale | As in the console (FR-8.29), an empty window must be told apart from a broken one and must say what fills it. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.47 — Plain-language desktop errors
+
+| Field | Value |
+|---|---|
+| ID | FR-20.47 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | Every error the Desktop Application (E-34) shows, including those of service control, first-run setup, client setup, the update check, update verification, the metrics reading and the console connection, **SHALL** state, in plain sentences taken from the message catalogue of FR-20.48, what happened in one sentence, why in at most one sentence when the cause is known, and what the user can do next in at most two sentences, **SHALL** show the catalogue's code and any underlying output (the service manager's error text, `smcpctl` output) in a details area with a copy control, and **SHALL** show no stack trace and no exit status without an explanation. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100, F-102, F-103, F-104 |
+| Verification Method | Test |
+| Verification Statement | Inject each catalogued desktop failure, at least a unit that fails to start, a failing `smcpctl install`, an unreachable release feed, a failed signature check, a stopped metrics listener and a certificate error on the admin listener; confirm each message is the catalogue's text with its parts within those sentence limits, that the code and the underlying output are shown and copied by the copy control, and that no stack trace appears. |
+| Source | OWNER (plain-language error messages: what happened, why, what to do); FR-1.51; FR-20.3; FR-20.8 |
+| Rationale | The output that FR-20.3 and FR-20.8 require is needed for diagnosis but is not an explanation. The user needs the explanation first and the output for a bug report. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.48 — Shared message catalogue
+
+| Field | Value |
+|---|---|
+| ID | FR-20.48 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway source **SHALL** keep one machine-readable message catalogue, `docs/design/messages.json`, that maps every Appendix B reason code to its Table B.2 `data.message` text, and every Desktop Application error and tray state to a title, a what-happened sentence, an optional why sentence and a what-to-do sentence, and the Management Console & Control API (E-24) and the Desktop Application (E-34) **SHALL** take the text they show for a reason code, a desktop error or a tray state from that catalogue at build time. |
+| Allocation | Elements: E-24 Management Console & Control API, E-34 Desktop Application; Functions: F-65, F-100, F-103 |
+| Verification Method | Test |
+| Verification Statement | In CI, confirm that the catalogue holds every reason code of Table B.2 with identical text and every reason code the error builder of FR-1.51 emits; confirm that every desktop error code raised in the application source and each of the six tray states has an entry with the required parts; confirm that the console and desktop builds import their reason-code, error and state text from the catalogue and hold no differing copy. |
+| Source | OWNER (a reason-code to message catalogue shared by desktop and console); FR-1.51; FR-18.7 |
+| Rationale | Three copies of the same message (on the wire, in the console, in the desktop application) drift. One catalogue checked against Appendix B keeps what the agent's user, the operator and the desktop user read the same. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.49 — Writing style guide
+
+| Field | Value |
+|---|---|
+| ID | FR-20.49 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway source **SHALL** include a writing style guide, `docs/design/writing.md`, that is the normative reference for every string the console, the Desktop Application (E-34) and the project site show, and that defines at least: plain, specific wording with concrete verbs; terminology consistent with the element, role and profile names of this SRS and `ArchitectureV2.md`; sentence-case labels and buttons named by their action; security-accurate statements that never claim protection beyond the active profile; the error, empty-state and help-text patterns of FR-20.46 to FR-20.48; and a list of banned words, phrases and characters, including marketing intensifiers, vague reassurance, hedging filler, exclamation marks, emoji and AI-product framing, each with the wording to use instead. |
+| Allocation | Elements: E-24 Management Console & Control API, E-34 Desktop Application; Functions: F-65, F-100, F-103 |
+| Verification Method | Inspection |
+| Verification Statement | Inspect the guide for each listed topic and for the banned list with replacements; inspect a sample of 30 strings across the console, the desktop windows and the site against the guide; record the result under `docs/verification/`. |
+| Source | OWNER (clarity; avoid generally recognized AI design patterns in wording, 2026-10-18); FR-8.35 |
+| Rationale | "User friendly" needs a reference that a reviewer and a test can check against. Without one, each surface invents its own voice, and the easy default is the generic voice of AI products, which users have learned to skim. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.50 — Visual design guide
+
+| Field | Value |
+|---|---|
+| ID | FR-20.50 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway source **SHALL** include a visual design guide, `docs/design/visual.md`, that is the normative reference for the console, the bundled windows of the Desktop Application (E-34) and the project site, that extends the console rules of `docs/console-style.md`, and that defines at least: the color tokens of the light and dark schemes; one typeface family with a fixed type scale; dense, left-aligned layout; WCAG 2.2 AA contrast and a visible focus indicator; state colors that always carry a text label and a shape, including the six tray states; motion limited to showing a change of state and removed under reduced motion; and a list of banned visual patterns, including decorative gradients, glassmorphism, sparkle icons, decorative glow and shadow, oversized rounded cards and card grids, decorative shapes, stock or 3D illustration, centered-everything layouts and decorative animation, each with what to do instead. |
+| Allocation | Elements: E-24 Management Console & Control API, E-34 Desktop Application; Functions: F-65, F-100, F-103 |
+| Verification Method | Inspection |
+| Verification Statement | Inspect the guide for each listed topic and for the banned list; inspect each bundled desktop window, five console views and the site's home and install pages against it in the light and dark schemes; record the result under `docs/verification/`. |
+| Source | OWNER (visual fidelity and style; avoid generally recognized AI design patterns in the user interface, 2026-10-18); FR-8.35 |
+| Rationale | The console's stark rules (FR-8.35) were written for one surface. The desktop windows and the site sit beside it, and a user moving between them should see one product. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.51 — UI string lint
+
+| Field | Value |
+|---|---|
+| ID | FR-20.51 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway source **SHALL** include a lint, run by the CI `lint` job on every pull request, that extracts the user-visible strings of `console/src`, `desktop/` and `site/src`, fails on each word, phrase or character that the writing guide of FR-20.49 bans, names the file, line and rule of each finding, accepts an exception only from an allowlist file in which every entry gives a reason, and fails on an allowlist entry that no longer matches a finding. |
+| Allocation | Elements: E-24 Management Console & Control API, E-34 Desktop Application; Functions: F-65, F-100 |
+| Verification Method | Test |
+| Verification Statement | Unit-test the lint with fixtures: a banned word in a user-visible string fails, the same word in an identifier, import path or class name passes, an allowlisted finding passes, and a stale allowlist entry fails; confirm that the CI `lint` job runs the lint and that the repository passes it at the release commit. |
+| Source | OWNER (tests can check the guides, for example a lint over UI strings) |
+| Rationale | A guide nobody checks decays. The lint catches the cheap, recognizable failures so that review can spend its time on clarity. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.52 — Desktop color scheme and motion
+
+| Field | Value |
+|---|---|
+| ID | FR-20.52 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The bundled windows and the tray icon of the Desktop Application (E-34) **SHALL** follow the operating system's light or dark appearance and change within 2 seconds of a change to it, and the bundled windows **SHALL** run no animation other than an opacity transition of at most 150 ms, and none while the reduce-motion setting is on. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100, F-103 |
+| Verification Method | Test |
+| Verification Statement | In the webview test build, emulate each color scheme and confirm each bundled window's colors and an axe-core contrast pass; switch the operating system appearance with the application running and confirm the windows and the tray icon change within 2 seconds; emulate reduced motion and confirm computed transition and animation durations of zero. |
+| Source | OWNER (light and dark following the OS; reduced motion) |
+| Rationale | A window that ignores dark mode is glaring next to the console, which already follows it, and motion that cannot be turned off excludes users with vestibular disorders (WCAG 2.2 success criterion 2.3.3). |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
 ### Security requirements for the desktop application and installers
 
 Parents are the MUSTs of `MCP_Gateway_Security_SRS.md` whose controls the desktop application or the installers could weaken. They keep the desktop application at or below the authority of a signed-in console user and keep installed code out of the agent's reach.
@@ -8946,7 +9132,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 8.5 | Credential management | SHALL | Source of FR | FR-6.2, FR-6.12, FR-8.20 |
 | 8.6 | Filter workbench | SHALL | Source of FR | FR-8.27 |
 | 8.7 | Enforcement status | SHALL | Source of FR | FR-8.3, FR-22.41 |
-| 8.8 | Local UI assets | SHALL | Source of FR | FR-8.25, FR-8.26, SR-2-6, FR-22.4 |
+| 8.8 | Local UI assets | SHALL | Source of FR | FR-8.25, FR-8.26, FR-20.42, SR-2-6, FR-22.4 |
 | 8.9 | GUI request protection | MUST | Realized by SR | SR-8.9-1 |
 | 8.10 | Application roles | SHALL | Source of FR | FR-8.2, FR-22.5, FR-22.41 |
 | 9 | Open-source local engineering capabilities | SHALL | Source of FR | FR-12, FR-12.2 |
@@ -8997,7 +9183,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8, FR-22.14 (planned v1.3.0), FR-22.39 (planned v1.3.0) | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1, SR-6.18-2 (planned v1.3.0) |
 | E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1 |
 | E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, FR-20.5 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.30 (planned v1.3.0) | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
-| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4, FR-20.25 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0) |
+| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4, FR-20.25 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0) |
 | E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
 | E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
 | E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11 | SR-4.2-2 |
@@ -9007,7 +9193,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-31 | Anomaly Scorer | FR-4.15, FR-10, FR-10.22, FR-10.23, FR-10.24, FR-10.25, FR-10.26, FR-10.27, FR-10.28, FR-10.29, FR-11, FR-11.3 | SR-1.12-2, SR-7-1 |
 | E-32 | Research Dataset Service | FR-3.1, FR-10, FR-10.30, FR-10.31, FR-10.32, FR-10.33, FR-10.34, FR-10.35, FR-10.36, FR-12.4 | SR-6-1, SR-6-2, SR-6.17-1 |
 | E-33 | Harness Adapter Kit | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.8, FR-15.9, FR-15.10, FR-16, FR-16.2, FR-16.9, FR-16.10, FR-18, FR-18.2, FR-18.3, FR-20.10 (planned v1.3.0) | SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1, SR-4.11-2 (planned v1.3.0) |
-| E-34 | Desktop Application | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.6 (planned v1.3.0), FR-20.7 (planned v1.3.0), FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.28 (planned v1.3.0) | SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
+| E-34 | Desktop Application | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.6 (planned v1.3.0), FR-20.7 (planned v1.3.0), FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.28 (planned v1.3.0), FR-20.40 (planned v1.3.0), FR-20.41 (planned v1.3.0), FR-20.42 (planned v1.3.0), FR-20.43 (planned v1.3.0), FR-20.44 (planned v1.3.0), FR-20.45 (planned v1.3.0), FR-20.46 (planned v1.3.0), FR-20.47 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-20.52 (planned v1.3.0) | SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
 | E-35 | Platform Installers | FR-20 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), FR-20.23 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.25 (planned v1.3.0), FR-20.26 (planned v1.3.0), FR-20.27 (planned v1.3.0) | SR-4.11-2 (planned v1.3.0) |
 | E-36 | ContextForge Connector | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.7 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.13 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.17 (planned v1.3.0), FR-22.18 (planned v1.3.0), FR-22.19 (planned v1.3.0), FR-22.20 (planned v1.3.0), FR-22.21 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.27 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.30 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.33 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.37 (planned v1.3.0), FR-22.38 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0), FR-22.43 (planned v1.3.0) | SR-3-6 (planned v1.3.0), SR-3.2-2 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-3.6-2 (planned v1.3.0), SR-3.8-2 (planned v1.3.0), SR-4-3 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-2.13-5 (planned v1.3.0) |
 
@@ -9081,7 +9267,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-62 | Drive fail-closed state | FR-7.12, FR-7.13, FR-9.17, FR-13.9, FR-13.13, SR-7.3-1 |
 | F-63 | Authenticate administrative user | FR-2.19, FR-2.23, FR-8, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0) |
 | F-64 | Enforce administrative roles | FR-2.23, FR-8, FR-8.2, SR-2-2, SR-6-3, SR-6.16-1 |
-| F-65 | Present management views | FR-8, FR-8.1, FR-8.3, FR-8.4, FR-8.5, FR-8.14, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-13.10, FR-18, FR-18.4, FR-19.2, FR-19.4, SR-3.3-1, SR-3.4-1, SR-6.17-1, FR-22.4 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) |
+| F-65 | Present management views | FR-8, FR-8.1, FR-8.3, FR-8.4, FR-8.5, FR-8.14, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-13.10, FR-18, FR-18.4, FR-19.2, FR-19.4, SR-3.3-1, SR-3.4-1, SR-6.17-1, FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) |
 | F-66 | Estimate observation cost | FR-8.11, FR-3.7 (deferred) |
 | F-67 | Provide parameter-selection workbench | FR-8, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.24, FR-8.25 |
 | F-68 | Present behavior analytics | FR-8, FR-8.13 |
@@ -9116,11 +9302,11 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-97 | Install, upgrade and remove the Gateway | FR-12.4, FR-12.7, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.11, FR-13.12, FR-13.13, FR-16.11, FR-17.9, FR-18.1, SR-4.14-1, SR-7.5-2, FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-12.5 (deferred) |
 | F-98 | Diagnose and lock down harness configuration | FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.10, FR-16.10, FR-18, FR-18.2, FR-18.3, SR-4.9-1, SR-4.11-1, SR-4.13-1, FR-20.10 (planned v1.3.0), SR-4.11-2 (planned v1.3.0) |
 | F-99 | Track session taint | SR-5.13-2 |
-| F-100 | Present desktop status and service control | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-7 (planned v1.3.0) |
+| F-100 | Present desktop status and service control | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.41 (planned v1.3.0), FR-20.45 (planned v1.3.0), FR-20.46 (planned v1.3.0), FR-20.47 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-20.52 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-7 (planned v1.3.0) |
 | F-101 | Raise desktop approval notices | FR-20.7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0) |
-| F-102 | Host the console in a native window | FR-20.6 (planned v1.3.0), FR-20.28 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2.8-5 (planned v1.3.0) |
-| F-103 | Guide first-run and client setup | FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-7 (planned v1.3.0) |
-| F-104 | Check, verify and apply updates | FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
+| F-102 | Host the console in a native window | FR-20.6 (planned v1.3.0), FR-20.28 (planned v1.3.0), FR-20.47 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2.8-5 (planned v1.3.0) |
+| F-103 | Guide first-run and client setup | FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.40 (planned v1.3.0), FR-20.41 (planned v1.3.0), FR-20.42 (planned v1.3.0), FR-20.43 (planned v1.3.0), FR-20.44 (planned v1.3.0), FR-20.46 (planned v1.3.0), FR-20.47 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.52 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-7 (planned v1.3.0) |
+| F-104 | Check, verify and apply updates | FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.46 (planned v1.3.0), FR-20.47 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
 | F-105 | Build platform installers | FR-20 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.23 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.26 (planned v1.3.0), FR-20.29 (deferred), FR-20.30 (deferred), FR-20.31 (deferred) |
 | F-106 | Install and remove platform packages | FR-20.16 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.25 (planned v1.3.0), SR-4.11-2 (planned v1.3.0), FR-20.31 (deferred) |
 | F-107 | Import catalog entry | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.7 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.17 (planned v1.3.0), FR-22.43 (planned v1.3.0), SR-3.5-2 (planned v1.3.0) |
@@ -9803,6 +9989,19 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-20.26 (planned v1.3.0) | FR-20 | Test | E-35 | Ad-hoc signature on macOS |
 | FR-20.27 (planned v1.3.0) | FR-20 | Inspection | E-34, E-35, E-24 | Desktop application documentation |
 | FR-20.28 (planned v1.3.0) | FR-20 | Test | E-34 | Deep links |
+| FR-20.40 (planned v1.3.0) | FR-20 | Test | E-34 | First-run introduction |
+| FR-20.41 (planned v1.3.0) | FR-20 | Test | E-34 | Introduction skip and reopen |
+| FR-20.42 (planned v1.3.0) | FR-20 | Test | E-34 | Introduction offline and private |
+| FR-20.43 (planned v1.3.0) | FR-20 | Test | E-34 | Introduction accessibility |
+| FR-20.44 (planned v1.3.0) | FR-20 | Demonstration | E-34 | Introduction effectiveness |
+| FR-20.45 (planned v1.3.0) | FR-20 | Test | E-34 | Tray state explanations |
+| FR-20.46 (planned v1.3.0) | FR-20 | Test | E-34 | Desktop empty states and in-context help |
+| FR-20.47 (planned v1.3.0) | FR-20 | Test | E-34 | Plain-language desktop errors |
+| FR-20.48 (planned v1.3.0) | FR-20 | Test | E-24, E-34 | Shared message catalogue |
+| FR-20.49 (planned v1.3.0) | FR-20 | Inspection | E-24, E-34 | Writing style guide |
+| FR-20.50 (planned v1.3.0) | FR-20 | Inspection | E-24, E-34 | Visual design guide |
+| FR-20.51 (planned v1.3.0) | FR-20 | Test | E-24, E-34 | UI string lint |
+| FR-20.52 (planned v1.3.0) | FR-20 | Test | E-34 | Desktop color scheme and motion |
 | SR-2-3 (planned v1.3.0) | SEC-2 | Test | E-34 | Desktop authority ceiling |
 | SR-2-4 (planned v1.3.0) | SEC-2 | Test | E-34 | No stored console credentials |
 | SR-2-5 (planned v1.3.0) | SEC-2 | Test | E-34 | Minimal IPC surface |
@@ -9877,9 +10076,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 | Check | Result |
 |---|---|
 | Requirements of the current release | 529 total: 367 FR (19 roots), 162 SR |
-| Planned for a later release (Section 2.8) | 95; v1.3.0: FR-20, FR-20.1, FR-20.2, FR-20.3, FR-20.4, FR-20.5, FR-20.6, FR-20.7, FR-20.8, FR-20.9, FR-20.10, FR-20.11, FR-20.12, FR-20.13, FR-20.14, FR-20.15, FR-20.16, FR-20.17, FR-20.18, FR-20.19, FR-20.20, FR-20.21, FR-20.22, FR-20.23, FR-20.24, FR-20.25, FR-20.26, FR-20.27, FR-20.28, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-4.11-2, SR-7-2, FR-22, FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-22.5, FR-22.6, FR-22.7, FR-22.8, FR-22.9, FR-22.10, FR-22.11, FR-22.12, FR-22.13, FR-22.14, FR-22.15, FR-22.16, FR-22.17, FR-22.18, FR-22.19, FR-22.20, FR-22.21, FR-22.22, FR-22.23, FR-22.24, FR-22.25, FR-22.26, FR-22.27, FR-22.28, FR-22.29, FR-22.30, FR-22.31, FR-22.32, FR-22.33, FR-22.34, FR-22.35, FR-22.36, FR-22.37, FR-22.38, FR-22.39, FR-22.40, FR-22.41, FR-22.42, FR-22.43, SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3, SR-6.18-2 |
+| Planned for a later release (Section 2.8) | 108; v1.3.0: FR-20, FR-20.1, FR-20.2, FR-20.3, FR-20.4, FR-20.5, FR-20.6, FR-20.7, FR-20.8, FR-20.9, FR-20.10, FR-20.11, FR-20.12, FR-20.13, FR-20.14, FR-20.15, FR-20.16, FR-20.17, FR-20.18, FR-20.19, FR-20.20, FR-20.21, FR-20.22, FR-20.23, FR-20.24, FR-20.25, FR-20.26, FR-20.27, FR-20.28, FR-20.40, FR-20.41, FR-20.42, FR-20.43, FR-20.44, FR-20.45, FR-20.46, FR-20.47, FR-20.48, FR-20.49, FR-20.50, FR-20.51, FR-20.52, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-4.11-2, SR-7-2, FR-22, FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-22.5, FR-22.6, FR-22.7, FR-22.8, FR-22.9, FR-22.10, FR-22.11, FR-22.12, FR-22.13, FR-22.14, FR-22.15, FR-22.16, FR-22.17, FR-22.18, FR-22.19, FR-22.20, FR-22.21, FR-22.22, FR-22.23, FR-22.24, FR-22.25, FR-22.26, FR-22.27, FR-22.28, FR-22.29, FR-22.30, FR-22.31, FR-22.32, FR-22.33, FR-22.34, FR-22.35, FR-22.36, FR-22.37, FR-22.38, FR-22.39, FR-22.40, FR-22.41, FR-22.42, FR-22.43, SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3, SR-6.18-2 |
 | Deferred from release 1.0 (Appendix N) | 35: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1, FR-20.29, FR-20.30, FR-20.31 |
-| Verification methods | Analysis 21, Demonstration 30, Inspection 86, Test 487 |
+| Verification methods | Analysis 21, Demonstration 31, Inspection 88, Test 497 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
