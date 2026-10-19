@@ -127,7 +127,7 @@ function CatalogView() {
       </PageHeader>
       <Help>
         <p>
-          Each table lists the tools one template grants: the public name a harness sees, the server and rule behind it, whether calls need approval and which
+          Each table lists the tools one template grants: the public name an agent sees, the server and rule behind it, whether calls need approval and which
           optional filters run. A tool marked as not offered is named by a rule but no running server provides it. Change the grants in the Policy studio (G-02).
         </p>
       </Help>

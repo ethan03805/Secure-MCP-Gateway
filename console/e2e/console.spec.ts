@@ -33,6 +33,16 @@ test("administrator signs in, sees enforcement state and signs out", async ({ pa
   await expect(strip).toContainText("policy r1");
   await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link")).toHaveCount(17);
   await expect(page.getByRole("heading", { name: /First-run checklist/ })).toBeVisible();
+  // CA-15: the account name alone beside the role, and "live updates".
+  await expect(strip).toContainText(/Administrator\s*admin(?!:)/);
+  await expect(strip).not.toContainText("admin:admin");
+  await expect(strip).toContainText(/live updates|updates on reload/);
+  // CA-14: the view's h1 is the first heading of the page; the navigation's
+  // group names are labels of their lists, not headings.
+  const levels = await page.getByRole("heading").evaluateAll((hs) => hs.map((h) => h.tagName));
+  expect(levels[0]).toBe("H1");
+  await expect(page.getByRole("navigation", { name: "Views" }).getByRole("heading")).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Views" }).getByRole("list").first()).toHaveAccessibleName(/\S/);
 
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
@@ -50,7 +60,7 @@ test("emergency stop refuses calls and resume restores them", async ({ page }) =
   await expect(strip).toContainText(/policy \S+/);
   await expect(strip).toContainText(/\d+ sessions?/);
   await expect(strip).toContainText(/healthy|degraded|fail-closed/);
-  await expect(page.getByRole("table", { name: "Health monitor causes" })).toBeVisible();
+  await expect(page.getByRole("table", { name: "Health causes" })).toBeVisible();
   await page.getByTestId("emergency-button").click();
   const dialog = page.getByRole("dialog", { name: "Emergency stop" });
   await expect(dialog).toBeVisible();

@@ -172,7 +172,7 @@ export default function AgentsPage() {
 
       <Sec no={`${CH.n}.4`} id="background" title="Background">
         <p>
-          What the harnesses expect from an MCP server, checked against their primary documentation, and where the
+          What the agents expect from an MCP server, checked against their primary documentation, and where the
           specification changes to meet them, is in <Link href="/docs/client-compatibility/">the client compatibility
           brief</Link>. The matrix itself is <code>{"docs/clients/matrix.json"}</code>; quick starts per client are under{" "}
           <Link href="/docs/clients/">client quick starts</Link>.

@@ -382,7 +382,8 @@ fieldset.choice label {
 .rail-group {
   margin-bottom: 0.9rem;
 }
-.rail h2 {
+.rail-label {
+  margin: 0;
   font-size: var(--fs-1);
   color: var(--ink-3);
   font-weight: 600;

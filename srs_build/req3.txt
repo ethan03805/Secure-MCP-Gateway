@@ -305,7 +305,7 @@ R: The catalog must grow to capture as many parameters as possible.
 
 @FR-8.8 | Observation presets
 P: FR-8
-S: The Observation & Parameter Workbench view (G-04) SHALL provide the editable presets Minimal security floor, Security standard, Behavior characterization, Performance profiling and Research — full capture, and SHALL save user-defined presets.
+S: The Observation & Parameter Workbench view (G-04) SHALL provide the editable presets Minimal security floor, Security standard, Behavior characterization, Performance profiling and Research: full capture, and SHALL save user-defined presets.
 A: E-24; F-67; D-11
 V: Demonstration | Apply each preset, modify one and save it as a new preset.
 SRC: ARCH §11 item 2
@@ -489,7 +489,7 @@ R: States what the release is tested against.
 
 @FR-8.31 | First-run checklist
 P: FR-8
-S: The Gateway Control view (G-01) SHALL show a first-run checklist with the items administrator created, Session Approver created, first server packaged and enabled, first policy revision published, first harness connected, approval tested and backup configured, each marked done from Gateway state and linked to the view that completes it.
+S: The Gateway Control view (G-01) SHALL show a first-run checklist with the items administrator created, Session Approver created, first server packaged and enabled, first policy revision published, first agent connected, approval tested and backup configured, each marked done from Gateway state and linked to the view that completes it.
 A: E-24; F-65; X-04
 V: Test | Start from a fresh installation; complete each item; confirm each is marked done from Gateway state and not from a manual tick.
 SRC: REVIEW (I5)

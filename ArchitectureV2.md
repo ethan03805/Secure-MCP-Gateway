@@ -1087,7 +1087,7 @@ Span collection is itself bounded (Section 14) and can be sampled independently 
 The workbench is how a non-programmer researcher or policy author tunes audits and capture. Recommended behaviors for SRS V2 usability requirements:
 
 1. **Catalog browser:** parameters grouped as in Section 10.3, with search, plain-language descriptions, units, sensitivity badge and cost indicator.
-2. **Presets:** *Minimal security floor*, *Security standard*, *Behavior characterization*, *Performance profiling*, *Research — full capture*. Each is editable and saveable as a named preset.
+2. **Presets:** *Minimal security floor*, *Security standard*, *Behavior characterization*, *Performance profiling*, *Research: full capture*. Each is editable and saveable as a named preset.
 3. **Scope builder:** pick principals, frameworks, session templates, servers and tools from lists, not free text.
 4. **Sampling and escalation controls:** sliders for the normal sampling rate; checkboxes for escalation parameters per band.
 5. **Baseline setup:** pick context dimensions and per-feature statistics (transform, robust, decay) with sensible defaults.

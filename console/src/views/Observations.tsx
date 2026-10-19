@@ -98,7 +98,7 @@ const builtin: Preset[] = [
   { name: "Security standard", builtin: true, pick: (p) => (p.sensitivity === "S0" || p.sensitivity === "S1") && (p.cost_class ?? "C0") <= "C1" },
   { name: "Behavior characterization", builtin: true, pick: (p) => p.baselinable || p.unit === "id" },
   { name: "Performance profiling", builtin: true, pick: (p) => p.unit === "ms" || p.capture_point === "periodic" || p.unit === "id" },
-  { name: "Research — full capture", builtin: true, pick: (p) => p.sensitivity !== "S3" },
+  { name: "Research: full capture", builtin: true, pick: (p) => p.sensitivity !== "S3" },
 ];
 
 const STORE = "smcp.console.presets";

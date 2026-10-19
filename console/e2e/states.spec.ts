@@ -173,7 +173,7 @@ async function emptyStates(browser: Browser) {
       ["G-08", /No backup has been taken\. Take one/],
       ["G-09", /No campaign exists\. Create one/],
       ["G-09", /No dataset has been exported\. Export one/],
-      ["G-11", /No harness is connected\. A session appears here when a harness signs in/],
+      ["G-11", /No agent is connected\. A session appears here when an agent signs in/],
       ["G-11 remote", /No remote client is registered/],
       ["G-12", /No secret is stored\. Create one/],
       ["G-13", /No call is waiting for approval\. A call appears here when/],

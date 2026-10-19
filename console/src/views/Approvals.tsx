@@ -184,8 +184,8 @@ export function Approvals({ path }: { path: string }) {
       </PageHeader>
       <Help>
         <p>
-          While a call is held the harness waits, for up to the hold bound (two minutes by default). Approve during the hold and the call continues; after
-          the hold the harness gets an error that tells the person to approve here and run the request again. An approval expires five minutes after the
+          While a call is held the agent waits, for up to the hold bound (two minutes by default). Approve during the hold and the call continues; after
+          the hold the agent gets an error that tells the person to approve here and run the request again. An approval expires five minutes after the
           request. Open an approval to see the exact arguments before you decide.
         </p>
       </Help>

@@ -19,7 +19,16 @@ test("G-01 gateway control: health, monitor causes, verification and checklist",
   claims("FR-8.3", "FR-8.31", "FR-7.12");
   await signIn(page, "/");
   await expect(page.getByRole("heading", { level: 1, name: "Gateway control" })).toBeVisible();
-  await expect(page.getByRole("table", { name: "Health monitor causes" })).toContainText("unconfined");
+  await expect(page.getByRole("table", { name: "Health causes" })).toContainText("unconfined");
+  // CA-12: one causes table, the monitor's view merged in (unconfined once,
+  // with its start time).
+  await expect(page.getByRole("table", { name: /causes/i })).toHaveCount(1);
+  await expect(page.getByRole("table", { name: "Health causes" }).getByRole("row").filter({ hasText: "unconfined" })).toHaveCount(1);
+  await expect(page.getByRole("table", { name: "Health causes" }).getByRole("columnheader", { name: "Since" })).toBeVisible();
+  // CA-13: why the installation is Standalone, with the next step.
+  const enforcement = page.getByRole("region", { name: "Enforcement" });
+  await expect(enforcement.getByRole("heading", { name: "Why this installation is Standalone" })).toBeVisible();
+  await expect(enforcement).toContainText("docs/enforced-profile.md");
   await page.getByRole("button", { name: "Verify the journal now" }).click();
   await expect(page.getByText("verified", { exact: true }).first()).toBeVisible();
   const checklist = page.getByRole("table", { name: "First-run checklist" });
@@ -312,7 +321,7 @@ test("G-04 presets: apply each, modify one and save it as a new preset", async (
   const heading = page.getByRole("heading", { name: /^Parameter Catalog .*: \d+ of \d+ selected$/ });
   const selectedCount = async () => Number(/: (\d+) of/.exec(await heading.innerText())![1]);
   const counts: Record<string, number> = {};
-  for (const name of ["Minimal security floor", "Security standard", "Behavior characterization", "Performance profiling", "Research — full capture"]) {
+  for (const name of ["Minimal security floor", "Security standard", "Behavior characterization", "Performance profiling", "Research: full capture"]) {
     await page.getByRole("button", { name, exact: true }).click();
     const note = page.getByText(new RegExp(`^Applied preset ${name}: (\\d+) parameters\\.$`));
     await expect(note).toBeVisible();
@@ -335,7 +344,7 @@ test("G-04 presets: apply each, modify one and save it as a new preset", async (
   await expect(page.getByText("Saved the selection as preset e2e edited standard in this browser.")).toBeVisible();
   // Saved presets outlive the page.
   await page.reload();
-  await page.getByRole("button", { name: "Research — full capture", exact: true }).click();
+  await page.getByRole("button", { name: "Research: full capture", exact: true }).click();
   await page.getByRole("button", { name: "e2e edited standard (saved)" }).click();
   await expect(page.getByText(`Applied preset e2e edited standard: ${counts["Security standard"]! - 1} parameters.`)).toBeVisible();
   await page.getByLabel(/Search parameters/).fill("request_bytes");
@@ -378,13 +387,13 @@ test("G-04 cost preview: it refreshes with each edit and publish waits for it", 
 
 /**
  * Publishes, from G-04, an Observation Policy that records every call with
- * every per-call parameter of the catalog except S3 ones (the Research —
+ * every per-call parameter of the catalog except S3 ones (the Research:
  * full capture preset, sampling rate 1, no scope), so that a test does not
  * depend on the policy an earlier test left in force.
  */
 async function recordEveryCall(page: Page) {
   await go(page, "/observations");
-  await page.getByRole("button", { name: "Research — full capture", exact: true }).click();
+  await page.getByRole("button", { name: "Research: full capture", exact: true }).click();
   await page.getByLabel("Normal-band sampling rate (0 to 1)").fill("1");
   for (const grp of ["Principals", "Tools"]) {
     const group = page.getByRole("group", { name: grp });
@@ -427,8 +436,8 @@ test("G-04 live record preview: masked records within the draft's scope", async 
   type Rec = Record<string, unknown>;
   await expect(async () => {
     await page.reload();
-    // Research — full capture includes end_user_claim (S2).
-    await page.getByRole("button", { name: "Research — full capture", exact: true }).click();
+    // Research: full capture includes end_user_claim (S2).
+    await page.getByRole("button", { name: "Research: full capture", exact: true }).click();
     await page.getByRole("group", { name: "Tools" }).getByRole("checkbox", { name: "ref/read_file", exact: true }).check();
     const d = await page.evaluate(() => fetch("/api/v1/observations?limit=200").then((r) => r.json()));
     const rows = (d.rows ?? []) as Rec[];

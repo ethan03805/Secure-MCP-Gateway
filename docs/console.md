@@ -44,7 +44,7 @@ Each view has a **Help for this view** section. Lists are tables; select a colum
 
 | Code | View | Path | What it does | Backend |
 |---|---|---|---|---|
-| G-01 | Gateway control | `/` | Enforcement state and each health cause with its meaning, health monitor causes with **Acknowledge** for latched ones, profile, policy revision, sessions, launcher, servers; **Reload policy**; journal verification; first-run checklist | `/admin/v1/health`, `/api/v1/health/*`, `/admin/v1/policy/reload`, `/api/v1/audit/verify` |
+| G-01 | Gateway control | `/` | Enforcement state, profile (with why a Standalone installation is not Enforced and where to read how to move), and one Causes table: each cause of the health report and of the health monitor with its meaning, state and start time, and **Acknowledge** for latched ones; policy revision, sessions, launcher, servers; **Reload policy**; journal verification; first-run checklist | `/admin/v1/health`, `/api/v1/health/*`, `/admin/v1/policy/reload`, `/api/v1/audit/verify` |
 | G-11 | Sessions and principals | `/sessions`, `/sessions/<id>` | Active and suspended sessions; a session's binding; **Suspend session**, **Resume session**, **Terminate session**; principals of `smcp.toml` and the principal directory with **Create principal**, **Suspend** and **Enable**; credentials with **Issue credential** (a confidential client's secret is shown once) and **Revoke**; Session Approver accounts | `/api/v1/sessions*`, `/api/v1/principals*`, `/api/v1/credentials/*` |
 | G-11 | Remote access | `/remote`, `/remote/clients/<id>` | Remote Access Profile state, **Enable remote access** (public URL, tunnel provider) and **Disable**; client registrations by state with **Approve** (bound to a principal), **Deny** and **Revoke** | `/api/v1/remote*`, `/api/v1/clients*` |
 | G-10 | Servers and library | `/servers`, `/servers/<alias>`, `/library`, `/library/<id>/<revision>`, `/catalog` | Servers with state, revision, manifest source and launcher; package revisions with state, reason (drift, expiry, revocation), alias, risk class, signer and trust anchor, **Enable** (with alias), **Suspend**, **Retire**; packaged servers; trust anchors with **Enroll a trust anchor** and **Remove**; import receipts; **Scan the library now**; a revision's bill of materials (from its signed provenance statement), launcher argument vector, mounts, egress destinations, secret slots and sandbox profile, then its signed manifest and provenance as text; the tool catalog per template | `/api/v1/servers*`, `/api/v1/catalog`, `/api/v1/packages*` |
@@ -82,7 +82,7 @@ Gateway control lists the setup steps of FR-8.31 and marks each from Gateway sta
 | Session Approver created | At least one `[[approver]]` account exists |
 | First server packaged and enabled | A running server's tools come from a verified package manifest |
 | First policy revision published | A policy revision is active |
-| First harness connected | A `session` event is in the journal, or a session is active |
+| First agent connected | A `session` event is in the journal, or a session is active |
 | Approval tested | An approval has been approved or denied |
 | Backup configured | The backup route reports a configured backup; `unknown` while backups are not available in this build |
 
@@ -96,7 +96,7 @@ Exports contain the events matching the current filter, oldest first, up to 100,
 
 ## Live updates
 
-While signed in with a role that may read the journal (Administrator, Operator, Policy Author, Auditor), the console keeps an event stream open (`/api/v1/audit/stream`) and refreshes the open view when the journal records something, typically within a second (FR-8.23). Approvers use the approvals watch stream; Researchers and Session Approvers have no live channel and the status bar says `updates on reload`. The status bar shows `live`; if the stream drops it shows `not live: refresh to update` and reconnects with backoff.
+While signed in with a role that may read the journal (Administrator, Operator, Policy Author, Auditor), the console keeps an event stream open (`/api/v1/audit/stream`) and refreshes the open view when the journal records something, typically within a second (FR-8.23). Approvers use the approvals watch stream; Researchers and Session Approvers have no live channel and the status bar says `updates on reload`. The status bar shows `live updates`; if the stream drops it shows `no live updates: reload to update` and reconnects with backoff.
 
 ## States and errors
 

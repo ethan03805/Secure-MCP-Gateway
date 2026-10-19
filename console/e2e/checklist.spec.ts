@@ -19,7 +19,7 @@ const items = [
   ["Session Approver created", "/sessions"],
   ["First server packaged and enabled", "/servers"],
   ["First policy revision published", "/policy"],
-  ["First harness connected", "/sessions"],
+  ["First agent connected", "/sessions"],
   ["Approval tested", "/approvals"],
   ["Backup configured", "/data-server"],
 ] as const;
@@ -69,7 +69,7 @@ test("the G-01 first-run checklist marks each item done from Gateway state, on a
     await expectState(page, "Administrator created", "done");
     await expectState(page, "First policy revision published", "done");
     await expect(row(page, "First policy revision published")).toContainText(/Revision \S+ is active/);
-    for (const item of ["Session Approver created", "First server packaged and enabled", "First harness connected", "Approval tested", "Backup configured"])
+    for (const item of ["Session Approver created", "First server packaged and enabled", "First agent connected", "Approval tested", "Backup configured"])
       await expectState(page, item, "to do");
     await expect(page.getByRole("heading", { name: "First-run checklist: 5 of 7 open" })).toBeVisible();
 
@@ -99,10 +99,10 @@ test("the G-01 first-run checklist marks each item done from Gateway state, on a
     await expectState(page, "First server packaged and enabled", "done");
     await expect(row(page, "First server packaged and enabled")).toContainText("1 server enabled from a verified package.");
 
-    // First harness connected: the test MCP client signs in with OAuth.
+    // First agent connected: the test MCP client signs in with OAuth.
     let r = await mcpCall(d, "ref_read_file", { path: "hello.txt" }, { expect: d.marker, timeout: "60s" }).done;
     expect(r.code, r.out).toBe(0);
-    await expectState(page, "First harness connected", "done");
+    await expectState(page, "First agent connected", "done");
 
     // Approval tested: a held call approved in G-13.
     const held = mcpCall(d, "ref_read_file", { path: "hello.txt" }, { scope: "smcp:template:approval-demo", expect: d.marker, timeout: "90s" });

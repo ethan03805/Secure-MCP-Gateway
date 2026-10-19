@@ -14,4 +14,4 @@
 # remove it with the string it excused. Rules: docs/design/writing.md.
 
 console/src/views/Observations.tsx banned-word robust  # statistics term: the feature option scores with robust statistics (median and MAD); not marketing
-console/src/views/Observations.tsx em-dash —  # preset name "Research — full capture" is fixed by SRS FR-8.8 and asserted in console/e2e/views.spec.ts; change it with the SRS
+console/src/views/Control.tsx banned-word harness  # G-01 help defines "agent" once with the SRS term it stands for, as docs/design/writing.md (Terminology) asks
