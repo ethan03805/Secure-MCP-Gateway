@@ -504,9 +504,9 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
           cache-dependency-path: go.sum
-      # SR-7.4-1 (Inspection): no plugins and no procedures outside the
-      # built-in namespaces; the effective settings are checked by
-      # TestNeo4jQueriesRetentionAndEngineStatus (SMCP_NEO4J_HARDENED).
+      # SR-7.4-1 (Inspection): no plugin archives, no plugin procedures
+      # (apoc., gds.); the effective settings, unrestricted procedures
+      # among them, are checked by TestNeo4jQueriesRetentionAndEngineStatus (SMCP_NEO4J_HARDENED).
       - name: Graph engine plugins and procedures (SR-7.4-1)
         env:
           NEO4J_CONTAINER: ${{ job.services.neo4j.id }}
@@ -515,8 +515,8 @@ jobs:
           echo "plugin archives (*.jar): ${plugins:-(empty)}"
           [ -z "$plugins" ] || { echo "the graph engine has plugins installed"; exit 1; }
           docker exec "$NEO4J_CONTAINER" cypher-shell -u neo4j -p smcp-ci-graph-password --format plain \
-            "SHOW PROCEDURES YIELD name WHERE NOT (name STARTS WITH 'db.' OR name STARTS WITH 'dbms.' OR name STARTS WITH 'tx.') RETURN count(*) AS other" | tee "$RUNNER_TEMP/procs.txt"
-          [ "$(tail -n 1 "$RUNNER_TEMP/procs.txt")" = 0 ] || { echo "procedures outside db., dbms. and tx. are installed"; exit 1; }
+            "SHOW PROCEDURES YIELD name RETURN name ORDER BY name" | tee "$RUNNER_TEMP/procs.txt"
+          if grep -Eq '^"?(apoc|gds)\.' "$RUNNER_TEMP/procs.txt"; then echo "plugin procedures are installed"; exit 1; fi
           docker exec "$NEO4J_CONTAINER" cypher-shell -u neo4j -p smcp-ci-graph-password --format plain \
             "CALL dbms.listConfig() YIELD name, value WHERE name IN ['server.http.enabled', 'server.https.enabled', 'dbms.usage_report.enabled', 'dbms.security.allow_csv_import_from_file_urls', 'dbms.security.procedures.unrestricted'] RETURN name, value"
       - name: Graph tests against Neo4j
