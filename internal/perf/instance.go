@@ -308,23 +308,33 @@ func (in *instance) session(ctx context.Context) (*mcp.ClientSession, error) {
 // api sends a control API GET with the operator token and returns the
 // status and the time it took.
 func (in *instance) api(hc *http.Client, path string) (int, time.Duration, error) {
+	code, d, _, err := in.apiGet(hc, path)
+	return code, d, err
+}
+
+// apiGet is api that also returns the response body; the time includes
+// reading it.
+func (in *instance) apiGet(hc *http.Client, path string) (int, time.Duration, []byte, error) {
 	tok, err := os.ReadFile(filepath.Join(in.state, "keys", "admin.token"))
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://127.0.0.1:%d%s", in.adminPort, path), nil)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(tok)))
 	t0 := time.Now()
 	resp, err := hc.Do(req)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, nil, err
 	}
-	_, _ = io.Copy(io.Discard, resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	return resp.StatusCode, time.Since(t0), nil
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	return resp.StatusCode, time.Since(t0), body, nil
 }
 
 // overheads reads the journal and returns, per delivered call, the

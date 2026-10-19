@@ -118,32 +118,85 @@ func TestQuantile(t *testing.T) {
 
 // TestWriteTestJSON: a measurement within budget becomes a passing test
 // with a partial claim; one over budget a failing test, and the package
-// fails.
+// fails. On the reference hardware a complete measurement is a full claim
+// and an incomplete one stays partial.
 func TestWriteTestJSON(t *testing.T) {
-	var b bytes.Buffer
-	ms := []Measurement{{Requirement: "FR-11.2", Name: "x", Pass: true}, {Requirement: "FR-11.8", Name: "y", Pass: false}}
-	if err := WriteTestJSON(&b, "example.com/m/internal/perf/run", ms, time.Now()); err != nil {
-		t.Fatal(err)
-	}
-	results := map[string]string{}
-	claims := map[string]bool{}
-	sc := bufio.NewScanner(&b)
-	for sc.Scan() {
-		var ev struct{ Action, Test, Output string }
-		if err := json.Unmarshal(sc.Bytes(), &ev); err != nil {
-			t.Fatal(err)
-		}
-		switch ev.Action {
-		case "pass", "fail":
-			results[ev.Test] = ev.Action
-		case "output":
-			if strings.Contains(ev.Output, "PARTIAL: ") {
-				claims[strings.TrimSpace(strings.SplitN(ev.Output, "PARTIAL: ", 2)[1])] = true
+	parse := func(b *bytes.Buffer) (results map[string]string, claims map[string]string) {
+		results, claims = map[string]string{}, map[string]string{}
+		sc := bufio.NewScanner(b)
+		for sc.Scan() {
+			var ev struct{ Action, Test, Output string }
+			if err := json.Unmarshal(sc.Bytes(), &ev); err != nil {
+				t.Fatal(err)
+			}
+			switch ev.Action {
+			case "pass", "fail":
+				results[ev.Test] = ev.Action
+			case "output":
+				for _, m := range []string{"PARTIAL: ", "VERIFIES: "} {
+					if strings.Contains(ev.Output, m) {
+						claims[strings.TrimSpace(strings.SplitN(ev.Output, m, 2)[1])] = strings.TrimSpace(m)
+					}
+				}
 			}
 		}
+		return results, claims
 	}
-	if results["TestPerfFR_11_2"] != "pass" || results["TestPerfFR_11_8"] != "fail" || results[""] != "fail" || !claims["FR-11.2"] || !claims["FR-11.8"] {
-		t.Fatalf("results %v claims %v", results, claims)
+	ms := []Measurement{{Requirement: "FR-11.2", Name: "x", Pass: true, Complete: true}, {Requirement: "FR-11.8", Name: "y", Pass: false, Complete: true},
+		{Requirement: "FR-11.9", Name: "z", Pass: true}}
+	var b bytes.Buffer
+	if err := WriteTestJSON(&b, "example.com/m/internal/perf/run", ms, false, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	results, claims := parse(&b)
+	if results["TestPerfFR_11_2"] != "pass" || results["TestPerfFR_11_8"] != "fail" || results[""] != "fail" ||
+		claims["FR-11.2"] != "PARTIAL:" || claims["FR-11.8"] != "PARTIAL:" || claims["FR-11.9"] != "PARTIAL:" {
+		t.Fatalf("not reference hardware: results %v claims %v", results, claims)
+	}
+	b.Reset()
+	if err := WriteTestJSON(&b, "example.com/m/internal/perf/run", ms, true, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	results, claims = parse(&b)
+	if results["TestPerfFR_11_2"] != "pass" || results["TestPerfFR_11_8"] != "fail" || results["TestPerfFR_11_9"] != "pass" ||
+		claims["FR-11.2"] != "VERIFIES:" || claims["FR-11.8"] != "VERIFIES:" || claims["FR-11.9"] != "PARTIAL:" {
+		t.Fatalf("reference hardware: results %v claims %v", results, claims)
+	}
+}
+
+// TestReferenceClass: only a GitHub-hosted ubuntu-24.04 runner of the
+// standard class (x86_64, 4 processors, about 16 GiB) is the recorded
+// reference hardware; another machine is measured but not counted as it.
+func TestReferenceClass(t *testing.T) {
+	ref := Host{OS: "linux", Arch: "amd64", CPUs: 4, CPU: "AMD EPYC 7763 64-Core Processor", MemoryBytes: memTotal("MemTotal:       16379624 kB\nMemFree: 1 kB\n"),
+		RunnerEnvironment: "github-hosted", Image: "ubuntu24"}
+	if ref.MemoryBytes != 16379624<<10 || !ReferenceClass(ref) {
+		t.Fatalf("runner host %+v not the reference class", ref)
+	}
+	for name, mod := range map[string]func(*Host){
+		"arm64":         func(h *Host) { h.Arch = "arm64" },
+		"macOS":         func(h *Host) { h.OS = "darwin" },
+		"2 processors":  func(h *Host) { h.CPUs = 2 },
+		"16 processors": func(h *Host) { h.CPUs = 16 },
+		"8 GiB":         func(h *Host) { h.MemoryBytes = 8 << 30 },
+		"64 GiB":        func(h *Host) { h.MemoryBytes = 64 << 30 },
+		"self-hosted":   func(h *Host) { h.RunnerEnvironment = "self-hosted" },
+		"not a runner":  func(h *Host) { h.RunnerEnvironment, h.Image = "", "" },
+		"ubuntu-22.04":  func(h *Host) { h.Image = "ubuntu22" },
+	} {
+		h := ref
+		mod(&h)
+		if ReferenceClass(h) {
+			t.Errorf("%s: counted as the reference hardware", name)
+		}
+	}
+	if memTotal("garbage") != 0 {
+		t.Fatal("memTotal of garbage")
+	}
+	// This machine is described with its memory and disk where it can be.
+	h := CurrentHost(t.TempDir())
+	if h.CPUs < 1 || h.DiskBytes <= 0 || (h.OS == "linux" && h.MemoryBytes <= 0) {
+		t.Fatalf("host %+v", h)
 	}
 }
 

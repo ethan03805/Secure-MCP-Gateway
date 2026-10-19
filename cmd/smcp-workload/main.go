@@ -10,9 +10,11 @@
 //	    directory that smcpd has not opened yet.
 //	smcp-workload run --bin DIR --out perf.json [--test-json perf-test.json]
 //	    [--calls 2000] [--decisions 100000] [--queries 100] [--idle 10m]
+//	    [--ingest 10m] [--rate 2000]
 //
 // The measurements are of the machine they run on; perf.json records the
-// host and marks whether it is the recorded reference hardware.
+// host (processor, cores, memory, disk) and marks whether it is the
+// recorded reference hardware (docs/reference-hardware.md).
 package main
 
 import (
@@ -97,6 +99,8 @@ func measure(args []string) error {
 	fs.IntVar(&o.Decisions, "decisions", 100000, "decisions for FR-11.2")
 	fs.IntVar(&o.Queries, "queries", 100, "repetitions of the console query set")
 	fs.DurationVar(&o.Idle, "idle", 10*time.Minute, "time from start to the idle memory sample")
+	fs.DurationVar(&o.Ingest, "ingest", perf.IngestDuration, "duration of the FR-11.6 observation ingest replay")
+	fs.IntVar(&o.Rate, "rate", perf.IngestRate, "observation records per second of the FR-11.6 replay")
 	fs.StringVar(&o.Commit, "commit", os.Getenv("GITHUB_SHA"), "commit measured")
 	work := fs.String("work", "", "work directory (default a new temporary directory, removed afterwards)")
 	if err := fs.Parse(args); err != nil {
@@ -136,7 +140,7 @@ func measure(args []string) error {
 			return err
 		}
 		defer f.Close()
-		if err := perf.WriteTestJSON(f, "github.com/ethan03805/secure-mcp-gateway/internal/perf/run", res.Measurements, time.Now()); err != nil {
+		if err := perf.WriteTestJSON(f, "github.com/ethan03805/secure-mcp-gateway/internal/perf/run", res.Measurements, res.ReferenceHardware, time.Now()); err != nil {
 			return err
 		}
 	}

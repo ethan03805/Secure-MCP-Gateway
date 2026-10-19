@@ -54,6 +54,9 @@ type Dataset struct {
 	Events        int `json:"events"`
 	Days          int `json:"days"`
 	Callers       int `json:"callers"`
+	// ObservationRecords is the number of observation records over Days
+	// days that the FR-11.6 replay wrote for the FR-11.8 analytics queries.
+	ObservationRecords int `json:"observationRecords,omitempty"`
 }
 
 // Nodes is the number of rule and registry nodes.

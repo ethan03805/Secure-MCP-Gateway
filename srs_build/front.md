@@ -113,7 +113,7 @@ A **platform profile** is always active; exactly one of the two applies to an in
 | Linux arm64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd | Enforced only | Enforced only |
 | macOS amd64 | Standalone (archive built; not part of the qualified set) | GitHub Releases archive | launchd user agent | No | No |
 
-The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The supported client matrix is Appendix K.
+The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The recorded reference hardware of FR-11 is the GitHub-hosted `ubuntu-24.04` standard runner class (x86_64, 4 vCPU, 16 GiB, SSD); the processor model varies within the class, so each performance report records the processor model, processor count, memory and disk of its run (`docs/reference-hardware.md`). The supported client matrix is Appendix K.
 
 Planned for v1.3.0 (FR-20): native installers and a desktop tray application, distributed as GitHub Release assets beside the archives and covered by the same signed checksum file (FR-20.23).
 
