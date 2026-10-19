@@ -13,6 +13,9 @@ CHANGELOG.md merge=union
 *.sh text eol=lf
 install.sh text eol=lf
 
+# Recorded catalog fixtures are compared by SHA-256: keep their bytes.
+internal/contextforge/testdata/*.yml -text
+
 # Built console (make console), embedded into smcpd.
 console/dist/** linguist-generated=true
 console/package-lock.json linguist-generated=true
