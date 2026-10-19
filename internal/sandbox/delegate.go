@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 )
 
 // delegatedControllers are the cgroup v2 controllers the sandbox limits
@@ -81,9 +80,4 @@ func fields(path string) []string {
 		return nil
 	}
 	return strings.Fields(string(b))
-}
-
-func ownedBySelf(fi os.FileInfo) bool {
-	st, ok := fi.Sys().(*syscall.Stat_t)
-	return ok && int(st.Uid) == os.Getuid()
 }

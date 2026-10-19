@@ -63,6 +63,9 @@ func (g *Gateway) ListenUDS() (net.Listener, error) {
 	if !u.Enabled {
 		return nil, errors.New("edge: the UDS Harness Profile is not enabled")
 	}
+	if err := udsSupported(); err != nil {
+		return nil, err
+	}
 	grp, err := user.LookupGroup(u.Group)
 	if err != nil {
 		return nil, fmt.Errorf("uds: group %q: %w", u.Group, err)

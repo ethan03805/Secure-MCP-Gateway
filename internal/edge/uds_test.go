@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -357,7 +356,7 @@ func TestUDSSocketMode(t *testing.T) {
 	if fi.Mode()&os.ModeSocket == 0 || fi.Mode().Perm() != 0o660 {
 		t.Fatalf("socket mode %v", fi.Mode())
 	}
-	if st, ok := fi.Sys().(*syscall.Stat_t); !ok || int(st.Gid) != gid {
+	if g, ok := fileGID(fi); !ok || g != gid {
 		t.Fatalf("socket group %v, want %d", fi.Sys(), gid)
 	}
 }

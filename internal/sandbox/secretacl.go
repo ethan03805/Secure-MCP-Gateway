@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/posixacl"
 )
@@ -52,14 +51,6 @@ func (l *Launcher) grantTraversal(dir string, uid int) error {
 			return nil
 		}
 	}
-}
-
-// fileUID is the owner of a stat result, or -1.
-func fileUID(st os.FileInfo) int {
-	if sys, ok := st.Sys().(*syscall.Stat_t); ok {
-		return int(sys.Uid)
-	}
-	return -1
 }
 
 // grantSecretFiles adds the created instance's host UID to the secret

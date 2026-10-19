@@ -378,6 +378,67 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # Windows (FR-21.2, FR-21.19, planned for v1.3.0; docs/windows-port.md).
+  # Not a required check. Builds every package for windows/amd64 and
+  # windows/arm64 with CGO_ENABLED=0 (the release setting, FR-21.18), runs
+  # go vet for Windows, runs the unit tests of the packages listed in
+  # WINDOWS_TEST_PACKAGES and fails when one of them fails. The last step
+  # runs every package once more, records the per-package result in the
+  # step summary and never fails the job: it measures the port.
+  windows:
+    name: windows
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CGO_ENABLED: "0"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The Go tests compare files byte for byte; keep LF line endings.
+      - name: Check out with LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Build (windows/amd64, windows/arm64)
+        run: |
+          go build ./...
+          GOARCH=arm64 go build ./...
+      - name: Vet
+        run: go vet ./...
+      - name: Every package, measured (informational, never fails)
+        continue-on-error: true
+        run: |
+          mkdir -p build
+          go test -short -count=1 -timeout 20m -json ./... > build/windows-all-test.json || true
+          {
+            echo "### Windows: every package (informational)"
+            echo '```'
+            jq -r 'select(.Test == null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Package)"' build/windows-all-test.json | sort
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          jq -r -s '
+            map(select(.Test != null)) | group_by(.Package + " " + .Test)
+            | map(select(any(.[]; .Action == "fail")))
+            | .[] | "--- FAIL: \(.[0].Package) \(.[0].Test)", (map(select(.Action == "output") | .Output) | join("") | .[0:3000])
+          ' build/windows-all-test.json || true
+      - name: Upload the test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-results
+          path: build/windows-*-test.json
+          if-no-files-found: warn
+          retention-days: 14
+
   # Management console (E-24): typecheck and build console/, check that the
   # committed console/dist (embedded into smcpd) matches the sources, audit
   # its npm dependencies and run the Playwright acceptance tests against a

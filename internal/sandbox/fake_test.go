@@ -134,7 +134,7 @@ func fakePodman(args []string) int {
 		if sig == "TERM" {
 			s = syscall.SIGTERM
 		}
-		_ = syscall.Kill(pid, s)
+		killPID(pid, s)
 		return 0
 	case "inspect":
 		if slices.Contains(args, "{{.State.Pid}}") {
@@ -162,7 +162,7 @@ func fakePodman(args []string) int {
 		if _, err := os.Stat(filepath.Join(dir, name+".oom")); err == nil {
 			oom = "true"
 		}
-		if syscall.Kill(pid, 0) == nil && !isZombie(pid) {
+		if pidAlive(pid) && !isZombie(pid) {
 			fmt.Printf("running|%d|/%s|0|%s\n", pid, name, oom)
 		} else {
 			code := "0"
