@@ -1,6 +1,6 @@
 # Verification gap list
 
-Every requirement of the current requirement set that is not yet verified, grouped by primary element (the first E-xx of the requirement's allocation), with what is missing. Rebuilt on 2026-10-19 by the phase-10 steward pass from the CI status data of main `d9dde78` (529 requirements: 479 verified, 48 partly verified, 2 unverified, 0 failing; 39 more are planned for a later release and not counted; run https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39197508791). `make status` produces the same report locally (`build/reqreport.md`); regenerate it before acting on an entry, because later merges change the counts.
+Every requirement of the current requirement set that is not yet verified, grouped by primary element (the first E-xx of the requirement's allocation), with what is missing. Rebuilt on 2026-10-19 by the phase-10 steward pass from the CI status data of main `383485d` (run https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39203581561), with FR-11 counted as verified by the Analysis record [FR-11.md](FR-11.md) added in the same pass (529 requirements: 489 verified, 39 partly verified, 1 unverified, 0 failing; 108 more are planned for a later release and not counted). `make status` produces the same report locally (`build/reqreport.md`); regenerate it before acting on an entry, because later merges change the counts.
 
 Each entry is marked:
 
@@ -8,31 +8,21 @@ Each entry is marked:
 - **unverified**: the behavior appears to exist, but no test or record proves the whole statement yet. These need a test or an inspection record, not new code.
 - **external**: the requirement needs an artifact or run outside the source tree (a release tag, a person, credentials, a third-party service). The entries that only the owner can unblock are collected in [Blocked on the owner](#blocked-on-the-owner) at the end.
 
-Parent requirements whose verification is "Review the verification results of every child requirement" are verified by `tools/reqreport` once all their children are, and reported partial while some but not all children are verified. They are not listed below. In this status data they are: FR-6, FR-8, FR-9, FR-10, FR-12, FR-13, FR-14, FR-15, FR-16, FR-18. FR-11 is listed, because it is reviewed against a performance report on the recorded reference hardware ([reference-hardware.md](../reference-hardware.md)) rather than rolled up.
+Parent requirements whose verification is "Review the verification results of every child requirement" are verified by `tools/reqreport` once all their children are, and reported partial while some but not all children are verified. They are not listed below. In this status data they are: FR-8, FR-9, FR-10, FR-12, FR-13, FR-14, FR-15, FR-16, FR-18. FR-11 is not a roll-up: it is reviewed by Analysis against a performance report on the recorded reference hardware ([reference-hardware.md](../reference-hardware.md)), and its record is [FR-11.md](FR-11.md) (run 39203581561 of main `383485d`, every FR-11 child verified).
 
 Requirements deferred from release 1.x (SRS Section 2.7, Appendix N) and requirements planned for a later release with a `TARGET:` line (SRS Section 2.8: FR-20, FR-22 and the security requirements planned with them, all for v1.3.0) are not part of the requirement set and are not listed.
 
-The claiming tests of each partly verified requirement say, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests. Several entries become full claims from the published result of a workflow run on a release tag rather than on main (FR-15.2, FR-15.8, FR-14.9, FR-13.3): they need the next release, v1.2.0, not new code.
+The claiming tests of each partly verified requirement say, in the comment next to `reqtest.Partial`, which clauses are missing; `build/reqreport.md` lists the claiming tests. Some requirements are full claims only from the published result of a workflow run on a release tag, and partial claims from a run on any other ref (FR-13.3, FR-14.9, FR-15.2, FR-15.8; [verification/README.md](README.md#results-of-separate-workflows)). FR-13.3 and FR-14.9 are verified by the v1.1.0 runs; FR-15.2 needs the lockdown job, and FR-15.8 the matrix job, on the next release tag, v1.2.0.
 
 ## E-01 Harness Interface Endpoint
 
-- FR-11 **unverified** (no claiming test or record): Reviewed by Analysis against a performance report that cites a passing perf run with every FR-11 child verified.
-- FR-11.5 **unverified** (partly verified): Measured on a runner that is not the recorded reference hardware class, or not complete.
 - FR-12.2 **unverified** (partly verified): The offline job does not run AT-07, AT-08 and AT-10.
 - FR-16.1 **external** (partly verified): The Remote Access listener is tested behind a local tunnel stand-in.
 - FR-16.2 **external** (partly verified): The tunnel drivers are tested against fake tailscale and cloudflared binaries.
 
-## E-06 Policy Decision Service
-
-- FR-11.2 **unverified** (partly verified): Measured on a runner that is not the recorded reference hardware class, or not complete.
-
 ## E-13 Library Trust Verifier
 
 - FR-14.3 **unverified** (partly verified): The reference servers are packaged with the unconfined probe; the Podman probe is tested with the hostile packaging fixture only.
-
-## E-20 Secret Broker
-
-- FR-6.10 **unverified** (partly verified): The Secret Broker wiring and the fingerprint filter are tested; a single run that leaks a delivered secret on every surface is missing.
 
 ## E-21 Audit & Evidence Service
 
@@ -47,7 +37,6 @@ The claiming tests of each partly verified requirement say, in the comment next 
 - FR-8.30 **unverified** (partly verified): Current browser engines only; the previous major version of each browser and Safari itself are not run.
 - FR-8.32 **unverified** (partly verified): The Runtime instance kill is done against a mocked instance table.
 - FR-8.33 **unverified** (partly verified): The Runtime instance kill is done against a mocked instance table.
-- FR-11.8 **unverified** (partly verified): Measured on a runner that is not the recorded reference hardware class, or not complete.
 - FR-12.7 **unverified** (partly verified): The subcommands are tested one by one; the Demonstration in both profiles is not recorded.
 - FR-13.7 **unverified** (partly verified): The launchd and systemd service paths of each profile are not exercised.
 - FR-18.1 **unverified** (partly verified): The install guide has not been followed on clean hosts.
@@ -57,15 +46,10 @@ The claiming tests of each partly verified requirement say, in the comment next 
 - FR-9.1 **missing** (partly verified): Relationship types owned by other elements are not created by the mirror.
 - SR-7.4-1 **unverified** (partly verified): The engine itself is not run as smcp-data on an Enforced host with its configuration and firewall rules inspected together.
 
-## E-27 Observation Store
-
-- FR-11.6 **unverified** (partly verified): The full 10-minute replay ran on a runner that is not the recorded reference hardware class.
-
 ## E-28 Data Lifecycle & Memory Manager
 
 - FR-9.10 **missing** (partly verified): The page-cache measurement and the other budgeted components are not covered.
 - FR-9.11 **missing** (partly verified): The page-cache measurement and the other budgeted components are not covered.
-- FR-11.9 **unverified** (partly verified): Measured on a runner that is not the recorded reference hardware class, or without the graph engine.
 
 ## E-29 Observation Collector
 
@@ -73,13 +57,11 @@ The claiming tests of each partly verified requirement say, in the comment next 
 - FR-10.2 **missing** (partly verified): Only the edge's stages emit spans; a call without an approval has no approval span.
 - FR-10.5 **unverified** (partly verified): The fixture covers the argument features only.
 - FR-10.10 **unverified** (partly verified): P-213 is computed from journal timestamps; no independent harness-side measurement is compared.
-- FR-11.4 **unverified** (partly verified): Measured on a runner that is not the recorded reference hardware class, or not complete.
 
 ## E-33 Harness Adapter Kit
 
 - FR-15.1 **external** (partly verified): Only Claude Code is run with its lockdown at the pinned version.
 - FR-15.2 **external** (partly verified): Claimed in full only by the lockdown job of a release tag.
-- FR-15.4 **unverified** (partly verified): Run on a Standalone host only.
 - FR-15.7 **external** (partly verified): Only Claude Code connects over TLS with what smcpctl clients setup wrote.
 - FR-15.8 **external** (partly verified): Gemini CLI and Grok Build are not run; the matrix result is a full claim only from a release tag.
 - FR-15.10 **external** (partly verified): Gemini CLI and Grok Build have no result in the matrix job.
@@ -138,7 +120,7 @@ Updated on 2026-10-19 by the agents-partials work: the Real agents workflow has 
 Updated on 2026-10-18 by the perf work: the GitHub-hosted `ubuntu-24.04` standard runner class (x86_64, 4 vCPU, 16 GiB, SSD) is the recorded reference hardware of FR-11 (SRS §1.6, [reference-hardware.md](../reference-hardware.md)). `perf.json` records each run's processor, memory and disk, and a complete measurement within budget on that class is a full claim. The FR-11.2, FR-11.4, FR-11.5, FR-11.8 and FR-11.9 lines are removed. The CI job `perf` now also runs the FR-11.6 replay (2,000 records per second for 10 minutes through the analytics store writer into the DuckDB store, no backpressure signal) and the FR-11.8 analytics queries over the 30 days of observation data that replay writes. FR-11.9 now includes the graph engine (Neo4j, CP-33 budget). In the dispatch run 39190807816 of this branch (AMD EPYC 9V45, `referenceHardware` true), every measurement passed and was complete: FR-11.2 0.011 ms, FR-11.4 0.42 ms, FR-11.5 9.4 ms, FR-11.6 2,000 records/s with no offer at 80% queue occupancy and no drop, FR-11.8 458 ms p95 over 1,200,000 observation records and the 100,000-event journal, FR-11.9 1,541 MiB (smcpd 120 MiB, Neo4j 1,421 MiB). The earlier run 39187565839 on an EPYC 7763 runner measured FR-11.4 at 1.19 ms while Neo4j ran from the start of the job; the engine now starts after the FR-11.4 loads. On EPYC 7763 runners FR-11.4 had measured 0.52 to 0.95 ms before, so its margin stays thin there. FR-11 itself is reviewed by Analysis against a performance report and still needs a record that cites a passing `perf` run of main with every child verified. FR-11.6 and FR-11.8 are measured with the DuckDB store of the SRS stack. The release archives are built without cgo, and their JSON Lines fallback store is not measured at this volume.
 
 
-Rebuilt on 2026-10-19 by the phase-10 steward pass: the per-element lines are now generated from the status data of main `d9dde78` and list every open requirement, partly verified ones included, with the missing part taken from the claiming tests' comments and the verification statement. The section below collects what only the owner can provide.
+Rebuilt on 2026-10-19 by the phase-10 steward pass: the per-element lines are now generated from the status data of main `383485d` and list every open requirement, partly verified ones included, with the missing part taken from the claiming tests' comments and the verification statement. The section below collects what only the owner can provide.
 
 ## Blocked on the owner
 
