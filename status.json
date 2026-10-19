@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T04:04:35Z",
-  "commit": "6e17678464aef0d94c3f07e6d7e877644c78827a",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/6e17678464aef0d94c3f07e6d7e877644c78827a",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39193976121",
+  "generatedAt": "2026-10-19T04:32:05Z",
+  "commit": "d9dde78d5b44c739fdad3aa009935ea3db165b4d",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d9dde78d5b44c739fdad3aa009935ea3db165b4d",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39197508791",
   "tests": {
-    "total": 1483,
-    "passed": 1464,
-    "failed": 1,
-    "skipped": 18,
-    "durationSec": 1649.7,
+    "total": 1492,
+    "passed": 1477,
+    "failed": 0,
+    "skipped": 15,
+    "durationSec": 1578.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -55,9 +55,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 63,
+        "passed": 64,
         "failed": 0,
-        "skipped": 1
+        "skipped": 0
       },
       {
         "name": "cmd/smcpd",
@@ -205,9 +205,9 @@
       },
       {
         "name": "internal/egress",
-        "passed": 29,
+        "passed": 30,
         "failed": 0,
-        "skipped": 2
+        "skipped": 1
       },
       {
         "name": "internal/filterapi",
@@ -403,9 +403,9 @@
       },
       {
         "name": "internal/tunnel",
-        "passed": 1,
+        "passed": 2,
         "failed": 0,
-        "skipped": 3
+        "skipped": 2
       },
       {
         "name": "internal/versions",
@@ -421,7 +421,7 @@
       },
       {
         "name": "scripts/agents",
-        "passed": 24,
+        "passed": 31,
         "failed": 0,
         "skipped": 0
       },
@@ -445,8 +445,8 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 22,
-        "failed": 1,
+        "passed": 25,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -458,7 +458,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.4,
+    "totalPct": 75.9,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -562,7 +562,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.5
+        "pct": 91.4
       },
       {
         "name": "internal/egress",
@@ -578,7 +578,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.6
       },
       {
         "name": "internal/gwtest",
@@ -586,7 +586,7 @@
       },
       {
         "name": "internal/harness",
-        "pct": 83.4
+        "pct": 83.5
       },
       {
         "name": "internal/health",
@@ -622,7 +622,7 @@
       },
       {
         "name": "internal/obsstore",
-        "pct": 82.3
+        "pct": 81.8
       },
       {
         "name": "internal/openapi",
@@ -718,7 +718,7 @@
       },
       {
         "name": "scripts/agents",
-        "pct": 66.6
+        "pct": 58.6
       },
       {
         "name": "scripts/evidence-fixture",
@@ -742,7 +742,7 @@
       },
       {
         "name": "tools/reqreport",
-        "pct": 85
+        "pct": 85.5
       },
       {
         "name": "tools/sbomcheck",
@@ -752,17 +752,17 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 475,
-    "partial": 49,
-    "failing": 2,
-    "unverified": 3,
+    "verified": 479,
+    "partial": 48,
+    "failing": 0,
+    "unverified": 2,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 23,
-        "partial": 7,
+        "verified": 24,
+        "partial": 6,
         "failing": 0
       },
       {
@@ -945,9 +945,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 58,
+        "verified": 61,
         "partial": 12,
-        "failing": 2
+        "failing": 0
       },
       {
         "element": "E-25",
@@ -4061,6 +4061,7 @@
           "internal/acceptance/enforced.TestAT21VersionBaseline",
           "internal/acceptance/offline.TestAT21VersionBaseline",
           "tools/reqreport.TestChildAnalysis",
+          "tools/reqreport.TestChildAnalysisIgnoresPlannedChildren",
           "tools/reqreport.TestChildAnalysisPartial",
           "tools/reqreport.TestComputeStatus",
           "tools/reqreport.TestCoverage",
@@ -4070,6 +4071,7 @@
           "tools/reqreport.TestLoadRequirements",
           "tools/reqreport.TestLoadRequirementsSkipsDeferred",
           "tools/reqreport.TestParseTestLog",
+          "tools/reqreport.TestPlannedRequirements",
           "tools/reqreport.TestPublishWorkflowResult",
           "tools/reqreport.TestRecordsInSubdirectories",
           "tools/reqreport.TestRecordsVerifyInspections",
@@ -4110,8 +4112,10 @@
       {
         "id": "FR-13",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 12 of 13 child requirements verified"
+        ]
       },
       {
         "id": "FR-13.1",
@@ -4145,7 +4149,7 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
@@ -4228,8 +4232,9 @@
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
           "cmd/smcpctl.TestInstallStandaloneServiceManager",
           "cmd/smcpctl.TestStandaloneUninstallKeepsEnforcedHost",
           "cmd/smcpctl.TestStandaloneUninstallLeavesEnforcedTable",
@@ -4241,8 +4246,9 @@
       {
         "id": "FR-13.12",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
           "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge"
         ]
       },
@@ -4397,7 +4403,9 @@
           "internal/acceptance.TestAT16HarnessLockdown",
           "internal/acceptance/enforced.TestAT16HarnessLockdown",
           "internal/acceptance/offline.TestAT16HarnessLockdown",
-          "internal/harness.TestClaudeCodeLockdownProfile"
+          "internal/harness.TestClaudeCodeLockdownProfile",
+          "scripts/agents.TestCheckLocked",
+          "scripts/agents.TestParseStream"
         ]
       },
       {
@@ -4405,7 +4413,10 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
-          "internal/harness.TestClaudeCodeLockdownProfile"
+          "internal/harness.TestClaudeCodeLockdownProfile",
+          "scripts/agents.TestCheckLocked",
+          "scripts/agents.TestLockdownReportFinish",
+          "workflow agents-lockdown at main (3aeeda239487, 2026-10-19T04:29:05Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39199016009"
         ]
       },
       {
@@ -4461,6 +4472,7 @@
         "tests": [
           "internal/policy.TestBrokenBuildTag",
           "scripts/agents.TestBrokenGatewayRun",
+          "scripts/agents.TestBrokenRunNeedsKey",
           "scripts/agents.TestBrokenVerdict",
           "scripts/agents.TestCanUseToolAnswer",
           "scripts/agents.TestClaudeCodeControlProtocol",
@@ -4469,7 +4481,8 @@
           "scripts/agents.TestMatrixClientsCovered",
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
-          "scripts/agents.TestStreamJSONSession"
+          "scripts/agents.TestStreamJSONSession",
+          "workflow agents at main (3aeeda239487, 2026-10-19T04:29:03Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39199016009"
         ]
       },
       {
@@ -5725,6 +5738,7 @@
         "tests": [
           "internal/egress.TestAttachLauncherConfines",
           "internal/egress.TestAttachNetwork",
+          "internal/egress.TestNetnsEnforcement",
           "internal/hostile/enforced.TestHostileFixtures/HF-23",
           "internal/sandbox.TestEgressAttachesSandboxNetwork",
           "internal/sandbox.TestEgressConfinementFailsClosed",
@@ -5743,6 +5757,7 @@
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
           "internal/egress.TestConnectTunnel",
+          "internal/egress.TestNetnsEnforcement",
           "internal/egress.TestOnlyCurrentGrantsAreForwarded",
           "internal/egress.TestProxyAllowsGrantedHTTP",
           "internal/egress.TestProxyRefusesUngranted"
@@ -5807,7 +5822,11 @@
           "internal/acceptance.TestAT16HarnessLockdown",
           "internal/acceptance/enforced.TestAT16HarnessLockdown",
           "internal/acceptance/offline.TestAT16HarnessLockdown",
-          "internal/harness.TestDoctorInventory"
+          "internal/harness.TestDoctorInventory",
+          "scripts/agents.TestCheckDoctor",
+          "scripts/agents.TestCheckLocked",
+          "scripts/agents.TestCheckServers",
+          "scripts/agents.TestParseStream"
         ]
       },
       {
@@ -5818,7 +5837,10 @@
           "internal/acceptance.TestAT16HarnessLockdown",
           "internal/acceptance/enforced.TestAT16HarnessLockdown",
           "internal/acceptance/offline.TestAT16HarnessLockdown",
-          "internal/harness.TestClaudeCodeLockdownProfile"
+          "internal/harness.TestClaudeCodeLockdownProfile",
+          "scripts/agents.TestCheckDoctor",
+          "scripts/agents.TestCheckLocked",
+          "scripts/agents.TestFileToolPrompt"
         ]
       },
       {
@@ -5832,10 +5854,11 @@
       {
         "id": "SR-4.14-1",
         "element": "E-01",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestHostRulesDecision",
           "cmd/smcpctl.TestRemoteEnableInstallsHostRules",
+          "internal/tunnel.TestHostRulesInNamespace",
           "internal/tunnel.TestHostRulesRuleset"
         ]
       },
@@ -6552,6 +6575,282 @@
           "internal/adminapi.TestPerObjectRevisions"
         ]
       }
+    ],
+    "planned": 39,
+    "plannedItems": [
+      {
+        "id": "FR-20",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.1",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.2",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.3",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.4",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.5",
+        "element": "E-23",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.6",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.7",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.8",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.9",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.10",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.11",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.12",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.13",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.14",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.15",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.16",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.17",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.18",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.19",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.20",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.21",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.22",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.23",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.24",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.25",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.26",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.27",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "FR-20.28",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2-3",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2-4",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2-5",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2-6",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2.6-2",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2-7",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2.8-5",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-2.9-4",
+        "element": "E-24",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-4.11-2",
+        "element": "E-35",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      },
+      {
+        "id": "SR-7-2",
+        "element": "E-34",
+        "status": "planned",
+        "tests": [],
+        "target": "v1.3.0"
+      }
     ]
   },
   "elements": [
@@ -6929,6 +7228,22 @@
         "packaging/npm/smcp-connect"
       ],
       "note": "smcp-session, smcp-stdio (both eras, UDS dialing) and smcp-connect (binary and npm) with the CP-43 credential file; smcpctl clients setup, lockdown and doctor for the seven local clients; Tailscale Funnel and Cloudflare tunnel drivers. TestConformanceThroughAdapters runs the northbound conformance checks relayed through smcp-stdio and through smcp-connect behind a test tunnel and requires each response to equal a direct connection's (FR-12.13, FR-16.9). The session helper is demonstrated with Claude Code (headersHelper) and Codex CLI (env_http_headers fed by smcp-session --env) (FR-12.12). The real-agent suite passes Claude Code 2.1.302, Codex CLI 0.142.2, Hermes Agent 0.17.0, OpenCode 1.15.13 and Goose 1.55.0 on every scenario, and its broken-build check turns a client to fail against a deliberately broken smcpd. Gemini CLI is not run (no GEMINI_API_KEY) and Grok Build is not run (no public CLI). Requirement report (main 1a96b1c): 10 of 20 verified; partly verified: FR-15 (parent, 4 of 10 child requirements verified), FR-15.1 (the generated lockdown settings are checked; refusal by each pinned client is not run), FR-15.2 (the generated managed settings are checked; refusal by the pinned client is not run), FR-15.4 (run on a Standalone host only; the Enforced host case is not), FR-15.7 (the per-client trust settings are checked; connecting each pinned client over TLS is not), FR-15.8, FR-15.10, SR-4.9-1 (needs each client started at its pinned version with a second server added), SR-4.11-1 (needs each client started at its pinned version with a second server added); unverified: FR-18.3 (quick starts not followed at the pinned version for every client). Live cloud-agent runs (Grok Bot, ChatGPT agent, Meta Muse) are descoped from release 1.x; FR-15.9 and FR-16.10 are verified by Inspection records of the documented modes and vendor settings, reviewed 2026-10-18."
+    },
+    {
+      "id": "E-34",
+      "name": "Desktop Application",
+      "subsystem": "SS-8",
+      "implementation": "not-started",
+      "packages": [],
+      "note": "Desktop Application (Tauri 2 tray app for macOS, Linux and Windows): planned for v1.3.0. Every requirement allocated to it is planned (SRS FR-20, SR-2-3 to SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-7-2; SRS Section 2.8) and is not counted in the current requirement set."
+    },
+    {
+      "id": "E-35",
+      "name": "Platform Installers",
+      "subsystem": "SS-8",
+      "implementation": "not-started",
+      "packages": [],
+      "note": "Platform Installers (macOS pkg and dmg, Linux deb, rpm and AppImage, Windows msi): planned for v1.3.0, without platform code signing; installers are verified with the release minisign signature, Sigstore bundle and SHA-256 checksums. Every requirement allocated to it is planned (SRS FR-20, SR-4.11-2; SRS Section 2.8). Platform signing, notarization and MSIX are deferred (Appendix N)."
     }
   ],
   "agents": [
@@ -7186,7 +7501,7 @@
       "attack": "Invalid stdout",
       "expected": "Instance terminated; call fails with `-31007`; event recorded",
       "fixture": "HF-18",
-      "observed": "standalone: call: error -31007 BACKEND_OUTPUT_INVALID after 100ms; instance terminated: true; refusal event recorded: true | enforced: call: error -31007 BACKEND_OUTPUT_INVALID after 0s; instance terminated: true; refusal event recorded: true",
+      "observed": "standalone: call: error -31007 BACKEND_OUTPUT_INVALID after 0s; instance terminated: true; refusal event recorded: true | enforced: call: error -31007 BACKEND_OUTPUT_INVALID after 0s; instance terminated: true; refusal event recorded: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7197,7 +7512,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7208,7 +7523,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7243,7 +7558,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35917: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36381: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7360,7 +7675,7 @@
     }
   ],
   "acceptance": {
-    "commit": "6e17678464aef0d94c3f07e6d7e877644c78827a",
+    "commit": "d9dde78d5b44c739fdad3aa009935ea3db165b4d",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -8048,19 +8363,19 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
-    "commit": "6e17678464aef0d94c3f07e6d7e877644c78827a",
-    "generatedAt": "2026-10-19T03:36:50Z",
+    "commit": "d9dde78d5b44c739fdad3aa009935ea3db165b4d",
+    "generatedAt": "2026-10-19T04:05:32Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000008743"
+      "runner": "GitHub Actions 1000008805"
     },
     "referenceHardware": false,
     "dataset": {
@@ -8077,7 +8392,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.028052,
+        "value": 0.028544,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -8089,7 +8404,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 18.187431,
+        "value": 17.435882,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -8101,18 +8416,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.9459852499999997,
+        "value": 0.8890086249999971,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (11.191 ms, mean of 11.211, 11.498, 10.722, 11.204, 11.192, 11.103, 11.311, 11.287) minus disabled (10.245 ms, mean of 10.078, 10.098, 10.462, 10.441, 10.131, 10.564, 9.835, 10.351), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.973 ms, mean of 11.014, 10.541, 10.895, 11.256, 11.485, 11.103, 10.320, 11.169) minus disabled (10.084 ms, mean of 10.301, 9.841, 10.414, 10.376, 10.078, 9.966, 9.565, 10.129), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 804.062255,
+        "value": 813.143289,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -8124,11 +8439,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 98.2890625,
+        "value": 101.11328125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 11m29s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 11m28s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
