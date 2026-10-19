@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T20:26:25Z",
+  "generatedAt": "2026-10-19T20:42:55Z",
   "commit": "176c7256437038ae8f2b878e461581c688c6bb16",
   "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/176c7256437038ae8f2b878e461581c688c6bb16",
   "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39310942151",
   "tests": {
     "total": 1662,
-    "passed": 1643,
+    "passed": 1644,
     "failed": 0,
-    "skipped": 19,
-    "durationSec": 1777.2,
+    "skipped": 18,
+    "durationSec": 2776.6,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -67,9 +67,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 84,
+        "passed": 85,
         "failed": 0,
-        "skipped": 1
+        "skipped": 0
       },
       {
         "name": "cmd/smcpd",
@@ -4827,7 +4827,8 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestDocumentationSetFR18"
+          "cmd/smcpctl.TestDocumentationSetFR18",
+          "cmd/smcpctl.TestInstallGuideWalkthrough"
         ]
       },
       {
@@ -9348,7 +9349,7 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
