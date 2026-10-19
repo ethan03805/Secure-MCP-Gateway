@@ -248,7 +248,15 @@ func jsonEdit(path, scope, purpose string, f func(map[string]any) error) (Change
 	if err != nil {
 		return Change{}, err
 	}
-	return Change{Path: path, Scope: scope, Purpose: purpose, Before: before, After: append(after, '\n'), Mode: 0o600}, nil
+	mode := os.FileMode(0o600)
+	if scope == "managed" {
+		// A managed (system-wide) settings file is written by root and read
+		// by the client running as the user; a 0600 root-owned file is
+		// silently ignored by the client, which leaves it unlocked (Real
+		// agents lockdown run, 2026-10-19). It holds no secret.
+		mode = 0o644
+	}
+	return Change{Path: path, Scope: scope, Purpose: purpose, Before: before, After: append(after, '\n'), Mode: mode}, nil
 }
 
 func obj(doc map[string]any, key string) map[string]any {

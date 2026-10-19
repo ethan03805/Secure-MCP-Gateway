@@ -63,6 +63,7 @@ func main() {
 	flag.BoolVar(&o.dnsOnlyCA, "dns-only-ca", false, "DIAGNOSTIC: reissue the instance CA with DNS-only name constraints (deviates from CP-53; labelled in the results)")
 	flag.BoolVar(&o.brokenGateway, "broken-gateway", false, "FR-15.8 broken-build check: build smcpd with -tags smcp_broken and exit 0 only if every client that runs reaches the Gateway and fails")
 	acceptance := flag.String("approval-acceptance", "", "FR-3.25: run the four approval cases with Claude Code only and write the Markdown transcript to this file")
+	lockdown := flag.String("lockdown", "", "FR-15.1, FR-15.2, SR-4.9-1, SR-4.11-1, FR-15.7, FR-18.3: run the Claude Code quick start and lockdown run (lockdown.go) and write its report to this file")
 	flag.Parse()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -70,6 +71,21 @@ func main() {
 	if *acceptance != "" {
 		if err := runApprovalAcceptance(ctx, o, *acceptance, os.Stdout); err != nil {
 			fmt.Fprintln(os.Stderr, "agents: approval acceptance:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if *lockdown != "" {
+		r, err := runLockdown(ctx, o, os.Stdout)
+		if err == nil {
+			err = writeOut(*lockdown, r)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "agents: lockdown run:", err)
+			os.Exit(2)
+		}
+		fmt.Printf("\nlockdown run: %s %s: %s: %s\n", r.Client, orDash(r.Version), r.Result, r.Detail)
+		if r.Result == resultFail {
 			os.Exit(1)
 		}
 		return
@@ -195,7 +211,10 @@ func run(ctx context.Context, o options, stdout io.Writer) ([]agentResult, error
 				break
 			}
 			r.Version = clientVersion(ctx, bin)
-			if r.Mode == modeAIGateway && c.NeedsKey != "" && os.Getenv(c.NeedsKey) == "" {
+			// c.mode, not r.Mode: r.Mode carries the +broken-gateway and
+			// +dns-only-ca suffixes, which once let a client without its
+			// key run in the broken-build check.
+			if c.mode(o.local) == modeAIGateway && c.NeedsKey != "" && os.Getenv(c.NeedsKey) == "" {
 				r.Detail = c.NeedsKey + " is not set; no model credentials"
 				if c.LocalLogin {
 					r.Detail += " (or run with -local)"

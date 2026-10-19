@@ -14,6 +14,9 @@ name: Real agents
 on:
   push:
     branches: [main]
+    # A run on a release tag is a full claim on the requirements it
+    # publishes to site-data/workflows.json (tools/reqreport/workflows.go).
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       clients:
@@ -38,7 +41,7 @@ jobs:
   agents:
     name: agents
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,19 +70,22 @@ jobs:
         run: go run ./scripts/agents -clients "$CLIENTS" -work "$RUNNER_TEMP/agents"
       # FR-15.8: a deliberately broken Gateway build (smcpd built with
       # -tags smcp_broken, which skips rate limits and approval obligations)
-      # must turn a real agent's result to fail. The suite exits 0 only if
-      # the agent reached the Gateway and failed. Its results go to separate
-      # files and are never published.
-      - name: Broken-build check (Claude Code against a broken Gateway)
-        if: ${{ !cancelled() && (inputs.clients == '' || contains(inputs.clients, 'claude-code')) }}
+      # must turn the real agents' results to fail. Every selected client
+      # runs again against the broken build; the suite exits 0 only if each
+      # client that runs reaches the Gateway and fails. Its results go to
+      # separate files and are never published as status data.
+      - name: Broken-build check (every client against a broken Gateway)
+        if: ${{ !cancelled() }}
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLIENTS: ${{ inputs.clients }}
         run: |
           if [ -z "$AI_GATEWAY_API_KEY" ]; then
             echo "AI_GATEWAY_API_KEY is not set; broken-build check skipped"
             exit 0
           fi
-          go run ./scripts/agents -clients claude-code -broken-gateway -work "$RUNNER_TEMP/agents-broken" \
+          go run ./scripts/agents -clients "$CLIENTS" -broken-gateway -work "$RUNNER_TEMP/agents-broken" \
             -out build/agents-broken.json -report build/agents-broken-report.json
       - name: Summary
         if: always()
@@ -113,6 +119,104 @@ jobs:
             ${{ runner.temp }}/agents-broken/agents/*/*.log
           if-no-files-found: warn
           retention-days: 14
+
+  # FR-15.1, FR-15.2, SR-4.9-1, SR-4.11-1, FR-15.7, FR-18.3: Claude Code at
+  # its pinned version follows its quick start (docs/clients/claude-code.md,
+  # option B) and connects over TLS with only what setup wrote; then the
+  # managed-settings lockdown of `smcpctl lockdown apply` is applied with
+  # sudo: a second MCP server in user and project scope must not load, the
+  # Read of a file in the Gateway state directory and the Edit of Claude
+  # Code's own MCP settings must be refused, and `smcpctl doctor` must
+  # report the extra servers (scripts/agents/lockdown.go).
+  lockdown:
+    name: lockdown
+    if: ${{ inputs.clients == '' || contains(inputs.clients, 'claude-code') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install Claude Code at the pinned version
+        run: scripts/agents/install-clis.sh claude-code
+      - name: Quick start and lockdown run
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: |
+          go run ./scripts/agents -lockdown build/agents-lockdown.json -work "$RUNNER_TEMP/lockdown"
+          # In CI every step must run: not-run (no key, no sudo) fails the job.
+          jq -e '.result == "pass"' build/agents-lockdown.json >/dev/null
+      - name: Summary
+        if: always()
+        run: |
+          f=build/agents-lockdown.json
+          [ -f "$f" ] || exit 0
+          {
+            jq -r '"### Lockdown run: \(.client) \(.version) (pinned \(.pinnedVersion)): \(.result)"' "$f"
+            echo
+            echo "| Step | Result | Detail |"
+            echo "|---|---|---|"
+            jq -r '.steps[] | "| \(.step) | \(.result) | \(.detail | gsub("\\|"; "/")) |"' "$f"
+          } >> "$GITHUB_STEP_SUMMARY"
+      # Transcripts are redacted; the credential file and the harness home
+      # are not uploaded.
+      - name: Upload the report and transcripts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: agents-lockdown
+          path: |
+            build/agents-lockdown.json
+            ${{ runner.temp }}/lockdown/lockdown/*.log
+            ${{ runner.temp }}/lockdown/lockdown/*.json
+            ${{ runner.temp }}/lockdown/smcpd.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  # Each job's result becomes a claim in site-data/workflows.json: partial
+  # from main, full from a release tag (tools/reqreport/workflows.go).
+  # Dispatched runs, which may select clients, claim nothing. The matrix
+  # job claims FR-15.8 only when the broken-build check ran.
+  publish-results:
+    name: publish-results
+    needs: [agents, lockdown]
+    if: >-
+      always() && (github.event_name == 'push' || github.event_name == 'schedule') &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-site-data
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: agents-results
+          path: results
+      - name: Publish the job results to the site-data branch
+        env:
+          AGENTS: ${{ needs.agents.result }}
+          LOCKDOWN: ${{ needs.lockdown.result }}
+          REF: ${{ github.ref_name }}
+        run: |
+          if [ -n "$(find results -name agents-broken.json -print -quit 2>/dev/null)" ] || [ "$AGENTS" = failure ]; then
+            case $AGENTS in success | failure) scripts/publish-workflow-result.sh agents "$AGENTS" "$REF" "$GITHUB_SHA" FR-15.8 ;; esac
+          else
+            echo "the broken-build check did not run; no FR-15.8 claim"
+          fi
+          case $LOCKDOWN in success | failure) scripts/publish-workflow-result.sh agents-lockdown "$LOCKDOWN" "$REF" "$GITHUB_SHA" FR-15.2 ;; esac
 
   publish:
     name: publish
