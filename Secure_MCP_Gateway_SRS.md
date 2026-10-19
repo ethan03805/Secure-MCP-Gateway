@@ -2065,7 +2065,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 | Verification Method | Test |
 | Verification Statement | Cancel a call to a stdio fixture; confirm the instance receives `notifications/cancelled` naming the request ID. |
 | Source | MCP:basic/patterns/cancellation |
-| Rationale | Transport-specific cancellation rules. Release 1.0 runs stdio instances only; cancellation on Streamable HTTP instances comes with the southbound HTTP client, planned for v1.3.0 (FR-5.28). |
+| Rationale | Transport-specific cancellation rules. On a Streamable HTTP instance (FR-5.28, planned for v1.3.0) the dispatcher closes the call's response stream, which is the cancellation on that transport, and also sends `notifications/cancelled`, which the 2025-11-25 era it negotiates accepts. |
 
 #### FR-5.27 — Instance shutdown
 

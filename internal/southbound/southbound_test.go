@@ -1,9 +1,12 @@
 package southbound
 
 import (
+	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,6 +140,39 @@ func TestCheckURL(t *testing.T) {
 			t.Errorf("%s accepted", bad)
 		}
 	}
+}
+
+// TestAddressGuard: a url server named by a host name or public address
+// is not connected when the address dialed is loopback, link-local, cloud
+// metadata, multicast or unspecified; private addresses are allowed.
+func TestAddressGuard(t *testing.T) {
+	for addr, want := range map[string]string{
+		"127.0.0.1": "loopback", "::1": "loopback", "::ffff:127.0.0.2": "loopback",
+		"169.254.169.254": "link-local", "fe80::1": "link-local",
+		"100.100.100.200": "cloud-metadata", "fd00:ec2::254": "cloud-metadata",
+		"239.1.2.3": "multicast", "0.0.0.0": "unspecified", "::": "unspecified",
+		"10.1.2.3": "", "192.168.1.10": "", "93.184.215.14": "", "2606:2800::1": "",
+	} {
+		if got := refusedAddr(netip.MustParseAddr(addr)); got != want {
+			t.Errorf("%s: %q, want %q", addr, got, want)
+		}
+	}
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	if c, err := dialer(true).DialContext(context.Background(), "tcp", ln.Addr().String()); err == nil || !strings.Contains(err.Error(), "loopback") {
+		if c != nil {
+			c.Close()
+		}
+		t.Fatalf("guarded dial to loopback: %v", err)
+	}
+	c, err := dialer(false).DialContext(context.Background(), "tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatalf("unguarded dial: %v", err)
+	}
+	c.Close()
 }
 
 func TestTokenFromEnv(t *testing.T) {

@@ -59,6 +59,7 @@ Transport-specific rules:
 | Connection refused or reset, failed certificate verification, response headers over 64 KiB | The instance is treated as failed and replaced |
 | HTTP 404 for a request in a session | The session ended: the instance is replaced with a new session |
 | Proxy variables in the Gateway's environment | Ignored |
+| A host name (or public address) in `url` that resolves to a loopback, link-local, cloud-metadata, multicast or unspecified address | Not connected; the instance fails. Private addresses are allowed. A local server must be named by a loopback URL. |
 
 The transport's diagnostics (refusals and what the server answered) are the instance's `Stderr` and become server-asserted evidence (SR-6.18-1). They never contain the token.
 
@@ -66,6 +67,6 @@ The transport's diagnostics (refusals and what the server answered) are the inst
 
 - The 2026-07-28 era southbound, with `subscriptions/listen` (FR-5.16, FR-5.31, deferred).
 - An OAuth 2.1 client (FR-22.45, v1.4.0).
-- Egress grants for remote url servers: the Gateway connects to the configured host directly. Use `ca_file` to pin the server's roots.
+- Egress grants for remote url servers: the Gateway connects to the configured host directly, not through the Egress Broker, whose one-use capabilities are minted for operations of a server process. The `url` itself is the operator's grant; the address rule above and `ca_file` bound where the connection can go.
 
 The experimental bridge `smcp-stdio --experimental-upstream` from the ContextForge spike still works and uses the same URL and token rules, but a `url` server replaces it.
