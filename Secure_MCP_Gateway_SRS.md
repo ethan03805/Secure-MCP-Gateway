@@ -7,7 +7,7 @@
 | Date | 2026-10-16 (America/Chicago) |
 | Owner | netrisk |
 | System of Interest | Secure MCP Gateway (local, single computer) |
-| Architecture | `ArchitectureV2.md` V2.3 draft — elements E-01…E-33, functions F-01…F-99, interfaces X-01…X-17 and I-01…I-39, GUI modules G-01…G-14, data stores D-01…D-15 |
+| Architecture | `ArchitectureV2.md` V2.4 draft — elements E-01…E-35 (E-34 and E-35 planned for v1.3.0), functions F-01…F-106, interfaces X-01…X-18 and I-01…I-42, GUI modules G-01…G-14, data stores D-01…D-15 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
 | Skill | `Skills.md` (INCOSE GtWR + project rules) |
@@ -20,20 +20,21 @@
 3. Recommended technology stack (open source only)
 4. Functional requirements (FR-1 … FR-19)
 5. Security requirements (SR, parented to `SEC` MUSTs)
-6. Appendix A — Controlled parameters (CP)
-7. Appendix B — Gateway error codes and reason codes
-8. Appendix C — Application role matrix
-9. Appendix D — Graph data model (mirror)
-10. Appendix E — Security-control coverage (SEC → SR)
-11. Appendix F — Allocation matrix (element → requirements)
-12. Appendix G — Architecture coverage (functions, interfaces, data stores, GUI modules)
-13. Appendix H — Requirement index
-14. Appendix I — Requirement-set checks
-15. Appendix J — Server package manifest schema
-16. Appendix K — Client matrix
-17. Appendix L — Hostile backend fixture suite
-18. Appendix M — Acceptance scenarios and the enforced label
-19. Appendix N — Requirements deferred from release 1.0
+6. Requirements planned for later releases (FR-20 onward and their SRs; Section 2.8)
+7. Appendix A — Controlled parameters (CP)
+8. Appendix B — Gateway error codes and reason codes
+9. Appendix C — Application role matrix
+10. Appendix D — Graph data model (mirror)
+11. Appendix E — Security-control coverage (SEC → SR)
+12. Appendix F — Allocation matrix (element → requirements)
+13. Appendix G — Architecture coverage (functions, interfaces, data stores, GUI modules)
+14. Appendix H — Requirement index
+15. Appendix I — Requirement-set checks
+16. Appendix J — Server package manifest schema
+17. Appendix K — Client matrix
+18. Appendix L — Hostile backend fixture suite
+19. Appendix M — Acceptance scenarios and the enforced label
+20. Appendix N — Requirements deferred from release 1.0
 
 ## 1. Purpose, scope and intended use
 
@@ -49,7 +50,7 @@ Per the owner, the Gateway is a local secure MCP gateway on a single computer wh
 
 ### 1.3 Scope
 
-**In scope:** all elements E-01…E-33 of `ArchitectureV2.md` and their interfaces, on the platforms of Section 1.6.
+**In scope:** all elements E-01…E-33 of `ArchitectureV2.md` and their interfaces, on the platforms of Section 1.6. The Desktop Application (E-34) and the Platform Installers (E-35) are in scope for release v1.3.0 (FR-20, Section 2.8).
 
 **Outside the SoI (interfaces only):** an external MCP Curation System, when one is used instead of the packaging command (X-02), package registries (X-17), agentic frameworks (X-12), tunnel providers (X-13), offline analytics tools (X-11), and the host platform (X-07). The reference harness adapters and harness tooling (E-33) and the packaging command (F-96) are inside the SoI and are delivered with the release.
 
@@ -114,6 +115,14 @@ A **platform profile** is always active; exactly one of the two applies to an in
 
 The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The supported client matrix is Appendix K.
 
+Planned for v1.3.0 (FR-20): native installers and a desktop tray application, distributed as GitHub Release assets beside the archives and covered by the same signed checksum file (FR-20.23).
+
+| Platform | Installers (E-35) | Desktop application (E-34) |
+|---|---|---|
+| macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView |
+| Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
+| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is specified in `srs_build/req7-windows.txt` | Tauri 2, WebView2 |
+
 ## 2. Conventions and traceability rules
 
 ### 2.1 Imperatives
@@ -134,7 +143,7 @@ IDs are stable. Later revisions retire IDs rather than reuse them.
 
 ### 2.3 Record fields
 
-Every requirement record carries: **ID**, **Parent ID**, **Statement**, **Allocation** (element E-xx; function F-xx; interface X-xx/I-xx; data store D-xx where relevant), **Verification Method** (Inspection, Analysis, Demonstration or Test), **Verification Statement**, **Source** and **Rationale**.
+Every requirement record carries: **ID**, **Parent ID**, **Statement**, **Allocation** (element E-xx; function F-xx; interface X-xx/I-xx; data store D-xx where relevant), **Verification Method** (Inspection, Analysis, Demonstration or Test), **Verification Statement**, **Source** and **Rationale**. A planned requirement also carries a **Target release** (Section 2.8); a deferred one a **Deferral** (Section 2.7).
 
 ### 2.4 Source citations
 
@@ -150,6 +159,8 @@ Every requirement record carries: **ID**, **Parent ID**, **Statement**, **Alloca
 | `OWNER` | Owner direction in the tasking for this SRS, including the owner decisions of 2026-10-16 recorded in `CHANGELOG.md` |
 | `REVIEW` | A gap found by the V1.1 completeness review and closed in V1.2 (`CHANGELOG.md`) |
 
+`OWNER` also covers the owner decisions of 2026-10-18 on the desktop application and platform installers (FR-20).
+
 ### 2.5 Subjects
 
 Each statement names its allocated element as the subject, for example *"The Session Manager (E-04) SHALL …"*. Requirements on the release, rather than on run-time behavior, name *"The Gateway release"* or the delivered command.
@@ -161,6 +172,16 @@ A requirement is **verified** only when at least one passing automated test clai
 ### 2.7 Deferred requirements
 
 A requirement record that carries a deferral rationale is **deferred from release 1.0**. It keeps its ID and text, and Appendix N lists it with the reason it is deferred and what release 1.0 does instead. A deferred requirement is not part of the requirement set of release 1.0: Appendices E to I, the requirement report (FR-12.10) and the release label (FR-19.3) leave it out. No requirement of release 1.0 has a deferred parent. Deferring a requirement, or restoring one, is a controlled change recorded in `CHANGELOG.md`.
+
+### 2.8 Planned requirements
+
+A requirement record that carries a **target release** (a `TARGET: vMAJOR.MINOR.PATCH` line in `srs_build/`) is **planned** for that release. It is a complete requirement: it is validated, allocated, rendered where it stands with its target release, and tests and records may claim it. Until its target release is the release being built, it is not part of the current requirement set:
+
+- Appendix I counts it apart from the requirements of the current release, and Appendices F, G and H mark it `(planned vX.Y.Z)`;
+- the requirement report (FR-12.10) lists it as `planned`, not `unverified`, keeps it out of the totals, the per-element roll-up and the items of the status data, and publishes it in a separate `plannedItems` array with its target release; a planned requirement that a test verifies is reported verified there, and one with a failing claim is counted as failing, because a failing test is never hidden;
+- it does not hold back a parent of the current release that is verified by the review of its children, and the release label (FR-19.3) does not depend on it.
+
+A requirement of the current release has no planned parent, and a record is never both planned and deferred. When the target release is being built, the target line is removed from each of its records in one controlled change recorded in `CHANGELOG.md`, and the requirements count from then on like any other.
 
 ## 3. Recommended technology stack (open source only)
 
@@ -200,6 +221,8 @@ All selections carry OSI-approved licenses. Exact versions, digests and transiti
 | Testing | Go `testing`; Playwright (GUI end-to-end and accessibility with `axe-core`); `vegeta` (load) | BSD-3; Apache-2.0; MPL-2.0; MIT | All | Requirement-tagged automated verification (FR-12.10) |
 | Supply chain | Syft (SBOM), Grype and `govulncheck` (vulnerabilities), minisign (release signing) | Apache-2.0; Apache-2.0; BSD-3; ISC | Release | FR-12.8 provenance |
 | Distribution | GitHub Releases, `install.sh`, a Homebrew tap | — | Release | Owner decision (FR-13) |
+| Desktop application (planned, v1.3.0) | **Tauri** 2 with the tray, notification, single-instance and deep-link plugins; the operating system's webview (WKWebView, WebKitGTK 4.1, WebView2) | MIT or Apache-2.0; LGPL-2.1+ (WebKitGTK); proprietary (WKWebView, WebView2 runtime) | E-34 | Small native shell around the existing console with a Rust core and an explicit capability model (FR-20.1, SR-2-5) |
+| Platform installers (planned, v1.3.0) | Tauri bundler (`.dmg`, `.deb`, `.rpm`, AppImage, `.msi` through WiX Toolset 3); `pkgbuild` and `productbuild` (`.pkg`); nFPM through GoReleaser (`smcp` `.deb` and `.rpm`) | MIT or Apache-2.0; part of macOS; MS-RL (WiX); MIT (nFPM) | E-35 | Native packages for each platform from the existing release pipeline (FR-20.17 to FR-20.20) |
 
 ### 3.2 Explicitly excluded
 
@@ -3972,7 +3995,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-12.10 |
 | Parent ID | FR-12 — Implementation constraints |
-| Statement | Each automated test **SHALL** declare each requirement it claims as a full or a partial claim, and the build **SHALL** produce a report that lists every requirement of this SRS with the status verified, partial, failing or unverified as defined in Section 2.6, together with the claiming tests. |
+| Statement | Each automated test **SHALL** declare each requirement it claims as a full or a partial claim, and the build **SHALL** produce a report that lists every requirement of this SRS with the status verified, partial, failing or unverified as defined in Section 2.6, and each requirement planned for a later release as planned unless a claim verifies it or fails (Section 2.8), together with the claiming tests. |
 | Allocation | Elements: E-01 Harness Interface Endpoint, E-24 Management Console & Control API |
 | Verification Method | Inspection |
 | Verification Statement | Run the report on the release commit; confirm it lists exactly the requirements of Appendix H, that every requirement without a claim is listed as unverified, that a requirement with only partial claims is listed as partial, and that the totals match the published status data. |
@@ -7159,6 +7182,564 @@ Each security requirement is a **SHALL** control whose parent is a **MUST** in `
 | Source | SEC 8.9 |
 | Rationale | Browser mutation protection. |
 
+## 6. Requirements planned for later releases
+
+The requirements of this section are planned for the release named in each record's **Target release** field (Section 2.8). They are complete requirements, allocated and verified like the others, but they are not part of the requirement set of the current release: Appendix I counts them separately, the matrices mark them, and the requirement report lists them as planned instead of unverified until a test or record verifies them. Security requirements for planned elements are kept here with their functional requirements, under the same `SR-<SEC id>-k` IDs and parent rules as Section 5.
+
+### FR-20 Desktop application and platform installers
+
+Owner decision of 2026-10-18: the product gets a desktop application and native installers so that a person can install, run and operate the Gateway without a terminal. The Desktop Application (E-34) is a Tauri 2 tray application for macOS, Linux and Windows; the Platform Installers (E-35) are a macOS `.pkg` and `.dmg`, Linux `.deb`, `.rpm` and AppImage packages, and a Windows `.msi`. Installers are verified with the project's minisign signature, Sigstore bundle and SHA-256 checksums; platform code signing, notarization and MSIX are deferred (Appendix N) and are additive when enabled. The Windows runtime of `smcpd` itself (service, paths, listeners) is specified separately in `srs_build/req7-windows.txt`; this section relies on it for Windows and does not restate it. The desktop application holds no more authority than the console: every control-API operation is performed in the console window under the user's own console sign-in.
+
+#### FR-20 — Desktop application and platform installers
+
+| Field | Value |
+|---|---|
+| ID | FR-20 |
+| Parent ID | — (root) |
+| Statement | The Gateway release **SHALL** include the Desktop Application (E-34) and the Platform Installers (E-35) specified by the requirements of this section. |
+| Allocation | Elements: E-34 Desktop Application, E-35 Platform Installers; Functions: F-100, F-105; External interfaces: X-16, X-18 |
+| Verification Method | Analysis |
+| Verification Statement | Review the verification results of every FR-20 child requirement; confirm each has passed on macOS arm64, on Ubuntu x86_64 and on Windows 11 x86_64. |
+| Source | OWNER (desktop app and automated installers on all three platforms, 2026-10-18) |
+| Rationale | A user-friendly product starts from an installer the user already knows how to run and an icon the user can click. The terminal remains supported; it stops being required. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.1 — Desktop application platforms
+
+| Field | Value |
+|---|---|
+| ID | FR-20.1 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** be built with Tauri 2 from source in the Gateway repository and **SHALL** run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 10 22H2 or later and Windows 11 on x86_64 (WebView2), where it controls the Windows service defined in `srs_build/req7-windows.txt`. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens. |
+| Source | OWNER (Tauri v2 tray app on macOS, Linux and Windows) |
+| Rationale | One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.2 — Tray icon and menu
+
+| Field | Value |
+|---|---|
+| ID | FR-20.2 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** show a tray (menu-bar) icon whose image and accessible name state one of `healthy`, `degraded`, `fail-closed`, `emergency stop`, `stopped` or `unreachable`, and a menu with the items Open Console, Approvals (with the pending count), Start, Stop, Restart, Set Up a Client, Check for Updates, Settings and Quit, where Start is enabled only while the service is stopped and Stop and Restart only while it runs. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100; Internal interfaces: I-40 |
+| Verification Method | Test |
+| Verification Statement | Drive the Gateway through each of the six states with a test harness; confirm the icon and accessible name for each and the enabled state of Start, Stop and Restart; open each menu item and confirm its action. |
+| Source | OWNER (start/stop/status of smcpd, health at a glance) |
+| Rationale | The tray is where the user looks first; it must say what state the Gateway is in without opening anything. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.3 — Service control
+
+| Field | Value |
+|---|---|
+| ID | FR-20.3 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** start, stop and restart the installed `smcpd` service only through the platform service manager (the launchd user agent on macOS, the systemd user or system unit on Linux, the Service Control Manager on Windows), **SHALL** request operating-system elevation only for a system-wide service, and **SHALL** report within 30 seconds whether the operation succeeded together with the service manager's error text when it did not. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | On each platform, start, stop and restart the service from the menu; confirm the service manager's state after each and the reported outcome; make the unit fail to start and confirm the error text is shown within 30 seconds; on a Linux Enforced host confirm one polkit prompt per operation and none for a user unit. |
+| Source | OWNER (start/stop/status of smcpd) |
+| Rationale | Stopping the service is not the emergency stop. The emergency stop (FR-3) refuses calls while the Gateway keeps its evidence path running and is done in the console, signed in; service control only starts and stops the process. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.4 — Health at a glance
+
+| Field | Value |
+|---|---|
+| ID | FR-20.4 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** read the CP-51 loopback metrics endpoint at least every 5 seconds while the service runs, **SHALL** show the tray state of FR-20.2 within 10 seconds of a change in the Gateway's health state, emergency stop or pending-approval count, **SHALL** show `unreachable` when no exposition has been read for 15 seconds, and **SHALL** show the label `not enforced` beside the state unless the exposition reports the release label `enforced`. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100; External interfaces: X-15; Internal interfaces: I-40 |
+| Verification Method | Test |
+| Verification Statement | Against a running Gateway, change the health state, set and clear the emergency stop and create an approval; confirm each tray change within 10 seconds; stop the metrics listener and confirm `unreachable` within 15 seconds and never `healthy`; confirm the `not enforced` label on a Standalone installation. |
+| Source | OWNER (health at a glance); ARCH §4 E-34 |
+| Rationale | The metrics endpoint needs no credential and carries no arguments, principals or sessions (security review RR-06), so the tray can show health without holding any authority. Stale data must never read as healthy. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.5 — Desktop health metrics
+
+| Field | Value |
+|---|---|
+| ID | FR-20.5 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The metrics endpoint **SHALL** expose, in addition to the FR-17.5 metric set, a gauge `smcp_release_enforced` whose value is 1 only while the release label is `enforced` and 0 otherwise and a gauge `smcp_emergency_stop` whose value is 1 only while the emergency stop is set, both without labels, and the first-run setup of FR-20.8 **SHALL** leave metrics enabled on the CP-51 address. |
+| Allocation | Elements: E-23 Health & Safety Monitor; Functions: F-61; External interfaces: X-15 |
+| Verification Method | Test |
+| Verification Statement | Scrape the endpoint on an Enforced and a Standalone installation and with the emergency stop set and cleared; confirm both gauges and their values; run the first-run setup and confirm metrics are enabled on the CP-51 address. |
+| Source | OWNER (health at a glance) |
+| Rationale | The tray needs the release label and the emergency stop, which the existing metric set does not carry, and must not need the operator token to read them. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.6 — Console in a native window
+
+| Field | Value |
+|---|---|
+| ID | FR-20.6 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** show the console that `smcpd` serves on the CP-03 admin listener in one native window, loaded from that listener's configured URL rather than from a copy bundled with the application, **SHALL** use the console's own sign-in and roles, and **SHALL** open any link to another origin in the user's default browser instead of in the window. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-102; External interfaces: X-04; Internal interfaces: I-41 |
+| Verification Method | Test |
+| Verification Statement | Open the console window; confirm the URL is the admin listener's, that the sign-in page appears, and that a console operation succeeds only for a role Appendix C permits; open a documentation link to another origin and confirm it opens in the default browser; open the window twice and confirm one window is focused. |
+| Source | OWNER (the existing web console shown in a native window instead of a browser tab) |
+| Rationale | Loading the served console keeps one console, one authentication path and one set of verified console requirements (FR-8). A bundled copy would drift from the daemon's version. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.7 — Approval notifications
+
+| Field | Value |
+|---|---|
+| ID | FR-20.7 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | When the pending-approval count read under FR-20.4 increases and notifications are on in Settings, the Desktop Application (E-34) **SHALL** raise one native notification within 10 seconds whose text is fixed except for the pending count, **SHALL** open the console window at the Approvals view (G-13) when the user activates it, and **SHALL** raise no notification when notifications are off. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-101; External interfaces: X-14; Internal interfaces: I-40 |
+| Verification Method | Test |
+| Verification Statement | Create one and then three approvals with notifications on; confirm one notification per increase within 10 seconds with the count and no tool name, alias or argument; activate it and confirm the console opens at G-13; turn notifications off and confirm none is raised. |
+| Source | OWNER (native notifications for pending approvals, respecting approval roles); FR-3.23 |
+| Rationale | In the Enforced profile `smcpd` runs as a system identity and cannot reach the user's desktop; the application can. The count is all it knows without signing in, and it is enough to send the user to the console, where the approval is shown with its binding (FR-3). |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.8 — First-run setup
+
+| Field | Value |
+|---|---|
+| ID | FR-20.8 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | When no Gateway configuration exists, the Desktop Application (E-34) **SHALL** offer a setup window that collects the Administrator and Approver passwords, runs `smcpctl bootstrap` with the passwords passed on standard input or in files of mode 0600 that it deletes when the command ends, then runs `smcpctl install` for the selected profile, and **SHALL** show each command's outcome and, when a step fails, its output and the command the user can run in a terminal to retry it. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-103, F-97; Internal interfaces: I-42 |
+| Verification Method | Test |
+| Verification Statement | On clean macOS, Ubuntu and Windows runners, complete the setup; confirm the configuration, keys and service exist as after the terminal procedure (FR-13.6), that no password appears in any process argument list (sampled every 100 ms during setup) or remains in a file afterwards; inject a failing install and confirm the output and retry command are shown. |
+| Source | OWNER (first-run setup wraps smcpctl bootstrap/install); SEC 7.5 |
+| Rationale | The setup is a front end to the verified terminal procedure, not a second implementation of it, so FR-13 keeps verifying the installation itself. Process argument lists are readable by other local accounts. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.9 — Profile choice in setup
+
+| Field | Value |
+|---|---|
+| ID | FR-20.9 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | On Linux, the first-run setup **SHALL** run the FR-13.5 prerequisite check before offering a profile, **SHALL** offer the Enforced profile only when every prerequisite is present, **SHALL** name each missing prerequisite otherwise, and **SHALL** state before installation, on every platform, that the Standalone profile is labelled `not enforced` and does not contain servers. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-103, F-97; Internal interfaces: I-42 |
+| Verification Method | Test |
+| Verification Statement | Run the setup on an Ubuntu runner with all Enforced prerequisites and on one without rootless Podman; confirm Enforced is offered on the first and refused with the missing prerequisite named on the second; confirm the Standalone statement on macOS, Linux and Windows. |
+| Source | OWNER (platform profiles); FR-13.9; FR-13.10 |
+| Rationale | A friendly installer must not hide the difference that matters most for security. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.10 — Client setup
+
+| Field | Value |
+|---|---|
+| ID | FR-20.10 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** list the Appendix K clients that `smcpctl clients setup` supports and that it detects on the host, **SHALL** show the changes `smcpctl clients setup <client> --dry-run` reports before applying them, **SHALL** apply them only after the user confirms, and **SHALL** offer the client's lockdown profile (FR-15.1) and removal (`--remove`) in the same window. |
+| Allocation | Elements: E-34 Desktop Application, E-33 Harness Adapter Kit; Functions: F-103, F-98; Internal interfaces: I-42 |
+| Verification Method | Test |
+| Verification Statement | With Claude Code and Codex CLI installed on a runner, open client setup; confirm both are listed with their dry-run changes; confirm nothing is written before confirmation; apply, connect each client and list tools through the Gateway; remove and confirm the client's settings are restored. |
+| Source | OWNER (client setup wraps smcpctl client setup for agents); FR-12.7 |
+| Rationale | Connecting an agent is the step most users get wrong by hand, and the dry run lets them see what will change in their client's files. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.11 — Update check
+
+| Field | Value |
+|---|---|
+| ID | FR-20.11 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** check the project's GitHub Releases for a newer stable release at most once every 24 hours and when the user selects Check for Updates, **SHALL** send no data in that request other than what an anonymous HTTPS GET of the releases document requires, **SHALL** report a newer release with its version and release notes link, and **SHALL** make no automatic check when automatic checks are off in Settings. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-104; External interfaces: X-16 |
+| Verification Method | Test |
+| Verification Statement | Point the application at a test release feed; confirm one request in 24 hours, a request on demand, the reported version, no request with automatic checks off, and, by capturing the request, no identifier, cookie or installation data in it; disconnect the network and confirm no error loop and a single "could not check" message on demand. |
+| Source | OWNER (update checks using the existing signed release verification); FR-12.2 |
+| Rationale | An update check is the only network request the desktop application makes on its own; it must be infrequent, anonymous and switchable off for offline hosts. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.12 — Gateway upgrade from the desktop
+
+| Field | Value |
+|---|---|
+| ID | FR-20.12 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | When the user accepts a newer release, the Desktop Application (E-34) **SHALL** upgrade the Gateway only by running `smcpctl upgrade` for that release (FR-13.7, FR-13.8), **SHALL** show its progress and outcome, and **SHALL** report a rollback as a failed upgrade with the version that is running afterwards. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-104, F-97; Internal interfaces: I-42 |
+| Verification Method | Test |
+| Verification Statement | Upgrade from the previous release to a candidate from the menu; confirm `smcpctl upgrade` ran and the new version reports healthy; repeat with a fault-injected release whose migration fails and confirm the rollback is reported with the previous version running. |
+| Source | OWNER (update checks using smcpctl upgrade) |
+| Rationale | The upgrade path with backup and rollback is already specified and verified; the desktop application must reuse it. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.13 — Desktop application update
+
+| Field | Value |
+|---|---|
+| ID | FR-20.13 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | When the user accepts a newer release, the Desktop Application (E-34) **SHALL** download the release's platform installer of the kind that installed it (FR-20.17 to FR-20.20), **SHALL** verify it as SR-7-2 requires, and **SHALL** then start that installer, and it **SHALL** NOT use the Tauri updater plugin or any update channel other than the release's signed checksum file. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-104; External interfaces: X-16, X-18 |
+| Verification Method | Test |
+| Verification Statement | Update from the previous release's application through a test feed; confirm the installer was verified and started and the new version runs; inspect the application's Cargo manifest and capability files and confirm the updater plugin is absent. |
+| Source | OWNER (update checks using the existing signed release verification); ARCH §4 E-34 |
+| Rationale | The Tauri updater verifies against its own key and manifest; using it would add a second trust root beside the release key that `install.sh` and `smcpctl upgrade` already rely on. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.14 — Single instance and start at login
+
+| Field | Value |
+|---|---|
+| ID | FR-20.14 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) **SHALL** run at most one instance per user session, focusing the existing instance when started again, and **SHALL** start at login only when the user turns that on in Settings, which is off after installation. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100 |
+| Verification Method | Test |
+| Verification Statement | Start the application twice; confirm one process and that the second start focuses the first; confirm start at login is off after installation and, when turned on, that the application starts after a fresh login on each platform. |
+| Source | OWNER (tray app) |
+| Rationale | Two instances would raise duplicate notifications and race on service control. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.15 — Desktop accessibility
+
+| Field | Value |
+|---|---|
+| ID | FR-20.15 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The setup, client setup, update and settings windows of the Desktop Application (E-34) **SHALL** meet WCAG 2.2 level AA and be operable by keyboard alone, and every tray menu item **SHALL** have an accessible name that the platform screen reader (VoiceOver, Orca, Narrator) announces. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100, F-103 |
+| Verification Method | Test |
+| Verification Statement | Run axe-core against each bundled window in the application's webview test build and confirm no WCAG 2.2 AA violation; complete setup, client setup and an update by keyboard alone; with VoiceOver, Orca and Narrator, confirm each tray menu item is announced by name and record the result under `docs/verification/`. |
+| Source | OWNER (user-friendly product); FR-8.30 |
+| Rationale | The console already meets WCAG 2.2 AA; the windows around it must not be the part that excludes users. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.16 — First-run usability
+
+| Field | Value |
+|---|---|
+| ID | FR-20.16 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Desktop Application (E-34) and the Platform Installers (E-35) **SHALL** allow a first-time user who has the in-application help to install the Gateway from the platform installer, complete first-run setup and connect Claude Code through the Gateway within 15 minutes, without using a terminal. |
+| Allocation | Elements: E-34 Desktop Application, E-35 Platform Installers; Functions: F-103, F-106 |
+| Verification Method | Demonstration |
+| Verification Statement | Run a timed task with three first-time users on each of macOS, Linux and Windows, starting from the downloaded installer; confirm at least two per platform complete within 15 minutes without a terminal, and record the times under `docs/verification/`. |
+| Source | OWNER (a more user-friendly product); FR-8.24 |
+| Rationale | Makes "user friendly" measurable for the whole first-run path, as FR-8.24 does for the workbench. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.17 — macOS installers
+
+| Field | Value |
+|---|---|
+| ID | FR-20.17 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway release **SHALL** publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` built with `pkgbuild` and `productbuild` that installs the application bundle in `/Applications` and links those five commands into `/usr/local/bin`. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
+| Verification Method | Test |
+| Verification Statement | On a GitHub-hosted macOS arm64 runner, install the `.pkg`; confirm the application bundle, the five links and that each command prints the release version; mount the `.dmg`, copy the application, and confirm it starts and finds its bundled commands. |
+| Source | OWNER (macOS .pkg/.dmg) |
+| Rationale | The `.pkg` puts the commands on the path and the application where users expect it; the `.dmg` is the drag-to-install form many users prefer and needs no administrator password. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.18 — Linux packages
+
+| Field | Value |
+|---|---|
+| ID | FR-20.18 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway release **SHALL** publish, for linux-amd64 and linux-arm64, a `.deb` and an `.rpm` package `smcp` built with nFPM through GoReleaser that installs `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` in `/usr/bin` with no graphical dependency, and a `.deb` and an `.rpm` package `smcp-desktop` built by the Tauri bundler that installs the Desktop Application and depends on `smcp` of the same version. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
+| Verification Method | Test |
+| Verification Statement | On Ubuntu 24.04 and Fedora containers for both architectures, install `smcp` alone and confirm the commands and that no graphical library was pulled in; install `smcp-desktop` and confirm the application starts and that installing it with a different `smcp` version is refused by the package manager. |
+| Source | OWNER (Linux .deb/.rpm) |
+| Rationale | Enforced hosts are often headless; splitting the packages keeps WebKitGTK off them, and the version dependency keeps the application and the daemon in step. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.19 — Linux AppImage
+
+| Field | Value |
+|---|---|
+| ID | FR-20.19 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway release **SHALL** publish, for linux-amd64 and linux-arm64, an AppImage of the Desktop Application containing `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect`, whose first-run setup **SHALL** offer the Standalone profile only, and the release **SHALL** NOT publish a Flatpak. |
+| Allocation | Elements: E-35 Platform Installers, E-34 Desktop Application; Functions: F-105, F-103 |
+| Verification Method | Test |
+| Verification Statement | Run the AppImage on Ubuntu 24.04 and on a distribution without `.deb` or `.rpm` tooling; confirm the application starts, setup offers only Standalone and installs a systemd user unit; inspect the release assets and confirm there is no Flatpak. |
+| Source | OWNER (AppImage or Flatpak if justified) |
+| Rationale | An AppImage serves distributions the packages do not, without root. A Flatpak sandbox would block the service-manager, Podman and nftables access the Gateway needs, so it is not justified. The Enforced profile needs system packages and root, so the AppImage does not offer it. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.20 — Windows installer
+
+| Field | Value |
+|---|---|
+| ID | FR-20.20 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway release **SHALL** publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries and service defined in `srs_build/req7-windows.txt` per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
+| Verification Method | Test |
+| Verification Statement | On a GitHub-hosted Windows runner with networking blocked, install the `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that the application starts and that installation succeeded without network access; uninstall from Settings and confirm removal. |
+| Source | OWNER (Windows MSI/MSIX) |
+| Rationale | MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 10 and 11 ship the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.21 — Installers place files only
+
+| Field | Value |
+|---|---|
+| ID | FR-20.21 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | Installing any Platform Installer (E-35) package **SHALL** create no Gateway configuration, state, keys, service unit or account and start no service, and **SHALL** leave every existing configuration, state directory, Evidence Journal and backup byte-for-byte unchanged. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-106; External interfaces: X-18; Data stores: D-06, D-15 |
+| Verification Method | Test |
+| Verification Statement | Install each package on a clean host and confirm no CP-46 directory, unit or account exists afterwards; install each over an existing installation of the previous release and confirm digests of configuration, keys, policy, journal and backups are unchanged. |
+| Source | OWNER (automated installers); FR-13.4 |
+| Rationale | Configuration, keys and services are created by `smcpctl install`, which is idempotent and verified (FR-13.4 to FR-13.6). A second, package-script install path would need its own verification and could rotate keys on upgrade. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.22 — Package removal keeps evidence
+
+| Field | Value |
+|---|---|
+| ID | FR-20.22 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | Removing a Platform Installer (E-35) package with the platform's package manager **SHALL** remove the files the package installed, **SHALL** stop and remove a system-wide `smcpd` service that `smcpctl install` created, and **SHALL** keep the configuration, the Evidence Journal, the evidence public key and the backup archives, and the documentation **SHALL** state the command that removes per-user services and the `smcpctl uninstall --purge` command. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-106; External interfaces: X-18; Data stores: D-06, D-15 |
+| Verification Method | Test |
+| Verification Statement | On each platform, install, set up, create journal entries and a backup, then remove the package; confirm the package files and the system service are gone and that `smcpctl journal verify` from a fresh install, pointed at the kept journal and key, succeeds; inspect `docs/install.md` for both commands. |
+| Source | OWNER (automated installers); FR-13.11 |
+| Rationale | Evidence outlives the installation that produced it, whichever tool removed it. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.23 — Installer release assets
+
+| Field | Value |
+|---|---|
+| ID | FR-20.23 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway release **SHALL** list every Platform Installer (E-35) file in the same SHA-256 checksum file as the archives of FR-13.1, so that the checksum file's minisign signature and its Sigstore bundle cover each installer. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105; External interfaces: X-16 |
+| Verification Method | Inspection |
+| Verification Statement | Inspect a release; confirm each `.pkg`, `.dmg`, `.deb`, `.rpm`, AppImage and `.msi` appears in the checksum file with a matching digest, and that `minisign -Vm` with the `SECURITY.md` key and `cosign verify-blob` with the release workflow identity both verify the checksum file. |
+| Source | OWNER (installers verified with minisign + cosign signatures and SHA-256 checksums); SEC 10.7 |
+| Rationale | Until platform signing is enabled, the release signatures are the only way a user can tell an installer came from the project. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.24 — Installer build and smoke test in CI
+
+| Field | Value |
+|---|---|
+| ID | FR-20.24 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The release workflow **SHALL** build every Platform Installer (E-35) on GitHub-hosted macOS arm64, Ubuntu x86_64 and arm64, and Windows x86_64 runners from the tagged commit, and **SHALL** publish the release only when each installer has installed, started the Desktop Application, run `smcpctl version` and been removed on a runner of its platform. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106 |
+| Verification Method | Test |
+| Verification Statement | Inspect the release workflow run of a candidate tag; confirm one build and one smoke-test job per installer and that a deliberately broken installer stops publication. |
+| Source | OWNER (automated installers on all three platforms) |
+| Rationale | An installer that was never installed by CI is untested release output. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.25 — Unsigned installer guidance
+
+| Field | Value |
+|---|---|
+| ID | FR-20.25 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | Until FR-20.29 and FR-20.30 are met, the installation guide **SHALL** show, before the download links, how to verify an installer with `sha256sum` or `shasum -a 256`, `minisign -Vm` and `cosign verify-blob`, and **SHALL** show and explain the prompts users see for an unsigned installer: on macOS 15 and later the "Not Opened" dialog and the System Settings, Privacy & Security, Open Anyway path; on Windows the SmartScreen "Windows protected your PC" dialog with More info and Run anyway, the Unknown publisher in the User Account Control prompt, and that Smart App Control blocks unsigned installers without an override. |
+| Allocation | Elements: E-35 Platform Installers, E-24 Management Console & Control API; Functions: F-106 |
+| Verification Method | Inspection |
+| Verification Statement | Follow the guide on macOS 15, Windows 11 with SmartScreen on and Windows 11 with Smart App Control on; confirm each prompt matches the guide's description and screenshots and that the verification commands succeed on the release. |
+| Source | OWNER (document the Gatekeeper/SmartScreen prompts users will see meanwhile) |
+| Rationale | Users told to click through a warning should first be given a way to check what they are running, and an exact description of the warning so a different one stands out. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.26 — Ad-hoc signature on macOS
+
+| Field | Value |
+|---|---|
+| ID | FR-20.26 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The macOS application bundle and every executable inside it **SHALL** carry an ad-hoc code signature, and the `.pkg` and `.dmg` **SHALL** carry none other than what FR-20.29 adds when it is met. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105 |
+| Verification Method | Test |
+| Verification Statement | Run `codesign -dv` on the bundle and each executable from a release `.dmg`; confirm an ad-hoc signature (`Signature=adhoc`) on each; confirm the application starts on Apple silicon after the Open Anyway approval. |
+| Source | OWNER (not code-signed with platform certificates for now) |
+| Rationale | macOS on Apple silicon runs no completely unsigned code; an ad-hoc signature is free, needs no certificate and is replaced when Developer ID signing is enabled. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.27 — Desktop application documentation
+
+| Field | Value |
+|---|---|
+| ID | FR-20.27 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The documentation **SHALL** include a desktop application guide covering installation from each Platform Installer, first-run setup, the tray states, approval notifications and their limits, client setup, updates and their verification, and removal, and **SHALL** state that the desktop application holds no authority beyond the user's console sign-in. |
+| Allocation | Elements: E-34 Desktop Application, E-35 Platform Installers, E-24 Management Console & Control API |
+| Verification Method | Inspection |
+| Verification Statement | Follow the guide on macOS, Linux and Windows; confirm each topic and the authority statement. |
+| Source | OWNER (a more user-friendly product); FR-18 |
+| Rationale | The guide is where users learn that a notification is not an approval and that the tray state is advisory. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-20.28 — Deep links
+
+| Field | Value |
+|---|---|
+| ID | FR-20.28 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | When the Desktop Application (E-34) registers a URL scheme, it **SHALL** register only `smcp`, **SHALL** accept only `smcp://console`, `smcp://approvals` and `smcp://approvals/<approval ID>` where the ID is a UUID, **SHALL** act on an accepted link only by focusing the console window at the console page it names, and **SHALL** ignore every other link without a request to the Gateway. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-102; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Open each accepted link and confirm the console page; open links with another path, a query string, an approval ID that is not a UUID and a 64 KiB link; confirm each is ignored, the console window is not navigated and no request reaches the admin listener. |
+| Source | OWNER (deep-link handling); SEC 8.9 |
+| Rationale | Any web page can open a registered scheme, so a deep link must never carry an action, only a place in the console where the user still signs in and decides. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+### Security requirements for the desktop application and installers
+
+Parents are the MUSTs of `MCP_Gateway_Security_SRS.md` whose controls the desktop application or the installers could weaken. They keep the desktop application at or below the authority of a signed-in console user and keep installed code out of the agent's reach.
+
+#### SR-2-3 — Desktop authority ceiling
+
+| Field | Value |
+|---|---|
+| ID | SR-2-3 |
+| Parent ID | SEC-2 — Identity and administration separation (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) process **SHALL** NOT read the operator token, the Secret Vault, the key store, the Evidence Journal or the password hashes in the configuration, **SHALL** send no request to the control API itself, and **SHALL** perform control-API operations only inside the console window under the user's console session, its child processes being limited to the `smcpctl` operations of FR-20.8 to FR-20.12 and the platform service manager. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100, F-103; Internal interfaces: I-41, I-42 |
+| Verification Method | Test |
+| Verification Statement | Run the application through every menu item and window under a file-access tracer (`fs_usage` on macOS, `strace -f` on Linux, Process Monitor on Windows) and a loopback capture; confirm no open of the operator token, vault, key, journal or configuration file by the application process, no control-API request from it outside the console window's webview, and no child process other than the listed `smcpctl` operations and the service manager. |
+| Source | SEC 2; OWNER (the desktop app gets no more privilege than the console) |
+| Rationale | The operator token acts as the Administrator. A tray application that read it would give every user of the desktop Administrator authority without a sign-in and would turn the application into a target. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2-4 — No stored console credentials
+
+| Field | Value |
+|---|---|
+| ID | SR-2-4 |
+| Parent ID | SEC-2 — Identity and administration separation (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) **SHALL** keep console session cookies and console passwords out of persistent storage by giving the console window a non-persistent (incognito) web data store, **SHALL** write setup passwords only to the 0600 files of FR-20.8 for the duration of the command, and **SHALL** keep any credential it needs to persist only in the operating system's credential store (macOS Keychain, Secret Service, Windows Credential Manager). |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-102, F-103 |
+| Verification Method | Test |
+| Verification Statement | Sign in to the console window, quit the application and search its data directories, the webview data directories and the temporary directory for the session cookie value and the password; confirm none is found; restart and confirm the console asks for a sign-in. |
+| Source | SEC 2; OWNER (the app never stores console credentials in plaintext) |
+| Rationale | A persisted cookie would let anything that reads the user's profile resume an administrator session within CP-29. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2-5 — Minimal IPC surface
+
+| Field | Value |
+|---|---|
+| ID | SR-2-5 |
+| Parent ID | SEC-2 — Identity and administration separation (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) **SHALL** grant the console window no Tauri capability and no IPC command, **SHALL** list no remote URL in any capability, **SHALL** grant its bundled windows only the commands their operations need, and **SHALL** include no shell plugin permission that runs a program or argument not fixed at build time. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-102, F-103; Internal interfaces: I-41, I-42 |
+| Verification Method | Test |
+| Verification Statement | Check the capability files, the generated permission manifest and the command registrations in CI and confirm the console window has none, no `remote` entry exists and each command is used by a bundled window; from the console window's script context, invoke each registered command and a sidecar execution and confirm each is refused. |
+| Source | SEC 2; OWNER (IPC surface minimized) |
+| Rationale | The console renders content that came from servers and agents (SR-6.17-1). If that window could reach the IPC bridge, an injection in the console would become code execution on the desktop. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2-6 — No remote content in the desktop application
+
+| Field | Value |
+|---|---|
+| ID | SR-2-6 |
+| Parent ID | SEC-2 — Identity and administration separation (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) **SHALL** load its bundled windows only from assets packaged in the application under a Content Security Policy whose `default-src` is `'self'`, **SHALL** allow the console window to load and navigate only within the configured admin listener origin, and **SHALL** load no script, style, font or frame from any other origin in any window. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-102 |
+| Verification Method | Test |
+| Verification Statement | Inspect the bundled CSP; with a network capture, exercise every window and confirm no request leaves loopback except the update check of FR-20.11; inject a remote script reference into a bundled page in a test build and confirm the CSP blocks it; navigate the console window to another origin and confirm it is refused and opened in the default browser instead. |
+| Source | SEC 2; SEC 8.8; OWNER (no remote content loaded) |
+| Rationale | A desktop shell that loads remote code inherits the trust of everything it loads. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2-7 — Desktop elevation limits
+
+| Field | Value |
+|---|---|
+| ID | SR-2-7 |
+| Parent ID | SEC-2 — Identity and administration separation (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) **SHALL** run as the logged-in user without elevation, **SHALL** request operating-system elevation (polkit, macOS authorization, User Account Control) only to install, start, stop or remove a system-wide `smcpd` service and to run a downloaded installer, and **SHALL** name the command and its arguments in the elevation prompt where the platform shows them. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-100, F-103, F-104; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Exercise every menu item and window on each platform; confirm the application process never runs elevated and that elevation is requested only for the listed operations, with the command named in the polkit and macOS prompts. |
+| Source | SEC 2; SEC 4.1 |
+| Rationale | Elevation granted for one fixed command is auditable; an elevated tray application would be root on the desktop. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2.6-2 — Notifications never approve
+
+| Field | Value |
+|---|---|
+| ID | SR-2.6-2 |
+| Parent ID | SEC-2.6 — Protected admin session (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) **SHALL** offer no approve, deny or reply action in any notification, **SHALL** decide no approval itself, and **SHALL** bring the user to the Approvals view (G-13) only through the console window, where a decision requires a console session of the Approver or Administrator role. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-101; External interfaces: X-14; Internal interfaces: I-41 |
+| Verification Method | Test |
+| Verification Statement | Raise an approval notification on each platform; confirm it has no action buttons or reply field; activate it while signed out and confirm the console shows the sign-in page; sign in as an Operator and confirm the decision is refused; sign in as an Approver and confirm the decision succeeds. |
+| Source | SEC 2.6; SEC 1.18; OWNER (a notification never lets the user approve without the console's authentication) |
+| Rationale | Notification centers are reachable by anyone at the unlocked desktop and by other applications on some platforms; an approval needs an authenticated approver and its binding (SR-1.18-2). |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2.8-5 — Desktop TLS validation
+
+| Field | Value |
+|---|---|
+| ID | SR-2.8-5 |
+| Parent ID | SEC-2.8 — Authenticated transport (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) **SHALL** accept the console window's connection to the admin listener only when the listener presents a certificate that chains to the Gateway server CA of the installation and names the configured host, **SHALL** show an error page instead of console content otherwise, and **SHALL** offer no option to proceed past a certificate error. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-102; External interfaces: X-04; Internal interfaces: I-41 |
+| Verification Method | Test |
+| Verification Statement | Point the console window at a test listener presenting a certificate from another CA, an expired certificate and a certificate for another name; confirm an error page with no console content and no proceed option in each case; confirm the installation's own listener loads. |
+| Source | SEC 2.8 |
+| Rationale | The console window carries an administrator session; a loopback listener impersonated by another local process must not receive it. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2.9-4 — No widened origins for the desktop
+
+| Field | Value |
+|---|---|
+| ID | SR-2.9-4 |
+| Parent ID | SEC-2.9 — Origin and Host (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Management Console & Control API (E-24) **SHALL** serve the Desktop Application's console window with the same Origin, Host and `Sec-Fetch-Site` checks it applies to a browser, **SHALL** NOT accept a Tauri or other custom-scheme origin, and the Desktop Application (E-34) **SHALL** require no change to those checks or to the console's Content Security Policy. |
+| Allocation | Elements: E-24 Management Console & Control API, E-34 Desktop Application; Functions: F-63; External interfaces: X-04; Internal interfaces: I-41 |
+| Verification Method | Test |
+| Verification Statement | Send control-API mutations with the origins `tauri://localhost`, `http://tauri.localhost` and `https://tauri.localhost`; confirm each is refused; complete a console mutation from the console window and confirm it carries the admin listener's own origin and passes unchanged checks. |
+| Source | SEC 2.9; SEC 8.9 |
+| Rationale | Allowing the application's own origin would let any page of that origin, including an injected one, make authenticated control-API requests. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-4.11-2 — Installed code outside the agent's reach
+
+| Field | Value |
+|---|---|
+| ID | SR-4.11-2 |
+| Parent ID | SEC-4.11 — Protected client configuration (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The `.pkg`, `.deb`, `.rpm` and `.msi` Platform Installers (E-35) **SHALL** install the Gateway binaries and the Desktop Application owned by root (macOS, Linux) or with Administrators-only write access (Windows), not writable by the installing user, and `smcpctl doctor` **SHALL** report a Gateway binary or application bundle that the user running it can write, which includes the `.dmg` and AppImage forms. |
+| Allocation | Elements: E-35 Platform Installers, E-33 Harness Adapter Kit; Functions: F-106, F-98; External interfaces: X-18 |
+| Verification Method | Test |
+| Verification Statement | Install each of the four packages; confirm owner and modes (macOS, Linux) or ACLs (Windows) of every installed file and that a write as the installing user fails; install from the `.dmg` and the AppImage and confirm `smcpctl doctor` reports the writable binaries. |
+| Source | SEC 4.11 |
+| Rationale | An agent runs as the user. If it can replace `smcpd` or the desktop application, it can remove every control; the system packages put the code beyond its write access, and doctor says when the drag-install forms do not. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-7-2 — Verified updates
+
+| Field | Value |
+|---|---|
+| ID | SR-7-2 |
+| Parent ID | SEC-7 — Safe operation and recovery (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Desktop Application (E-34) **SHALL** start a downloaded installer or upgrade only after verifying the release checksum file's minisign signature with the release public key embedded in the application at build time (the key of `SECURITY.md` and `install.sh`), the installer's SHA-256 against that file and, when `cosign` is installed, the checksum file's Sigstore bundle against the release workflow identity, and **SHALL** refuse an installer whose version is not newer than the installed one, installing nothing and naming the failed check when any check fails. |
+| Allocation | Elements: E-34 Desktop Application; Functions: F-104; External interfaces: X-16 |
+| Verification Method | Test |
+| Verification Statement | Through a test feed, offer an installer with a modified byte, a checksum file with a modified line, a checksum file signed by another key, a bad Sigstore bundle with cosign installed, and an older correctly signed release; confirm each is refused with the failed check named and nothing installed; confirm a correct newer release is verified and started. |
+| Source | SEC 7; SEC 10.7; OWNER (update verification uses the release key) |
+| Rationale | An update channel is a code-execution path into the operator's machine. It must trust exactly the key and workflow identity that the other install paths trust, and never accept a rollback to a release with known flaws. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
 ## Appendix A — Controlled parameters (CP)
 
 Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix A. Values marked **ARCH** come from `ArchitectureV2.md`. Changing a value requires a controlled revision of this SRS.
@@ -7350,7 +7931,7 @@ The Gateway keeps these Table B.2 codes as defense in depth: an earlier check of
 | Dataset export | ✓ | — | — | — | — | — | ✓ (approved campaigns) |
 | Purge | ✓ | — | — | — | — | — | — |
 
-One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver accounts. Each role is a separate account with its own password: the Administrator account itself cannot complete a harness sign-in (FR-2.19, FR-2.23), so the Administrator password is never typed into a harness sign-in page. Harness principals have no control-plane role (SR-2.5-1).
+One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver accounts. Each role is a separate account with its own password: the Administrator account itself cannot complete a harness sign-in (FR-2.19, FR-2.23), so the Administrator password is never typed into a harness sign-in page. Harness principals have no control-plane role (SR-2.5-1). The Desktop Application planned for v1.3.0 has no role either: it adds no row, and every operation in its console window is performed with the role of the account signed in there (SR-2-3, SR-2.6-2).
 
 The rows name operations. Control API routes the rows do not name follow these rules (FR-8.2):
 
@@ -7424,16 +8005,16 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 1.18 | Bound human approval | MUST | Realized by SR | SR-1.18-1, SR-1.18-2, SR-1.18-3 |
 | 1.19 | Rule explanation | MUST | Realized by SR | SR-1.19-1 |
 | 1.20 | Bounded graph work | MUST | Realized by SR | SR-1.20-1 |
-| 2 | Identity and administration separation | MUST | Realized by SR | SR-2-1, SR-2-2 |
+| 2 | Identity and administration separation | MUST | Realized by SR | SR-2-1, SR-2-2, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7 |
 | 2.1 | Per-request authentication | MUST | Realized by SR | SR-2.1-1, SR-2.1-2, SR-2.1-3 |
 | 2.2 | Distinct client credentials | MUST | Realized by SR | SR-2.2-1 |
 | 2.3 | Client-key protection | MUST | Realized by SR | SR-2.3-1, SR-2.3-2 |
 | 2.4 | Revocation deadline | MUST | Realized by SR | SR-2.4-1 |
 | 2.5 | Admin identity | MUST | Realized by SR | SR-2.5-1 |
-| 2.6 | Protected admin session | MUST | Realized by SR | SR-2.6-1 |
+| 2.6 | Protected admin session | MUST | Realized by SR | SR-2.6-1, SR-2.6-2 |
 | 2.7 | Password verification | MUST | Realized by SR | SR-2.7-1 |
-| 2.8 | Authenticated transport | MUST | Realized by SR | SR-2.8-1, SR-2.8-3, SR-2.8-4 |
-| 2.9 | Origin and Host | MUST | Realized by SR | SR-2.9-1, SR-2.9-2, SR-2.9-3 |
+| 2.8 | Authenticated transport | MUST | Realized by SR | SR-2.8-1, SR-2.8-3, SR-2.8-4, SR-2.8-5 |
+| 2.9 | Origin and Host | MUST | Realized by SR | SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-2.9-4 |
 | 2.10 | Credential separation | MUST | Realized by SR | SR-2.10-1 |
 | 2.11 | OAuth boundary | MUST | Realized by SR | SR-2.11-1, SR-2.11-2, SR-2.11-4, SR-2.11-5 |
 | 2.12 | State ownership | MUST | Deferred | SR-2.12-1 (Appendix N) |
@@ -7465,7 +8046,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 4.8 | Safe process launch | MUST | Realized by SR | SR-4.8-1 |
 | 4.9 | Hermes endpoint | MUST | Realized by SR | SR-4.9-1 |
 | 4.10 | Runtime tool guard | MUST | Disposition | Client-side runtime tool guard belongs to the harness. The Gateway supports it with deterministic, manifest-derived catalogs (FR-1.25, FR-1.27) and the Claude Code lockdown profile limits MCP servers to the Gateway (FR-15.2). |
-| 4.11 | Protected client configuration | MUST | Realized by SR | SR-4.11-1 |
+| 4.11 | Protected client configuration | MUST | Realized by SR | SR-4.11-1, SR-4.11-2 |
 | 4.12 | Local inference path | MUST | Disposition | Local inference routing belongs to the harness deployment outside the SoI; cloud-hosted models are expected for the supported clients and are stated in the Security Limitations document (FR-18.2). |
 | 4.13 | Additional clients | MUST | Realized by SR | SR-4.13-1 |
 | 4.14 | Overlay least privilege | MUST | Realized by SR | SR-4.14-1, SR-4.14-2 |
@@ -7511,7 +8092,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 6.18 | Server-asserted evidence | MUST | Realized by SR | SR-6.18-1 |
 | 6.19 | Unevaluated failure evidence | MUST | Realized by SR | SR-6.19-1 |
 | 6.20 | Direct decision links | MUST | Realized by SR | SR-6.20-1 |
-| 7 | Safe operation and recovery | MUST | Realized by SR | SR-7-1 |
+| 7 | Safe operation and recovery | MUST | Realized by SR | SR-7-1, SR-7-2 |
 | 7.1 | Transaction retry safety | MUST | Realized by SR | SR-7.1-1 |
 | 7.2 | Indeterminate mutation | MUST | Realized by SR | SR-7.2-1 |
 | 7.3 | Graph integrity validation | MUST | Realized by SR | SR-7.3-1 |
@@ -7532,7 +8113,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 8.5 | Credential management | SHALL | Source of FR | FR-6.2, FR-6.12, FR-8.20 |
 | 8.6 | Filter workbench | SHALL | Source of FR | FR-8.27 |
 | 8.7 | Enforcement status | SHALL | Source of FR | FR-8.3 |
-| 8.8 | Local UI assets | SHALL | Source of FR | FR-8.25, FR-8.26 |
+| 8.8 | Local UI assets | SHALL | Source of FR | FR-8.25, FR-8.26, SR-2-6 |
 | 8.9 | GUI request protection | MUST | Realized by SR | SR-8.9-1 |
 | 8.10 | Application roles | SHALL | Source of FR | FR-8.2 |
 | 9 | Open-source local engineering capabilities | SHALL | Source of FR | FR-12, FR-12.2 |
@@ -7550,7 +8131,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 10.4 | Document authority | SHALL | Disposition | Satisfied by Section 1.4 of this SRS (document authority). |
 | 10.5 | Performance qualification | SHALL | Source of FR | FR-11 |
 | 10.6 | Acceptance evidence | SHALL | Source of FR | FR-8.34, FR-12.9, FR-12.10, FR-19, FR-19.3, FR-19.4 |
-| 10.7 | Release provenance | SHALL | Source of FR | FR-12.8, FR-13.1, FR-13.2 |
+| 10.7 | Release provenance | SHALL | Source of FR | FR-12.8, FR-13.1, FR-13.2, FR-20.23, SR-7-2 |
 | 10.8 | Local security review | SHALL | Disposition | Source review of packaged servers is the operator's decision at packaging (FR-14.3, FR-14.5); Gateway release scanning is covered by FR-12.8. |
 | 10.9 | Operator procedures | SHALL | Source of FR | FR-12.7, FR-18, FR-18.4, FR-18.8 |
 
@@ -7582,8 +8163,8 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-20 | Secret Broker | FR-3.1, FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11 | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
 | E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8 | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1 |
 | E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1 |
-| E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3 | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
-| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4 | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
+| E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, FR-20.5 (planned v1.3.0) | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
+| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4, FR-20.25 (planned v1.3.0), FR-20.27 (planned v1.3.0) | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0) |
 | E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
 | E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
 | E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11 | SR-4.2-2 |
@@ -7592,7 +8173,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | E-30 | Behavior Baseline Engine | FR-10, FR-10.12, FR-10.13, FR-10.14, FR-10.15, FR-10.16, FR-10.17, FR-10.18, FR-10.19, FR-10.20, FR-10.21, FR-11.7 | SR-7-1 |
 | E-31 | Anomaly Scorer | FR-4.15, FR-10, FR-10.22, FR-10.23, FR-10.24, FR-10.25, FR-10.26, FR-10.27, FR-10.28, FR-10.29, FR-11, FR-11.3 | SR-1.12-2, SR-7-1 |
 | E-32 | Research Dataset Service | FR-3.1, FR-10, FR-10.30, FR-10.31, FR-10.32, FR-10.33, FR-10.34, FR-10.35, FR-10.36, FR-12.4 | SR-6-1, SR-6-2, SR-6.17-1 |
-| E-33 | Harness Adapter Kit | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.8, FR-15.9, FR-15.10, FR-16, FR-16.2, FR-16.9, FR-16.10, FR-18, FR-18.2, FR-18.3 | SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1 |
+| E-33 | Harness Adapter Kit | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.8, FR-15.9, FR-15.10, FR-16, FR-16.2, FR-16.9, FR-16.10, FR-18, FR-18.2, FR-18.3, FR-20.10 (planned v1.3.0) | SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1, SR-4.11-2 (planned v1.3.0) |
+| E-34 | Desktop Application | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.6 (planned v1.3.0), FR-20.7 (planned v1.3.0), FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.28 (planned v1.3.0) | SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
+| E-35 | Platform Installers | FR-20 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), FR-20.23 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.25 (planned v1.3.0), FR-20.26 (planned v1.3.0), FR-20.27 (planned v1.3.0) | SR-4.11-2 (planned v1.3.0) |
 
 ## Appendix G — Architecture coverage
 
@@ -7660,9 +8243,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-58 | Manage trust anchors | FR-7.10, FR-14.8 |
 | F-59 | Issue and revoke framework credentials | FR-2.18, FR-7.7, FR-16, FR-16.5, SR-2.2-1, SR-2.3-1, SR-2.11-2, FR-2.14 (deferred), FR-7.15 (deferred) |
 | F-60 | Protect Gateway keys | FR-7.7, FR-7.8, FR-17, FR-17.7, SR-2.8-4, SR-2.13-1, FR-7.15 (deferred), FR-7.9 (deferred) |
-| F-61 | Monitor enforcement health | FR-7.11, FR-7.12, FR-13.9, FR-13.10, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, SR-4-1, SR-6.11-1 |
+| F-61 | Monitor enforcement health | FR-7.11, FR-7.12, FR-13.9, FR-13.10, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, SR-4-1, SR-6.11-1, FR-20.5 (planned v1.3.0) |
 | F-62 | Drive fail-closed state | FR-7.12, FR-7.13, FR-9.17, FR-13.9, FR-13.13, SR-7.3-1 |
-| F-63 | Authenticate administrative user | FR-2.19, FR-2.23, FR-8, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-7.5-1, SR-7.5-2, SR-8.9-1 |
+| F-63 | Authenticate administrative user | FR-2.19, FR-2.23, FR-8, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0) |
 | F-64 | Enforce administrative roles | FR-2.23, FR-8, FR-8.2, SR-2-2, SR-6-3, SR-6.16-1 |
 | F-65 | Present management views | FR-8, FR-8.1, FR-8.3, FR-8.4, FR-8.5, FR-8.14, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-13.10, FR-18, FR-18.4, FR-19.2, FR-19.4, SR-3.3-1, SR-3.4-1, SR-6.17-1 |
 | F-66 | Estimate observation cost | FR-8.11, FR-3.7 (deferred) |
@@ -7696,9 +8279,16 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-94 | Obtain and refresh harness session | FR-12.12, FR-15, FR-15.8, FR-18.3, SR-2.3-2 |
 | F-95 | Bridge stdio to the harness interface | FR-12.13, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.9, FR-18.3 |
 | F-96 | Build, sign and verify server package | FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.10, FR-14.12, FR-18.6, SR-3.5-1 |
-| F-97 | Install, upgrade and remove the Gateway | FR-12.4, FR-12.7, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.11, FR-13.12, FR-13.13, FR-16.11, FR-17.9, FR-18.1, SR-4.14-1, SR-7.5-2, FR-12.5 (deferred) |
-| F-98 | Diagnose and lock down harness configuration | FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.10, FR-16.10, FR-18, FR-18.2, FR-18.3, SR-4.9-1, SR-4.11-1, SR-4.13-1 |
+| F-97 | Install, upgrade and remove the Gateway | FR-12.4, FR-12.7, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.11, FR-13.12, FR-13.13, FR-16.11, FR-17.9, FR-18.1, SR-4.14-1, SR-7.5-2, FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-12.5 (deferred) |
+| F-98 | Diagnose and lock down harness configuration | FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.10, FR-16.10, FR-18, FR-18.2, FR-18.3, SR-4.9-1, SR-4.11-1, SR-4.13-1, FR-20.10 (planned v1.3.0), SR-4.11-2 (planned v1.3.0) |
 | F-99 | Track session taint | SR-5.13-2 |
+| F-100 | Present desktop status and service control | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-7 (planned v1.3.0) |
+| F-101 | Raise desktop approval notices | FR-20.7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0) |
+| F-102 | Host the console in a native window | FR-20.6 (planned v1.3.0), FR-20.28 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2.8-5 (planned v1.3.0) |
+| F-103 | Guide first-run and client setup | FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-7 (planned v1.3.0) |
+| F-104 | Check, verify and apply updates | FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
+| F-105 | Build platform installers | FR-20 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.23 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.26 (planned v1.3.0), FR-20.29 (deferred), FR-20.30 (deferred), FR-20.31 (deferred) |
+| F-106 | Install and remove platform packages | FR-20.16 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.25 (planned v1.3.0), SR-4.11-2 (planned v1.3.0), FR-20.31 (deferred) |
 
 ### G.2 External interfaces
 
@@ -7707,20 +8297,21 @@ Use this matrix to code element by element. A requirement allocated to several e
 | X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-1.51, FR-1.52, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-2.23, FR-3.14, FR-3.16, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.12, FR-12.9, FR-12.12, FR-12.13, FR-15, FR-15.8, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-2.11-4, SR-2.11-5, SR-5.2-1, SR-5.2-2, FR-5.25 (deferred), SR-2.8-2 (deferred), SR-2.11-3 (deferred) |
 | X-02 | FR-14, FR-14.3, FR-14.5, FR-14.6, FR-14.9, FR-14.12 |
 | X-03 | FR-5.1, FR-5.2, FR-5.3, FR-14, FR-14.4, FR-14.11 |
-| X-04 | FR-2.19, FR-2.23, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.22, FR-8.23, FR-8.24, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-16.5, SR-2.5-1, SR-2.8-1, SR-2.9-2 |
+| X-04 | FR-2.19, FR-2.23, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.22, FR-8.23, FR-8.24, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-16.5, SR-2.5-1, SR-2.8-1, SR-2.9-2, FR-20.6 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0) |
 | X-05 | FR-3.17, FR-3.18, FR-3.23, FR-3.24, FR-3.25, FR-8.21 |
 | X-06 | FR-5.36, FR-5.38, SR-4.5-2, SR-5.15-1 |
-| X-07 | FR-12.3, FR-12.4, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1, FR-7.9 (deferred), FR-12.5 (deferred) |
+| X-07 | FR-12.3, FR-12.4, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1, FR-20.1 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.28 (planned v1.3.0), SR-2-7 (planned v1.3.0), FR-7.9 (deferred), FR-12.5 (deferred) |
 | X-08 | FR-6.2 |
 | X-09 | FR-7.14 |
 | X-10 | FR-10.2 |
 | X-11 | FR-10.34, FR-10.35, FR-10.36, SR-6-1 |
 | X-12 | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.6, FR-15.7, FR-15.8, FR-15.10, FR-16.9, FR-18.3, SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1 |
 | X-13 | FR-15.9, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.5, FR-16.6, FR-16.7, FR-16.8, FR-16.9, FR-16.10, FR-16.11, FR-16.12, FR-18.3, SR-2.11-2, SR-4.14-1, SR-4.14-2 |
-| X-14 | FR-3.23 |
-| X-15 | FR-17.4, FR-17.5 |
-| X-16 | FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.7 |
+| X-14 | FR-3.23, FR-20.7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0) |
+| X-15 | FR-17.4, FR-17.5, FR-20.4 (planned v1.3.0), FR-20.5 (planned v1.3.0) |
+| X-16 | FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.7, FR-20 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.23 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
 | X-17 | FR-14, FR-14.1, FR-14.2, SR-3.5-1 |
+| X-18 | FR-20 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), SR-4.11-2 (planned v1.3.0), FR-20.31 (deferred) |
 
 ### G.3 Internal interfaces
 
@@ -7765,6 +8356,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-37 | FR-9.5, FR-9.9, SR-1.13-1, SR-4.2-2 |
 | I-38 | FR-9.6, FR-9.10, FR-9.11, FR-9.12 |
 | I-39 | FR-10.20, FR-10.21, FR-10.22, SR-7-1 |
+| I-40 | FR-20.2 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.7 (planned v1.3.0) |
+| I-41 | FR-20.6 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2.6-2 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0) |
+| I-42 | FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.12 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-5 (planned v1.3.0) |
 
 ### G.4 Data stores
 
@@ -7775,7 +8369,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | D-03 | FR-5.39, FR-14.1, SR-3-2 |
 | D-04 | FR-6.1, FR-9.16 |
 | D-05 | FR-9.1, SR-6.10-1, SR-6.13-1 |
-| D-06 | FR-7.4, FR-7.5, FR-7.14, FR-9.16, FR-13.11, FR-13.12, FR-17.8, SR-1.2-2, SR-6.2-1, SR-6.3-1, SR-6.12-1, SR-6.13-1 |
+| D-06 | FR-7.4, FR-7.5, FR-7.14, FR-9.16, FR-13.11, FR-13.12, FR-17.8, SR-1.2-2, SR-6.2-1, SR-6.3-1, SR-6.12-1, SR-6.13-1, FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0) |
 | D-07 | FR-2.8, FR-2.13, FR-2.20, FR-9.1, FR-2.16 (deferred) |
 | D-08 | FR-7.7, FR-7.8, FR-9.16, FR-17.7, SR-1.1-2, SR-2.8-4, FR-7.15 (deferred), FR-7.9 (deferred) |
 | D-09 | FR-9.7, FR-9.8, FR-9.14, FR-9.13 (deferred) |
@@ -7784,7 +8378,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | D-12 | FR-9.14, FR-10.35, FR-10.36 |
 | D-13 | FR-9.7, FR-10.9, FR-10.11, FR-9.13 (deferred) |
 | D-14 | FR-17.1, FR-17.2, FR-17.3 |
-| D-15 | FR-9.16, FR-13.11, FR-17.6, SR-7.7-1 |
+| D-15 | FR-9.16, FR-13.11, FR-17.6, SR-7.7-1, FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0) |
 
 ### G.5 GUI view modules
 
@@ -7802,7 +8396,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | G-10 | FR-8.18, SR-3.3-1, SR-3.4-1 |
 | G-11 | FR-2.18, FR-8.19, FR-16.5 |
 | G-12 | FR-8.20 |
-| G-13 | FR-3.23, FR-3.25, FR-8.21 |
+| G-13 | FR-3.23, FR-3.25, FR-8.21, FR-20.7, SR-2.6-2 |
 | G-14 | FR-8.22, FR-8.28, FR-8.29, FR-8.34 |
 
 ## Appendix H — Requirement index
@@ -8338,6 +8932,45 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-7.11-1 | SEC-7.11 | Test | E-01 | Pre-parse bounds |
 | SR-7.12-1 | SEC-7.12 | Test | E-10 | Cancellation propagation |
 | SR-8.9-1 | SEC-8.9 | Test | E-24 | CSRF and preconditions |
+| FR-20 (planned v1.3.0) | — | Analysis | E-34, E-35 | Desktop application and platform installers |
+| FR-20.1 (planned v1.3.0) | FR-20 | Test | E-34 | Desktop application platforms |
+| FR-20.2 (planned v1.3.0) | FR-20 | Test | E-34 | Tray icon and menu |
+| FR-20.3 (planned v1.3.0) | FR-20 | Test | E-34 | Service control |
+| FR-20.4 (planned v1.3.0) | FR-20 | Test | E-34 | Health at a glance |
+| FR-20.5 (planned v1.3.0) | FR-20 | Test | E-23 | Desktop health metrics |
+| FR-20.6 (planned v1.3.0) | FR-20 | Test | E-34 | Console in a native window |
+| FR-20.7 (planned v1.3.0) | FR-20 | Test | E-34 | Approval notifications |
+| FR-20.8 (planned v1.3.0) | FR-20 | Test | E-34 | First-run setup |
+| FR-20.9 (planned v1.3.0) | FR-20 | Test | E-34 | Profile choice in setup |
+| FR-20.10 (planned v1.3.0) | FR-20 | Test | E-34, E-33 | Client setup |
+| FR-20.11 (planned v1.3.0) | FR-20 | Test | E-34 | Update check |
+| FR-20.12 (planned v1.3.0) | FR-20 | Test | E-34 | Gateway upgrade from the desktop |
+| FR-20.13 (planned v1.3.0) | FR-20 | Test | E-34 | Desktop application update |
+| FR-20.14 (planned v1.3.0) | FR-20 | Test | E-34 | Single instance and start at login |
+| FR-20.15 (planned v1.3.0) | FR-20 | Test | E-34 | Desktop accessibility |
+| FR-20.16 (planned v1.3.0) | FR-20 | Demonstration | E-34, E-35 | First-run usability |
+| FR-20.17 (planned v1.3.0) | FR-20 | Test | E-35 | macOS installers |
+| FR-20.18 (planned v1.3.0) | FR-20 | Test | E-35 | Linux packages |
+| FR-20.19 (planned v1.3.0) | FR-20 | Test | E-35, E-34 | Linux AppImage |
+| FR-20.20 (planned v1.3.0) | FR-20 | Test | E-35 | Windows installer |
+| FR-20.21 (planned v1.3.0) | FR-20 | Test | E-35 | Installers place files only |
+| FR-20.22 (planned v1.3.0) | FR-20 | Test | E-35 | Package removal keeps evidence |
+| FR-20.23 (planned v1.3.0) | FR-20 | Inspection | E-35 | Installer release assets |
+| FR-20.24 (planned v1.3.0) | FR-20 | Test | E-35 | Installer build and smoke test in CI |
+| FR-20.25 (planned v1.3.0) | FR-20 | Inspection | E-35, E-24 | Unsigned installer guidance |
+| FR-20.26 (planned v1.3.0) | FR-20 | Test | E-35 | Ad-hoc signature on macOS |
+| FR-20.27 (planned v1.3.0) | FR-20 | Inspection | E-34, E-35, E-24 | Desktop application documentation |
+| FR-20.28 (planned v1.3.0) | FR-20 | Test | E-34 | Deep links |
+| SR-2-3 (planned v1.3.0) | SEC-2 | Test | E-34 | Desktop authority ceiling |
+| SR-2-4 (planned v1.3.0) | SEC-2 | Test | E-34 | No stored console credentials |
+| SR-2-5 (planned v1.3.0) | SEC-2 | Test | E-34 | Minimal IPC surface |
+| SR-2-6 (planned v1.3.0) | SEC-2 | Test | E-34 | No remote content in the desktop application |
+| SR-2-7 (planned v1.3.0) | SEC-2 | Test | E-34 | Desktop elevation limits |
+| SR-2.6-2 (planned v1.3.0) | SEC-2.6 | Test | E-34 | Notifications never approve |
+| SR-2.8-5 (planned v1.3.0) | SEC-2.8 | Test | E-34 | Desktop TLS validation |
+| SR-2.9-4 (planned v1.3.0) | SEC-2.9 | Test | E-24, E-34 | No widened origins for the desktop |
+| SR-4.11-2 (planned v1.3.0) | SEC-4.11 | Test | E-35, E-33 | Installed code outside the agent's reach |
+| SR-7-2 (planned v1.3.0) | SEC-7 | Test | E-34 | Verified updates |
 
 ## Appendix I — Requirement-set checks
 
@@ -8345,9 +8978,10 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 
 | Check | Result |
 |---|---|
-| Requirements | 529 total: 367 FR (19 roots), 162 SR |
-| Deferred from release 1.0 (Appendix N) | 32: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1 |
-| Verification methods | Analysis 19, Demonstration 28, Inspection 77, Test 405 |
+| Requirements of the current release | 529 total: 367 FR (19 roots), 162 SR |
+| Planned for a later release (Section 2.8) | 39; v1.3.0: FR-20, FR-20.1, FR-20.2, FR-20.3, FR-20.4, FR-20.5, FR-20.6, FR-20.7, FR-20.8, FR-20.9, FR-20.10, FR-20.11, FR-20.12, FR-20.13, FR-20.14, FR-20.15, FR-20.16, FR-20.17, FR-20.18, FR-20.19, FR-20.20, FR-20.21, FR-20.22, FR-20.23, FR-20.24, FR-20.25, FR-20.26, FR-20.27, FR-20.28, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-4.11-2, SR-7-2 |
+| Deferred from release 1.0 (Appendix N) | 35: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.28, FR-5.29, FR-5.30, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1, FR-20.29, FR-20.30, FR-20.31 |
+| Verification methods | Analysis 20, Demonstration 29, Inspection 80, Test 439 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |
@@ -8356,7 +8990,7 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 | Security SHALL items without citing FR | None |
 | Barren functional roots (no children) | None |
 | Parameter Catalog (`docs/parameters.json`) | 93 parameters; all 92 ARCH §10.3 IDs present |
-| Implementation status (`docs/status/elements.json`) | implemented 8, partial 25 |
+| Implementation status (`docs/status/elements.json`) | implemented 8, not-started 2, partial 25 |
 | Elements without an allocated requirement | None |
 | Functions without an allocated requirement | None |
 | External interfaces without an allocated requirement | None |
@@ -8958,4 +9592,46 @@ These records keep their IDs and text so that a later release can restore them u
 | Source | SEC 6.9 |
 | Rationale | Consistent retention. |
 | Deferral | Release 1.0 has one retention setting per store (the Audit Profile's `retention` and the `[evidence]` and `[observation]` settings) and no no-capture data classifications, because payload capture is deferred (SR-6.6-1). There are no competing minimum and maximum retentions or capture requirements to conflict. Retention validation is deferred with policy-directed capture. |
+
+#### FR-20.29 — macOS signing and notarization (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-20.29 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The release workflow **SHALL** sign the macOS application bundle and its executables with a Developer ID Application certificate and the hardened runtime, sign the `.pkg` with a Developer ID Installer certificate, notarize the `.pkg` and `.dmg` with the Apple notary service and staple the tickets, using the repository secrets `APPLE_CERTIFICATE` (base64 `.p12` of the Developer ID Application certificate), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_INSTALLER_CERTIFICATE`, `APPLE_INSTALLER_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID`, and either `APPLE_API_KEY`, `APPLE_API_ISSUER` and `APPLE_API_KEY_P8` (App Store Connect API key) or `APPLE_ID` and `APPLE_PASSWORD` (app-specific password). |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105 |
+| Verification Method | Test |
+| Verification Statement | On a release built with the secrets, run `spctl -a -vv -t install` on the `.pkg` and `spctl -a -vv` on the application, and `xcrun stapler validate` on both; confirm acceptance as Notarized Developer ID; confirm the FR-20.23 checksums still cover the signed files. |
+| Source | OWNER (platform signing/notarization is a later, additive step) |
+| Rationale | Notarization removes the Open Anyway step. It is additive: the minisign and Sigstore verification of FR-20.23 stays, and the checksums are computed over the signed files. |
+| Deferral | Deferred by owner decision of 2026-10-18: the project has no Apple Developer ID yet. Release v1.3.0 ships the macOS installers with an ad-hoc signature only (FR-20.26), verified with the release's minisign signature, Sigstore bundle and SHA-256 checksums (FR-20.23), and the installation guide describes the Gatekeeper prompts (FR-20.25). Enabling this requirement needs only the listed secrets and a signing step in the release workflow. |
+
+#### FR-20.30 — Windows Authenticode signing (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-20.30 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The release workflow **SHALL** Authenticode-sign the Desktop Application executable, the Windows Gateway binaries and the `.msi` with SHA-256 and an RFC 3161 timestamp, using either the repository secrets `WINDOWS_CERTIFICATE` (base64 `.pfx` of an OV or EV code-signing certificate) and `WINDOWS_CERTIFICATE_PASSWORD`, or Azure Trusted Signing with `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TRUSTED_SIGNING_ENDPOINT`, `AZURE_TRUSTED_SIGNING_ACCOUNT` and `AZURE_TRUSTED_SIGNING_PROFILE`. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105 |
+| Verification Method | Test |
+| Verification Statement | On a release built with the secrets, run `signtool verify /pa /v` on each signed file; confirm a valid chain and timestamp; confirm the FR-20.23 checksums cover the signed files. |
+| Source | OWNER (platform signing is a later, additive step) |
+| Rationale | A signature names the publisher in the User Account Control prompt and lets SmartScreen build reputation; Smart App Control requires it. |
+| Deferral | Deferred by owner decision of 2026-10-18: the project has no Authenticode certificate yet. Release v1.3.0 ships an unsigned `.msi`, verified with the release's minisign signature, Sigstore bundle and SHA-256 checksums (FR-20.23), and the installation guide describes the SmartScreen and Smart App Control behavior (FR-20.25). Enabling this requirement needs only the listed secrets and a signing step in the release workflow. |
+
+#### FR-20.31 — Windows MSIX package (deferred)
+
+| Field | Value |
+|---|---|
+| ID | FR-20.31 |
+| Parent ID | FR-20 — Desktop application and platform installers |
+| Statement | The Gateway release **SHALL** publish, for windows-amd64, an MSIX package of the Desktop Application signed with the certificate of FR-20.30, in addition to the `.msi`. |
+| Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
+| Verification Method | Test |
+| Verification Statement | Install the MSIX on Windows 11 with `Add-AppxPackage`; confirm the application starts and controls the Windows service; confirm the package signature verifies. |
+| Source | OWNER (Windows MSI/MSIX) |
+| Rationale | MSIX gives clean per-user installs and removal, but Windows installs an MSIX only when its signature chains to a trusted root, so it cannot ship before Authenticode signing. |
+| Deferral | Deferred with Windows Authenticode signing (FR-20.30): an unsigned MSIX cannot be installed outside developer mode. Release v1.3.0 ships the `.msi` of FR-20.20 instead. The Tauri bundler builds MSI and NSIS installers but not MSIX, so this also needs a separate packaging step. |
 

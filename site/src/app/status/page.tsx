@@ -3,6 +3,7 @@ import { DocHead, GeneratedAt, ImplBadge, Note, ReqBadge, SampleNotice, Sec } fr
 import VerificationBars, { type VerificationRow } from "@/components/charts/VerificationBars";
 import TrendChart from "@/components/charts/TrendChart";
 import { loadArch } from "@/lib/parse-arch";
+import { loadRequirements } from "@/lib/parse-reqs";
 import { loadStatus, type ReqStatus } from "@/lib/status";
 import { consoleResults } from "@/lib/console-results";
 import {
@@ -31,6 +32,12 @@ export default function StatusPage() {
   const covBy = new Map(s.coverage.packages.map((c) => [c.name, c.pct]));
   const r = s.requirements;
   const cons = consoleResults(s);
+  // Planned requirements (SRS Section 2.8) by primary element, from the source records.
+  const plannedBy = new Map<string, number>();
+  for (const q of loadRequirements().reqs) {
+    const el = q.alloc.find((a) => a.startsWith("E-"));
+    if (q.target && el) plannedBy.set(el, (plannedBy.get(el) ?? 0) + 1);
+  }
 
   const implCount = (k: string) => arch.elements.filter((e) => els.get(e.id)?.implementation === k).length;
   const noData = arch.elements.filter((e) => !els.has(e.id));
@@ -47,14 +54,15 @@ export default function StatusPage() {
               partial: b.partial,
               failing: b.failing,
               unverified: Math.max(0, b.total - b.verified - b.partial - b.failing),
+              planned: plannedBy.get(e.id) ?? 0,
             }
-          : { verified: 0, partial: 0, failing: 0, unverified: 0 };
+          : { verified: 0, partial: 0, failing: 0, unverified: 0, planned: plannedBy.get(e.id) ?? 0 };
         return {
           id: e.id,
           name: e.name,
           group: `${ss.id} ${ss.name}`,
           counts,
-          note: b ? undefined : "not in status data",
+          note: b ? undefined : plannedBy.get(e.id) ? "planned for a later release" : "not in status data",
         };
       }),
   );

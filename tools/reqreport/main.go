@@ -10,6 +10,8 @@
 //   - verified: at least one passing full claim and no failing claim
 //   - partial: only partial claims passed
 //   - unverified: no passing claim (skipped tests do not verify)
+//   - planned: unverified, and the record has a TARGET: line naming a later
+//     release (SRS Section 2.8); kept out of the totals
 //
 // A requirement verified by Inspection, Analysis or Demonstration can also
 // be verified by a passing record under docs/verification/ (records.go,
@@ -152,6 +154,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 	recordWarnings := applyRecords(results, reqs, recs, o.records)
 	recordWarnings = append(recordWarnings, applyWorkflowResults(results, wfs)...)
 	applyChildAnalysis(results, reqs)
+	markPlanned(results)
 	for _, t := range log.Tests {
 		t.Package = shortPackage(t.Package, module)
 	}
@@ -221,8 +224,8 @@ func run(args []string, stdin io.Reader, stdout io.Writer) (int, error) {
 		written = append(written, o.status)
 	}
 	rs := st.Requirements
-	fmt.Fprintf(stdout, "reqreport: %d requirements: %d verified, %d partial, %d failing, %d unverified; tests %d passed, %d failed, %d skipped; wrote %s\n",
-		rs.Total, rs.Verified, rs.Partial, rs.Failing, rs.Unverified, st.Tests.Passed, st.Tests.Failed, st.Tests.Skipped, strings.Join(written, ", "))
+	fmt.Fprintf(stdout, "reqreport: %d requirements: %d verified, %d partial, %d failing, %d unverified; %d planned for later releases; tests %d passed, %d failed, %d skipped; wrote %s\n",
+		rs.Total, rs.Verified, rs.Partial, rs.Failing, rs.Unverified, rs.Planned, st.Tests.Passed, st.Tests.Failed, st.Tests.Skipped, strings.Join(written, ", "))
 	for _, w := range recordWarnings {
 		fmt.Fprintf(stdout, "reqreport: warning: %s\n", w)
 	}

@@ -189,7 +189,7 @@ The Gateway keeps these Table B.2 codes as defense in depth: an earlier check of
 | Dataset export | ✓ | — | — | — | — | — | ✓ (approved campaigns) |
 | Purge | ✓ | — | — | — | — | — | — |
 
-One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver accounts. Each role is a separate account with its own password: the Administrator account itself cannot complete a harness sign-in (FR-2.19, FR-2.23), so the Administrator password is never typed into a harness sign-in page. Harness principals have no control-plane role (SR-2.5-1).
+One person may hold several roles; on a single-user installation the Administrator usually also holds Approver and Session Approver accounts. Each role is a separate account with its own password: the Administrator account itself cannot complete a harness sign-in (FR-2.19, FR-2.23), so the Administrator password is never typed into a harness sign-in page. Harness principals have no control-plane role (SR-2.5-1). The Desktop Application planned for v1.3.0 has no role either: it adds no row, and every operation in its console window is performed with the role of the account signed in there (SR-2-3, SR-2.6-2).
 
 The rows name operations. Control API routes the rows do not name follow these rules (FR-8.2):
 

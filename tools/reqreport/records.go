@@ -258,8 +258,14 @@ const childAnalysisPrefix = "Review the verification results of every"
 // statement.
 func applyChildAnalysis(results []*ReqResult, reqs []Requirement) {
 	children := map[string][]string{}
+	planned := map[string]bool{}
 	for _, r := range reqs {
-		if r.Parent != "" {
+		planned[r.ID] = r.Planned()
+	}
+	for _, r := range reqs {
+		// A planned child (SRS Section 2.8) is not part of the current
+		// requirement set, so it does not hold back a parent that is.
+		if r.Parent != "" && (!r.Planned() || planned[r.Parent]) {
 			children[r.Parent] = append(children[r.Parent], r.ID)
 		}
 	}

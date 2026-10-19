@@ -27,13 +27,14 @@ export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-export const REQ_STATUSES: ReqStatus[] = ["verified", "partial", "failing", "unverified"];
+export const REQ_STATUSES: ReqStatus[] = ["verified", "partial", "failing", "unverified", "planned"];
 
 export const REQ_STATUS_TEXT: Record<ReqStatus, string> = {
   verified: "verified",
   partial: "partial",
   failing: "failing",
   unverified: "unverified",
+  planned: "planned",
 };
 
 export const REQ_STATUS_MEANING: Record<ReqStatus, string> = {
@@ -41,6 +42,7 @@ export const REQ_STATUS_MEANING: Record<ReqStatus, string> = {
   partial: "Only partial claims, all passing.",
   failing: "A test that claims it failed.",
   unverified: "No test claims it.",
+  planned: "Planned for a later release (SRS Section 2.8); not counted in the current requirement set.",
 };
 
 export const IMPL_TEXT: Record<Implementation, string> = {

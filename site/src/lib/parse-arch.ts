@@ -148,7 +148,7 @@ export function loadArch(): Arch {
       const key = b[1].toLowerCase();
       const val = b[2].trim();
       if (key === "purpose") el.purpose = strip(val);
-      else if (key === "functions") el.functions = Array.from(val.matchAll(/F-\d\d/g)).map((x) => x[0]);
+      else if (key === "functions") el.functions = Array.from(val.matchAll(/F-\d{2,3}/g)).map((x) => x[0]);
       else if (key === "interfaces") el.interfaces = Array.from(val.matchAll(/[XI]-\d\d/g)).map((x) => x[0]);
       else if (key === "owned data") el.ownedData = strip(val);
       else if (key === "allocation targets") el.allocationTargets = strip(val);
@@ -162,7 +162,7 @@ export function loadArch(): Arch {
   }
 
   const functions: Fn[] = nonEmpty(
-    tableRows(required(md, /^## 5\. Function catalog/, "function catalog"), /^F-\d\d$/),
+    tableRows(required(md, /^## 5\. Function catalog/, "function catalog"), /^F-\d{2,3}$/),
     "function",
   ).map((c) => ({
     id: c[0],

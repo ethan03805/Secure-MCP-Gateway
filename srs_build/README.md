@@ -7,11 +7,12 @@
 | `front.md` | Document control, purpose, scope, profiles, conventions, technology stack (Sections 1–3) |
 | `req1.txt` … `req4.txt` | Functional requirements FR-1 … FR-19 |
 | `req5.txt` | Security requirements (SR) and SEC dispositions (`@DISP`) |
+| `req6-desktop.txt` | Section 6, requirements planned for later releases: FR-20 desktop application and platform installers (v1.3.0) and their SRs |
 | `appendix.md` | Appendices A–D (controlled parameters, error and reason codes, roles, graph data model) |
 | `appendix2.md` | Appendices J–M (manifest schema summary, client matrix, hostile fixture suite, acceptance scenario mapping), emitted after the generated appendices |
 | `gen.py` | Validator and generator; also produces Appendices E–I |
 
-Record format: `@ID | Title`, then `P:` parent, `S:` statement, `A:` allocation (`;`-separated E/F/X/I/D IDs), `V:` `Method | statement`, `SRC:` sources, `R:` rationale, optionally `DEFER:` with the reason the requirement is deferred from release 1.0 (SRS Section 2.7: the record moves to Appendix N and leaves the requirement set and the requirement report), followed by a blank line. `TEXT:` lines and `#` headings between records are copied into the output.
+Record format: `@ID | Title`, then `P:` parent, `S:` statement, `A:` allocation (`;`-separated E/F/X/I/D IDs), `V:` `Method | statement`, `SRC:` sources, `R:` rationale, optionally `DEFER:` with the reason the requirement is deferred from release 1.0 (SRS Section 2.7: the record moves to Appendix N and leaves the requirement set and the requirement report), or `TARGET:` with the release the requirement is planned for, as `vMAJOR.MINOR.PATCH` (SRS Section 2.8: the record stays in place with a Target release row, Appendices F to H mark it, Appendix I counts it apart, and `tools/reqreport` lists it as `planned` in `plannedItems` instead of counting it as unverified; a current requirement may not have a planned parent, and a record may not carry both lines), followed by a blank line. `TEXT:` lines and `#` headings between records are copied into the output.
 
 Build (from the project directory):
 

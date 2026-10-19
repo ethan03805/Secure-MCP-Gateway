@@ -25,7 +25,8 @@ export const DEFAULT_STATUS_URL =
   "https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/site-data/status.json";
 export const FETCH_TIMEOUT_MS = 5000;
 
-export type ReqStatus = "verified" | "partial" | "failing" | "unverified";
+/** "planned": a requirement with a target release (SRS Section 2.8), kept out of the current totals. */
+export type ReqStatus = "verified" | "partial" | "failing" | "unverified" | "planned";
 export type Implementation = "implemented" | "partial" | "not-started";
 
 export type PackageTests = { name: string; passed: number; failed: number; skipped: number };
@@ -38,7 +39,7 @@ export type ElementVerification = {
   partial: number;
   failing: number;
 };
-export type RequirementItem = { id: string; element: string; status: ReqStatus; tests: string[] };
+export type RequirementItem = { id: string; element: string; status: ReqStatus; tests: string[]; target?: string };
 export type ElementStatus = {
   id: string;
   name: string;
@@ -125,6 +126,9 @@ export type Status = {
     unverified: number;
     byElement: ElementVerification[];
     items: RequirementItem[];
+    /** Requirements planned for a later release (SRS Section 2.8); absent in status data from before the field existed. */
+    planned?: number;
+    plannedItems?: RequirementItem[];
   };
   elements: ElementStatus[];
   agents: AgentResult[];

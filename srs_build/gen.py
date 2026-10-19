@@ -59,7 +59,7 @@ for fn in sorted(HERE.glob("req*.txt")):
                 cur = None
                 continue
             key, _, val = line.partition(": ")
-            cur[{"P": "parent", "S": "stmt", "A": "alloc", "V": "ver", "SRC": "src", "R": "rat", "DEFER": "defer"}[key]] = val.strip()
+            cur[{"P": "parent", "S": "stmt", "A": "alloc", "V": "ver", "SRC": "src", "R": "rat", "DEFER": "defer", "TARGET": "target"}[key]] = val.strip()
             continue
         if line.startswith("TEXT: "):
             items.append(("md", line[6:] + "\n"))
@@ -82,6 +82,27 @@ for r in deferred.values():
 for r in reqs.values():
     if r.get("parent") in deferred:
         errors.append(f"{r['id']}: parent {r['parent']} is deferred")
+
+# ---------- planned requirements ----------
+# A record with a TARGET: line is planned for the later release it names
+# (Section 2.8): it is part of the specification and is rendered where it
+# stands with its target release, but Appendix I counts it apart from the
+# requirement set of the current release, the matrices mark it, and the
+# requirement report (tools/reqreport) lists it as planned, not unverified.
+planned = collections.OrderedDict((k, v) for k, v in reqs.items() if "target" in v)
+for r in allrecs.values():
+    if "target" in r and "defer" in r:
+        errors.append(f"{r['id']}: both DEFER and TARGET")
+    if "target" in r and not re.fullmatch(r'v\d+\.\d+\.\d+', r["target"]):
+        errors.append(f"{r['id']}: TARGET '{r['target']}' is not a release vMAJOR.MINOR.PATCH")
+for r in reqs.values():
+    if "target" not in r and r.get("parent") in planned:
+        errors.append(f"{r['id']}: parent {r['parent']} is planned for {planned[r['parent']]['target']}")
+
+
+def pl(rid):
+    """An ID as listed in the matrices: planned requirements are marked."""
+    return f"{rid} (planned {planned[rid]['target']})" if rid in planned else rid
 
 # ---------- validation ----------
 FIELDS = ["parent", "stmt", "alloc", "ver", "src", "rat"]
@@ -295,7 +316,10 @@ for kind, obj in items:
     out.append(f"| ID | {r['id']} |\n| Parent ID | {esc(parent_fmt(r))} |\n")
     out.append(f"| Statement | {esc(bold(r['stmt']))} |\n| Allocation | {esc(alloc_fmt(r['alloc_ids']))} |\n")
     out.append(f"| Verification Method | {r['method']} |\n| Verification Statement | {esc(r['vstmt'])} |\n")
-    out.append(f"| Source | {esc(r['src'])} |\n| Rationale | {esc(r['rat'])} |\n\n")
+    out.append(f"| Source | {esc(r['src'])} |\n| Rationale | {esc(r['rat'])} |\n")
+    if "target" in r:
+        out.append(f"| Target release | {r['target']} (planned, Section 2.8) |\n")
+    out.append("\n")
 
 out.append(APPX.rstrip() + "\n\n")
 
@@ -328,8 +352,8 @@ out.append("## Appendix F — Allocation matrix (element → requirements)\n\n")
 out.append("Use this matrix to code element by element. A requirement allocated to several elements appears under each.\n\n")
 out.append("| Element | Name | Functional (FR) | Security (SR) |\n|---|---|---|---|\n")
 for e in sorted(arch["E"]):
-    fr = [r["id"] for r in reqs.values() if e in r["alloc_ids"] and r["id"].startswith("FR")]
-    sr = [r["id"] for r in reqs.values() if e in r["alloc_ids"] and r["id"].startswith("SR")]
+    fr = [pl(r["id"]) for r in reqs.values() if e in r["alloc_ids"] and r["id"].startswith("FR")]
+    sr = [pl(r["id"]) for r in reqs.values() if e in r["alloc_ids"] and r["id"].startswith("SR")]
     out.append(f"| {e} | {enames.get(e,'')} | {', '.join(fr) or '—'} | {', '.join(sr) or '—'} |\n")
 out.append("\n")
 
@@ -338,7 +362,7 @@ out.append("## Appendix G — Architecture coverage\n\n")
 def cov_table(prefix, label, names=None):
     out.append(f"### {label}\n\n| ID | {'Name | ' if names else ''}Requirements |\n|---|{'---|' if names else ''}---|\n")
     for x in sorted(arch[prefix], key=natkey):
-        rs = [r["id"] for r in reqs.values() if x in r["alloc_ids"]]
+        rs = [pl(r["id"]) for r in reqs.values() if x in r["alloc_ids"]]
         rs += [r["id"] + " (deferred)" for r in deferred.values() if x in r["alloc_ids"]]
         nm = f" {esc(names.get(x,''))} |" if names else ""
         out.append(f"| {x} |{nm} {', '.join(rs) or ('context only — outside SoI' if x in CONTEXT_ONLY else '**none**')} |\n")
@@ -357,20 +381,25 @@ out.append("\n")
 out.append("## Appendix H — Requirement index\n\n| ID | Parent | Method | Elements | Title |\n|---|---|---|---|---|\n")
 for r in reqs.values():
     els = ", ".join(x for x in r["alloc_ids"] if x.startswith("E-"))
-    out.append(f"| {r['id']} | {r['parent']} | {r['method']} | {els} | {esc(r['title'])} |\n")
+    out.append(f"| {pl(r['id'])} | {r['parent']} | {r['method']} | {els} | {esc(r['title'])} |\n")
 out.append("\n")
 
 # Appendix I
-fr = [r for r in reqs.values() if r["id"].startswith("FR")]
-sr = [r for r in reqs.values() if r["id"].startswith("SR")]
+fr = [r for r in reqs.values() if r["id"].startswith("FR") and r["id"] not in planned]
+sr = [r for r in reqs.values() if r["id"].startswith("SR") and r["id"] not in planned]
 roots = [r for r in fr if r["parent"] == "—"]
-barren_roots = [r["id"] for r in roots if not any(x["parent"] == r["id"] for x in fr)]
+allfr = [r for r in reqs.values() if r["id"].startswith("FR")]
+barren_roots = [r["id"] for r in allfr if r["parent"] == "—" and not any(x["parent"] == r["id"] for x in allfr)]
+by_target = collections.OrderedDict()
+for r in planned.values():
+    by_target.setdefault(r["target"], []).append(r["id"])
 mcount = collections.Counter(r["method"] for r in reqs.values())
 must_ids = [s for s in sec if sec[s]["imp"] == "MUST"]
 out.append("## Appendix I — Requirement-set checks\n\n")
 out.append("Generated by the SRS build script from the requirement records, `ArchitectureV2.md` and `MCP_Gateway_Security_SRS.md`.\n\n")
 out.append("| Check | Result |\n|---|---|\n")
-out.append(f"| Requirements | {len(reqs)} total: {len(fr)} FR ({len(roots)} roots), {len(sr)} SR |\n")
+out.append(f"| Requirements of the current release | {len(fr) + len(sr)} total: {len(fr)} FR ({len(roots)} roots), {len(sr)} SR |\n")
+out.append(f"| Planned for a later release (Section 2.8) | {len(planned)}" + "".join(f"; {t}: {', '.join(ids)}" for t, ids in by_target.items()) + " |\n")
 out.append(f"| Deferred from release 1.0 (Appendix N) | {len(deferred)}: {', '.join(deferred) or 'None'} |\n")
 out.append(f"| Verification methods | " + ", ".join(f"{k} {v}" for k, v in sorted(mcount.items())) + " |\n")
 out.append(f"| Unique IDs; required fields; SHALL present; no MUST imperative | Pass |\n")
@@ -406,5 +435,5 @@ for r in deferred.values():
     out.append(f"| Source | {esc(r['src'])} |\n| Rationale | {esc(r['rat'])} |\n| Deferral | {esc(r['defer'])} |\n\n")
 
 OUT.write_text("".join(out))
-print(f"OK: {len(reqs)} requirements ({len(fr)} FR, {len(sr)} SR), {len(deferred)} deferred -> {OUT}")
+print(f"OK: {len(fr) + len(sr)} requirements ({len(fr)} FR, {len(sr)} SR), {len(planned)} planned, {len(deferred)} deferred -> {OUT}")
 print("WARNINGS:\n" + ("\n".join(warnings) if warnings else "none"))

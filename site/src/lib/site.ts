@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import type { ReqStatus, Status, StatusSnapshot } from "./status";
 import { fmtDateTime, shortSha } from "./labels";
+import { loadRequirements } from "./parse-reqs";
 
 /* Formatting and status vocabulary live in labels.ts so client code can use them. */
 export * from "./labels";
@@ -49,13 +50,28 @@ export function buildCommit(): string {
 
 export type ReqStatusEntry = { status: ReqStatus; tests: string[] };
 
-/** Requirement ID to status. Requirements absent from the CI report are unverified. */
+/** Requirement ID to status, from the current items and the planned items of the CI report. */
 export function reqStatusMap(s: Status): Map<string, ReqStatusEntry> {
-  return new Map(s.requirements.items.map((i) => [i.id, { status: i.status, tests: i.tests ?? [] }]));
+  const all = [...s.requirements.items, ...(s.requirements.plannedItems ?? [])];
+  return new Map(all.map((i) => [i.id, { status: i.status, tests: i.tests ?? [] }]));
 }
 
+let plannedIds: Set<string> | undefined;
+
+/** IDs of the requirements whose source record has a TARGET: line (SRS Section 2.8). */
+export function plannedRequirementIds(): Set<string> {
+  plannedIds ??= new Set(loadRequirements().reqs.filter((r) => r.target).map((r) => r.id));
+  return plannedIds;
+}
+
+/**
+ * A requirement's status. Requirements absent from the CI report are unverified, and planned
+ * (SRS Section 2.8) when their record names a target release, so the site is right even with
+ * status data written before the report knew planned requirements.
+ */
 export function reqStatusOf(map: Map<string, ReqStatusEntry>, id: string): ReqStatus {
-  return map.get(id)?.status ?? "unverified";
+  const st = map.get(id)?.status ?? "unverified";
+  return st === "unverified" && plannedRequirementIds().has(id) ? "planned" : st;
 }
 
 export function elementStatusMap(s: Status) {

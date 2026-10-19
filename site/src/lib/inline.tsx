@@ -7,7 +7,7 @@ import Link from "next/link";
  */
 export function Inline({ text, linkIds = true }: { text: string; linkIds?: boolean }) {
   const parts: React.ReactNode[] = [];
-  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\b(?:E|F|X|I|D|G)-\d\d\b)|(\b(?:FR|SR)-[\d.]+(?:-\d+)?\b)|(\bCP-\d\d\b)/g;
+  const re = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\b(?:E|F|X|I|D|G)-\d{2,3}\b)|(\b(?:FR|SR)-[\d.]+(?:-\d+)?\b)|(\bCP-\d\d\b)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let k = 0;
