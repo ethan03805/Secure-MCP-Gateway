@@ -226,13 +226,15 @@ func runScript(t *testing.T, rel release, r run) result {
 	for _, kv := range os.Environ() {
 		k, _, _ := strings.Cut(kv, "=")
 		switch strings.ToUpper(k) {
-		case "PATH", "TEMP", "TMP", "LOCALAPPDATA", "PROGRAMFILES", "SMCP_VERSION", "SMCP_INSTALL_DIR", "SMCP_BASE_URL", "SMCP_FROM", "SMCP_PUBKEY", "SMCP_NO_COSIGN":
+		case "PATH", "TEMP", "TMP", "LOCALAPPDATA", "SMCP_GIT_DIR", "SMCP_VERSION", "SMCP_INSTALL_DIR", "SMCP_BASE_URL", "SMCP_FROM", "SMCP_PUBKEY", "SMCP_NO_COSIGN":
 			continue
 		}
 		env = append(env, kv)
 	}
+	// Windows sets ProgramFiles for every new process itself, so Git's
+	// OpenSSL is hidden through SMCP_GIT_DIR instead.
 	env = append(env, "PATH="+strings.Join(path, string(os.PathListSeparator)), "TEMP="+res.tmp, "TMP="+res.tmp,
-		"LOCALAPPDATA="+local, "ProgramFiles="+pf)
+		"LOCALAPPDATA="+local, "SMCP_GIT_DIR="+pf)
 	env = append(env, r.extraEnv...)
 	var cmd *exec.Cmd
 	if r.iex {

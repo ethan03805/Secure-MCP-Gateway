@@ -14,7 +14,8 @@ nothing. It installs to %LOCALAPPDATA%\Programs\smcp-gateway unless -Dir
 is given, and never asks for elevation.
 
 The signature is checked with minisign.exe when it is on PATH, otherwise
-with OpenSSL 3 (the one in Git for Windows is found by its usual path).
+with OpenSSL 3 (the one in Git for Windows is found by its usual path, or
+under SMCP_GIT_DIR when Git is installed elsewhere).
 Windows PowerShell 5.1 and PowerShell 7 are supported.
 
 With `irm | iex` the options come from environment variables:
@@ -91,9 +92,13 @@ function Find-OpenSSL3 {
   $candidates = @()
   $onPath = Find-Command 'openssl'
   if ($onPath) { $candidates += $onPath }
-  if ($env:ProgramFiles) {
-    foreach ($sub in @('Git\usr\bin\openssl.exe', 'Git\mingw64\bin\openssl.exe', 'Git\clangarm64\bin\openssl.exe')) {
-      $candidates += (Join-Path $env:ProgramFiles $sub)
+  # Git for Windows' own OpenSSL; SMCP_GIT_DIR names a Git installed
+  # elsewhere than %ProgramFiles%\Git.
+  $gitDir = $env:SMCP_GIT_DIR
+  if (-not $gitDir -and $env:ProgramFiles) { $gitDir = Join-Path $env:ProgramFiles 'Git' }
+  if ($gitDir) {
+    foreach ($sub in @('usr\bin\openssl.exe', 'mingw64\bin\openssl.exe', 'clangarm64\bin\openssl.exe')) {
+      $candidates += (Join-Path $gitDir $sub)
     }
   }
   foreach ($o in $candidates) {
@@ -293,12 +298,17 @@ try {
     if ($line -match '^([0-9a-f]{64}) [ *](.+)$' -and $Matches[2] -eq $Archive) { $want = $Matches[1] }
   }
   if (-not $want) { Fail "$Archive is not listed in $Sums; nothing was installed" }
-  $got = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $Tmp $Archive)).Hash.ToLowerInvariant()
+  # .NET directly rather than Get-FileHash, Expand-Archive and Unblock-File,
+  # which live in modules that a mismatched PSModulePath can hide.
+  $sha = [Security.Cryptography.SHA256]::Create()
+  $fs = [IO.File]::OpenRead((Join-Path $Tmp $Archive))
+  try { $got = -join ($sha.ComputeHash($fs) | ForEach-Object { $_.ToString('x2') }) } finally { $fs.Dispose(); $sha.Dispose() }
   if ($got -ne $want) { Fail "checksum mismatch for ${Archive}: expected $want, got $got; nothing was installed" }
   Say "checksum verified ($got)"
 
   $x = Join-Path $Tmp 'x'
-  Expand-Archive -LiteralPath (Join-Path $Tmp $Archive) -DestinationPath $x
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $Tmp $Archive), $x)
 
   try { New-Item -ItemType Directory -Force -Path $Dir | Out-Null } catch { Fail "cannot create ${Dir}: $($_.Exception.Message)" }
   $installed = @()
@@ -315,7 +325,7 @@ try {
       Fail "cannot replace ${dst} (is it running? stop the Gateway first): $($_.Exception.Message)"
     }
     # The files were verified above; remove their Mark of the Web (FR-21.22).
-    Unblock-File -LiteralPath $dst
+    Remove-Item -LiteralPath $dst -Stream Zone.Identifier -ErrorAction SilentlyContinue
     $installed += $b
   }
   if ($installed.Count -eq 0) { Fail 'the archive contains no binaries' }
