@@ -498,7 +498,16 @@ const envelopeBytes = 64 << 10
 
 func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error) {
 	spec := pipeline.ServerSpec{Alias: sc.Alias, Command: sc.Command, Args: sc.Args, Dir: sc.Dir, RiskClasses: sc.RiskClasses, HighRisk: sc.HighRisk(),
-		Runtime: sc.Runtime, ArtifactRoot: sc.ArtifactRoot, Roots: SpecRoots(sc)}
+		Runtime: sc.Runtime, ArtifactRoot: sc.ArtifactRoot, Roots: SpecRoots(sc), URL: sc.URL, CAFile: sc.CAFile}
+	if spec.URL != "" {
+		// FR-5.28: a server reached over Streamable HTTP runs outside the
+		// Gateway's sandbox in every profile, so a high-risk class is
+		// refused for it, and there is no local artifact to pin.
+		if spec.HighRisk {
+			return nil, fmt.Errorf("%w (risk classes %v): a Streamable HTTP server is never confined by the Gateway", ErrHighRiskUnconfined, sc.RiskClasses)
+		}
+		return r.finishLaunch(ctx, &Server{Alias: sc.Alias, cfg: sc, spec: spec})
+	}
 	if spec.HighRisk && !r.opts.Launcher.Confined() {
 		return nil, fmt.Errorf("%w (risk classes %v, launcher %s)", ErrHighRiskUnconfined, sc.RiskClasses, r.opts.Launcher.Name())
 	}
@@ -525,6 +534,12 @@ func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error
 		art.Pinned = sc.CommandSHA256 != ""
 		s.Artifact = &art
 	}
+	return r.finishLaunch(ctx, s)
+}
+
+// finishLaunch starts the first instance of s and records its tool set.
+func (r *Registry) finishLaunch(ctx context.Context, s *Server) (*Server, error) {
+	sc := s.cfg
 	inst, ts, era, err := r.start(ctx, s)
 	if err != nil {
 		return nil, err
@@ -578,6 +593,8 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	if d, ok := r.opts.Secrets.(interface{ InstanceDir(alias string) string }); ok {
 		spec.SecretDir = d.InstanceDir(sc.Alias)
 	}
+	limit := int(r.opts.Limits.ResultBytes) + envelopeBytes
+	spec.MaxMessageBytes = limit
 	proc, err := r.opts.Launcher.Launch(ctx, spec)
 	if err != nil {
 		// A launcher wrapper outside the secret broker's own wrapper (the
@@ -587,7 +604,6 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 		r.withdraw(sc.Alias, "launch_failed")
 		return nil, pipeline.ToolSet{}, "", fmt.Errorf("launch: %w", err)
 	}
-	limit := int(r.opts.Limits.ResultBytes) + envelopeBytes
 	w := &lineWriter{p: proc}
 	ff := newFrameFilter(proc, limit)
 	// FR-5.20: a server-initiated request other than ping is answered
@@ -631,7 +647,11 @@ func (r *Registry) start(ctx context.Context, s *Server) (*instance, pipeline.To
 	sess, err := client.Connect(cctx, transport, &mcp.ClientSessionOptions{ProtocolVersion: LegacyEra})
 	if err != nil {
 		proc.Close()
-		return nil, pipeline.ToolSet{}, "", fmt.Errorf("connect %s: %w (stderr: %s)", sc.Command, err, stderrForError(proc.Stderr(), secrets))
+		target := sc.Command
+		if sc.URL != "" {
+			target = sc.URL
+		}
+		return nil, pipeline.ToolSet{}, "", fmt.Errorf("connect %s: %w (stderr: %s)", target, err, stderrForError(proc.Stderr(), secrets))
 	}
 	inst.session = sess
 	era := ""
@@ -1161,7 +1181,12 @@ func (s *Server) Stderr() string {
 // for a Server value that was not launched, such as a test fixture).
 func (s *Server) OversizedFrames() uint64 {
 	if in := s.peek(); in != nil && in.filter != nil {
-		return in.filter.oversized.Load()
+		n := in.filter.oversized.Load()
+		if o, ok := in.proc.(interface{ OversizedFrames() uint64 }); ok {
+			// A transport that bounds messages itself (southbound HTTP).
+			n += o.OversizedFrames()
+		}
+		return n
 	}
 	return 0
 }
@@ -1251,8 +1276,8 @@ func (f *fifo) release() {
 // tooLargeCode and tooLargeMessage mark the error the frame filter
 // substitutes for an oversized response.
 const (
-	tooLargeCode         = jsonrpc.CodeInternalError
-	tooLargeMessage      = "local.smcpgw/result-too-large"
+	tooLargeCode         = pipeline.ResultTooLargeCode
+	tooLargeMessage      = pipeline.ResultTooLargeMessage
 	inputRequiredMessage = "local.smcpgw/input-required"
 	invalidResultMessage = "local.smcpgw/invalid-result"
 )

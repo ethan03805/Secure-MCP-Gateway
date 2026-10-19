@@ -55,7 +55,37 @@ type ServerSpec struct {
 	// manifest declares none. A sandbox mounts only the parts of its
 	// mount grants that lie within these roots (SR-4.6-1).
 	Roots []Root
+	// URL is the MCP endpoint of a server reached over Streamable HTTP
+	// (FR-5.28) instead of being launched; Command is then empty. Only a
+	// launcher wrapped by southbound.Wrap connects to it. CAFile, when set,
+	// names the only roots trusted for its TLS certificate.
+	URL    string
+	CAFile string
+	// MaxMessageBytes is the dispatcher's bound on one server message
+	// (CP-08 plus the envelope allowance); a transport that frames messages
+	// itself applies it while reading.
+	MaxMessageBytes int
 }
+
+// ResultTooLargeCode and ResultTooLargeMessage mark the error response that
+// replaces a server message larger than the dispatcher's bound (FR-4.10).
+// The Tool Dispatcher maps it to a withheld result; a transport that bounds
+// messages itself (the southbound Streamable HTTP client) emits the same
+// response.
+const (
+	ResultTooLargeCode    = -32603
+	ResultTooLargeMessage = "local.smcpgw/result-too-large"
+)
+
+// ResultTooLargeResponse is the error response, without a line end, that
+// replaces an oversized message answering request id.
+func ResultTooLargeResponse(id []byte) []byte {
+	return fmt.Appendf(nil, `{"jsonrpc":"2.0","id":%s,"error":{"code":%d,"message":%q}}`, id, ResultTooLargeCode, ResultTooLargeMessage)
+}
+
+// ErrNoHTTPTransport is returned for a ServerSpec with a URL by a launcher
+// that cannot connect to Streamable HTTP servers.
+var ErrNoHTTPTransport = errors.New("the launcher has no Streamable HTTP transport; wrap it with southbound.Wrap")
 
 // Root is one manifest-declared filesystem slot bound to a host path.
 // Write is true when the manifest declares the slot read-write.
@@ -108,6 +138,9 @@ var ErrUnpinnedLaunch = errors.New("launch specification is not a pinned local a
 // running pip, and a container run without an image digest. It does not
 // prove the artifact is content-addressed; signed packages (E-13) do.
 func CheckLaunchSpec(spec ServerSpec) error {
+	if spec.URL != "" {
+		return ErrNoHTTPTransport
+	}
 	if !filepath.IsAbs(spec.Command) {
 		return fmt.Errorf("%w: command %q must be an absolute path", ErrUnpinnedLaunch, spec.Command)
 	}

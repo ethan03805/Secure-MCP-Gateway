@@ -36,6 +36,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/policystore"
 	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
 	"github.com/ethan03805/secure-mcp-gateway/internal/session"
+	"github.com/ethan03805/secure-mcp-gateway/internal/southbound"
 )
 
 // Options are the seams. Zero values select the defaults.
@@ -212,7 +213,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 
 	if o.Launcher == nil {
-		o.Launcher = pipeline.SubprocessLauncher{}
+		// Command servers as subprocesses, url servers over Streamable
+		// HTTP (FR-5.28).
+		o.Launcher = southbound.Wrap(pipeline.SubprocessLauncher{})
 	}
 	if a.Egress, err = egress.FromConfig(cfg, a.Evidence, o.Log); err != nil {
 		return a, fmt.Errorf("egress broker: %w", err)
