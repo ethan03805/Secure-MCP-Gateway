@@ -1,7 +1,6 @@
 package secrets
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -56,7 +55,7 @@ const brokerUsePolicy = `{
     {"id": "env", "secret": "env-secret", "server": "t", "slot": "API_TOKEN", "mode": "S4", "tools": ["*"], "purpose": "legacy client",
      "s4_waiver": {"approved_by": "admin:alice", "reason": "server reads only its environment"}},
     {"id": "db", "secret": "file-secret", "server": "t", "slot": "db", "mode": "S3", "tools": ["*"], "purpose": "database session"},
-    {"id": "call", "secret": "call-secret", "server": "t", "slot": "callkey", "mode": "S2", "tools": ["readcall", "hold"], "purpose": "signing", "calls_per_minute": 3},
+    {"id": "call", "secret": "call-secret", "server": "t", "slot": "callkey", "mode": "S2", "tools": ["readcall", "hold", "echoprogress", "echoerror", "echoresult"], "purpose": "signing", "calls_per_minute": 3},
     {"id": "hdr", "secret": "hdr-secret", "server": "t", "slot": "apikey", "mode": "S1", "tools": ["*"], "purpose": "HTTP API"},
     {"id": "approved", "secret": "call-secret", "server": "t", "slot": "approved", "mode": "S2", "tools": ["needsapproval"], "purpose": "approved use", "approval": true}
   ]
@@ -65,7 +64,7 @@ const brokerUsePolicy = `{
 const brokerPolicy = `{
   "revision": "r1",
   "framework_profiles": {"dev": {"templates": ["all"], "default_template": "all"}},
-  "templates": {"all": {"rules": [{"id": "all", "server": "t", "tools": ["getenv", "readfile", "readcall", "hold", "echo", "needsapproval"]}]}}
+  "templates": {"all": {"rules": [{"id": "all", "server": "t", "tools": ["getenv", "readfile", "readcall", "hold", "echo", "needsapproval", "echoprogress", "echoerror", "echoresult"]}]}}
 }`
 
 // fixtureServer exposes the launch environment and files to the tests.
@@ -127,6 +126,42 @@ func fixtureServer(env map[string]string, seen *sync.Map) *mcp.Server {
 	})
 	mcp.AddTool(s, &mcp.Tool{Name: "echo"}, func(_ context.Context, _ *mcp.CallToolRequest, a args) (*mcp.CallToolResult, any, error) {
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "echo:" + a.Text}}}, nil, nil
+	})
+	// SR-2-1 echo tools. source names where the value comes from: an
+	// environment variable (S4), a file named by an environment variable
+	// (S3, S2), or "S1", the injected header value as an upstream that
+	// echoes request headers would return it.
+	source := func(name string) string {
+		switch {
+		case name == "S1":
+			return hdrValue
+		case strings.HasSuffix(name, "_FILE"):
+			b, err := os.ReadFile(env[name])
+			if err != nil {
+				return "absent"
+			}
+			return string(b)
+		}
+		return env[name]
+	}
+	mcp.AddTool(s, &mcp.Tool{Name: "echoprogress"}, func(ctx context.Context, req *mcp.CallToolRequest, a args) (*mcp.CallToolResult, any, error) {
+		if tok := req.Params.GetProgressToken(); tok != nil {
+			v := source(a.Name)
+			for i, msg := range []string{"starting", "value " + encode(v, a.Enc), "half way", "again " + v} {
+				_ = req.Session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{ProgressToken: tok, Progress: float64(i + 1), Message: msg})
+			}
+		}
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "done"}}}, nil, nil
+	})
+	mcp.AddTool(s, &mcp.Tool{Name: "echoerror"}, func(_ context.Context, _ *mcp.CallToolRequest, a args) (*mcp.CallToolResult, any, error) {
+		v := encode(source(a.Name), a.Enc)
+		if a.Text == "rpc" {
+			return nil, nil, fmt.Errorf("backend failure with %s", v)
+		}
+		return &mcp.CallToolResult{IsError: true, Content: []mcp.Content{&mcp.TextContent{Text: "tool failure with " + v}}}, nil, nil
+	})
+	mcp.AddTool(s, &mcp.Tool{Name: "echoresult"}, func(_ context.Context, _ *mcp.CallToolRequest, a args) (*mcp.CallToolResult, any, error) {
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: encode(source(a.Name), a.Enc)}}}, nil, nil
 	})
 	return s
 }
@@ -197,13 +232,13 @@ type brokerHarness struct {
 	store    *session.Store
 	srv      *httptest.Server
 	mem      *audit.Memory
-	logs     *bytes.Buffer
+	logs     *syncBuffer
 	runtime  string
 }
 
 func newBrokerHarness(t *testing.T) *brokerHarness {
 	t.Helper()
-	h := &brokerHarness{t: t, tv: newTestVault(t), launcher: &envLauncher{}, inj: &fakeInjector{}, logs: &bytes.Buffer{}}
+	h := &brokerHarness{t: t, tv: newTestVault(t), launcher: &envLauncher{}, inj: &fakeInjector{}, logs: &syncBuffer{}}
 	h.mem = h.tv.mem
 	for name, v := range map[string]string{"env-secret": envValue, "file-secret": fileValue, "call-secret": callValue, "hdr-secret": hdrValue} {
 		h.tv.create(t, name, v)
