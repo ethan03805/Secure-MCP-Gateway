@@ -17,11 +17,11 @@ TARGET: v1.3.0
 
 @FR-20.1 | Desktop application platforms
 P: FR-20
-S: The Desktop Application (E-34) SHALL be built with Tauri 2 from source in the Gateway repository and SHALL run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 10 22H2 or later and Windows 11 on x86_64 (WebView2), where it controls the Windows service defined in `srs_build/req7-windows.txt`.
+S: The Desktop Application (E-34) SHALL be built with Tauri 2 from source in the Gateway repository and SHALL run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 10 22H2 or later and Windows 11 on x86_64 (WebView2), where it controls the Windows service defined in `srs_build/req7-windows.txt`. On macOS the application SHALL be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6).
 A: E-34; F-100; X-07
 V: Test | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens.
-SRC: OWNER (Tauri v2 tray app on macOS, Linux and Windows)
-R: One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon.
+SRC: OWNER (Tauri v2 tray app on macOS, Linux and Windows; desktop application macOS arm64 only, 2026-10-18)
+R: One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon. Owner decision of 2026-10-18: the macOS application targets Apple silicon only; Intel Macs keep the terminal path (the darwin-amd64 archive and `install.sh`), which needs no second application build to test and support.
 TARGET: v1.3.0
 
 @FR-20.2 | Tray icon and menu
@@ -74,7 +74,7 @@ P: FR-20
 S: When the pending-approval count read under FR-20.4 increases and notifications are on in Settings, the Desktop Application (E-34) SHALL raise one native notification within 10 seconds whose text is fixed except for the pending count, SHALL open the console window at the Approvals view (G-13) when the user activates it, and SHALL raise no notification when notifications are off.
 A: E-34; F-101; I-40; X-14
 V: Test | Create one and then three approvals with notifications on; confirm one notification per increase within 10 seconds with the count and no tool name, alias or argument; activate it and confirm the console opens at G-13; turn notifications off and confirm none is raised.
-SRC: OWNER (native notifications for pending approvals, respecting approval roles); FR-3.23
+SRC: OWNER (native notifications for pending approvals, respecting approval roles; notifications show only the pending count, 2026-10-18); FR-3.23
 R: In the Enforced profile `smcpd` runs as a system identity and cannot reach the user's desktop; the application can. The count is all it knows without signing in, and it is enough to send the user to the console, where the approval is shown with its binding (FR-3).
 TARGET: v1.3.0
 
@@ -155,8 +155,8 @@ P: FR-20
 S: The Desktop Application (E-34) and the Platform Installers (E-35) SHALL allow a first-time user who has the in-application help to install the Gateway from the platform installer, complete first-run setup and connect Claude Code through the Gateway within 15 minutes, without using a terminal.
 A: E-34; E-35; F-103; F-106
 V: Demonstration | Run a timed task with three first-time users on each of macOS, Linux and Windows, starting from the downloaded installer; confirm at least two per platform complete within 15 minutes without a terminal, and record the times under `docs/verification/`.
-SRC: OWNER (a more user-friendly product); FR-8.24
-R: Makes "user friendly" measurable for the whole first-run path, as FR-8.24 does for the workbench.
+SRC: OWNER (a more user-friendly product; 15-minute target confirmed 2026-10-18); FR-8.24
+R: Makes "user friendly" measurable for the whole first-run path, as FR-8.24 does for the workbench. The owner set the target at 15 minutes on 2026-10-18.
 TARGET: v1.3.0
 
 @FR-20.17 | macOS installers
@@ -170,7 +170,7 @@ TARGET: v1.3.0
 
 @FR-20.18 | Linux packages
 P: FR-20
-S: The Gateway release SHALL publish, for linux-amd64 and linux-arm64, a `.deb` and an `.rpm` package `smcp` built with nFPM through GoReleaser that installs `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` in `/usr/bin` with no graphical dependency, and a `.deb` and an `.rpm` package `smcp-desktop` built by the Tauri bundler that installs the Desktop Application and depends on `smcp` of the same version.
+S: The Gateway release SHALL publish, for linux-amd64 and linux-arm64, a `.deb` and an `.rpm` package `smcp` built with nFPM through GoReleaser that installs `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` in `/usr/bin` with no graphical dependency, and a `.deb` and an `.rpm` package `smcp-desktop` built by the Tauri bundler that installs the Desktop Application and depends on `smcp` of the same version. The packages are release assets; signed APT and RPM repositories are deferred (FR-20.32).
 A: E-35; F-105; F-106; X-18
 V: Test | On Ubuntu 24.04 and Fedora containers for both architectures, install `smcp` alone and confirm the commands and that no graphical library was pulled in; install `smcp-desktop` and confirm the application starts and that installing it with a different `smcp` version is refused by the package manager.
 SRC: OWNER (Linux .deb/.rpm)
@@ -206,11 +206,11 @@ TARGET: v1.3.0
 
 @FR-20.22 | Package removal keeps evidence
 P: FR-20
-S: Removing a Platform Installer (E-35) package with the platform's package manager SHALL remove the files the package installed, SHALL stop and remove a system-wide `smcpd` service that `smcpctl install` created, and SHALL keep the configuration, the Evidence Journal, the evidence public key and the backup archives, and the documentation SHALL state the command that removes per-user services and the `smcpctl uninstall --purge` command.
+S: Removing a Platform Installer (E-35) package with the platform's package manager SHALL remove the files the package installed, SHALL stop and remove a system-wide `smcpd` service that `smcpctl install` created, SHALL NOT stop or remove a per-user service, and SHALL keep the configuration, the Evidence Journal, the evidence public key and the backup archives, and the documentation SHALL state the command that removes per-user services and the `smcpctl uninstall --purge` command.
 A: E-35; F-106; X-18; D-06; D-15
 V: Test | On each platform, install, set up, create journal entries and a backup, then remove the package; confirm the package files and the system service are gone and that `smcpctl journal verify` from a fresh install, pointed at the kept journal and key, succeeds; inspect `docs/install.md` for both commands.
-SRC: OWNER (automated installers); FR-13.11
-R: Evidence outlives the installation that produced it, whichever tool removed it.
+SRC: OWNER (automated installers; Linux package removal stops system services only, 2026-10-18); FR-13.11
+R: Evidence outlives the installation that produced it, whichever tool removed it. A package manager runs as root without the user's session, so it cannot reliably reach a per-user service manager; per-user services are removed with the documented command instead.
 TARGET: v1.3.0
 
 @FR-20.23 | Installer release assets
@@ -293,6 +293,15 @@ V: Test | Install the MSIX on Windows 11 with `Add-AppxPackage`; confirm the app
 SRC: OWNER (Windows MSI/MSIX)
 R: MSIX gives clean per-user installs and removal, but Windows installs an MSIX only when its signature chains to a trusted root, so it cannot ship before Authenticode signing.
 DEFER: Deferred with Windows Authenticode signing (FR-20.30): an unsigned MSIX cannot be installed outside developer mode. Release v1.3.0 ships the `.msi` of FR-20.20 instead. The Tauri bundler builds MSI and NSIS installers but not MSIX, so this also needs a separate packaging step.
+
+@FR-20.32 | Signed package repositories
+P: FR-20
+S: The Gateway project SHALL publish an APT repository and an RPM repository that serve the `smcp` and `smcp-desktop` packages of FR-20.18 for linux-amd64 and linux-arm64, with repository metadata signed by a project repository key whose fingerprint `SECURITY.md` publishes, and the installation guide SHALL show how to add each repository with that key.
+A: E-35; F-105; F-106; X-16; X-18
+V: Test | On Ubuntu 24.04 and Fedora containers, add each repository as the guide shows, install `smcp` and `smcp-desktop` with `apt` and `dnf`, and confirm the package manager verified the repository signature; alter one metadata byte and confirm installation is refused.
+SRC: OWNER (signed apt/rpm repositories later, 2026-10-18)
+R: A repository lets the package manager deliver updates, but it adds a long-lived signing key and hosting the project does not have yet.
+DEFER: Deferred by owner decision of 2026-10-18: release v1.3.0 publishes the Linux packages as release assets only, verified with the release's minisign signature, Sigstore bundle and SHA-256 checksums (FR-20.23). Enabling this requirement needs a repository signing key, hosting for the repository and a publishing step in the release workflow.
 
 ### Desktop user experience
 
@@ -479,7 +488,7 @@ S: The Desktop Application (E-34) SHALL accept the console window's connection t
 A: E-34; F-102; I-41; X-04
 V: Test | Point the console window at a test listener presenting a certificate from another CA, an expired certificate and a certificate for another name; confirm an error page with no console content and no proceed option in each case; confirm the installation's own listener loads.
 SRC: SEC 2.8
-R: The console window carries an administrator session; a loopback listener impersonated by another local process must not receive it.
+R: The console window carries an administrator session; a loopback listener impersonated by another local process must not receive it. Implementation (owner decision of 2026-10-18, strict): the application verifies the listener's certificate chain itself in the webview's certificate hook, with the installation's Gateway server CA bundle (`tls/ca.crt` in the state directory, a public file) as the only trust anchor and the configured host as the required name: the server-trust authentication challenge of the WKWebView navigation delegate on macOS, which it answers for the admin listener's host and port only and cancels for every other host; `load-failed-with-tls-errors` together with a check of the TLS information of every committed load in WebKitGTK on Linux; and the WebView2 `ServerCertificateErrorDetected` event with the same committed-load check on Windows. A certificate the operating system trusts but that does not chain to the Gateway CA is refused like any other. A loopback proxy in front of the listener was rejected: it would give the console window another origin, which SR-2.9-4 forbids, or would have to rewrite the Origin and Host headers the console checks.
 TARGET: v1.3.0
 
 @SR-2.9-4 | No widened origins for the desktop

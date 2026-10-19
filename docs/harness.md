@@ -10,6 +10,7 @@ The lockdown profiles are only as strong as each client's own settings enforceme
 smcpctl clients setup <client> [--dry-run] [--stdio] [--helper] [--no-lockdown] [--system-trust]
 smcpctl clients setup <client> --remove
 smcpctl client setup <client> ...          # same command (FR-12.7 spelling)
+smcpctl connect <client> ...               # same command (alias, FR-15.11)
 ```
 
 Writes the client's MCP configuration pointing at the Gateway (server name `smcp`), the client's CA trust setting where the client has one (FR-15.7), and then the lockdown profile (unless `--no-lockdown`). `--dry-run` prints every file it would create or update with the full new content, and the commands it would run, and writes nothing.
