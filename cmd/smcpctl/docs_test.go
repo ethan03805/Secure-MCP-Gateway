@@ -76,6 +76,7 @@ func subcommands() map[string]string {
 		"servers":   serversUsage,
 		"package":   packageUsage,
 		"trust":     trustUsage,
+		"catalog":   catalogUsage,
 		"keys":      "status rotate",
 		"config":    "validate migrate",
 		"journal":   "verify export",

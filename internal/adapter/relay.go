@@ -35,6 +35,10 @@ type Relay struct {
 	In     io.Reader
 	Out    io.Writer
 	Log    *slog.Logger
+	// Upstream marks the experimental relay to a Streamable HTTP server
+	// other than the Gateway (upstream.go): a 401 is not retried and
+	// messages name the upstream.
+	Upstream bool
 
 	outMu      sync.Mutex
 	mu         sync.Mutex
@@ -150,11 +154,15 @@ func (r *Relay) forward(ctx context.Context, msg []byte) {
 	for attempt := 0; attempt < 2; attempt++ {
 		status, err := r.post(ctx, msg, env)
 		if err != nil {
-			r.Log.Warn("gateway request failed", "method", env.Method, "err", err)
+			r.Log.Warn(r.peer()+" request failed", "method", env.Method, "err", err)
 			r.writeError(env.ID, -32000, "smcp adapter: "+err.Error())
 			return
 		}
 		if status != http.StatusUnauthorized {
+			return
+		}
+		if r.Upstream {
+			r.writeError(env.ID, -31006, "smcp adapter: the upstream refused the token (HTTP 401)")
 			return
 		}
 		r.Tokens.Invalidate()
@@ -167,6 +175,9 @@ func (r *Relay) forward(ctx context.Context, msg []byte) {
 func (r *Relay) post(ctx context.Context, msg []byte, env envelope) (int, error) {
 	tok, err := r.Tokens.Token(ctx)
 	if err != nil {
+		if r.Upstream {
+			return 0, fmt.Errorf("no upstream token: %w", err)
+		}
 		return 0, fmt.Errorf("no Gateway session: %w", err)
 	}
 	req, err := http.NewRequestWithContext(ctx, "POST", r.URL, bytes.NewReader(msg))
@@ -228,12 +239,51 @@ func (r *Relay) post(ctx context.Context, msg []byte, env envelope) (int, error)
 		if len(bytes.TrimSpace(b)) == 0 {
 			return resp.StatusCode, fmt.Errorf("empty response (HTTP %d)", resp.StatusCode)
 		}
+		// An error status whose body is not JSON-RPC (ContextForge answers
+		// a refused token scope with HTTP 403 {"detail": ...}) is turned
+		// into a JSON-RPC error for the request instead of being relayed
+		// as a message the client cannot match.
+		if resp.StatusCode >= 300 && !isJSONRPC(b) {
+			return resp.StatusCode, fmt.Errorf("%s answered HTTP %d: %s", r.peer(), resp.StatusCode, snippet(b))
+		}
 		r.write(b)
 		return resp.StatusCode, nil
 	default:
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-		return resp.StatusCode, fmt.Errorf("gateway answered HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+		return resp.StatusCode, fmt.Errorf("%s answered HTTP %d: %s", r.peer(), resp.StatusCode, strings.TrimSpace(string(b)))
 	}
+}
+
+func (r *Relay) peer() string {
+	if r.Upstream {
+		return "upstream"
+	}
+	return "gateway"
+}
+
+// isJSONRPC reports whether b is a JSON-RPC 2.0 message or batch.
+func isJSONRPC(b []byte) bool {
+	b = bytes.TrimSpace(b)
+	if len(b) > 0 && b[0] == '[' {
+		var batch []json.RawMessage
+		if json.Unmarshal(b, &batch) != nil || len(batch) == 0 {
+			return false
+		}
+		b = batch[0]
+	}
+	var m struct {
+		JSONRPC string `json:"jsonrpc"`
+	}
+	return json.Unmarshal(b, &m) == nil && m.JSONRPC == "2.0"
+}
+
+// snippet is the start of a response body for an error message.
+func snippet(b []byte) string {
+	s := strings.TrimSpace(string(b))
+	if len(s) > 200 {
+		s = s[:200] + "..."
+	}
+	return s
 }
 
 // noteInitialize records the negotiated legacy protocol version.

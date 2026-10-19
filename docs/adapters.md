@@ -87,12 +87,14 @@ Reads newline-delimited JSON-RPC messages on standard input and POSTs each one, 
 
 - The protocol era is the framework's: `Mcp-Protocol-Version` comes from the message's `_meta["io.modelcontextprotocol/protocolVersion"]` (2026-07-28 era) or from the version the `initialize` result negotiated (2025-11-25 era). `Mcp-Method` and, for `tools/call`, `prompts/get` and `resources/read`, `Mcp-Name` are taken from the message. Tools that declare `x-mcp-header` parameter headers are not supported by the relay.
 - Requests are relayed concurrently; notifications get no output.
-- A request the Gateway answers without a JSON-RPC body (for example plain HTTP 400), or that cannot be delivered, gets JSON-RPC error `-32000` with the reason, so the framework is never left waiting.
+- A request the Gateway answers without a JSON-RPC body (for example plain HTTP 400, or an error status with a JSON body that is not JSON-RPC), or that cannot be delivered, gets JSON-RPC error `-32000` with the reason, so the framework is never left waiting.
 - TLS 1.3; when `ca_file` is set it is the only trust root.
 - When `socket` is set, smcp-stdio connects to the Gateway's UDS harness socket instead of the URL (see `docs/harness.md`, UDS Harness Profile): it authenticates once with `uds_key`, then copies lines unchanged in both directions. When standard input ends it waits for the replies to the requests it sent, then closes the socket, which ends the session. A refused key or peer exits with status 1 and "the Gateway refused the socket session".
 - Messages longer than 16 MiB are refused.
 
 Any client: configure a stdio MCP server whose command is `smcp-stdio` with no arguments.
+
+Experimental, not a release feature: `smcp-stdio --experimental-upstream URL` relays to another Streamable HTTP MCP server instead of the Gateway, with the bearer token from `SMCP_UPSTREAM_TOKEN` or the file named by `SMCP_UPSTREAM_TOKEN_FILE`. The URL must be https, or http to a loopback host; redirects are not followed and a 401 is not retried. It exists for the ContextForge spike, where `smcpd` runs it as a command-configured backend until the southbound Streamable HTTP client exists ([contextforge-spike.md](contextforge-spike.md)).
 
 ## smcp-connect
 

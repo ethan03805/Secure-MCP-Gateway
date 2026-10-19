@@ -82,12 +82,18 @@ func StdioMain(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	credPath := fs.String("credentials", DefaultPath(), "CP-43 credential file")
 	verbose := fs.Bool("v", false, "log each relay failure and debug detail to standard error")
 	showVersion := fs.Bool("version", false, "print the version and exit")
+	upstream := fs.String("experimental-upstream", "", "EXPERIMENTAL: relay to this Streamable HTTP MCP endpoint instead of the Gateway, with the bearer token in $"+UpstreamTokenEnv+" or the file named by $"+UpstreamTokenFileEnv+" (docs/contextforge-spike.md)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if *showVersion {
 		fmt.Fprintf(stdout, "smcp-stdio %s\n", Version)
 		return 0
+	}
+	if *upstream != "" {
+		ctx, cancel := signalContext()
+		defer cancel()
+		return runUpstream(ctx, *upstream, os.Getenv, stdin, stdout, stderr, *verbose)
 	}
 	creds, err := Load(*credPath)
 	if err != nil {

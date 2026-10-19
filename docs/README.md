@@ -38,6 +38,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Observation and analytics](observation.md) | FR-10, FR-11 | Collector, store, baselines, anomaly scoring, research exports, `smcpctl observe` |
 | [Operations](operations/README.md) | FR-7.11 to FR-7.14, FR-13.7 to FR-13.13, FR-17 | Health, logs, metrics, reload, keys, backup, upgrade, uninstall |
 | [Remote Access Profile](remote-access.md) | FR-16 | Tunnel, remote listener, registrations, device sign-in, limits |
+| [ContextForge integration spike](contextforge-spike.md) | FR-22 (planned v1.3.0) | Experimental: ContextForge as a loopback backend, end-to-end run through smcpd, catalog import feasibility, requirement findings, `smcpctl catalog` |
 | [Harness adapters](adapters.md) | FR-12.12, FR-12.13, FR-16.9 | `smcp-session`, `smcp-stdio`, `smcp-connect`, the credential file |
 | [X-01 harness interface ICD](icd/x-01-harness-interface.md) | FR-1.48, FR-12.9 | Listeners (TLS and UDS), both protocol eras, OAuth endpoints and scopes, session API, required headers, error codes, conformance fixtures and the conformance suite (`make conformance`) |
 | [X-12 adapter hooks ICD](icd/x-12-adapter-hooks.md) | FR-1.48 | Adapter hooks, credential file and lockdown per supported framework |
