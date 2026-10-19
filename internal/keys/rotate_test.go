@@ -195,15 +195,81 @@ func TestCertReloaderServesRotatedLeaf(t *testing.T) {
 	if _, err := RotateLeaf(dir, "127.0.0.1"); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.Reload(); err != nil {
-		t.Fatal(err)
-	}
+	// No Reload call: the first handshake after the rotation sees the new file.
 	fresh := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: poolOf(t, ca), MinVersion: tls.VersionTLS13}}}
 	if second := serialOf(fresh); second == first {
 		t.Fatal("new connection still got the old certificate")
 	}
 	if again := serialOf(keep); again != first {
 		t.Fatal("kept-alive connection was replaced")
+	}
+}
+
+func TestCertReloaderServesNewCAAtOnceAfterSwitch(t *testing.T) {
+	// FR-17.7 CA clause at the listener: immediately after the CA switch,
+	// with no wait and no Reload call, a new connection is served the
+	// certificate issued by the new CA, so a client trusting only the new
+	// CA connects (before, the reloader checked the file at most once per
+	// second and served the old certificate during that second).
+	reqtest.Partial(t, "FR-17.7")
+	dir := t.TempDir()
+	if err := Ensure(dir, "127.0.0.1"); err != nil {
+		t.Fatal(err)
+	}
+	r, err := NewCertReloader(filepath.Join(dir, ServerCertFile), filepath.Join(dir, ServerKeyFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{GetCertificate: r.GetCertificate, MinVersion: tls.VersionTLS13})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				_ = c.(*tls.Conn).Handshake()
+				_ = c.Close()
+			}()
+		}
+	}()
+	dial := func(roots *x509.CertPool) error {
+		c, err := tls.Dial("tcp", ln.Addr().String(), &tls.Config{RootCAs: roots, ServerName: "127.0.0.1", MinVersion: tls.VersionTLS13})
+		if err == nil {
+			_ = c.Close()
+		}
+		return err
+	}
+	oldCA, _ := loadCert(filepath.Join(dir, CACertFile))
+	if err := dial(poolOf(t, oldCA)); err != nil {
+		t.Fatalf("before rotation: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		// A handshake just before the switch, inside the same second.
+		if err := dial(poolOf(t, oldCA)); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := BeginCARotation(dir, time.Now(), time.Hour, "127.0.0.1"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := FinishCARotation(dir, time.Now(), "127.0.0.1"); err != nil {
+			t.Fatal(err)
+		}
+		newCA, err := loadCert(filepath.Join(dir, CACertFile))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := dial(poolOf(t, newCA)); err != nil {
+			t.Fatalf("switch %d: client trusting only the new CA right after the switch: %v", i, err)
+		}
+		if err := dial(poolOf(t, oldCA)); err == nil {
+			t.Fatalf("switch %d: client trusting only the old CA still connects", i)
+		}
+		oldCA = newCA
 	}
 }
 
