@@ -9,15 +9,18 @@
 </head>
 <body>
 <main class="panel" role="alert">
-  <h1>The console was not opened</h1>
-  <p>The admin listener did not present a certificate issued by this installation's Gateway CA for the configured address, or the CA file could not be read. The desktop application opens the console only over a connection it can verify, so nothing from that listener was shown and you cannot continue past this page.</p>
-  <h2>What to check</h2>
+  <!-- Text of CONSOLE_CERTIFICATE_INVALID in docs/design/messages.json (FR-20.47, FR-20.48). -->
+  <h1>The console's certificate was refused</h1>
+  <p>The console's address did not present a certificate from this Gateway's certificate authority, so the console was not loaded. Nothing from that address was shown, and this window has no way to continue past this page (SR-2.8-5).</p>
+  <h2>Why this happens</h2>
+  <p>Another program may be using the console's address, or the Gateway's certificates were replaced.</p>
+  <h2>What to do</h2>
   <ul>
-    <li>The Gateway is running (tray icon) and the admin listener address in Settings is the one in your Gateway configuration (<code>[admin_listener] address</code>).</li>
-    <li>The CA file in Settings is the installation's <code>tls/ca.crt</code>. Leave it empty for the Standalone default.</li>
-    <li>After a CA rotation, close this window and open the console again from the tray.</li>
+    <li>Restart the Gateway from the menu bar, then open the console again.</li>
+    <li>Check in Settings that the admin listener address is the one in your Gateway configuration (<code>[admin_listener] address</code>) and that the CA file is the installation's <code>tls/ca.crt</code>, or empty for the default.</li>
+    <li>After a certificate rotation, close this window and open the console again.</li>
   </ul>
-  <p>The window title names the check that failed. See the desktop guide, <code>docs/desktop.md</code>, section "Console window".</p>
+  <p class="help">The window title names the check that failed. If the error stays, copy that title into a bug report. The desktop guide, <code>docs/desktop.md</code>, explains this page under "Console window".</p>
 </main>
 </body>
 </html>

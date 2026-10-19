@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-intro-open-client-setup"
+description = "Enables the intro_open_client_setup command without any pre-configured scope."
+commands.allow = ["intro_open_client_setup"]
+
+[[permission]]
+identifier = "deny-intro-open-client-setup"
+description = "Denies the intro_open_client_setup command without any pre-configured scope."
+commands.deny = ["intro_open_client_setup"]

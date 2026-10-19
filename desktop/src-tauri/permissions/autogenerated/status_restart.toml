@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-status-restart"
+description = "Enables the status_restart command without any pre-configured scope."
+commands.allow = ["status_restart"]
+
+[[permission]]
+identifier = "deny-status-restart"
+description = "Denies the status_restart command without any pre-configured scope."
+commands.deny = ["status_restart"]

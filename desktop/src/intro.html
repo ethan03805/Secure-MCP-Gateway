@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Introduction</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="intro-view.js"></script>
+</head>
+<body>
+<div class="window">
+  <main class="content" id="step" aria-labelledby="step-title">
+    <p class="eyebrow" id="step-count"></p>
+    <h1 id="step-title" tabindex="-1"></h1>
+    <div id="step-body"></div>
+  </main>
+  <div class="bar" role="group" aria-label="Introduction controls">
+    <button type="button" class="link" id="skip">Skip introduction</button>
+    <span class="spacer"></span>
+    <span class="progress" id="progress" aria-hidden="true"></span>
+    <button type="button" id="back">Back</button>
+    <button type="button" class="primary" id="next">Next</button>
+  </div>
+</div>
+<div class="sr-only" aria-live="polite" id="announce"></div>
+</body>
+</html>

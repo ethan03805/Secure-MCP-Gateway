@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-intro-close"
+description = "Enables the intro_close command without any pre-configured scope."
+commands.allow = ["intro_close"]
+
+[[permission]]
+identifier = "deny-intro-close"
+description = "Denies the intro_close command without any pre-configured scope."
+commands.deny = ["intro_close"]

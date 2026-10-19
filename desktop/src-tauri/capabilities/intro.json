@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "intro-window",
+  "description": "The bundled Introduction window (SRS FR-20.40, FR-20.41): reads which controls it may offer, stores how the user left it, opens the console window and opens a fixed guide page in the default browser.",
+  "local": true,
+  "windows": ["intro"],
+  "permissions": [
+    "allow-intro-get",
+    "allow-intro-close",
+    "allow-intro-open-console",
+    "allow-intro-open-setup",
+    "allow-intro-open-client-setup",
+    "allow-intro-open-guide"
+  ]
+}

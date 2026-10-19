@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "status-window",
+  "description": "The bundled Gateway Status window (SRS FR-20.45): reads the tray state and starts, restarts or opens the console through the same paths as the tray menu.",
+  "local": true,
+  "windows": ["status"],
+  "permissions": ["allow-status-get", "allow-status-open-console", "allow-status-start", "allow-status-restart"]
+}

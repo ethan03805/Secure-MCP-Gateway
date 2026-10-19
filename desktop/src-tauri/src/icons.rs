@@ -1,8 +1,9 @@
 //! Tray icons for the six states (SRS FR-20.2), drawn at start-up so the
-//! state is told by shape as well as color: a green disc (healthy), an
-//! amber triangle (degraded), a red no-entry disc (fail-closed), a red
-//! octagon (emergency stop), a grey square (stopped) and a grey ring
-//! (unreachable).
+//! state is told by shape as well as color. The shapes are those of
+//! `docs/design/visual.md` ("Tray states"), the same as the Gateway Status
+//! window's: a filled square (healthy), a diamond (degraded), a triangle
+//! (fail-closed), a triangle with a bar under it (emergency stop), a hollow
+//! square (stopped) and a ring (unreachable).
 
 use crate::state::TrayState;
 
@@ -11,39 +12,32 @@ pub const SIZE: u32 = 36;
 #[derive(Clone, Copy)]
 struct Rgb(u8, u8, u8);
 
-const GREEN: Rgb = Rgb(0x2e, 0x9d, 0x57);
-const AMBER: Rgb = Rgb(0xd9, 0x8e, 0x04);
-const RED: Rgb = Rgb(0xd1, 0x34, 0x2f);
-const GREY: Rgb = Rgb(0x86, 0x8b, 0x94);
-const WHITE: Rgb = Rgb(0xff, 0xff, 0xff);
+// Mid tones of the --ok, --warn, --bad and --ink-3 tokens that read on both
+// light and dark menu bars.
+const GREEN: Rgb = Rgb(0x2e, 0x8a, 0x5c);
+const AMBER: Rgb = Rgb(0xc2, 0x8a, 0x1e);
+const RED: Rgb = Rgb(0xc8, 0x3a, 0x5e);
+const GREY: Rgb = Rgb(0x86, 0x8f, 0x89);
 
 /// Coverage-tested shape: returns the color at a point in [-1, 1]², or None.
 fn shade(state: TrayState, x: f64, y: f64) -> Option<Rgb> {
     let r = (x * x + y * y).sqrt();
+    // Triangle pointing up with its apex at (0, top) and its base at y = base,
+    // as wide as it is tall.
+    let triangle = |top: f64, base: f64| y <= base && y >= top + 2.0 * x.abs();
     match state {
-        TrayState::Healthy => (r <= 0.8).then_some(GREEN),
-        TrayState::Degraded => {
-            // Triangle pointing up, with a white bar as an exclamation.
-            // Apex (0, -0.8), base y = 0.75 from x = -0.9 to 0.9.
-            if !(y <= 0.75 && y >= -0.8 + (1.55 / 0.9) * x.abs()) {
-                return None;
-            }
-            let bar = x.abs() <= 0.09 && ((-0.35..=0.3).contains(&y) || (0.45..=0.6).contains(&y));
-            Some(if bar { WHITE } else { AMBER })
-        }
-        TrayState::FailClosed => {
-            if r > 0.8 {
-                return None;
-            }
-            Some(if x.abs() <= 0.5 && y.abs() <= 0.13 { WHITE } else { RED })
-        }
+        TrayState::Healthy => (x.abs() <= 0.62 && y.abs() <= 0.62).then_some(GREEN),
+        TrayState::Degraded => (x.abs() + y.abs() <= 0.85).then_some(AMBER),
+        TrayState::FailClosed => triangle(-0.8, 0.75).then_some(RED),
         TrayState::EmergencyStop => {
-            // Regular octagon: |x|, |y| and |x|±|y| bounds.
-            let k = 0.8;
-            let inside = x.abs() <= k && y.abs() <= k && (x.abs() + y.abs()) <= k * 1.414;
-            inside.then_some(RED)
+            let bar = x.abs() <= 0.8 && (0.62..=0.85).contains(&y);
+            (triangle(-0.85, 0.42) || bar).then_some(RED)
         }
-        TrayState::Stopped => (x.abs() <= 0.62 && y.abs() <= 0.62).then_some(GREY),
+        TrayState::Stopped => {
+            let outer = x.abs() <= 0.68 && y.abs() <= 0.68;
+            let inner = x.abs() < 0.4 && y.abs() < 0.4;
+            (outer && !inner).then_some(GREY)
+        }
         TrayState::Unreachable => (0.55..=0.8).contains(&r).then_some(GREY),
     }
 }
@@ -84,6 +78,20 @@ pub fn rgba(state: TrayState) -> Vec<u8> {
 mod tests {
     use super::*;
     use crate::claims;
+
+    /// With SMCP_ICON_DIR set, writes each icon's raw RGBA pixels there
+    /// (`<state>.rgba`, SIZE x SIZE) for review screenshots.
+    #[test]
+    fn dump_icons_for_review() {
+        let Some(dir) = std::env::var_os("SMCP_ICON_DIR") else {
+            return;
+        };
+        let dir = std::path::PathBuf::from(dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for s in TrayState::ALL {
+            std::fs::write(dir.join(format!("{}.rgba", s.name().replace(' ', "-"))), rgba(s)).unwrap();
+        }
+    }
 
     #[test]
     fn six_distinct_icons() {

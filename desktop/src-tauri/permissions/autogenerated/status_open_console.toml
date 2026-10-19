@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-status-open-console"
+description = "Enables the status_open_console command without any pre-configured scope."
+commands.allow = ["status_open_console"]
+
+[[permission]]
+identifier = "deny-status-open-console"
+description = "Denies the status_open_console command without any pre-configured scope."
+commands.deny = ["status_open_console"]

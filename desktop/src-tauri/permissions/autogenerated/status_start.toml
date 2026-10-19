@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-status-start"
+description = "Enables the status_start command without any pre-configured scope."
+commands.allow = ["status_start"]
+
+[[permission]]
+identifier = "deny-status-start"
+description = "Denies the status_start command without any pre-configured scope."
+commands.deny = ["status_start"]

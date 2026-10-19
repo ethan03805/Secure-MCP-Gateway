@@ -54,44 +54,108 @@ fn no_gateway_secret_or_control_api_in_the_application() {
     assert!(checked >= 8, "only {checked} source files checked");
 }
 
+/// Each bundled window has one capability granting only its own commands;
+/// the console window has none (SR-2-5).
+const CAPABILITIES: [(&str, &str, &str, &[&str]); 3] = [
+    (
+        "settings.json",
+        "settings-window",
+        "settings",
+        &["allow-get-settings", "allow-save-settings"],
+    ),
+    (
+        "intro.json",
+        "intro-window",
+        "intro",
+        &[
+            "allow-intro-get",
+            "allow-intro-close",
+            "allow-intro-open-console",
+            "allow-intro-open-setup",
+            "allow-intro-open-client-setup",
+            "allow-intro-open-guide",
+        ],
+    ),
+    (
+        "status.json",
+        "status-window",
+        "status",
+        &[
+            "allow-status-get",
+            "allow-status-open-console",
+            "allow-status-start",
+            "allow-status-restart",
+        ],
+    ),
+];
+
 #[test]
-fn one_capability_for_the_settings_window_only() {
+fn one_capability_per_bundled_window_and_none_for_the_console() {
     claims::partial(&["SR-2-5"]);
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("capabilities");
-    let files: Vec<_> = std::fs::read_dir(&dir)
+    let mut files: Vec<_> = std::fs::read_dir(&dir)
         .unwrap()
         .map(|e| e.unwrap().file_name().into_string().unwrap())
         .collect();
-    assert_eq!(files, ["settings.json"], "unexpected capability files");
-    let cap: Value = serde_json::from_str(CAPABILITY).unwrap();
-    assert_eq!(cap["windows"], serde_json::json!(["settings"]));
-    assert!(cap.get("webviews").is_none());
-    assert!(cap.get("remote").is_none(), "a capability lists a remote URL");
-    assert_ne!(cap["local"], Value::Bool(false));
-    let perms: Vec<&str> = cap["permissions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|p| p.as_str().unwrap())
-        .collect();
-    assert_eq!(perms, ["allow-get-settings", "allow-save-settings"]);
-    // The configuration enables exactly this capability.
+    files.sort();
+    let mut want: Vec<_> = CAPABILITIES.iter().map(|c| c.0.to_string()).collect();
+    want.sort();
+    assert_eq!(files, want, "unexpected capability files");
+    for (file, id, window, perms) in CAPABILITIES {
+        let cap: Value = serde_json::from_str(&std::fs::read_to_string(dir.join(file)).unwrap()).unwrap();
+        assert_eq!(cap["identifier"], Value::from(id), "{file}");
+        assert_eq!(cap["windows"], serde_json::json!([window]), "{file}");
+        assert_ne!(window, crate::console::CONSOLE_LABEL);
+        assert!(cap.get("webviews").is_none(), "{file}");
+        assert!(cap.get("remote").is_none(), "{file} lists a remote URL");
+        assert_ne!(cap["local"], Value::Bool(false), "{file}");
+        let got: Vec<&str> = cap["permissions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| p.as_str().unwrap())
+            .collect();
+        assert_eq!(got, perms, "{file}");
+    }
+    assert_eq!(
+        serde_json::from_str::<Value>(CAPABILITY).unwrap()["windows"],
+        serde_json::json!(["settings"])
+    );
+    // The configuration enables exactly these capabilities.
     assert_eq!(
         conf()["app"]["security"]["capabilities"],
-        serde_json::json!(["settings-window"])
+        serde_json::json!(["settings-window", "intro-window", "status-window"])
     );
-    assert_ne!(crate::console::CONSOLE_LABEL, crate::SETTINGS_LABEL);
+    for label in [crate::SETTINGS_LABEL, crate::INTRO_LABEL, crate::STATUS_LABEL] {
+        assert_ne!(crate::console::CONSOLE_LABEL, label);
+    }
 }
 
 #[test]
 fn commands_are_declared_and_registered_once() {
     claims::partial(&["SR-2-5"]);
+    let commands: Vec<String> = CAPABILITIES
+        .iter()
+        .flat_map(|c| c.3.iter())
+        .map(|p| p.trim_start_matches("allow-").replace('-', "_"))
+        .collect();
     // build.rs's application manifest makes every command need a permission.
-    assert!(BUILD.contains(r#".commands(&["get_settings", "save_settings"])"#));
+    let build: String = BUILD.chars().filter(|c| !c.is_whitespace()).collect();
+    let manifest = format!(
+        ".commands(&[{},])",
+        commands
+            .iter()
+            .map(|c| format!("\"{c}\""))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    assert!(build.contains(&manifest), "build.rs must list exactly {commands:?}");
     let compact: String = LIB.chars().filter(|c| !c.is_whitespace()).collect();
-    assert!(compact.contains("tauri::generate_handler![get_settings,save_settings]"));
-    // Each command refuses any window but Settings, whatever the ACL says.
+    assert!(compact.contains(&format!("tauri::generate_handler![{}]", commands.join(","))));
+    // Each command refuses any window but its own, whatever the ACL says.
     assert_eq!(LIB.matches("only_settings_window(&webview)").count(), 2);
+    assert_eq!(LIB.matches("only_window(&webview, INTRO_LABEL)").count(), 6);
+    assert_eq!(LIB.matches("only_window(&webview, STATUS_LABEL)").count(), 4);
 }
 
 #[test]
@@ -120,7 +184,7 @@ fn bundled_pages_are_self_only() {
     );
     // The bundled pages reference only packaged files.
     let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../src");
-    for f in ["settings.html", "error.html"] {
+    for f in ["settings.html", "error.html", "intro.html", "status.html"] {
         let page = std::fs::read_to_string(dist.join(f)).unwrap();
         assert!(
             !page.contains("http://") && !page.contains("https://") && !page.contains("//cdn"),

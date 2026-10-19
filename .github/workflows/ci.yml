@@ -562,6 +562,12 @@ jobs:
           npm run typecheck
           npm test
           npm run build
+      - name: Bundled windows in WebKit and Chromium (axe WCAG 2.2 AA, CSP, keyboard, reduced motion; FR-20.43)
+        if: runner.os == 'macOS'
+        working-directory: desktop
+        run: |
+          npx --no-install playwright install chromium webkit
+          npm run test:a11y
       - name: npm audit (high and critical, with the reviewed allowlist)
         run: scripts/npm-audit-gate.sh desktop
       - name: cargo fmt
