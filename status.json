@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T03:35:41Z",
-  "commit": "a07a0a4bee780156078d12caa649fbcc746e7c09",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a07a0a4bee780156078d12caa649fbcc746e7c09",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39190818645",
+  "generatedAt": "2026-10-19T04:04:35Z",
+  "commit": "6e17678464aef0d94c3f07e6d7e877644c78827a",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/6e17678464aef0d94c3f07e6d7e877644c78827a",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39193976121",
   "tests": {
-    "total": 1475,
-    "passed": 1460,
-    "failed": 0,
-    "skipped": 15,
-    "durationSec": 2850.4,
+    "total": 1483,
+    "passed": 1464,
+    "failed": 1,
+    "skipped": 18,
+    "durationSec": 1649.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -55,9 +55,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 58,
+        "passed": 63,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "cmd/smcpd",
@@ -205,9 +205,9 @@
       },
       {
         "name": "internal/egress",
-        "passed": 30,
+        "passed": 29,
         "failed": 0,
-        "skipped": 1
+        "skipped": 2
       },
       {
         "name": "internal/filterapi",
@@ -403,9 +403,9 @@
       },
       {
         "name": "internal/tunnel",
-        "passed": 2,
+        "passed": 1,
         "failed": 0,
-        "skipped": 2
+        "skipped": 3
       },
       {
         "name": "internal/versions",
@@ -445,8 +445,8 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 21,
-        "failed": 0,
+        "passed": 22,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -458,7 +458,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.3,
+    "totalPct": 76.4,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -486,7 +486,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 38.2
+        "pct": 39.1
       },
       {
         "name": "cmd/smcpd",
@@ -522,7 +522,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 84.1
+        "pct": 84.3
       },
       {
         "name": "internal/authguard",
@@ -562,7 +562,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.5
       },
       {
         "name": "internal/egress",
@@ -582,7 +582,7 @@
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.8
+        "pct": 80
       },
       {
         "name": "internal/harness",
@@ -622,7 +622,7 @@
       },
       {
         "name": "internal/obsstore",
-        "pct": 81.8
+        "pct": 82.3
       },
       {
         "name": "internal/openapi",
@@ -752,17 +752,17 @@
   },
   "requirements": {
     "total": 529,
-    "verified": 472,
-    "partial": 53,
-    "failing": 0,
-    "unverified": 4,
+    "verified": 475,
+    "partial": 49,
+    "failing": 2,
+    "unverified": 3,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 24,
-        "partial": 6,
+        "verified": 23,
+        "partial": 7,
         "failing": 0
       },
       {
@@ -921,7 +921,7 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 21,
-        "verified": 17,
+        "verified": 18,
         "partial": 3,
         "failing": 0
       },
@@ -946,15 +946,15 @@
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 58,
-        "partial": 15,
-        "failing": 0
+        "partial": 12,
+        "failing": 2
       },
       {
         "element": "E-25",
         "name": "Graph Database Engine",
         "total": 7,
-        "verified": 3,
-        "partial": 4,
+        "verified": 4,
+        "partial": 3,
         "failing": 0
       },
       {
@@ -969,15 +969,15 @@
         "element": "E-27",
         "name": "Observation Store",
         "total": 5,
-        "verified": 3,
-        "partial": 2,
+        "verified": 4,
+        "partial": 1,
         "failing": 0
       },
       {
         "element": "E-28",
         "name": "Data Lifecycle & Memory Manager",
         "total": 12,
-        "verified": 8,
+        "verified": 9,
         "partial": 3,
         "failing": 0
       },
@@ -3971,7 +3971,7 @@
         "element": "E-01",
         "status": "partial",
         "tests": [
-          "analysis: 9 of 12 child requirements verified"
+          "analysis: 10 of 12 child requirements verified"
         ]
       },
       {
@@ -4006,8 +4006,11 @@
       {
         "id": "FR-12.4",
         "element": "E-28",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestEnforcedLayoutOnHost",
+          "docs/verification/FR-12.4.md:5"
+        ]
       },
       {
         "id": "FR-12.6",
@@ -4107,10 +4110,8 @@
       {
         "id": "FR-13",
         "element": "E-24",
-        "status": "partial",
-        "tests": [
-          "analysis: 9 of 13 child requirements verified"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-13.1",
@@ -4144,18 +4145,21 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "partial",
+        "status": "failing",
         "tests": [
+          "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
           "cmd/smcpctl.TestInstallStandalone",
-          "cmd/smcpctl.TestInstallStandaloneServiceManager"
+          "cmd/smcpctl.TestInstallStandaloneServiceManager",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
         "id": "FR-13.5",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
           "cmd/smcpctl.TestInstallRefusals",
           "internal/sandbox.TestDoctorAllPrerequisitesPresent",
@@ -4224,19 +4228,21 @@
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "partial",
+        "status": "failing",
         "tests": [
-          "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
           "cmd/smcpctl.TestInstallStandaloneServiceManager",
-          "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge"
+          "cmd/smcpctl.TestStandaloneUninstallKeepsEnforcedHost",
+          "cmd/smcpctl.TestStandaloneUninstallLeavesEnforcedTable",
+          "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge",
+          "cmd/smcpctl.TestUninstallScopeByProfile",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
         "id": "FR-13.12",
         "element": "E-24",
-        "status": "verified",
+        "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
           "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge"
         ]
       },
@@ -5696,17 +5702,20 @@
       {
         "id": "SR-4.2-1",
         "element": "E-25",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "cmd/smcpctl.TestGraphPortFirewallOnHost",
           "internal/graph.TestEngineCheckAndMemorySampling"
         ]
       },
       {
         "id": "SR-4.2-2",
         "element": "E-27",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "internal/obsstore.TestStoreLayoutAndModes"
+          "cmd/smcpctl.TestEnforcedLayoutOnHost",
+          "internal/obsstore.TestStoreLayoutAndModes",
+          "docs/verification/SR-4.2-2.md:5"
         ]
       },
       {
@@ -5716,7 +5725,6 @@
         "tests": [
           "internal/egress.TestAttachLauncherConfines",
           "internal/egress.TestAttachNetwork",
-          "internal/egress.TestNetnsEnforcement",
           "internal/hostile/enforced.TestHostileFixtures/HF-23",
           "internal/sandbox.TestEgressAttachesSandboxNetwork",
           "internal/sandbox.TestEgressConfinementFailsClosed",
@@ -5735,7 +5743,6 @@
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
           "internal/egress.TestConnectTunnel",
-          "internal/egress.TestNetnsEnforcement",
           "internal/egress.TestOnlyCurrentGrantsAreForwarded",
           "internal/egress.TestProxyAllowsGrantedHTTP",
           "internal/egress.TestProxyRefusesUngranted"
@@ -5825,11 +5832,10 @@
       {
         "id": "SR-4.14-1",
         "element": "E-01",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestHostRulesDecision",
           "cmd/smcpctl.TestRemoteEnableInstallsHostRules",
-          "internal/tunnel.TestHostRulesInNamespace",
           "internal/tunnel.TestHostRulesRuleset"
         ]
       },
@@ -6271,8 +6277,10 @@
       {
         "id": "SR-6.12-1",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "cmd/smcpctl.TestEnforcedLayoutOnHost"
+        ]
       },
       {
         "id": "SR-6.13-1",
@@ -6407,6 +6415,7 @@
         "element": "E-25",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestGraphPortFirewallOnHost",
           "internal/graph.TestEngineCheckAndMemorySampling",
           "internal/graph.TestNeo4jQueriesRetentionAndEngineStatus"
         ]
@@ -7177,7 +7186,7 @@
       "attack": "Invalid stdout",
       "expected": "Instance terminated; call fails with `-31007`; event recorded",
       "fixture": "HF-18",
-      "observed": "standalone: call: error -31007 BACKEND_OUTPUT_INVALID after 0s; instance terminated: true; refusal event recorded: true | enforced: call: error -31007 BACKEND_OUTPUT_INVALID after 0s; instance terminated: true; refusal event recorded: true",
+      "observed": "standalone: call: error -31007 BACKEND_OUTPUT_INVALID after 100ms; instance terminated: true; refusal event recorded: true | enforced: call: error -31007 BACKEND_OUTPUT_INVALID after 0s; instance terminated: true; refusal event recorded: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7234,7 +7243,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39579: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35917: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -7351,7 +7360,7 @@
     }
   ],
   "acceptance": {
-    "commit": "a07a0a4bee780156078d12caa649fbcc746e7c09",
+    "commit": "6e17678464aef0d94c3f07e6d7e877644c78827a",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -8039,19 +8048,19 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   },
   "performance": {
     "schema": 1,
-    "commit": "a07a0a4bee780156078d12caa649fbcc746e7c09",
-    "generatedAt": "2026-10-19T03:08:01Z",
+    "commit": "6e17678464aef0d94c3f07e6d7e877644c78827a",
+    "generatedAt": "2026-10-19T03:36:50Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000008531"
+      "runner": "GitHub Actions 1000008743"
     },
     "referenceHardware": false,
     "dataset": {
@@ -8068,7 +8077,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.017272,
+        "value": 0.028052,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -8080,7 +8089,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 13.468136,
+        "value": 18.187431,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -8092,18 +8101,18 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.3694758749999991,
+        "value": 0.9459852499999997,
         "budget": 1,
         "samples": 16000,
         "pass": true,
-        "method": "p95 P-213 with observation enabled (8.597 ms, mean of 8.631, 8.373, 8.072, 8.666, 8.839, 8.676, 8.744, 8.777) minus disabled (8.228 ms, mean of 8.328, 8.282, 8.100, 8.572, 8.116, 8.035, 8.013, 8.376), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (11.191 ms, mean of 11.211, 11.498, 10.722, 11.204, 11.192, 11.103, 11.311, 11.287) minus disabled (10.245 ms, mean of 10.078, 10.098, 10.462, 10.441, 10.131, 10.564, 9.835, 10.351), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.8",
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 635.224857,
+        "value": 804.062255,
         "budget": 2000,
         "samples": 600,
         "pass": true,
@@ -8115,11 +8124,11 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 103.37890625,
+        "value": 98.2890625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
-        "method": "resident set size of smcpd 10m0s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
+        "method": "resident set size of smcpd 11m29s after start with no traffic, Data Server off (no Neo4j); server instances excluded"
       }
     ]
   }
