@@ -230,8 +230,9 @@ if [ -n "$PACKAGE" ]; then
     else err "neither dpkg nor rpm is installed; use the archive (without --package)"
     fi
   fi
-  # A pre-release 1.3.0-rc.1 is 1.3.0~rc.1 in the Linux package names.
-  PKGVER=$(printf '%s' "$NUM" | sed 's/-/~/')
+  # A pre-release 1.3.0-rc.1 is 1.3.0.rc.1 in the Linux package file names
+  # (1.3.0~rc.1 inside the package; a release asset name cannot hold "~").
+  PKGVER=$(printf '%s' "$NUM" | sed 's/-/./')
   case "$PACKAGE" in
     deb) ARCHIVE="${PROJECT}_${PKGVER}_${ARCH}.deb" ;;
     rpm)

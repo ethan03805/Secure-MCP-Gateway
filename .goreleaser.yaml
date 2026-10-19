@@ -151,7 +151,13 @@ nfpms:
     package_name: smcp
     ids: [smcpd, smcpctl, smcp-session, smcp-stdio, smcp-connect, smcp-refserver]
     formats: [deb, rpm]
-    file_name_template: "{{ .ConventionalFileName }}"
+    # A pre-release version keeps its "~" inside the package (1.3.0~rc.1
+    # orders before 1.3.0 in dpkg and rpm), but not in the file name:
+    # GitHub release asset names cannot contain "~" and the upload renames
+    # it to ".", so the name in the signed checksum file would not match
+    # the asset. The installers workflow checks every name in the checksum
+    # file against the asset name rules.
+    file_name_template: '{{ replace .ConventionalFileName "~" "." }}'
     vendor: Secure MCP Gateway project
     homepage: https://github.com/ethan03805/Secure-MCP-Gateway
     maintainer: Secure MCP Gateway project <ethan03805@users.noreply.github.com>

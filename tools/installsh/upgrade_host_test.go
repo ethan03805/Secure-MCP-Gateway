@@ -147,7 +147,7 @@ func TestInstallScriptPackageUpgradeOnHost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	name := "smcp_" + strings.Replace(ver, "-", "~", 1) + "_" + runtime.GOARCH + ".deb"
+	name := "smcp_" + strings.Replace(ver, "-", ".", 1) + "_" + runtime.GOARCH + ".deb"
 	if filepath.Base(deb) != name {
 		t.Fatalf("install.sh would look for %s; the build's package is %s", name, filepath.Base(deb))
 	}

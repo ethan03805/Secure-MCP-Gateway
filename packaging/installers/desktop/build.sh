@@ -184,7 +184,11 @@ if rpm -qlp "$rpm" | grep -Eq '^/usr/bin/smcp(d|ctl|-session|-stdio|-connect|-re
 	echo "build.sh: the .rpm carries Gateway commands, which belong to the smcp package" >&2
 	exit 1
 fi
-cp "$deb" "$outdir/smcp-desktop_${debver}_${arch}.deb"
-cp "$rpm" "$outdir/smcp-desktop-${rpmver}.${rpmarch}.rpm"
+# A pre-release keeps "~" in the package versions (1.3.0~rc.1 orders
+# before 1.3.0) but not in the file names: a GitHub release asset name
+# cannot contain "~", so the name in the signed checksum file would not
+# match the asset (as for the smcp packages, .goreleaser.yaml).
+cp "$deb" "$outdir/smcp-desktop_$(printf '%s' "$debver" | tr '~' '.')_${arch}.deb"
+cp "$rpm" "$outdir/smcp-desktop-$(printf '%s' "$rpmver" | tr '~' '.').${rpmarch}.rpm"
 install -m 0755 "$appimage" "$outdir/smcp-desktop_${version}_linux_${arch}.AppImage"
 ls -l "$outdir"
