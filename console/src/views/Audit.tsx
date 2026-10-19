@@ -10,6 +10,7 @@ import { Crumbs, DataTable, ErrorBlock, Help, JsonBlock, KV, Loaded, Mono, PageH
 import { VerifyPanel } from "./Control";
 import { EventPathGraph, NeighborhoodGraph, type EventPath, type Neighborhood } from "../graph";
 import { usePerm } from "../perm";
+import { reasonMessage } from "../messages";
 import { SelectField, TextField } from "../ui";
 
 const filterKeys = ["class", "outcome", "reason_code", "origin", "session_id", "correlation_id", "principal_id", "decision_id", "q", "since", "until"] as const;
@@ -178,6 +179,7 @@ function EventDetail({ id }: { id: string }) {
                   ["Phase", e.phase ? <Mono>{e.phase}</Mono> : <span className="muted">none</span>],
                   ["Outcome", e.outcome ? <StateLabel tone={toneOf(e.outcome)}>{e.outcome}</StateLabel> : <span className="muted">none</span>],
                   ["Reason code", e.reason_code ? <Mono>{e.reason_code}</Mono> : <span className="muted">none</span>],
+                  ...(reasonMessage(e.reason_code, e.correlation_id) ? ([["Message to the agent", reasonMessage(e.reason_code, e.correlation_id)]] as [string, ReactNode][]) : []),
                   ["Origin element", <Mono>{e.origin}</Mono>],
                   ["Policy status", <Mono>{e.policy_status}</Mono>],
                   ["Decision", e.decision_id ? <Link to={`/audit/decisions/${encodeURIComponent(e.decision_id)}`}><Mono>{e.decision_id}</Mono></Link> : <span className="muted">none</span>],
