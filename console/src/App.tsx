@@ -20,6 +20,15 @@ const kinds: [Kind, string][] = [
   ["console", "Operator, Policy Author, Auditor or Researcher"],
 ];
 
+// What each account kind is and where it comes from, shown under the choice.
+const kindHelp: Record<Kind, string> = {
+  administrator: "The account smcpctl bootstrap created (username admin). It may open every view and take every action.",
+  approver: "Decides tool calls that a policy rule holds for a person. Accounts are [[approvals.account]] entries in smcp.toml.",
+  session_approver:
+    "Approves agent harnesses (AI clients such as Claude Code) on the Gateway's own sign-in page when they connect; in the console it approves remote client registrations. Accounts are [[approver]] entries in smcp.toml.",
+  console: "Accounts from [[console.account]] in smcp.toml. The account's role decides which views you see.",
+};
+
 function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void; expired: boolean }) {
   const [kind, setKind] = useState<Kind>("administrator");
   const [user, setUser] = useState("admin");
@@ -69,7 +78,10 @@ function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void;
   return (
     <main className="signin" id="main">
       <h1>Gateway console</h1>
-      <p className="lede">Sign in to control this Secure MCP Gateway. The console talks only to the control API on this loopback address.</p>
+      <p className="lede">
+        Sign in to control this Secure MCP Gateway: the policy it applies to tool calls, the MCP servers it launches, approvals and the evidence journal. This
+        page talks only to the Gateway's control API on this loopback address.
+      </p>
       {expired && (
         <p className="notice notice-warn" role="status">
           Your sign-in ended. Sign in again to continue where you were.
@@ -82,7 +94,7 @@ function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void;
       )}
       {!bootstrap ? (
         <form onSubmit={submit} aria-label="Sign in">
-          <fieldset className="choice choice-stack">
+          <fieldset className="choice choice-stack" aria-describedby="kind-help">
             <legend>Account</legend>
             {kinds.map(([k, label]) => (
               <label key={k}>
@@ -99,6 +111,9 @@ function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void;
               </label>
             ))}
           </fieldset>
+          <p className="hint" id="kind-help">
+            {kindHelp[kind]}
+          </p>
           <label className="field">
             <span>Username</span>
             <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" required name="username" />
@@ -107,12 +122,23 @@ function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void;
             <span>Password</span>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required name="password" />
           </label>
-          {error && <ErrorBlock error={error} />}
+          {error && (
+            <ErrorBlock
+              error={error}
+              doing="the sign-in"
+              next={
+                error.code === "signin_failed"
+                  ? "Check that the account kind above matches the account, then the username and password. Repeated failures lock the account for a while."
+                  : undefined
+              }
+            />
+          )}
           <button type="submit" className="btn-primary" disabled={busy}>
             {busy ? "Signing in" : "Sign in"}
           </button>
           <p className="small">
-            Session Approvers also approve harness sign-ins on the Gateway's own sign-in page when a harness connects. First installation:{" "}
+            No account? Ask the Gateway's administrator: accounts are set in <Mono>smcp.toml</Mono>, and Session Approvers also in Sessions and principals.
+            First installation without an administrator password:{" "}
             <button
               type="button"
               className="link"
@@ -140,7 +166,7 @@ function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void;
             <span>New administrator password</span>
             <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} minLength={12} required autoComplete="new-password" />
           </label>
-          {error && <ErrorBlock error={error} />}
+          {error && <ErrorBlock error={error} doing="setting the administrator password" />}
           <div className="dialog-actions">
             <button type="button" onClick={() => setBootstrap(false)}>
               Back to sign-in
