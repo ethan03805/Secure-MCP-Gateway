@@ -451,6 +451,39 @@ func (rt *Runtime) teardown(alias, reason string) {
 	}
 }
 
+// SetHosted installs the resolver of hosted packages (the ContextForge
+// Connector, E-36); call it before Prepare.
+func (rt *Runtime) SetHosted(f func(sc config.Server, m *packaging.Manifest, rev Revision) (config.Server, error)) {
+	rt.o.Hosted = f
+}
+
+// SuspendRevision suspends an enabled revision for cause (drift of a hosted
+// package found by reconciliation, a broken scope, FR-22.29, FR-22.33):
+// the registry state, evidence, and the running instance's teardown.
+func (rt *Runtime) SuspendRevision(id, rev string, cause error) error {
+	rt.mu.Lock()
+	var b *Binding
+	for _, x := range rt.bindings {
+		if x.rev.ServerID == id && x.rev.Revision == rev {
+			b = x
+		}
+	}
+	rt.mu.Unlock()
+	if b == nil {
+		_, gone, err := rt.lib.SetState(id, rev, StateSuspended, cause.Error(), "E-36")
+		if gone != "" {
+			rt.teardown(gone, cause.Error())
+		}
+		return err
+	}
+	err := rt.suspendBinding(b, cause, nil)
+	rt.teardown(b.Alias, cause.Error())
+	if errors.Is(err, pipeline.ErrServerSuspended) {
+		return nil
+	}
+	return err
+}
+
 // Close stops polling and releases the registry lock.
 func (rt *Runtime) Close() error {
 	rt.mu.Lock()
