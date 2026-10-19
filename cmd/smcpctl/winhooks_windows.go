@@ -12,6 +12,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/harness"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
+	"github.com/ethan03805/secure-mcp-gateway/internal/obsstore"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsvc"
@@ -82,6 +83,15 @@ func winRemoveUnit(u unitFile) {
 // label (SR-4-2) and the state directory's DACL and key protection
 // (FR-21.5, FR-21.10), which smcpd also checks at start.
 func platformDoctorFindings(cfg *config.Config) []harness.Finding {
+	out := platformDoctorState(cfg)
+	if !obsstore.DuckDBAvailable() {
+		// FR-21.18: the release builds without cgo on Windows.
+		out = append(out, harness.Finding{Kind: harness.KindInfo, Message: "Observation Store: DuckDB is not available in this build (CGO_ENABLED=0); observation records are kept as JSON Lines (FR-21.18)"})
+	}
+	return out
+}
+
+func platformDoctorState(cfg *config.Config) []harness.Finding {
 	if cfg.State.Dir != "" && strings.EqualFold(filepath.Dir(filepath.Clean(cfg.State.Dir)), filepath.Join(programData(), "smcp-gateway")) {
 		return machineDoctorFindings(cfg)
 	}
