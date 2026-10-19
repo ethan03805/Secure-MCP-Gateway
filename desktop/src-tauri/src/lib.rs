@@ -12,6 +12,7 @@
 //! policy, certificate check, notification text, settings) are in their
 //! own modules with unit tests; this file wires them to Tauri.
 
+pub mod clients;
 pub mod console;
 pub mod explain;
 pub mod health;
@@ -56,6 +57,7 @@ pub const SETTINGS_LABEL: &str = "settings";
 pub const INTRO_LABEL: &str = "intro";
 pub const STATUS_LABEL: &str = "status";
 pub const SETUP_LABEL: &str = "setup";
+pub const CLIENTS_LABEL: &str = "clients";
 /// The desktop guide, opened in the default browser from Help.
 const GUIDE_URL: &str = "https://github.com/ethan03805/Secure-MCP-Gateway/blob/main/docs/desktop.md";
 /// Where the introduction sends a user for a task this version of the
@@ -184,7 +186,7 @@ struct IntroInfo {
 fn intro_get(webview: tauri::Webview) -> Result<IntroInfo, String> {
     only_window(&webview, INTRO_LABEL)?;
     Ok(IntroInfo {
-        available: vec!["setup", "open-console"],
+        available: vec!["setup", "client-setup", "open-console"],
     })
 }
 
@@ -221,7 +223,8 @@ fn intro_open_setup(webview: tauri::Webview) -> Result<(), String> {
 #[tauri::command]
 fn intro_open_client_setup(webview: tauri::Webview) -> Result<(), String> {
     only_window(&webview, INTRO_LABEL)?;
-    Err("client setup is not in this version; see the desktop guide".into())
+    open_clients(webview.app_handle());
+    Ok(())
 }
 
 /// Opens a fixed guide page in the default browser; the window names only
@@ -418,6 +421,149 @@ fn setup_open_console(app: AppHandle, webview: tauri::Webview) -> Result<(), Str
     Ok(())
 }
 
+#[tauri::command]
+fn setup_open_client_setup(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, SETUP_LABEL)?;
+    open_clients(&app);
+    Ok(())
+}
+
+/// What the client setup window lists (FR-20.10, FR-20.46).
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClientsView {
+    /// A Gateway configuration exists, so `smcpctl connect` can run.
+    gateway_set_up: bool,
+    smcpctl: bool,
+    clients: Vec<clients::Client>,
+    /// Why detection failed, when it did.
+    failure: Option<clients::Outcome>,
+}
+
+/// The paths client setup needs, or the catalogue code of what is missing.
+fn clients_paths(shared: &Shared) -> Result<(PathBuf, PathBuf), &'static str> {
+    let smcpctl = smcpctl_path(&shared.host).ok_or("SETUP_SMCPCTL_MISSING")?;
+    let cfg = clients::config_path(&shared.host).ok_or("CLIENTS_GATEWAY_NOT_SET_UP")?;
+    Ok((smcpctl, cfg))
+}
+
+fn refused_outcome(code: &'static str) -> clients::Outcome {
+    clients::Outcome {
+        code: Some(code),
+        ..Default::default()
+    }
+}
+
+#[tauri::command]
+async fn clients_list(app: AppHandle, webview: tauri::Webview) -> Result<ClientsView, String> {
+    only_window(&webview, CLIENTS_LABEL)?;
+    let shared = app.state::<Arc<Shared>>().inner().clone();
+    let session = app.state::<Arc<clients::Session>>().inner().clone();
+    let smcpctl = smcpctl_path(&shared.host);
+    let mut view = ClientsView {
+        gateway_set_up: clients::config_path(&shared.host).is_some(),
+        smcpctl: smcpctl.is_some(),
+        clients: Vec::new(),
+        failure: None,
+    };
+    let Some(smcpctl) = smcpctl else { return Ok(view) };
+    let argv = clients::detect_argv(&smcpctl);
+    let home = shared.host.home.clone();
+    let a = argv.clone();
+    let (exit, out) = tauri::async_runtime::spawn_blocking(move || clients::run(&a, &home))
+        .await
+        .map_err(|e| e.to_string())?;
+    match clients::parse_detect(&out).filter(|_| exit.code == Some(0)) {
+        Some(list) => {
+            *session.known.lock().unwrap_or_else(|e| e.into_inner()) = list.iter().map(|c| c.id.clone()).collect();
+            view.clients = list;
+        }
+        None => view.failure = Some(clients::outcome(&argv, &exit, out, "CLIENTS_DETECT_FAILED")),
+    }
+    Ok(view)
+}
+
+/// Shows the changes `smcpctl connect <client> --dry-run` reports; nothing
+/// is written (FR-20.10).
+#[tauri::command]
+async fn clients_preview(
+    app: AppHandle,
+    webview: tauri::Webview,
+    id: String,
+    lockdown: bool,
+) -> Result<clients::Preview, clients::Outcome> {
+    only_window(&webview, CLIENTS_LABEL).map_err(|_| refused_outcome("SETUP_NOT_ALLOWED"))?;
+    let shared = app.state::<Arc<Shared>>().inner().clone();
+    let session = app.state::<Arc<clients::Session>>().inner().clone();
+    if !session.is_known(&id) {
+        return Err(refused_outcome("CLIENT_UNKNOWN"));
+    }
+    let (smcpctl, cfg) = clients_paths(&shared).map_err(refused_outcome)?;
+    let argv = clients::preview_argv(&smcpctl, &cfg, &id, lockdown);
+    let home = shared.host.home.clone();
+    let a = argv.clone();
+    let (exit, out) = tauri::async_runtime::spawn_blocking(move || clients::run(&a, &home))
+        .await
+        .map_err(|_| refused_outcome("CLIENT_PREVIEW_FAILED"))?;
+    match clients::parse_preview(&out).filter(|p| exit.code == Some(0) && p.client == id) {
+        Some(p) => {
+            *session.previewed.lock().unwrap_or_else(|e| e.into_inner()) = Some((id, lockdown));
+            Ok(p)
+        }
+        None => Err(clients::outcome(&argv, &exit, out, "CLIENT_PREVIEW_FAILED")),
+    }
+}
+
+/// Applies the setup the user confirmed, only if it is the one previewed.
+#[tauri::command]
+async fn clients_apply(
+    app: AppHandle,
+    webview: tauri::Webview,
+    id: String,
+    lockdown: bool,
+) -> Result<clients::Outcome, String> {
+    only_window(&webview, CLIENTS_LABEL)?;
+    let shared = app.state::<Arc<Shared>>().inner().clone();
+    let session = app.state::<Arc<clients::Session>>().inner().clone();
+    if !session.is_known(&id) || !session.was_previewed(&id, lockdown) {
+        return Ok(refused_outcome("CLIENT_NOT_PREVIEWED"));
+    }
+    let (smcpctl, cfg) = match clients_paths(&shared) {
+        Ok(p) => p,
+        Err(code) => return Ok(refused_outcome(code)),
+    };
+    *session.previewed.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    let argv = clients::apply_argv(&smcpctl, &cfg, &id, lockdown);
+    let home = shared.host.home.clone();
+    let a = argv.clone();
+    let (exit, out) = tauri::async_runtime::spawn_blocking(move || clients::run(&a, &home))
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(clients::outcome(&argv, &exit, out, "CLIENT_SETUP_FAILED"))
+}
+
+/// Restores the client's files (`--remove`, FR-20.10).
+#[tauri::command]
+async fn clients_remove(app: AppHandle, webview: tauri::Webview, id: String) -> Result<clients::Outcome, String> {
+    only_window(&webview, CLIENTS_LABEL)?;
+    let shared = app.state::<Arc<Shared>>().inner().clone();
+    let session = app.state::<Arc<clients::Session>>().inner().clone();
+    if !session.is_known(&id) {
+        return Ok(refused_outcome("CLIENT_UNKNOWN"));
+    }
+    let (smcpctl, cfg) = match clients_paths(&shared) {
+        Ok(p) => p,
+        Err(code) => return Ok(refused_outcome(code)),
+    };
+    let argv = clients::remove_argv(&smcpctl, &cfg, &id);
+    let home = shared.host.home.clone();
+    let a = argv.clone();
+    let (exit, out) = tauri::async_runtime::spawn_blocking(move || clients::run(&a, &home))
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(clients::outcome(&argv, &exit, out, "CLIENT_REMOVE_FAILED"))
+}
+
 /// Shows a bundled window, creating it if needed.
 fn open_bundled(app: &AppHandle, label: &str, page: &str, title: &str, size: (f64, f64)) {
     if let Some(w) = app.get_webview_window(label) {
@@ -441,6 +587,12 @@ fn open_intro(app: &AppHandle) {
 /// Gateway is not set up, and from Help.
 fn open_setup(app: &AppHandle) {
     open_bundled(app, SETUP_LABEL, "setup.html", "Set Up the Gateway", (640.0, 640.0));
+}
+
+/// Client setup (FR-20.10), from the tray's Set Up a Client, the
+/// introduction and the end of first-run setup.
+fn open_clients(app: &AppHandle) {
+    open_bundled(app, CLIENTS_LABEL, "clients.html", "Set Up a Client", (720.0, 680.0));
 }
 
 /// The Gateway Status window (FR-20.45), from the tray's status lines.
@@ -585,6 +737,7 @@ fn on_menu(app: &AppHandle, id: &str) {
         "status" | "help_status" => open_status(app),
         "help_intro" => open_intro(app),
         "help_setup" => open_setup(app),
+        "setup_client" => open_clients(app),
         "help_guide" => {
             let _ = tauri_plugin_opener::open_url(GUIDE_URL, None::<&str>);
         }
@@ -604,10 +757,9 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
     let start = item("start", "Start", false)?;
     let stop = item("stop", "Stop", false)?;
     let restart = item("restart", "Restart", false)?;
-    // Set Up a Client and Check for Updates arrive with the client-setup
-    // and update windows (FR-20.10, FR-20.11); until then they are shown
-    // disabled so the menu has the FR-20.2 shape.
-    let setup = item("setup_client", "Set Up a Client", false)?;
+    // Check for Updates arrives with the update window (FR-20.11); until
+    // then it is shown disabled so the menu has the FR-20.2 shape.
+    let setup = item("setup_client", "Set Up a Client…", true)?;
     let updates = item("check_updates", "Check for Updates", false)?;
     let settings_item = item("settings", "Settings…", true)?;
     // Help (FR-20.41): the introduction, the status explanations and the guide.
@@ -767,7 +919,12 @@ pub fn run() {
             setup_get,
             setup_run,
             setup_progress,
-            setup_open_console
+            setup_open_console,
+            setup_open_client_setup,
+            clients_list,
+            clients_preview,
+            clients_apply,
+            clients_remove
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -789,6 +946,7 @@ pub fn run() {
             });
             app.manage(shared.clone());
             app.manage(Arc::new(setup::Session::default()));
+            app.manage(Arc::new(clients::Session::default()));
             build_tray(app.handle(), &shared)?;
             // FR-20.40: the introduction opens at the first start.
             if show_intro {

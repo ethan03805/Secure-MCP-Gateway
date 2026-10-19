@@ -262,8 +262,8 @@ function renderDone(p: Progress): void {
   if (p.profile !== "enforced") nodes.push(el("p", { class: "note" }, ["This installation is labelled not enforced. MCP servers run as ordinary processes under your account."]));
   nodes.push(
     el("h2", {}, ["Next"]),
-    el("p", {}, ["Connect an agent: choose Set Up a Client in the tray menu. Then sign in to the console with the Administrator or Approver password you chose."]),
-    el("div", { class: "actions-inline" }, [openConsole()]),
+    el("p", {}, ["Connect an agent with Set Up a Client, here or in the tray menu. Then sign in to the console with the Administrator or Approver password you chose."]),
+    el("div", { class: "actions-inline" }, [button("Set Up a Client", () => void invoke("setup_open_client_setup"), true), openConsole()]),
   );
   show(nodes);
   enter(title, "The Gateway is set up");

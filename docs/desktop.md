@@ -1,6 +1,6 @@
 # Desktop application (draft)
 
-> **Status: in development for v1.3.0 (SRS FR-20, planned).** This is the first draft of the desktop application guide that SRS FR-20.27 requires. It describes what is built today in `desktop/`: the tray, service control, the console window, approval notifications and first-run setup. Client setup, updates, the platform installers and Windows support come in later changes. Until the installers ship, build the application from source as described at the end of this page.
+> **Status: in development for v1.3.0 (SRS FR-20, planned).** This is the first draft of the desktop application guide that SRS FR-20.27 requires. It describes what is built today in `desktop/`: the tray, service control, the console window, approval notifications, first-run setup and client setup. updates, the platform installers and Windows support come in later changes. Until the installers ship, build the application from source as described at the end of this page.
 
 The Secure MCP Gateway desktop application is a tray (menu-bar) application, built with Tauri 2, that shows the Gateway's health at a glance, starts and stops the `smcpd` service, tells you when tool calls are waiting for approval, and opens the management console in its own window instead of a browser tab. It runs on macOS 14 or later on Apple silicon (there is no Intel build; Intel Macs keep the command-line path) and on Linux with WebKitGTK 4.1 and a tray that supports StatusNotifierItem or AppIndicator. The terminal path (`install.sh`, `smcpctl`) stays fully supported.
 
@@ -18,7 +18,7 @@ The only file of the Gateway installation the application reads is the public CA
 
 ## Introduction
 
-The first time the application starts for a user, it opens a short introduction (SRS FR-20.40): four steps that say what the Gateway does and name the three things a new user does, set up the Gateway, connect an agent, and review calls and decide approvals, each with the control that starts it. Where this version cannot do a task itself yet (client setup), the step says so and opens the guide page with the commands instead. When you finish or skip the introduction and the Gateway is not set up yet, first-run setup opens next.
+The first time the application starts for a user, it opens a short introduction (SRS FR-20.40): four steps that say what the Gateway does and name the three things a new user does, set up the Gateway, connect an agent, and review calls and decide approvals, each with the control that starts it. When you finish or skip the introduction and the Gateway is not set up yet, first-run setup opens next.
 
 - **Skip** with Skip introduction or the Escape key, from any step. The introduction does not open at start again once you have finished or skipped it.
 - **Reopen** it from the menu: Help, then Introduction.
@@ -38,6 +38,17 @@ The window shows the two steps (keys, configuration and accounts; then the servi
 `smcpctl` is looked for beside the application (the `.dmg` and the AppImage carry it), then in `/usr/local/bin`, `/usr/bin`, `/opt/homebrew/bin` and `~/.local/bin`, never on `PATH`. If none is there, the window says so and names the installers.
 
 After an Enforced installation, the Gateway CA certificate (`/var/lib/smcp/state/tls/ca.crt`) is not readable by your account; copy it to a file you can read and set it in Settings so that the console window can check the admin listener (see [Console window](#console-window)).
+
+## Client setup
+
+**Set Up a Client** (tray menu, the introduction, and the end of first-run setup) connects an agent to the Gateway through `smcpctl connect`, the alias of `smcpctl clients setup` (SRS FR-20.10):
+
+1. The window runs `smcpctl clients detect --json` and lists the supported agents (Appendix K) it finds for your account, each marked Connected or Not connected. Supported agents that were not found are named below the list.
+2. **Connect** runs `smcpctl connect <client> --config <configuration> --dry-run --json` and shows every file the setup would create or change, with its full new content, and the lockdown profile's changes. Nothing is written at this point. The **Also apply the lockdown profile** switch (on by default where the agent has one, FR-15.1) runs the preview again without the lockdown.
+3. **Connect** on the preview runs `smcpctl connect <client> --config <configuration>` (with `--no-lockdown` when the switch is off). The application applies only a setup whose preview you saw, with the same switch setting. Restart the agent afterwards.
+4. **Disconnect** runs `smcpctl connect <client> --config <configuration> --remove`, which restores the agent's files from the backups setup made.
+
+The commands run in your home directory, so they change only user-scope and managed settings, never a project directory. A failure shows the message, the command and its output, with Copy Details. Without a Gateway configuration the window asks you to run first-run setup first. `smcpctl clients detect` and `--dry-run --json` are also available in a terminal.
 
 ## Tray states
 
@@ -68,7 +79,7 @@ The tray needs the metrics endpoint. `smcpctl bootstrap` enables it on the admin
 | Open Console | Opens the console window, or brings it to the front. |
 | Approvals (*n* pending) | Opens the console window at the Approvals view (G-13). |
 | Start, Stop, Restart | Controls the `smcpd` service through the service manager. Start is enabled only while the service is stopped; Stop and Restart only while it runs. |
-| Set Up a Client | Not available yet (shown disabled). Use `smcpctl connect <client>` meanwhile. |
+| Set Up a Client… | Opens the client setup window (below). |
 | Check for Updates | Not available yet (shown disabled). |
 | Settings… | The admin listener address, the metrics endpoint, the CA file and the notification switch. |
 | Help | Introduction (reopens the introduction), Set Up the Gateway (first-run setup), Gateway Status, and Desktop Guide (this page, in the default browser). |
@@ -123,4 +134,4 @@ The macOS bundle is not signed; macOS asks you to approve it in System Settings,
 
 ## Not yet available
 
-Client setup (FR-20.10), update checks and upgrades (FR-20.11 to FR-20.13), start at login (FR-20.14), deep links (FR-20.28), Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).
+Update checks and upgrades (FR-20.11 to FR-20.13), start at login (FR-20.14), deep links (FR-20.28), Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).

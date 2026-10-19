@@ -73,6 +73,7 @@ const STATES = [
   ["unreachable", 0],
 ];
 
+const CLIENTS_DEMOS = ["demo=list", "demo=none-connected", "demo=none-detected", "demo=not-set-up", "demo=failed", "demo=list&preview=codex"];
 const SETUP_DEMOS = ["form", "form-enforced", "form-missing", "running", "failed", "done", "configured", "missing-smcpctl"];
 
 const engine = process.env.ENGINE === "chromium" ? chromium : webkit;
@@ -104,6 +105,13 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
     await page.waitForSelector("#stage-title");
     if (shots) await page.screenshot({ path: `${shots}/setup-${d}-${scheme}.png`, fullPage: true });
     await axe(page, `setup ${d} (${scheme})`);
+  }
+  // Client setup: the list, each empty state and a preview (FR-20.10).
+  for (const d of CLIENTS_DEMOS) {
+    await page.goto(`${base}/clients.html?${d}`);
+    await page.waitForSelector("#stage-title");
+    if (shots) await page.screenshot({ path: `${shots}/clients-${d.replace(/[=&]/g, "-")}-${scheme}.png`, fullPage: true });
+    await axe(page, `clients ${d} (${scheme})`);
   }
   // settings.html rejects outside the application; only the introduction
   // and status pages must run without an error here.
@@ -215,6 +223,29 @@ const kb = await chromium.launch();
   await page.getByRole("button", { name: "Try Again" }).focus();
   await page.keyboard.press("Enter");
   if ((await focused()) !== "stage-title" || !(await page.$("#setup-form"))) fail("setup: Try Again did not return to the form");
+
+  // Client setup by keyboard alone: from the list to the preview, the
+  // lockdown switch re-previews, and Connect sends the previewed choice.
+  await page.goto(`${base}/clients.html?demo=list`);
+  await page.waitForSelector("#stage-title");
+  if ((await focused()) !== "stage-title") fail(`clients: initial focus on ${await focused()}`);
+  let reached = false;
+  for (let i = 0; i < 6 && !reached; i++) {
+    await page.keyboard.press("Tab");
+    reached = (await page.evaluate(() => document.activeElement?.textContent ?? "")) === "Connect Codex CLI";
+  }
+  if (!reached) fail("clients: Tab does not reach Connect Codex CLI");
+  await page.keyboard.press("Enter");
+  await page.waitForSelector("#lockdown");
+  if ((await focused()) !== "stage-title") fail(`clients preview: focus on ${await focused()}`);
+  await page.keyboard.press("Tab");
+  if ((await focused()) !== "lockdown") fail(`clients preview: Tab reaches ${await focused()}, not the lockdown switch`);
+  await page.keyboard.press("Space");
+  await page.waitForSelector("#lockdown:not(:checked)");
+  if (await page.$('h3:text-is("Lockdown profile")')) fail("clients preview: the lockdown plan is still shown with the switch off");
+  await page.getByRole("button", { name: "Connect", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  if (calls.at(-1) !== 'clients_apply {"id":"codex","lockdown":false}') fail(`clients: Connect sent ${calls.at(-1)}`);
   await ctx.close();
 }
 await kb.close();

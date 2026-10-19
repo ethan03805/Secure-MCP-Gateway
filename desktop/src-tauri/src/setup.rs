@@ -501,18 +501,31 @@ pub struct Exit {
 /// passing each line of standard output and standard error to `on_line` as
 /// it arrives, and kills it at the timeout.
 pub fn run_streaming(argv: &[String], timeout: Duration, on_line: Arc<dyn Fn(&str) + Send + Sync>) -> Exit {
+    run_streaming_in(argv, None, timeout, on_line)
+}
+
+/// [`run_streaming`] with a working directory.
+pub fn run_streaming_in(
+    argv: &[String],
+    cwd: Option<&Path>,
+    timeout: Duration,
+    on_line: Arc<dyn Fn(&str) + Send + Sync>,
+) -> Exit {
     let Some((prog, args)) = argv.split_first() else {
         return Exit {
             spawn_error: Some("empty command".into()),
             ..Default::default()
         };
     };
-    let child = Command::new(prog)
-        .args(args)
+    let mut cmd = Command::new(prog);
+    cmd.args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+        .stderr(Stdio::piped());
+    if let Some(d) = cwd {
+        cmd.current_dir(d);
+    }
+    let child = cmd.spawn();
     let mut child = match child {
         Ok(c) => c,
         Err(e) => {

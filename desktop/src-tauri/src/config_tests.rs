@@ -67,7 +67,7 @@ fn no_gateway_secret_or_control_api_in_the_application() {
 
 /// Each bundled window has one capability granting only its own commands;
 /// the console window has none (SR-2-5).
-const CAPABILITIES: [(&str, &str, &str, &[&str]); 4] = [
+const CAPABILITIES: [(&str, &str, &str, &[&str]); 5] = [
     (
         "settings.json",
         "settings-window",
@@ -107,6 +107,18 @@ const CAPABILITIES: [(&str, &str, &str, &[&str]); 4] = [
             "allow-setup-run",
             "allow-setup-progress",
             "allow-setup-open-console",
+            "allow-setup-open-client-setup",
+        ],
+    ),
+    (
+        "clients.json",
+        "clients-window",
+        "clients",
+        &[
+            "allow-clients-list",
+            "allow-clients-preview",
+            "allow-clients-apply",
+            "allow-clients-remove",
         ],
     ),
 ];
@@ -146,13 +158,20 @@ fn one_capability_per_bundled_window_and_none_for_the_console() {
     // The configuration enables exactly these capabilities.
     assert_eq!(
         conf()["app"]["security"]["capabilities"],
-        serde_json::json!(["settings-window", "intro-window", "status-window", "setup-window"])
+        serde_json::json!([
+            "settings-window",
+            "intro-window",
+            "status-window",
+            "setup-window",
+            "clients-window"
+        ])
     );
     for label in [
         crate::SETTINGS_LABEL,
         crate::INTRO_LABEL,
         crate::STATUS_LABEL,
         crate::SETUP_LABEL,
+        crate::CLIENTS_LABEL,
     ] {
         assert_ne!(crate::console::CONSOLE_LABEL, label);
     }
@@ -183,7 +202,8 @@ fn commands_are_declared_and_registered_once() {
     assert_eq!(LIB.matches("only_settings_window(&webview)").count(), 2);
     assert_eq!(LIB.matches("only_window(&webview, INTRO_LABEL)").count(), 6);
     assert_eq!(LIB.matches("only_window(&webview, STATUS_LABEL)").count(), 4);
-    assert_eq!(LIB.matches("only_window(&webview, SETUP_LABEL)").count(), 4);
+    assert_eq!(LIB.matches("only_window(&webview, SETUP_LABEL)").count(), 5);
+    assert_eq!(LIB.matches("only_window(&webview, CLIENTS_LABEL)").count(), 4);
 }
 
 #[test]
@@ -212,7 +232,14 @@ fn bundled_pages_are_self_only() {
     );
     // The bundled pages reference only packaged files.
     let dist = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../src");
-    for f in ["settings.html", "error.html", "intro.html", "status.html", "setup.html"] {
+    for f in [
+        "settings.html",
+        "error.html",
+        "intro.html",
+        "status.html",
+        "setup.html",
+        "clients.html",
+    ] {
         let page = std::fs::read_to_string(dist.join(f)).unwrap();
         assert!(
             !page.contains("http://") && !page.contains("https://") && !page.contains("//cdn"),

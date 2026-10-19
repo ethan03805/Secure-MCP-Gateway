@@ -176,3 +176,11 @@ pre.output, pre.command {
 pre.output:focus-visible, pre.command:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 details { margin: 12px 0 0; }
 summary { cursor: pointer; font-weight: 600; }
+
+/* Set Up a Client window (FR-20.10). */
+h3 { margin: 16px 0 6px; font-size: var(--fs-3); font-weight: 600; }
+ul.client-list { list-style: none; margin: 12px 0; padding: 0; border-top: 1px solid var(--rule); }
+ul.client-list li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--rule); }
+ul.client-list li strong { display: block; }
+ul.client-list .actions-inline { margin: 0; }
+p.change { margin: 12px 0 4px; font-weight: 600; overflow-wrap: anywhere; }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clients-preview"
+description = "Enables the clients_preview command without any pre-configured scope."
+commands.allow = ["clients_preview"]
+
+[[permission]]
+identifier = "deny-clients-preview"
+description = "Denies the clients_preview command without any pre-configured scope."
+commands.deny = ["clients_preview"]

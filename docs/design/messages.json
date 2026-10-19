@@ -514,13 +514,38 @@
       },
       "CLIENT_SETUP_FAILED": {
         "title": "The agent was not connected",
-        "what": "smcpctl clients setup {client} ended with an error.",
+        "what": "smcpctl connect {client} ended with an error.",
         "todo": "Read the output in the details and fix the cause it names, then select Connect again."
       },
       "CLIENT_REMOVE_FAILED": {
         "title": "The agent was not disconnected",
-        "what": "smcpctl clients setup {client} --remove ended with an error.",
+        "what": "smcpctl connect {client} --remove ended with an error.",
         "todo": "Read the output in the details and fix the cause it names, then select Disconnect again."
+      },
+      "CLIENT_PREVIEW_FAILED": {
+        "title": "The changes could not be shown",
+        "what": "smcpctl connect {client} --dry-run ended with an error, so nothing was changed.",
+        "todo": "Read the output in the details and fix the cause it names, then select the agent again."
+      },
+      "CLIENT_NOT_PREVIEWED": {
+        "title": "Review the changes first",
+        "what": "The agent was not connected because the changes for this choice were not shown first.",
+        "todo": "Select Back, choose the agent and the lockdown setting again, and review the changes before you select Connect."
+      },
+      "CLIENT_UNKNOWN": {
+        "title": "This agent is not in the list",
+        "what": "The agent is not one that smcpctl listed on this computer.",
+        "todo": "Select Look Again to refresh the list."
+      },
+      "CLIENTS_DETECT_FAILED": {
+        "title": "Could not look for agents",
+        "what": "smcpctl clients detect ended with an error.",
+        "todo": "Read the output in the details, then select Look Again."
+      },
+      "CLIENTS_GATEWAY_NOT_SET_UP": {
+        "title": "Set up the Gateway first",
+        "what": "No Gateway configuration exists on this computer, so there is nothing to connect an agent to.",
+        "todo": "Select Set Up the Gateway in the Help menu, then come back to connect an agent."
       },
       "UPDATE_CHECK_FAILED": {
         "title": "Could not check for updates",
