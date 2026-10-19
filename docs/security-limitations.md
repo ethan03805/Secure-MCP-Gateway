@@ -19,7 +19,7 @@ On macOS, and on Linux without rootless Podman, nftables, cgroup v2 and systemd,
 
 In the Standalone profile the agent harness and the Gateway run under the same operating-system account. The agent's own file and shell tools can read the Gateway's keys, policy, journal and the harness credential file, and can stop or reconfigure the Gateway.
 
-- **Mitigation:** the per-client lockdown profiles deny the client's own file tools access to the Gateway paths where the client supports such rules (FR-15.1, FR-15.2), and `smcpctl doctor` reports the paths that remain readable (FR-15.4). These rules are enforced by the client, not by the operating system.
+- **Mitigation:** the per-client lockdown profiles deny the client's own file tools access to the Gateway paths where the client supports such rules (FR-15.1, FR-15.2), and `smcpctl doctor` reports the paths that remain readable (FR-15.4). These rules are enforced by the client, not by the operating system. CI checks the Claude Code profile at its pinned version (the Real agents lockdown job); the profiles of the other clients are checked as generated files only.
 
 ### 3. Non-MCP tools bypass the Gateway
 
@@ -64,11 +64,11 @@ A package signature shows who packaged a server and that it has not changed sinc
 - Remote (hosted) MCP servers cannot be used as backends in v1 (FR-14.4).
 - Planned for v1.3.0 (FR-22, not in this release): hosted servers imported from the IBM ContextForge catalog, reached only through a bundled ContextForge instance that the operator opts into. A hosted server's code cannot be inspected, so the source review and signature binding of SEC 3.1 and SEC 3.2 cannot apply to it. The owner accepted this gap on 2026-10-18 on the terms of SR-3-6: each hosted package carries a recorded trust decision, every tool is labelled `untrusted`, and the risk class is `moderate` or higher. The owner also accepted that a hosted server is probed with access narrowed to its one host through the Egress Broker (SR-3.5-2), instead of the no-network quarantine of SEC 3.5. Its operator sees every argument sent to it, and every hosted package served by the bundled instance shares one containment domain (FR-22.42).
 - Only MCP tools are relayed. Resources and prompts are refused (SR-5.6-1); sampling, elicitation and roots requests from servers are refused (`-32601`, or `-31010` for an `InputRequiredResult`); the MRTR Relay Profile that would relay them is not implemented.
-- Windows is not supported.
+- Windows is not supported in release 1.x.
 
-### 12. Known gaps in release 1.0
+### 12. Known gaps in release 1.x
 
-These are requirements release 1.0, and the main branch after it, do not meet in full; [verification/gap-list.md](verification/gap-list.md) tracks them.
+These are requirements release 1.1.0, and the main branch after it, do not meet in full; [verification/gap-list.md](verification/gap-list.md) tracks them.
 
 - **Remote Access host rules on macOS (SR-4.14-1):** in the Enforced profile `smcpctl remote enable` installs nftables rules that drop non-loopback connections to the Gateway ports. macOS runs only the Standalone profile and has no nftables; the Gateway still binds loopback only, and [remote-access.md](remote-access.md#host-rules) gives a pf anchor that you load yourself.
 - **Secret copies in memory (SR-2.13-2, RR-11):** the Secret Broker overwrites its byte buffers after each delivery, but Go strings cannot be overwritten: the S4 environment value (and the `NAME=value` entry built for the child process), the header the Egress Broker sets on each S1 request and the age library's decryption buffers stay in the Gateway's memory until it is reused. Prefer S1 to S3 over S4.
@@ -76,7 +76,7 @@ These are requirements release 1.0, and the main branch after it, do not meet in
 - **Egress capabilities in the Standalone profile (security review RR-09):** one-use egress capabilities are in the server's memory, so another process of the same user can use them while the call runs; a server configured with `[egress] require_capability = false` is authorized by instance and grant only.
 - **Unpackaged servers (RR-10):** egress grants are checked against a manifest only for packaged servers; set `[packages] require_signed = true` to refuse unpackaged ones.
 - **Session state:** sessions, taint, rate windows and quotas are kept in memory; a restart ends every session (FR-2.16), so harnesses sign in again.
-- **Performance:** the FR-11 budgets have been measured on CI runners only, not on recorded reference hardware.
+- **Performance:** the recorded reference hardware of FR-11 is a class, the GitHub-hosted `ubuntu-24.04` standard runner (4 vCPU, 16 GiB, SSD), not one machine; the processor model varies from run to run, and margins measured on one model may be thinner on another ([reference-hardware.md](reference-hardware.md)). The ingest and analytics query budgets (FR-11.6, FR-11.8) are measured with the DuckDB Observation Store; the JSON Lines store of the release archives is not measured at that volume.
 - **No SELinux module:** the Enforced profile ships AppArmor profiles for `smcpd` and for image-less servers (`smcp-server`). Servers that run from an image have only the container runtime's default confinement, and on a host with SELinux instead of AppArmor no host policy module confines `smcpd`; `[[runtime.server]] selinux_type` only passes a type to Podman.
 - **Graph engine firewall (SR-4.2-1, SR-7.4-1):** the nftables table `inet smcp` admits only `smcp-core` to the Bolt port 7687 and denies new connections opened by `smcp-data`. The engine is covered only when the operator runs it as `smcp-data` on port 7687 (see [graph.md](graph.md)); an engine run as another user, or on another port without editing `/etc/smcp/smcp.nft`, is not covered.
 - **Evidence key and journal directories (SR-6.12-1, FR-12.4):** the evidence key, the journal and its anchor are kept below `/var/lib/smcp/state`, owned by `smcp-core`, because the evidence exporter runs inside `smcpd`. Every other CP-46 identity is denied the key and the checkpoint copies in `/var/lib/smcp/exports`, but a compromise of `smcpd` exposes the key. The CP-46 directories `journal/`, `keys/` and `vault/` are created with their own owners and stay empty in release 1.x.

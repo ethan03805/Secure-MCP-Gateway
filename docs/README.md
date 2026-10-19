@@ -47,6 +47,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Real-agent conformance suite](agents-conformance.md) | FR-15.8, FR-15.10 | `scripts/agents`, the "Real agents" workflow, the broken-build check, known client findings |
 | [Hostile backend fixtures](hostile-fixtures.md) | FR-19.1, FR-19.2, Appendix L | `internal/hostile`, `cmd/smcp-hostile`, the CI job "hostile" |
 | [Acceptance scenarios, release label and performance](acceptance.md) | FR-19.3, FR-19.4, FR-11, FR-10.2, FR-10.11 | AT-01 to AT-21 and where they run, the release label, `smcp-workload` and the CI job "perf", stage timing spans |
+| [Reference hardware](reference-hardware.md) | FR-11 | The recorded reference hardware (the GitHub-hosted `ubuntu-24.04` runner class), what each performance report records, and when a measurement is a full claim |
 | [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)), runbook execution records and the [gap list](verification/gap-list.md) of unverified requirements |
 | [Continuous integration](ci.md) | — | For contributors: the required checks, and which CI jobs a pull request that changes only documentation skips |
 | [Windows port](windows-port.md) | FR-21 (planned v1.3.0) | For contributors: measured Windows build gaps, what fails closed on Windows today, the `windows` CI job, effort and order per FR-21 area, and open questions on the requirements |
@@ -67,7 +68,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Key rotation](runbooks/key-rotation.md) | Scheduled rotation of the listener certificate, CA or evidence key |
 | [Upgrade rollback](runbooks/upgrade-rollback.md) | Upgrading, or an upgrade rolled back |
 
-FR-18.8 asks for a recorded execution of each runbook against the release commit. Each runbook was executed against a real `smcpd` on 2026-10-17; the records are in [verification/runbooks/](verification/runbooks/FR-18.8.md). `scripts/ci-integration.sh` also runs the backup, restore, rotation and upgrade steps on every pull request.
+FR-18.8 asks for a recorded execution of each runbook against the release commit. Each runbook was executed against a real `smcpd` on 2026-10-17 and again for v1.1.0 on 2026-10-18 (main `d55c08f`); the records are in [verification/runbooks/](verification/runbooks/FR-18.8.md). `scripts/ci-integration.sh` also runs the backup, restore, rotation and upgrade steps on every pull request.
 
 ## Control API
 
@@ -114,7 +115,7 @@ Sequence diagrams of the main flows, each with the differences of the current im
 |---|---|---|
 | [schemas/manifest.schema.json](schemas/manifest.schema.json) | JSON Schema of the server package manifest (SRS Appendix J) | E-13 import, `smcpctl package` |
 | [parameters.json](parameters.json) | Parameter Catalog: every observation parameter of ARCH §10.3 with its attributes (FR-10.37); embedded in the binaries by `parameters.go` | E-29, E-27, E-32, G-04 |
-| [status/elements.json](status/elements.json) | Implementation state of each element E-01 to E-33: `implemented`, `partial` or `not-started`, with the packages and main gaps | CI status data, project site |
+| [status/elements.json](status/elements.json) | Implementation state of each element E-01 to E-36 (E-34 to E-36 are planned for v1.3.0): `implemented`, `partial` or `not-started`, with the packages and main gaps | CI status data, project site |
 | [clients/matrix.json](clients/matrix.json) | Client matrix with pinned versions and latest results (FR-15.10) | Real agents workflow, quick starts |
 
 The SRS build (`srs_build/gen.py`) checks `parameters.json`, `schemas/manifest.schema.json` and `status/elements.json`. Update `status/elements.json` in the same pull request that changes an element's implementation state.

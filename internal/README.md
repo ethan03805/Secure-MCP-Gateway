@@ -137,7 +137,7 @@ credential (`config.CredentialRevoked`) and server revision under the gate
 
 ## Element status
 
-Every element E-01 to E-33 has code. E-07, E-09, E-12, E-17, E-18, E-23, E-30 and E-31 are recorded as implemented (every allocated requirement verified, none deferred from release 1.0, no other known gap); the others are partial. `docs/status/elements.json` records each element's state and its main gaps, and the requirement report (`make status`, `build/reqreport.md`) lists which requirements tests verify, partly verify or leave unverified. The Data Server (E-25 to E-28) and SS-10 (E-29 to E-32) attach as evidence observers and must not gate enforcement. `cmd/smcpd` wires every element; `smcpctl health` lists each with its runtime state (`info.elements`).
+Every element of release 1.x (E-01 to E-33) has code; E-34 to E-36 are planned for v1.3.0 and have none. E-07, E-09, E-12, E-17, E-18, E-23, E-30 and E-31 are recorded as implemented (every allocated requirement verified, none deferred from release 1.0, no other known gap); the others are partial. `docs/status/elements.json` records each element's state and its main gaps, and the requirement report (`make status`, `build/reqreport.md`) lists which requirements tests verify, partly verify or leave unverified. The Data Server (E-25 to E-28) and SS-10 (E-29 to E-32) attach as evidence observers and must not gate enforcement. `cmd/smcpd` wires every element; `smcpctl health` lists each with its runtime state (`info.elements`).
 
 ## Residual gaps in what exists
 

@@ -626,8 +626,10 @@ function PerformanceSection({ no, s }: { no: string; s: ReturnType<typeof loadSt
       <p>
         The FR-11 measurements of the CI job <code>perf</code>, which runs <code>smcp-workload</code> against real{" "}
         <code>smcpd</code> instances with the reference dataset and eight concurrent callers. The budgets are the CP-32
-        targets. Results from a CI runner are measurements of that runner, not of the reference hardware the SRS names, so
-        they count as partial evidence only.
+        targets. The recorded reference hardware is the GitHub-hosted <code>ubuntu-24.04</code> runner class, described under{" "}
+        <Link href="/docs/reference-hardware/">reference hardware</Link>. A complete measurement within budget on that
+        class is a full claim of its requirement; a run on any other host, or an incomplete measurement, is a partial
+        claim only.
       </p>
       {!p ? (
         <p className="empty-state">Not yet run. The perf job runs on pushes to main and on demand.</p>
