@@ -5,7 +5,7 @@ import { ApiError, post } from "./api";
 import { useResource, type Resource } from "./data";
 import { usePerm } from "./perm";
 import type { Health } from "./types";
-import { Dialog, ErrorBlock } from "./ui";
+import { Dialog, ErrorBlock, toneOf, type Tone } from "./ui";
 
 const HealthContext = createContext<Resource<Health> | null>(null);
 
@@ -31,6 +31,18 @@ export const causeText: Record<string, string> = {
 
 export function isStopped(h?: Health): boolean {
   return !!h?.causes.includes("emergency_stop");
+}
+
+/**
+ * The state as the console shows it. A Standalone Gateway whose health is
+ * degraded only by its profile's own cause (profile_only, FR-20.2) works as
+ * designed and reads "running, not enforced"; the `not enforced` label is
+ * part of the word, so it stays visible wherever the state is shown.
+ */
+export function stateOf(h: Health): { word: string; tone: Tone; running: boolean } {
+  if (isStopped(h)) return { word: "emergency stop", tone: toneOf(h.state), running: false };
+  if (h.profile_only) return { word: "running, not enforced", tone: "ok", running: true };
+  return { word: h.state, tone: toneOf(h.state), running: false };
 }
 
 /** The emergency stop or resume button with its confirmation dialog. */

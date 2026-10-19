@@ -21,6 +21,9 @@ pub struct Exposition {
     pub release_enforced: Option<bool>,
     /// `smcp_emergency_stop` (FR-20.5); absent from older releases.
     pub emergency_stop: Option<bool>,
+    /// `smcp_health_profile_only` (FR-20.5): degraded only by the
+    /// Standalone profile's own cause; absent from older releases.
+    pub profile_only: Option<bool>,
 }
 
 /// Largest exposition read (the Gateway's is a few kilobytes).
@@ -53,6 +56,7 @@ pub fn parse(text: &str) -> Result<Exposition, ReadError> {
     let mut pending = 0u64;
     let mut enforced = None;
     let mut stop = None;
+    let mut profile_only = None;
     for line in text.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
@@ -84,6 +88,7 @@ pub fn parse(text: &str) -> Result<Exposition, ReadError> {
             }
             "smcp_release_enforced" => enforced = Some(num()? == 1.0),
             "smcp_emergency_stop" => stop = Some(num()? == 1.0),
+            "smcp_health_profile_only" => profile_only = Some(num()? == 1.0),
             _ => {}
         }
     }
@@ -93,6 +98,7 @@ pub fn parse(text: &str) -> Result<Exposition, ReadError> {
         pending_approvals: pending,
         release_enforced: enforced,
         emergency_stop: stop,
+        profile_only,
     })
 }
 
@@ -146,7 +152,7 @@ pub(crate) mod tests {
 
     pub const SAMPLE: &str =
         "# HELP smcp_health_state Gateway health\n# TYPE smcp_health_state gauge\nsmcp_health_state 1\n\
-smcp_active_sessions 2\nsmcp_pending_approvals 3\nsmcp_release_enforced 0\nsmcp_emergency_stop 1\n\
+smcp_active_sessions 2\nsmcp_pending_approvals 3\nsmcp_release_enforced 0\nsmcp_emergency_stop 1\nsmcp_health_profile_only 1\n\
 smcp_calls_total{server_alias=\"t\",tool=\"t_echo\",outcome=\"delivered\",reason_code=\"\"} 4\n";
 
     #[test]
@@ -159,12 +165,14 @@ smcp_calls_total{server_alias=\"t\",tool=\"t_echo\",outcome=\"delivered\",reason
                 health_state: 1,
                 pending_approvals: 3,
                 release_enforced: Some(false),
-                emergency_stop: Some(true)
+                emergency_stop: Some(true),
+                profile_only: Some(true)
             }
         );
         let old = parse("smcp_health_state 0\n").unwrap();
         assert_eq!(old.release_enforced, None);
         assert_eq!(old.emergency_stop, None);
+        assert_eq!(old.profile_only, None);
         assert_eq!(old.pending_approvals, 0);
         assert!(parse("smcp_active_sessions 1\n").is_err());
         assert!(parse("smcp_health_state 7\n").is_err());

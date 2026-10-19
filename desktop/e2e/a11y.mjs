@@ -66,6 +66,7 @@ function errorsOf(page) {
 const STEPS = 4;
 const STATES = [
   ["healthy", 1],
+  ["running", 0],
   ["degraded", 1],
   ["degraded", 0],
   ["fail-closed", 0],

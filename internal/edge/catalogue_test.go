@@ -108,11 +108,11 @@ func TestMessageCatalogue(t *testing.T) {
 
 	sentences := func(s string) int { return strings.Count(strings.TrimSpace(s), ". ") + 1 }
 
-	// The six tray states of FR-20.2, plus the variant for a degraded
-	// Gateway that is not labelled enforced (a Standalone installation is
-	// never healthy, FR-13.10).
+	// The seven tray states of FR-20.2, plus the variant for a degraded
+	// Gateway that is not labelled enforced and has a cause besides the
+	// profile's own (a Standalone installation is never healthy, FR-13.10).
 	controls := map[string]bool{"open-console": true, "start": true, "restart": true}
-	for _, s := range []string{"healthy", "degraded", "degraded-not-enforced", "fail-closed", "emergency-stop", "stopped", "unreachable"} {
+	for _, s := range []string{"healthy", "running", "degraded", "degraded-not-enforced", "fail-closed", "emergency-stop", "stopped", "unreachable"} {
 		st, ok := c.Desktop.States[s]
 		if !ok {
 			t.Errorf("tray state %s: missing", s)

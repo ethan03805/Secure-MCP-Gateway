@@ -53,12 +53,13 @@ The commands run in your home directory, so they change only user-scope and mana
 
 ## Tray states
 
-The tray icon shows one of six states. Its shape changes with the state as well as its color, and its accessible name (the tooltip, read by VoiceOver and Orca) states it in words, for example "Secure MCP Gateway: degraded (not enforced), 2 pending approvals".
+The tray icon shows one of seven states. Its shape changes with the state as well as its color, and its accessible name (the tooltip, read by VoiceOver and Orca) states it in words, for example "Secure MCP Gateway: degraded (not enforced), 2 pending approvals".
 
 | Icon | State | Meaning |
 |---|---|---|
 | Green filled square | healthy | The Gateway answers and reports `healthy`. |
-| Amber diamond | degraded | The Gateway runs with a non-critical cause. In the Standalone profile this is normal: the cause is `unconfined`. |
+| Green square, left half filled | running, not enforced | A Standalone Gateway whose only cause is `unconfined` (`smcp_health_profile_only` is 1). It works as designed: calls are checked and recorded, servers are not contained. |
+| Amber diamond | degraded | The Gateway runs with a non-critical cause other than the Standalone profile's own. Open the console (Gateway control, Causes) or run `smcpctl health`. |
 | Red triangle | fail-closed | The Gateway refuses tool calls because of a critical cause. Open the console (Health) or run `smcpctl health`. |
 | Red triangle with a bar under it | emergency stop | The emergency stop is set. Resume in the console, signed in as an Administrator, or with `smcpctl resume`. |
 | Grey hollow square | stopped | The service manager reports the service stopped, and the metrics endpoint does not answer. |
@@ -66,7 +67,7 @@ The tray icon shows one of six states. Its shape changes with the state as well 
 
 The shapes are those of the visual guide ([design/visual.md](design/visual.md)), so they also tell the states apart without color.
 
-The top of the menu repeats the state in words, with the first sentence of what it means, for example "Degraded, not enforced" and "The Gateway is running and checking tool calls." Selecting either line opens the **Gateway Status** window, which explains the state, says what to do and offers the control that does it: Start for stopped, Restart for unreachable, Open Console for the others. For unreachable it shows how long ago the status was last read, and on an installation that is not labelled `enforced` it explains what `not enforced` means. The text comes from the shared message catalogue `docs/design/messages.json` (FR-20.48), the same text the console uses.
+The top of the menu repeats the state in words, with the first sentence of what it means, for example "Running, not enforced" and "The Gateway is running and checking every tool call your agents make." Selecting either line opens the **Gateway Status** window, which explains the state, says what to do and offers the control that does it: Start for stopped, Restart for unreachable, Open Console for the others. For unreachable it shows how long ago the status was last read, and on an installation that is not labelled `enforced` it explains what `not enforced` means. The text comes from the shared message catalogue `docs/design/messages.json` (FR-20.48), the same text the console uses.
 
 Beside the icon, the label **not enforced** is shown unless the Gateway reports the release label `enforced` (the gauge `smcp_release_enforced`). The application reads the endpoint every 2 seconds, so a change shows within a few seconds.
 

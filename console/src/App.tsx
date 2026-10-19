@@ -4,11 +4,11 @@
 import { Component, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { asApiError, loginPath, logoutPath, post, restoreSession, roleLabel, setCredentials, setUnauthorizedHandler, signIn, type ApiError, type Credentials, type Role } from "./api";
 import { LiveProvider, useLive } from "./data";
-import { EmergencyControl, HealthProvider, isStopped, useHealth } from "./health";
+import { EmergencyControl, HealthProvider, stateOf, useHealth } from "./health";
 import { PermProvider, usePerm } from "./perm";
 import { Link, navigate, useLocation } from "./router";
 import { ThemeSelect } from "./theme";
-import { ErrorBlock, Mono, StateLabel, toneOf } from "./ui";
+import { ErrorBlock, Mono, StateLabel } from "./ui";
 import { allowed, startPath, viewFor, views, type ViewDef } from "./views/registry";
 
 type Kind = "administrator" | "approver" | "session_approver" | "console";
@@ -197,8 +197,8 @@ function StatusStrip({ cred, onSignOut }: { cred: Credentials; onSignOut: () => 
   const live = useLive();
   const perm = usePerm();
   const h = health?.status === "ok" ? health.data : undefined;
-  const stopped = isStopped(h);
-  const cls = h ? (h.state === "fail-closed" ? "strip strip-bad" : h.state === "degraded" ? "strip strip-warn" : "strip") : "strip";
+  const st = h ? stateOf(h) : undefined;
+  const cls = h ? (h.state === "fail-closed" ? "strip strip-bad" : h.state === "degraded" && !st?.running ? "strip strip-warn" : "strip") : "strip";
   return (
     <header className={cls} data-testid="status-strip">
       <a className="skip" href="#main">
@@ -209,10 +209,16 @@ function StatusStrip({ cred, onSignOut }: { cred: Credentials; onSignOut: () => 
         <>
           <span className="strip-item" aria-live="polite">
             <span className="sr-only">Enforcement state: </span>
-            <StateLabel tone={toneOf(h.state)}>{stopped ? "emergency stop" : h.state}</StateLabel>
+            <StateLabel tone={st!.tone}>{st!.word}</StateLabel>
           </span>
           <span className="strip-item">
-            {h.profile}: <strong>{h.release_label}</strong>
+            {st!.running ? (
+              <>{h.profile} profile</>
+            ) : (
+              <>
+                {h.profile}: <strong>{h.release_label}</strong>
+              </>
+            )}
             {h.installation_mode ? <> ({h.installation_mode})</> : null}
           </span>
           <span className="strip-item">

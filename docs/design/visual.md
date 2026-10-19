@@ -56,16 +56,19 @@ WCAG 2.2 level AA on every surface (FR-8.32; desktop windows FR-20.15):
 
 ## Tray states (desktop application)
 
-The tray icon and its accessible name state exactly one of the six states of FR-20.2. Each has a token, a shape and a word; the word is the accessible name, and the `not enforced` label stays beside it on a Standalone installation (FR-20.4).
+The tray icon and its accessible name state exactly one of the seven states of FR-20.2. Each has a token, a shape and a word; the word is the accessible name, and the `not enforced` label stays beside it on a Standalone installation (FR-20.4).
 
 | State | Token | Shape | Word |
 |---|---|---|---|
 | healthy | `--ok` | filled square | healthy |
+| running, not enforced | `--ok` | square, left half filled | running (with the `not enforced` label) |
 | degraded | `--warn` | diamond | degraded |
 | fail-closed | `--bad` | triangle | fail-closed |
 | emergency stop | `--bad` | triangle with a bar | emergency stop |
 | stopped | `--ink-3` | hollow square | stopped |
 | unreachable | `--ink-3` | ring | unreachable |
+
+`running, not enforced` is a Standalone installation whose health is degraded only by the profile's own cause `unconfined` (the gauge `smcp_health_profile_only`): it works as designed, so it is not shown as degraded, and the half-filled square and the `not enforced` label say that the servers are not contained. Any other cause shows `degraded`. In the console the state reads the same (the `profile_only` field of `/admin/v1/health`).
 
 `unreachable` is shown when no status has been read for 15 seconds; it is never shown as the last known state, and stale data is never green. The monochrome menu-bar template image carries the state by shape alone, so the shapes must differ in silhouette.
 

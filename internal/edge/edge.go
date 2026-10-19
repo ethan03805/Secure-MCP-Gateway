@@ -554,12 +554,16 @@ type Health struct {
 	// Windows host or in WSL (SR-4-2), omitted elsewhere.
 	InstallationMode string   `json:"installation_mode,omitempty"`
 	ProfileReasons   []string `json:"profile_reasons,omitempty"`
-	Version          string   `json:"version"`
-	PolicyRevision   string   `json:"policy_revision,omitempty"`
-	Sessions         int      `json:"sessions"`
-	Launcher         string   `json:"launcher"`
-	Servers          []string `json:"servers"`
-	Unverified       []string `json:"unverified_servers,omitempty"`
+	// ProfileOnly is true while the state is degraded by the profile's own
+	// cause alone (Standalone: "unconfined"): the installation works as
+	// designed and the console shows "running, not enforced" (FR-20.2).
+	ProfileOnly    bool     `json:"profile_only"`
+	Version        string   `json:"version"`
+	PolicyRevision string   `json:"policy_revision,omitempty"`
+	Sessions       int      `json:"sessions"`
+	Launcher       string   `json:"launcher"`
+	Servers        []string `json:"servers"`
+	Unverified     []string `json:"unverified_servers,omitempty"`
 }
 
 // Health computes the health report.
@@ -602,6 +606,7 @@ func (g *Gateway) Health() Health {
 			h.Causes = append(h.Causes, c)
 		}
 	}
+	h.ProfileOnly = g.prof.DegradedOnlyByProfile(h.State, h.Causes)
 	return h
 }
 

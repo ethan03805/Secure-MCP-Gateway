@@ -15,6 +15,40 @@ import { claims, g, go, mock, nav, signIn } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
+// A Standalone Gateway degraded only by its profile's own cause reads
+// "running, not enforced" in the status bar and G-01; any other cause reads
+// degraded. The health report is the real one with state, causes and
+// profile_only replaced (internal/e2e.TestDesktopMetricsOnRunningGateway
+// checks that the Gateway computes profile_only).
+test("G-01 and the status bar: running, not enforced versus degraded", async ({ page }) => {
+  claims("FR-8.3");
+  const health = async (patch: Record<string, unknown>) => {
+    await page.unroute("**/admin/v1/health");
+    await page.route("**/admin/v1/health", async (r) => {
+      const res = await r.fetch();
+      r.fulfill({ response: res, json: { ...(await res.json()), ...patch } });
+    });
+  };
+  await health({ state: "degraded", causes: ["unconfined"], profile_only: true });
+  await signIn(page, "/");
+  const strip = page.getByTestId("status-strip");
+  await expect(strip).toContainText("running, not enforced");
+  await expect(strip).toContainText("standalone profile");
+  await expect(strip).not.toContainText("degraded");
+  await expect(strip).not.toHaveClass(/strip-warn/);
+  const enforcement = page.getByRole("region", { name: "Enforcement" });
+  await expect(enforcement.getByRole("definition").filter({ hasText: "running, not enforced" })).toBeVisible();
+  await expect(enforcement.getByTestId("not-enforced")).toContainText("running, not enforced");
+
+  await health({ state: "degraded", causes: ["unconfined", "unverified_manifests"], profile_only: false });
+  await page.reload();
+  await expect(strip).toContainText("degraded");
+  await expect(strip).toContainText("not enforced");
+  await expect(strip).not.toContainText("running, not enforced");
+  await expect(strip).toHaveClass(/strip-warn/);
+  await page.unroute("**/admin/v1/health");
+});
+
 test("G-01 gateway control: health, monitor causes, verification and checklist", async ({ page }) => {
   claims("FR-8.3", "FR-8.31", "FR-7.12");
   await signIn(page, "/");

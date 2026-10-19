@@ -184,6 +184,10 @@ func Attach(ctx context.Context, a *app.App, o Options) (*Runtime, error) {
 		// FR-20.5: the desktop tray reads these without a credential.
 		ReleaseEnforced: func() bool { return a.Profile.Label == "enforced" },
 		EmergencyStop:   func() bool { return a.Gateway != nil && a.Gateway.Stopped() },
+		// FR-20.5: a Standalone Gateway degraded only by "unconfined" is
+		// shown as "running, not enforced" (FR-20.2).
+		ProfileStandalone: func() bool { return a.Profile.Profile == profile.Standalone },
+		ProfileOnly:       func() bool { return r.ProfileOnly() },
 	})
 	a.Evidence.AddObserver("metrics", r.metrics, 4096)
 	a.Journal.SetFlushObserver(r.metrics.Flush.Observe)
@@ -333,6 +337,18 @@ func (r *Runtime) Status() Status {
 		rep.State = g.State
 	}
 	return Status{Report: rep, Gateway: g}
+}
+
+// ProfileOnly reports whether the combined health state is degraded by the
+// profile's own cause alone: every cause of the health monitor (active or
+// latched) and of the Gateway's report is the profile's cause (FR-20.5).
+func (r *Runtime) ProfileOnly() bool {
+	st := r.Status()
+	causes := append([]string(nil), r.app.Gateway.Health().Causes...)
+	for _, c := range st.Causes {
+		causes = append(causes, c.Name)
+	}
+	return r.app.Profile.DegradedOnlyByProfile(st.State, causes)
 }
 
 func rank(s string) int {

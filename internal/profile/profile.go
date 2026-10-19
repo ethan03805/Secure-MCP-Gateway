@@ -159,3 +159,23 @@ func (r Report) Degraded() string {
 	}
 	return ""
 }
+
+// DegradedOnlyByProfile reports whether a health state is degraded by the
+// profile's own cause alone: the state is degraded, the profile has a
+// cause (Standalone: "unconfined") and every cause listed is that one. A
+// Standalone installation in that state works as designed, and the
+// console and the desktop application show it as "running, not enforced"
+// instead of "degraded" (SRS FR-20.2, FR-20.5). Any other cause, or a
+// state other than degraded, gives false.
+func (r Report) DegradedOnlyByProfile(state string, causes []string) bool {
+	own := r.Degraded()
+	if state != "degraded" || own == "" || len(causes) == 0 {
+		return false
+	}
+	for _, c := range causes {
+		if c != own {
+			return false
+		}
+	}
+	return true
+}

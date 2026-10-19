@@ -10,6 +10,7 @@ const COMMANDS: Record<Control, string> = { "open-console": "status_open_console
 // the state's color; the word beside it carries the meaning.
 const SHAPES: Record<TrayState, string> = {
   healthy: '<rect x="1" y="1" width="10" height="10"/>',
+  running: '<rect x="1.75" y="1.75" width="8.5" height="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="1" width="5" height="10"/>',
   degraded: '<path d="M6 0.5 11.5 6 6 11.5 0.5 6Z"/>',
   "fail-closed": '<path d="M6 0.5 11.5 11 0.5 11Z"/>',
   "emergency-stop": '<path d="M6 0.5 11.5 9 0.5 9Z"/><rect x="0.5" y="10" width="11" height="1.5"/>',
