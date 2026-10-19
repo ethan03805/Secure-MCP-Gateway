@@ -149,6 +149,8 @@ ensure_dir /var/lib/smcp/journal smcp-evidence "$group" 0700
 ensure_dir /var/lib/smcp/keys smcp-keys "$group" 0700
 ensure_dir /var/lib/smcp/vault smcp-vault "$group" 0700
 ensure_dir /var/lib/smcp/exports smcp-core "$group" 0750
+# backup.dir of the installed configuration (pre-upgrade backups).
+ensure_dir /var/lib/smcp/backups smcp-core "$group" 0700
 # The Gateway's state directory (state.dir) and smcp-core's home, which
 # holds rootless Podman's container storage.
 ensure_dir /var/lib/smcp/state smcp-core "$group" 0700

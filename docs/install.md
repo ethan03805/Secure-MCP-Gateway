@@ -183,7 +183,7 @@ It ends by printing that the installation is not enforced. The unit runs the `sm
 sudo smcpctl install --profile enforced --admin-password-file a.pw --approver-password-file b.pw
 ```
 
-It runs the copy of `packaging/linux/install-enforced.sh` embedded in `smcpctl` with `--bin-dir` set to the directory of `smcpctl` (which must also hold `smcpd` and `smcp-refserver`). That script checks every Section 1.5.1 prerequisite before changing the host and stops naming the missing ones; then it creates the CP-46 service identities and subordinate ranges, the directories, the nftables table, the AppArmor profile (when AppArmor is enabled) and the systemd units, and installs the binaries into `/usr/local/bin`. `smcpctl install` then bootstraps the state into `/var/lib/smcp/state` and the policy into `/var/lib/smcp/policy` (owned by `smcp-core`), writes `/etc/smcp/smcp.toml` (root:smcp 0640) with `[profile] mode = "enforced"`, `[runtime] sandbox = "podman"`, `cgroup_manager = "cgroupfs"`, a mount of `/srv/smcp/sandbox` for the reference server and `[log] file = "/var/log/smcp/smcpd.log"`, starts `smcp-nftables.service` and `smcpd.service`, and checks health.
+It runs the copy of `packaging/linux/install-enforced.sh` embedded in `smcpctl` with `--bin-dir` set to the directory of `smcpctl` (which must also hold `smcpd` and `smcp-refserver`). That script checks every Section 1.5.1 prerequisite before changing the host and stops naming the missing ones; then it creates the CP-46 service identities and subordinate ranges, the directories, the nftables table, the AppArmor profile (when AppArmor is enabled) and the systemd units, and installs the binaries into `/usr/local/bin`. `smcpctl install` then bootstraps the state into `/var/lib/smcp/state` and the policy into `/var/lib/smcp/policy` (owned by `smcp-core`), writes `/etc/smcp/smcp.toml` (root:smcp 0640) with `[profile] mode = "enforced"`, `[runtime] sandbox = "podman"`, `cgroup_manager = "cgroupfs"`, a mount of `/srv/smcp/sandbox` for the reference server `[log] file = "/var/log/smcp/smcpd.log"` and `[backup] dir = "/var/lib/smcp/backups"` (smcpd cannot write next to the configuration; installations made by v1.1.0 or earlier lack this line, see the Enforced walkthrough below), starts `smcp-nftables.service` and `smcpd.service`, and checks health.
 
 Remove either installation with `smcpctl uninstall` (below); without `--config` it finds the configuration that install wrote.
 
@@ -317,6 +317,14 @@ mkdir -p release
 for f in smcp_1.1.0_checksums.txt smcp_1.1.0_checksums.txt.minisig "smcp_1.1.0_linux_${arch}.tar.gz"; do
   curl -fsSL -o "release/$f" "https://github.com/ethan03805/Secure-MCP-Gateway/releases/download/v1.1.0/$f"
 done
+#    Installations made by v1.1.0 or earlier keep backups next to the
+#    read-only configuration; give them a writable backup directory once.
+if ! sudo grep -q '^\[backup\]' /etc/smcp/smcp.toml; then
+  sudo install -d -o smcp-core -g smcp -m 0700 /var/lib/smcp/backups
+  printf '\n[backup]\ndir = "/var/lib/smcp/backups"\n' | sudo tee -a /etc/smcp/smcp.toml >/dev/null
+  sudo systemctl restart smcpd.service
+  until sudo -u smcp-core smcpctl health --config /etc/smcp/smcp.toml >/dev/null 2>&1; do sleep 1; done
+fi
 sudo smcpctl upgrade --config /etc/smcp/smcp.toml --release release --passphrase-file backup.pw
 smcpctl version --short
 sudo -u smcp-core smcpctl health --config /etc/smcp/smcp.toml
