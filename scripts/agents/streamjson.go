@@ -34,10 +34,17 @@ type streamMsg struct {
 // tools of the MCP server named prefix are allowed with their input
 // unchanged, every other tool is denied.
 func canUseToolAnswer(m streamMsg, prefix string) map[string]any {
+	return canUseToolAnswerFunc(m, func(tool string) bool { return strings.HasPrefix(tool, prefix) })
+}
+
+// canUseToolAnswerFunc is canUseToolAnswer with the allowed tools chosen by
+// allow. The lockdown run (lockdown.go) also allows Claude Code's file
+// tools, so that only the managed deny rules can refuse them.
+func canUseToolAnswerFunc(m streamMsg, allow func(tool string) bool) map[string]any {
 	var resp map[string]any
 	if m.Request.Subtype != "can_use_tool" {
 		resp = map[string]any{}
-	} else if strings.HasPrefix(m.Request.ToolName, prefix) {
+	} else if allow(m.Request.ToolName) {
 		input := m.Request.Input
 		if len(input) == 0 {
 			input = json.RawMessage("{}")
@@ -55,6 +62,12 @@ func canUseToolAnswer(m streamMsg, prefix string) map[string]any {
 // requests until the result message arrives, then closes stdin so the CLI
 // exits. Every line the CLI prints is copied to log.
 func streamJSONSession(stdin io.WriteCloser, stdout io.Reader, log io.Writer, prompt, toolPrefix string) error {
+	return streamJSONSessionFunc(stdin, stdout, log, prompt, func(tool string) bool { return strings.HasPrefix(tool, toolPrefix) })
+}
+
+// streamJSONSessionFunc is streamJSONSession with the allowed tools chosen
+// by allow.
+func streamJSONSessionFunc(stdin io.WriteCloser, stdout io.Reader, log io.Writer, prompt string, allow func(tool string) bool) error {
 	defer stdin.Close()
 	enc := json.NewEncoder(stdin)
 	if err := enc.Encode(map[string]any{
@@ -76,7 +89,7 @@ func streamJSONSession(stdin io.WriteCloser, stdout io.Reader, log io.Writer, pr
 		switch m.Type {
 		case "control_request":
 			if !closed {
-				if err := enc.Encode(canUseToolAnswer(m, toolPrefix)); err != nil {
+				if err := enc.Encode(canUseToolAnswerFunc(m, allow)); err != nil {
 					return err
 				}
 			}

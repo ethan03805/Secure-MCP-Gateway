@@ -345,5 +345,5 @@ fi
 # as the Go test cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost. It
 # removes the installation, so it comes last.
 say "uninstall and purge of the Enforced installation (FR-13.11, FR-13.12)"
-SMCP_ENFORCED_HOST_TEST=1 host_test TestEnforcedUninstallAndPurgeOnHost || fail "uninstall and purge"
+host_test ./cmd/smcpctl/ TestEnforcedUninstallAndPurgeOnHost SMCP_ENFORCED_HOST_TEST || fail "uninstall and purge"
 say "passed"

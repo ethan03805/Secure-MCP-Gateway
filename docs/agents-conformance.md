@@ -93,7 +93,7 @@ Without `-local`, Claude Code runs with a temporary `CLAUDE_CONFIG_DIR` and Code
 
 - The model key reaches each agent only through its environment. The session token travels the same way, and configuration files reference it with `${SMCP_SESSION_TOKEN}`, `{env:SMCP_SESSION_TOKEN}` or `bearer_token_env_var`. Goose is the exception: it does not expand variables in extension headers, so its temporary config file (mode 0600) holds the token. Neither secret ever appears on a command line.
 - The Session Approver and administrator passwords are generated per run and stored in owner-only files in the work directory.
-- Keep each run small: one short prompt per scenario, four scenario prompts per client, Haiku-class models. A full run of the five installable clients through the AI Gateway, plus the one Claude Code run of the broken-build check, costs well under one US dollar.
+- Keep each run small: one short prompt per scenario, four scenario prompts per client, Haiku-class models. A full run of the five installable clients through the AI Gateway, costs well under one US dollar; the broken-build check repeats it once and the Claude Code lockdown run adds three short prompts.
 
 ## Results format
 
@@ -127,10 +127,21 @@ Without `-local`, Claude Code runs with a temporary `CLAUDE_CONFIG_DIR` and Code
 FR-15.8 asks that a deliberately broken Gateway build turn the results to `fail`. `smcpd` built with `-tags smcp_broken` has such a defect in the policy decider (`internal/policy/broken_on.go`): once a rule grants a tool, it permits the call without the rate limit and without the approval obligation. Ungranted tools stay denied, so agents still connect and call tools. The binary logs "DELIBERATELY BROKEN BUILD" at startup. Release builds never set the tag, and `TestBrokenBuildTag` checks both builds.
 
 ```
-go run ./scripts/agents -clients claude-code -broken-gateway -out build/agents-broken.json -report build/agents-broken-report.json
+go run ./scripts/agents -broken-gateway -out build/agents-broken.json -report build/agents-broken-report.json
 ```
 
 With `-broken-gateway` the suite builds that binary and exits 0 only when at least one client ran and every client that ran reached the Gateway (its `allowed` scenario passed) and failed. A client that fails without reaching the Gateway proves nothing and fails the check. The expected detail is `failed: denied (call … to ref_time_now was dispatched; want a refusal); approval (no approval requested event for ref_read_file)`. `TestBrokenGatewayRun` runs the same check with the scripted reference client.
+
+### The lockdown run
+
+`-lockdown FILE` runs Claude Code through its quick start and its lockdown profile (`scripts/agents/lockdown.go`) and writes the report to FILE. It works in a fresh home directory for the harness user:
+
+1. Quick start, option B of `docs/clients/claude-code.md`: `smcpctl clients credentials` and `smcpctl clients setup claude-code --helper --no-lockdown`. `smcpctl doctor` must list the Gateway and no other server. Claude Code then starts with only the files setup wrote (no `--mcp-config` and no CA in its environment) and must call `ref_echo` over TLS; the journal decides (FR-18.3, FR-15.7).
+2. Control: the reference server is added over stdio as a second MCP server in user scope (`~/.claude.json`) and project scope (`./.mcp.json`). Claude Code is asked to read a canary file in the Gateway state directory with its Read tool and to edit `./.mcp.json` with its Edit tool. Without the lockdown both extra servers must connect, the canary must come back and the file must change, so the locked step tests something.
+3. Locked: `sudo -n smcpctl lockdown apply claude-code` writes `/etc/claude-code/managed-settings.json`. Doctor must still flag both extra servers and no longer report Claude Code's settings files as writable. The same prompt plus one `ref_echo` call runs again: only the Gateway may connect, the canary must not appear in the output, `./.mcp.json` must be unchanged byte for byte, and the Gateway call must still succeed. The suite answers every permission request with "allow", so only the managed deny rules can refuse the file tools (FR-15.1, FR-15.2, SR-4.9-1, SR-4.11-1).
+4. `sudo -n smcpctl lockdown remove claude-code` must remove the managed file again (FR-15.6).
+
+Steps 3 and 4 run on Linux with root or password-less sudo; elsewhere they are `not-run` and so is the run. The first CI run found that the managed file was written with mode 0600, which Claude Code running as the user cannot read and silently ignores; managed files are now written with mode 0644.
 
 ### The `-dns-only-ca` diagnostic
 
@@ -138,13 +149,16 @@ With `-broken-gateway` the suite builds that binary and exits 0 only when at lea
 
 ## Continuous integration
 
-The workflow `.github/workflows/agents.yml` (name "Real agents") runs on pushes to main, nightly and on manual dispatch, where it takes an optional client list. It is not a required check.
+The workflow `.github/workflows/agents.yml` (name "Real agents") runs on pushes to main and release tags, nightly and on manual dispatch, where it takes an optional client list. It is not a required check.
 
 1. `scripts/agents/install-clis.sh` installs the CLIs at the versions pinned in `docs/clients/matrix.json`: the npm packages for Claude Code, Codex, OpenCode and Gemini CLI, the Goose release script and the Hermes installer of the release tag mapped from the pinned version. A client without a pin gets the latest release. A failed install prints the installer's last lines and leaves the client `not-run`.
 2. `go run ./scripts/agents` runs with the repository secrets `AI_GATEWAY_API_KEY` and, optionally, `GEMINI_API_KEY`.
-3. The broken-build check runs Claude Code against `smcpd` built with `-tags smcp_broken` (see above) and fails the job unless Claude Code reaches the Gateway and fails. It runs when the dispatch input includes `claude-code` or is empty and the AI Gateway key is set. Its results, `build/agents-broken.json`, are uploaded but never published.
+3. The broken-build check runs every selected client against `smcpd` built with `-tags smcp_broken` (see above) and fails the job unless each client that runs reaches the Gateway and fails. It runs when the AI Gateway key is set. Its results, `build/agents-broken.json`, are uploaded but never published as status data.
 4. The results, `smcpd.log` and the redacted agent output are uploaded as the artifact `agents-results`. Debug logs and per-client configuration files are not uploaded.
 5. On main, the `publish` job commits `agents.json` to the `site-data` branch with `scripts/agents/publish.sh` and replaces the `agents` field of the published `status.json`. The CI `status` job reads `site-data/agents.json` whenever it publishes a new `status.json`, so the results stay on the site between agent runs.
+
+6. The `lockdown` job runs the lockdown run (see above) with Claude Code at its pinned version and fails unless every step passed.
+7. On pushes to main, nightly runs and release tags, the `publish-results` job publishes each job's result to `site-data/workflows.json` with `scripts/publish-workflow-result.sh`: `agents` claims FR-15.8 (only when the broken-build check ran) and `agents-lockdown` claims FR-15.2. `tools/reqreport` counts a result from a release tag as a full claim and one from main as a partial claim. Dispatched runs claim nothing.
 
 To update a pin, change `pinnedVersion` in `docs/clients/matrix.json`, run the suite locally for that client, and record `lastResult` and `lastRun`.
 

@@ -210,6 +210,11 @@ func TestClaudeCodeLockdownProfile(t *testing.T) {
 	if len(p.Changes) != 1 || p.Changes[0].Path != filepath.Join(e.Root, "/Library/Application Support/ClaudeCode/managed-settings.json") {
 		t.Fatalf("changes %+v", p.Changes)
 	}
+	// The managed file is written by root and must be readable by the
+	// user who runs Claude Code, or the client ignores it.
+	if p.Changes[0].Mode != 0o644 {
+		t.Errorf("managed settings mode %o, want 644", p.Changes[0].Mode)
+	}
 	var doc struct {
 		AllowManagedOnly bool             `json:"allowManagedMcpServersOnly"`
 		Allowed          []map[string]any `json:"allowedMcpServers"`

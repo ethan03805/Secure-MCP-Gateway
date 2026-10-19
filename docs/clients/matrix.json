@@ -13,7 +13,7 @@
       "session": "oauth",
       "lockdown": {
         "mechanism": "managed-settings.json: allowedMcpServers, managed-only allowlist, permissions.deny Read and Edit on Gateway paths",
-        "confirm": true
+        "confirm": false
       },
       "caTrust": {
         "mechanism": "NODE_EXTRA_CA_CERTS",

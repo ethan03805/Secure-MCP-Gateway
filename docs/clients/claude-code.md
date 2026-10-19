@@ -1,6 +1,6 @@
 # Claude Code
 
-Status: configuration generated and unit-tested; the setup it writes has not been run by the matrix job. The real-agent suite (`docs/agents-conformance.md`) ran Claude Code 2.1.302 over HTTPS on 2026-10-16 and it failed: the native build (Bun runtime, BoringSSL) rejects the iPAddress name constraints of the CP-53 local CA with "unsupported name constraint type" and does not connect. Option C (`smcp-stdio`) avoids this.
+Status: option B below and the lockdown are run by the `lockdown` job of the Real agents workflow (`scripts/agents/lockdown.go`, `docs/agents-conformance.md`) with Claude Code 2.1.302 on Linux. On 2026-10-19 (run 39184564500) Claude Code connected over TLS with only what `smcpctl clients setup claude-code --helper` wrote and called a tool through the Gateway; with the lockdown applied, a second MCP server in user and project scope did not load, the Read of a file in the Gateway state directory and the Edit of `./.mcp.json` were refused ("denied by your permission settings"), and `smcpctl doctor` flagged both extra servers. Option A needs a browser sign-in and is not run by CI. CP-53 CAs carry DNS-only name constraints, which the native build (BoringSSL) accepts; an instance CA made before that change must be replaced with `smcpctl keys rotate ca`.
 
 ## Connect
 
@@ -31,7 +31,7 @@ smcpctl lockdown show claude-code
 sudo --preserve-env=HOME smcpctl lockdown apply claude-code --config <config>
 ```
 
-The managed settings file (`/Library/Application Support/ClaudeCode/managed-settings.json` on macOS, `/etc/claude-code/managed-settings.json` on Linux) sets `allowManagedMcpServersOnly: true`, allows only the Gateway URL and the `smcp-stdio` command, and denies Claude Code's `Read` and `Edit` tools on the Gateway's state and configuration directories and the credential file, and `Edit` on Claude Code's own MCP and settings files. Claude Code's managed settings cannot be overridden from user or project settings. Remove with `sudo --preserve-env=HOME smcpctl lockdown remove claude-code`.
+The managed settings file (`/Library/Application Support/ClaudeCode/managed-settings.json` on macOS, `/etc/claude-code/managed-settings.json` on Linux, mode 0644 so that Claude Code running as the user can read it) sets `allowManagedMcpServersOnly: true`, allows only the Gateway URL and the `smcp-stdio` command, and denies Claude Code's `Read` and `Edit` tools on the Gateway's state and configuration directories and the credential file, and `Edit` on Claude Code's own MCP and settings files. Claude Code's managed settings cannot be overridden from user or project settings. Remove with `sudo --preserve-env=HOME smcpctl lockdown remove claude-code`.
 
 ## Verify
 

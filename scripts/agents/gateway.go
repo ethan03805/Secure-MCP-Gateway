@@ -126,8 +126,8 @@ func startGateway(ctx context.Context, root, work string, clients []*client, dns
 		logf("BROKEN-BUILD CHECK: building smcpd with -tags smcp_broken")
 		args = append(args, "-tags", "smcp_broken")
 	}
-	logf("building smcpd, smcpctl and smcp-refserver into %s", g.bin)
-	build := exec.CommandContext(ctx, "go", append(args, "-o", g.bin+string(os.PathSeparator), "./cmd/smcpd", "./cmd/smcpctl", "./cmd/smcp-refserver")...)
+	logf("building smcpd, smcpctl, smcp-refserver and smcp-session into %s", g.bin)
+	build := exec.CommandContext(ctx, "go", append(args, "-o", g.bin+string(os.PathSeparator), "./cmd/smcpd", "./cmd/smcpctl", "./cmd/smcp-refserver", "./cmd/smcp-session")...)
 	build.Dir = root
 	if out, err := build.CombinedOutput(); err != nil {
 		return nil, fmt.Errorf("go build: %w\n%s", err, out)
