@@ -29,12 +29,23 @@ type batchStore struct {
 	mu             sync.Mutex
 	sizes          []int
 	at             []time.Time
+	waited         []time.Duration // per batch: append time minus the oldest row's "ts"
 }
 
 func (b *batchStore) Append(_ string, rows []obsstore.Row) error {
+	now := time.Now()
+	var oldest time.Time
+	for _, r := range rows {
+		if ts, ok := r["ts"].(time.Time); ok && (oldest.IsZero() || ts.Before(oldest)) {
+			oldest = ts
+		}
+	}
 	b.mu.Lock()
 	b.sizes = append(b.sizes, len(rows))
-	b.at = append(b.at, time.Now())
+	b.at = append(b.at, now)
+	if !oldest.IsZero() {
+		b.waited = append(b.waited, now.Sub(oldest))
+	}
 	b.mu.Unlock()
 	return nil
 }
@@ -83,16 +94,22 @@ func TestObservationBatching(t *testing.T) {
 	if total != 10000 {
 		t.Fatalf("%d of 10000 records written", total)
 	}
-	// The longest gap between consecutive batches bounds how long a record
-	// waited (it was offered after the previous batch).
+	// Batch latency is measured per record: each row carries the time it
+	// was offered, and a batch's latency is its append time minus its
+	// oldest row's. The gap between consecutive batches is not used: when
+	// the offering loop itself is descheduled (a busy CI host, the race
+	// detector) no record is waiting during the gap, and the gap is not a
+	// latency. Batches appended after the last offer (the drain at the
+	// end) are included.
+	if len(bs.waited) != len(bs.sizes) || len(offered) != 2000 {
+		t.Fatalf("%d batch latencies for %d batches", len(bs.waited), len(bs.sizes))
+	}
 	var worst time.Duration
-	for i := 1; i < len(bs.at); i++ {
-		if g := bs.at[i].Sub(bs.at[i-1]); g > worst && bs.at[i].Before(offered[len(offered)-1]) {
-			worst = g
-		}
+	for _, w := range bs.waited {
+		worst = max(worst, w)
 	}
 	if worst > 350*time.Millisecond { // 200 ms plus scheduling jitter
-		t.Fatalf("a batch waited %s", worst)
+		t.Fatalf("a record waited %s for its batch", worst)
 	}
 }
 
