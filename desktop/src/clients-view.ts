@@ -158,13 +158,13 @@ function renderOutcome(c: Client, o: Outcome, removing: boolean): void {
       el("p", {}, [removing ? "Its settings files are restored to how they were before setup." : "Restart the agent so that it reads the new settings. Its tool calls then go through the Gateway."]),
     ];
     if (o.output) nodes.push(el("pre", { class: "output", tabindex: "0", "aria-label": "Output of smcpctl" }, [o.output.trimEnd()]));
-    nodes.push(el("div", { class: "actions-inline" }, [button("Back to the List", () => void load(), true)]));
+    nodes.push(el("div", { class: "actions-inline" }, [button("Back to the list", () => void load(), true)]));
     show(nodes);
     enter(removing ? `${c.name} is disconnected` : `${c.name} is connected`);
     return;
   }
   const code = o.code ?? (removing ? "CLIENT_REMOVE_FAILED" : "CLIENT_SETUP_FAILED");
-  show([...messageNodes(code, { client: c.id }), detailsArea(o), el("div", { class: "actions-inline" }, [button("Back to the List", () => void load(), true)])]);
+  show([...messageNodes(code, { client: c.id }), detailsArea(o), el("div", { class: "actions-inline" }, [button("Back to the list", () => void load(), true)])]);
   enter(message(cat, code, { client: c.id }).title);
 }
 

@@ -139,6 +139,17 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
   await page.waitForSelector("#step-body p");
   await page.goto(`${base}/status.html?csp&state=stopped`);
   await page.waitForSelector("#meaning:not(:empty)");
+  // The bundled IBM Plex faces load under the CSP (font-src 'self') and are
+  // the faces in use (docs/design/visual.md, Type).
+  const fonts = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return {
+      sans: document.fonts.check('600 14px "IBM Plex Sans"') && [...document.fonts].some((f) => f.family.includes("IBM Plex Sans") && f.status === "loaded"),
+      family: getComputedStyle(document.body).fontFamily,
+    };
+  });
+  if (!fonts.sans) fail("the bundled IBM Plex Sans did not load under the CSP");
+  if (!/^"?IBM Plex Sans"?,/.test(fonts.family)) fail(`body font is ${fonts.family}, not IBM Plex Sans first`);
   await page.goto(`${base}/setup.html?csp&demo=failed`);
   await page.waitForSelector("#stage-title");
   await page.goto(`${base}/updates.html?csp&preview=available`);

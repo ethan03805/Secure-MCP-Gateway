@@ -114,4 +114,10 @@ test("every view loads and works from the local installation with outbound reque
     "a font file was loaded from the admin listener",
   ).toBe(true);
   expect(blocked, "requests to other origins").toEqual([]);
+  // The fonts' licenses (OFL 1.1) are served with them.
+  for (const f of ["OFL-IBM-Plex-Sans.txt", "OFL-IBM-Plex-Mono.txt"]) {
+    const r = await page.request.get(`${origin}/licenses/${f}`);
+    expect(r.status(), f).toBe(200);
+    expect(await r.text(), f).toContain("SIL Open Font License, Version 1.1");
+  }
 });

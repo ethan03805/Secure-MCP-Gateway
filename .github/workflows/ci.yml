@@ -670,6 +670,9 @@ jobs:
           npm run typecheck
           npm test
           npm run build
+      - name: Application icons match their generator (docs/design/visual.md)
+        if: runner.os == 'Linux'
+        run: python3 -I desktop/scripts/make-icons.py --check
       - name: Bundled windows in WebKit and Chromium (axe WCAG 2.2 AA, CSP, keyboard, reduced motion; FR-20.43)
         if: runner.os == 'macOS'
         working-directory: desktop
