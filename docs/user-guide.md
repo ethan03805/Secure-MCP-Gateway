@@ -51,7 +51,7 @@ install.sh: downloading smcp_1.1.0_darwin_arm64.tar.gz (v1.1.0)
 install.sh: signature verified (smcp_1.1.0_checksums.txt, with minisign)
 install.sh: Sigstore bundle verified (cosign, ethan03805/Secure-MCP-Gateway release workflow)
 install.sh: checksum verified (b401ce43...)
-install.sh: installed smcpd smcpctl smcp-refserver smcp-stdio smcp-session smcp-connect to /Users/you/.local/bin
+install.sh: installed smcpd ... smcp-connect to /Users/you/.local/bin
 ```
 
 The Sigstore line appears only when `cosign` is installed. If any check fails, the script installs nothing. If it says `~/.local/bin` is not on your `PATH`, add it:
