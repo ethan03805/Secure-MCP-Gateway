@@ -267,6 +267,24 @@ fn no_updater_or_shell_plugin() {
     assert!(!LIB.contains("Command::new"), "lib.rs spawns processes; use service.rs");
 }
 
+/// FR-20.28: the bundler registers the scheme `smcp` and no other; the
+/// deep-link plugin itself is not used, so no window can register more.
+#[test]
+fn only_the_smcp_scheme_is_registered() {
+    claims::partial(&["FR-20.28"]);
+    let c = conf();
+    assert_eq!(
+        c["plugins"]["deep-link"],
+        serde_json::json!({"desktop": {"schemes": ["smcp"]}})
+    );
+    assert_eq!(c["plugins"].as_object().unwrap().len(), 1);
+    assert!(!CARGO.contains("tauri-plugin-deep-link"));
+    // Links reach only deeplink::parse, then the console window.
+    let compact: String = LIB.chars().filter(|c| !c.is_whitespace()).collect();
+    assert!(compact.contains("urls.iter().find_map(|u|deeplink::parse(u.as_str()))"));
+    assert!(compact.contains("deeplink::from_args(std::env::args())"));
+}
+
 #[test]
 fn single_instance_is_the_first_plugin() {
     claims::partial(&["FR-20.14"]);
@@ -279,7 +297,7 @@ fn single_instance_is_the_first_plugin() {
     // A second start opens or focuses the console window of the first.
     let compact: String = LIB.chars().filter(|c| !c.is_whitespace()).collect();
     let at = compact
-        .find("tauri_plugin_single_instance::init(|app,_argv,_cwd|")
+        .find("tauri_plugin_single_instance::init(|app,argv,_cwd|")
         .unwrap();
-    assert!(compact[at..at + 100].contains("open_console(app,Page::Home)"));
+    assert!(compact[at..at + 300].contains("open_console(app,deeplink::from_args(argv).unwrap_or(Page::Home))"));
 }

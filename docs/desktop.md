@@ -81,7 +81,7 @@ The tray needs the metrics endpoint. `smcpctl bootstrap` enables it on the admin
 | Start, Stop, Restart | Controls the `smcpd` service through the service manager. Start is enabled only while the service is stopped; Stop and Restart only while it runs. |
 | Set Up a Client… | Opens the client setup window (below). |
 | Check for Updates | Not available yet (shown disabled). |
-| Settings… | The admin listener address, the metrics endpoint, the CA file and the notification switch. |
+| Settings… | The admin listener address, the metrics endpoint, the CA file, the notification switch and Open the app when I log in. |
 | Help | Introduction (reopens the introduction), Set Up the Gateway (first-run setup), Gateway Status, and Desktop Guide (this page, in the default browser). |
 | Quit | Quits the application. The Gateway keeps running. |
 
@@ -112,11 +112,27 @@ For the Linux Enforced profile the state directory is not readable by your accou
 
 ## Approval notifications
 
-When the number of pending approvals goes up and notifications are on, the application raises one notification: "*n* tool calls are waiting for approval. Open the console to review them." The text is fixed except for the count; it never names a tool, a server or an argument, because the application knows nothing else without signing in, and notification centers are visible to anyone at the unlocked desktop. A notification has no approve, deny or reply action. To decide, open **Approvals** from the tray menu and sign in as an Approver or Administrator. Turn notifications off in **Settings**. Opening the Approvals view by clicking the notification itself is planned.
+When the number of pending approvals goes up and notifications are on, the application raises one notification: "*n* tool calls are waiting for approval. Open the console to review them." The text is fixed except for the count; it never names a tool, a server or an argument, because the application knows nothing else without signing in, and notification centers are visible to anyone at the unlocked desktop. A notification has no approve, deny or reply action. To decide, open **Approvals** from the tray menu and sign in as an Approver or Administrator. Turn notifications off in **Settings**. Clicking the notification opens the console window at the Approvals view (macOS and Linux); that is its only action. On Windows the notification does not open the console yet; use Approvals in the tray menu.
 
 ## Single instance
 
 Only one copy runs per user session. Starting the application again opens or focuses the console window of the copy that is running.
+
+## Start at login
+
+The application does not start at login after installation. Turn on **Open the app when I log in** in Settings to add it as a login item of your account, without elevation: on macOS the launch agent `~/Library/LaunchAgents/com.smcp.desktop.plist`, on Linux the autostart entry `~/.config/autostart/smcp-desktop.desktop` (for an AppImage it names the AppImage file), on Windows the value `Secure MCP Gateway` under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. Turning the switch off removes it. The Gateway service has its own login start (`smcpctl install`) and does not depend on the application.
+
+## Links that open the console
+
+The application registers the URL scheme `smcp` (SRS FR-20.28) and accepts only three links:
+
+| Link | Opens |
+|---|---|
+| `smcp://console` | the console window |
+| `smcp://approvals` | the Approvals view |
+| `smcp://approvals/<approval ID>` | one approval, where the ID is a UUID |
+
+An accepted link only brings the console window to that page; you still sign in and decide there. Every other link, including one with a query string, another path, an ID that is not a UUID or more than 64 characters, is ignored and nothing is sent to the Gateway. Any web page can open a registered link, so a link never approves, denies or changes anything.
 
 ## Building from source (until the installers ship)
 
@@ -134,4 +150,4 @@ The macOS bundle is not signed; macOS asks you to approve it in System Settings,
 
 ## Not yet available
 
-Update checks and upgrades (FR-20.11 to FR-20.13), start at login (FR-20.14), deep links (FR-20.28), Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).
+Update checks and upgrades (FR-20.11 to FR-20.13), Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).

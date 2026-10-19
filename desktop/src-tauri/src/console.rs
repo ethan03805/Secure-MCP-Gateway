@@ -45,20 +45,53 @@ pub const WINDOW: WindowConfig = WindowConfig {
     height: 860.0,
 };
 
-/// A console page the application may open (deep links of FR-20.28 will
-/// map to these).
+/// A console page the application may open: from the menu, a
+/// notification, or an accepted deep link (FR-20.28, `deeplink`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Page {
     Home,
     /// The Approvals view, G-13.
     Approvals,
+    /// One approval in the Approvals view.
+    Approval(ApprovalId),
+}
+
+/// An approval ID that is a UUID in its canonical 36-character form, kept
+/// as lower-case text. Only [`ApprovalId::parse`] makes one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ApprovalId([u8; 36]);
+
+impl ApprovalId {
+    pub fn parse(s: &str) -> Option<ApprovalId> {
+        let b = s.as_bytes();
+        if b.len() != 36 {
+            return None;
+        }
+        let mut out = [0u8; 36];
+        for (i, &c) in b.iter().enumerate() {
+            let dash = matches!(i, 8 | 13 | 18 | 23);
+            out[i] = match (dash, c) {
+                (true, b'-') => b'-',
+                (false, b'0'..=b'9' | b'a'..=b'f') => c,
+                (false, b'A'..=b'F') => c.to_ascii_lowercase(),
+                _ => return None,
+            };
+        }
+        Some(ApprovalId(out))
+    }
+
+    pub fn as_str(&self) -> &str {
+        // Only ASCII hex digits and hyphens are stored.
+        std::str::from_utf8(&self.0).unwrap_or("")
+    }
 }
 
 impl Page {
-    pub fn path(self) -> &'static str {
+    pub fn path(self) -> String {
         match self {
-            Page::Home => "/",
-            Page::Approvals => "/approvals",
+            Page::Home => "/".into(),
+            Page::Approvals => "/approvals".into(),
+            Page::Approval(id) => format!("/approvals/{}", id.as_str()),
         }
     }
 }
@@ -145,10 +178,24 @@ mod tests {
     fn approvals_open_at_g13() {
         claims::partial(&["FR-20.7", "SR-2.6-2"]);
         assert_eq!(
-            admin().page(Page::Approvals.path()).as_str(),
+            admin().page(&Page::Approvals.path()).as_str(),
             "https://127.0.0.1:8444/approvals"
         );
-        assert_eq!(admin().page(Page::Home.path()).as_str(), "https://127.0.0.1:8444/");
+        assert_eq!(admin().page(&Page::Home.path()).as_str(), "https://127.0.0.1:8444/");
+        let id = ApprovalId::parse("0B0E5C1E-2F0E-4A7B-9A51-6D5F8E7C1A2B").unwrap();
+        assert_eq!(
+            admin().page(&Page::Approval(id).path()).as_str(),
+            "https://127.0.0.1:8444/approvals/0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b"
+        );
+        for bad in [
+            "",
+            "0b0e5c1e2f0e4a7b9a516d5f8e7c1a2b",
+            "0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2g",
+            "0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b0",
+            "../../admin/v1/stop/0000000000000000",
+        ] {
+            assert!(ApprovalId::parse(bad).is_none(), "{bad}");
+        }
     }
 
     #[test]

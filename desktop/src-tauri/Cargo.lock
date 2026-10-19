@@ -3449,6 +3449,7 @@ version = "0.1.0"
 dependencies = [
  "block2",
  "libc",
+ "notify-rust",
  "objc2",
  "objc2-core-foundation",
  "objc2-foundation",

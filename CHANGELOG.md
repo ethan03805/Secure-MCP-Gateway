@@ -8,6 +8,8 @@
 
 - Desktop client setup (SRS FR-20.10, planned for v1.3.0): the Set Up a Client window (tray menu, introduction, end of first-run setup) lists the supported agents that the new `smcpctl clients detect --json` finds, shows the changes `smcpctl connect <client> --dry-run --json` reports (new `--json`) with each file's full content, applies only the setup the user previewed, with or without the lockdown profile, and offers Disconnect (`--remove`). The commands run in the user's home directory.
 
+- Desktop deep links, notification click-through and start at login (SRS FR-20.28, FR-20.7, FR-20.14, planned for v1.3.0). The app registers only the `smcp` scheme, through the bundler configuration and without the deep-link plugin. It accepts only `smcp://console`, `smcp://approvals` and `smcp://approvals/<UUID>`, which come from the macOS open-URL event or from the arguments on Linux and Windows. An accepted link only focuses the console window at that page, and every other link is ignored. Clicking an approval notification opens the Approvals view on macOS and Linux (notify-rust, the version the notification plugin already uses); the notification has no other action. The new Settings switch Open the app when I log in is off by default. It writes a per-user login item: a launch agent, an XDG autostart entry, or the HKCU Run value.
+
 ## v1.2.0 — 2026-10-19
 
 Third release, built to SRS V1.2 and architecture V2.3 from main after the phase-10 work (32 pull requests since v1.1.0). The tag is made by the procedure in `docs/release-checklist.md`, rehearsed with `v1.2.0-rc.1` on the same commit.

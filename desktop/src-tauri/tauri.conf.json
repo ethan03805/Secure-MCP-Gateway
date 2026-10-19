@@ -27,5 +27,11 @@
       "minimumSystemVersion": "14.0"
     }
   },
-  "plugins": {}
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["smcp"]
+      }
+    }
+  }
 }

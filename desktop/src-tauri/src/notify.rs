@@ -17,6 +17,45 @@ pub struct Notice {
 
 pub const TITLE: &str = "Secure MCP Gateway";
 
+/// The one action an approval notification has: its default activation
+/// (a click on the notification), which opens the Approvals view. The
+/// label is what a notification server that lists actions shows.
+pub const OPEN_ACTION: (&str, &str) = ("default", "Open Approvals");
+
+/// Whether a notification's reported action opens the Approvals view. A
+/// dismissal (`__closed`) or anything else does nothing.
+pub fn opens_approvals(action: &str) -> bool {
+    action == OPEN_ACTION.0
+}
+
+/// How many notifications may wait for a click at once; each waits on a
+/// thread of its own.
+pub const MAX_WAITING: usize = 4;
+
+static WAITING: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// A place among the waiting notifications, released when dropped.
+#[derive(Debug)]
+pub struct Waiting(());
+
+impl Waiting {
+    pub fn take() -> Option<Waiting> {
+        use std::sync::atomic::Ordering;
+        WAITING
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| {
+                (n < MAX_WAITING).then_some(n + 1)
+            })
+            .ok()
+            .map(|_| Waiting(()))
+    }
+}
+
+impl Drop for Waiting {
+    fn drop(&mut self) {
+        WAITING.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
 /// The fixed text for a pending count.
 pub fn notice(count: u64) -> Notice {
     let body = if count == 1 {
@@ -66,6 +105,24 @@ mod tests {
         );
         assert_eq!(n.observe(2, true), None);
         assert_eq!(n.observe(0, true), None);
+    }
+
+    #[test]
+    fn activation_only_opens_the_approvals_view() {
+        claims::partial(&["FR-20.7", "SR-2.6-2"]);
+        assert!(opens_approvals("default"));
+        for other in ["__closed", "approve", "deny", "reply", ""] {
+            assert!(!opens_approvals(other), "{other}");
+        }
+        let label = OPEN_ACTION.1.to_lowercase();
+        for word in ["approve", "deny", "allow", "reply"] {
+            assert!(!label.contains(word), "{word}");
+        }
+        // The waiting threads are bounded.
+        let held: Vec<_> = std::iter::from_fn(Waiting::take).take(MAX_WAITING + 2).collect();
+        assert!(held.len() <= MAX_WAITING);
+        drop(held);
+        assert!(Waiting::take().is_some());
     }
 
     #[test]

@@ -12,8 +12,10 @@
 //! policy, certificate check, notification text, settings) are in their
 //! own modules with unit tests; this file wires them to Tauri.
 
+pub mod autostart;
 pub mod clients;
 pub mod console;
+pub mod deeplink;
 pub mod explain;
 pub mod health;
 pub mod icons;
@@ -144,6 +146,26 @@ fn save_settings(
         }]
     })?;
     settings.resolve(shared.host.os, &shared.host.home, shared.xdg_state_home.as_deref())?;
+    // FR-20.14: register or remove the login item when the switch changes
+    // (or when it is on and the item is missing).
+    let was_on = shared.settings.lock().unwrap_or_else(|e| e.into_inner()).start_at_login;
+    if settings.start_at_login != was_on
+        || (settings.start_at_login && shared.host.os != "windows" && !autostart::registered(&shared.host))
+    {
+        let exe = std::env::current_exe().map_err(|e| {
+            vec![FieldError {
+                field: "start_at_login",
+                message: e.to_string(),
+            }]
+        })?;
+        let program = autostart::program(exe, std::env::var_os("APPIMAGE").map(PathBuf::from));
+        autostart::apply(&shared.host, &program, settings.start_at_login, &SystemRunner).map_err(|m| {
+            vec![FieldError {
+                field: "start_at_login",
+                message: m,
+            }]
+        })?;
+    }
     settings.save(&shared.settings_path).map_err(|e| {
         vec![FieldError {
             field: "file",
@@ -604,6 +626,43 @@ fn notify(app: &AppHandle, body: &str) {
     let _ = app.notification().builder().title(notify::TITLE).body(body).show();
 }
 
+/// An approval notification (FR-20.7, SR-2.6-2). Activating it opens the
+/// console window at the Approvals view (G-13); its only action is that
+/// default one, so it can never approve, deny or reply. On macOS and Linux
+/// a thread waits for the activation; at most `notify::MAX_WAITING` wait at
+/// once, and a notification beyond that is shown without click-through.
+fn notify_approvals(app: &AppHandle, body: &str) {
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        if let Some(slot) = notify::Waiting::take() {
+            let app = app.clone();
+            let body = body.to_string();
+            std::thread::spawn(move || {
+                let _slot = slot;
+                #[cfg(target_os = "macos")]
+                {
+                    let _ = notify_rust::set_application(&app.config().identifier);
+                }
+                let mut n = notify_rust::Notification::new();
+                n.appname(notify::TITLE).summary(notify::TITLE).body(&body);
+                #[cfg(target_os = "linux")]
+                n.action(notify::OPEN_ACTION.0, notify::OPEN_ACTION.1);
+                match n.show() {
+                    Ok(handle) => handle.wait_for_action(|action| {
+                        if notify::opens_approvals(action) {
+                            let a = app.clone();
+                            let _ = app.run_on_main_thread(move || open_console(&a, Page::Approvals));
+                        }
+                    }),
+                    Err(_) => notify(&app, &body),
+                }
+            });
+            return;
+        }
+    }
+    notify(app, body);
+}
+
 fn open_settings(app: &AppHandle) {
     if let Some(w) = app.get_webview_window(SETTINGS_LABEL) {
         let _ = w.show();
@@ -627,7 +686,7 @@ fn open_console(app: &AppHandle, page: Page) {
             return;
         }
     };
-    let target = r.admin.page(page.path());
+    let target = r.admin.page(&page.path());
     if let Some(w) = app.get_webview_window(CONSOLE_LABEL) {
         if page != Page::Home {
             let _ = w.navigate(target);
@@ -878,7 +937,7 @@ fn poll(app: AppHandle, shared: Arc<Shared>) {
         if let Some(n) = view.pending {
             let enabled = resolved.as_ref().map(|r| r.notifications).unwrap_or(false);
             if let Some(notice) = notifier.observe(n, enabled) {
-                notify(&app, &notice.body);
+                notify_approvals(&app, &notice.body);
             }
         }
         if last.as_ref() != Some(&(view.clone(), service_status)) {
@@ -898,8 +957,11 @@ pub fn run() {
     let context = tauri::generate_context!();
     let app = tauri::Builder::default()
         // First, so a second start only focuses the first (FR-20.14).
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            open_console(app, Page::Home)
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // A deep link opened while the application runs arrives here
+            // on Linux and Windows (FR-20.28); any other second start
+            // focuses the console window.
+            open_console(app, deeplink::from_args(argv).unwrap_or(Page::Home))
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
@@ -955,18 +1017,33 @@ pub fn run() {
                 // FR-20.8: no Gateway configuration, so setup is offered.
                 open_setup(app.handle());
             }
+            // FR-20.28: on Linux and Windows a link that started the
+            // application arrives as an argument.
+            if let Some(page) = deeplink::from_args(std::env::args()) {
+                open_console(app.handle(), page);
+            }
             let handle = app.handle().clone();
             std::thread::spawn(move || poll(handle, shared));
             Ok(())
         })
         .build(context)
         .expect("error while building the desktop application");
-    app.run(|_app, ev| {
+    app.run(|app, ev| match ev {
         // Closing the last window keeps the tray running; Quit exits.
-        if let RunEvent::ExitRequested { api, code, .. } = ev {
+        RunEvent::ExitRequested { api, code, .. } => {
             if code.is_none() {
                 api.prevent_exit();
             }
+        }
+        // macOS delivers a registered-scheme link as an event (FR-20.28).
+        #[cfg(target_os = "macos")]
+        RunEvent::Opened { urls } => {
+            if let Some(page) = urls.iter().find_map(|u| deeplink::parse(u.as_str())) {
+                open_console(app, page);
+            }
+        }
+        _ => {
+            let _ = app;
         }
     });
 }
