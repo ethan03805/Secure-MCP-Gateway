@@ -946,6 +946,18 @@ jobs:
               echo "no $f results"
             fi
           done
+          # FR-13.4 and FR-13.11 in both profiles: the Standalone runs on
+          # macOS and Ubuntu and the Enforced run of linux-integration,
+          # read together by tools/reqreport.TestInstallProfilesEvidence.
+          if [ -s build/install-standalone-macos-test.json ] && [ -s build/install-standalone-linux-test.json ] && [ -s build/linux-integration-test.json ]; then
+            SMCP_INSTALL_EVIDENCE_MACOS="$PWD/build/install-standalone-macos-test.json" \
+            SMCP_INSTALL_EVIDENCE_LINUX="$PWD/build/install-standalone-linux-test.json" \
+            SMCP_INSTALL_EVIDENCE_ENFORCED="$PWD/build/linux-integration-test.json" \
+              go test -json -count=1 -run '^TestInstallProfilesEvidence$' ./tools/reqreport/ > build/install-profiles-test.json || true
+            cat build/install-profiles-test.json >> build/all-test.json
+          else
+            echo "install results missing for a profile; FR-13.4 and FR-13.11 not combined"
+          fi
           if [ "$merged" = 1 ]; then
             go run ./tools/reqreport -in build/all-test.json -coverprofile build/cover.out -fail-on-failing=false
           fi

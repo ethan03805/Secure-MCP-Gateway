@@ -44,6 +44,32 @@ func withInstalledConfig(args []string) []string {
 	return args
 }
 
+// uninstallScope says which host objects an uninstall removes. Each
+// profile removes only what its own install created: the Enforced profile
+// (`[profile] mode = "enforced"`) the system units, the nftables table
+// `inet smcp`, the LSM profiles, the smcp-srv setup and, on purge, the
+// CP-46 service identities; any other profile mode only the user's own
+// launchd agent or systemd user unit. A Standalone uninstall on a host that
+// also has an Enforced installation leaves the Enforced objects in place.
+type uninstallScope struct {
+	enforced bool
+}
+
+func scopeFor(profileMode string) uninstallScope {
+	return uninstallScope{enforced: profileMode == "enforced"}
+}
+
+// removesUnit reports whether a unit file of this kind belongs to the
+// profile being uninstalled.
+func (s uninstallScope) removesUnit(kind string) bool {
+	switch kind {
+	case "launchd", "systemd-user":
+		return !s.enforced
+	default: // systemd-system, systemd-aux, nft-ruleset
+		return s.enforced
+	}
+}
+
 // uninstallCmd is `smcpctl uninstall [--purge]` (FR-13.11, FR-13.12).
 func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 	fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
@@ -67,6 +93,7 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 		return err
 	}
 	jdir := filepath.Join(cfg.State.Dir, "journal")
+	scope := scopeFor(cfg.Profile.Mode)
 
 	// The purge confirmation comes first, so that a refusal changes nothing.
 	if *purge {
@@ -97,7 +124,7 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 
 	// 2. Units, nftables table, LSM profiles, binaries.
 	for _, u := range unitFiles() {
-		if !u.exists {
+		if !u.exists || !scope.removesUnit(u.kind) {
 			continue
 		}
 		if hostRoot == "" {
@@ -129,7 +156,10 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 			_ = runQuiet(argv...)
 		}
 	}
-	if hostRoot == "" {
+	if hostRoot == "" && !scope.enforced && runtime.GOOS == "linux" {
+		fmt.Fprintf(out, "kept: system units, nftables table %s, LSM profiles and service identities (profile mode %q; only the Enforced profile's uninstall removes them)\n", nftTable, cfg.Profile.Mode)
+	}
+	if hostRoot == "" && scope.enforced {
 		fmt.Fprintln(out, removeNftTable())
 		for _, line := range removeLSMProfiles() {
 			fmt.Fprintln(out, line)
@@ -182,7 +212,7 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 			}
 		}
 	}
-	if hostRoot == "" {
+	if hostRoot == "" && scope.enforced {
 		for _, line := range removeIdentities() {
 			fmt.Fprintln(out, line)
 		}
