@@ -115,4 +115,8 @@ The measured start on macOS arm64 with Docker was 8 to 9 s to the first healthy 
 
 ## Not built yet
 
-The console view G-15, start on demand and upgrade, uninstall and the managed-process form of the bundled instance, its Enforced-profile containment, hosted-entry import (probe, `manifest_version` 2), per-package isolation and its self-check, reconciliation, and the hostile fixtures HFC-01 to HFC-14.
+- Dispatch of an enabled hosted package: registering it with its own team, user, gateway, virtual server and token at enablement, the scope self-check at each start and token renewal with suspension on a finding, reconciliation every 5 minutes with suspension on drift and `contextforge_drift` events, and calls through the southbound Streamable HTTP transport with the backend-name wrapper (built, `renameProcess`) and the evidence fields of FR-22.39.
+- An E-18 endpoint per hosted package (FR-22.40), the probe secret of API-key entries, and the narrowed probe network (SR-3.5-2).
+- The Enforced-profile containment of the bundled instance (rootless Podman under E-16, network namespace limited to E-18 endpoints, firewall rule for the Gateway identity; FR-22.24, FR-22.26, SR-4.5-4, SR-4.7-3).
+- The managed-process form for hosts without a container engine (FR-22.20, needs a hashed wheel set in the release lock), upgrade with rollback (FR-22.31), the release lock's signature and the SBOM records (FR-22.18, FR-22.21), and the desktop setup choice (FR-22.44).
+- The hostile rows that need the items above (HFC-01, HFC-05, HFC-08 to HFC-13).
