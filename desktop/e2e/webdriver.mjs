@@ -110,7 +110,10 @@ try {
   // ---- Introduction, then first-run setup (FR-20.40, FR-20.8) ----
   await windowTitled("Introduction");
   ok("the introduction opens at the first start");
-  await click(await find("#skip"));
+  // Skip closes the window, so the click may report the window as gone.
+  await click(await find("#skip")).catch((e) => {
+    if (!String(e).includes("no such window")) throw e;
+  });
   await windowTitled("Set Up the Gateway", 60000);
   await waitFor(() => find("#setup-form"), "the setup form", 60000);
   ok("first-run setup follows the introduction when no configuration exists");
