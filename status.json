@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T20:42:55Z",
-  "commit": "176c7256437038ae8f2b878e461581c688c6bb16",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/176c7256437038ae8f2b878e461581c688c6bb16",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39310942151",
+  "generatedAt": "2026-10-19T21:58:35Z",
+  "commit": "6ee81f7b9ff57f695a41c021ca917a71923e140a",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/6ee81f7b9ff57f695a41c021ca917a71923e140a",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39323825409",
   "tests": {
-    "total": 1662,
-    "passed": 1644,
-    "failed": 0,
+    "total": 1674,
+    "passed": 1655,
+    "failed": 1,
     "skipped": 18,
-    "durationSec": 2776.6,
+    "durationSec": 2905,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -67,7 +67,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 85,
+        "passed": 86,
         "failed": 0,
         "skipped": 0
       },
@@ -205,7 +205,7 @@
       },
       {
         "name": "internal/contextforge",
-        "passed": 11,
+        "passed": 22,
         "failed": 0,
         "skipped": 0
       },
@@ -217,8 +217,8 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 68,
-        "failed": 0,
+        "passed": 67,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -488,7 +488,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.4,
+    "totalPct": 76.5,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -516,7 +516,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 42.3
+        "pct": 43
       },
       {
         "name": "cmd/smcpd",
@@ -536,7 +536,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 80.6
+        "pct": 80.3
       },
       {
         "name": "internal/anomaly",
@@ -592,7 +592,7 @@
       },
       {
         "name": "internal/contextforge",
-        "pct": 86.6
+        "pct": 89.3
       },
       {
         "name": "internal/diag",
@@ -600,7 +600,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.3
+        "pct": 91.7
       },
       {
         "name": "internal/egress",
@@ -616,7 +616,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 84
       },
       {
         "name": "internal/gwtest",
@@ -652,7 +652,7 @@
       },
       {
         "name": "internal/observe",
-        "pct": 91.6
+        "pct": 91.7
       },
       {
         "name": "internal/obspolicy",
@@ -732,7 +732,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.7
+        "pct": 80
       },
       {
         "name": "internal/session",
@@ -794,9 +794,9 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 491,
-    "partial": 38,
-    "failing": 0,
+    "verified": 490,
+    "partial": 36,
+    "failing": 3,
     "unverified": 1,
     "byElement": [
       {
@@ -1035,17 +1035,17 @@
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 11,
+        "verified": 9,
         "partial": 0,
-        "failing": 0
+        "failing": 2
       },
       {
         "element": "E-31",
         "name": "Anomaly Scorer",
         "total": 10,
-        "verified": 10,
+        "verified": 9,
         "partial": 0,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-32",
@@ -1059,8 +1059,8 @@
         "element": "E-33",
         "name": "Harness Adapter Kit",
         "total": 21,
-        "verified": 12,
-        "partial": 8,
+        "verified": 14,
+        "partial": 6,
         "failing": 0
       }
     ],
@@ -3774,7 +3774,7 @@
       {
         "id": "FR-10.20",
         "element": "E-30",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestPromotionManualAndAutomatic",
@@ -3785,7 +3785,7 @@
       {
         "id": "FR-10.21",
         "element": "E-30",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/anomaly.TestRollbackScoresRecordSnapshot",
@@ -4421,7 +4421,7 @@
           "internal/acceptance/offline.TestAT17OfflineEngineeringWorkflow",
           "internal/acceptance/offline/enforced.TestAT17OfflineEngineeringWorkflow",
           "internal/packaging.TestReferenceRecipesArePinned",
-          "workflow reference-packages at v1.1.0 (935dc4d0849e, 2026-10-18T23:52:21Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39178206965"
+          "workflow reference-packages at v1.2.0 (176c72564370, 2026-10-19T21:17:23Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39325918737"
         ]
       },
       {
@@ -4456,7 +4456,7 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
-          "analysis: 6 of 11 child requirements verified"
+          "analysis: 8 of 11 child requirements verified"
         ]
       },
       {
@@ -4475,12 +4475,12 @@
       {
         "id": "FR-15.2",
         "element": "E-33",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (176c72564370, 2026-10-19T19:33:00Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39310942097"
+          "workflow agents-lockdown at v1.2.0 (176c72564370, 2026-10-19T21:31:07Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39325918733"
         ]
       },
       {
@@ -4534,7 +4534,7 @@
       {
         "id": "FR-15.8",
         "element": "E-33",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "internal/policy.TestBrokenBuildTag",
           "scripts/agents.TestBrokenGatewayRun",
@@ -4549,7 +4549,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (176c72564370, 2026-10-19T19:32:59Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39310942097"
+          "workflow agents at v1.2.0 (176c72564370, 2026-10-19T21:31:05Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39325918733"
         ]
       },
       {
@@ -6473,7 +6473,7 @@
       {
         "id": "SR-7-1",
         "element": "E-31",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/baseline.TestRollbackAndIntegrity",
           "internal/e2e.TestBaselinePromotionRollbackAndIntegrity"
@@ -7258,29 +7258,37 @@
       {
         "id": "FR-22",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "analysis: 2 of 45 child requirements verified"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.1",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge.TestCatalogSource"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.2",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/contextforge.TestBoundedParsing"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.3",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/contextforge.TestClassificationReasons"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7307,8 +7315,10 @@
       {
         "id": "FR-22.7",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge.TestCatalogCodeHasNoNetworkOrExec"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7328,8 +7338,10 @@
       {
         "id": "FR-22.10",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge.TestMapToolNames"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7377,15 +7389,19 @@
       {
         "id": "FR-22.17",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge.TestReleaseLock"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.18",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge.TestReleaseLock"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8544,7 +8560,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44779: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45769: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8661,7 +8677,7 @@
     }
   ],
   "acceptance": {
-    "commit": "176c7256437038ae8f2b878e461581c688c6bb16",
+    "commit": "6ee81f7b9ff57f695a41c021ca917a71923e140a",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9349,24 +9365,24 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   },
   "performance": {
     "schema": 1,
-    "commit": "176c7256437038ae8f2b878e461581c688c6bb16",
-    "generatedAt": "2026-10-19T19:56:38Z",
+    "commit": "6ee81f7b9ff57f695a41c021ca917a71923e140a",
+    "generatedAt": "2026-10-19T21:07:13Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000010046",
-      "memoryBytes": 16766414848,
+      "runner": "GitHub Actions 1000010325",
+      "memoryBytes": 16766410752,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90422214656,
-      "diskDevice": "nvme0n1p1",
-      "diskModel": "MSFT NVMe Accelerator v1.0",
+      "diskFreeBytes": 90421604352,
+      "diskDevice": "sda1",
+      "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
       "imageVersion": "20261012.334.1"
@@ -9388,7 +9404,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.010055,
+        "value": 0.030347,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9401,7 +9417,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 8.751166,
+        "value": 19.126179,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9414,19 +9430,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.5294253750000006,
+        "value": 0.5186212499999971,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (6.246 ms, mean of 7.060, 6.025, 6.325, 6.023, 6.246, 6.173, 6.236, 5.884) minus disabled (5.717 ms, mean of 5.669, 5.751, 5.613, 5.632, 5.789, 5.731, 6.040, 5.511), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.767 ms, mean of 11.056, 10.850, 10.635, 10.172, 10.787, 11.053, 10.846, 10.741) minus disabled (10.249 ms, mean of 10.091, 10.211, 10.603, 10.411, 9.684, 10.224, 10.196, 10.572), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.966180671883,
+        "value": 1999.964995099349,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9438,7 +9454,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 433.919257,
+        "value": 808.45795,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9450,12 +9466,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1532.51171875,
+        "value": 1541.390625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m9s after start with no traffic: smcpd (120.6 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1411.9 MiB in 2 processes, process 3920 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m20s after start with no traffic: smcpd (122.1 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1419.3 MiB in 2 processes, process 4237 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
