@@ -127,7 +127,11 @@ export function toneOf(state: string): Tone {
   }
 }
 
-export function ErrorBlock({ error, retry, what, doing }: { error: ApiError; retry?: () => void; what?: string; doing?: string }) {
+/** What to do after a failure without a more specific next step: the Gateway did not answer, or failed inside. */
+const serverNext = "run smcpctl health and read the smcpd log; docs/troubleshooting.md lists each reason code.";
+
+export function ErrorBlock({ error, retry, what, doing, next }: { error: ApiError; retry?: () => void; what?: string; doing?: string; next?: ReactNode }) {
+  const step = next ?? (error.status === 0 || error.status >= 500 ? (retry ? `Retry. If it fails again, ${serverNext}` : `Try again. If it fails again, ${serverNext}`) : null);
   if (error.status === 403 && error.code !== "csrf_invalid") {
     return (
       <div className="notice notice-bad" role="alert">
@@ -149,6 +153,7 @@ export function ErrorBlock({ error, retry, what, doing }: { error: ApiError; ret
         {error.status ? `HTTP ${error.status}` : "no response"}
         {error.code && <> reason {error.code}</>}
       </p>
+      {step && <p className="small">{step}</p>}
       {retry && (
         <button type="button" onClick={retry}>
           Retry

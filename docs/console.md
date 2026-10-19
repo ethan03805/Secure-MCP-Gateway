@@ -74,7 +74,7 @@ When a policy rule with `"approval": true` is used, the call is held and appears
 
 ### First-run checklist
 
-Gateway control lists the setup steps of FR-8.31 and marks each from Gateway state:
+Gateway control lists the setup steps of FR-8.31 and marks each from Gateway state. While any step is open the checklist is the first section of the view, and each open step says what completes it; once all are done it moves to the end. In the Standalone profile the Enforcement section also explains what "not enforced" leaves open (see [security-limitations.md](security-limitations.md)).
 
 | Item | Done when |
 |---|---|

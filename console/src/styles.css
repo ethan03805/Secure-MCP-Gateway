@@ -178,6 +178,10 @@ kbd {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+/* A short table cell (a state word, a view name) that should not wrap. */
+td.nowrap {
+  white-space: nowrap;
+}
 ul.plain {
   margin: 0;
   padding-left: 1.1rem;

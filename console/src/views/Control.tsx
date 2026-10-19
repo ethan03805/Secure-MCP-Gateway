@@ -33,7 +33,9 @@ export function VerifyPanel() {
       title="Journal verification"
       actions={
         perm.can("POST /api/v1/audit/verify") && (
-          <button type="button" onClick={() => void run()} disabled={busy}>
+          // aria-disabled, not disabled: a disabled button drops keyboard
+          // focus to the page body, the end of the view in G-01.
+          <button type="button" onClick={() => void (busy || run())} aria-disabled={busy}>
             {busy ? "Verifying" : "Verify the journal now"}
           </button>
         )
@@ -109,7 +111,8 @@ interface CheckItem {
   action: string;
 }
 
-function Checklist() {
+/** The FR-8.31 items, each marked from Gateway state; the detail of an open item names the step that completes it. */
+function useChecklist(): CheckItem[] {
   const health = useHealth();
   const perm = usePerm();
   const ifCan = (route: string, path: string) => (perm.can(route) ? path : null);
@@ -131,7 +134,7 @@ function Checklist() {
   if (backup.status === "ok") {
     const b = backup.data as Record<string, unknown> | unknown[];
     backupDone = Array.isArray(b) ? b.length > 0 : !!(b && (b["configured"] === true || (Array.isArray(b["backups"]) && (b["backups"] as unknown[]).length > 0)));
-    backupDetail = backupDone ? "A backup is configured." : "No backup is configured yet.";
+    backupDetail = backupDone ? "A backup is configured." : "No backup is configured yet. Take one with a passphrase in Data server and memory.";
   } else if (backup.status === "error" && !backup.error.unavailable) {
     backupDetail = `Backup status could not be read: ${backup.error.message}`;
   }
@@ -141,12 +144,17 @@ function Checklist() {
       done: true,
       detail: perm.role === "administrator" ? "You are signed in with the administrator account or operator token." : "The Gateway was bootstrapped with an administrator.",
       to: "/sessions",
-      action: "Accounts",
+      action: "Sessions and principals",
     },
     {
       item: "Session Approver created",
       done: approvers === null ? null : approvers > 0,
-      detail: approvers === null ? "Unknown" : `${approvers} Session Approver account${approvers === 1 ? "" : "s"} configured.`,
+      detail:
+        approvers === null
+          ? "Unknown"
+          : approvers > 0
+            ? `${approvers} Session Approver account${approvers === 1 ? "" : "s"} configured.`
+            : "No Session Approver account. Add one in Sessions and principals: a harness cannot sign in without it.",
       to: "/sessions",
       action: "Sessions and principals",
     },
@@ -158,33 +166,46 @@ function Checklist() {
           ? "Unknown"
           : packaged > 0
             ? `${packaged} server${packaged === 1 ? "" : "s"} enabled from a verified package.`
-            : `${running} server${running === 1 ? "" : "s"} enabled, none from a verified package.`,
+            : `${running} server${running === 1 ? "" : "s"} enabled, none from a verified package. Enable a package revision in Servers and library.`,
       to: "/servers",
       action: "Servers and library",
     },
     {
       item: "First policy revision published",
       done: h ? !!h.policy_revision : null,
-      detail: h?.policy_revision ? <>Revision <Mono>{h.policy_revision}</Mono> is active.</> : "No policy revision is active.",
+      detail: h?.policy_revision ? <>Revision <Mono>{h.policy_revision}</Mono> is active.</> : "No policy revision is active, so every call is refused. Publish one in Policy studio.",
       to: "/policy",
       action: "Policy studio",
     },
     {
       item: "First harness connected",
       done: harness,
-      detail: harness ? "A harness session has been recorded in the journal." : "No harness session has been recorded yet.",
+      detail: harness ? (
+        "A harness session has been recorded in the journal."
+      ) : (
+        <>
+          No harness session has been recorded yet. Connect an AI client with <Mono>smcpctl clients setup</Mono> and sign it in as a Session Approver
+          (docs/quickstart.md).
+        </>
+      ),
       to: "/sessions",
       action: "Sessions and principals",
     },
     {
       item: "Approval tested",
       done: tested,
-      detail: tested ? "An approval has been decided." : "No tool-call approval has been decided yet.",
+      detail: tested
+        ? "An approval has been decided."
+        : "No tool-call approval has been decided yet. Call a tool whose policy rule requires approval, then approve or deny it in Approvals.",
       to: "/approvals",
       action: "Approvals",
     },
     { item: "Backup configured", done: backupDone, detail: backupDetail, to: "/data-server", action: "Data server and memory" },
   ];
+  return items;
+}
+
+function Checklist({ items }: { items: CheckItem[] }) {
   const columns: Column<CheckItem>[] = [
     { key: "item", label: "Item", render: (r) => r.item },
     {
@@ -192,13 +213,15 @@ function Checklist() {
       label: "State",
       render: (r) =>
         r.done === null ? <StateLabel tone="neutral">unknown</StateLabel> : r.done ? <StateLabel tone="ok">done</StateLabel> : <StateLabel tone="pending">to do</StateLabel>,
+      className: "nowrap",
     },
     { key: "detail", label: "From Gateway state", render: (r) => r.detail },
-    { key: "to", label: "Where", render: (r) => <Link to={r.to}>{r.action}</Link> },
+    { key: "to", label: "Where", render: (r) => <Link to={r.to}>{r.action}</Link>, className: "nowrap" },
   ];
   const left = items.filter((i) => i.done !== true).length;
   return (
     <Section title={left ? `First-run checklist: ${left} of ${items.length} open` : "First-run checklist: complete"}>
+      <p className="small">The steps to a working installation, in order. Each is marked from Gateway state; the link opens the view where it is done.</p>
       <DataTable caption="First-run checklist" columns={columns} rows={items} rowKey={(r) => r.item} empty="" />
     </Section>
   );
@@ -274,10 +297,18 @@ function Causes() {
 export function Control() {
   const health = useHealth();
   const perm = usePerm();
+  const checklist = useChecklist();
+  // While setup steps are open the checklist comes first: it is what a new
+  // installation needs next. Once complete it moves to the end.
+  const open = checklist.some((i) => i.done !== true);
   return (
     <>
       <PageHeader code="G-01" title="Gateway control">
-        <p>Enforcement state of this Gateway, why it is in that state, and the controls that change it. Emergency stop is in the bar at the top of every view.</p>
+        <p>
+          The Gateway stands between agent harnesses (AI clients such as Claude Code) and the MCP servers it launches: it decides each tool call against the
+          active policy, holds calls that need a person's approval, and records every step in a signed journal. This view shows whether that is in force, why,
+          and the controls that change it. Emergency stop is in the bar at the top of every view.
+        </p>
       </PageHeader>
       <Help>
         <p>
@@ -285,7 +316,14 @@ export function Control() {
           anticipate. <strong>Reload policy</strong> activates the policy file after you edit it. Health states: healthy (all controls active), degraded (the
           Gateway runs with a reduced guarantee, listed under causes) and fail-closed (every call is refused).
         </p>
+        <p>
+          Terms: a <strong>harness</strong> is the AI client that calls tools through the Gateway; when it connects, a person signs it in on the Gateway's sign-in page
+          with a <strong>Session Approver</strong> account. A <strong>server</strong> is a backend MCP server the Gateway launches. An <strong>approval</strong> is a
+          held tool call that an <strong>Approver</strong> or the Administrator approves or denies in Approvals. The <strong>profile</strong> is Standalone (not
+          enforced: servers run without a sandbox) or Enforced (Linux with rootless Podman: each server is contained).
+        </p>
       </Help>
+      {open && <Checklist items={checklist} />}
       {health && (
         <Section title="Enforcement">
           <Loaded res={health} what="health" route="/admin/v1/health">
@@ -302,6 +340,17 @@ export function Control() {
                     ["Version", <Mono>{h.version}</Mono>],
                   ]}
                 />
+                {h.profile === "standalone" && (
+                  <div className="notice notice-warn" data-testid="not-enforced">
+                    <p>
+                      <strong>Not enforced.</strong> The Standalone profile decides, filters and records the tool calls that go through the Gateway, but it does
+                      not contain the servers. Each server runs as your user without a sandbox and can read and write your files and reach the network
+                      directly; the agent also runs as your user and its own tools (shell, file editing) never pass through the Gateway. Servers rated high
+                      risk are refused, and health stays degraded with the cause unconfined. Containment needs the Enforced profile on Linux. Details:
+                      docs/security-limitations.md.
+                    </p>
+                  </div>
+                )}
                 <h3 className="sub">Causes</h3>
                 {h.causes.length === 0 ? (
                   <p className="empty">No cause reduces enforcement.</p>
@@ -339,7 +388,7 @@ export function Control() {
         </Section>
       )}
       <VerifyPanel />
-      <Checklist />
+      {!open && <Checklist items={checklist} />}
     </>
   );
 }
