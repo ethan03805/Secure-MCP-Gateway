@@ -53,7 +53,28 @@ On Linux and macOS behavior is unchanged: the new `_unix.go` and `!windows` file
 
 ## Continuous integration
 
-The job `windows` in `.github/workflows/ci.yml` runs on `windows-latest` for every pull request that changes more than documentation (the `changes` gate of [ci.md](ci.md)). It is not a required check. It builds every package for `windows/amd64` and `windows/arm64` with `CGO_ENABLED=0`, runs `go vet`, runs the unit tests of the packages in `WINDOWS_TEST_PACKAGES` (the job fails if one fails), and then runs every package once more without failing the job, writing the per-package result to the step summary as the measure of the port. The package list and the reason each other package is excluded are in the workflow.
+The job `windows` in `.github/workflows/ci.yml` runs on `windows-latest` for every pull request that changes more than documentation (the `changes` gate of [ci.md](ci.md)). It is not a required check. It builds every package for `windows/amd64` and `windows/arm64` with `CGO_ENABLED=0`, runs `go vet`, runs the unit tests of the packages in `WINDOWS_TEST_PACKAGES` (the job fails if one fails), and then runs every package once more without failing the job, writing the per-package result to the step summary as the measure of the port. The package list and the reason each other package is excluded are in the workflow. It also runs the `TestWindows*` tests of `internal/keys`, `internal/pipeline` and `internal/edge`, which check the fail-closed gates above.
+
+### First Windows test run (windows-latest, 2026-10-19)
+
+`go test -short ./...` with `CGO_ENABLED=0` on `windows-latest` took about 90 seconds. 24 packages pass, 40 fail and 13 have no tests. The failures group into a small number of causes, most of which are tests written for POSIX rather than product defects; the product gaps among them are marked.
+
+| Cause | Packages | Kind |
+|---|---|---|
+| `smcpd` start refused by the `CheckPrivate` gate | `internal/app`, `internal/e2e`, `internal/remote`, `internal/conformance`, `internal/adapter`, parts of `cmd/smcpctl` | intended (fail closed) |
+| Server launch refused by the launch gate | `internal/packaging` (probe) | intended (fail closed) |
+| Test fixtures use POSIX commands such as `/inproc/t` or `/fake/mem`, which `filepath.IsAbs` rejects on Windows | `internal/backend`, `internal/edge`, `internal/filters`, `internal/pipeline`, `internal/sandbox` | tests |
+| POSIX mode checks: the tests expect `0600`, and the product refuses some files on Windows (the vault's "readable by their owner only" check, the graph password file check) | `internal/keys`, `internal/secrets`, `internal/graph`, `internal/obsstore`, `internal/baseline`, `internal/principals`, `internal/diag`, `internal/obspolicy`, `internal/research`, `internal/approval`, `internal/harness`, `scripts/agents` | product (fails closed today; FR-21.5 replaces it with a DACL check) and tests |
+| Directory `fsync` fails with "Access is denied" | `internal/policystore`, `internal/policyadmin`, `internal/backup` | product: the Policy Store cannot publish on Windows until directory sync is skipped there (NTFS metadata is journaled; `FlushFileBuffers` needs a file handle) |
+| Windows paths written by the tests into TOML basic strings (`\U` read as an escape) | `internal/adminapi`, `internal/consoleauth`, `internal/filterapi`, `internal/openapi`, `tools/openapi` | tests; also a documentation point: Windows paths in `smcp.toml` need literal strings (`'C:\...'`) or forward slashes |
+| POSIX default paths (`/usr/bin/podman`, `sudo`) checked as absolute | `internal/config`, `internal/packaging` | product defaults, Linux-only features |
+| Request-filter path canonicalization is POSIX: `/etc/passwd` resolves under the working directory as `C:\...\etc\passwd` | `internal/filters`, `internal/policy` | product, security-relevant: path rules need the FR-21.25 Windows semantics before any Windows mode is supported |
+| Free disk space not measured off Linux and macOS | `internal/health` | product: `GetDiskFreeSpaceEx` for the CP quota check |
+| Test binaries built without `.exe` | `cmd/smcpd`, `cmd/smcp-refserver`, `cmd/smcpctl`, `internal/packaging` | tests |
+| Tools absent on Windows (`sh`, `nft`, `node`) | `tools/installsh`, `internal/tunnel`, `internal/adapter` | tests (FR-21.4 replaces `install.sh` with `install.ps1`) |
+| Latency bound on a shared runner | `internal/perf` | tests |
+
+Passing on Windows: `cmd/smcp-hostile`, `docs`, `internal/acceptance` (its Linux scenarios skip), `internal/analytics`, `internal/anomaly`, `internal/audit`, `internal/authguard`, `internal/consoleapi`, `internal/egress`, `internal/hostile`, `internal/library` (including the `LockFileEx` registry lock), `internal/metrics`, `internal/observe`, `internal/posixacl`, `internal/profile`, `internal/reqtest`, `internal/sandbox/probe`, `internal/session`, `internal/testport`, `internal/versions`, `packaging/linux`, `tools/provenance`, `tools/reqreport`, `tools/sbomcheck`.
 
 ## Effort by FR-21 area
 
@@ -80,14 +101,16 @@ Total: roughly 60 to 90 engineer-days, of which the machine mode (AppContainer, 
 ## Recommended order
 
 1. This step: build, `go vet`, fail-closed gates, non-required CI job.
-2. ACL checks and DPAPI key protection, which lift the `CheckPrivate` gate so `smcpd` starts in the per-user mode with nothing to launch.
-3. Backend launch with Job Objects and the interpreter refusal, which lifts the launch gate and gives the per-user mode parity with macOS Standalone.
-4. Stop handling and the Task Scheduler task; `smcpctl install` on Windows.
-5. Release zips, `install.ps1`, the Defender scan and the unsigned-binary notices.
-6. Adapters, client paths and the real-agent suite; the acceptance subset in the per-user mode; make the `windows` job required.
-7. Named pipes and SID mapping; path rules.
-8. Machine mode, after a spike that answers the AppContainer and WFP questions below: SCM service and virtual account, AppContainer, WFP egress.
-9. WSL2 mode.
+2. Test portability (fixture paths through `filepath`, `.exe` suffixes, TOML literal strings, mode checks behind a helper) and the small product fixes the first run found: directory `fsync`, free disk space, POSIX defaults. Each package that passes moves into `WINDOWS_TEST_PACKAGES`.
+3. ACL checks and DPAPI key protection, which lift the `CheckPrivate` gate so `smcpd` starts in the per-user mode with nothing to launch.
+4. Windows path rules (FR-21.25) for the request filters and filesystem slots, before any backend can run.
+5. Backend launch with Job Objects and the interpreter refusal, which lifts the launch gate and gives the per-user mode parity with macOS Standalone.
+6. Stop handling and the Task Scheduler task; `smcpctl install` on Windows.
+7. Release zips, `install.ps1`, the Defender scan and the unsigned-binary notices.
+8. Adapters, client paths and the real-agent suite; the acceptance subset in the per-user mode; make the `windows` job required and add `windows-11-arm`.
+9. Named pipes and SID mapping.
+10. Machine mode, after a spike that answers the AppContainer and WFP questions below: SCM service and virtual account, AppContainer, WFP egress.
+11. WSL2 mode.
 
 ## Risks and what Windows can honestly claim
 
@@ -109,3 +132,5 @@ Total: roughly 60 to 90 engineer-days, of which the machine mode (AppContainer, 
 9. **FR-21.11 suspended creation through Go.** `os/exec` closes the primary thread handle, so a suspended child cannot be resumed without enumerating its threads. Specify the outcome (the process is in the Job Object before it runs) and let the implementation use `PROC_THREAD_ATTRIBUTE_JOB_LIST`, which places the process in the job at creation without suspension. Also, refusing `cmd.exe` by name does not stop a backend from starting a shell itself (Node's `child_process` with `shell: true`, a renamed copy); SR-4.8-2 is a rule for the Server Runtime Manager only and the docs should say so.
 10. **SR-4-2 WSL detection.** `WSL_DISTRO_NAME` is set only for processes started through `wsl.exe`, not for a systemd service inside the distribution. Detect from `/proc/sys/kernel/osrelease` (contains `microsoft` or `WSL`) and treat the variable as a second signal only.
 11. **FR-21.19 "excluded by build constraints".** Many Linux-only tests skip at run time (`t.Skip` on `runtime.GOOS` or a missing tool), which is equivalent for CI. Allow either.
+12. **FR-21.2 source and rationale.** The build fails in four packages, not three: `internal/sandbox/probe` (`syscall.Getrusage`) as well, and `go vet` fails in three more test packages. The command list also omits `smcp-hostile` and `smcp-workload`, which are built by `go build ./...` and now build too.
+13. **Missing record: Policy Store durability on Windows.** The Policy Store, its activation and backup restore sync directories after renames, which Windows refuses. A requirement (or a note under FR-21.2) should state the Windows durability rule so it is tested, not just patched.

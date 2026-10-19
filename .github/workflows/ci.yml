@@ -414,6 +414,52 @@ jobs:
           GOARCH=arm64 go build ./...
       - name: Vet
         run: go vet ./...
+      # Packages whose tests pass on Windows today (measured 2026-10-18,
+      # docs/windows-port.md). Every other package with tests is excluded
+      # until its port lands; the reason per package:
+      #   smcpd start refused by keys.CheckPrivate (FR-21.5, FR-21.10):
+      #     internal/app, internal/e2e, internal/remote, internal/conformance,
+      #     internal/adapter, cmd/smcpctl (also: binaries built without .exe)
+      #   server launch refused (FR-21.11) and POSIX fixture paths such as
+      #     "/inproc/t" that are not absolute on Windows: internal/backend,
+      #     internal/edge, internal/filters, internal/pipeline
+      #   Linux sandbox (fake Podman uses syscall.Exec): internal/sandbox
+      #   POSIX file-mode checks in code or tests (FR-21.5): internal/keys,
+      #     internal/secrets, internal/graph, internal/obsstore,
+      #     internal/baseline, internal/principals, internal/diag,
+      #     internal/obspolicy, internal/research, internal/approval,
+      #     internal/harness, scripts/agents
+      #   directory fsync refused by Windows ("Access is denied"):
+      #     internal/policystore, internal/policyadmin, internal/backup
+      #   Windows paths written into TOML basic strings by the tests:
+      #     internal/adminapi, internal/consoleauth, internal/filterapi,
+      #     internal/openapi, tools/openapi
+      #   POSIX default paths (/usr/bin/podman, sudo): internal/config,
+      #     internal/packaging (also: no .exe, launch refused)
+      #   free disk space not measured off Linux and macOS: internal/health
+      #   POSIX path canonicalization of the request filters (FR-21.25):
+      #     internal/policy, internal/filters
+      #   tools absent on Windows (sh, nft): tools/installsh, internal/tunnel
+      #   binaries built without .exe: cmd/smcpd, cmd/smcp-refserver
+      #   timing on a shared runner: internal/perf
+      # The Test*Windows* gate tests of internal/keys, internal/pipeline and
+      # internal/edge check that unported features fail closed.
+      - name: Test the packages that pass on Windows, and the fail-closed gates
+        env:
+          WINDOWS_TEST_PACKAGES: >-
+            ./cmd/smcp-hostile ./docs ./internal/acceptance ./internal/analytics
+            ./internal/anomaly ./internal/audit ./internal/authguard
+            ./internal/consoleapi ./internal/egress ./internal/hostile
+            ./internal/library ./internal/metrics ./internal/observe
+            ./internal/posixacl ./internal/profile ./internal/reqtest
+            ./internal/sandbox/probe ./internal/session ./internal/testport
+            ./internal/versions ./packaging/linux ./tools/provenance
+            ./tools/reqreport ./tools/sbomcheck
+        run: |
+          mkdir -p build
+          # shellcheck disable=SC2086 # the list is split on purpose
+          go test -short -count=1 $WINDOWS_TEST_PACKAGES
+          go test -count=1 -run 'Windows' ./internal/keys ./internal/pipeline ./internal/edge -v | grep -E '^(=== RUN|--- |ok|FAIL|PASS)'
       - name: Every package, measured (informational, never fails)
         continue-on-error: true
         run: |
