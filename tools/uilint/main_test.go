@@ -84,6 +84,17 @@ fn tray<'a>(x: &'a str) -> char {
 	}
 }
 
+func TestExtractJSON(t *testing.T) {
+	src := "{\n  \"messages\": {\n    \"FAIL_CLOSED\": {\"text\": \"The Gateway is not accepting tool calls.\", \"codes\": [\"-31004\"]},\n    \"tray\": [\"healthy\", \"Oops!\"]\n  },\n  \"version\": 1\n}\n"
+	got := extractJSON(src)
+	if !reflect.DeepEqual(texts(got), []string{"The Gateway is not accepting tool calls.", "-31004", "healthy", "Oops!"}) || got[0].Line != 3 || got[3].Line != 4 {
+		t.Errorf("extracted %+v", got)
+	}
+	if fs := rules(lintFile("docs/design/messages.json", src)); !reflect.DeepEqual(fs, []string{"banned-word:Oops", "exclamation:s!"}) {
+		t.Errorf("findings %q", fs)
+	}
+}
+
 func rules(fs []Finding) []string {
 	var out []string
 	for _, f := range fs {
@@ -209,6 +220,7 @@ func TestRunFixtureTree(t *testing.T) {
 	write("desktop/src-tauri/src/main.rs", `fn main() { let s = "Oops, the tray failed"; }`)
 	write("desktop/src-tauri/target/x.rs", `fn main() { let s = "Oops"; }`)
 	write("site/src/app/x.css", `.a { backdrop-filter: blur(4px); }`)
+	write("docs/design/messages.json", `{"SAVED": "Saved, rest assured."}`)
 	write(DefaultAllowlist, "console/src/a.tsx banned-word robust  # statistics term\n")
 
 	var out bytes.Buffer
@@ -220,6 +232,7 @@ func TestRunFixtureTree(t *testing.T) {
 	if code != 1 ||
 		!strings.Contains(got, "desktop/src-tauri/src/main.rs:1: banned-word: Oops\n") ||
 		!strings.Contains(got, "site/src/app/x.css:1: css-backdrop-filter: backdrop-filter: blur(4px)\n") ||
+		!strings.Contains(got, "docs/design/messages.json:1: banned-word: rest assured\n") ||
 		strings.Contains(got, "Robust") || strings.Contains(got, "a.test.tsx") || strings.Contains(got, "node_modules") || strings.Contains(got, "target") {
 		t.Errorf("code %d, output:\n%s", code, got)
 	}
@@ -227,6 +240,7 @@ func TestRunFixtureTree(t *testing.T) {
 	write("desktop/src-tauri/src/main.rs", `fn main() { let s = "The tray could not start."; }`)
 	write("site/src/app/x.css", `.a { border: 1px solid var(--rule); }`)
 	write("console/src/a.tsx", `export const A = () => <p>Median statistics</p>;`)
+	write("docs/design/messages.json", `{"SAVED": "Policy revision published."}`)
 	out.Reset()
 	if code, _ := run(root, DefaultAllowlist, &out); code != 1 || !strings.Contains(out.String(), "stale allowlist entry") {
 		t.Errorf("stale entry: code %d, output:\n%s", code, out.String())

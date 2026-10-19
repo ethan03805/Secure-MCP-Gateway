@@ -17,6 +17,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html"
@@ -136,8 +137,9 @@ var scope = []struct {
 	{"desktop", []string{".ts", ".tsx", ".js", ".jsx", ".mjs", ".html", ".rs", ".css"}},
 }
 
-// scopeFiles are single files in scope.
-var scopeFiles = []string{"console/index.html"}
+// scopeFiles are single files in scope, read when present. Every string
+// value of the shared message catalogue (FR-20.48) is UI text.
+var scopeFiles = []string{"console/index.html", "docs/design/messages.json"}
 
 // skipDirs are directory names never descended into: dependencies, build
 // outputs and generated code.
@@ -222,6 +224,8 @@ func extract(rel, src string) []UIString {
 		return extractHTML(src)
 	case ".rs":
 		return extractRust(src)
+	case ".json":
+		return extractJSON(src)
 	}
 	return nil
 }
@@ -1128,6 +1132,58 @@ func extractRust(src string) []UIString {
 		}
 	}
 	return out
+}
+
+// JSON ---------------------------------------------------------------------
+
+// extractJSON returns every string value (not object keys) of a JSON
+// document such as the shared message catalogue. A document that does not
+// parse yields what was read before the error; its own tests catch that.
+func extractJSON(src string) []UIString {
+	lines := lineIndex(src)
+	dec := json.NewDecoder(strings.NewReader(src))
+	var out []UIString
+	// One frame per open container: whether it is an object and whether
+	// the next string in it is a key.
+	type frame struct{ object, key bool }
+	var stack []frame
+	for {
+		off := int(dec.InputOffset())
+		t, err := dec.Token()
+		if err != nil {
+			return out
+		}
+		switch v := t.(type) {
+		case json.Delim:
+			switch v {
+			case '{':
+				stack = append(stack, frame{object: true, key: true})
+			case '[':
+				stack = append(stack, frame{})
+			default:
+				stack = stack[:len(stack)-1]
+				if n := len(stack); n > 0 && stack[n-1].object {
+					stack[n-1].key = true
+				}
+			}
+			continue
+		case string:
+			if n := len(stack); n > 0 && stack[n-1].object && stack[n-1].key {
+				stack[n-1].key = false
+				continue
+			}
+			if text := strings.TrimSpace(v); text != "" {
+				// The token starts after any separator and white space.
+				for off < len(src) && strings.IndexByte(" \t\r\n,:", src[off]) >= 0 {
+					off++
+				}
+				out = append(out, UIString{Line: lines.line(off), Text: text})
+			}
+		}
+		if n := len(stack); n > 0 && stack[n-1].object {
+			stack[n-1].key = true
+		}
+	}
 }
 
 // Allowlist ----------------------------------------------------------------

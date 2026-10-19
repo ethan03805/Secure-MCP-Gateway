@@ -10,7 +10,8 @@ A UI string is text the product shows to a person:
 
 - console: `console/src/**/*.ts` and `*.tsx` (string literals, template literal text, JSX text and user-facing attributes such as `title`, `aria-label`, `placeholder` and component props) and `console/index.html`;
 - reference site: `site/src/**/*.ts` and `*.tsx` and any HTML page in `site/public/`;
-- desktop application (macOS arm64), when `desktop/` exists: `*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.mjs`, `*.html` and Rust string literals (`*.rs`: window titles, tray labels, notification text), without `target/`, `node_modules/`, `dist/` and `gen/`.
+- desktop application (macOS arm64), when `desktop/` exists: `*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.mjs`, `*.html` and Rust string literals (`*.rs`: window titles, tray labels, notification text), without `target/`, `node_modules/`, `dist/` and `gen/`;
+- the shared message catalogue `docs/design/messages.json` (FR-20.48), when it exists: every JSON string value (not the keys) is UI text: reason-code messages, desktop errors and tray states.
 
 Tests (`*.test.*`, `*.spec.*`, `e2e/`) are not UI strings. Neither is the long-form documentation the site renders from `docs/`, the README, the SRS and the architecture documents: that is documentation, held to the same principles by review but not by the lint, because it quotes banned words when it defines them (as this page does) and uses SRS terms such as "harness" verbatim.
 
