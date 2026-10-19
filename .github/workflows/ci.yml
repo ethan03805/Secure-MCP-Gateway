@@ -1127,7 +1127,7 @@ jobs:
       - name: Standalone profile
         run: |
           mkdir -p build
-          if ! go test -tags hostile -count=1 -json -run TestHostileFixtures ./internal/hostile/ > build/hostile-standalone-test.json; then
+          if ! go test -tags hostile -count=1 -json -run 'TestHostileFixtures|TestHostileContextForge' ./internal/hostile/ > build/hostile-standalone-test.json; then
             echo "::warning::hostile suite (standalone): a harness check failed; see build/hostile-standalone-test.json"
           fi
       - name: Streamable HTTP transport (FR-5.28; every applicable row must pass)
@@ -1168,6 +1168,7 @@ jobs:
         if: always()
         run: |
           if [ -f build/hostile.md ]; then cat build/hostile.md >> "$GITHUB_STEP_SUMMARY"; else echo "no hostile results" >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f build/hostile-contextforge.md ]; then cat build/hostile-contextforge.md >> "$GITHUB_STEP_SUMMARY"; fi
           jq -r -s 'map(select(.Action == "output" and (.Output | test("pass=|skip|enforced profile unavailable")))) | .[].Output' build/hostile-*-test.json 2>/dev/null || true
       - name: Upload the results
         if: always()
@@ -1181,6 +1182,8 @@ jobs:
             build/hostile-enforced.json
             build/hostile-standalone-test.json
             build/hostile-enforced-test.json
+            build/hostile-contextforge.json
+            build/hostile-contextforge.md
           if-no-files-found: warn
           retention-days: 14
 

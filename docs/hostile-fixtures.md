@@ -35,6 +35,10 @@ The Gateway is built with `app.Start` and the same elements `cmd/smcpd` wires fo
 
 For a manual run, `smcp-hostile -fixture HF-04 -http 127.0.0.1:0` serves a fixture over HTTP on a loopback address and prints the endpoint URL.
 
+## ContextForge rows (planned v1.3.0)
+
+`TestHostileContextForge` (build tag `hostile`, run by the `hostile` job with the Standalone rows) checks the rows HFC-01 to HFC-14 of SRS FR-22.43 that this build can assert, against a malicious catalog file and a compromised bundled-instance stand-in (`hostile.CFStandIn`), and writes `build/hostile-contextforge.json` and `.md` beside the Appendix L results. HFC-02, HFC-03, HFC-04 and HFC-06 pass. HFC-07 is asserted by the console suite, and the removal and drift parts of HFC-08 and HFC-13 and the running instance's refusal in HFC-14 by the `contextforge` job against the pinned image. HFC-10 reports the self-check findings, but suspending hosted packages is not built yet, so it does not pass; the other rows need hosted packages or the Enforced-profile containment of the bundled instance and are reported as not asserted. The rows stay outside Appendix L and the status data's `hostile` array until the release that adopts them.
+
 ## Safety of the fixtures
 
 Every fixture is inert and self-contained:
