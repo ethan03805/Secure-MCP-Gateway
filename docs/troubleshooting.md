@@ -220,3 +220,4 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `CAMPAIGN_QUOTA_REACHED` | Journal `research` events | A research campaign reached its record quota and completed | Export its dataset; create a new campaign to continue |
 | `DATA_PURGED` | Journal events, `POST /api/v1/observations/purge` | Observation data was purged; the event is the deletion receipt (SR-6.15-1) | None |
 | `GRAPH_REBUILD` | Journal `admin` events | An administrator asked for the graph mirror to be rebuilt from the journal | Wait for the mirror's state to return to `ready` (`smcpctl graph status`) |
+
