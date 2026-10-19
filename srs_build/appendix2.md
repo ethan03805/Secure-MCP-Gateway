@@ -42,6 +42,8 @@ A package is a directory in the library (OD-7), written by `smcpctl package buil
 
 The schema has no member that names a network endpoint for the server; a remote backend cannot be expressed and is rejected (FR-14.4).
 
+Planned for v1.3.0, not part of the current schema: `manifest_version` 2 for hosted packages imported from the ContextForge catalog (FR-22.10) adds an `upstream` member (kind `contextforge-hosted`, hosted URL and transport, catalog entry ID and digest, ContextForge gateway name and slug) and a per-tool `backend_name`, the name ContextForge serves (`<gateway-slug>-<original-name>`). The tool `name` keeps the pattern `[A-Za-z0-9_]{1,47}`; it is derived from `backend_name` by the deterministic, collision-checked mapping of FR-22.10, so the slug does not count toward the 47 characters, and a served name that no longer matches `backend_name` (for example after a gateway rename) is drift (FR-22.33).
+
 ## Appendix K — Client matrix
 
 The machine-readable matrix is `docs/clients/matrix.json` (FR-15.10). Pinned versions are set there, not here. "Lockdown mechanism" names the client's own control that the lockdown profile uses (FR-15.1); where a client offers none, `smcpctl doctor` reports the gap (FR-15.3, FR-15.4) and the client is labelled `gateway-available` rather than `exclusive-gateway` (SR-4.13-1). Mechanisms marked *to confirm at pinning* are not yet verified against the pinned version and are recorded with their result when the matrix job first runs (FR-15.8).

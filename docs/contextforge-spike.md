@@ -1,6 +1,6 @@
 # ContextForge integration spike (October 2026)
 
-A de-risking spike for the IBM ContextForge integration that the owner chose for v1.3.0 (SRS FR-22, `srs_build/req8-contextforge.txt`). It answers four questions before implementation starts: can ContextForge run as a loopback-only backend; can `smcpd` mediate calls through it today; what can a catalog import really prove about provenance; which FR-22 requirements need changing. Everything described here was run on 2026-10-18 on macOS arm64 (Docker Desktop, Standalone profile). Nothing in this spike changes a release requirement or ships ContextForge.
+A de-risking spike for the IBM ContextForge integration that the owner chose for v1.3.0 (SRS FR-22, `srs_build/req8-contextforge.txt`). It answers four questions before implementation starts: can ContextForge run as a loopback-only backend; can `smcpd` mediate calls through it today; what can a catalog import really prove about provenance; which FR-22 requirements need changing. Everything described here was run on 2026-10-18 on macOS arm64 (Docker Desktop, Standalone profile). Nothing in this spike changes a release requirement or ships ContextForge; the FR-22 corrections it proposed were applied to the planned v1.3.0 requirements afterwards (see Requirements to adjust).
 
 What this pull request adds:
 
@@ -103,7 +103,9 @@ The parser enforces the FR-22.2 bounds (4 MiB, 2,000 entries, 4,096-character st
 
 ## Requirements to adjust
 
-The owner's decisions of 2026-10-18 on the questions this spike raised (accept the SEC 3.1/3.2 gap for hosted servers on SR-3-6's terms, Streamable HTTP southbound back in v1.3.0, a Gateway-held OAuth client planned for a later release, bundled ContextForge opt-in) are recorded in the SRS separately. The findings below still need a requirement change.
+The owner's decisions of 2026-10-18 on the questions this spike raised (accept the SEC 3.1/3.2 gap for hosted servers on SR-3-6's terms, Streamable HTTP southbound back in v1.3.0, a Gateway-held OAuth client planned for a later release, bundled ContextForge opt-in) are recorded in the SRS separately. The findings below still needed a requirement change.
+
+**Applied on 2026-10-19** (`srs_build/req8-contextforge.txt`, regenerated SRS): FR-22.27 keeps `EMAIL_AUTH_ENABLED` on, turns `PUBLIC_REGISTRATION_ENABLED` off and pins `GUNICORN_WORKERS=1`, `GATEWAY_TOOL_NAME_SEPARATOR=-` and `SSRF_ALLOWED_NETWORKS`; FR-22.28 adds `DEFAULT_USER_PASSWORD` and the per-package user passwords to the generated vault credentials; FR-22.29 isolates each hosted package with its own non-admin user and team, team visibility set at creation, tokens owned by that user, and a self-check that probes `/mcp`, `/rpc`, other virtual servers (`/mcp` and `/sse`) and an admin route; FR-22.10 records a deterministic, collision-checked mapping from ContextForge's `backend_name` to the manifest name (Appendix J notes it for `manifest_version` 2); FR-22.33 makes polling the drift signal, treats gateway renames and team changes as drift, and maps `Unknown tool` results and `-32601` to `-31007` `BACKEND_ERROR` with an immediate reconciliation; FR-22.34 names the per-package user and team and forbids E-10 the global endpoints; FR-22.30 adds the start window (about 15 s measured, CP-47 wait); FR-22.24 checks the doubled CP-24 budget against about 410 MiB; FR-22.42 states the unauthenticated `/health` and `/ready`; SR-3.8-2 and HFC-08 and HFC-10 follow. FR-22.19 and FR-22.3 needed no change. `ArchitectureV2.md` (E-36, F-109, I-43, scenario 18.11), `docs/security-limitations.md` and `docs/security-review-2026-10.md` (CF-R6) were updated to match.
 
 | Requirement | Problem | Proposed change |
 |---|---|---|
@@ -132,7 +134,7 @@ No FR-22 requirement looked infeasible apart from FR-22.29 as written. The catal
 ## Recommended implementation order
 
 1. **Southbound Streamable HTTP client in E-10** (FR-5.28 to FR-5.30, now v1.3.0). It replaces the `--experimental-upstream` bridge, maps ContextForge's errors (403 detail bodies, `Unknown tool` results) and carries the package token from the broker.
-2. **Spec fixes above** (FR-22.27, FR-22.28, FR-22.29, FR-22.10 name mapping), before code depends on them.
+2. **Spec fixes above** (FR-22.27, FR-22.28, FR-22.29, FR-22.10 name mapping), before code depends on them. Done on 2026-10-19.
 3. **Release lock and verification** (FR-22.18, FR-22.19, SR-3.2-2): the digests and signer identity above; cosign verification and SBOM recording in the release workflow.
 4. **Catalog reader and `smcpctl catalog`** (FR-22.1 to FR-22.5, FR-22.7, FR-22.16): promote `internal/contextforge` from experimental, read the catalog only from the release lock or an operator-confirmed file, add the control API and G-15.
 5. **Local-entry import through packaging** (FR-22.6, FR-22.8, FR-22.11 to FR-22.15): the dry-run recipe becomes input to `smcpctl package build`.
