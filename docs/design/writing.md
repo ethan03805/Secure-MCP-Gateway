@@ -24,9 +24,9 @@ Tests (`*.test.*`, `*.spec.*`, `e2e/`) are not UI strings. Neither is the long-f
 5. **Sentence case for labels, headings, buttons and messages inside windows.** "Set up a client", "Policy revisions", "Emergency stop". Capitalize proper names (Gateway, Evidence Journal, Claude Code) and role names (Approver, Administrator). Native menu items and window titles follow the platform convention, which is title case on macOS: the tray menu items are fixed by SRS FR-20.2 as Open Console, Approvals, Start, Stop, Restart, Set Up a Client, Check for Updates, Settings and Quit.
 6. **Exact numbers and IDs.** Show the count, the revision, the reason code and the correlation ID as they are, in the monospaced face: "3 calls waiting", `rev-2026-10-18.2`, `FAIL_CLOSED`. Do not round counts that drive a decision ("many calls", "a few servers").
 7. **No exclamation marks.** Calm text for every outcome, including success: "Policy revision published."
-8. **Errors say what happened, why, and what to do.** Follow the Appendix B pattern: the outcome first, then the cause in the user's terms, then the next action, and show the reason code (and the correlation ID when there is one) with the message (FR-8.29). The Gateway's `data.message` is the text; do not replace it with a generic one.
-9. **Empty states name the next action.** "No call is waiting for approval. A call appears here when a policy rule with approval required is used." (FR-8.29)
-10. **Help text says what a thing does and when to use it.** One or two sentences: what the control changes, and the case it is for (FR-8.25). Do not restate the label.
+8. **Errors say what happened, why, and what to do.** Follow the Appendix B pattern: the outcome first, then the cause in the user's terms, then the next action, and show the reason code (and the correlation ID when there is one) with the message (FR-8.29; desktop errors FR-20.47, from the catalogue of FR-20.48). The Gateway's `data.message` is the text; do not replace it with a generic one.
+9. **Empty states name the next action.** "No call is waiting for approval. A call appears here when a policy rule with approval required is used." (FR-8.29; desktop FR-20.46)
+10. **Help text says what a thing does and when to use it.** One or two sentences: what the control changes, and the case it is for (FR-8.25; desktop FR-20.46). Do not restate the label.
 11. **Empty values say "none".** A table cell or field with no value shows the word `none`, not a dash.
 
 ## Terminology
