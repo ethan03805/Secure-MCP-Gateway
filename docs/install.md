@@ -251,6 +251,49 @@ smcpctl uninstall --config ~/smcp/smcp.toml --purge   # also configuration, stat
 
 Without `--purge` the configuration, the state directory and the evidence journal stay, so `smcpctl journal verify` still works afterwards. `--purge` asks for the installation ID (`smcpctl keys status` shows it) before deleting. On the Enforced profile it also removes the service identities. Each profile removes only what its own install created: an installation whose configuration selects `[profile] mode = "enforced"` removes the system units, the nftables table `inet smcp`, the AppArmor profiles and the `smcp-srv` setup; any other installation removes only your launchd agent or systemd user unit, so a Standalone uninstall on a host that also has an Enforced installation leaves the Enforced one running. Homebrew installs are removed with `brew uninstall smcp` after `smcpctl uninstall`. Binaries installed by a platform package stay in place (`smcpctl uninstall` says so); remove them as in [Remove a Linux package](#remove-a-linux-package) or [Remove the macOS package](#remove-the-macos-package).
 
+## Walkthrough: Standalone, from install to uninstall
+
+The commands below take a clean macOS or Linux account through the whole life of a Standalone installation: install v1.0.0 with `install.sh` (signature and checksum checks), install the service, upgrade to v1.1.0 from the downloaded release files, and uninstall while keeping the evidence. Run them in an empty directory. CI runs this block as written on macOS arm64 and Ubuntu (`scripts/ci-install-guide.sh`, job `install-guide`) and fails when a step no longer works. On Linux a CI runner has no login session, so the script first enables lingering and sets `XDG_RUNTIME_DIR`, as a desktop session does.
+
+<!-- ci-install-guide: standalone -->
+```sh
+# 1. Install v1.0.0 with install.sh. It verifies the minisign signature of the
+#    checksum file and the archive's SHA-256 before it installs anything.
+if [ "$(uname -s)" = Darwin ]; then brew install minisign; fi
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version v1.0.0
+export PATH="$HOME/.local/bin:$PATH"
+smcpctl version --short
+
+# 2. Passwords of the administrator, the Session Approver and the pre-upgrade backup.
+(umask 077 && openssl rand -hex 16 > admin.pw && openssl rand -hex 16 > approver.pw && openssl rand -hex 16 > backup.pw)
+
+# 3. Install the service: a launchd user agent on macOS, a systemd user unit on Linux.
+smcpctl install --admin-password-file admin.pw --approver-password-file approver.pw
+case "$(uname -s)" in
+  Darwin) cfg="$HOME/Library/Application Support/smcp-gateway/config/smcp.toml" ;;
+  *) cfg="${XDG_CONFIG_HOME:-$HOME/.config}/smcp-gateway/smcp.toml" ;;
+esac
+smcpctl health --config "$cfg"
+
+# 4. Upgrade to v1.1.0 from the release files (checked as install.sh does,
+#    backed up first, rolled back automatically if the new version fails).
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m); case "$arch" in x86_64) arch=amd64 ;; aarch64) arch=arm64 ;; esac
+mkdir -p release
+for f in smcp_1.1.0_checksums.txt smcp_1.1.0_checksums.txt.minisig "smcp_1.1.0_${os}_${arch}.tar.gz"; do
+  curl -fsSL -o "release/$f" "https://github.com/ethan03805/Secure-MCP-Gateway/releases/download/v1.1.0/$f"
+done
+smcpctl upgrade --config "$cfg" --release release --passphrase-file backup.pw
+smcpctl version --short
+smcpctl health --config "$cfg"
+
+# 5. Uninstall. The service and binaries go; the configuration, state and
+#    journal stay. uninstall removes smcpctl too, so keep a copy to verify the journal.
+cp "$HOME/.local/bin/smcpctl" smcpctl-kept
+smcpctl uninstall --config "$cfg"
+./smcpctl-kept journal verify --config "$cfg"
+```
+
 ## Verify an installation
 
 ```sh
