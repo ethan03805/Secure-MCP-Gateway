@@ -581,7 +581,7 @@ func (in *installer) check(profile string) error {
 			argv = append(argv, "--host-only")
 		}
 		if err := in.run(argv...); err != nil {
-			return errors.New("Enforced profile prerequisites are missing (listed above); nothing was changed")
+			return errors.New("prerequisites of the Enforced profile are missing (listed above); nothing was changed")
 		}
 		return nil
 	}
