@@ -32,6 +32,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Secrets: vault and broker](secrets.md) | FR-6 | Vault, Secret Use Policy, delivery modes S1 to S4, leak detection |
 | [Enforced profile on Linux](enforced-profile.md) | FR-13.5, SR-4.5-1, CP-46 | Installing packaging/linux, smcpd.service under systemd, AppArmor profile, egress for sandboxed servers |
 | [Server sandbox](sandbox.md) | FR-12.3, FR-13.5, SR-4.5-1 to SR-4.7-2 | Enforced-profile prerequisites, Linux installer, `[runtime]`, sandbox profile, Runtime Monitor, `smcpctl runtime` |
+| [Streamable HTTP servers](southbound-http.md) | E-10 (FR-5.28 to FR-5.30, planned v1.3.0) | `[[server]] url`, headers sent, responses accepted, transport protections |
 | [Egress Broker](egress.md) | E-18 | Grants, DNS and address checks, limits, evidence, `smcpctl egress` |
 | [Management console](console.md), [console visual rules](console-style.md), [first-run audit](design/console-audit.md) | FR-8 | Views, sign-in, roles |
 | [Writing style guide](design/writing.md), [visual design guide](design/visual.md) | FR-20.48 to FR-20.51 (planned v1.3.0) | Normative rules for UI text and look of the console, desktop app and site; banned words and visual patterns; `tools/uilint` and its allowlist |

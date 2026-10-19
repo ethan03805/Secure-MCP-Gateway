@@ -38,6 +38,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
+	"github.com/ethan03805/secure-mcp-gateway/internal/southbound"
 	"github.com/ethan03805/secure-mcp-gateway/internal/versions"
 )
 
@@ -206,6 +207,9 @@ func run(cfgPath, level string) error {
 		rt.Start(ctx)
 		defer rt.Close()
 	}
+	// url servers connect over Streamable HTTP (FR-5.28); innermost, so the
+	// Secret Broker's teardown and the package checks wrap them too.
+	opts.Launcher = southbound.Wrap(opts.Launcher)
 	sec, err := attachSecrets(cfg, &opts, obs, mon, log) // E-19, E-20; nil when [secrets] is absent
 	if err != nil {
 		return err

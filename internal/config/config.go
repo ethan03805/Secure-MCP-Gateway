@@ -18,6 +18,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
+	"github.com/ethan03805/secure-mcp-gateway/internal/southbound"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
@@ -274,6 +275,14 @@ type Server struct {
 	Package       string            `toml:"package" json:"package"`
 	PackageSHA256 string            `toml:"package_sha256" json:"package_sha256"`
 	Slots         map[string]string `toml:"slots" json:"slots"`
+	// URL names the MCP endpoint of a server reached over Streamable HTTP
+	// (FR-5.28) instead of a command or package: https, or http to a
+	// loopback host. CAFile optionally names PEM certificates that are the
+	// only roots trusted for its TLS certificate. A bearer token is
+	// delivered by the Secret Broker in SMCP_UPSTREAM_TOKEN or
+	// SMCP_UPSTREAM_TOKEN_FILE (secret_env).
+	URL    string `toml:"url" json:"url"`
+	CAFile string `toml:"ca_file" json:"ca_file"`
 
 	// Set by the package library when it resolves a packaged entry, never
 	// read from the file: the manifest's launch runtime ("native", "node",
@@ -603,8 +612,11 @@ func (c *Config) check() error {
 			return fmt.Errorf("duplicate server alias %q", s.Alias)
 		}
 		aliases[s.Alias] = true
-		if (s.Command == "") == (s.Package == "") {
-			return fmt.Errorf("server %q: set exactly one of command and package", s.Alias)
+		if n := btoi(s.Command != "") + btoi(s.Package != "") + btoi(s.URL != ""); n != 1 {
+			return fmt.Errorf("server %q: set exactly one of command, package and url", s.Alias)
+		}
+		if err := s.checkURL(); err != nil {
+			return err
 		}
 		if s.Package == "" && (s.PackageSHA256 != "" || len(s.Slots) > 0) {
 			return fmt.Errorf("server %q: package_sha256 and slots apply only to a package", s.Alias)
@@ -625,6 +637,37 @@ func (c *Config) check() error {
 		return err
 	}
 	return c.Egress.check(aliases)
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// checkURL checks a server reached over Streamable HTTP (FR-5.28): the URL
+// rules of southbound.CheckURL, and none of the keys that only a launched
+// server uses.
+func (s Server) checkURL() error {
+	if s.URL == "" {
+		if s.CAFile != "" {
+			return fmt.Errorf("server %q: ca_file applies only to a url", s.Alias)
+		}
+		return nil
+	}
+	if _, err := southbound.CheckURL(s.URL); err != nil {
+		return fmt.Errorf("server %q: %w", s.Alias, err)
+	}
+	if len(s.Args) > 0 || len(s.Env) > 0 || s.Dir != "" || s.CommandSHA256 != "" {
+		return fmt.Errorf("server %q: args, env, dir and command_sha256 apply only to a command, not to a url", s.Alias)
+	}
+	for k := range s.SecretEnv {
+		if k != southbound.TokenEnv && k != southbound.TokenFileEnv {
+			return fmt.Errorf("server %q: a url server takes only the secret_env slots %s and %s, not %s", s.Alias, southbound.TokenEnv, southbound.TokenFileEnv, k)
+		}
+	}
+	return nil
 }
 
 func sameHostPort(a, b string) bool {
@@ -653,6 +696,7 @@ func (c *Config) resolvePaths() {
 	}
 	for i := range c.Servers {
 		res(&c.Servers[i].Dir)
+		res(&c.Servers[i].CAFile)
 		for k, v := range c.Servers[i].Slots {
 			res(&v)
 			c.Servers[i].Slots[k] = v
