@@ -1,4 +1,4 @@
-// The view modules G-01 to G-14 of ArchitectureV2 §4 (E-24) plus the
+// The view modules G-01 to G-15 of ArchitectureV2 §4 (E-24) plus the
 // operator views of elements that have no G number. The navigation lists
 // the views the signed-in role may open (FR-8.28): a view is listed when
 // the role may use one of its routes (perm.tsx). An Administrator also
@@ -10,6 +10,7 @@ import { AnomalyResponse } from "./AnomalyResponse";
 import { Approvals } from "./Approvals";
 import { Audit } from "./Audit";
 import { AuditProfiles } from "./AuditProfiles";
+import { ContextForge } from "./ContextForge";
 import { Control } from "./Control";
 import { DataServer } from "./DataServer";
 import { Egress } from "./Egress";
@@ -48,6 +49,15 @@ export const views: ViewDef[] = [
     render: (p) => <Servers path={p} />,
   },
   { code: "G-12", title: "Secrets", path: "/secrets", prefixes: ["/secrets/"], group: "Operate", routes: ["GET /api/v1/secrets"], render: (p) => <Secrets path={p} /> },
+  {
+    code: "G-15",
+    title: "ContextForge catalog",
+    path: "/contextforge",
+    prefixes: ["/contextforge/"],
+    group: "Operate",
+    routes: ["GET /api/v1/contextforge/catalog"],
+    render: (p) => <ContextForge path={p} />,
+  },
   { title: "Egress", path: "/egress", group: "Operate", routes: ["GET /api/v1/egress"], render: () => <Egress /> },
   { title: "Runtime", path: "/runtime", prefixes: ["/runtime/"], group: "Operate", routes: ["GET /api/v1/runtime"], render: (p) => <Runtime path={p} /> },
   { code: "G-11", title: "Remote access", path: "/remote", prefixes: ["/remote/"], group: "Operate", routes: ["GET /api/v1/remote", "GET /api/v1/clients"], render: (p) => <Remote path={p} /> },

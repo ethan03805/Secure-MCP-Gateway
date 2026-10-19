@@ -18,6 +18,7 @@ const registry: { title: string; routes: string[] }[] = [
   { title: "Sessions and principals", routes: ["GET /api/v1/sessions"] },
   { title: "Servers and library", routes: ["GET /api/v1/servers", "GET /api/v1/packages"] },
   { title: "Secrets", routes: ["GET /api/v1/secrets"] },
+  { title: "ContextForge catalog", routes: ["GET /api/v1/contextforge/catalog"] },
   { title: "Egress", routes: ["GET /api/v1/egress"] },
   { title: "Runtime", routes: ["GET /api/v1/runtime"] },
   { title: "Remote access", routes: ["GET /api/v1/remote", "GET /api/v1/clients"] },
