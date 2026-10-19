@@ -44,7 +44,7 @@ case "$pkg" in
 *.deb) format=deb bindir=/usr/bin libdir=/usr/bin
 	prefixes='^\./(usr/((bin|lib|share|share/doc)/)?)?$|^\./usr/bin/smcp[a-z-]*$|^\./usr/lib/smcp/.*$|^\./usr/share/doc/smcp/.*$' ;;
 *.rpm) format=rpm bindir=/usr/bin libdir=/usr/bin
-	prefixes='^/usr/bin/smcp[a-z-]*$|^/usr/lib/smcp/.*$|^/usr/share/doc/smcp/.*$' ;;
+	prefixes='^/usr/bin/smcp[a-z-]*$|^/usr/lib/smcp(/.*)?$|^/usr/share/doc/smcp(/.*)?$' ;;
 *.pkg) format=pkg bindir=/usr/local/bin libdir=/usr/local/lib/smcp
 	prefixes='^\.(/usr(/local(/(bin|lib|share|share/doc))?)?)?$|^\./usr/local/bin/smcp[a-z-]*$|^\./usr/local/lib/smcp(/.*)?$|^\./usr/local/share/doc/smcp(/.*)?$' ;;
 *) fail "$pkg: not a .deb, .rpm or .pkg" ;;
@@ -138,10 +138,12 @@ rpm)
 	;;
 pkg)
 	files=$(pkgutil --payload-files "$pkg")
-	pkgutil --check-signature "$pkg" | grep -q 'no signature' || fail "the .pkg carries a signature (FR-20.26: none until FR-20.29)"
+	# pkgutil exits 1 for an unsigned package.
+	sig=$(pkgutil --check-signature "$pkg" 2>&1 || true)
+	grep -q 'Status: no signature' <<<"$sig" || fail "the .pkg carries a signature (FR-20.26: none until FR-20.29): $sig"
 	x=$work/expanded
 	pkgutil --expand "$pkg" "$x"
-	if find "$x" -name Scripts | grep -q .; then fail "the .pkg has install scripts"; fi
+	if [ -n "$(find "$x" -name Scripts)" ]; then fail "the .pkg has install scripts"; fi
 	;;
 esac
 bad=$(grep -Ev "$prefixes" <<<"$files" || true)
@@ -164,7 +166,8 @@ for b in "${binaries[@]}"; do
 	real=$libdir/$b
 	if [ "$format" = pkg ]; then
 		[ "$(readlink "$link")" = "../lib/smcp/$b" ] || fail "$link is not a link to ../lib/smcp/$b"
-		codesign -dv "$real" 2>&1 | grep -q 'Signature=adhoc' || fail "$real has no ad-hoc signature (FR-20.26)"
+		cs=$(codesign -dv "$real" 2>&1 || true)
+		grep -q 'Signature=adhoc' <<<"$cs" || fail "$real has no ad-hoc signature (FR-20.26)"
 		owner=$(stat -f %u "$real")
 	else
 		owner=$(stat -c %u "$real")
@@ -182,7 +185,8 @@ for b in "${binaries[@]}"; do
 done
 if asuser test -w "$libdir"; then fail "$libdir is writable by the user (SR-4.11-2)"; fi
 if [ "$format" = pkg ]; then
-	pkgutil --pkgs | grep -qx io.github.ethan03805.smcp || fail "pkgutil does not know io.github.ethan03805.smcp"
+	pkgs=$(pkgutil --pkgs || true)
+	grep -qx io.github.ethan03805.smcp <<<"$pkgs" || fail "pkgutil does not know io.github.ethan03805.smcp"
 fi
 
 step "4. Standalone bootstrap, smcpd, journal, backup, doctor (temporary state)"
