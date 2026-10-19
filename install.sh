@@ -27,7 +27,17 @@
 #   --base-url <url>  download base URL, for a mirror (default: the release on GitHub)
 #   --pubkey <key>    minisign public key, for a fork (default: the key below)
 #   --no-cosign       skip the cosign check even when cosign is installed
+#   --package[=<fmt>] download the platform package (.deb, .rpm or macOS
+#                     .pkg; default: the format of this host) instead of the
+#                     archive, verify it the same way, save it in --dir (default:
+#                     the current directory) and, when run as root, install it
+#                     with the package manager; otherwise print that command
 #   --help            show this help
+#
+# With --package the script can also upgrade an installed package: the new
+# package is verified against the signed checksum file before the package
+# manager sees it, and a package that fails a check is neither saved nor
+# installed.
 set -eu
 
 REPO="ethan03805/Secure-MCP-Gateway"
@@ -36,6 +46,8 @@ DIR="${SMCP_INSTALL_DIR:-$HOME/.local/bin}"
 PROJECT="smcp"
 BASE_URL=""
 NO_COSIGN=0
+PACKAGE=""
+DIR_SET=0
 
 # Release signing public key (minisign, key ID 064FAC0C64ACCED0). The same
 # key is published in SECURITY.md.
@@ -45,6 +57,7 @@ usage() {
   cat <<'USAGE'
 usage: install.sh [--version <tag>] [--dir <path>] [--repo <owner/name>]
                   [--base-url <url>] [--pubkey <key>] [--no-cosign]
+                  [--package[=deb|rpm|pkg]]
 
 Downloads a Secure MCP Gateway release for this OS and architecture,
 verifies the minisign signature of its checksum file with the embedded
@@ -58,6 +71,10 @@ the harness adapters smcp-stdio, smcp-session and smcp-connect.
   --base-url <url>  download base URL, for a mirror (default: the release on GitHub)
   --pubkey <key>    minisign public key, for a fork (default: the embedded key)
   --no-cosign       skip the cosign check even when cosign is installed
+  --package[=<fmt>] the platform package (.deb, .rpm, macOS .pkg) instead of
+                    the archive: verified the same way, saved in --dir
+                    (default: the current directory), installed with the
+                    package manager when run as root
 
 Signature checks need minisign or OpenSSL 3 (macOS: brew install minisign).
 USAGE
@@ -69,8 +86,10 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --version) [ $# -ge 2 ] || err "--version needs a value"; VERSION="$2"; shift 2 ;;
     --version=*) VERSION="${1#*=}"; shift ;;
-    --dir) [ $# -ge 2 ] || err "--dir needs a value"; DIR="$2"; shift 2 ;;
-    --dir=*) DIR="${1#*=}"; shift ;;
+    --dir) [ $# -ge 2 ] || err "--dir needs a value"; DIR="$2"; DIR_SET=1; shift 2 ;;
+    --dir=*) DIR="${1#*=}"; DIR_SET=1; shift ;;
+    --package) PACKAGE=auto; shift ;;
+    --package=*) PACKAGE="${1#*=}"; shift ;;
     --repo) [ $# -ge 2 ] || err "--repo needs a value"; REPO="$2"; shift 2 ;;
     --repo=*) REPO="${1#*=}"; shift ;;
     --base-url) [ $# -ge 2 ] || err "--base-url needs a value"; BASE_URL="$2"; shift 2 ;;
@@ -203,6 +222,28 @@ esac
 NUM="${VERSION#v}"
 
 ARCHIVE="${PROJECT}_${NUM}_${OS}_${ARCH}.tar.gz"
+if [ -n "$PACKAGE" ]; then
+  if [ "$PACKAGE" = auto ]; then
+    if [ "$OS" = darwin ]; then PACKAGE=pkg
+    elif command -v dpkg >/dev/null 2>&1; then PACKAGE=deb
+    elif command -v rpm >/dev/null 2>&1; then PACKAGE=rpm
+    else err "neither dpkg nor rpm is installed; use the archive (without --package)"
+    fi
+  fi
+  # A pre-release 1.3.0-rc.1 is 1.3.0~rc.1 in the Linux package names.
+  PKGVER=$(printf '%s' "$NUM" | sed 's/-/~/')
+  case "$PACKAGE" in
+    deb) ARCHIVE="${PROJECT}_${PKGVER}_${ARCH}.deb" ;;
+    rpm)
+      case "$ARCH" in amd64) RPMARCH=x86_64 ;; *) RPMARCH=aarch64 ;; esac
+      ARCHIVE="${PROJECT}-${PKGVER}-1.${RPMARCH}.rpm" ;;
+    pkg)
+      [ "$OS" = darwin ] && [ "$ARCH" = arm64 ] || err "the macOS package is for Apple silicon; use the archive (without --package)"
+      ARCHIVE="${PROJECT}_${NUM}_darwin_arm64.pkg" ;;
+    *) err "--package takes deb, rpm or pkg (got '$PACKAGE')" ;;
+  esac
+  [ "$DIR_SET" = 1 ] || DIR=$(pwd)
+fi
 SUMS="${PROJECT}_${NUM}_checksums.txt"
 BASE="${BASE_URL:-https://github.com/$REPO/releases/download/$VERSION}"
 BASE="${BASE%/}"
@@ -246,6 +287,30 @@ want=$(awk -v f="$ARCHIVE" '$2 == f || $2 == "*" f { print $1 }' "$TMP/$SUMS")
 got=$(sha256 "$TMP/$ARCHIVE")
 [ "$want" = "$got" ] || err "checksum mismatch for $ARCHIVE: expected $want, got $got; nothing was installed"
 say "checksum verified ($got)"
+
+if [ -n "$PACKAGE" ]; then
+  mkdir -p "$DIR" 2>/dev/null && [ -w "$DIR" ] || err "$DIR is not writable by $(id -un); pass --dir"
+  dest=$(cd "$DIR" && pwd)/$ARCHIVE
+  case "$dest" in *[[:space:]]*) err "the package path '$dest' contains white space; pass a --dir without it" ;; esac
+  cp "$TMP/$ARCHIVE" "$dest.tmp.$$"
+  mv -f "$dest.tmp.$$" "$dest"
+  say "saved the verified package as $dest"
+  case "$PACKAGE" in
+    deb) cmd="apt-get install -y $dest" ;;
+    rpm) if command -v dnf >/dev/null 2>&1; then cmd="dnf install -y $dest"; else cmd="rpm -U $dest"; fi ;;
+    pkg) cmd="installer -pkg $dest -target /" ;;
+  esac
+  if [ "$(id -u)" = 0 ]; then
+    say "installing: $cmd"
+    # shellcheck disable=SC2086 # cmd is split into its words on purpose
+    DEBIAN_FRONTEND=noninteractive $cmd || err "the package manager did not install $ARCHIVE"
+    say "installed $ARCHIVE"
+    say "next: smcpctl install   (see docs/install.md); after an upgrade restart a running Gateway service"
+  else
+    say "install it as root: sudo $cmd"
+  fi
+  exit 0
+fi
 
 mkdir -p "$TMP/x"
 tar -xzf "$TMP/$ARCHIVE" -C "$TMP/x"

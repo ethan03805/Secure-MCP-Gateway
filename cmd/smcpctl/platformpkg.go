@@ -126,6 +126,11 @@ func binaryWritableFindings(exe string, euid int, enforced bool, writable func(s
 			paths = append(paths, p)
 		}
 	}
+	// Inside an AppImage the binaries are on a read-only mount, but the
+	// AppImage file that holds them is the user's own (FR-20.19).
+	if img := appImageFile(exe, os.Getenv("APPIMAGE"), os.Getenv("APPDIR")); img != "" && writable(img) {
+		paths = append(paths, img)
+	}
 	if len(paths) == 0 {
 		return []harness.Finding{{Kind: harness.KindInfo, Path: dir, Message: "the Gateway binaries and their directory are not writable by this user (SR-4.11-2)"}}
 	}
@@ -136,9 +141,24 @@ func binaryWritableFindings(exe string, euid int, enforced bool, writable func(s
 	var out []harness.Finding
 	for _, p := range paths {
 		out = append(out, harness.Finding{Kind: kind, Path: p,
-			Message: prefix + "this user, who runs the agents, can write this Gateway binary or directory and so replace the Gateway; install from the .pkg, .deb or .rpm package, or make it root-owned (SR-4.11-2)"})
+			Message: prefix + "this user, who runs the agents, can write this Gateway binary, directory or AppImage and so replace the Gateway; install from the .pkg, .deb or .rpm package, or make it root-owned (SR-4.11-2)"})
 	}
 	return out
+}
+
+// appImageFile returns the AppImage that holds exe: the AppImage runtime
+// mounts the image at APPDIR and names the image file in APPIMAGE, and
+// passes both to the processes it starts. It returns "" when exe is not
+// below APPDIR.
+func appImageFile(exe, appImage, appDir string) string {
+	if appImage == "" || appDir == "" || !filepath.IsAbs(appImage) {
+		return ""
+	}
+	rel, err := filepath.Rel(filepath.Clean(appDir), exe)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return ""
+	}
+	return appImage
 }
 
 // doctorBinaryFindings runs binaryWritableFindings for this smcpctl.

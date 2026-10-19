@@ -53,6 +53,12 @@ jobs:
         with:
           name: installers-macos
           path: build/installers
+      # Broken-installer stop test (FR-20.24): a truncated and an altered
+      # copy of the .pkg are refused by installer and stop package-smoke.sh.
+      - name: Broken copies of the .pkg are refused
+        env:
+          VERSION: ${{ inputs.version }}
+        run: bash scripts/package-broken.sh "build/installers/smcp_${VERSION}_darwin_arm64.pkg" "$VERSION"
       - name: Install with installer, exercise, remove as docs/install.md says
         env:
           VERSION: ${{ inputs.version }}

@@ -40,6 +40,13 @@ on:
         description: Install the .pkg on a macOS runner (installers-macos-smoke.yml)
         type: boolean
         default: true
+      break:
+        description: >-
+          "deb" changes one byte of the amd64 .deb after it is built, so that
+          its smoke test fails (installers-broken.yml checks that this stops
+          publication, FR-20.24). Empty for every real build.
+        type: string
+        default: ""
     outputs:
       version:
         description: Version of the packages
@@ -88,6 +95,16 @@ jobs:
           GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
           SMCP_BUILD_REFSERVER: "1"
           SMCP_SBOM: ${{ inputs.tag != '' && '1' || '' }}
+      - name: Deliberately break the amd64 .deb (stop test)
+        if: inputs.break == 'deb'
+        run: |
+          [ -z "$TAG" ] || { echo "::error::a release build is never broken on purpose"; exit 1; }
+          f=$(ls build/dist/smcp_*_amd64.deb)
+          size=$(wc -c < "$f")
+          printf 'broken' | dd of="$f" bs=1 seek=$((size / 2)) conv=notrunc 2>/dev/null
+          echo "::warning::$f was changed on purpose; its smoke test must fail"
+        env:
+          TAG: ${{ inputs.tag }}
       - name: Version
         id: version
         env:
@@ -197,6 +214,46 @@ jobs:
         with:
           name: installers-linux
           path: build/installers
+      # Broken-installer stop test (FR-20.24): a truncated and an altered
+      # copy are refused by the package manager and stop package-smoke.sh.
+      - name: Broken copies of the .deb are refused
+        if: matrix.format == 'deb'
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+        run: |
+          # shellcheck disable=SC2086 # FILE is a glob
+          set -- build/installers/$FILE
+          bash scripts/package-broken.sh "$1" "$VERSION"
+      - name: Broken copies of the .rpm are refused (Fedora container)
+        if: matrix.format == 'rpm'
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+        run: |
+          # shellcheck disable=SC2086 # FILE is a glob
+          set -- build/installers/$FILE
+          docker run --rm -v "$PWD:/w:ro" -w /w -e VERSION -e PKG="$1" fedora:44 bash -c \
+            'dnf install -y -q procps-ng util-linux shadow-utils findutils >/dev/null && bash scripts/package-broken.sh "$PKG" "$VERSION"'
+      # Upgrade through install.sh --package: the new package is verified
+      # against the signed checksum file before apt sees it; an altered
+      # package or another key's signature leaves the old version installed.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: matrix.format == 'deb'
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Upgrade with install.sh --package (TestInstallScriptPackageUpgradeOnHost)
+        if: matrix.format == 'deb'
+        env:
+          SMCP_PACKAGE_UPGRADE_TEST: "1"
+          SMCP_UPGRADE_VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+        run: |
+          # shellcheck disable=SC2086 # FILE is a glob
+          set -- build/installers/$FILE
+          SMCP_UPGRADE_DEB="$PWD/$1" go test -count=1 -v -run '^TestInstallScriptPackageUpgradeOnHost$' ./tools/installsh/
       # Ubuntu: on the runner itself, with systemd, so that removal of the
       # system smcpd service is exercised (FR-20.22).
       - name: Install, exercise and remove the .deb
