@@ -901,8 +901,8 @@ test("Runtime instance kill with the keyboard (instance table mocked: the accept
 // The same action on a real instance (FR-8.33): in the Enforced profile
 // (the console-enforced CI job) the reference server runs in rootless
 // Podman. A call starts its instance; it is killed from the Runtime view
-// with keyboard events only, the Gateway reports it killed with the reason
-// typed, and Podman no longer runs its container. Skipped in the Standalone profile, which has no sandbox.
+// with keyboard events only, the Gateway reports it killed by an operator,
+// and Podman no longer runs its container. Skipped in the Standalone profile, which has no sandbox.
 test("Runtime instance kill with the keyboard on a real sandboxed instance (Enforced profile)", async ({ page, browserName }) => {
   test.skip(g.profile !== "enforced", "the Standalone profile runs no sandboxed instance");
   claims("FR-8.33", "FR-8.32", "FR-8.18");
@@ -937,7 +937,8 @@ test("Runtime instance kill with the keyboard on a real sandboxed instance (Enfo
   expect(api.status()).toBe(200);
   const view = ((await api.json()) as { instance: { state: string; kill_reason?: string } }).instance;
   expect(view.state).toBe("killed");
-  expect(view.kill_reason).toBe("keyboard kill of a real instance");
+  // The instance records the reason code; the typed reason goes to the journal with the account.
+  expect(view.kill_reason).toBe("OPERATOR_KILL");
   await expect.poll(() => execFileSync("podman", ["ps", "-q", "--filter", `name=^${container}$`], { encoding: "utf8" }).trim(), { timeout: 30_000 }).toBe("");
   console.log(`Runtime real kill keyboard (${browserName}): ${states} states passed axe`);
 });

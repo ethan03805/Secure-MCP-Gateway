@@ -896,7 +896,7 @@ jobs:
       - name: Playwright browsers of that release
         run: |
           npx --no-install playwright install --with-deps chromium firefox webkit
-          node -e 'const b=require("playwright-core/browsers.json").browsers.filter(x=>["chromium","firefox","webkit"].includes(x.name)); for (const x of b) console.log(x.name, x.browserVersion)'
+          jq -r '.browsers[] | select(.name == "chromium" or .name == "firefox" or .name == "webkit") | "\(.name) \(.browserVersion)"' node_modules/playwright-core/browsers.json
         working-directory: console
       - name: Build the Gateway binaries once for the three runs
         run: |
