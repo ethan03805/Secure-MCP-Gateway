@@ -8,7 +8,9 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -34,8 +36,12 @@ type RunOptions struct {
 	// process) and its descendants.
 	GraphURI, GraphUser, GraphPasswordFile string
 	GraphPID                               int
-	Commit                                 string
-	Log                                    io.Writer
+	// GraphContainer names a created, stopped container of the graph
+	// engine that Run starts (docker start) for the FR-11.9 measurement
+	// only, takes GraphPID from, and stops at the end.
+	GraphContainer string
+	Commit         string
+	Log            io.Writer
 }
 
 func (o *RunOptions) defaults() {
@@ -81,51 +87,6 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 		res.ReferenceClass = ReferenceClassName
 	}
 	full := o.Callers == RefCallers // every load uses the reference callers
-
-	// FR-11.9: an idle instance, started first and sampled o.Idle after
-	// its start, while the other measurements run (it gets no traffic).
-	idleExtra, err := graphConfig(o, filepath.Join(o.Work, "graph-password"))
-	if err != nil {
-		return nil, err
-	}
-	idle, err := newInstance(o.BinDir, filepath.Join(o.Work, "idle"), idleExtra, doc)
-	if err != nil {
-		return nil, err
-	}
-	if err := idle.start(); err != nil {
-		return nil, err
-	}
-	defer idle.stop()
-	idleSince := time.Now()
-	if o.GraphURI != "" {
-		if err := idle.waitGraphReady(2 * time.Minute); err != nil {
-			return nil, err
-		}
-		say("idle instance: graph mirror ready on %s", o.GraphURI)
-	}
-	type rssSample struct {
-		bytes, graph int64
-		procs        int
-		at           time.Duration
-		err          error
-	}
-	idleRSS := make(chan rssSample, 1)
-	sampleCtx, stopSample := context.WithCancel(ctx)
-	defer stopSample()
-	go func() {
-		select {
-		case <-sampleCtx.Done():
-			idleRSS <- rssSample{err: sampleCtx.Err()}
-		case <-time.After(o.Idle):
-			s := rssSample{at: time.Since(idleSince)}
-			s.bytes, s.err = idle.rssBytes()
-			if s.err == nil && o.GraphPID > 0 {
-				s.graph, s.procs, s.err = treeRSS(o.GraphPID)
-			}
-			idleRSS <- s
-		}
-	}()
-	say("idle instance started; memory is sampled after %s", o.Idle)
 
 	// FR-11.2: decisions against the reference policy.
 	say("FR-11.2: %d decisions, %d callers, %d candidate rules", o.Decisions, o.Callers, RefCandidates)
@@ -208,6 +169,64 @@ func Run(ctx context.Context, o RunOptions) (*Results, error) {
 	cm := captureMeasurement(runs, onMemory)
 	cm.Complete = full && o.Calls >= 2000 && cm.Samples > 0
 	res.Measurements = append(res.Measurements, cm)
+
+	// FR-11.9: an idle instance, started after the load measurements and
+	// sampled o.Idle after its start while the FR-11.6 replay and the
+	// FR-11.8 queries run on another instance (it gets no traffic). The
+	// graph engine, when perf starts it (GraphContainer), starts here too:
+	// a JVM starting beside the FR-11.4 loads took processor time from
+	// both conditions and added about 3 ms to their P-213.
+	if o.GraphContainer != "" {
+		pid, stop, err := startGraphContainer(ctx, o.GraphContainer)
+		if err != nil {
+			return nil, err
+		}
+		defer stop()
+		o.GraphPID = pid
+		say("graph engine container %s started (process %d)", o.GraphContainer, pid)
+	}
+	idleExtra, err := graphConfig(o, filepath.Join(o.Work, "graph-password"))
+	if err != nil {
+		return nil, err
+	}
+	idle, err := newInstance(o.BinDir, filepath.Join(o.Work, "idle"), idleExtra, doc)
+	if err != nil {
+		return nil, err
+	}
+	if err := idle.start(); err != nil {
+		return nil, err
+	}
+	defer idle.stop()
+	idleSince := time.Now()
+	if o.GraphURI != "" {
+		if err := idle.waitGraphReady(3 * time.Minute); err != nil {
+			return nil, err
+		}
+		say("idle instance: graph mirror ready on %s", o.GraphURI)
+	}
+	type rssSample struct {
+		bytes, graph int64
+		procs        int
+		at           time.Duration
+		err          error
+	}
+	idleRSS := make(chan rssSample, 1)
+	sampleCtx, stopSample := context.WithCancel(ctx)
+	defer stopSample()
+	go func() {
+		select {
+		case <-sampleCtx.Done():
+			idleRSS <- rssSample{err: sampleCtx.Err()}
+		case <-time.After(o.Idle):
+			s := rssSample{at: time.Since(idleSince)}
+			s.bytes, s.err = idle.rssBytes()
+			if s.err == nil && o.GraphPID > 0 {
+				s.graph, s.procs, s.err = treeRSS(o.GraphPID)
+			}
+			idleRSS <- s
+		}
+	}()
+	say("idle instance started; memory is sampled after %s", o.Idle)
 
 	// FR-11.6 and FR-11.8: the reference data of the query instance, the
 	// 30-day journal and 30 days of observation records. The records are
@@ -496,4 +515,24 @@ func graphConfig(o RunOptions, pwPath string) (string, error) {
 		user = "neo4j"
 	}
 	return fmt.Sprintf("\n[graph]\nenabled = true\nuri = %q\nusername = %q\npassword_file = %q\n", o.GraphURI, user, pwPath), nil
+}
+
+// startGraphContainer starts the stopped container name with docker and
+// returns its first process's ID and a function that stops it.
+func startGraphContainer(ctx context.Context, name string) (int, func(), error) {
+	if out, err := exec.CommandContext(ctx, "docker", "start", name).CombinedOutput(); err != nil {
+		return 0, nil, fmt.Errorf("docker start %s: %w: %s", name, err, out)
+	}
+	stop := func() { _ = exec.Command("docker", "stop", name).Run() }
+	out, err := exec.CommandContext(ctx, "docker", "inspect", "-f", "{{.State.Pid}}", name).Output()
+	if err != nil {
+		stop()
+		return 0, nil, fmt.Errorf("docker inspect %s: %w", name, err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil || pid <= 0 {
+		stop()
+		return 0, nil, fmt.Errorf("docker inspect %s: process %q", name, out)
+	}
+	return pid, stop, nil
 }

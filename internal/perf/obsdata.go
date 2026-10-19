@@ -216,13 +216,14 @@ type IngestResult struct {
 
 // Backpressure reports whether the replay saw the backpressure signal: an
 // offer at 80% or more of the writer's queue, a dropped record or a failed
-// store write.
+// store write, or fewer rows written than offered (the service also writes
+// its own meta-metrics rows, so the count may be higher).
 func (r IngestResult) Backpressure() bool {
 	var drops uint64
 	for _, n := range r.Stats.Drops {
 		drops += n
 	}
-	return r.Stats.PressureOffers > 0 || drops > 0 || r.Stats.LastError != "" || r.Stats.Written != r.Offered+r.Scores
+	return r.Stats.PressureOffers > 0 || drops > 0 || r.Stats.LastError != "" || r.Stats.Written < r.Offered+r.Scores
 }
 
 // ReplayIngest opens the Observation Store of the configuration cfgPath

@@ -125,7 +125,7 @@ func TestReplayIngest(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if res.Backend != b || res.Offered != 3*rate || res.Backpressure() || res.Stats.Written != res.Offered+res.Scores {
+			if res.Backend != b || res.Offered != 3*rate || res.Backpressure() || res.Stats.Written < res.Offered+res.Scores {
 				t.Fatalf("replay %+v", res)
 			}
 			if res.Rate < rate*0.99 || res.Elapsed < 2900*time.Millisecond {
@@ -181,6 +181,13 @@ func TestIngestMeasurement(t *testing.T) {
 		if m := ingestMeasurement(r, IngestRate, IngestDuration); m.Pass {
 			t.Errorf("%s: passes", name)
 		}
+	}
+	// The service writes its own meta-metrics rows (one per interval)
+	// beside the replayed ones; they do not count as a fault.
+	withMetrics := ok
+	withMetrics.Stats.Written += 60
+	if m := ingestMeasurement(withMetrics, IngestRate, IngestDuration); !m.Pass {
+		t.Fatalf("meta-metrics rows fail the replay: %+v", m)
 	}
 	if m := ingestMeasurement(ok, IngestRate, time.Minute); m.Complete {
 		t.Fatal("a one-minute replay is complete")

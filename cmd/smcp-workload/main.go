@@ -104,6 +104,7 @@ func measure(args []string) error {
 	fs.StringVar(&o.GraphURI, "graph-uri", "", "Bolt URI of a graph engine for the idle instance's graph mirror (FR-11.9)")
 	fs.StringVar(&o.GraphUser, "graph-user", "neo4j", "graph engine user")
 	fs.StringVar(&o.GraphPasswordFile, "graph-password-file", "", "file with the graph engine password")
+	fs.StringVar(&o.GraphContainer, "graph-container", "", "created, stopped container of the graph engine to start (docker) for the FR-11.9 measurement only; sets --graph-pid")
 	fs.IntVar(&o.GraphPID, "graph-pid", 0, "process ID of the graph engine (a container's first process); its tree's memory is added to the idle sample")
 	fs.StringVar(&o.Commit, "commit", os.Getenv("GITHUB_SHA"), "commit measured")
 	work := fs.String("work", "", "work directory (default a new temporary directory, removed afterwards)")
