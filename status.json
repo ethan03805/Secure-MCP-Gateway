@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T21:58:35Z",
-  "commit": "6ee81f7b9ff57f695a41c021ca917a71923e140a",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/6ee81f7b9ff57f695a41c021ca917a71923e140a",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39323825409",
+  "generatedAt": "2026-10-19T23:44:03Z",
+  "commit": "413677046b43464c1993fd36a81a536df1d926bb",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/413677046b43464c1993fd36a81a536df1d926bb",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39328988239",
   "tests": {
-    "total": 1674,
-    "passed": 1655,
-    "failed": 1,
+    "total": 1692,
+    "passed": 1674,
+    "failed": 0,
     "skipped": 18,
-    "durationSec": 2905,
+    "durationSec": 5246.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -43,13 +43,13 @@
       },
       {
         "name": "desktop/linux",
-        "passed": 41,
+        "passed": 49,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "desktop/macos",
-        "passed": 41,
+        "passed": 49,
         "failed": 0,
         "skipped": 0
       },
@@ -67,7 +67,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 86,
+        "passed": 88,
         "failed": 0,
         "skipped": 0
       },
@@ -217,8 +217,8 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 67,
-        "failed": 1,
+        "passed": 68,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -516,7 +516,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 43
+        "pct": 43.2
       },
       {
         "name": "cmd/smcpd",
@@ -536,7 +536,7 @@
       },
       {
         "name": "internal/analytics",
-        "pct": 80.3
+        "pct": 80.6
       },
       {
         "name": "internal/anomaly",
@@ -564,7 +564,7 @@
       },
       {
         "name": "internal/backup",
-        "pct": 79.6
+        "pct": 79.8
       },
       {
         "name": "internal/baseline",
@@ -600,7 +600,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.7
+        "pct": 91.3
       },
       {
         "name": "internal/egress",
@@ -616,7 +616,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 84
+        "pct": 83.9
       },
       {
         "name": "internal/gwtest",
@@ -652,7 +652,7 @@
       },
       {
         "name": "internal/observe",
-        "pct": 91.7
+        "pct": 91.6
       },
       {
         "name": "internal/obspolicy",
@@ -732,7 +732,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 80
+        "pct": 79.7
       },
       {
         "name": "internal/session",
@@ -740,7 +740,7 @@
       },
       {
         "name": "internal/testport",
-        "pct": 81.6
+        "pct": 79.6
       },
       {
         "name": "internal/tunnel",
@@ -788,15 +788,15 @@
       },
       {
         "name": "tools/uilint",
-        "pct": 85.3
+        "pct": 86
       }
     ]
   },
   "requirements": {
     "total": 530,
-    "verified": 490,
-    "partial": 36,
-    "failing": 3,
+    "verified": 491,
+    "partial": 38,
+    "failing": 0,
     "unverified": 1,
     "byElement": [
       {
@@ -1035,17 +1035,17 @@
         "element": "E-30",
         "name": "Behavior Baseline Engine",
         "total": 11,
-        "verified": 9,
+        "verified": 11,
         "partial": 0,
-        "failing": 2
+        "failing": 0
       },
       {
         "element": "E-31",
         "name": "Anomaly Scorer",
         "total": 10,
-        "verified": 9,
+        "verified": 10,
         "partial": 0,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-32",
@@ -1059,8 +1059,8 @@
         "element": "E-33",
         "name": "Harness Adapter Kit",
         "total": 21,
-        "verified": 14,
-        "partial": 6,
+        "verified": 12,
+        "partial": 8,
         "failing": 0
       }
     ],
@@ -3774,7 +3774,7 @@
       {
         "id": "FR-10.20",
         "element": "E-30",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/baseline.TestPromotionManualAndAutomatic",
@@ -3785,7 +3785,7 @@
       {
         "id": "FR-10.21",
         "element": "E-30",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestObserveCommands",
           "internal/anomaly.TestRollbackScoresRecordSnapshot",
@@ -4207,7 +4207,7 @@
         "element": "E-24",
         "status": "verified",
         "tests": [
-          "workflow tap at v1.1.0 (935dc4d0849e, 2026-10-18T23:59:57Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39178720966"
+          "workflow tap at v1.2.0 (176c72564370, 2026-10-19T22:25:25Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39330362409"
         ]
       },
       {
@@ -4228,6 +4228,7 @@
         "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedInstallOnHost",
+          "cmd/smcpctl.TestInstallCheck",
           "cmd/smcpctl.TestInstallEnforcedFake",
           "cmd/smcpctl.TestInstallRefusals",
           "internal/sandbox.TestDoctorAllPrerequisitesPresent",
@@ -4456,7 +4457,7 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
-          "analysis: 8 of 11 child requirements verified"
+          "analysis: 6 of 11 child requirements verified"
         ]
       },
       {
@@ -4475,12 +4476,12 @@
       {
         "id": "FR-15.2",
         "element": "E-33",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at v1.2.0 (176c72564370, 2026-10-19T21:31:07Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39325918733"
+          "workflow agents-lockdown at main (413677046b43, 2026-10-19T22:53:09Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39328988172"
         ]
       },
       {
@@ -4534,7 +4535,7 @@
       {
         "id": "FR-15.8",
         "element": "E-33",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "internal/policy.TestBrokenBuildTag",
           "scripts/agents.TestBrokenGatewayRun",
@@ -4549,7 +4550,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at v1.2.0 (176c72564370, 2026-10-19T21:31:05Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39325918733"
+          "workflow agents at main (413677046b43, 2026-10-19T22:53:07Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39328988172"
         ]
       },
       {
@@ -6473,7 +6474,7 @@
       {
         "id": "SR-7-1",
         "element": "E-31",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/baseline.TestRollbackAndIntegrity",
           "internal/e2e.TestBaselinePromotionRollbackAndIntegrity"
@@ -6755,6 +6756,8 @@
         "element": "E-23",
         "status": "partial",
         "tests": [
+          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "internal/e2e.TestDesktopMetricsOnRunningGateway",
           "internal/metrics.TestDesktopGauges"
         ],
@@ -6791,15 +6794,35 @@
       {
         "id": "FR-20.8",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/linux.setup::tests::offered_only_without_a_configuration",
+          "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/macos.setup::tests::offered_only_without_a_configuration",
+          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-20.9",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestEnforcedScriptHostOnly",
+          "cmd/smcpctl.TestInstallCheck",
+          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one",
+          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/macos.setup::tests::the_prerequisite_check_names_each_missing_one"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -6878,8 +6901,11 @@
       {
         "id": "FR-20.19",
         "element": "E-35",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7021,8 +7047,13 @@
       {
         "id": "FR-20.47",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7599,7 +7630,9 @@
         "status": "partial",
         "tests": [
           "desktop/linux.config_tests::no_gateway_secret_or_control_api_in_the_application",
-          "desktop/macos.config_tests::no_gateway_secret_or_control_api_in_the_application"
+          "desktop/linux.setup::tests::offered_only_without_a_configuration",
+          "desktop/macos.config_tests::no_gateway_secret_or_control_api_in_the_application",
+          "desktop/macos.setup::tests::offered_only_without_a_configuration"
         ],
         "target": "v1.3.0"
       },
@@ -7610,8 +7643,12 @@
         "tests": [
           "desktop/linux.console::tests::the_window_is_incognito_without_devtools",
           "desktop/linux.settings::tests::saved_settings_are_private_and_round_trip",
+          "desktop/linux.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "desktop/macos.console::tests::the_window_is_incognito_without_devtools",
-          "desktop/macos.settings::tests::saved_settings_are_private_and_round_trip"
+          "desktop/macos.settings::tests::saved_settings_are_private_and_round_trip",
+          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments"
         ],
         "target": "v1.3.0"
       },
@@ -7623,9 +7660,11 @@
           "desktop/linux.config_tests::commands_are_declared_and_registered_once",
           "desktop/linux.config_tests::no_updater_or_shell_plugin",
           "desktop/linux.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
           "desktop/macos.config_tests::commands_are_declared_and_registered_once",
           "desktop/macos.config_tests::no_updater_or_shell_plugin",
-          "desktop/macos.config_tests::one_capability_per_bundled_window_and_none_for_the_console"
+          "desktop/macos.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
+          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only"
         ],
         "target": "v1.3.0"
       },
@@ -7663,7 +7702,9 @@
         "status": "partial",
         "tests": [
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
-          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager"
+          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments"
         ],
         "target": "v1.3.0"
       },
@@ -8560,7 +8601,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45769: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41441: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8677,7 +8718,7 @@
     }
   ],
   "acceptance": {
-    "commit": "6ee81f7b9ff57f695a41c021ca917a71923e140a",
+    "commit": "413677046b43464c1993fd36a81a536df1d926bb",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9365,24 +9406,24 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
-    "commit": "6ee81f7b9ff57f695a41c021ca917a71923e140a",
-    "generatedAt": "2026-10-19T21:07:13Z",
+    "commit": "413677046b43464c1993fd36a81a536df1d926bb",
+    "generatedAt": "2026-10-19T22:02:04Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000010325",
-      "memoryBytes": 16766410752,
+      "runner": "GitHub Actions 1000010783",
+      "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90421604352,
-      "diskDevice": "sda1",
-      "diskModel": "Virtual Disk",
+      "diskFreeBytes": 90421403648,
+      "diskDevice": "nvme0n1p1",
+      "diskModel": "MSFT NVMe Accelerator v1.0",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
       "imageVersion": "20261012.334.1"
@@ -9404,7 +9445,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.030347,
+        "value": 0.015633,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9417,7 +9458,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 19.126179,
+        "value": 19.709046,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9430,19 +9471,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.5186212499999971,
+        "value": 0.03459712499999945,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.767 ms, mean of 11.056, 10.850, 10.635, 10.172, 10.787, 11.053, 10.846, 10.741) minus disabled (10.249 ms, mean of 10.091, 10.211, 10.603, 10.411, 9.684, 10.224, 10.196, 10.572), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (8.133 ms, mean of 8.131, 8.225, 8.005, 8.192, 8.216, 8.105, 8.033, 8.154) minus disabled (8.098 ms, mean of 8.047, 7.766, 8.001, 8.091, 8.486, 7.832, 8.045, 8.516), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.964995099349,
+        "value": 1999.9653351275037,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9454,7 +9495,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 808.45795,
+        "value": 579.664766,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9466,12 +9507,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1541.390625,
+        "value": 1556.125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m20s after start with no traffic: smcpd (122.1 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1419.3 MiB in 2 processes, process 4237 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m16s after start with no traffic: smcpd (126.9 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1429.2 MiB in 2 processes, process 3957 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
