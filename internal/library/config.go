@@ -16,7 +16,8 @@ import (
 // each enabled revision gets its AppContainer placement, recorded under
 // <state>/appcontainer.
 func OpenConfigured(cfg *config.Config, log *slog.Logger) (*Library, error) {
-	o := Options{StateDir: cfg.State.Dir, Dir: cfg.Packages.Library, Log: log}
+	bundled := cfg.ContextForge.Bundled
+	o := Options{StateDir: cfg.State.Dir, Dir: cfg.Packages.Library, Log: log, HostedAllowed: func() bool { return bundled }}
 	if cfg.Runtime.Sandbox == "appcontainer" {
 		if runtime.GOOS != "windows" {
 			return nil, errors.New(`runtime.sandbox = "appcontainer" needs Windows`)

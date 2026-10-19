@@ -75,7 +75,7 @@ func (c *Connector) setupInstance() {
 	sum := sha256.Sum256([]byte(c.o.Config.State.Dir))
 	l := c.o.Config.Limits
 	inst, err := bundle.New(bundle.Options{Engine: eng, Image: lock.ImageRef(c.platform), Name: "smcp-contextforge-" + hex.EncodeToString(sum[:4]),
-		Settings:    bundle.Settings{Limits: bundle.Limits{UpstreamTimeout: l.UpstreamTimeout.Duration, CallsPerMinute: l.PrincipalCallsPerMin, Concurrency: l.ToolConcurrencyTotal}},
+		Settings:    bundle.Settings{SSRFAllowed: c.o.SSRFAllowed, Limits: bundle.Limits{UpstreamTimeout: l.UpstreamTimeout.Duration, CallsPerMinute: l.PrincipalCallsPerMin, Concurrency: l.ToolConcurrencyTotal}},
 		Credentials: c.credentials, OnState: c.instanceState, Log: c.o.Log})
 	if err != nil {
 		c.instErr = err

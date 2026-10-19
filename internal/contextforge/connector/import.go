@@ -146,7 +146,7 @@ func (c *Connector) ProposeLocal(id string, in LocalImport, actor string) (propo
 			return refuse(packaging.Errf(contextforge.ReasonContextForgeDisabled,
 				"hosted entry %s needs the bundled ContextForge instance, and [contextforge] bundled is false", e.ID))
 		}
-		return refuse(packaging.Errf(ReasonHostedNotAvailable, "hosted-entry import needs the hosted probe, which this build does not have yet"))
+		return c.ProposeHosted(id, in, actor)
 	case contextforge.ClassUnsupported:
 		return refuse(packaging.Errf(ReasonEntryUnsupported, "entry %s is unsupported: %s", e.ID, strings.Join(reasons, "; ")))
 	}

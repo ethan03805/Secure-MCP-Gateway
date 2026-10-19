@@ -24,13 +24,44 @@ import (
 //go:embed manifest.schema.json
 var manifestSchemaJSON []byte
 
-// ManifestVersion is the only manifest_version this release reads.
+// manifestV2SchemaJSON is a copy of docs/schemas/manifest.v2.schema.json,
+// the manifest of a hosted package (SRS FR-22.10, planned v1.3.0).
+//
+//go:embed manifest.v2.schema.json
+var manifestV2SchemaJSON []byte
+
+// ManifestVersion is the manifest_version of a local package.
 const ManifestVersion = 1
+
+// ManifestVersionHosted is the manifest_version of a hosted package
+// imported from the ContextForge catalog (FR-22.10).
+const ManifestVersionHosted = 2
+
+// Hosted package constants: the artifact type and launch runtime of a
+// manifest_version 2 package, and the file its artifact is.
+const (
+	ArtifactHosted = "hosted"
+	HostedArtifact = "upstream.json"
+)
+
+// Upstream is the upstream member of a hosted package manifest
+// (FR-22.10): the hosted endpoint, the catalog entry it came from and the
+// ContextForge gateway name and slug fixed at the probe.
+type Upstream struct {
+	Kind        string `json:"kind"`
+	URL         string `json:"url"`
+	Transport   string `json:"transport"`
+	EntryID     string `json:"catalog_entry_id"`
+	EntrySHA256 string `json:"catalog_entry_sha256"`
+	GatewayName string `json:"gateway_name"`
+	GatewaySlug string `json:"gateway_slug"`
+}
 
 // Manifest is the Appendix J package manifest.
 type Manifest struct {
 	ManifestVersion int                `json:"manifest_version"`
 	Server          ServerInfo         `json:"server"`
+	Upstream        *Upstream          `json:"upstream,omitempty"` // manifest_version 2 only
 	Artifact        ArtifactInfo       `json:"artifact"`
 	Launch          Launch             `json:"launch"`
 	Era             string             `json:"era"`
@@ -79,7 +110,10 @@ type Launch struct {
 // Tool is one tool definition as read from the live tools/list at
 // packaging, with the operator's classification.
 type Tool struct {
-	Name              string          `json:"name"`
+	Name string `json:"name"`
+	// BackendName is the name the bundled ContextForge instance serves the
+	// tool under (manifest_version 2 only, FR-22.10); E-10 sends it.
+	BackendName       string          `json:"backend_name,omitempty"`
 	Title             string          `json:"title,omitempty"`
 	Description       string          `json:"description,omitempty"`
 	DescriptionSHA256 string          `json:"description_sha256"`
@@ -168,22 +202,29 @@ type Attestations struct {
 	RecurationDue       string `json:"recuration_due,omitempty"`
 }
 
-var manifestSchema = func() *jsonschema.Schema {
-	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(manifestSchemaJSON))
+var manifestSchema = compileSchema("manifest.schema.json", manifestSchemaJSON)
+
+var manifestV2Schema = compileSchema("manifest.v2.schema.json", manifestV2SchemaJSON)
+
+func compileSchema(name string, raw []byte) *jsonschema.Schema {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
 		panic("embedded manifest schema: " + err.Error())
 	}
 	c := jsonschema.NewCompiler()
 	c.AssertFormat()
-	if err := c.AddResource("manifest.schema.json", doc); err != nil {
+	if err := c.AddResource(name, doc); err != nil {
 		panic(err)
 	}
-	s, err := c.Compile("manifest.schema.json")
+	s, err := c.Compile(name)
 	if err != nil {
 		panic("compile manifest schema: " + err.Error())
 	}
 	return s
-}()
+}
+
+// ManifestV2SchemaJSON returns the embedded hosted-package schema.
+func ManifestV2SchemaJSON() []byte { return append([]byte(nil), manifestV2SchemaJSON...) }
 
 // ManifestSchemaJSON returns the embedded Appendix J schema.
 func ManifestSchemaJSON() []byte { return append([]byte(nil), manifestSchemaJSON...) }
@@ -206,15 +247,20 @@ func ParseManifest(raw []byte) (*Manifest, error) {
 	if head.ManifestVersion == nil {
 		return nil, Errf(ReasonManifestSchema, "manifest_version is missing")
 	}
-	if head.ManifestVersion.String() != "1" {
-		return nil, Errf(ReasonManifestVersion, "manifest_version %s is not supported (this release reads version %d)", head.ManifestVersion.String(), ManifestVersion)
+	schema, schemaName := manifestSchema, "docs/schemas/manifest.schema.json"
+	switch head.ManifestVersion.String() {
+	case "1":
+	case "2":
+		schema, schemaName = manifestV2Schema, "docs/schemas/manifest.v2.schema.json"
+	default:
+		return nil, Errf(ReasonManifestVersion, "manifest_version %s is not supported (this release reads versions %d and %d)", head.ManifestVersion.String(), ManifestVersion, ManifestVersionHosted)
 	}
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
 		return nil, Wrap(ReasonManifestSchema, "manifest is not JSON", err)
 	}
-	if err := manifestSchema.Validate(doc); err != nil {
-		return nil, Wrap(ReasonManifestSchema, "manifest does not conform to docs/schemas/manifest.schema.json", err)
+	if err := schema.Validate(doc); err != nil {
+		return nil, Wrap(ReasonManifestSchema, "manifest does not conform to "+schemaName, err)
 	}
 	var m Manifest
 	sd := json.NewDecoder(bytes.NewReader(raw))
@@ -270,13 +316,23 @@ func CheckArgv(runtime string, argv []string) error {
 	return nil
 }
 
+// Hosted reports whether the manifest is a hosted package's
+// (manifest_version 2).
+func (m *Manifest) Hosted() bool { return m.ManifestVersion == ManifestVersionHosted }
+
 func (m *Manifest) check() error {
-	if err := CheckArgv(m.Launch.Runtime, m.Launch.Argv); err != nil {
-		return err
-	}
-	want := map[string]bool{"npm": m.Launch.Runtime == "node", "pypi": m.Launch.Runtime == "python", "oci": m.Launch.Runtime == "oci", "binary": m.Launch.Runtime == "native"}
-	if !want[m.Artifact.Type] {
-		return Errf(ReasonManifestSchema, "artifact type %s cannot run with runtime %s", m.Artifact.Type, m.Launch.Runtime)
+	if m.Hosted() {
+		if err := m.checkHosted(); err != nil {
+			return err
+		}
+	} else {
+		if err := CheckArgv(m.Launch.Runtime, m.Launch.Argv); err != nil {
+			return err
+		}
+		want := map[string]bool{"npm": m.Launch.Runtime == "node", "pypi": m.Launch.Runtime == "python", "oci": m.Launch.Runtime == "oci", "binary": m.Launch.Runtime == "native"}
+		if !want[m.Artifact.Type] {
+			return Errf(ReasonManifestSchema, "artifact type %s cannot run with runtime %s", m.Artifact.Type, m.Launch.Runtime)
+		}
 	}
 	seen := map[string]bool{}
 	for _, t := range m.Tools {
@@ -537,6 +593,49 @@ func (m *Manifest) MCPTools() ([]*mcp.Tool, error) {
 func (m *Manifest) Find(name string) *Tool {
 	for i := range m.Tools {
 		if m.Tools[i].Name == name {
+			return &m.Tools[i]
+		}
+	}
+	return nil
+}
+
+// checkHosted applies the rules of a hosted manifest the schema cannot
+// express: the artifact is the canonical JSON of the upstream member, and
+// backend names are unique.
+func (m *Manifest) checkHosted() error {
+	if m.Upstream == nil {
+		return Errf(ReasonManifestSchema, "a hosted manifest needs its upstream member")
+	}
+	raw, err := m.Upstream.CanonicalJSON()
+	if err != nil {
+		return err
+	}
+	if SHA256Hex(raw) != m.Artifact.SHA256 {
+		return Errf(ReasonManifestSchema, "the artifact digest is not the digest of the upstream member")
+	}
+	if m.Artifact.Reference != m.Upstream.URL {
+		return Errf(ReasonManifestSchema, "the artifact reference %q is not the upstream URL", m.Artifact.Reference)
+	}
+	seen := map[string]bool{}
+	for _, t := range m.Tools {
+		if seen[t.BackendName] {
+			return Errf(ReasonManifestSchema, "backend name %q is listed twice", t.BackendName)
+		}
+		seen[t.BackendName] = true
+	}
+	return nil
+}
+
+// CanonicalJSON is the artifact of a hosted package: the upstream member
+// as compact JSON with its keys in a fixed order.
+func (u *Upstream) CanonicalJSON() ([]byte, error) {
+	return json.Marshal(u)
+}
+
+// FindBackend returns the manifest tool with the given backend name.
+func (m *Manifest) FindBackend(name string) *Tool {
+	for i := range m.Tools {
+		if m.Tools[i].BackendName == name {
 			return &m.Tools[i]
 		}
 	}

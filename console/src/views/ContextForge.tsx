@@ -198,6 +198,29 @@ function ImportForm({ entry, onStarted }: { entry: Entry; onStarted: (id: string
   );
 }
 
+function HostedForm({ entry, onStarted }: { entry: Entry; onStarted: (id: string) => void }) {
+  const [risk, setRisk] = useState("moderate");
+  const a = useAction<{ proposal: Proposal }>();
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void a.run(() => post(`/api/v1/contextforge/catalog/${encodeURIComponent(entry.id)}/import`, { risk_class: risk }), (r) => onStarted(r.proposal.proposal_id));
+      }}
+    >
+      <p>
+        A hosted server runs at <Mono>{entry.url}</Mono> and its code cannot be inspected. The Gateway registers it in the bundled ContextForge instance, reads its
+        tools with a token scoped to it, removes the registration again and shows the trust decision. Every tool is marked untrusted.
+      </p>
+      <SelectField label="Risk class" value={risk} onChange={setRisk} options={["moderate", "high"]} hint="A hosted package is moderate or high." />
+      {a.error && <ErrorBlock error={a.error} doing="the probe" />}
+      <button type="submit" className="btn-primary" disabled={a.busy}>
+        Probe hosted server
+      </button>
+    </form>
+  );
+}
+
 function ProposalPanel({ id }: { id: string }) {
   const [p, setP] = useState<Proposal | null>(null);
   const [tick, setTick] = useState(0);
@@ -214,7 +237,7 @@ function ProposalPanel({ id }: { id: string }) {
     };
   }, [id, tick]);
   if (!p) return <p className="muted">Reading the proposal.</p>;
-  if (p.state === "building") return <p role="status">Fetching the pinned artifact and reading its tools. This can take a few minutes.</p>;
+  if (p.state === "building") return <p role="status">Reading the server's tools. This can take a few minutes.</p>;
   if (p.state === "failed")
     return (
       <p className="notice notice-bad" role="alert">
@@ -296,10 +319,8 @@ function EntryDetail({ id }: { id: string }) {
             {e.class === "local" && perm.can("POST /api/v1/contextforge/catalog/{id}/import") && (
               <Section title="Import">{proposal ? <ProposalPanel id={proposal} /> : <ImportForm entry={e} onStarted={setProposal} />}</Section>
             )}
-            {e.class === "hosted" && (
-              <Section title="Import">
-                <p>A hosted entry is reached through the bundled ContextForge instance. Hosted imports are not available in this build.</p>
-              </Section>
+            {e.class === "hosted" && perm.can("POST /api/v1/contextforge/catalog/{id}/import") && (
+              <Section title="Import">{proposal ? <ProposalPanel id={proposal} /> : <HostedForm entry={e} onStarted={setProposal} />}</Section>
             )}
           </>
         )}

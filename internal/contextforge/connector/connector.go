@@ -76,6 +76,13 @@ type Options struct {
 	// Broker holds the bundled instance's credentials (nil without
 	// [secrets]; the instance then cannot run).
 	Broker *secrets.Broker
+	// EndpointFor maps a hosted URL to the URL the bundled instance
+	// registers for it (the entry's E-18 endpoint). Nil: the hosted URL
+	// itself.
+	EndpointFor func(hostedURL string) (string, error)
+	// SSRFAllowed are the networks the bundled instance may reach (the
+	// E-18 endpoint addresses, FR-22.27).
+	SSRFAllowed []string
 	// Enforced is true in the Enforced profile; elsewhere the bundled
 	// instance is reported contextforge_unconfined (FR-22.25).
 	Enforced bool

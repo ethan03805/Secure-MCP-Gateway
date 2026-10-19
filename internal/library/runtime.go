@@ -31,6 +31,10 @@ type RuntimeOptions struct {
 	// ScanInterval is the library polling interval (FR-5.3, default 300s).
 	ScanInterval time.Duration
 	Log          *slog.Logger
+	// Hosted resolves an enabled hosted package (manifest_version 2) to
+	// the server entry that reaches it through the bundled ContextForge
+	// instance (E-36). Nil: hosted packages do not start.
+	Hosted func(sc config.Server, m *packaging.Manifest, rev Revision) (config.Server, error)
 	// EgressGrants are the configured [[egress.grant]] entries; a packaged
 	// server whose grants exceed its manifest's egress capabilities is
 	// not started (CheckEgressCeiling).
@@ -153,6 +157,19 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	m, _, err := rt.lib.Manifest(rev.ServerID, rev.Revision)
 	if err != nil {
 		return sc, err
+	}
+	if m.Hosted() {
+		if rt.o.Hosted == nil {
+			return sc, errf(ReasonHostedUnavailable, "package %s is a hosted package; this build cannot route it through the bundled ContextForge instance yet", sc.Package)
+		}
+		out, err := rt.o.Hosted(sc, m, rev)
+		if err != nil {
+			return sc, err
+		}
+		rt.mu.Lock()
+		rt.bindings[sc.Alias] = &Binding{Alias: sc.Alias, Package: sc.Package, Revision: rev.Revision, Status: "starting", manifest: m, rev: rev}
+		rt.mu.Unlock()
+		return out, nil
 	}
 	if err := CheckEgressCeiling(sc.Alias, rt.o.EgressGrants, m.Capabilities.Egress); err != nil {
 		return sc, err

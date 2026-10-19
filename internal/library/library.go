@@ -66,6 +66,17 @@ const (
 	ReasonTampered         = "ARTIFACT_TAMPERED"
 	ReasonUnsigned         = "UNSIGNED_SERVER_REFUSED"
 	ReasonLocked           = "REGISTRY_LOCKED"
+	// ReasonHostedAdmission: a hosted package lacks a condition of SR-3-6
+	// (a recorded trust decision acknowledging that its code cannot be
+	// inspected; untrusted tools and a moderate or higher risk class are
+	// schema rules).
+	ReasonHostedAdmission = "HOSTED_ADMISSION_REFUSED"
+	// ReasonContextForgeDisabled: a hosted package while [contextforge]
+	// bundled is false (FR-22.22).
+	ReasonContextForgeDisabled = "CONTEXTFORGE_DISABLED"
+	// ReasonHostedUnavailable: a hosted package has no route to the bundled
+	// instance in this build.
+	ReasonHostedUnavailable = "HOSTED_DISPATCH_UNAVAILABLE"
 )
 
 // Error is a registry refusal with a reason code.
@@ -125,7 +136,11 @@ type registryDoc struct {
 
 // Options configure a Library.
 type Options struct {
-	StateDir string
+	// HostedAllowed reports whether hosted packages (manifest_version 2,
+	// SRS FR-22) may be imported and enabled: [contextforge] bundled. Nil
+	// means no.
+	HostedAllowed func() bool
+	StateDir      string
 	// Dir is the directory library scanned for packages (default
 	// <state>/library).
 	Dir string
@@ -141,11 +156,12 @@ type Options struct {
 
 // Library is the verifier and registry.
 type Library struct {
-	stateDir string
-	dir      string
-	log      *slog.Logger
-	now      func() time.Time
-	lock     *os.File
+	hostedAllowed func() bool
+	stateDir      string
+	dir           string
+	log           *slog.Logger
+	now           func() time.Time
+	lock          *os.File
 
 	mu       sync.Mutex
 	doc      registryDoc
@@ -176,7 +192,7 @@ func Open(o Options) (*Library, error) {
 	if o.Now == nil {
 		o.Now = time.Now
 	}
-	l := &Library{stateDir: o.StateDir, dir: o.Dir, log: o.Log, now: o.Now, containment: o.Containment, bindings: o.Bindings}
+	l := &Library{stateDir: o.StateDir, dir: o.Dir, log: o.Log, now: o.Now, containment: o.Containment, bindings: o.Bindings, hostedAllowed: o.HostedAllowed}
 	l.feedReadAt = o.Now()
 	for _, d := range []string{l.path(), l.path("artifacts", "sha256"), l.path("unpacked"), l.path("revisions"), l.path("receipts"), l.path("evidence"), l.path("work"), l.dir} {
 		if err := os.MkdirAll(d, 0o700); err != nil {

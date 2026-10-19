@@ -72,6 +72,14 @@ An Administrator enrolls the catalog import key once, as `docs/api/contextforge.
 
 With `[runtime] sandbox = "podman"` the Connector cannot sandbox the import probe yet and refuses with `SANDBOXED_PROBE_UNAVAILABLE`; build the recipe from `smcpctl catalog import --dry-run` with `smcpctl package build --sandbox podman` there.
 
+## Importing a hosted entry
+
+With the bundled instance enabled, a hosted entry with auth type `Open` is imported through it (FR-22.9, FR-22.10). The Connector starts the instance if it is stopped, registers the entry as a probe package (team, non-admin user, gateway named `smcp-<entry id>`, virtual server, token scoped to them), reads the served tool list with that token, and removes the probe objects again. It maps each served name `<slug>-<name>` to a manifest name (FR-22.10) and writes a `manifest_version` 2 package (`docs/schemas/manifest.v2.schema.json`): the `upstream` member with the hosted URL, transport, catalog entry and gateway name and slug, every tool with its `backend_name`, `source_trust` `untrusted`, risk class `moderate` or `high`, one egress rule for the hosted host, and as its artifact the canonical JSON of the `upstream` member. The provenance statement adds the instance's image digest, the probe time and the SHA-256 of the hosted server's TLS public key seen by the Gateway (FR-22.11). The trust decision states that the code cannot be inspected and that its operator sees every argument; the Library imports a hosted package only with such a decision, untrusted tools, a moderate or higher risk class and the bundled instance enabled (SR-3-6, `HOSTED_ADMISSION_REFUSED`).
+
+ContextForge v1.0.11 serves a server's tools `get-time` and `get_time` under one name (it turns underscores into hyphens), so such a server is refused with `TOOL_NAME_COLLISION`.
+
+Not built yet: the probe through the entry's E-18 endpoint and the probe secret of API-key entries (they are refused with `HOSTED_IMPORT_UNAVAILABLE`), the narrowed probe network in the Enforced profile (SR-3.5-2), and the dispatch of an enabled hosted package through its virtual server (FR-22.36, with the southbound HTTP transport); an enabled hosted package is not started (`HOSTED_DISPATCH_UNAVAILABLE`).
+
 ## Choosing the bundled instance at setup
 
 `smcpctl bootstrap` and `smcpctl install` ask on a terminal whether to enable the bundled ContextForge instance, with what it adds and its risk, and the default is no (FR-22.44). `--with-contextforge` answers yes without asking; without a terminal and without the flag the answer is no. The answer is written as `[contextforge] bundled`. A yes also fetches the pinned image for this machine when Podman or Docker is installed; a no fetches nothing (FR-22.22). The desktop application's first-run setup is not wired to this choice yet.
