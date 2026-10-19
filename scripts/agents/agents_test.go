@@ -85,6 +85,61 @@ func TestReferenceRun(t *testing.T) {
 	}
 }
 
+// TestDeniedRetryPrecondition is the regression test for Real agents run
+// 39279945533: Codex CLI's first denied attempt timed out after five
+// minutes without a call, the probe's fill before the retry used an expired
+// 30-second context and never reached the Gateway, and the retry's call was
+// rightly permitted in an empty window, reported as "dispatched; want a
+// refusal". Here the client's first denied attempt calls only after the
+// probe's window has ended, which must be reported as the precondition not
+// holding (errWindowOpen), not as a dispatch, and the retry, after a fill
+// the journal confirms, must be refused with RATE_LIMITED.
+func TestDeniedRetryPrecondition(t *testing.T) {
+	reqtest.Partial(t, "FR-15.8")
+	if testing.Short() {
+		t.Skip("builds and starts smcpd; waits out two rate windows")
+	}
+	ref := referenceClient()
+	late := &client{ID: "late", Name: "late client", Framework: "other",
+		run: func(ctx context.Context, e *runEnv, s scenario) (string, error) {
+			if s.ID == scnDenied && !s.Retry {
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				case <-time.After(rateWindow + 3*time.Second):
+				}
+			}
+			return ref.run(ctx, e, s)
+		}}
+	dir := t.TempDir()
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+	defer cancel()
+	_, err := run(ctx, options{
+		clients: "late", out: filepath.Join(dir, "agents.json"), report: filepath.Join(dir, "report.json"),
+		work: filepath.Join(dir, "work"), timeout: 2 * time.Minute, maxTurns: 2, extra: []*client{late},
+	}, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lastReports) != 1 {
+		t.Fatalf("reports: %+v", lastReports)
+	}
+	var denied *scenarioResult
+	for i, s := range lastReports[0].Scenarios {
+		if s.Scenario == scnDenied {
+			denied = &lastReports[0].Scenarios[i]
+		}
+	}
+	if denied == nil || denied.Result != resultPass || !denied.Retried ||
+		!strings.Contains(denied.Detail, "retried once; first attempt: deny precondition not held") ||
+		!strings.Contains(denied.Detail, "not a Gateway fault") {
+		t.Fatalf("denied scenario: %+v", denied)
+	}
+	if lastReports[0].Result != resultPass {
+		t.Fatalf("late client: %+v", lastReports[0])
+	}
+}
+
 // TestBrokenGatewayRun is the FR-15.8 broken-build check with the scripted
 // reference client: against smcpd built with -tags smcp_broken the client
 // still reaches the Gateway, its denied and approval scenarios fail, and

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
@@ -17,6 +20,14 @@ func callEvents(corr, tool string, steps ...[3]string) []audit.Event {
 		}
 		evs = append(evs, audit.Event{Class: class, Phase: audit.Phase(s[0]), Outcome: s[1], ReasonCode: s[2],
 			CorrelationID: corr, SessionID: "s1", ToolRevision: "live-abc/" + tool})
+	}
+	return evs
+}
+
+// timed stamps every event with t.
+func timed(evs []audit.Event, t time.Time) []audit.Event {
+	for i := range evs {
+		evs[i].Time = t.Format(time.RFC3339Nano)
 	}
 	return evs
 }
@@ -45,15 +56,71 @@ func TestJournalAssertions(t *testing.T) {
 
 	t.Run("denied", func(t *testing.T) {
 		refused := callEvents("c2", toolLimited, [3]string{"requested", "", ""}, [3]string{"denied", "deny", "RATE_LIMITED"})
-		if err := checkDenied(refused); err != nil {
+		if err := checkDenied(refused, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := checkDenied(callEvents("c2", toolLimited, delivered...)); err == nil {
+		if err := checkDenied(callEvents("c2", toolLimited, delivered...), nil); err == nil {
 			t.Fatal("dispatched call accepted as a denial")
 		}
 		other := callEvents("c2", toolLimited, [3]string{"requested", "", ""}, [3]string{"denied", "deny", "NO_PERMIT"})
-		if err := checkDenied(other); err == nil {
+		if err := checkDenied(other, nil); err == nil {
 			t.Fatal("wrong reason code accepted")
+		}
+	})
+
+	// A dispatched call is a Gateway fault when the session's window was
+	// full (a call permitted less than a minute earlier) and a deny
+	// precondition failure (errWindowOpen) when it was empty, as in Real
+	// agents run 39279945533 where the probe's fill before the retry never
+	// reached the Gateway.
+	t.Run("denied window", func(t *testing.T) {
+		t0 := time.Date(2026, 10, 19, 15, 45, 12, 0, time.UTC)
+		fill := timed(callEvents("fill", toolLimited, delivered...), t0)
+		agent := func(after time.Duration) []audit.Event {
+			return timed(callEvents("agent", toolLimited, delivered...), t0.Add(after))
+		}
+		err := checkDenied(agent(30*time.Second), fill)
+		if err == nil || errors.Is(err, errWindowOpen) || !strings.Contains(err.Error(), "Gateway fault") {
+			t.Fatalf("dispatch inside a full window: %v", err)
+		}
+		// Any permitted call of the session fills the window, not only one
+		// to the rate-limited tool.
+		echo := timed(callEvents("echo", toolAllowed, delivered...), t0)
+		if err := checkDenied(agent(10*time.Second), echo); err == nil || errors.Is(err, errWindowOpen) {
+			t.Fatalf("dispatch inside a window filled by another tool: %v", err)
+		}
+		// The fill of the same attempt counts too (in evs, not prior).
+		if err := checkDenied(append(slices.Clone(fill), agent(5*time.Second)...), nil); err == nil || errors.Is(err, errWindowOpen) {
+			t.Fatalf("dispatch after a fill in the same attempt: %v", err)
+		}
+		err = checkDenied(agent(6*time.Minute+57*time.Second), fill)
+		if !errors.Is(err, errWindowOpen) || !strings.Contains(err.Error(), "not a Gateway fault") {
+			t.Fatalf("dispatch after the window ended: %v", err)
+		}
+		if err := checkDenied(agent(0), nil); !errors.Is(err, errWindowOpen) {
+			t.Fatalf("dispatch with no earlier permitted call: %v", err)
+		}
+		// A dispatched call without a permit decision is never excused.
+		bare := callEvents("agent", toolLimited, [3]string{"requested", "", ""}, [3]string{"dispatched", "", ""})
+		if err := checkDenied(bare, nil); err == nil || errors.Is(err, errWindowOpen) {
+			t.Fatalf("dispatch without a permit: %v", err)
+		}
+	})
+
+	t.Run("fill", func(t *testing.T) {
+		if o, err := fillOutcome(callEvents("f", toolLimited, delivered...)); err != nil || o != fillPermitted {
+			t.Fatalf("permitted fill: %q %v", o, err)
+		}
+		refused := callEvents("f", toolLimited, [3]string{"requested", "", ""}, [3]string{"denied", "deny", "RATE_LIMITED"})
+		if o, err := fillOutcome(refused); err != nil || o != fillRateLimited {
+			t.Fatalf("refused fill: %q %v", o, err)
+		}
+		if _, err := fillOutcome(nil); err == nil || !strings.Contains(err.Error(), "did not reach the Gateway") {
+			t.Fatalf("fill that never reached the Gateway: %v", err)
+		}
+		other := callEvents("f", toolLimited, [3]string{"requested", "", ""}, [3]string{"denied", "deny", "NO_PERMIT"})
+		if _, err := fillOutcome(other); err == nil {
+			t.Fatal("fill refused for another reason accepted")
 		}
 	})
 
