@@ -28,6 +28,8 @@ pub struct Settings {
     pub ca_file: String,
     /// Approval notifications (FR-20.7).
     pub notifications: bool,
+    /// Start the application at login (FR-20.14); off after installation.
+    pub start_at_login: bool,
 }
 
 impl Default for Settings {
@@ -37,6 +39,7 @@ impl Default for Settings {
             metrics_address: DEFAULT_METRICS_ADDRESS.into(),
             ca_file: String::new(),
             notifications: true,
+            start_at_login: false,
         }
     }
 }
@@ -294,6 +297,7 @@ mod tests {
             metrics_address: "192.0.2.1:9464".into(),
             ca_file: "rel/ca.crt".into(),
             notifications: false,
+            start_at_login: false,
         };
         let errs = bad.resolve("linux", home, None).unwrap_err();
         let fields: Vec<_> = errs.iter().map(|e| e.field).collect();
