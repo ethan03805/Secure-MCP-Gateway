@@ -70,7 +70,7 @@ It verifies every prerequisite first and exits with status 2, listing each missi
 | AppArmor | `/etc/apparmor.d/smcpd` and `/etc/apparmor.d/smcp-server`, loaded in enforce mode when AppArmor is enabled |
 | nftables | `/etc/smcp/smcp.nft`, loaded as table `inet smcp` |
 | systemd units | `/etc/systemd/system/smcp-nftables.service` and `smcpd.service`, enabled |
-| Binaries | With `--bin-dir DIR`: `smcpd`, `smcpctl` and `smcp-refserver` from DIR into `/usr/local/bin` |
+| Binaries | With `--bin-dir DIR`: `smcpd`, `smcpctl` and `smcp-refserver` from DIR into `/usr/local/bin`. With `--packaged-bin DIR` (what `smcpctl install` passes when its binaries come from the smcp `.deb` or `.rpm`): nothing copied; the unit runs `DIR/smcpd` |
 
 Each step prints `present`, `created` or `updated`. A second run prints only `present` lines. It never touches configuration, keys, policy or the journal. `--start` starts both units and needs `/etc/smcp/smcp.toml`.
 
@@ -78,7 +78,7 @@ The Gateway currently keeps keys and the journal in one state directory owned by
 
 ### smcpd.service
 
-The unit runs `/usr/local/bin/smcpd --config /etc/smcp/smcp.toml` as `smcp-core:smcp` with `Delegate=yes` and `DelegateSubgroup=supervisor`, so that container cgroups are created below the service's own cgroup, and with `XDG_RUNTIME_DIR=/run/smcp`. With this unit set `runtime.cgroup_manager = "cgroupfs"`. It applies `ProtectSystem=strict` (writable: `/var/lib/smcp`, `/run/smcp`, `/var/log/smcp`), `ProtectHome=read-only`, `PrivateTmp`, `ProtectKernelModules`, `ProtectClock`, `LockPersonality`, `RestrictRealtime`, `RestrictAddressFamilies` and `SystemCallArchitectures=native`. The unit file lists the options it does not set and why (rootless Podman needs setuid `newuidmap`, its own namespaces and capabilities inside them). A writable mount grant outside `/var/lib/smcp` needs a drop-in with `ReadWritePaths=` as well as the grant in `smcp.toml`.
+The unit runs `/usr/local/bin/smcpd --config /etc/smcp/smcp.toml` (or the package's `/usr/bin/smcpd`, see above) as `smcp-core:smcp` with `Delegate=yes` and `DelegateSubgroup=supervisor`, so that container cgroups are created below the service's own cgroup, and with `XDG_RUNTIME_DIR=/run/smcp`. With this unit set `runtime.cgroup_manager = "cgroupfs"`. It applies `ProtectSystem=strict` (writable: `/var/lib/smcp`, `/run/smcp`, `/var/log/smcp`), `ProtectHome=read-only`, `PrivateTmp`, `ProtectKernelModules`, `ProtectClock`, `LockPersonality`, `RestrictRealtime`, `RestrictAddressFamilies` and `SystemCallArchitectures=native`. The unit file lists the options it does not set and why (rootless Podman needs setuid `newuidmap`, its own namespaces and capabilities inside them). A writable mount grant outside `/var/lib/smcp` needs a drop-in with `ReadWritePaths=` as well as the grant in `smcp.toml`.
 
 ### nftables table `inet smcp`
 

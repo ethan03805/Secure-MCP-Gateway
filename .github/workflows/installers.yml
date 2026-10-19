@@ -200,7 +200,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { format: deb, arch: amd64, runner: ubuntu-24.04, file: "smcp_*_amd64.deb" }
+          - { format: deb, arch: amd64, runner: ubuntu-24.04, file: "smcp_*_amd64.deb", enforced: true }
           - { format: deb, arch: arm64, runner: ubuntu-24.04-arm, file: "smcp_*_arm64.deb" }
           - { format: rpm, arch: amd64, runner: ubuntu-24.04, file: "smcp-*.x86_64.rpm" }
           - { format: rpm, arch: arm64, runner: ubuntu-24.04-arm, file: "smcp-*.aarch64.rpm" }
@@ -265,6 +265,19 @@ jobs:
           # shellcheck disable=SC2086 # FILE is a glob
           set -- build/installers/$FILE
           bash scripts/package-smoke.sh "$1" "$VERSION"
+      # The Enforced profile installed from the package on the same runner
+      # (FR-13.5, FR-20.21, FR-20.22): smcpd.service runs /usr/bin/smcpd in
+      # place, with no copy in /usr/local/bin; an upgrade, the removal and a
+      # reinstall over the kept evidence.
+      - name: Enforced profile from the .deb
+        if: matrix.enforced
+        env:
+          VERSION: ${{ needs.build-linux.outputs.version }}
+          FILE: ${{ matrix.file }}
+        run: |
+          # shellcheck disable=SC2086 # FILE is a glob
+          set -- build/installers/$FILE
+          bash scripts/package-enforced.sh "$1" "$VERSION"
       # Fedora: in a container, as root; the script does the user's part as
       # an unprivileged user. No systemd, so the service check is skipped.
       - name: Install, exercise and remove the .rpm (Fedora container)

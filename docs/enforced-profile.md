@@ -89,7 +89,7 @@ With `run_as`, containers get their cgroups from `smcp-srv`'s user manager inste
 
 ## 5. AppArmor
 
-`packaging/linux/apparmor/smcpd` confines `/usr/local/bin/smcpd`: read `/etc/smcp`, read and write `/var/lib/smcp`, `/run/smcp` and `/var/log/smcp`, read cgroup and kernel settings for the doctor and the Runtime Monitor, read `/srv`, and execute only Podman and sudo (`PUx`: their own profile when the host has one, unconfined otherwise, because rootless Podman needs user namespaces, mounts and the setuid ID-map helpers). Mount sources outside `/srv` go into `/etc/apparmor.d/local/smcpd`:
+`packaging/linux/apparmor/smcpd` confines `smcpd.service`, which runs `/usr/local/bin/smcpd` or, installed from the smcp `.deb` or `.rpm`, `/usr/bin/smcpd`: read `/etc/smcp`, read and write `/var/lib/smcp`, `/run/smcp` and `/var/log/smcp`, read cgroup and kernel settings for the doctor and the Runtime Monitor, read `/srv`, and execute only Podman and sudo (`PUx`: their own profile when the host has one, unconfined otherwise, because rootless Podman needs user namespaces, mounts and the setuid ID-map helpers). Mount sources outside `/srv` go into `/etc/apparmor.d/local/smcpd`:
 
 ```
 /data/projects/** r,
