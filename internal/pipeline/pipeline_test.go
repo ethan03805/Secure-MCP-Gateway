@@ -204,6 +204,18 @@ func TestCheckLaunchSpecWindowsRules(t *testing.T) {
 	}
 }
 
+// TestLimitsForDefaults: a zero limit takes the CP-24 value.
+func TestLimitsForDefaults(t *testing.T) {
+	reqtest.Partial(t, "FR-21.12")
+	if got := (SubprocessLauncher{}).LimitsFor(ServerSpec{}); got != DefaultResourceLimits {
+		t.Fatalf("nil Limits: %+v", got)
+	}
+	l := SubprocessLauncher{Limits: func(ServerSpec) ResourceLimits { return ResourceLimits{Processes: 4} }}
+	if got := l.LimitsFor(ServerSpec{}); got != (ResourceLimits{MemoryBytes: 512 << 20, CPUs: 1, Processes: 4}) {
+		t.Fatalf("partial Limits: %+v", got)
+	}
+}
+
 func TestSubprocessLauncher(t *testing.T) {
 	l := SubprocessLauncher{TerminateAfter: 200 * time.Millisecond}
 	if l.Confined() || l.Name() != "subprocess" {

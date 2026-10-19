@@ -214,8 +214,9 @@ type ResourceLimits struct {
 // 128 processes.
 var DefaultResourceLimits = ResourceLimits{MemoryBytes: 512 << 20, CPUs: 1, Processes: 128}
 
-// limitsFor returns the limits of one instance with defaults applied.
-func (l SubprocessLauncher) limitsFor(spec ServerSpec) ResourceLimits {
+// LimitsFor returns the limits of one instance with the CP-24 defaults
+// applied to every field Limits leaves zero.
+func (l SubprocessLauncher) LimitsFor(spec ServerSpec) ResourceLimits {
 	var r ResourceLimits
 	if l.Limits != nil {
 		r = l.Limits(spec)

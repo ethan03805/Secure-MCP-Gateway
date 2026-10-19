@@ -25,7 +25,7 @@ const limitExitCode = 0xC0000044 // STATUS_QUOTA_EXCEEDED
 // limits, and no breakaway. A broken memory or process limit ends the whole
 // instance, as a cgroup limit does in the Enforced profile.
 func startChild(l SubprocessLauncher, spec ServerSpec, env []string, stdin, stdout *os.File, stderr io.Writer) (child, error) {
-	lim := l.limitsFor(spec)
+	lim := l.LimitsFor(spec)
 	c := &jobChild{stderrDone: make(chan struct{})}
 	job, err := winsandbox.NewJob(winsandbox.Limits{MemoryBytes: lim.MemoryBytes, CPUs: lim.CPUs, Processes: lim.Processes}, func(v winsandbox.Violation) {
 		c.once.Do(func() {
