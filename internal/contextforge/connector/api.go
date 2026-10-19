@@ -26,6 +26,16 @@ func (c *Connector) RegisterRoutes(s *adminapi.Server) {
 	s.Handle("POST /api/v1/contextforge/instance/start", c.apiInstance(true))
 	s.Handle("POST /api/v1/contextforge/instance/stop", c.apiInstance(false))
 	s.Handle("POST /api/v1/contextforge/instance/uninstall", c.apiUninstall)
+	s.Handle("POST /api/v1/contextforge/starter-set", c.apiStarterSet)
+}
+
+func (c *Connector) apiStarterSet(w http.ResponseWriter, r *http.Request) {
+	ps, err := c.ProposeStarterSet(adminapi.Actor(r))
+	if err != nil {
+		writeRefusal(w, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"proposals": ps})
 }
 
 func (c *Connector) apiUninstall(w http.ResponseWriter, r *http.Request) {

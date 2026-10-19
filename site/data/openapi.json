@@ -2876,6 +2876,53 @@
     ]
    }
   },
+  "/api/v1/contextforge/starter-set": {
+   "post": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "postContextforgeStarterSet",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Start one hosted import per starter-set entry of the release lock; each gets its own probe and decision",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator"
+    ]
+   }
+  },
   "/api/v1/contextforge/status": {
    "get": {
     "description": "Reference: docs/api/contextforge.md",

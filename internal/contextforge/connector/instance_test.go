@@ -178,3 +178,27 @@ func anyString(v any) string {
 	raw, _ := json.Marshal(v)
 	return string(raw)
 }
+
+// FR-22.17 (part): no starter-set offer while the bundled instance is off;
+// with it on, one proposal per starter-set entry (here refused, as the
+// fixture has no vault).
+func TestStarterSetOffer(t *testing.T) {
+	reqtest.Partial(t, "FR-22.17")
+	f := newFixture(t, "")
+	if _, err := f.c.ProposeStarterSet("op"); packaging.ReasonOf(err) != contextforge.ReasonContextForgeDisabled {
+		t.Fatalf("bundled off: %v", err)
+	}
+	g := newFixture(t, "bundled = true\n")
+	ps, err := g.c.ProposeStarterSet("op")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ps) != len(contextforge.ReleaseLock().ContextForge.StarterSet) {
+		t.Fatalf("%d proposals", len(ps))
+	}
+	for _, p := range ps {
+		if p.Class != contextforge.ClassHosted || p.ReasonCode != ReasonVaultRequired {
+			t.Errorf("proposal %+v", p)
+		}
+	}
+}

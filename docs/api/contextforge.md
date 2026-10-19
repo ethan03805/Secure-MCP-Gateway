@@ -13,6 +13,7 @@ Control API routes of the ContextForge Connector (E-36, SRS FR-22, planned for v
 | `POST /api/v1/contextforge/proposals/{id}/decision` | Administrator, Operator | `{"accept": true, "presented_sha256": "<decision.sha256>"}` or `{"accept": false}` |
 | `POST /api/v1/contextforge/instance/start` | Administrator, Operator | Verify the pinned image if it was not verified yet, then start the bundled instance; answers the `instance` view |
 | `POST /api/v1/contextforge/instance/stop` | Administrator, Operator | Stop the bundled instance; its data volume stays |
+| `POST /api/v1/contextforge/starter-set` | Administrator, Operator | Start one hosted import per starter-set entry of the release lock (FR-22.17); each proposal gets its own probe and trust decision, and none is enabled. Refused with `CONTEXTFORGE_DISABLED` while `bundled` is false |
 | `POST /api/v1/contextforge/instance/uninstall` | Administrator | Stop and remove the bundled instance, its data volume and image, retire its credentials and suspend every enabled hosted package revision; answers what was removed |
 
 `GET /api/v1/contextforge/status` carries `instance`: `state` (`disabled`, `unavailable` with `reason_code`, `stopped`, `starting`, `healthy`, `unhealthy`), `detail`, `version`, `image`, `verified` (time of the image verification), `restarts`, `started_at` and `unconfined`.

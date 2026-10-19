@@ -138,6 +138,7 @@ var appendixC = map[string]matrixOp{
 	"POST /api/v1/contextforge/proposals/{id}/decision": op(rowCatalog, "AO"),
 	"POST /api/v1/contextforge/instance/start":          op(rowCatalog, "AO"),
 	"POST /api/v1/contextforge/instance/stop":           op(rowCatalog, "AO"),
+	"POST /api/v1/contextforge/starter-set":             op(rowCatalog, "AO"),
 	"POST /api/v1/contextforge/instance/uninstall":      op(rowAdminOnly, "A"),
 
 	"POST /api/v1/remote/enable":  op(rowRemote, "A"),

@@ -333,6 +333,7 @@ function InstancePanel() {
   const res = useResource<Status>("/api/v1/contextforge/status");
   const perm = usePerm();
   const a = useAction<{ instance: Instance }>();
+  const starter = useAction<{ proposals: Proposal[] }>();
   return (
     <Loaded res={res} what="the ContextForge Connector" route="/api/v1/contextforge/status">
       {(s) => (
@@ -361,6 +362,24 @@ function InstancePanel() {
               </div>
             )}
             {a.error && <ErrorBlock error={a.error} doing="the instance action" />}
+            {s.bundled && perm.can("POST /api/v1/contextforge/starter-set") && (
+              <>
+                <h3 className="sub">Starter set</h3>
+                <p>
+                  The starter set of this release (<Mono>{s.release_lock.starter_set.join(" ")}</Mono>) are hosted documentation servers with read-only tools. Importing it
+                  probes each entry and gives each its own trust decision on its entry page; none is enabled.
+                </p>
+                <button type="button" disabled={starter.busy} onClick={() => void starter.run(() => post("/api/v1/contextforge/starter-set", {}))}>
+                  Import the starter set
+                </button>
+                {starter.error && <ErrorBlock error={starter.error} doing="the starter set" />}
+                {starter.result && (
+                  <Done>
+                    Started {starter.result.proposals.length} imports. Open each entry to read and decide its trust decision.
+                  </Done>
+                )}
+              </>
+            )}
           </Section>
           <Section title="Catalog and release lock">
             <KV

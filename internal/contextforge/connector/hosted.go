@@ -348,3 +348,25 @@ func firstNonEmpty(v ...string) string {
 	}
 	return ""
 }
+
+// ProposeStarterSet offers the starter set of the release lock as one
+// import (FR-22.17): one hosted proposal per entry, each with its own
+// probe, trust decision and signature, none enabled. It is refused while
+// the bundled instance is off.
+func (c *Connector) ProposeStarterSet(actor string) ([]proposal, error) {
+	if !c.o.Config.ContextForge.Bundled {
+		return nil, packaging.Errf(contextforge.ReasonContextForgeDisabled, "the starter set is offered only while [contextforge] bundled is true")
+	}
+	if c.catErr != nil {
+		return nil, c.catErr
+	}
+	var out []proposal
+	for _, id := range contextforge.ReleaseLock().ContextForge.StarterSet {
+		p, err := c.ProposeHosted(id, LocalImport{}, actor)
+		if err != nil && p.ID == "" {
+			return out, err
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
