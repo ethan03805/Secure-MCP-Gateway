@@ -183,6 +183,16 @@ var routeRoles = map[string][]string{
 	"GET /api/v1/packages/{id}/{rev}":                 opsRead,
 	"POST /api/v1/packages/{id}/{rev}/disable":        operator,
 	"POST /api/v1/packages/{id}/{rev}/classification": operator,
+
+	// contextforge (E-36, FR-22.5): browsing for Operators and Auditors,
+	// imports and trust decisions for Operators.
+	"GET /api/v1/contextforge/status":                   opsRead,
+	"GET /api/v1/contextforge/catalog":                  opsRead,
+	"GET /api/v1/contextforge/catalog/{id}":             opsRead,
+	"POST /api/v1/contextforge/catalog/{id}/import":     operator,
+	"GET /api/v1/contextforge/proposals":                opsRead,
+	"GET /api/v1/contextforge/proposals/{id}":           opsRead,
+	"POST /api/v1/contextforge/proposals/{id}/decision": operator,
 }
 
 // refine narrows a route's roles by the request: it returns false when the

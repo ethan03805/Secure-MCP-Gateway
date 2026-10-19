@@ -280,9 +280,14 @@ func run(cfgPath, level string) error {
 	}
 	defer rs.Close()
 	rs.Register(a.Admin)
+	cf, err := attachContextForge(ctx, cfg, pkgs, a, log) // E-36 (planned v1.3.0): catalog and local-entry import
+	if err != nil {
+		return err
+	}
+	defer cf.Close()
 	// Every component exists from here on: the elements report reads them.
 	w := &wiring{app: a, approvals: approvals, notify: notifyMode(cfg.Approvals.Notify), packages: pkgs, sandbox: rt, secrets: sec,
-		mirror: mirror, obs: obs, remote: rs, console: true}
+		mirror: mirror, obs: obs, remote: rs, console: true, contextforge: cf}
 	// E-21/E-22/E-23: health monitor, metrics, export, keys, backup, reload.
 	opsrt, err := ops.Attach(ctx, a, ops.Options{ConfigPath: cfgPath, Log: log, LogLevel: lv, Monitor: mon, MetricsListener: lns.Metrics,
 		PendingApprovals: func() int { return len(approvals.List(approval.StatePending)) },

@@ -1,0 +1,19 @@
+package config
+
+// ContextForge configures the ContextForge Connector (E-36, SRS FR-22,
+// planned for v1.3.0; docs/contextforge.md).
+type ContextForge struct {
+	// Bundled runs the bundled ContextForge instance (FR-22.22). The
+	// default is false: hosted-entry imports and hosted packages are then
+	// refused with CONTEXTFORGE_DISABLED, and local-entry imports work.
+	Bundled bool `toml:"bundled" json:"bundled"`
+	// CatalogFile is an operator-supplied catalog read instead of the
+	// pinned one; CatalogSHA256 is the digest the operator confirmed
+	// (FR-22.1). The schema requires both or neither.
+	CatalogFile   string `toml:"catalog_file" json:"catalog_file,omitempty"`
+	CatalogSHA256 string `toml:"catalog_sha256" json:"catalog_sha256,omitempty"`
+	// NPMRegistry and PyPIIndex are the registries a local-entry import
+	// fetches the operator-pinned artifact from (default the public ones).
+	NPMRegistry string `toml:"npm_registry" json:"npm_registry,omitempty"`
+	PyPIIndex   string `toml:"pypi_index" json:"pypi_index,omitempty"`
+}

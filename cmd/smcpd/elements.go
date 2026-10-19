@@ -8,6 +8,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/analytics"
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/approval"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/connector"
 	"github.com/ethan03805/secure-mcp-gateway/internal/graph"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
@@ -47,6 +48,8 @@ type wiring struct {
 	obs       *analytics.Service
 	remote    *remote.Service
 	console   bool
+	// contextforge is the ContextForge Connector (E-36).
+	contextforge *connector.Connector
 }
 
 func plural(n int, one, many string) string {
@@ -164,6 +167,17 @@ func (w *wiring) elements() []element {
 			add("E-33", "Remote Access Profile", elementActive, st.ResourceURI)
 		} else {
 			add("E-33", "Remote Access Profile", elementDisabled, "off; enable with `smcpctl remote enable`")
+		}
+	}
+	if w.contextforge != nil {
+		st := w.contextforge.Status()
+		switch {
+		case st.CatalogError != "":
+			add("E-36", "ContextForge Connector", elementDegraded, "catalog refused: "+st.CatalogReason)
+		case st.Bundled:
+			add("E-36", "ContextForge Connector", elementActive, fmt.Sprintf("catalog %s; bundled instance not built yet", st.CatalogSHA256[:12]))
+		default:
+			add("E-36", "ContextForge Connector", elementActive, fmt.Sprintf("catalog %s, %d entries; bundled instance off", st.CatalogSHA256[:12], st.CatalogEntries))
 		}
 	}
 	return out

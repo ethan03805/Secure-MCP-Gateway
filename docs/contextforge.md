@@ -56,6 +56,30 @@ ContextForge serves a hosted server's tools as `<gateway-slug>-<name>`. A hosted
 
 The names depend only on the tool names, not their order. When two tools still map to the same name, the import is refused with `TOOL_NAME_COLLISION` naming both. The gateway name and slug are `smcp-<entry id>` and are fixed in the manifest's `upstream` member.
 
+## Importing a local entry
+
+With a running Gateway, `smcpctl catalog --config smcp.toml` and the control API (`docs/api/contextforge.md`) import a local entry. The operator supplies what the catalog cannot: the exact version and digest of the artifact, the launch vector inside it and its licenses (FR-22.6). The Gateway fetches that artifact, probes it as `smcpctl package build` does, and shows the trust decision: class, provider, repository, auth type, artifact, tools with their classes, risk class, egress destinations and secret slots (FR-22.12). Every tool's source trust is `untrusted`.
+
+```sh
+smcpctl catalog import playwright-mcp --config smcp.toml \
+  --version 0.0.41 --integrity sha512-... \
+  --argv node --argv node_modules/@playwright/mcp/cli.js --license Apache-2.0
+```
+
+On a terminal it asks you to type `accept`; otherwise pass `--accept <sha256 of the decision>` or `--decline`, or decide later with `smcpctl catalog decide`. An accepted package carries the decision and the ContextForge origin (catalog SHA-256, release, entry ID and digest, URL, repository, install text) in its signed provenance statement (FR-22.11), is signed with the Gateway's catalog import key and is imported verified-disabled with no policy change (FR-22.13). Its revision is `<version>+cf.<n>`, so a re-import after the catalog changed is a new revision with its own decision. The entry then shows `imported`, or `changed` when the catalog's digest of it differs from the imported one (FR-22.16). Each attempt and decision is in the journal (`catalog_import`, `catalog_trust_decision`, FR-22.14).
+
+An Administrator enrolls the catalog import key once, as `docs/api/contextforge.md` shows; until then an accept is refused with `IMPORT_KEY_NOT_ENROLLED`. Enabling an imported package and granting its tools stay separate Administrator and Policy Author actions.
+
+With `[runtime] sandbox = "podman"` the Connector cannot sandbox the import probe yet and refuses with `SANDBOXED_PROBE_UNAVAILABLE`; build the recipe from `smcpctl catalog import --dry-run` with `smcpctl package build --sandbox podman` there.
+
+## Configuration
+
+| Key | Default | Meaning |
+|---|---|---|
+| `[contextforge] bundled` | `false` | Run the bundled ContextForge instance (FR-22.22). While false, hosted entries are refused with `CONTEXTFORGE_DISABLED` |
+| `[contextforge] catalog_file`, `catalog_sha256` | none | Read this catalog instead of the pinned one; both or neither. A wrong digest is reported by `smcpctl catalog status` and the health report's element list, and the Gateway keeps running without a catalog |
+| `[contextforge] npm_registry`, `pypi_index` | the public registries | Where a local import fetches the pinned artifact |
+
 ## Not built yet
 
-Importing through the control API and the console view G-15, the trust decision and journal events, the bundled ContextForge instance and its lifecycle, per-package isolation, reconciliation, and the hostile fixtures HFC-01 to HFC-14. `smcpctl catalog import` without `--dry-run` is refused.
+The console view G-15, the bundled ContextForge instance and its lifecycle, hosted-entry import (probe, `manifest_version` 2), per-package isolation, reconciliation, and the hostile fixtures HFC-01 to HFC-14.

@@ -65,6 +65,40 @@ type Provenance struct {
 	Builder           Builder          `json:"builder"`
 	Probe             ProbeEnvironment `json:"probe"`
 	BuiltAt           string           `json:"built_at"`
+	// ContextForge records the catalog origin of a package imported from
+	// the ContextForge catalog (FR-22.11); nil for other packages.
+	ContextForge *ContextForgeOrigin `json:"contextforge,omitempty"`
+	// TrustDecision is the operator's accepted trust decision for an
+	// imported third-party package (FR-22.12).
+	TrustDecision *TrustDecision `json:"trust_decision,omitempty"`
+}
+
+// ContextForgeOrigin is the ContextForge provenance of an imported package
+// (FR-22.11). The hosted members are set for hosted packages only.
+type ContextForgeOrigin struct {
+	CatalogSHA256       string `json:"catalog_sha256"`
+	ContextForgeRelease string `json:"contextforge_release,omitempty"`
+	EntryID             string `json:"catalog_entry_id"`
+	EntrySHA256         string `json:"catalog_entry_sha256"`
+	Class               string `json:"class"`
+	URL                 string `json:"url,omitempty"`
+	Repo                string `json:"repo,omitempty"`
+	Install             string `json:"install,omitempty"`
+
+	InstanceDigest     string `json:"instance_digest,omitempty"`
+	ProbedAt           string `json:"probed_at,omitempty"`
+	ServerInfoName     string `json:"server_info_name,omitempty"`
+	ServerInfoVersion  string `json:"server_info_version,omitempty"`
+	TLSPublicKeySHA256 string `json:"tls_public_key_sha256,omitempty"`
+}
+
+// TrustDecision records what the operator accepted before an imported
+// package was signed: who, when, and the SHA-256 of the presented text.
+type TrustDecision struct {
+	Actor           string `json:"actor"`
+	Time            string `json:"time"`
+	PresentedSHA256 string `json:"presented_sha256"`
+	Text            string `json:"text"`
 }
 
 // DependencyLock records the lock file that pinned transitive dependencies
