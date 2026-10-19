@@ -611,6 +611,28 @@ jobs:
           New-Item -ItemType Directory -Force -Path build\win\bin | Out-Null
           foreach ($c in 'smcpd', 'smcpctl', 'smcp-refserver') { go build -o "build\win\bin\$c.exe" "./cmd/$c"; if ($LASTEXITCODE) { exit 1 } }
           ./scripts/windows-install-smoke.ps1 -BinDir build\win\bin
+      # FR-21.4, FR-21.22: install.ps1 by both invocations under Windows
+      # PowerShell 5.1 and PowerShell 7, with minisign.exe (the 0.12 release,
+      # pinned by digest; its minisign signature checked when the digest was
+      # recorded) and with the runner's OpenSSL 3. The claims go to the
+      # status job with the Windows-only tests.
+      - name: install.ps1 tests
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'minisign.zip'
+          Invoke-WebRequest -UseBasicParsing -Uri https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-win64.zip -OutFile $zip
+          if ((Get-FileHash -Algorithm SHA256 $zip).Hash -ne '37B600344E20C19314B2E82813DB2BFDCC408B77B876F7727889DBD46D539479') { throw 'minisign-0.12-win64.zip digest mismatch' }
+          Expand-Archive -LiteralPath $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'minisign') -Force
+          $env:PATH = (Join-Path $env:RUNNER_TEMP 'minisign\minisign-win64\x86_64') + [IO.Path]::PathSeparator + $env:PATH
+          go test -json -count=1 -timeout 20m ./tools/installps1 > build\installps1-test.json
+          $rc = $LASTEXITCODE
+          Get-Content build\installps1-test.json | Add-Content build\windows-test.json
+          Get-Content build\installps1-test.json | ConvertFrom-Json | Where-Object { $_.Test -and $_.Action -in 'pass', 'fail', 'skip' } |
+            ForEach-Object { "$($_.Action)`t$($_.Test)" }
+          if ($rc) {
+            Get-Content build\installps1-test.json | ConvertFrom-Json | Where-Object { $_.Action -eq 'output' } | ForEach-Object { $_.Output } | Select-Object -Last 200
+          }
+          exit $rc
       - name: Every package, measured (informational, never fails)
         continue-on-error: true
         run: |

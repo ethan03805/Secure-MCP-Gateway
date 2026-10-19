@@ -1,0 +1,139 @@
+# Microsoft Defender scan of the Windows release binaries (SRS FR-21.24).
+#
+# Builds smcpd, smcpctl, smcp-session, smcp-stdio, smcp-connect and
+# smcp-refserver for windows/amd64 and windows/arm64 with the flags of
+# .goreleaser.yaml (CGO_ENABLED=0, -trimpath, the version ldflags), updates
+# the Defender signatures and scans the binaries and their zip archives
+# with `MpCmdRun.exe -Scan -ScanType 3`. A detection fails the job unless
+# every scanned binary's SHA-256 is listed in packaging/defender-reviewed.json,
+# where the release manager records a reviewed false-positive submission to
+# Microsoft. The job writes defender.md (signature version and result) and
+# defender-sha256.txt (the digests of the scanned binaries) as the artifact
+# defender-scan.
+#
+# Callers:
+#   - release.yml, job windows-scan, with the release tag: the release job
+#     needs it, so a detection publishes nothing; the release job checks
+#     that the binaries in the published zip archives have the scanned
+#     digests (the builds are reproducible) and adds defender.md to the
+#     release notes.
+#   - workflow_dispatch, to exercise the scan; eicar=true adds the EICAR
+#     test file to the scanned directory, and the job must then fail.
+name: windows-scan
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag (v1.3.0)
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      eicar:
+        description: Add the EICAR test file (the scan must fail)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26.x"
+
+jobs:
+  scan:
+    name: Defender scan
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - name: Check out with LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Build the Windows binaries as GoReleaser does
+        shell: pwsh
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          $version = if ($env:TAG) { $env:TAG.TrimStart('v') } else { '0.0.0-scan' }
+          $mod = 'github.com/ethan03805/secure-mcp-gateway'
+          $ld = @{
+            'smcpd' = "-s -w -X $mod/internal/backend.Version=$version"; 'smcpctl' = "-s -w -X $mod/internal/backend.Version=$version"
+            'smcp-session' = "-s -w -X $mod/internal/adapter.Version=$version"; 'smcp-stdio' = "-s -w -X $mod/internal/adapter.Version=$version"
+            'smcp-connect' = "-s -w -X $mod/internal/adapter.Version=$version"; 'smcp-refserver' = "-s -w -X main.Version=$version"
+          }
+          foreach ($arch in 'amd64', 'arm64') {
+            $env:GOOS = 'windows'; $env:GOARCH = $arch
+            $dir = "build\scan\windows_$arch"
+            New-Item -ItemType Directory -Force -Path $dir | Out-Null
+            foreach ($b in $ld.Keys) {
+              go build -trimpath -ldflags $ld[$b] -o "$dir\$b.exe" "./cmd/$b"
+              if ($LASTEXITCODE) { exit 1 }
+            }
+            Compress-Archive -Path "$dir\*.exe" -DestinationPath "build\scan\smcp_windows_$arch.zip" -Force
+          }
+          Get-ChildItem -Recurse build\scan -Filter *.exe | ForEach-Object {
+            '{0}  {1}/{2}' -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $_.Directory.Name, $_.Name
+          } | Sort-Object { $_.Split(' ')[2] } | Set-Content -Encoding ascii build\defender-sha256.txt
+          Get-Content build\defender-sha256.txt
+      - name: Add the EICAR test file (workflow_dispatch eicar=true)
+        if: github.event_name == 'workflow_dispatch' && inputs.eicar
+        shell: pwsh
+        run: |
+          # The standard antivirus test string, split so that this workflow
+          # file itself is not a test file.
+          $a = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR'
+          $b = '-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
+          [IO.File]::WriteAllText("$PWD\build\scan\windows_amd64\eicar.com", $a + $b)
+      - name: Update the Defender signatures and scan (FR-21.24)
+        shell: pwsh
+        run: |
+          $mp = Join-Path $env:ProgramFiles 'Windows Defender\MpCmdRun.exe'
+          if (-not (Test-Path $mp)) { Write-Host "::error::MpCmdRun.exe not found; the binaries cannot be scanned"; exit 1 }
+          & $mp -SignatureUpdate | Out-Host
+          $st = Get-MpComputerStatus
+          $sig = "$($st.AntivirusSignatureVersion) (engine $($st.AMEngineVersion), updated $($st.AntivirusSignatureLastUpdated.ToUniversalTime().ToString('u')))"
+          Write-Host "Defender signatures: $sig"
+          $out = & $mp -Scan -ScanType 3 -File "$PWD\build\scan" -DisableRemediation 2>&1 | Out-String
+          $rc = $LASTEXITCODE
+          Write-Host $out
+          # MpCmdRun exits 0 when nothing was found and 2 when a threat was.
+          $result = switch ($rc) { 0 { 'no detection' } 2 { 'DETECTION' } default { "scan failed (exit $rc)" } }
+          $reviewed = $false
+          if ($rc -eq 2) {
+            $list = Get-Content packaging\defender-reviewed.json -Raw | ConvertFrom-Json
+            $digests = @(Get-Content build\defender-sha256.txt | ForEach-Object { $_.Split(' ')[0] })
+            $known = @($list.reviewed | ForEach-Object { $_.sha256 })
+            $reviewed = ($digests.Count -gt 0) -and -not ($digests | Where-Object { $known -notcontains $_ })
+            if (Test-Path build\scan\windows_amd64\eicar.com) { $reviewed = $false }
+          }
+          @(
+            '### Microsoft Defender scan (FR-21.24)',
+            '',
+            "- Signatures: $sig",
+            "- Scanned: the Windows binaries and zip archives (amd64, arm64), MpCmdRun -Scan -ScanType 3",
+            "- Result: $result$(if ($reviewed) { ' (every detected build listed in packaging/defender-reviewed.json with a reviewed false-positive submission)' })"
+          ) | Set-Content -Encoding utf8 build\defender.md
+          Get-Content build\defender.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          if ($rc -eq 0 -or ($rc -eq 2 -and $reviewed)) { exit 0 }
+          Write-Host "::error::Defender: $result; publication stops until the release manager records a reviewed false-positive submission in packaging/defender-reviewed.json"
+          exit 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: defender-scan
+          path: |
+            build/defender.md
+            build/defender-sha256.txt
+          if-no-files-found: warn
+          retention-days: 30

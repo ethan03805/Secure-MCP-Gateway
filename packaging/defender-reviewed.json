@@ -1,0 +1,4 @@
+{
+  "comment": "Windows release binaries that Microsoft Defender reported and the release manager reviewed as false positives (SRS FR-21.24). Each entry names the SHA-256 of one binary, the detection, the Microsoft submission ID and who reviewed it on which date. The windows-scan workflow passes a detection only when every scanned binary is listed here.",
+  "reviewed": []
+}
