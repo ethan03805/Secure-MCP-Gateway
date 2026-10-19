@@ -342,7 +342,7 @@ func (c *Conn) send(msg []byte) {
 	case env.Method == "":
 		// A response to a server-initiated request (ping, or the
 		// dispatcher's -32601 refusal, FR-5.20).
-		c.goPost(msg, env)
+		c.postNow(msg, env)
 	case !hasID(env.ID):
 		if env.Method == "notifications/cancelled" {
 			// Closing the response stream is the cancellation on this
@@ -356,7 +356,7 @@ func (c *Conn) send(msg []byte) {
 				}
 			}
 		}
-		c.goPost(msg, env)
+		c.postNow(msg, env)
 	default:
 		ctx, cancel := context.WithCancel(c.ctx)
 		key := idKey(env.ID)
@@ -378,27 +378,27 @@ func (c *Conn) send(msg []byte) {
 	}
 }
 
-// goPost sends a notification or response; the server answers 202.
-func (c *Conn) goPost(msg []byte, env envelope) {
-	c.spawn(func() {
-		ctx, cancel := context.WithTimeout(c.ctx, 30*time.Second)
-		defer cancel()
-		resp, err := c.post(ctx, msg, env)
-		if err != nil {
-			if c.ctx.Err() == nil {
-				c.logf("%s not delivered: %v", describe(env), err)
-			}
-			return
+// postNow sends a notification or response and waits for the server's
+// 202, so that messages keep the order the dispatcher wrote them in
+// (notifications/initialized before the next request).
+func (c *Conn) postNow(msg []byte, env envelope) {
+	ctx, cancel := context.WithTimeout(c.ctx, 30*time.Second)
+	defer cancel()
+	resp, err := c.post(ctx, msg, env)
+	if err != nil {
+		if c.ctx.Err() == nil {
+			c.logf("%s not delivered: %v", describe(env), err)
 		}
-		drain(resp)
-		if resp.StatusCode/100 != 2 {
-			c.logf("%s answered HTTP %d", describe(env), resp.StatusCode)
-			return
-		}
-		if env.Method == "notifications/initialized" {
-			c.startListen()
-		}
-	})
+		return
+	}
+	drain(resp)
+	if resp.StatusCode/100 != 2 {
+		c.logf("%s answered HTTP %d", describe(env), resp.StatusCode)
+		return
+	}
+	if env.Method == "notifications/initialized" {
+		c.startListen()
+	}
 }
 
 func describe(env envelope) string {

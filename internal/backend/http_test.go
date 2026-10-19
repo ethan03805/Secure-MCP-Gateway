@@ -104,8 +104,8 @@ func TestHTTPRequestHeadersAndResponseTypes(t *testing.T) {
 				t.Fatalf("result %q %v", got, err)
 			}
 			posts := s.Posts("")
-			if len(posts) < 4 { // initialize, initialized, tools/list, tools/call
-				t.Fatalf("%d posts", len(posts))
+			if len(posts) < 4 || posts[0].Msg.Method != "initialize" || posts[1].Msg.Method != "notifications/initialized" || posts[2].Msg.Method != "tools/list" {
+				t.Fatalf("posts out of order or missing: %d", len(posts))
 			}
 			for _, p := range posts {
 				h := p.Header

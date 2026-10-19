@@ -218,7 +218,7 @@ func (s *Server) serve(rw http.ResponseWriter, r *http.Request) {
 	m := req.Msg
 	if s.Session != "" && m.Method != "initialize" {
 		if s.expired.Load() || r.Header.Get("Mcp-Session-Id") != s.Session {
-			w.JSON(http.StatusNotFound, `{"jsonrpc":"2.0","id":null,"error":{"code":-32001,"message":"session not found"}}`)
+			w.JSON(http.StatusNotFound, `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"session not found"}}`)
 			return
 		}
 	}
