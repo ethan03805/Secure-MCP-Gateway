@@ -12,7 +12,7 @@ documents at build time; implementation, test, coverage and verification figures
 npm ci
 npm test            # unit tests (test/*.test.ts, node --test with type stripping)
 npm run build       # static export to out/
-npm run check-out   # after a build: every docs/ file has a page, every internal link and anchor resolves
+npm run check-out   # after a build: every docs/ file has a page, every internal link, anchor and site image resolves
 npm run check-diagrams  # after a build: every diagram and chart fits its box (Chrome, 1280 and 390 px)
 npm run typecheck   # tsc --noEmit
 npm run dev
@@ -27,6 +27,7 @@ npm run dev
 | `MCP_Gateway_Security_SRS.md` | `src/lib/parse-sec.ts` | |
 | `docs/flows/*.md` | `src/lib/flows.ts` | Every file becomes a page under Flows. An empty or missing directory is allowed. |
 | `docs/**/*.md` (except flows) | `src/lib/content.ts` | Every file becomes a page under `/docs/` at its path (`docs/api/policy.md` is `/docs/api/policy/`, a `README.md` is its directory). Order and groups follow the sections of `docs/README.md` that first link each file; subdirectories form their own group. Root documents are listed in `ROOT_DOCS`. Two files mapping to one path fail the build. |
+| Images in `docs/**/*.md` | `src/lib/content.ts` (`assetSrc`) | A document references an image by its path relative to itself, under `site/public/` (`../site/public/guide/approvals-pending.webp`), so it shows on GitHub too; the site serves it from the root (`/guide/approvals-pending.webp`). The content tests fail when such an image is missing. Screenshots of the console are WebP in `public/guide/`. |
 | `status.json`, `history.json` | `src/lib/status.ts` | Published by CI to the `site-data` branch. See below. |
 | `data/openapi.json` | `src/lib/openapi.ts` | The control API document, written by `go run ./tools/openapi` (`make openapi`) from the Go sources. A Go test fails when it is stale and the regenerate workflow rewrites it on pull requests. Served as `/openapi.json` and rendered by the Control API page. |
 | `docs/clients/matrix.json` | `src/lib/matrix.ts` | The client matrix with per-client notes, joined with the `agents` results of the status data on the Agents page. |

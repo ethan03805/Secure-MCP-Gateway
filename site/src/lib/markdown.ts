@@ -8,7 +8,7 @@ import rehypeStringify from "rehype-stringify";
 import GithubSlugger from "github-slugger";
 import fs from "node:fs";
 import path from "node:path";
-import { FLOWS_DIR, REPO_ROOT, docByFile, docExists, docHref, flowSlug } from "./content";
+import { FLOWS_DIR, REPO_ROOT, assetSrc, docByFile, docExists, docHref, flowSlug } from "./content";
 import { parseDiagram, withAutonumber, type ParsedDiagram } from "./diagram";
 import { REPO_URL } from "./site";
 
@@ -124,12 +124,16 @@ export function resolveRepoLink(href: string, fromFile: string): string {
   return `${REPO_URL}/${isDir ? "tree" : "blob"}/main/${repoPath}${hash}`;
 }
 
-/** rehype plugin: rewrite relative links with resolveRepoLink. */
+/** rehype plugin: rewrite relative links with resolveRepoLink and image sources with assetSrc. */
 function rehypeRepoLinks(fromFile: string) {
   return () => (tree: HastNode) => {
     const walk = (n: HastNode) => {
       if (n.type === "element" && n.tagName === "a" && typeof n.properties?.href === "string") {
         n.properties.href = resolveRepoLink(n.properties.href, fromFile);
+      }
+      if (n.type === "element" && n.tagName === "img" && typeof n.properties?.src === "string") {
+        n.properties.src = assetSrc(n.properties.src, fromFile, REPO_URL);
+        n.properties.loading ??= "lazy";
       }
       n.children?.forEach(walk);
     };

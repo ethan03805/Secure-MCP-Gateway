@@ -266,6 +266,23 @@ export function docSlug(file: string): string {
   return parts.map((p) => p.toLowerCase().replace(/[^a-z0-9-]+/g, "-")).join("/");
 }
 
+/** Files under this directory are served from the site root (site/public/guide/a.webp is /guide/a.webp). */
+export const PUBLIC_DIR = "site/public";
+
+/**
+ * Site URL of an image a document references by a path relative to itself.
+ * Documents point at site/public/... so the image shows on GitHub too; on the
+ * site that file is served from the root. Any other relative image goes to the
+ * raw file on GitHub. Absolute URLs and site paths are left alone.
+ */
+export function assetSrc(src: string, fromFile: string, repoUrl: string): string {
+  if (!src || src.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(src)) return src;
+  const repoPath = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), src));
+  if (repoPath.startsWith("..")) return src;
+  if (repoPath.startsWith(`${PUBLIC_DIR}/`)) return repoPath.slice(PUBLIC_DIR.length);
+  return `${repoUrl}/raw/main/${repoPath}`;
+}
+
 function titleOf(md: string, file: string): string {
   return (md.match(/^# (.+)$/m)?.[1] ?? path.posix.basename(file, ".md")).replace(/[`*]/g, "").trim();
 }

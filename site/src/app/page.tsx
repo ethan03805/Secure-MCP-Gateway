@@ -10,7 +10,7 @@ import { loadStatus } from "@/lib/status";
 import { loadMatrix } from "@/lib/matrix";
 import { loadOpenApi } from "@/lib/openapi";
 import { loadReleases } from "@/lib/release";
-import { CHAPTERS, buildCommit, fmtDateTime, fmtPct, shortSha } from "@/lib/site";
+import { CHAPTERS, START_HERE, buildCommit, fmtDateTime, fmtPct, shortSha } from "@/lib/site";
 import { SYSTEM_MAP_HREF, loadSystemMap } from "@/lib/system-map";
 
 /** The README's opening paragraph: what the system is. */
@@ -70,6 +70,13 @@ export default function Home() {
           <Inline text={readmeIntro()} linkIds={false} />
         </p>
       </DocHead>
+
+      <p className="sysmap-callout">
+        <Link href={START_HERE.href}>
+          <strong>{START_HERE.label}</strong>
+        </Link>
+        : {START_HERE.about}
+      </p>
 
       <SampleNotice snap={snap} />
 
