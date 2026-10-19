@@ -295,9 +295,9 @@ probe_call probe_net_connect '{"address":"127.0.0.1:7687"}' "blocked:"
 kill "$standin" 2>/dev/null || true
 wait "$standin" 2>/dev/null || true
 
-# host_test PKG TEST VAR: runs one Go test of this repository that inspects
+# host_test_env PKG TEST VAR: runs one Go test of this repository that inspects
 # the installation, with VAR=1, and adds its events to SMCP_ITEST_RESULTS.
-host_test() {
+host_test_env() {
   local repo
   repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
   if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
@@ -309,7 +309,7 @@ host_test() {
 }
 
 say "graph engine port admits only smcp-core; smcp-data opens no connections (SR-4.2-1, SR-7.4-1)"
-host_test ./cmd/smcpctl/ TestGraphPortFirewallOnHost SMCP_ENFORCED_FIREWALL_TEST || fail "graph port firewall"
+host_test_env ./cmd/smcpctl/ TestGraphPortFirewallOnHost SMCP_ENFORCED_FIREWALL_TEST || fail "graph port firewall"
 
 say "unit hardening in effect"
 systemctl show smcpd.service -p User -p ProtectSystem -p ProtectHome -p PrivateTmp -p NoNewPrivileges \
@@ -327,7 +327,7 @@ sudo -n systemctl disable --quiet smcpd.service
 
 say "CP-46 directories, owners and modes; evidence key and checkpoint copies (FR-12.4, SR-6.12-1, SR-4.2-2)"
 sudo -n ls -ld /etc/smcp /var/lib/smcp /var/lib/smcp/* /var/log/smcp "$state_root"/keys "$state_root"/journal "$state_root"/observation || true
-host_test ./cmd/smcpctl/ TestEnforcedLayoutOnHost SMCP_ENFORCED_LAYOUT_TEST || fail "CP-46 layout and evidence key custody"
+host_test_env ./cmd/smcpctl/ TestEnforcedLayoutOnHost SMCP_ENFORCED_LAYOUT_TEST || fail "CP-46 layout and evidence key custody"
 
 # SR-2.13-3 while the installation exists: the vault (one secret, stored
 # above) and its passphrase file are read as every CP-46 identity other

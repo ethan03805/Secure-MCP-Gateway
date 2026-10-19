@@ -42,7 +42,7 @@ export function loadRequirements(): ReqData {
   const dir = path.join(REPO_ROOT, "srs_build");
   const files = fs
     .readdirSync(dir)
-    .filter((f) => /^req\d+\.txt$/.test(f))
+    .filter((f) => /^req\d+(-[a-z0-9-]+)?\.txt$/.test(f))
     .sort();
   const reqs: Requirement[] = [];
   const disps: Disposition[] = [];

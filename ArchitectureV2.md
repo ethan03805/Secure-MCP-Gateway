@@ -1,7 +1,7 @@
 # Secure MCP Gateway — Architecture V2 (Logical Decomposition)
 
 **Document:** `ArchitectureV2.md`
-**Revision:** V2.4 draft (proposed)
+**Revision:** V2.5 draft (proposed)
 **Date:** 2026-10-18 (America/Chicago)
 **Owner:** netrisk
 **Inputs:** `architecture.md` rev 2.0 (problem-space analysis), `MCP_Gateway_Security_SRS.md` V1 (security-control set; renamed from `MCP_Gateway_SRS.md`), `Secure-MCP-Gateway-Research-Brief.md`
@@ -66,7 +66,7 @@ Every leaf SHALL should name its element in its subject (e.g., *"The Anomaly Sco
 | A-8 | The Gateway runs in one of two platform profiles. The **Enforced profile** runs on Linux (x86_64 or arm64) with rootless Podman, nftables, cgroup v2 and systemd. The **Standalone (unconfined) profile** runs on macOS arm64 or on Linux without those features. | E-16, E-17 and the network part of E-18 exist only in the Enforced profile. In the Standalone profile backends run as ordinary child processes, health reports `degraded` with cause `unconfined`, servers of the high-risk classes are refused, and the release labels the installation "not enforced". |
 | A-9 | **Policy authority** is the signed, schema-validated policy revision held by E-05 in the Policy Store (D-01) and compiled to an in-memory snapshot. **Evidence authority** is the signed, hash-chained Evidence Journal (D-06). | The graph database (E-25, via E-26) and the Observation Store (E-27) are mirrors and indexes for graph views, research and analytics. Their unavailability degrades analytics and never opens or blocks enforcement. Dispatch waits only on the journal write of the decision intent. |
 | A-10 | Some agents run on a vendor's cloud computer and cannot reach the user's loopback address (Grok Bot, ChatGPT agent "dots", Meta Muse). | The **Remote Access profile** exposes the Gateway, still running on the user's computer, through an authenticated tunnel (X-13). Installing the Gateway inside the vendor's virtual machine is not a control, because the agent controls that machine. |
-| A-11 | Backends are local MCP servers that expose **tools**. | Remote (hosted) MCP servers as backends and the resources and prompts capabilities are out of scope for this baseline and are refused (V1 5.6). |
+| A-11 | Backends are local MCP servers that expose **tools**. | Remote (hosted) MCP servers as backends and the resources and prompts capabilities are out of scope for this baseline and are refused (V1 5.6). **Planned for v1.3.0 (OD-17):** a hosted server listed in the IBM ContextForge catalog can be imported as a *hosted package* and is then reached only through the bundled ContextForge instance that E-36 runs as a contained local backend (Section 18.11); a direct remote backend stays refused. |
 
 ### 2.3 System context
 
@@ -95,6 +95,7 @@ flowchart TB
   CUR -->|X-02 Publish signed packages + revocations| LIB[(Trusted MCP Server Library)]
   LIB -->|X-03 Library Retrieval| GW
   REL[Release channel<br/>GitHub Releases / Homebrew] -->|X-16 Release distribution| GW
+  CF[ContextForge catalog and release<br/>planned v1.3.0] -->|X-19, X-20| GW
   SSRC[External secret source<br/>optional] -->|X-08 Secret Provisioning| GW
   MET[Local metrics scraper] -->|X-15 Operational metrics| GW
   GW[[Secure MCP Gateway — SoI]]
@@ -117,7 +118,7 @@ flowchart LR
 
 ## 3. Decomposition overview
 
-The SoI decomposes into **ten subsystems** and **thirty-five elements**. E-34 and E-35 are planned for release v1.3.0 (SRS FR-20, Section 2.8 of the SRS); they are specified here so that requirements can be allocated to them before they are built. Element IDs are stable. Later revisions retire IDs instead of reusing them.
+The SoI decomposes into **ten subsystems** and **thirty-five elements**. E-34 and E-35 are planned for release v1.3.0 (SRS FR-20, Section 2.8 of the SRS); they are specified here so that requirements can be allocated to them before they are built. Element IDs are stable. Later revisions retire IDs instead of reusing them. E-36 ContextForge Connector is planned for v1.3.0 as well (SRS FR-22).
 
 | Subsystem | Elements |
 |---|---|
@@ -125,7 +126,7 @@ The SoI decomposes into **ten subsystems** and **thirty-five elements**. E-34 an
 | **SS-2 Identity & Session** | E-03 Identity & Authentication Service · E-04 Session Manager |
 | **SS-3 Policy** | E-05 Policy Administration Service · E-06 Policy Decision Service · E-07 Approval Service |
 | **SS-4 Enforcement Pipeline** | E-08 Access Enforcement Point · E-09 Request Inspection Pipeline · E-10 Tool Dispatcher · E-11 Response Inspection Pipeline · E-12 Enforcement Coordinator |
-| **SS-5 Server Trust & Execution** | E-13 Library Trust Verifier · E-14 Local Server Registry · E-15 Server Runtime Manager · E-16 Execution Sandbox · E-17 Runtime Monitor · E-18 Egress Broker |
+| **SS-5 Server Trust & Execution** | E-13 Library Trust Verifier · E-14 Local Server Registry · E-15 Server Runtime Manager · E-16 Execution Sandbox · E-17 Runtime Monitor · E-18 Egress Broker · E-36 ContextForge Connector (planned, v1.3.0) |
 | **SS-6 Secrets** | E-19 Secret Vault · E-20 Secret Broker |
 | **SS-7 Assurance** | E-21 Audit & Evidence Service · E-22 Key & Trust Anchor Manager · E-23 Health & Safety Monitor |
 | **SS-8 Management** | E-24 Management Console & Control API (with GUI view modules G-01…G-14) · E-34 Desktop Application (planned) · E-35 Platform Installers (planned) |
@@ -184,6 +185,7 @@ flowchart TB
     E16[E-16 Execution Sandbox]
     E17[E-17 Runtime Monitor]
     E18[E-18 Egress Broker]
+    E36[E-36 ContextForge Connector<br/>planned v1.3.0]
   end
   subgraph SS6[SS-6 Secrets]
     E19[E-19 Secret Vault]
@@ -196,6 +198,9 @@ flowchart TB
   E20 --> E16
   E20 --> E18
   E19 --> E20
+  E36 -->|package request| E13
+  E36 -->|contained instance| E15
+  E20 -->|ContextForge credentials| E36
 ```
 
 **Evidence, data and observation (SS-7 to SS-10)**
@@ -384,6 +389,14 @@ Trust levels: **T0** = TCB, compromise defeats the security guarantee; **T1** = 
 - **Owned data:** egress allowlists (from D-01), DNS resolution records.
 - **Allocation targets:** default-deny egress; destination canonicalization (rev 2.0 §6); DNS rebinding protection; redirect re-authorization; private/reserved range denial; method restrictions (V1 5.19); TLS validation; credential attachment only for the secret's bound destination (Section 8); per-operation audit; egress volume, destination and timing observables.
 
+#### E-36 ContextForge Connector — T1 (planned for v1.3.0; the bundled ContextForge instance it manages is contained workload, **U**)
+- **Purpose:** Integrates IBM ContextForge (`github.com/IBM/mcp-context-forge`, Apache-2.0) in two ways, neither of which adds a path around the Gateway. **Catalog import:** reads the ContextForge server catalog (`mcp-catalog.yml`) from the pinned ContextForge release, classifies each entry as *local* (a self-hosted server with a repository and install command), *hosted* (a remote MCP endpoint) or *unsupported*, and turns an operator's choice into a package request for E-13: a local entry becomes an ordinary package built from a digest-pinned artifact by F-96 and runs under E-15 and E-16 like any other package; a hosted entry becomes a *hosted package* whose tools come from a quarantine probe through the bundled instance. Every import records ContextForge provenance (catalog file digest, entry ID and digest, URL or install reference, ContextForge version and image digest) and waits for the operator's trust decision and signature; nothing runs before E-13 has verified it. **Bundled instance:** installs the ContextForge release pinned by the Gateway release (signature and digest verified), generates its credentials into E-19, starts it through E-15 as one contained instance (a rootless Podman container under E-16 in the Enforced profile, a managed child process elsewhere) bound to loopback with its admin UI disabled, registers each enabled hosted package as one ContextForge gateway behind its own E-18 egress endpoint and one virtual server, and reconciles ContextForge's state against the Server Registry. ContextForge holds no authority: agents connect only to the Gateway, E-10 reaches each hosted package through its own virtual-server endpoint with a package-scoped token, and every call passes the full pipeline (E-06, E-09, E-07, E-12, E-11, E-21). ContextForge's own plugins and guardrails, federation, discovery, REST and gRPC wrapping, A2A, prompts and resources are disabled; the Gateway's policy, filters, approvals and journal are authoritative.
+- **Functions:** F-107 Import catalog entry; F-108 Run bundled ContextForge; F-109 Federate hosted packages through ContextForge.
+- **Interfaces:** X-19, X-20, I-43, I-13 (E-10 to the bundled instance), I-18, I-22, I-25.
+- **Owned data:** D-16 ContextForge State (the instance's database and generated configuration; never an authority, rebuilt from D-02 by reconciliation), the ContextForge lock of the Gateway release.
+- **Allocation targets:** catalog source pinning and bounded, inert parsing; entry classification and refusal reasons; import of local entries through F-96 only (no catalog install command is ever run); hosted-package probe, manifest and provenance; explicit operator trust decision recorded in provenance and journal; image and wheel verification against the release lock; license and SBOM records; opt-out; lazy start and stop; contained execution and loopback-only listener; hardened configuration with every unused ContextForge feature off; credentials generated and held in E-19; package-scoped tokens; reconciliation and drift suspension; health, upgrade with rollback, uninstall; journal events; console view G-15.
+- **Trust:** E-36 is T1 because a fault in it can admit a misconfigured instance; it never decides policy or verifies signatures (E-13 does). The bundled ContextForge instance is untrusted contained workload, like signed server code: all hosted packages served by it share one containment domain, so a compromise of the instance is treated as a compromise of every hosted package it serves (Section 12, B-9).
+
 ### SS-6 Secrets
 
 #### E-19 Secret Vault — T0
@@ -450,6 +463,7 @@ Trust levels: **T0** = TCB, compromise defeats the security guarantee; **T1** = 
 | G-12 | Secrets | Operator | Secret metadata, Secret Use Policy bindings, rotation; values write-only |
 | G-13 | Approvals | Approver | Pending approvals with bound request and anomaly evidence |
 | G-14 | Audit Investigation | Auditor | Graph-led investigation of decisions, events, rules and servers (rev 2.0 §7.2) |
+| G-15 | ContextForge Catalog | Operator | Browse the ContextForge catalog, import entries with the trust decision, bundled ContextForge status, reconciliation findings, start, stop and upgrade (planned, v1.3.0) |
 
 #### E-34 Desktop Application — T1 (planned for v1.3.0)
 - **Purpose:** A native tray (menu-bar) application for macOS, Linux and Windows, built with Tauri 2, that makes the Gateway usable without a terminal: it starts, stops and restarts the `smcpd` service through the platform service manager, shows health at a glance from the loopback metrics endpoint, raises native notifications when tool-call approvals are pending, shows the existing console (E-24) in a native window instead of a browser tab, runs first-run setup and client setup by invoking `smcpctl` with fixed argument vectors, and checks for updates that it verifies with the project's release key. It holds **no more authority than the console**: every control-API operation happens inside the console window under the user's own console sign-in and role (SRS Appendix C), and the application itself never reads the operator token, the vault or the key store.
@@ -692,6 +706,9 @@ Each function has exactly one **owning element**, which is the allocation target
 | F-104 | Check, verify and apply updates | E-34 | M | Find a newer release, verify minisign, SHA-256 and Sigstore before installing; Gateway upgrades through `smcpctl upgrade` (planned, v1.3.0) |
 | F-105 | Build platform installers | E-35 | M | Build pkg, dmg, deb, rpm, AppImage and msi in CI, list them in the signed checksum file and smoke-test each (planned, v1.3.0) |
 | F-106 | Install and remove platform packages | E-35 | M | Place binaries and the desktop application in non-user-writable locations; create no state; keep evidence on removal (planned, v1.3.0) |
+| F-107 | Import catalog entry | E-36 | M | Read the pinned ContextForge catalog, classify entries, build a package request with ContextForge provenance, record the trust decision (planned, v1.3.0) |
+| F-108 | Run bundled ContextForge | E-36 | R | Verify, configure, start, health-check, upgrade and remove the contained ContextForge instance (planned, v1.3.0) |
+| F-109 | Federate hosted packages through ContextForge | E-36 | R | One ContextForge gateway and virtual server per enabled hosted package, package-scoped tokens, reconciliation and drift suspension (planned, v1.3.0) |
 
 ### 5.1 Control-point view (owner's three phases plus observation)
 
@@ -729,6 +746,8 @@ Each function has exactly one **owning element**, which is the allocation target
 | **X-16** | Release Distribution | GitHub Releases, Homebrew tap → installer (F-97) and E-34 update check (F-104) | Inbound; content **untrusted until verified** | Release archives for darwin and linux on amd64 and arm64, checksums, minisign signatures, Sigstore bundle, `install.sh`, Homebrew formula; from v1.3.0 also the E-35 platform installers | Signature verification before install; idempotent install; versioned configuration schema; no downgrade |
 | **X-18** | Platform Package Installation | E-35 packages → OS installer (macOS Installer, dpkg/APT, RPM/DNF, Windows Installer) and back to the host | Inbound to the host; content **untrusted until verified** by the user (checksum and signature) or, later, by the platform's code-signing check | `.pkg`, `.dmg`, `.deb`, `.rpm`, AppImage, `.msi` (planned, v1.3.0) | Install locations not writable by the user; no state creation or service start; evidence kept on removal; unsigned until platform signing is enabled |
 | **X-17** | Package Sources | npm, PyPI, OCI registries, release URLs → packaging command (F-96) | Inbound at packaging time only; content **untrusted** | Package tarballs, wheels, images and binaries addressed by digest | Digest pinning; no floating versions; never contacted by the running daemon |
+| **X-19** | ContextForge Catalog | ContextForge catalog file (`mcp-catalog.yml` of the pinned release, or an operator-supplied file) → E-36 | Inbound; content **untrusted** (planned, v1.3.0) | Catalog entries: id, name, category, provider, URL, auth type, transport, repository, install command, tags, OAuth discovery metadata, logo path | Digest pinning; bounded YAML parsing without aliases; inert display; no network fetch at run time |
+| **X-20** | ContextForge Release | `ghcr.io/ibm/mcp-context-forge` image, PyPI `mcp-contextforge-gateway` wheels → E-36 | Inbound at install and upgrade only; content **untrusted until verified** (planned, v1.3.0) | OCI image index and platform digests, cosign keyless signature and SPDX SBOM attestation, hashed wheel set | Digest equals the Gateway release lock; signer identity; SBOM and license recorded; no floating tags |
 
 ### 6.2 Internal interfaces
 
@@ -776,6 +795,7 @@ Each function has exactly one **owning element**, which is the allocation target
 | I-40 | E-23 → E-34 | Desktop health read (planned, v1.3.0) | The X-15 exposition read on loopback: health state, pending approvals, enforced flag, emergency stop; no credential |
 | I-41 | E-34 ↔ E-24 | Console in a native window (planned, v1.3.0) | The X-04 console and control API in a webview; TLS validated against the Gateway server CA; the user's own cookie session and role |
 | I-42 | E-34 → E-24 (`smcpctl`) | Setup, client setup and upgrade commands (planned, v1.3.0) | Child process with a fixed argument vector per operation; passwords on standard input, never as arguments; exit status and output shown to the user |
+| I-43 | E-36 ↔ bundled ContextForge admin API (inside E-16) | Configure and reconcile the bundled instance (planned, v1.3.0) | Gateways, virtual servers, scoped tokens, health; admin token from E-19 held only by E-36 |
 
 ### 6.3 Server package manifest (data item crossing X-03)
 
@@ -1086,6 +1106,7 @@ flowchart TB
   end
   subgraph U2[Untrusted: contained]
     SRV[Signed server code inside E-16]
+    CF[Bundled ContextForge inside E-16<br/>planned v1.3.0]
   end
   subgraph EXT[External]
     NET[Internet / services]
@@ -1097,6 +1118,8 @@ flowchart TB
   T2N --- T0N
   T1N --- SRV
   SRV -- only via E-18 --> NET
+  T1N -- I-13 scoped token, I-43 admin --> CF
+  CF -- only via E-18 --> NET
   LIB -- X-03 --> T0N
   T2N -- X-11 --> OFF
 ```
@@ -1111,12 +1134,15 @@ flowchart TB
 | B-6 Gateway ↔ Host platform | X-07 | Platform trusted (A-4); least-privilege Gateway service identities |
 | B-7 Services ↔ Data Server | I-36, I-37 | E-26 sole credential holder; fixed templates; private listeners |
 | B-8 Gateway ↔ Offline research | X-11 | E-32 campaign authorization, pseudonymization, export audit |
+| B-9 Gateway ↔ bundled ContextForge (planned, v1.3.0) | I-13, I-43, I-25, X-19, X-20 | E-36 release-lock verification, hardened configuration and reconciliation; E-16 containment; loopback listener reachable only by the Gateway identity; package-scoped tokens; E-11 response inspection; E-18 egress per hosted package |
 
 **Signed ≠ trusted to behave.** A curation signature establishes **provenance and review**, not runtime safety. Signed server code stays in the untrusted zone (U2) and gets full run-time containment and response inspection.
 
 **The Data Server is outside the TCB** (A-9, revised in V2.3). It holds mirrors of policy and audit and the behavior model, not the authority. A compromise of E-25/E-26 can falsify graph views and analytics but cannot change what E-06 enforces, because E-06 loads only signed revisions from the Policy Store, and cannot hide evidence, because the signed journal (D-06) is the record that `smcpctl journal verify` checks. The separate Secret Vault (D-04) remains outside the Data Server.
 
 **The Standalone profile has no sandbox boundary** (A-8). B-3 and B-4 then rely on the server's own behavior, which is why high-risk server classes are refused in that profile and the release labels it "not enforced".
+
+**The bundled ContextForge instance is untrusted, contained workload (planned, v1.3.0).** It sits in U2 beside signed server code, never in T0 to T2. Threats considered at B-9: (1) a malicious or altered catalog entry (poisoned descriptions, an unpinned or shell-bearing install command, a URL that points at a private or metadata address, YAML expansion) is stopped by bounded parsing, inert display, F-96 pinning, the import-time metadata scan and E-18 destination checks; (2) a compromised or vulnerable ContextForge (its 2026 advisories include a hardcoded default JWT key, SSRF bypasses, template injection and a sandbox escape in a sample server) can lie about tools, swap or alter results between the hosted packages it serves, attempt network or host escape, or try to reach the Gateway's listeners; containment, egress per package, drift reconciliation, response inspection and the restriction that it never holds an upstream credential bound that damage to the hosted packages it serves, and the Security Limitations document states that they share one containment domain; (3) an agent trying to reach ContextForge directly finds no listener it can use: the instance listens only on loopback, only the Gateway identity may connect in the Enforced profile, and every route needs a token only E-36 and E-10 hold; (4) double or conflicting enforcement is avoided by disabling ContextForge's plugins and guardrails and setting its limits above the Gateway's, so the Gateway's decision is the only one that binds.
 
 **The behavior model is security-enforcing (T1), not TCB:** its worst failure is a missed or false anomaly, because anomaly scoring can only restrict (A-7).
 
@@ -1141,6 +1167,7 @@ flowchart TB
 | D-13 | Meta-metrics | E-27 | E-29 | Stage timing spans, system resource and throughput series | Retention by policy; aggregated rollups kept longer |
 | D-14 | Diagnostic Log | Gateway log directory | E-23 | Leveled operational messages for troubleshooting | Separate from evidence; rotated by size and count; no secret values or raw arguments |
 | D-15 | Backup Archives | Operator-chosen directory | E-28 | Encrypted backups of D-01, D-02, D-03 digests, D-04, D-06, D-08 and configuration | Encrypted with an operator passphrase or recipient key; checksummed; restore verified before service |
+| D-16 | ContextForge State | Private volume of the bundled ContextForge instance | E-36 | ContextForge database (SQLite), generated configuration (planned, v1.3.0) | Not an authority: reconciled against D-02 and rebuildable; holds no upstream credential; removed on uninstall |
 
 ### 13.1 Behavior model in the graph (illustrative)
 
@@ -1389,6 +1416,40 @@ E-13 processes a revocation entry (F-35). E-14 suspends the server revision. E-1
 2. E-07 parks the call (F-17) and E-02 sends progress keep-alives to the harness at the CP-45 interval.
 3. On approval within the hold bound, the call continues to launch authorization (F-29). On denial it ends with `-31001`. At the bound it ends with `-31002`, whose message tells the person in plain language how to approve and retry and links to G-13.
 
+### 18.11 ContextForge catalog import and the bundled instance (planned, v1.3.0)
+
+```mermaid
+flowchart TB
+  AG[Agent and harness adapter] -->|X-01 / X-13 only| PIPE
+  subgraph GW[smcpd]
+    PIPE[E-01..E-12 pipeline<br/>policy, filters,<br/>approvals, journal]
+    E36[E-36 ContextForge<br/>Connector]
+    E18[E-18 Egress Broker]
+  end
+  PIPE -->|I-13 stdio| PKG[Sandboxed local<br/>packages]
+  PIPE -->|I-13 HTTP, loopback,<br/>package token| CF[Bundled ContextForge<br/>contained, U]
+  E36 -->|I-43 admin| CF
+  CAT[(X-19 catalog,<br/>X-20 release)] --> E36
+  CF -->|one virtual server<br/>per hosted package| E18
+  PKG -->|I-25| E18
+  E18 -->|X-06 TLS,<br/>S1 credential| HS[Hosted MCP servers]
+```
+
+Catalog import:
+
+1. The operator opens G-15 or runs `smcpctl catalog list`. E-36 reads the catalog of the pinned ContextForge release (X-19), verifies its digest against the Gateway release lock, parses it with bounds and shows every entry as inert text with its classification.
+2. For a **local** entry the operator supplies an exact version and digest for the artifact named by the entry's install command; E-36 hands a recipe to F-96, which builds the package as in Section 18.1. The catalog's install command itself is never run. The resulting package runs under E-15 and E-16 directly; ContextForge is not on its path.
+3. For a **hosted** entry E-36 starts a quarantine probe through the bundled instance with an egress grant for the entry's host only and no secret except a probe secret the operator binds, reads `tools/list`, and writes a hosted-package manifest (every tool `source_trust: untrusted`, risk class at least `moderate`).
+4. G-15 shows the trust decision: kind, provider, URL or repository, auth type, tools, egress, secret slots and, for a hosted entry, that its code cannot be inspected. The operator accepts and signs with the operator key (F-96); the decision and the ContextForge provenance are recorded in the provenance statement and the journal.
+5. E-13 verifies and imports the package as for any other (Section 18.1, steps 1 to 5); it is verified and disabled, and no policy grants it.
+
+Call through the bundled instance:
+
+1. The operator enables a hosted package (G-10) and grants its tools in policy (G-02). E-36 starts the bundled instance if it is not running, registers the package as one ContextForge gateway whose URL is the package's E-18 endpoint, creates one virtual server holding only its tools, mints a package-scoped token and reconciles.
+2. An agent calls the tool through the Gateway. The call follows Section 18.3: decision, request inspection, approval, launch authorization and journal intent; E-10 sends it to the package's virtual-server endpoint with the package-scoped token (never the harness credential).
+3. ContextForge forwards it to the E-18 endpoint; E-18 originates TLS to the hosted server and inserts the S1 credential. ContextForge never holds the upstream credential.
+4. The result returns through E-11 inspection and E-12 release; the journal records the hosted package, the virtual server and the ContextForge version, and labels the result server-asserted.
+
 ---
 
 ## 19. Open decisions
@@ -1411,6 +1472,7 @@ E-13 processes a revocation entry (F-35). E-14 suspends the server revision. E-1
 | OD-14 | Platform support | Linux only; Linux plus macOS without containment | **Decided 2026-10-16:** Enforced profile on Linux with rootless Podman, nftables, cgroup v2 and systemd; Standalone (unconfined) profile on macOS arm64 and Linux, labelled "not enforced" (A-8) |
 | OD-15 | Policy and evidence authority | Graph database as system of record; signed files plus journal | **Decided 2026-10-16:** signed Policy Store and Evidence Journal are the authorities; the graph and Observation Store are mirrors (A-9) |
 | OD-16 | Cloud agents | Unsupported; Gateway inside the vendor VM; Remote Access through a tunnel | **Decided 2026-10-16:** Remote Access profile through an authenticated tunnel (A-10, X-13); inside-VM installation is not a control |
+| OD-17 | Real MCP servers out of the box | Reference packages only; import from the IBM ContextForge catalog; bundled ContextForge as a contained backend; ContextForge as a general federated upstream for remote instances | **Decided 2026-10-18 (owner), planned for v1.3.0:** catalog import into the Library and a bundled ContextForge run by E-36 as a contained, loopback-only backend with the Gateway authoritative (A-11, Section 18.11, FR-22). Federation with remote ContextForge instances is out of scope and may be revisited after v1.3.0 |
 
 ---
 
@@ -1418,6 +1480,7 @@ E-13 processes a revocation entry (F-35). E-14 suspends the server revision. E-1
 
 | Revision | Date | Change |
 |---|---|---|
+| V2.5 draft | 2026-10-18 | ContextForge integration, planned for v1.3.0 (OD-17): element E-36 ContextForge Connector in SS-5, functions F-107 to F-109, interfaces X-19, X-20 and I-43, data store D-16, view module G-15, boundary B-9 and its threat notes, scenario 18.11, A-11 amended. |
 | V2.4 draft | 2026-10-18 | Desktop application and platform installers, planned for v1.3.0 (owner decision 2026-10-18): E-34 Desktop Application and E-35 Platform Installers in SS-8, functions F-100–F-106, interface X-18 and internal interfaces I-40–I-42; X-14 and X-16 extended. Function IDs now have two or three digits; the site and the SRS build parse both. The Windows runtime of `smcpd` is specified separately. |
 | V2.3 draft | 2026-10-16 | Re-baseline for a shippable v1. Authority decoupled from the graph (A-9, OD-15): the signed Policy Store (D-01) and the Evidence Journal (D-06) are authorities; E-25 and E-26 move from T0 to T2 and hold mirrors. Platform profiles (A-8, OD-14). Operator self-curation: packaging command F-96 on E-13, X-02 inside the SoI, X-17 package sources, OD-1 and OD-7 decided. Approval hold mode and notification (F-17 extended, X-14; OD-5 decided). Session taint (F-99) and tool-metadata scanning (F-34 extended). Remote Access profile for cloud agents (A-10, X-13; dynamic registration under F-59, `smcp-connect` under F-95; OD-16). Installation and upgrade (F-97, X-16), harness doctor and lockdown profiles (F-98), diagnostic log and metrics (F-61 extended, X-15, D-14), encrypted backup archives (D-15). Function IDs stay within two digits so that existing tools that parse `F-dd` keep working. Scope: tools only and local backends only (A-11). |
 | V2.0 draft | 2026-10-14 | First logical decomposition: 8 subsystems, 24 elements, 65 functions, 10 external and 28 internal interfaces, 8 data stores; session Allow-policy model; secrets design; V1 traceability. |
