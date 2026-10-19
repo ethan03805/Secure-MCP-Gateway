@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T19:55:49Z",
-  "commit": "45bc003c0f2d51d77d5bc658f9ed2a21982fa181",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/45bc003c0f2d51d77d5bc658f9ed2a21982fa181",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39309663659",
+  "generatedAt": "2026-10-19T20:26:25Z",
+  "commit": "176c7256437038ae8f2b878e461581c688c6bb16",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/176c7256437038ae8f2b878e461581c688c6bb16",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39310942151",
   "tests": {
     "total": 1662,
     "passed": 1643,
-    "failed": 1,
-    "skipped": 18,
-    "durationSec": 2152.6,
+    "failed": 0,
+    "skipped": 19,
+    "durationSec": 1777.2,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -67,9 +67,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 85,
+        "passed": 84,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "cmd/smcpd",
@@ -331,8 +331,8 @@
       },
       {
         "name": "internal/perf/run",
-        "passed": 5,
-        "failed": 1,
+        "passed": 6,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -600,11 +600,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.3
       },
       {
         "name": "internal/egress",
-        "pct": 84.4
+        "pct": 84.5
       },
       {
         "name": "internal/filterapi",
@@ -616,11 +616,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.9
+        "pct": 83.7
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.8
+        "pct": 80
       },
       {
         "name": "internal/harness",
@@ -724,7 +724,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 84.3
+        "pct": 84.4
       },
       {
         "name": "internal/sandbox/probe",
@@ -732,7 +732,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 80
+        "pct": 79.7
       },
       {
         "name": "internal/session",
@@ -794,18 +794,18 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 490,
+    "verified": 491,
     "partial": 38,
-    "failing": 1,
+    "failing": 0,
     "unverified": 1,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 25,
+        "verified": 26,
         "partial": 5,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-02",
@@ -3973,7 +3973,7 @@
       {
         "id": "FR-11.5",
         "element": "E-01",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
@@ -4827,8 +4827,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestDocumentationSetFR18",
-          "cmd/smcpctl.TestInstallGuideWalkthrough"
+          "cmd/smcpctl.TestDocumentationSetFR18"
         ]
       },
       {
@@ -8509,7 +8508,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8544,7 +8543,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:42433: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44779: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8661,7 +8660,7 @@
     }
   ],
   "acceptance": {
-    "commit": "45bc003c0f2d51d77d5bc658f9ed2a21982fa181",
+    "commit": "176c7256437038ae8f2b878e461581c688c6bb16",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9349,27 +9348,27 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   },
   "performance": {
     "schema": 1,
-    "commit": "45bc003c0f2d51d77d5bc658f9ed2a21982fa181",
-    "generatedAt": "2026-10-19T19:20:13Z",
+    "commit": "176c7256437038ae8f2b878e461581c688c6bb16",
+    "generatedAt": "2026-10-19T19:56:38Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000010006",
-      "memoryBytes": 16760344576,
+      "runner": "GitHub Actions 1000010046",
+      "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 89634910208,
+      "diskFreeBytes": 90422214656,
       "diskDevice": "nvme0n1p1",
       "diskModel": "MSFT NVMe Accelerator v1.0",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
-      "imageVersion": "20261018.339.1"
+      "imageVersion": "20261012.334.1"
     },
     "referenceHardware": true,
     "referenceClass": "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)",
@@ -9388,7 +9387,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.019769,
+        "value": 0.010055,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9401,11 +9400,11 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 79.478175,
+        "value": 8.751166,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
-        "pass": false,
+        "pass": true,
         "complete": true,
         "method": "real smcpd with synchronous scoring, 8 concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (request receipt to delivered, minus dispatched to the backend's response)"
       },
@@ -9414,19 +9413,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.17984037500000127,
+        "value": 0.5294253750000006,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (8.294 ms, mean of 8.255, 8.610, 8.371, 8.631, 8.208, 8.295, 7.984, 7.996) minus disabled (8.114 ms, mean of 8.661, 8.110, 7.802, 8.213, 7.862, 8.416, 7.808, 8.038), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (6.246 ms, mean of 7.060, 6.025, 6.325, 6.023, 6.246, 6.173, 6.236, 5.884) minus disabled (5.717 ms, mean of 5.669, 5.751, 5.613, 5.632, 5.789, 5.731, 6.040, 5.511), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.965311038339,
+        "value": 1999.966180671883,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9438,7 +9437,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 627.481977,
+        "value": 433.919257,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9450,12 +9449,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1505.53125,
+        "value": 1532.51171875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m18s after start with no traffic: smcpd (95.7 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1409.9 MiB in 2 processes, process 3939 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m9s after start with no traffic: smcpd (120.6 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1411.9 MiB in 2 processes, process 3920 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
