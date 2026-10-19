@@ -1,0 +1,548 @@
+{
+  "$comment": "Message catalogue shared by the console and the desktop application (SRS FR-20.48). reasonCodes is SRS Appendix B Table B.2 word for word (internal/edge/catalogue_test.go checks it). desktop holds the tray state explanations, errors and empty states of the desktop application (FR-20.45 to FR-20.47); wording follows docs/design/writing.md. {name} is a placeholder the caller fills.",
+  "version": 1,
+  "reasonCodes": {
+    "NO_PERMIT": {
+      "codes": [
+        -31001
+      ],
+      "message": "The Gateway's policy does not allow this tool in this session. Ask the Gateway operator to grant it."
+    },
+    "NO_TEMPLATE": {
+      "codes": [
+        -31001
+      ],
+      "message": "This session's policy template no longer exists. Sign in again to start a new session."
+    },
+    "TEMPLATE_NOT_PERMITTED": {
+      "codes": [
+        -31001
+      ],
+      "message": "The requested policy template is not permitted for this agent. Request a template its framework profile allows, or none for the default."
+    },
+    "PRINCIPAL_DISABLED": {
+      "codes": [
+        -31001
+      ],
+      "message": "This agent's access to the Gateway is suspended. Ask the Gateway operator."
+    },
+    "CREDENTIAL_INVALID": {
+      "codes": [
+        -31001
+      ],
+      "message": "This agent's Gateway credential is no longer valid. Ask the Gateway operator for a new one."
+    },
+    "REVISION_NOT_ENABLED": {
+      "codes": [
+        -31001
+      ],
+      "message": "The tool's server is not enabled on the Gateway. Ask the Gateway operator."
+    },
+    "NO_ROUTE": {
+      "codes": [
+        -31001
+      ],
+      "message": "The tool's server is not available right now. Try again later or ask the Gateway operator."
+    },
+    "AMBIGUOUS_ROUTE": {
+      "codes": [
+        -31001
+      ],
+      "message": "The Gateway could not choose how to reach this tool and refused the call. Ask the Gateway operator."
+    },
+    "HIGH_RISK_UNFLAGGED": {
+      "codes": [
+        -31001
+      ],
+      "message": "This tool is in a high-risk class that this session's policy does not allow."
+    },
+    "DENY_RULE": {
+      "codes": [
+        -31001
+      ],
+      "message": "The Gateway's policy forbids this tool in this session."
+    },
+    "EVAL_BOUND": {
+      "codes": [
+        -31001
+      ],
+      "message": "The Gateway could not finish checking this call within its limits and refused it. Ask the operator to simplify the policy."
+    },
+    "APPROVAL_DENIED": {
+      "codes": [
+        -31001
+      ],
+      "message": "A person reviewing this call denied it."
+    },
+    "TAINT_DENIED": {
+      "codes": [
+        -31001
+      ],
+      "message": "This session has read untrusted content, so tools that write or send data are blocked. Start a new session to use them."
+    },
+    "ARGUMENTS_INVALID": {
+      "codes": [
+        -31001
+      ],
+      "message": "The request arguments could not be read."
+    },
+    "ARGUMENTS_TOO_LARGE": {
+      "codes": [
+        -31001
+      ],
+      "message": "The request is too large for this tool. Send less data in one call."
+    },
+    "ARGUMENTS_TOO_DEEP": {
+      "codes": [
+        -31001
+      ],
+      "message": "The request is nested too deeply. Simplify the arguments."
+    },
+    "UNICODE_CONTROL": {
+      "codes": [
+        -31001
+      ],
+      "message": "The request contains hidden or direction-changing characters. Remove them and try again."
+    },
+    "SECRET_IN_ARGUMENTS": {
+      "codes": [
+        -31001
+      ],
+      "message": "The request appears to contain a password, key or token, so it was not sent. Remove the secret and try again."
+    },
+    "DATA_CLASS_IN_ARGUMENTS": {
+      "codes": [
+        -31001
+      ],
+      "message": "The request contains personal or classified data that this tool may not receive, so it was not sent. Remove it and try again."
+    },
+    "PATH_INVALID": {
+      "codes": [
+        -31001
+      ],
+      "message": "A file path in the request is not allowed in this form. Use a plain path."
+    },
+    "PATH_OUTSIDE_ROOTS": {
+      "codes": [
+        -31001
+      ],
+      "message": "A file path in the request is outside the folders this tool may use."
+    },
+    "URL_INVALID": {
+      "codes": [
+        -31001
+      ],
+      "message": "A web address in the request is not valid."
+    },
+    "URL_NOT_ALLOWED": {
+      "codes": [
+        -31001
+      ],
+      "message": "A web address in the request is not allowed for this tool."
+    },
+    "URL_PRIVATE_ADDRESS": {
+      "codes": [
+        -31001
+      ],
+      "message": "A web address in the request points to a local or private network address, which this tool may not use."
+    },
+    "FILTER_UNAVAILABLE": {
+      "codes": [
+        -31001
+      ],
+      "message": "The Gateway could not run a required check for this tool. Give the operator the correlation ID {correlationId}."
+    },
+    "FILTER_ERROR": {
+      "codes": [
+        -31001,
+        -31003
+      ],
+      "message": "A Gateway safety check failed, so the call was stopped. Give the operator the correlation ID {correlationId}."
+    },
+    "FILTER_TIMEOUT": {
+      "codes": [
+        -31001,
+        -31003
+      ],
+      "message": "A Gateway safety check took too long, so the call was stopped. Try a smaller request."
+    },
+    "APPROVAL_REQUIRED": {
+      "codes": [
+        -31002
+      ],
+      "message": "This call needs approval. Open {approvalUrl} to approve it, then run the same request again."
+    },
+    "TAINT_APPROVAL": {
+      "codes": [
+        -31002
+      ],
+      "message": "This session has read untrusted content, so this tool needs approval. Open {approvalUrl} to approve it, then run the same request again."
+    },
+    "APPROVAL_EXPIRED": {
+      "codes": [
+        -31002
+      ],
+      "message": "The approval for this call expired before it was used. Run the same request again to ask for a new approval."
+    },
+    "APPROVAL_CONSUMED": {
+      "codes": [
+        -31002
+      ],
+      "message": "The approval for this call was already used by an identical call. Run the same request again to ask for a new approval."
+    },
+    "APPROVAL_UNAVAILABLE": {
+      "codes": [
+        -31002
+      ],
+      "message": "This call needs approval, but the Gateway's approval service is not available. Ask the Gateway operator to approve the call or check `smcpctl health`, then run the same request again."
+    },
+    "FILTER_BLOCKED": {
+      "codes": [
+        -31003
+      ],
+      "message": "The tool's result was withheld by a Gateway content filter. The operator can see why in the audit record {correlationId}."
+    },
+    "SECRET_LEAK": {
+      "codes": [
+        -31003
+      ],
+      "message": "The tool's result was withheld because it appeared to contain a protected secret."
+    },
+    "RESULT_TOO_LARGE": {
+      "codes": [
+        -31003
+      ],
+      "message": "The tool's result was too large to inspect and was withheld. Narrow the request."
+    },
+    "RESULT_INVALID": {
+      "codes": [
+        -31003
+      ],
+      "message": "The tool's server returned a result the Gateway could not validate, so it was withheld."
+    },
+    "RELEASE_REFUSED": {
+      "codes": [
+        -31003
+      ],
+      "message": "The result was withheld because the session or policy changed while the tool ran. Run the request again."
+    },
+    "OUTCOME_UNRECORDED": {
+      "codes": [
+        -31003
+      ],
+      "message": "The tool ran, but the Gateway could not record its outcome, so the result was withheld. It may have completed the action; check before trying again. The operator can see the cause with `smcpctl health`."
+    },
+    "ANOMALY_WITHHELD": {
+      "codes": [
+        -31003
+      ],
+      "message": "The tool's result was withheld because the call looked unusual for this agent. The operator can see why in the audit record {correlationId}."
+    },
+    "FAIL_CLOSED": {
+      "codes": [
+        -31004
+      ],
+      "message": "The Gateway is not accepting tool calls right now because a safety check failed. The operator can see the cause with `smcpctl health`."
+    },
+    "EMERGENCY_STOP": {
+      "codes": [
+        -31004
+      ],
+      "message": "The Gateway operator has stopped all tool calls."
+    },
+    "NO_SNAPSHOT": {
+      "codes": [
+        -31004
+      ],
+      "message": "The Gateway has no valid policy loaded and is refusing all tool calls."
+    },
+    "JOURNAL_UNAVAILABLE": {
+      "codes": [
+        -31004
+      ],
+      "message": "The Gateway could not record this call and did not run it. The operator can see the cause with `smcpctl health`."
+    },
+    "POLICY_REVISION_CHANGED": {
+      "codes": [
+        -31004
+      ],
+      "message": "The Gateway's policy changed while this call was being checked. Run the request again."
+    },
+    "CAPABILITY": {
+      "codes": [
+        -31004
+      ],
+      "message": "The Gateway refused to run this call because an internal check failed. Run the request again; if it repeats, give the operator the correlation ID {correlationId}."
+    },
+    "RATE_LIMITED": {
+      "codes": [
+        -31005
+      ],
+      "message": "Too many tool calls in a short time. Wait a minute and try again."
+    },
+    "QUOTA_EXHAUSTED": {
+      "codes": [
+        -31005
+      ],
+      "message": "This session has used all the tool calls its policy allows. Start a new session."
+    },
+    "QUEUE_FULL": {
+      "codes": [
+        -31005
+      ],
+      "message": "The Gateway is busy. Try again shortly."
+    },
+    "SESSION_LIMIT": {
+      "codes": [
+        -31005
+      ],
+      "message": "This agent already has the maximum number of open sessions. End one, then try again."
+    },
+    "LISTEN_LIMIT": {
+      "codes": [
+        -31005
+      ],
+      "message": "This session already has the maximum number of open listen streams. Close one, then try again."
+    },
+    "SESSION_INVALID": {
+      "codes": [
+        -31006
+      ],
+      "message": "Your Gateway session is not valid. Sign in again."
+    },
+    "SESSION_STATE": {
+      "codes": [
+        -31006
+      ],
+      "message": "Your Gateway session has ended. Sign in again."
+    },
+    "BACKEND_ERROR": {
+      "codes": [
+        -31007
+      ],
+      "message": "The tool's server reported an error."
+    },
+    "DISPATCH_FAILED": {
+      "codes": [
+        -31007
+      ],
+      "message": "The tool's server could not be started or reached. The operator can check it in the Servers view."
+    },
+    "BACKEND_OUTPUT_INVALID": {
+      "codes": [
+        -31007
+      ],
+      "message": "The tool's server sent data that is not valid MCP, so the call was stopped and the server restarted."
+    },
+    "CLIENT_DEADLINE": {
+      "codes": [
+        -31008
+      ],
+      "message": "The tool did not finish in time."
+    },
+    "UPSTREAM_TIMEOUT": {
+      "codes": [
+        -31009
+      ],
+      "message": "The tool's server stopped responding. It may have completed the action; check before trying again."
+    },
+    "INSTANCE_FAILED": {
+      "codes": [
+        -31009
+      ],
+      "message": "The tool's server stopped while running this call. It may have completed the action; check before trying again."
+    },
+    "CANCELLED": {
+      "codes": [
+        -31009
+      ],
+      "message": "The call was cancelled before it finished. It may have completed the action; check before trying again."
+    },
+    "INPUT_REQUIRED_UNSUPPORTED": {
+      "codes": [
+        -31010
+      ],
+      "message": "The tool asked for input that the Gateway does not relay."
+    },
+    "SCHEMA_INVALID": {
+      "codes": [
+        -32602
+      ],
+      "message": "The arguments do not match what this tool accepts."
+    }
+  },
+  "desktop": {
+    "states": {
+      "healthy": {
+        "label": "Healthy",
+        "meaning": "The Gateway is running and checking every tool call your agents make.",
+        "action": "No action needed. Open the console to review recent calls and approvals.",
+        "control": "open-console"
+      },
+      "degraded": {
+        "label": "Degraded",
+        "meaning": "The Gateway is running and checking tool calls, but part of it is not working as configured.",
+        "action": "Open the console and check Health for the cause.",
+        "control": "open-console"
+      },
+      "degraded-not-enforced": {
+        "label": "Degraded",
+        "meaning": "The Gateway is running and checking tool calls. A Standalone installation always reports degraded, because its MCP servers run as ordinary processes without container or network isolation.",
+        "action": "No action needed if you chose Standalone. To see every cause, open the console and check Health.",
+        "control": "open-console"
+      },
+      "fail-closed": {
+        "label": "Fail-closed",
+        "meaning": "The Gateway is refusing every tool call because a check it depends on is not available. Your agents get an error instead of a result.",
+        "action": "Open the console and check Health for the cause. Calls are accepted again when the cause is fixed.",
+        "control": "open-console"
+      },
+      "emergency-stop": {
+        "label": "Emergency stop",
+        "meaning": "An emergency stop is in effect. The Gateway refuses every tool call until an Administrator clears it.",
+        "action": "Open the console to see when it was set. An Administrator clears it in the Gateway Control view.",
+        "control": "open-console"
+      },
+      "stopped": {
+        "label": "Stopped",
+        "meaning": "The Gateway service is not running. Agents set up to use it cannot make tool calls.",
+        "action": "Start the Gateway.",
+        "control": "start"
+      },
+      "unreachable": {
+        "label": "Unreachable",
+        "meaning": "The desktop app cannot read the Gateway's status, so it cannot tell whether tool calls are being checked.",
+        "action": "If the Gateway is starting, wait a few seconds. If this state stays, restart the Gateway.",
+        "detail": "Last status reading: {lastReading}.",
+        "control": "restart"
+      }
+    },
+    "labels": {
+      "not-enforced": {
+        "label": "not enforced",
+        "meaning": "This installation is labelled not enforced. Policy checks, approvals and the Evidence Journal work, but the isolation the Enforced profile adds (containers and restricted network access for MCP servers) is not in place or not yet verified."
+      }
+    },
+    "errors": {
+      "SERVICE_START_FAILED": {
+        "title": "The Gateway did not start",
+        "what": "The service manager could not start the Gateway service.",
+        "todo": "Read the service manager's message in the details, then select Start again. If it fails again, copy the details into a bug report."
+      },
+      "SERVICE_STOP_FAILED": {
+        "title": "The Gateway did not stop",
+        "what": "The service manager could not stop the Gateway service.",
+        "why": "The Gateway may still be running and checking tool calls.",
+        "todo": "Select Stop again. If it fails again, copy the details into a bug report."
+      },
+      "SERVICE_RESTART_FAILED": {
+        "title": "The Gateway did not restart",
+        "what": "The service manager could not restart the Gateway service.",
+        "todo": "If the tray shows Stopped, select Start. If that fails, copy the details into a bug report."
+      },
+      "SERVICE_TIMEOUT": {
+        "title": "No answer from the service manager",
+        "what": "The service manager did not report a result within 30 seconds.",
+        "todo": "Check the tray state in a minute. If it has not changed, select the operation again."
+      },
+      "SERVICE_NOT_INSTALLED": {
+        "title": "The Gateway service is not set up",
+        "what": "There is no Gateway service on this computer to start.",
+        "why": "First-run setup has not been completed, or the service was removed.",
+        "todo": "Select Set Up the Gateway to create it."
+      },
+      "ELEVATION_DENIED": {
+        "title": "Permission not given",
+        "what": "This operation needs administrator permission, and the permission prompt was cancelled.",
+        "todo": "Select the operation again and enter an administrator's password when macOS asks."
+      },
+      "SETUP_PASSWORDS_DIFFER": {
+        "title": "The passwords do not match",
+        "what": "The two entries for the {role} password are different.",
+        "todo": "Type the same password in both fields."
+      },
+      "SETUP_BOOTSTRAP_FAILED": {
+        "title": "Setup could not create the Gateway's keys and accounts",
+        "what": "smcpctl bootstrap ended with an error.",
+        "todo": "Read the output in the details and fix the cause it names, then select Try Again. You can also run the command shown in the details in a terminal."
+      },
+      "SETUP_INSTALL_FAILED": {
+        "title": "Setup could not install the Gateway service",
+        "what": "smcpctl install ended with an error.",
+        "todo": "Read the output in the details and fix the cause it names, then select Try Again. You can also run the command shown in the details in a terminal."
+      },
+      "CLIENT_SETUP_FAILED": {
+        "title": "The agent was not connected",
+        "what": "smcpctl clients setup {client} ended with an error.",
+        "todo": "Read the output in the details and fix the cause it names, then select Connect again."
+      },
+      "CLIENT_REMOVE_FAILED": {
+        "title": "The agent was not disconnected",
+        "what": "smcpctl clients setup {client} --remove ended with an error.",
+        "todo": "Read the output in the details and fix the cause it names, then select Disconnect again."
+      },
+      "UPDATE_CHECK_FAILED": {
+        "title": "Could not check for updates",
+        "what": "The desktop app could not read the list of releases from GitHub.",
+        "why": "This computer may be offline, or GitHub may be unavailable.",
+        "todo": "Check the network connection, then select Check for Updates again. Nothing on this computer was changed."
+      },
+      "UPDATE_VERIFY_FAILED": {
+        "title": "The update failed verification and was not installed",
+        "what": "The downloaded release did not pass the {check} check.",
+        "why": "The file may be damaged, or it may not come from the project.",
+        "todo": "Select Check for Updates to download it again. If it fails again, report it as SECURITY.md describes."
+      },
+      "UPDATE_NOT_NEWER": {
+        "title": "The update was not installed",
+        "what": "The offered release, version {offered}, is not newer than the installed version {installed}.",
+        "why": "The desktop app never installs an older release.",
+        "todo": "No action needed. You are on the newer version."
+      },
+      "UPGRADE_FAILED": {
+        "title": "The Gateway upgrade failed",
+        "what": "smcpctl upgrade ended with an error, and version {version} is running now.",
+        "todo": "Read the output in the details. To retry, select Check for Updates again."
+      },
+      "UPGRADE_ROLLED_BACK": {
+        "title": "The upgrade was rolled back",
+        "what": "The new version failed a check during the upgrade, so smcpctl restored version {version}, which is running now.",
+        "todo": "You can keep using the Gateway. Copy the details into a bug report so the release can be fixed."
+      },
+      "CONSOLE_UNREACHABLE": {
+        "title": "The console did not load",
+        "what": "The desktop app could not connect to the console at {url}.",
+        "why": "The Gateway may be stopped or still starting.",
+        "todo": "Check the tray state. If it shows Stopped, select Start, then select Open Console again."
+      },
+      "CONSOLE_CERTIFICATE_INVALID": {
+        "title": "The console's certificate was refused",
+        "what": "The server at {url} did not present a certificate from this Gateway's certificate authority, so the console was not loaded.",
+        "why": "Another program may be using the console's address, or the Gateway's certificates were replaced.",
+        "todo": "Restart the Gateway, then open the console again. If the error stays, copy the details into a bug report."
+      }
+    },
+    "empty": {
+      "CLIENTS_NONE_DETECTED": {
+        "title": "No supported agents found",
+        "what": "None of the agents the Gateway can set up were found on this computer.",
+        "todo": "Install an agent, such as Claude Code, then select Look Again. The desktop guide lists the supported agents."
+      },
+      "CLIENTS_NONE_CONNECTED": {
+        "title": "No agents connected yet",
+        "what": "No agent on this computer is set up to use the Gateway.",
+        "todo": "Choose an agent in the list and select Connect."
+      },
+      "APPROVALS_NONE": {
+        "title": "No approvals waiting",
+        "what": "No tool call is waiting for a decision.",
+        "todo": "When your policy holds a call for approval, the count appears here and in the tray."
+      },
+      "UPDATES_NONE": {
+        "title": "This is the latest version",
+        "what": "Version {version} is the newest stable release.",
+        "todo": "No action needed. The desktop app checks again within 24 hours unless automatic checks are off in Settings."
+      }
+    }
+  }
+}
