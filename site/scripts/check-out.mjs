@@ -2,6 +2,7 @@
 //   - every Markdown file under docs/ (except docs/flows) has a page under /docs/,
 //     and every docs/flows/*.md has a page under /flows/;
 //   - every site-internal link and in-page anchor in every page resolves;
+//   - every image a page loads from the site itself (site/public) is in out/;
 //   - the Status page has its sections and tables.
 // Exit status 1 lists each problem. Run with `npm run check-out`.
 import fs from "node:fs";
@@ -85,6 +86,19 @@ for (const page of pages) {
   }
 }
 
+// 2b. Images served by the site itself (documents reference site/public/...).
+let images = 0;
+for (const page of pages) {
+  if (page.startsWith("_next/")) continue;
+  const html = fs.readFileSync(path.join(OUT, page), "utf8");
+  for (const m of html.matchAll(/<img\s[^>]*?src="(\/[^"/][^"]*)"/g)) {
+    images++;
+    if (!fs.existsSync(path.join(OUT, decodeURIComponent(m[1].split("?")[0])))) {
+      problems.push(`/${page.replace(/index\.html$/, "")}: image ${m[1]} is not in out/`);
+    }
+  }
+}
+
 // 3. Status page structure.
 const status = fs.readFileSync(path.join(OUT, "status/index.html"), "utf8");
 for (const id of ["run", "implementation", "element-notes", "verification", "tests", "trends", "agents", "hostile", "console"]) {
@@ -101,4 +115,4 @@ if (problems.length) {
   for (const p of problems) console.error(`  ${p}`);
   process.exit(1);
 }
-console.log(`check-out: ${pages.length} pages, ${links} internal links, all resolve`);
+console.log(`check-out: ${pages.length} pages, ${links} internal links and ${images} images, all resolve`);

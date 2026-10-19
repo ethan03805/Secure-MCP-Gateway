@@ -23,7 +23,15 @@ export const CHAPTERS = [
   { n: 11, href: "/install/", label: "Install", about: "Published releases, installation, and how to verify an archive (cosign, SHA-256, minisign) and a server package." },
 ] as const;
 
-export type ChapterHref = (typeof CHAPTERS)[number]["href"];
+/** The user guide for people new to the product, linked ahead of the chapters. */
+export const START_HERE = {
+  href: "/docs/user-guide/",
+  label: "Start here",
+  about:
+    "What you do with Secure MCP Gateway: install, connect your first agent, approve a call, read the journal, and the everyday tasks after that.",
+} as const;
+
+export type ChapterHref =(typeof CHAPTERS)[number]["href"];
 
 export function chapter(href: ChapterHref) {
   return CHAPTERS.find((c) => c.href === href)!;

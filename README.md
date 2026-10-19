@@ -98,6 +98,7 @@ The confidential client this needs, approvals, emergency stop and journal verifi
 
 | Read | For |
 |---|---|
+| [docs/user-guide.md](docs/user-guide.md) | Start here if you have not used the product: the first day and the everyday tasks |
 | [docs/README.md](docs/README.md) | Index of all user and operator documentation |
 | [docs/install.md](docs/install.md), [docs/quickstart.md](docs/quickstart.md) | Installing and the first run |
 | [docs/operator-guide.md](docs/operator-guide.md) | Day-2 operation: approvals, policy publication, packages, secrets, backups, keys, upgrades, emergency stop, remote access |

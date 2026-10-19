@@ -292,6 +292,15 @@ caption,
   color: var(--ink-3);
   margin-right: 0.45em;
 }
+/* Start here: the user guide, ahead of the numbered chapters. */
+.chapters .start-here a {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--rule-strong);
+}
+.chapters .start-here a[aria-current="page"] {
+  border-bottom-color: var(--ink);
+}
 
 /* Sheet: rail | main | margin ----------------------------------------- */
 main {
@@ -1116,7 +1125,7 @@ table.notes .note-text {
 .prose {
   min-width: 0;
 }
-.prose > div > *:not(.table-wrap):not(table):not(figure):not(pre) {
+.prose > div > *:not(.table-wrap):not(table):not(figure):not(pre):not(:has(> img)) {
   max-width: var(--main);
 }
 .prose table {
@@ -1136,6 +1145,12 @@ table.notes .note-text {
 }
 .prose img {
   max-width: 100%;
+  height: auto;
+}
+/* Screenshots in the documents (site/public/guide): a hairline frame keeps them apart from the page. */
+.prose img[src^="/guide/"] {
+  display: block;
+  border: 1px solid var(--rule-strong);
 }
 
 /*

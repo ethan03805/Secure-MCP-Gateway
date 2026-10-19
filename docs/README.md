@@ -12,6 +12,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 
 | Document | For |
 |---|---|
+| [What you do with Secure MCP Gateway](user-guide.md) | New users: what the product is, the day-one path (install, connect Claude Code, first call, approval, journal), everyday tasks, Standalone and Enforced, what is planned for v1.3 |
 | [Install guide](install.md) | install.sh, Homebrew, building from source, the Linux enforced host, upgrade, rollback, uninstall (FR-18.1) |
 | [Release checklist](release-checklist.md) | Publishing a release: signing key, secrets, snapshot, tag, post-release verification (FR-13.1 to FR-13.3) |
 | [Quick start](quickstart.md) | Bootstrap, start, connect Claude Code or Codex, make a call, approve a held call, verify the journal |

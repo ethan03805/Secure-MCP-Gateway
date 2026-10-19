@@ -6,9 +6,11 @@ import path from "node:path";
 import {
   FLOWS_DIR,
   INDEX_FILE,
+  PUBLIC_DIR,
   REPO_ROOT,
   ROOT_GROUP,
   allDocs,
+  assetSrc,
   docGroups,
   docSlug,
   firstSentence,
@@ -69,6 +71,26 @@ test("docSlug maps paths under docs/", () => {
   assert.equal(docSlug("docs/operations/logging-metrics-reload.md"), "operations/logging-metrics-reload");
   assert.equal(flowSlug("docs/flows/Tool_Call.md"), "tool-call");
   assert.equal(groupAnchor("Client quick starts"), "g-client-quick-starts");
+});
+
+test("assetSrc serves site/public images from the site root and others from GitHub", () => {
+  const repo = "https://github.com/o/r";
+  assert.equal(assetSrc("../site/public/guide/a.webp", "docs/user-guide.md", repo), "/guide/a.webp");
+  assert.equal(assetSrc("../../site/public/x.png", "docs/api/policy.md", repo), "/x.png");
+  assert.equal(assetSrc("img/b.png", "docs/install.md", repo), "https://github.com/o/r/raw/main/docs/img/b.png");
+  assert.equal(assetSrc("/guide/a.webp", "docs/user-guide.md", repo), "/guide/a.webp");
+  assert.equal(assetSrc("https://example.com/c.png", "docs/user-guide.md", repo), "https://example.com/c.png");
+});
+
+test("every image a document references under site/public exists", () => {
+  for (const d of allDocs()) {
+    const md = fs.readFileSync(path.join(REPO_ROOT, d.file), "utf8");
+    for (const m of md.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)) {
+      const src = assetSrc(m[1], d.file, "https://github.com/o/r");
+      if (!src.startsWith("/")) continue;
+      assert.ok(fs.existsSync(path.join(REPO_ROOT, PUBLIC_DIR, src)), `${d.file}: image ${m[1]} is missing`);
+    }
+  }
 });
 
 test("indexPlacement records the first linking section and skips external links", () => {
