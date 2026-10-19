@@ -23,7 +23,7 @@ import (
 //
 // It changes the current user's service manager and home directory, so it
 // runs only with SMCP_INSTALL_SERVICE_TEST=1, in the CI job
-// install-standalone (macos-latest, arm64; ubuntu-24.04 with Podman
+// install-standalone (macos-26, arm64; ubuntu-24.04 with Podman
 // removed). FR-13.6 asks for both runners: the status job merges the
 // results of this test only when both platforms reported one, so each run
 // claims the requirement in full. FR-13.4 also needs the Enforced profile

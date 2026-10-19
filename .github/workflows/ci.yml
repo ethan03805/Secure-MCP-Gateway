@@ -53,6 +53,11 @@ jobs:
       heavy: ${{ steps.classify.outputs.heavy }}
       go: ${{ steps.classify.outputs.go }}
       desktop: ${{ steps.classify.outputs.desktop }}
+      # macOS runners are scarce (docs/ci.md, "macOS runners"): on pull
+      # requests the macOS legs run only when they can be affected.
+      macos-pkg: ${{ steps.classify.outputs.macos-pkg }}
+      install-os: ${{ steps.classify.outputs.install-os }}
+      desktop-matrix: ${{ steps.classify.outputs.desktop-matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: github.event_name == 'pull_request'
@@ -72,16 +77,39 @@ jobs:
           # desktop: true runs the desktop job (desktop/, Go code, go.mod,
           # go.sum, tools/reqreport, this workflow); a pull request that
           # changes only desktop/ runs neither the heavy jobs nor go.
+          # macOS (pull requests only; every other trigger runs all of them):
+          #   macos_pkg: the .pkg smoke test of installers.yml, when the
+          #     .pkg can change (packaging/installers/macos/, the installer
+          #     workflows and scripts, .goreleaser.yaml, Go code that builds
+          #     for darwin: not *_test.go, *_linux.go, *_windows.go).
+          #   macos_install: the macOS legs of install-standalone and
+          #     install-guide (Go code for darwin and its tests, install.sh,
+          #     docs/install.md, their scripts).
+          #   macos_desktop: the macOS leg of desktop (desktop/,
+          #     tools/reqreport).
+          #   Changing this workflow runs all of them.
           heavy=true go=full desktop=true
+          macos_pkg=true macos_install=true macos_desktop=true
           # A pull_request run checks out the merge commit of the head into
           # the current base: HEAD^1 is the base, so the diff is exactly what
           # merging the pull request changes.
           if [ "$EVENT" = pull_request ] && git rev-parse -q --verify 'HEAD^2' >/dev/null &&
              files=$(git -c core.quotePath=false diff --no-renames --name-only 'HEAD^1' HEAD) && [ -n "$files" ]; then
             heavy=false go=skip desktop=false
+            macos_pkg=false macos_install=false macos_desktop=false
             while IFS= read -r f; do
               case "$f" in
                 desktop/* | *.go | go.mod | go.sum | tools/reqreport/* | .github/workflows/ci.yml) desktop=true ;;
+              esac
+              case "$f" in
+                *_linux.go | *_linux_test.go | *_windows.go | *_windows_test.go) ;;
+                *_test.go) macos_install=true ;;
+                *.go | go.mod | go.sum) macos_install=true macos_pkg=true ;;
+                packaging/installers/macos/* | .github/workflows/installers.yml | .github/workflows/installers-macos-smoke.yml | \
+                  scripts/package-smoke.sh | scripts/install-pkg-tools.sh | .goreleaser.yaml) macos_pkg=true ;;
+                install.sh | docs/install.md | scripts/ci-install-guide.sh | scripts/ci-install-standalone.sh) macos_install=true ;;
+                desktop/* | tools/reqreport/*) macos_desktop=true ;;
+                .github/workflows/ci.yml) macos_pkg=true macos_install=true macos_desktop=true ;;
               esac
               case "$f" in
                 desktop/*) ;;
@@ -95,9 +123,16 @@ jobs:
             done <<<"$files"
             { echo "Changed files:"; echo '```'; echo "$files"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           fi
-          { echo "heavy=$heavy"; echo "go=$go"; echo "desktop=$desktop"; } >> "$GITHUB_OUTPUT"
-          echo "heavy=$heavy go=$go desktop=$desktop"
-          echo "**heavy=$heavy go=$go desktop=$desktop** (docs/ci.md)" >> "$GITHUB_STEP_SUMMARY"
+          install_os='["ubuntu-24.04"]'
+          [ "$macos_install" = true ] && install_os='["ubuntu-24.04","macos-26"]'
+          desktop_matrix='[{"os":"ubuntu-24.04","platform":"linux"}]'
+          [ "$macos_desktop" = true ] && desktop_matrix='[{"os":"macos-15","platform":"macos"},{"os":"ubuntu-24.04","platform":"linux"}]'
+          {
+            echo "heavy=$heavy"; echo "go=$go"; echo "desktop=$desktop"; echo "macos-pkg=$macos_pkg"
+            echo "install-os=$install_os"; echo "desktop-matrix=$desktop_matrix"
+          } >> "$GITHUB_OUTPUT"
+          echo "heavy=$heavy go=$go desktop=$desktop macos_pkg=$macos_pkg macos_install=$macos_install macos_desktop=$macos_desktop"
+          echo "**heavy=$heavy go=$go desktop=$desktop macos_pkg=$macos_pkg macos_install=$macos_install macos_desktop=$macos_desktop** (docs/ci.md)" >> "$GITHUB_STEP_SUMMARY"
 
   srs:
     name: srs
@@ -347,7 +382,8 @@ jobs:
   # agent on macOS (arm64); install twice, check the service and health,
   # then uninstall. The Go test that runs it writes its events to
   # build/install-standalone-<os>-test.json for the status job. Not a
-  # required check.
+  # required check. The macOS leg runs on pull requests only when
+  # changes.outputs.install-os lists it (docs/ci.md, "macOS runners").
   install-standalone:
     name: install-standalone (${{ matrix.os }})
     needs: changes
@@ -355,7 +391,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest]
+        os: ${{ fromJSON(needs.changes.outputs.install-os || '["ubuntu-24.04","macos-26"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -397,13 +433,17 @@ jobs:
   # uninstall). It
   # fails when the guide drifts from what works. The Go test writes its
   # events to build/install-guide-<os>-test.json for the status job. Not a
-  # required check.
+  # required check. Runs on every trigger; the macOS leg runs on pull
+  # requests only when changes.outputs.install-os lists it (docs/ci.md,
+  # "macOS runners").
   install-guide:
     name: install-guide (${{ matrix.os }})
+    needs: changes
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-latest]
+        os: ${{ fromJSON(needs.changes.outputs.install-os || '["ubuntu-24.04","macos-26"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -545,7 +585,9 @@ jobs:
   # claims, the bundled windows' typecheck and tests, and on macOS the
   # unsigned .app bundle. Not a required check. Runs when desktop/, Go code
   # or this workflow changes (changes.outputs.desktop) and on every other
-  # trigger; the claims (build/desktop-<platform>-test.json, written by
+  # trigger; on pull requests the macOS leg only when desktop/,
+  # tools/reqreport or this workflow changes (changes.outputs.desktop-matrix;
+  # docs/ci.md, "macOS runners"); the claims (build/desktop-<platform>-test.json, written by
   # `reqreport cargo`) go to the status job.
   desktop:
     name: desktop (${{ matrix.platform }})
@@ -554,11 +596,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-15
-            platform: macos
-          - os: ubuntu-24.04
-            platform: linux
+        include: ${{ fromJSON(needs.changes.outputs.desktop-matrix || '[{"os":"macos-15","platform":"macos"},{"os":"ubuntu-24.04","platform":"linux"}]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     env:
@@ -659,14 +697,19 @@ jobs:
           retention-days: 7
 
   # Platform installers (E-35, FR-20.24): build the .deb, .rpm and macOS
-  # .pkg as snapshots and install, exercise and remove each one
-  # (installers.yml, which the release workflow also runs before
-  # publishing). Heavy; not a required check.
+  # .pkg as snapshots (all on Linux) and install, exercise and remove each
+  # one (installers.yml, which the release workflow also runs before
+  # publishing). Heavy; not a required check. The .pkg smoke test on macOS
+  # runs on pull requests only when the .pkg can change
+  # (changes.outputs.macos-pkg) and never blocks on a missing macOS runner
+  # (docs/ci.md, "macOS runners").
   installers:
     name: installers
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     uses: ./.github/workflows/installers.yml
+    with:
+      macos-smoke: ${{ needs.changes.result != 'success' || needs.changes.outputs.macos-pkg != 'false' }}
     permissions:
       contents: read
 

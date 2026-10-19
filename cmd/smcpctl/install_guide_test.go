@@ -50,7 +50,7 @@ func TestInstallGuideHasWalkthrough(t *testing.T) {
 // systemd, and uninstall with the kept journal verified.
 //
 // It installs into the user's home and service manager, so it runs only
-// with SMCP_INSTALL_GUIDE_TEST=1, in the CI job install-guide (macos-latest,
+// with SMCP_INSTALL_GUIDE_TEST=1, in the CI job install-guide (macos-26,
 // arm64; ubuntu-24.04). The status job merges the results only when both
 // runners reported. FR-18.1 stays partial: a rollback and the Homebrew
 // and from-source options are not followed by this run.

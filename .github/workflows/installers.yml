@@ -1,17 +1,29 @@
 # Platform installers (E-35; SRS FR-20.17, FR-20.18, FR-20.21 to FR-20.24,
 # FR-20.26, SR-4.11-2): builds the Linux .deb and .rpm packages `smcp`
-# (GoReleaser nFPM) and the macOS command-line .pkg (pkgbuild and
-# productbuild), then installs, exercises and removes each one on a runner
-# of its platform with scripts/package-smoke.sh.
+# (GoReleaser nFPM) and the macOS command-line .pkg, then installs,
+# exercises and removes each one on a runner of its platform with
+# scripts/package-smoke.sh.
+#
+# Every package is built on Linux, the .pkg too: build-macos runs
+# packaging/installers/macos/build-pkg-linux.sh (xar, bomutils and
+# rcodesign; the package build-pkg.sh makes with pkgbuild on macOS). Only
+# the .pkg smoke test needs a macOS runner, and it does not block: it is
+# the reusable workflow installers-macos-smoke.yml, which fails the run on
+# a real test failure and only warns when no macOS runner picked the job
+# up (docs/ci.md, "macOS runners").
 #
 # A reusable workflow with two callers:
 #   - ci.yml, job installers, behind the changes job (docs/ci.md), with no
-#     tag: snapshot packages. Not a required check.
-#   - release.yml, job installers, with the release tag: the release job
-#     needs it, downloads the artifacts installers-linux and
-#     installers-macos into build/installers and publishes exactly those
-#     files, listed in the signed checksum file (FR-20.23). A failed smoke
-#     test stops the release before anything is published (FR-20.24).
+#     tag: snapshot packages. macos-smoke says whether the .pkg smoke test
+#     runs: always on pushes to main, on pull requests only when the macOS
+#     package can change. Not a required check.
+#   - release.yml, job installers, with the release tag and macos-smoke
+#     false: the release job needs it, downloads the artifacts
+#     installers-linux and installers-macos, publishes the .deb and .rpm
+#     files and lists them and the .pkg in the signed checksum file
+#     (FR-20.23). A failed Linux smoke test stops the release before
+#     anything is published (FR-20.24). release.yml then smoke-tests the
+#     .pkg on macOS and uploads it only when that test passed.
 #
 # The desktop application packages (smcp-desktop .deb/.rpm, the .dmg, the
 # AppImage and the .msi) are not built yet.
@@ -24,6 +36,14 @@ on:
         description: Release tag (v1.3.0); empty builds snapshot packages
         type: string
         default: ""
+      macos-smoke:
+        description: Install the .pkg on a macOS runner (installers-macos-smoke.yml)
+        type: boolean
+        default: true
+    outputs:
+      version:
+        description: Version of the packages
+        value: ${{ jobs.build-linux.outputs.version }}
 
 permissions:
   contents: read
@@ -88,9 +108,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # The macOS .pkg, built on Linux (no macOS runner): GoReleaser
+  # cross-compiles the darwin-arm64 binaries; build-pkg-linux.sh signs them
+  # ad hoc with rcodesign and writes the flat package with xar and
+  # bomutils, all pinned by scripts/install-pkg-tools.sh.
   build-macos:
     name: build .pkg
-    runs-on: macos-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -108,6 +132,20 @@ jobs:
         if: inputs.tag != ''
         working-directory: console
         run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
+      - name: Package tools cache (xar, bomutils, rcodesign)
+        id: pkgtools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/pkgtools
+          key: pkgtools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/install-pkg-tools.sh') }}
+      - name: Build the package tools (pinned commits and digests)
+        env:
+          CACHED: ${{ steps.pkgtools.outputs.cache-hit }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential autoconf automake libtool libxml2-dev libssl-dev zlib1g-dev libbz2-dev file >/dev/null
+          if [ "$CACHED" != true ]; then bash scripts/install-pkg-tools.sh "$RUNNER_TEMP/pkgtools"; fi
+          echo "$RUNNER_TEMP/pkgtools/bin" >> "$GITHUB_PATH"
       - name: GoReleaser (darwin-arm64 binaries)
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
@@ -115,19 +153,22 @@ jobs:
           version: ${{ env.GORELEASER_VERSION }}
           args: build --clean --single-target ${{ inputs.tag == '' && '--snapshot' || '' }}
         env:
-          GOOS: darwin
-          GOARCH: arm64
+          # GGOOS/GGOARCH pick the --single-target platform without also
+          # cross-compiling the before hooks (go run ./tools/provenance).
+          GGOOS: darwin
+          GGOARCH: arm64
           GORELEASER_CURRENT_TAG: ${{ inputs.tag }}
           SMCP_BUILD_REFSERVER: "1"
           SMCP_SBOM: ${{ inputs.tag != '' && '1' || '' }}
-      - name: pkgbuild and productbuild
+      - name: Build the .pkg (build-pkg-linux.sh)
         env:
           TAG: ${{ inputs.tag }}
         run: |
           version=$(jq -r .version build/dist/metadata.json)
           if [ -n "$TAG" ] && [ "$version" != "${TAG#v}" ]; then echo "::error::binaries have version $version, not ${TAG#v}"; exit 1; fi
-          bash packaging/installers/macos/build-pkg.sh "$version" build/dist build/installers
-          pkgutil --payload-files build/installers/*.pkg
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) bash packaging/installers/macos/build-pkg-linux.sh "$version" build/dist build/installers
+          xar -t -f build/installers/*.pkg
+          sha256sum build/installers/*.pkg | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installers-macos
@@ -180,22 +221,15 @@ jobs:
           docker run --rm -v "$PWD:/w:ro" -w /w -e VERSION -e PKG="$1" fedora:44 bash -c \
             'dnf install -y -q procps-ng util-linux shadow-utils findutils >/dev/null && bash scripts/package-smoke.sh "$PKG" "$VERSION"'
 
+  # The .pkg installed on a real Mac; does not block (a runner that never
+  # starts is a warning, a failed test fails the run). The release runs
+  # installers-macos-smoke.yml itself, after publishing (release.yml).
   smoke-macos:
-    name: smoke pkg (arm64)
+    name: smoke pkg
     needs: [build-linux, build-macos]
-    runs-on: macos-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: installers-macos
-          path: build/installers
-      - name: Install with installer, exercise, remove as docs/install.md says
-        env:
-          VERSION: ${{ needs.build-linux.outputs.version }}
-        run: |
-          set -- build/installers/smcp_*_darwin_arm64.pkg
-          bash scripts/package-smoke.sh "$1" "$VERSION"
+    if: inputs.macos-smoke
+    uses: ./.github/workflows/installers-macos-smoke.yml
+    with:
+      version: ${{ needs.build-linux.outputs.version }}
+    permissions:
+      contents: read
