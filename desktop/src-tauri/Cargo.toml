@@ -1,0 +1,58 @@
+# Desktop Application (E-34, SRS FR-20). Direct dependencies are pinned to
+# exact versions that were at least two weeks old when chosen; Cargo.lock
+# is committed. The Tauri updater and shell plugins are deliberately absent
+# (FR-20.13, SR-2-5): updates are verified with the release key, and the
+# application runs only fixed argument vectors through std::process.
+[package]
+name = "smcp-desktop"
+version = "0.1.0"
+description = "Secure MCP Gateway desktop application (tray, service control, console window)"
+license = "Apache-2.0"
+edition = "2021"
+rust-version = "1.90"
+publish = false
+
+[lib]
+name = "smcp_desktop"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "smcp-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.1", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.1", features = ["tray-icon", "image-png"] }
+tauri-plugin-single-instance = "=2.5.2"
+tauri-plugin-notification = "=2.5.1"
+tauri-plugin-opener = "=2.7.0"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.150"
+url = "=2.5.8"
+rustls-webpki = { version = "=0.103.15", default-features = false, features = ["std", "ring"] }
+rustls-pki-types = { version = "=1.15.1", features = ["std"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "=0.2.189"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "=0.6.4"
+block2 = "=0.6.2"
+objc2-foundation = { version = "=0.3.2", features = ["NSString", "NSURLAuthenticationChallenge", "NSURLProtectionSpace", "NSURLCredential", "NSURLSession", "NSArray", "NSData"] }
+objc2-security = { version = "=0.3.2", features = ["SecTrust", "SecCertificate", "SecBase"] }
+objc2-core-foundation = { version = "=0.3.2", features = ["CFArray", "CFData"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "=2.0.2", features = ["v2_40"] }
+
+[dev-dependencies]
+rcgen = { version = "=0.14.10", default-features = false, features = ["crypto", "pem", "ring"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

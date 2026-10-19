@@ -23,6 +23,7 @@
 //	go test -json -coverpkg=./... -coverprofile=build/cover.out ./... > build/go-test.json
 //	go run ./tools/reqreport -in build/go-test.json -coverprofile build/cover.out
 //	go run ./tools/reqreport history -status build/status.json -history site-data/history.json
+//	go run ./tools/reqreport cargo -test-output cargo-test.txt -claims claims.tsv -package desktop/macos -out build/desktop-macos-test.json
 //
 // It writes <out>.json, <out>.md and, unless -status is empty, the status
 // document (schema 1). The exit status is 1 when any requirement is failing.
@@ -48,6 +49,13 @@ func main() {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "reqreport label:", err)
 			os.Exit(2)
+		}
+		os.Exit(code)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "cargo" {
+		code, err := runCargo(os.Args[2:], os.Stdout)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "reqreport cargo:", err)
 		}
 		os.Exit(code)
 	}

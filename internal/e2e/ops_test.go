@@ -215,6 +215,46 @@ func journalEvents(t *testing.T, stateDir string) []audit.Event {
 	return evs
 }
 
+// TestDesktopMetricsOnRunningGateway scrapes a running Standalone Gateway
+// for the desktop tray's gauges (FR-20.5): smcp_release_enforced is 0 for
+// the "not enforced" label, and smcp_emergency_stop follows the emergency
+// stop set and cleared through the control API. The Enforced value (1) is
+// covered by internal/metrics.TestDesktopGauges; the first-run setup half
+// of FR-20.5 comes with the setup window.
+func TestDesktopMetricsOnRunningGateway(t *testing.T) {
+	reqtest.Partial(t, "FR-20.5")
+	mport := freePort(t)
+	f := startOps(t, fmt.Sprintf("[metrics]\nenabled = true\naddress = \"127.0.0.1:%d\"\n", mport), nil)
+	scrape := func() string {
+		t.Helper()
+		resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/metrics", mport))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return string(b)
+	}
+	want := func(lines ...string) {
+		t.Helper()
+		expo := scrape()
+		for _, l := range lines {
+			if !strings.Contains(expo, l+"\n") {
+				t.Fatalf("metrics lack %q\n%s", l, expo)
+			}
+		}
+	}
+	want("smcp_release_enforced 0", "smcp_emergency_stop 0")
+	if st, body := f.admin("POST", "/admin/v1/stop", f.operator, map[string]any{"reason": "desktop metrics test"}); st != 200 {
+		t.Fatalf("stop: %d %v", st, body)
+	}
+	want("smcp_release_enforced 0", "smcp_emergency_stop 1")
+	if st, body := f.admin("POST", "/admin/v1/resume", f.operator, map[string]any{}); st != 200 {
+		t.Fatalf("resume: %d %v", st, body)
+	}
+	want("smcp_release_enforced 0", "smcp_emergency_stop 0")
+}
+
 func TestOpsMetricsAndHealthGate(t *testing.T) {
 	// FR-17.4: metrics on the loopback address only; FR-17.5: every metric
 	// of the set after a test run, with no other label names.

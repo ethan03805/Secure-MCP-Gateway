@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Console not opened</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="panel" role="alert">
+  <h1>The console was not opened</h1>
+  <p>The admin listener did not present a certificate issued by this installation's Gateway CA for the configured address, or the CA file could not be read. The desktop application opens the console only over a connection it can verify, so nothing from that listener was shown and you cannot continue past this page.</p>
+  <h2>What to check</h2>
+  <ul>
+    <li>The Gateway is running (tray icon) and the admin listener address in Settings is the one in your Gateway configuration (<code>[admin_listener] address</code>).</li>
+    <li>The CA file in Settings is the installation's <code>tls/ca.crt</code>. Leave it empty for the Standalone default.</li>
+    <li>After a CA rotation, close this window and open the console again from the tray.</li>
+  </ul>
+  <p>The window title names the check that failed. See the desktop guide, <code>docs/desktop.md</code>, section "Console window".</p>
+</main>
+</body>
+</html>

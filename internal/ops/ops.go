@@ -180,6 +180,9 @@ func Attach(ctx context.Context, a *app.App, o Options) (*Runtime, error) {
 			return out
 		},
 		PendingApproval: o.PendingApprovals,
+		// FR-20.5: the desktop tray reads these without a credential.
+		ReleaseEnforced: func() bool { return a.Profile.Label == "enforced" },
+		EmergencyStop:   func() bool { return a.Gateway != nil && a.Gateway.Stopped() },
 	})
 	a.Evidence.AddObserver("metrics", r.metrics, 4096)
 	a.Journal.SetFlushObserver(r.metrics.Flush.Observe)

@@ -1,0 +1,129 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --text: #1c2024;
+  --muted: #5b636e;
+  --line: #d4d8de;
+  --accent: #1f5fbf;
+  --error: #b42318;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15181c;
+    --panel: #1d2126;
+    --text: #e8eaed;
+    --muted: #a3abb6;
+    --line: #3a4049;
+    --accent: #7aa7ff;
+    --error: #ff8a80;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.panel {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  background: var(--panel);
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+
+h2 {
+  font-size: 15px;
+  margin: 20px 0 8px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.field.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field.check label {
+  display: inline;
+  margin: 0;
+}
+
+input[type="text"],
+input[type="url"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.help {
+  color: var(--muted);
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.error {
+  color: var(--error);
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.error:empty {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+button {
+  padding: 6px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
