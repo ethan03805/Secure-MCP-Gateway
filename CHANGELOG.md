@@ -12,6 +12,8 @@
 
 - Desktop deep links, notification click-through and start at login (SRS FR-20.28, FR-20.7, FR-20.14, planned for v1.3.0). The app registers only the `smcp` scheme, through the bundler configuration and without the deep-link plugin. It accepts only `smcp://console`, `smcp://approvals` and `smcp://approvals/<UUID>`, which come from the macOS open-URL event or from the arguments on Linux and Windows. An accepted link only focuses the console window at that page, and every other link is ignored. Clicking an approval notification opens the Approvals view on macOS and Linux (notify-rust, the version the notification plugin already uses); the notification has no other action. The new Settings switch Open the app when I log in is off by default. It writes a per-user login item: a launch agent, an XDG autostart entry, or the HKCU Run value.
 
+- CI job `desktop-e2e (linux)` (not required): the debug desktop application in WebKitGTK under Xvfb, driven by tauri-driver, completes first-run setup against the real smcpctl and smcpd and samples process arguments for the passwords every 100 ms. It then checks the configuration, the user unit and the CP-51 metrics, connects and disconnects Claude Code through the client setup window, runs axe in the application's own webview, and opens accepted and refused deep links (`desktop/e2e/webdriver.mjs`).
+
 ## v1.2.0 — 2026-10-19
 
 Third release, built to SRS V1.2 and architecture V2.3 from main after the phase-10 work (32 pull requests since v1.1.0). The tag is made by the procedure in `docs/release-checklist.md`, rehearsed with `v1.2.0-rc.1` on the same commit.

@@ -696,6 +696,82 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Desktop end-to-end on Linux (SRS FR-20.8, FR-20.9, FR-20.5, FR-20.10,
+  # FR-20.15, FR-20.28): the debug application in WebKitGTK under Xvfb,
+  # driven over WebDriver by tauri-driver (desktop/e2e/webdriver.mjs). It
+  # completes first-run setup with the real smcpctl and smcpd (a systemd
+  # user unit on the runner), samples process arguments for the
+  # passwords, connects and disconnects Claude Code, runs axe in the
+  # application's own webview and opens deep links. Changes the runner's
+  # home, so it runs only here. Not a required check.
+  desktop-e2e:
+    name: desktop-e2e (linux)
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.desktop == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      RUST_VERSION: "1.94.0"
+      CARGO_TERM_COLOR: never
+      TAURI_DRIVER_VERSION: "2.1.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: WebKitGTK, its WebDriver, Xvfb and tray libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev \
+            webkit2gtk-driver xvfb dbus-x11 >/dev/null
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+      - name: Cargo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/bin/tauri-driver
+            desktop/src-tauri/target
+          key: desktop-e2e-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ env.TAURI_DRIVER_VERSION }}-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            desktop-e2e-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ env.TAURI_DRIVER_VERSION }}-
+      - name: tauri-driver
+        run: command -v tauri-driver || cargo install tauri-driver --version "$TAURI_DRIVER_VERSION" --locked
+      - name: Build the bundled windows, the application and the Gateway commands
+        run: |
+          (cd desktop && npm ci --no-audit --no-fund && npm run build)
+          (cd desktop/src-tauri && cargo build --locked)
+          go build -o desktop/src-tauri/target/debug/ ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver
+      - name: Drive the application (setup, client setup, deep links)
+        working-directory: desktop
+        env:
+          SMCP_DESKTOP_E2E: "1"
+        run: |
+          # Claude Code is "installed" for detection (its settings file).
+          echo '{"theme":"dark"}' > "$HOME/.claude.json"
+          export APP="$PWD/src-tauri/target/debug/smcp-desktop"
+          dbus-run-session -- xvfb-run -a sh -c '
+            tauri-driver --port 4444 > "$RUNNER_TEMP/tauri-driver.log" 2>&1 &
+            node e2e/webdriver.mjs'
+      - name: Logs
+        if: always()
+        run: |
+          cat "$RUNNER_TEMP/tauri-driver.log" 2>/dev/null | tail -100 || true
+          journalctl --user -u smcpd.service --no-pager 2>/dev/null | tail -50 || true
+
   # Platform installers (E-35, FR-20.24): build the .deb, .rpm and macOS
   # .pkg as snapshots (all on Linux) and install, exercise and remove each
   # one (installers.yml, which the release workflow also runs before
