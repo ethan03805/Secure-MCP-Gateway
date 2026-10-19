@@ -185,7 +185,7 @@ smcpctl uninstall --config ~/smcp/smcp.toml           # services and binaries; k
 smcpctl uninstall --config ~/smcp/smcp.toml --purge   # also configuration, state, keys, journal
 ```
 
-Without `--purge` the configuration, the state directory and the evidence journal stay, so `smcpctl journal verify` still works afterwards. `--purge` asks for the installation ID (`smcpctl keys status` shows it) before deleting. On the Enforced profile it also removes the service identities. Homebrew installs are removed with `brew uninstall smcp` after `smcpctl uninstall`.
+Without `--purge` the configuration, the state directory and the evidence journal stay, so `smcpctl journal verify` still works afterwards. `--purge` asks for the installation ID (`smcpctl keys status` shows it) before deleting. On the Enforced profile it also removes the service identities. Each profile removes only what its own install created: an installation whose configuration selects `[profile] mode = "enforced"` removes the system units, the nftables table `inet smcp`, the AppArmor profiles and the `smcp-srv` setup; any other installation removes only your launchd agent or systemd user unit, so a Standalone uninstall on a host that also has an Enforced installation leaves the Enforced one running. Homebrew installs are removed with `brew uninstall smcp` after `smcpctl uninstall`.
 
 ## Verify an installation
 

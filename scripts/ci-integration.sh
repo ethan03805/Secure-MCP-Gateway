@@ -18,7 +18,7 @@
 #   SMCP_ENFORCED_MODE    profile mode of the sandboxed instance (default
 #                         enforced; "auto" on hosts without systemd or an LSM)
 #   SMCP_ENFORCED_CGROUP_MANAGER  runtime.cgroup_manager for that instance
-#   SMCP_RUN_INSTALLER    1 to run packaging/linux/install-enforced.sh twice
+#   SMCP_RUN_INSTALLER    1 to run smcpctl install --profile enforced twice
 #                         with sudo (default: SMCP_REQUIRE_PREREQS)
 #   SMCP_RUN_SYSTEMD      1 to install packaging/linux and run smcpd.service
 #                         under systemd (scripts/ci-systemd.sh; changes the
@@ -397,12 +397,21 @@ enforced_section() {
     fail "package build of each artifact type (OCI probed with Podman)"
 
   if [ "${SMCP_RUN_INSTALLER:-${SMCP_REQUIRE_PREREQS:-0}}" = 1 ] && sudo -n true 2>/dev/null; then
-    say "Enforced profile: packaging/linux/install-enforced.sh (twice; the second run changes nothing)"
-    sudo -n "$root/packaging/linux/install-enforced.sh" --no-start | tee "$work/install1.log"
-    sudo -n "$root/packaging/linux/install-enforced.sh" --no-start | tee "$work/install2.log"
-    if grep -q '^created\|^updated' "$work/install2.log"; then
-      fail "second installer run changed the host"
-    fi
+    # smcpctl install --profile enforced on this clean host, as the Go test
+    # cmd/smcpctl.TestEnforcedInstallOnHost (FR-13.5: a missing
+    # prerequisite stops it before any change; then the identities,
+    # subordinate ranges, directories, nftables table, AppArmor profiles
+    # and units; FR-13.4: a second run reports every step present and
+    # changes no file). It runs the embedded install-enforced.sh and starts
+    # smcpd.service, which is stopped again until scripts/ci-systemd.sh.
+    say "Enforced profile: smcpctl install --profile enforced (twice; the second run changes nothing)"
+    stage="$work/enforced-bin"
+    mkdir -p "$stage"
+    cp "$bin/smcpd" "$bin/smcpctl" "$sbin/smcp-refserver" "$stage/"
+    go_test SMCP_ENFORCED_HOST_TEST=1 SMCP_ENFORCED_STAGE="$stage" SMCP_SYSTEMD_PORT="${SMCP_SYSTEMD_PORT:-8643}" \
+      SMCP_ENFORCED_ADMIN_PW="$work/admin.pw" SMCP_ENFORCED_APPROVER_PW="$work/approver.pw" \
+      -count=1 -run '^TestEnforcedInstallOnHost$' ./cmd/smcpctl/ || fail "smcpctl install --profile enforced"
+    sudo -n systemctl stop smcpd.service
     if [ -d /sys/kernel/security/apparmor ]; then
       say "Enforced profile: servers run confined by the AppArmor profile smcp-server"
       go_test CGO_ENABLED=0 SMCP_SANDBOX_IT=1 SMCP_SANDBOX_IT_STRICT=$strict SMCP_SANDBOX_IT_APPARMOR=1 \

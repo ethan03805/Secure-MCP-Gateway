@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Enforced profile under real systemd: installs it with
-# `smcpctl install --profile enforced` (FR-13.5: packaging/linux, the
-# bootstrap as smcp-core, /etc/smcp/smcp.toml, smcpd.service started and
-# healthy), runs the install a second time and checks that nothing changed
-# (FR-13.4), adds the sandbox probe and a secret vault to the installed
+# Enforced profile under real systemd: runs `smcpctl install --profile
+# enforced` (after scripts/ci-integration.sh installed it and checked
+# FR-13.5 and FR-13.4 with cmd/smcpctl.TestEnforcedInstallOnHost; this run
+# starts smcpd.service), checks that a Standalone uninstall leaves the
+# Enforced installation intact, adds the sandbox probe and a secret vault to the installed
 # configuration, restarts smcpd.service with runtime.run_as = "smcp-srv", makes tool
 # calls that run in rootless Podman containers of the separate server
 # identity smcp-srv (CP-46), delivers an S3 secret file to a server in an
@@ -53,7 +53,25 @@ ci=/var/lib/smcp/ci     # files this script adds: vault passphrase, policies
 as_core() { sudo -n -u smcp-core env XDG_RUNTIME_DIR=/run/smcp HOME=/var/lib/smcp/home/smcp-core "$@"; }
 probe_bin=/srv/smcp-itest-bin
 
-say "smcpctl install --profile enforced (FR-13.5)"
+repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+# host_test NAME... runs Go tests of cmd/smcpctl against this host; their
+# events go to SMCP_ITEST_RESULTS for the status job.
+host_test() {
+  local re
+  re="^($(IFS='|'; echo "$*"))\$"
+  if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
+    (cd "$repo" && go test -json -count=1 -run "$re" ./cmd/smcpctl/) \
+      | tee -a "$SMCP_ITEST_RESULTS" | jq -rj 'select(.Action == "output") | .Output'
+  else
+    (cd "$repo" && go test -v -count=1 -run "$re" ./cmd/smcpctl/)
+  fi
+}
+
+# scripts/ci-integration.sh has already installed the Enforced profile on
+# a clean host with cmd/smcpctl.TestEnforcedInstallOnHost (FR-13.5,
+# FR-13.4) and stopped smcpd.service; this run starts it again (on a host
+# where nothing was installed yet, it installs).
+say "smcpctl install --profile enforced (starts smcpd.service)"
 stage="$work/systemd-bin"
 mkdir -p "$stage"
 cp "$bin/smcpd" "$bin/smcpctl" "$stage/"
@@ -67,33 +85,17 @@ if ! sudo -n "$stage/smcpctl" "${install_args[@]}" > "$work/systemd-install.log"
   fail "smcpctl install --profile enforced"
 fi
 grep -v '^present' "$work/systemd-install.log" || true
-grep -Eq '^(created|present|updated) file /etc/systemd/system/smcpd.service' "$work/systemd-install.log" \
-  || fail "smcpctl install did not install smcpd.service"
-grep -q "^created configuration $cfg" "$work/systemd-install.log" || fail "smcpctl install did not write $cfg"
+grep -Eq "^(created|present) configuration $cfg" "$work/systemd-install.log" || fail "smcpctl install did not report $cfg"
 grep -q '^health: ' "$work/systemd-install.log" || fail "smcpctl install did not report the health of the started Gateway"
 if grep -q '^health: fail-closed' "$work/systemd-install.log"; then fail "the installed Gateway is fail-closed"; fi
 sudo -n systemctl is-active --quiet smcpd.service || fail "smcpctl install did not start smcpd.service"
-[ "$(sudo -n stat -c '%U:%G %a' "$cfg")" = "root:smcp 640" ] || fail "$cfg is $(sudo -n stat -c '%U:%G %a' "$cfg"), not root:smcp 640"
-[ "$(sudo -n stat -c '%U' "$state_root/journal")" = smcp-core ] || fail "the state directory is not smcp-core's"
-if [ -d /sys/kernel/security/apparmor ]; then
-  sudo -n aa-status 2>/dev/null | grep -qx '   smcpd' || sudo -n aa-status 2>/dev/null | grep -q ' smcpd$' || fail "AppArmor profile smcpd is not loaded"
-  echo "AppArmor profile smcpd is loaded"
-fi
 
-say "a second smcpctl install changes nothing (FR-13.4)"
-digests() {
-  { sudo -n find "$cfg" /var/lib/smcp/policy "$state_root/keys" "$state_root/tls" /etc/systemd/system/smcpd.service \
-    -type f -exec sha256sum {} + 2>/dev/null || true; } | sort
-}
-digests > "$work/install-digests-1"
-[ -s "$work/install-digests-1" ] || fail "no installed files to compare"
-# shellcheck disable=SC2024 # the log belongs to the runner
-sudo -n "$stage/smcpctl" "${install_args[@]}" > "$work/systemd-install2.log" 2>&1 || { cat "$work/systemd-install2.log" >&2; fail "second smcpctl install"; }
-if grep -E '^(created|updated) ' "$work/systemd-install2.log"; then fail "the second smcpctl install changed the host"; fi
-grep -q "^present configuration $cfg" "$work/systemd-install2.log" || fail "the second smcpctl install did not report the configuration present"
-digests > "$work/install-digests-2"
-diff "$work/install-digests-1" "$work/install-digests-2" || fail "the second smcpctl install changed configuration, keys, policy or units"
-echo "second run: $(grep -c '^present' "$work/systemd-install2.log") steps present, none created or updated"
+# A Standalone installation's uninstall and purge, run as this user (who
+# has passwordless sudo), leave the Enforced installation intact: the
+# nftables table inet smcp, the AppArmor profiles, the system units, the
+# service identities and the running smcpd.service.
+say "a Standalone uninstall beside the Enforced installation"
+SMCP_ENFORCED_HOST_TEST=1 host_test TestStandaloneUninstallKeepsEnforcedHost || fail "Standalone uninstall beside the Enforced installation"
 
 say "server identity smcp-srv (CP-46)"
 srv_uid=$(id -u smcp-srv)
@@ -294,7 +296,6 @@ sudo -n systemctl disable --quiet smcpd.service
 # above) and its passphrase file are read as every CP-46 identity other
 # than smcp-core, the identity smcpd and its Secret Broker run as.
 say "the vault is readable by the Secret Broker's identity only (SR-2.13-3)"
-repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 vault_env=(SMCP_VAULT_IT_DIR="$state_root/vault" SMCP_VAULT_IT_FILES="$ci/vault-pass")
 if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
   (cd "$repo" && env "${vault_env[@]}" go test -json -count=1 -run '^TestIntegrationVaultIsolation$' ./internal/secrets/) \
@@ -304,15 +305,8 @@ else
 fi
 
 # Uninstall and purge on this host (FR-13.11 Enforced half, FR-13.12),
-# as the Go test cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost, whose
-# events go to SMCP_ITEST_RESULTS for the status job. It removes the
-# installation, so it comes last.
+# as the Go test cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost. It
+# removes the installation, so it comes last.
 say "uninstall and purge of the Enforced installation (FR-13.11, FR-13.12)"
-repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-if [ -n "${SMCP_ITEST_RESULTS:-}" ]; then
-  (cd "$repo" && SMCP_ENFORCED_HOST_TEST=1 go test -json -count=1 -run '^TestEnforcedUninstallAndPurgeOnHost$' ./cmd/smcpctl/) \
-    | tee -a "$SMCP_ITEST_RESULTS" | jq -rj 'select(.Action == "output") | .Output' || fail "uninstall and purge"
-else
-  (cd "$repo" && SMCP_ENFORCED_HOST_TEST=1 go test -v -count=1 -run '^TestEnforcedUninstallAndPurgeOnHost$' ./cmd/smcpctl/) || fail "uninstall and purge"
-fi
+SMCP_ENFORCED_HOST_TEST=1 host_test TestEnforcedUninstallAndPurgeOnHost || fail "uninstall and purge"
 say "passed"

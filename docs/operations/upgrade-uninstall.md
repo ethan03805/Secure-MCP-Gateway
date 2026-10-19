@@ -41,7 +41,7 @@ smcpctl uninstall [--bin-dir DIR] [--stop-cmd CMD]
 Without `--config`, and with no `smcp.toml` in the working directory, it uses the configuration that `smcpctl install` wrote (`/etc/smcp/smcp.toml`, then the Standalone CP-46 path).
 
 1. Stops the Gateway (service unit or `--stop-cmd`) and waits until the control API stops answering.
-2. Unloads the launchd agent or disables the systemd units, then removes the launchd plist or the systemd units (`smcpd.service`, `smcp-nftables.service`) and `/etc/smcp/smcp.nft`, the nftables table `inet smcp` (Linux, with `sudo -n` when not root), the AppArmor profiles `/etc/apparmor.d/smcpd` and `/etc/apparmor.d/smcp-*` (Linux), and the binaries `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-connect` and their `.prev` copies in `--bin-dir`.
+2. Removes what the installation's profile created. Enforced (`[profile] mode = "enforced"`): disables and removes the systemd units (`smcpd.service`, `smcp-nftables.service`) and `/etc/smcp/smcp.nft`, the nftables table `inet smcp` (with `sudo -n` when not root), the AppArmor profiles `/etc/apparmor.d/smcpd` and `/etc/apparmor.d/smcp-*`, and the `smcp-srv` sudoers rule, unit drop-in and lingering. Any other profile mode: unloads and removes the launchd agent or the systemd user unit only, and leaves the system units, the nftables table, the AppArmor profiles and the service identities of an Enforced installation on the same host in place. Then it removes the binaries `smcpd`, `smcpctl`, `smcp-refserver`, `smcp-connect` and their `.prev` copies in `--bin-dir`.
 3. Keeps the evidence journal, the evidence public keys, the backup archives, the configuration and the state directory, and prints how to verify the kept journal later:
 
 ```
@@ -54,7 +54,7 @@ smcpctl journal verify --dir <state>/journal --key <state>/keys/evidence-genesis
 smcpctl uninstall --purge
 ```
 
-Prints the installation ID and asks the operator to type it; any other input stops the purge before anything is removed. Then it performs the uninstall steps, prints the name and SHA-256 of the last journal segment (record it), and deletes the configuration file, the policy file, the state directory (keys, journal, TLS material), the diagnostic log files, and on Linux the CP-46 service identities (`smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, `smcp-srv`) that exist. Backup archives are kept; delete them separately.
+Prints the installation ID and asks the operator to type it; any other input stops the purge before anything is removed. Then it performs the uninstall steps, prints the name and SHA-256 of the last journal segment (record it), and deletes the configuration file, the policy file, the state directory (keys, journal, TLS material), the diagnostic log files, and, for an Enforced installation, the CP-46 service identities (`smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, `smcp-srv`) that exist. Backup archives are kept; delete them separately.
 
 ## Errors
 

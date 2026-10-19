@@ -27,7 +27,9 @@ import (
 // removed). FR-13.6 asks for both runners: the status job merges the
 // results of this test only when both platforms reported one, so each run
 // claims the requirement in full. FR-13.4 also needs the Enforced profile
-// (scripts/ci-systemd.sh) and FR-13.11 the Enforced uninstall: partial.
+// and FR-13.11 the Enforced uninstall: partial here;
+// tools/reqreport.TestInstallProfilesEvidence claims both in full from the
+// results of this test on both runners and of the Enforced host tests.
 func TestInstallStandaloneServiceManager(t *testing.T) {
 	if os.Getenv("SMCP_INSTALL_SERVICE_TEST") != "1" {
 		t.Skip("changes the user's service manager; set SMCP_INSTALL_SERVICE_TEST=1 on a disposable runner")

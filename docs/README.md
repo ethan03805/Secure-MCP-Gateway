@@ -45,6 +45,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Hostile backend fixtures](hostile-fixtures.md) | FR-19.1, FR-19.2, Appendix L | `internal/hostile`, `cmd/smcp-hostile`, the CI job "hostile" |
 | [Acceptance scenarios, release label and performance](acceptance.md) | FR-19.3, FR-19.4, FR-11, FR-10.2, FR-10.11 | AT-01 to AT-21 and where they run, the release label, `smcp-workload` and the CI job "perf", stage timing spans |
 | [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)), runbook execution records and the [gap list](verification/gap-list.md) of unverified requirements |
+| [Continuous integration](ci.md) | — | For contributors: the required checks, and which CI jobs a pull request that changes only documentation skips |
 
 ## Client quick starts (FR-18.3)
 

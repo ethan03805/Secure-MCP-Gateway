@@ -1,6 +1,10 @@
-# Continuous integration. The job names srs, go, lint, site, security and
-# linux-integration are required status checks on main; renaming one breaks
-# branch protection, so keep them stable.
+# Continuous integration. The job names srs, go, lint, site, security,
+# linux-integration and console are required status checks on main;
+# renaming one breaks branch protection, so keep them stable. Do not add
+# paths-ignore to this workflow: a required check that never reports
+# blocks the pull request. Pull requests that change only documentation
+# skip heavy jobs through the changes job instead (docs/ci.md); a new
+# heavy job gets the same needs: changes and if: as console.
 #
 # Triggers: pull requests, pushes to main, pushes of release tags (v*) and
 # workflow_dispatch. The dispatch trigger exists because commits pushed with
@@ -36,6 +40,58 @@ env:
   GOVULNCHECK_VERSION: v1.9.0
 
 jobs:
+  # Which areas a pull request changes (docs/ci.md). Pull requests that
+  # change only Markdown documentation, srs_build/ or site/ skip the heavy
+  # jobs below; a job skipped by its if: reports "skipped", which satisfies
+  # a required check. Every other trigger runs everything (heavy=true,
+  # go=full), and so does any job whose changes job did not succeed.
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      heavy: ${{ steps.classify.outputs.heavy }}
+      go: ${{ steps.classify.outputs.go }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Classify the changed files
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          # heavy: true runs every job; false skips linux-integration,
+          # install-standalone, console, graph and hostile.
+          # go: full (race, coverage), light (no race, no coverage: the Go
+          # tests read docs/, the root Markdown files, srs_build/ and
+          # site/data/) or skip (site/ only).
+          heavy=true go=full
+          # A pull_request run checks out the merge commit of the head into
+          # the current base: HEAD^1 is the base, so the diff is exactly what
+          # merging the pull request changes.
+          if [ "$EVENT" = pull_request ] && git rev-parse -q --verify 'HEAD^2' >/dev/null &&
+             files=$(git -c core.quotePath=false diff --no-renames --name-only 'HEAD^1' HEAD) && [ -n "$files" ]; then
+            heavy=false go=skip
+            while IFS= read -r f; do
+              case "$f" in
+                site/data/*) [ "$go" = full ] || go=light ;;
+                site/*) ;;
+                docs/*.md | srs_build/*) [ "$go" = full ] || go=light ;;
+                */*) heavy=true go=full ;;
+                *.md) [ "$go" = full ] || go=light ;;
+                *) heavy=true go=full ;;
+              esac
+            done <<<"$files"
+            { echo "Changed files:"; echo '```'; echo "$files"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+          echo "heavy=$heavy go=$go"
+          echo "**heavy=$heavy go=$go** (docs/ci.md)" >> "$GITHUB_STEP_SUMMARY"
+
   srs:
     name: srs
     runs-on: ubuntu-24.04
@@ -54,6 +110,8 @@ jobs:
 
   go:
     name: go
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.go != 'skip') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -90,14 +148,24 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/pyload"
           "$RUNNER_TEMP/pyload/bin/pip" install --no-cache-dir -r internal/research/testdata/pyload/requirements.txt
           echo "SMCP_RESEARCH_PYTHON=$RUNNER_TEMP/pyload/bin/python" >> "$GITHUB_ENV"
+      # go=light (a pull request that changes only documentation, the SRS
+      # or site data; docs/ci.md): every test, without -race and coverage.
       - name: Test (race, coverage) and map results to requirement IDs (FR-12.10)
         id: test
+        env:
+          GO_MODE: ${{ needs.changes.outputs.go }}
         run: |
           mkdir -p build
           rc=0
-          go test -race -json -coverpkg=./... -coverprofile=build/cover.out ./... > build/go-test.json || rc=$?
-          echo "rc=$rc" >> "$GITHUB_OUTPUT"
-          go run ./tools/reqreport -in build/go-test.json -coverprofile build/cover.out
+          if [ "$GO_MODE" = light ]; then
+            go test -json ./... > build/go-test.json || rc=$?
+            echo "rc=$rc" >> "$GITHUB_OUTPUT"
+            go run ./tools/reqreport -in build/go-test.json
+          else
+            go test -race -json -coverpkg=./... -coverprofile=build/cover.out ./... > build/go-test.json || rc=$?
+            echo "rc=$rc" >> "$GITHUB_OUTPUT"
+            go run ./tools/reqreport -in build/go-test.json -coverprofile build/cover.out
+          fi
           cat build/reqreport.md >> "$GITHUB_STEP_SUMMARY"
           exit "$rc"
       - name: Output of failed tests
@@ -213,6 +281,8 @@ jobs:
 
   linux-integration:
     name: linux-integration
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -268,6 +338,8 @@ jobs:
   # required check.
   install-standalone:
     name: install-standalone (${{ matrix.os }})
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     strategy:
       fail-fast: false
       matrix:
@@ -314,6 +386,8 @@ jobs:
   # FR-8.34) go to the status job.
   console:
     name: console
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     # The graph mirror for the G-14 investigation test (console/e2e/
@@ -475,6 +549,8 @@ jobs:
   # Community Edition in a service container. Not a required check.
   graph:
     name: graph
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
@@ -534,6 +610,8 @@ jobs:
   # build/hostile.json; the job still succeeds. Not a required check.
   hostile:
     name: hostile
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -946,6 +1024,18 @@ jobs:
               echo "no $f results"
             fi
           done
+          # FR-13.4 and FR-13.11 in both profiles: the Standalone runs on
+          # macOS and Ubuntu and the Enforced run of linux-integration,
+          # read together by tools/reqreport.TestInstallProfilesEvidence.
+          if [ -s build/install-standalone-macos-test.json ] && [ -s build/install-standalone-linux-test.json ] && [ -s build/linux-integration-test.json ]; then
+            SMCP_INSTALL_EVIDENCE_MACOS="$PWD/build/install-standalone-macos-test.json" \
+            SMCP_INSTALL_EVIDENCE_LINUX="$PWD/build/install-standalone-linux-test.json" \
+            SMCP_INSTALL_EVIDENCE_ENFORCED="$PWD/build/linux-integration-test.json" \
+              go test -json -count=1 -run '^TestInstallProfilesEvidence$' ./tools/reqreport/ > build/install-profiles-test.json || true
+            cat build/install-profiles-test.json >> build/all-test.json
+          else
+            echo "install results missing for a profile; FR-13.4 and FR-13.11 not combined"
+          fi
           if [ "$merged" = 1 ]; then
             go run ./tools/reqreport -in build/all-test.json -coverprofile build/cover.out -fail-on-failing=false
           fi
