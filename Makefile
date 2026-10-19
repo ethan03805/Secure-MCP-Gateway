@@ -125,6 +125,7 @@ status: ## Full tests with coverage, then build/reqreport.{json,md} and build/st
 hostile: ## Hostile backend fixture suite (SRS Appendix L); writes build/hostile.json and build/hostile.md
 	@mkdir -p $(BUILD)
 	$(GO) test -tags hostile -count=1 -run TestHostileFixtures ./internal/hostile/
+	$(GO) test -tags hostile -count=1 -run TestHostileHTTPFixtures ./internal/hostile/
 	@cat $(BUILD)/hostile.md
 
 .PHONY: conformance
