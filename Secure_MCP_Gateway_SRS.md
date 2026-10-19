@@ -7,7 +7,7 @@
 | Date | 2026-10-16 (America/Chicago) |
 | Owner | netrisk |
 | System of Interest | Secure MCP Gateway (local, single computer) |
-| Architecture | `ArchitectureV2.md` V2.5 draft — elements E-01…E-36 (E-34 to E-36 planned for v1.3.0), functions F-01…F-109, interfaces X-01…X-20 and I-01…I-43, GUI modules G-01…G-15, data stores D-01…D-16 |
+| Architecture | `ArchitectureV2.md` V2.6 draft — elements E-01…E-36 (E-34 to E-36 planned for v1.3.0), functions F-01…F-109, interfaces X-01…X-20 and I-01…I-43, GUI modules G-01…G-15, data stores D-01…D-16 |
 | Security control root | `MCP_Gateway_Security_SRS.md` (V1 security-control baseline; cited as `SEC`) |
 | Protocol baseline | MCP specification and schema 2026-07-28 (`mcp-spec/2026-07-28/`; cited as `MCP:` and `SCHEMA:`) |
 | Skill | `Skills.md` (INCOSE GtWR + project rules) |
@@ -61,7 +61,7 @@ Per the owner, the Gateway is a local secure MCP gateway on a single computer wh
 | Remote (hosted) MCP servers as backends | Not supported. Every backend is a packaged local server launched by E-15. A manifest naming a remote URL as the server endpoint is rejected (FR-14.4). Planned for v1.3.0: hosted servers imported from the IBM ContextForge catalog, reached only through the bundled ContextForge instance, which is opt-in (FR-22). |
 | MCP resources and prompts | Not served northbound and not requested southbound. The Gateway relays tools only (FR-1.11, SR-5.6-1). |
 | Sampling, elicitation and roots | Refused unless the MRTR Relay Profile is enabled (Section 1.5). |
-| Windows hosts | Not supported. |
+| Windows hosts | Not supported in this release; current releases do not build for Windows. Planned for v1.3.0 (FR-21): per-user, machine and WSL2 installation modes, each labelled "not enforced" (SR-4-2). |
 | An agent's non-MCP native tools | Not mediated. Built-in shell, file, browser and connector tools of an agent bypass the Gateway; the lockdown profiles (FR-15) reduce this for local harnesses and the Security Limitations document (FR-18.2) states it. |
 | Running the Gateway inside a vendor's cloud agent machine | Not a control and not supported; cloud agents use the Remote Access profile. |
 
@@ -112,6 +112,7 @@ A **platform profile** is always active; exactly one of the two applies to an in
 | Linux x86_64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd (system units for Enforced, user unit for Standalone) | Enforced only | Enforced only |
 | Linux arm64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd | Enforced only | Enforced only |
 | macOS amd64 | Standalone (archive built; not part of the qualified set) | GitHub Releases archive | launchd user agent | No | No |
+| Windows x64 and arm64 (planned v1.3.0, FR-21) | Standalone restrictions and the label "not enforced" in every mode (SR-4-2) | GitHub Releases zip archive, `install.ps1`, the `.msi` of FR-20.20 | Task Scheduler logon task or Run key (per-user mode); Windows service under `NT SERVICE\smcpd` (machine mode); systemd inside a WSL2 distribution (WSL2 mode) | Machine mode: AppContainer and Job Object per server revision, partial (FR-21.13); WSL2 mode: rootless Podman | Machine mode: Windows Filtering Platform filters and the loopback broker (FR-21.14); WSL2 mode: nftables |
 
 The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The recorded reference hardware of FR-11 is the GitHub-hosted `ubuntu-24.04` standard runner class (x86_64, 4 vCPU, 16 GiB, SSD); the processor model varies within the class, so each performance report records the processor model, processor count, memory and disk of its run (`docs/reference-hardware.md`). The supported client matrix is Appendix K.
 
@@ -121,7 +122,7 @@ Planned for v1.3.0 (FR-20): native installers and a desktop tray application, di
 |---|---|---|
 | macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView; arm64 only (no Intel or universal build; Intel Macs keep the darwin-amd64 archive) |
 | Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`) as release assets (signed APT and RPM repositories deferred, FR-20.32), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
-| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is specified in `srs_build/req7-windows.txt` | Tauri 2, WebView2 |
+| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is FR-21 (service FR-21.6, archives FR-21.3) | Tauri 2, WebView2 |
 
 ## 2. Conventions and traceability rules
 
@@ -195,6 +196,7 @@ All selections carry OSI-approved licenses. Exact versions, digests and transiti
 | Host OS (Enforced profile) | Linux, kernel ≥ 6.8 (for example Ubuntu 24.04 LTS or Debian 13), x86_64 or arm64, with cgroup v2 and unprivileged user namespaces | GPL-2.0 | All, X-07 | Isolation primitives the Enforced profile relies on |
 | Host OS (Standalone profile) | macOS 14 or later on arm64; Linux without the Enforced prerequisites | Proprietary (macOS); GPL-2.0 | All except E-16, E-18 network mediation | Owner decision: the product runs on the developer's own computer, labelled "not enforced" |
 | Service management | systemd (Linux); launchd user agent (macOS) | LGPL-2.1+; part of macOS | All | Ordering, restart, sandboxing directives |
+| Host OS and service management (Windows, planned v1.3.0) | Windows 11 23H2 or later (x64, arm64), Windows Server 2022 and 2025 (x64); Task Scheduler (per-user) or the Service Control Manager (machine); optionally WSL2 with a 6.18 LTS kernel | Proprietary (Windows); GPL-2.0 (WSL2 kernel) | All, X-07 | Owner decision of 2026-10-18 (FR-21). Native isolation uses AppContainer, Job Objects, the Windows Filtering Platform and DPAPI through `golang.org/x/sys/windows` (BSD-3-Clause) |
 | Implementation language | **Go** 1.26 | BSD-3-Clause | E-01…E-33 except E-24 front end | One memory-safe language for the core; strong concurrency, static binaries |
 | MCP protocol | Official MCP Go SDK (`modelcontextprotocol/go-sdk`) in stateless mode (Section 3.3, risk 1) | Apache-2.0 (with retained MIT notices) | E-02, E-10, E-33 | Serves both protocol eras on one handler |
 | JSON Schema validation | `santhosh-tekuri/jsonschema` v6 | Apache-2.0 | E-05, E-09, E-11, E-13, E-14 | Supports 2020-12 and draft-07; no remote `$ref` by default |
@@ -7244,7 +7246,7 @@ The requirements of this section are planned for the release named in each recor
 
 ### FR-20 Desktop application and platform installers
 
-Owner decision of 2026-10-18: the product gets a desktop application and native installers so that a person can install, run and operate the Gateway without a terminal. The Desktop Application (E-34) is a Tauri 2 tray application for macOS, Linux and Windows; the Platform Installers (E-35) are a macOS `.pkg` and `.dmg`, Linux `.deb`, `.rpm` and AppImage packages, and a Windows `.msi`. Installers are verified with the project's minisign signature, Sigstore bundle and SHA-256 checksums; platform code signing, notarization and MSIX are deferred (Appendix N) and are additive when enabled. The Windows runtime of `smcpd` itself (service, paths, listeners) is specified separately in `srs_build/req7-windows.txt`; this section relies on it for Windows and does not restate it. The desktop application holds no more authority than the console: every control-API operation is performed in the console window under the user's own console sign-in.
+Owner decision of 2026-10-18: the product gets a desktop application and native installers so that a person can install, run and operate the Gateway without a terminal. The Desktop Application (E-34) is a Tauri 2 tray application for macOS, Linux and Windows; the Platform Installers (E-35) are a macOS `.pkg` and `.dmg`, Linux `.deb`, `.rpm` and AppImage packages, and a Windows `.msi`. Installers are verified with the project's minisign signature, Sigstore bundle and SHA-256 checksums; platform code signing, notarization and MSIX are deferred (Appendix N) and are additive when enabled. The Windows runtime of `smcpd` itself (host versions, service, directories, listeners and the "not enforced" label) is FR-21 (FR-21.1, FR-21.5, FR-21.6, FR-21.8, SR-4-2); this section relies on it for Windows and does not restate it. The desktop application holds no more authority than the console: every control-API operation is performed in the console window under the user's own console sign-in.
 
 #### FR-20 — Desktop application and platform installers
 
@@ -7266,7 +7268,7 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 |---|---|
 | ID | FR-20.1 |
 | Parent ID | FR-20 — Desktop application and platform installers |
-| Statement | The Desktop Application (E-34) **SHALL** be built with Tauri 2 from source in the Gateway repository and **SHALL** run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 10 22H2 or later and Windows 11 on x86_64 (WebView2), where it controls the Windows service defined in `srs_build/req7-windows.txt`. On macOS the application **SHALL** be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6). |
+| Statement | The Desktop Application (E-34) **SHALL** be built with Tauri 2 from source in the Gateway repository and **SHALL** run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on the x64 Windows hosts of FR-21.1 (WebView2), where it controls the Windows service of FR-21.6. On macOS the application **SHALL** be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6). |
 | Allocation | Elements: E-34 Desktop Application; Functions: F-100; External interfaces: X-07 |
 | Verification Method | Test |
 | Verification Statement | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens. |
@@ -7532,12 +7534,12 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 |---|---|
 | ID | FR-20.20 |
 | Parent ID | FR-20 — Desktop application and platform installers |
-| Statement | The Gateway release **SHALL** publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries and service defined in `srs_build/req7-windows.txt` per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime. |
+| Statement | The Gateway release **SHALL** publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries of FR-21.3 and the machine-mode Windows service of FR-21.6 per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime. |
 | Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
 | Verification Method | Test |
 | Verification Statement | On a GitHub-hosted Windows runner with networking blocked, install the `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that the application starts and that installation succeeded without network access; uninstall from Settings and confirm removal. |
 | Source | OWNER (Windows MSI/MSIX) |
-| Rationale | MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 10 and 11 ship the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB. |
+| Rationale | MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 11 ships the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-20.21 — Installers place files only
@@ -7980,6 +7982,498 @@ Parents are the MUSTs of `MCP_Gateway_Security_SRS.md` whose controls the deskto
 | Verification Statement | Through a test feed, offer an installer with a modified byte, a checksum file with a modified line, a checksum file signed by another key, a bad Sigstore bundle with cosign installed, and an older correctly signed release; confirm each is refused with the failed check named and nothing installed; confirm a correct newer release is verified and started. |
 | Source | SEC 7; SEC 10.7; OWNER (update verification uses the release key) |
 | Rationale | An update channel is a code-execution path into the operator's machine. It must trust exactly the key and workflow identity that the other install paths trust, and never accept a rollback to a release with known flaws. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+## Planned requirements: Windows platform (FR-21, target v1.3.0)
+
+The owner decided on 2026-10-18 that the Gateway (`smcpd`, `smcpctl` and the helper commands) also runs on Windows, next to macOS and Linux, for the desktop app and the automated installers. The desktop app and its installers are specified separately (`srs_build/req6-desktop.txt`); this section specifies the Gateway itself on a Windows host. Every record here carries a target release (Section 2.8): it is planned, is not part of the requirement set of the current release, and does not affect its release label.
+
+**Security posture.** A Windows host cannot provide what the Enforced profile relies on: there is no rootless Podman with user namespaces, no seccomp, no AppArmor or SELinux and no nftables on Windows itself. Windows offers different primitives (AppContainer and Less Privileged AppContainer tokens, Job Objects, the Windows Filtering Platform, virtual service accounts and DACLs), which together contain a backend process less completely than the Linux Enforced sandbox: an AppContainer still reads everything granted to ALL APPLICATION PACKAGES (most of `C:\Windows` and `C:\Program Files`), has no system-call filter, and runs the server's interpreter from the host rather than from a pinned image. A Gateway inside WSL2 can run the Linux Enforced stack, but any process of the Windows user can run `wsl.exe -u root`, so the agent-to-Gateway separation depends on the Windows account the agents run under. Every Windows installation therefore claims the Standalone profile and the label "not enforced" (SR-4-2), and refuses high-risk servers (SR-4-1).
+
+The health causes (`partially_confined`, `state_acl`, `key_protection`, `pipe_squatted`) and reason codes (`SHELL_LAUNCH`, `PATH_REFUSED`) named below enter Appendix B when the target release implements them.
+
+Three Windows installation modes are specified: the **per-user** mode (no elevation; servers run as ordinary child processes, as on macOS), the **machine** mode (a Windows service under a virtual service account; servers contained in AppContainers with Job Object limits and Windows Filtering Platform egress filters), and the **WSL2** mode (the Linux build in a dedicated WSL2 distribution, reached from Windows agents over the loopback listener). In the per-user mode the agents and `smcpd` run as the same account, so an agent can read the Gateway's state whatever its DACL says; DPAPI there protects against copying the state to another account or host, not against the agent. The machine-mode records (FR-21.13, FR-21.14, SR-4.1-3, SR-4.5-3, SR-4.6-2) fix the outcome; the mechanism (who creates AppContainer profiles, loopback exemptions and WFP filters, and with which rights) is confirmed by the spike that `docs/windows-port.md` schedules before the machine mode is built, and a different mechanism with the same outcome is a controlled change.
+
+**Relation to FR-20 and FR-22.** The Desktop Application (E-34) and the `.msi` Platform Installer (E-35) for Windows are specified in FR-20 (FR-20.1, FR-20.20) and run on the x64 hosts of FR-21.1; the application controls the service of FR-21.6 and shows the label of SR-4-2. No desktop application is built for Windows on arm64 in v1.3.0; those hosts use the FR-21.3 zip archive. The bundled ContextForge instance of FR-22 runs on Windows, in every installation mode, as the managed process of FR-22.20 and FR-22.25 inside its own Job Object (FR-21.12) and not in an AppContainer, so the health cause `contextforge_unconfined` applies while it runs, also in the machine mode.
+
+Revised on 2026-10-19 after the measured port (`docs/windows-port.md`, #144): the findings listed there under "Requirements in #131 to adjust" are applied, the named-pipe SR is SR-2.8-6 (SR-2.8-5 belongs to FR-20), and Authenticode signing is left to FR-20.30, which already names the secrets.
+
+### FR-21 Windows platform support
+
+#### FR-21 — Windows platform support
+
+| Field | Value |
+|---|---|
+| ID | FR-21 |
+| Parent ID | — (root) |
+| Statement | The Gateway release **SHALL** run on the Windows hosts of FR-21.1 in the per-user, machine and WSL2 installation modes of this section, with the security posture and label that SR-4-2 states. |
+| Allocation | Elements: E-24 Management Console & Control API, E-15 Server Runtime Manager, E-16 Execution Sandbox, E-22 Key & Trust Anchor Manager, E-23 Health & Safety Monitor; Functions: F-97; External interfaces: X-07, X-16 |
+| Verification Method | Analysis |
+| Verification Statement | Review the verification results of every FR-21 child requirement and of SR-2.8-6, SR-2.13-4, SR-4-2, SR-4.1-3, SR-4.5-3, SR-4.6-2 and SR-4.8-2; confirm each has passed on a Windows x64 host and, where the child names it, on a Windows arm64 host. |
+| Source | OWNER (2026-10-18: Windows supported in addition to macOS and Linux, for the desktop app and automated installers) |
+| Rationale | Groups the Windows obligations so that the release can state which Windows guarantees it meets, separately from the Linux Enforced qualification. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.1 — Windows host platforms
+
+| Field | Value |
+|---|---|
+| ID | FR-21.1 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The Gateway **SHALL** run on Windows 11 version 23H2 or later on x64 and arm64, and on Windows Server 2022 and Windows Server 2025 on x64, and `smcpctl install` **SHALL** refuse an older Windows build, naming the build it found and the minimum it needs. |
+| Allocation | Elements: E-24 Management Console & Control API, E-23 Health & Safety Monitor; Functions: F-97; External interfaces: X-07 |
+| Verification Method | Demonstration |
+| Verification Statement | Install and run the Windows acceptance subset (FR-21.20) on a GitHub-hosted `windows-latest` runner (Windows Server 2025, x64) and on a `windows-11-arm` runner; confirm both reach the health state SR-4-2 states. Run `smcpctl install` with the reported build lowered below the minimum in a test hook; confirm the refusal message. |
+| Source | OWNER (2026-10-18 Windows decision); GitHub-hosted runner images (windows-latest is Windows Server 2025; windows-11-arm is available to public repositories) |
+| Rationale | Fixes a testable set of Windows versions. Windows 10 reached end of support in October 2025, and the APIs used below (AppContainer profile creation, `PIPE_REJECT_REMOTE_CLIENTS`, DPAPI) are present on every version listed. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.2 — Windows build portability
+
+| Field | Value |
+|---|---|
+| ID | FR-21.2 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | Every command of the Gateway source (`smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `smcp-refserver`, `smcp-hostile` and `smcp-workload`) and every test package **SHALL** build and pass `go vet` with `GOOS=windows` for `amd64` and `arm64` with `CGO_ENABLED=0`, and no security check **SHALL** read a POSIX mode, a POSIX owner or a Unix signal result on Windows: each such check **SHALL** be replaced on Windows by its FR-21 counterpart or refuse (fail closed). |
+| Allocation | Elements: E-24 Management Console & Control API, E-15 Server Runtime Manager, E-13 Library Trust Verifier, E-33 Harness Adapter Kit; Functions: F-97; External interfaces: X-16 |
+| Verification Method | Test |
+| Verification Statement | In CI, cross-build every command and compile every test package for windows/amd64 and windows/arm64 and run `go vet` with `GOOS=windows`; confirm success. Run the `TestWindows*` fail-closed tests on `windows-latest`; confirm that `keys.CheckPrivate`, the subprocess launcher and the UDS listener refuse until their FR-21 counterpart exists. |
+| Source | OWNER (2026-10-18 Windows decision); `docs/windows-port.md` (measured 2026-10-18: four packages failed to build, `internal/tunnel`, `internal/sandbox`, `internal/sandbox/probe` and `internal/library`, and three test packages failed `go vet`; fixed with fail-closed gates in #144) |
+| Rationale | The build half is met by #144 and a CI cross-build keeps it from regressing. Every `os.WriteFile` and `os.MkdirAll` takes a mode (239 literals), so modes cannot be confined to non-Windows files; the obligation is that no protection on Windows relies on one. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.3 — Windows release archives
+
+| Field | Value |
+|---|---|
+| ID | FR-21.3 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The Gateway release **SHALL** publish a zip archive for each of windows-amd64 and windows-arm64 containing `smcpd.exe`, `smcpctl.exe`, `smcp-session.exe`, `smcp-stdio.exe`, `smcp-connect.exe`, the console assets, the license notices, the provenance files of FR-12.8 and the SBOM, list both archives in the SHA-256 checksum file that FR-13.1 signs with minisign, and cover them with the same cosign Sigstore bundle. |
+| Allocation | Elements: E-24 Management Console & Control API; Functions: F-97; External interfaces: X-16 |
+| Verification Method | Inspection |
+| Verification Statement | Inspect a GitHub Release; confirm both zip archives and their contents, their entries in the checksum file, that the minisign signature of the checksum file verifies with the key in `SECURITY.md`, and that `cosign verify-blob` accepts the bundle for the checksum file. |
+| Source | OWNER (2026-10-18 Windows decision); SEC 10.7; `.goreleaser.yaml` (darwin and linux only on 2026-10-18) |
+| Rationale | Windows users expect zip, not tar.gz, and every install path, including the MSI built by the desktop installers, starts from the same signed checksum file. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.4 — PowerShell installer verification
+
+| Field | Value |
+|---|---|
+| ID | FR-21.4 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The `install.ps1` script **SHALL** support the invocations `irm <url> \| iex` and `powershell -ExecutionPolicy Bypass -File install.ps1`, **SHALL** download the zip archive for the host architecture, **SHALL** verify both the minisign signature and the trusted-comment signature of the checksum file with the release public key embedded in the script, using `minisign.exe` or, when that is absent, OpenSSL 3 (for example the one shipped with Git for Windows, with the key wrapped as an Ed25519 SubjectPublicKeyInfo and the BLAKE2b-512 prehash of prehashed signatures), **SHALL** verify the archive's SHA-256 with `Get-FileHash` against that file and the cosign bundle when `cosign.exe` is installed, and **SHALL** install nothing when a verification fails or no signature verifier is available. |
+| Allocation | Elements: E-24 Management Console & Control API; Functions: F-97; External interfaces: X-16 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, run the script by each supported invocation against a release with a modified archive, one with a modified checksum file, one with a modified trusted comment, and with neither verifier on `PATH`; confirm each is refused with nothing written outside a temporary directory; run it against the intact release with each verifier and confirm installation. |
+| Source | OWNER (2026-10-18: automated installers; install.ps1 verifying like install.sh); FR-13.2; `docs/windows-port.md` finding 5 |
+| Rationale | `irm \| iex` is the established PowerShell equivalent of `curl \| sh`, and the default execution policy (Restricted on Windows 11 clients, RemoteSigned on Server) refuses an unsigned downloaded script run any other way. PowerShell has no built-in Ed25519 verification, so the script needs the same explicit verifier rule as `install.sh`: refuse rather than install unverified. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.5 — Windows directories and access control
+
+| Field | Value |
+|---|---|
+| ID | FR-21.5 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Gateway **SHALL** keep its configuration, persistent state, diagnostic logs and exports in the directories that CP-46 assigns to the Windows installation mode, each with inheritance disabled and exactly the access control entries CP-46 states, and the Health & Safety Monitor (E-23) **SHALL** report `fail-closed` with cause `state_acl` when a state directory grants access to any other security identifier. |
+| Allocation | Elements: E-28 Data Lifecycle & Memory Manager, E-23 Health & Safety Monitor, E-24 Management Console & Control API; Functions: F-97, F-61; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Install each Windows mode; read each directory's DACL with `Get-Acl` and compare it with CP-46; add an access control entry for the Users group to the state directory and confirm the reported health and cause. |
+| Source | OWNER (2026-10-18 Windows decision); FR-12.4; CP-46; Microsoft documentation (`%ProgramData%` grants Users create access by default) |
+| Rationale | POSIX owners and modes have no meaning on NTFS. `%ProgramData%` lets every user create files by default, so the Gateway has to replace the inherited DACL rather than rely on it. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.6 — Windows service management
+
+| Field | Value |
+|---|---|
+| ID | FR-21.6 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the `smcpctl install` command **SHALL** install `smcpd` in the per-user mode, without elevation, as a Task Scheduler task registered through the Task Scheduler API with a logon trigger limited to the installing user's SID and restart after a failure, or, when Windows refuses that registration to the user, as an `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` entry with a printed notice that restart after a failure is unavailable; and in the machine mode (`--machine`, elevated) as a Windows service registered with the Service Control Manager under the CP-46 virtual service account, with automatic (delayed) start, an unrestricted service SID and recovery actions that restart the service after the first and second failures. |
+| Allocation | Elements: E-24 Management Console & Control API, E-22 Key & Trust Anchor Manager; Functions: F-97; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, install the per-user mode as a standard (non-administrator) account and the machine mode as an administrator; confirm the task or Run entry, the notice where the fallback applies, the service definition, its account and recovery settings (`sc.exe qc`, `sc.exe qfailure`); end the `smcpd` process and confirm it is restarted where restart applies; reboot a machine-mode host (Demonstration on a recorded host) and confirm the service starts before any user logs on. |
+| Source | OWNER (2026-10-18 Windows decision); FR-12.5; FR-13.6; `docs/windows-port.md` finding 6 |
+| Rationale | `schtasks /create /sc onlogon` refuses a standard user; the Task Scheduler API with a trigger for the user's own SID may be accepted, and the Run key is the fallback that never needs elevation. The Service Control Manager is the Windows counterpart of the systemd system unit, and a virtual service account gives the service its own identity without a password. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.7 — Windows stop and shutdown handling
+
+| Field | Value |
+|---|---|
+| ID | FR-21.7 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, `smcpd` **SHALL** treat a Service Control Manager stop or preshutdown request and a console `CTRL_C` or `CTRL_BREAK` event as the orderly stop that SIGTERM triggers on Linux, stopping dispatch, recording the stop in the Evidence Journal, terminating every backend instance and exiting within the CP-47 health-wait bound; on a `CTRL_CLOSE`, `CTRL_LOGOFF` or `CTRL_SHUTDOWN` event it **SHALL** record the stop in the Evidence Journal first and exit within 4 seconds, leaving the backends to the kill-on-close of their Job Objects (FR-21.12). |
+| Allocation | Elements: E-12 Enforcement Coordinator, E-15 Server Runtime Manager, E-21 Audit & Evidence Service, E-24 Management Console & Control API; Functions: F-40, F-62 |
+| Verification Method | Test |
+| Verification Statement | Start `smcpd` as a service and as a console process with a running backend; send each stop event; confirm the journal stop record, that no backend process remains and the exit time for each event. |
+| Source | OWNER (2026-10-18 Windows decision); CP-47; `docs/windows-port.md` finding 7 |
+| Rationale | Windows delivers no SIGTERM to a service, and it ends a console process about 5 seconds after `CTRL_CLOSE`, `CTRL_LOGOFF` or `CTRL_SHUTDOWN` whatever the handler does, so the journal record comes first for those events. `smcpctl stop` is the emergency stop, not a process stop, and is not part of this requirement. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.8 — Named-pipe harness transport
+
+| Field | Value |
+|---|---|
+| ID | FR-21.8 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, when the UDS Harness Profile is enabled, the Harness Interface Endpoint (E-01) **SHALL** carry MCP over the CP-02 Windows named pipe in place of the Unix-domain socket, with the framing, cancellation and correlation of FR-1.47, and **SHALL** NOT open an AF_UNIX socket. |
+| Allocation | Elements: E-01 Harness Interface Endpoint, E-02 Protocol Mediator; Functions: F-01, F-02; External interfaces: X-01 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, run the northbound conformance fixtures for both protocol eras over the named pipe; confirm results identical to the TLS listener; confirm with `Get-NetTCPConnection` and a socket-path scan that no AF_UNIX socket is created. |
+| Source | OWNER (2026-10-18 Windows decision; named pipes with DACLs replacing the UDS listener); FR-1.47 |
+| Rationale | Named pipes are the Windows local IPC with a security descriptor, a client process ID and impersonation; AF_UNIX on Windows only reports the peer process ID and depends on file ACLs on the socket path, so one transport, the pipe, is specified. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.9 — Named-pipe peer mapping
+
+| Field | Value |
+|---|---|
+| ID | FR-21.9 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, when the UDS Harness Profile is enabled, the Identity & Authentication Service (E-03) **SHALL** identify each named-pipe client by the user SID of its token, obtained by impersonating the client at identification level (`ImpersonateNamedPipeClient`, then `OpenThreadToken`) and not from a process ID, and **SHALL** require both a registered peer SID and the principal's bearer key before establishing a session. |
+| Allocation | Elements: E-03 Identity & Authentication Service, E-01 Harness Interface Endpoint; Functions: F-04; External interfaces: X-01 |
+| Verification Method | Test |
+| Verification Statement | In the per-user and the machine mode, connect over the pipe as a registered user with the correct key, as a registered user with a wrong key and as an unregistered user with the correct key; confirm one session and two refusals, each refusal recorded with the client SID. |
+| Source | OWNER (2026-10-18 Windows decision); FR-2.15; `docs/windows-port.md` finding 8 |
+| Rationale | The Windows counterpart of the registered peer UID. A virtual service account cannot open another user's process token, and a process ID can be reused between lookup and use, so the token comes from the pipe impersonation. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.10 — Windows key protection
+
+| Field | Value |
+|---|---|
+| ID | FR-21.10 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Key & Trust Anchor Manager (E-22) **SHALL** store each private key file encrypted with DPAPI (`CryptProtectData`, user scope) under the account that runs `smcpd` (the installing user in the per-user mode, the CP-46 virtual service account in the machine mode), **SHALL** check the state directory DACL of FR-21.5 in place of the POSIX mode check, and **SHALL** refuse to start with cause `key_protection` when a key file cannot be decrypted, without overwriting it. |
+| Allocation | Elements: E-22 Key & Trust Anchor Manager; Functions: F-60; External interfaces: X-07; Data stores: D-08 |
+| Verification Method | Test |
+| Verification Statement | Install each mode; confirm every private key file is a DPAPI blob; copy the state directory to a second runner and start `smcpd` there; confirm the refusal and that the copied files are unchanged; confirm a normal start on the original host. |
+| Source | OWNER (2026-10-18 Windows decision: DPAPI, CNG or TPM key protection); FR-12.4; `docs/windows-port.md` (the `keys.CheckPrivate` gate refuses on Windows until this requirement) |
+| Rationale | File modes give no protection on Windows and copied files would be usable elsewhere. DPAPI binds the keys to the account and its master key, so copying the state alone is not enough. In the per-user mode the agent runs as the same account and can unprotect them; that is the macOS Standalone posture. Keys sealed by the TPM through the CNG Platform Crypto Provider are left for a later release, as on Linux. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.11 — Windows backend launch
+
+| Field | Value |
+|---|---|
+| ID | FR-21.11 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Server Runtime Manager (E-15) **SHALL** launch each backend with `CreateProcess` from the verified executable path with an argument string built by the Microsoft C runtime quoting rules from the manifest's argument vector, **SHALL** refuse a manifest whose executable is a `.bat` or `.cmd` file or `cmd.exe`, `powershell.exe` or `pwsh.exe`, and **SHALL** have the backend process in the instance's Job Object before its first instruction runs. |
+| Allocation | Elements: E-15 Server Runtime Manager; Functions: F-38; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Enable a package whose arguments contain spaces, quotes, `&`, `\|` and `%PATH%`; confirm the backend receives them unchanged and unexpanded; attempt to enable packages whose executable is a `.cmd` file, `cmd.exe` and `pwsh.exe`; confirm refusal with reason `SHELL_LAUNCH`; confirm from the Job Object accounting that the backend's first process belonged to the job from creation. |
+| Source | OWNER (2026-10-18 Windows decision); SEC 4.8; CVE-2024-24576 class (batch-file argument injection through `CreateProcess`); `docs/windows-port.md` finding 9 |
+| Rationale | Windows passes one command-line string, not an argument vector, and runs `.bat` and `.cmd` files through `cmd.exe`, whose own parsing defeats correct quoting. The statement fixes the outcome; `os/exec` cannot resume a suspended child, so the implementation is expected to use `PROC_THREAD_ATTRIBUTE_JOB_LIST`, which places the process in the job at creation. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.12 — Job Object resource limits
+
+| Field | Value |
+|---|---|
+| ID | FR-21.12 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Server Runtime Manager (E-15) **SHALL** run each backend instance in its own Job Object with kill-on-close, a process memory limit, an active-process limit and a CPU rate limit set from CP-24 or the manifest, and with breakaway disallowed. |
+| Allocation | Elements: E-15 Server Runtime Manager, E-16 Execution Sandbox; Functions: F-38, F-41; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Run the hostile fixtures that allocate memory beyond the limit, fork processes beyond the limit and spin the CPU; confirm each is stopped or throttled at the CP-24 value and that killing `smcpd` terminates every process of the job. |
+| Source | OWNER (2026-10-18 Windows decision: Job Objects); CP-24; SR-4.7-2 |
+| Rationale | Job Objects are the Windows counterpart of cgroup memory, CPU and PID limits, and the only way to make sure no backend process outlives the Gateway. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.13 — AppContainer backend containment
+
+| Field | Value |
+|---|---|
+| ID | FR-21.13 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | In the Windows machine mode, the Execution Sandbox (E-16) **SHALL** run each backend under the AppContainer profile of its enabled server revision with no capabilities (a Less Privileged AppContainer when the package manifest declares it compatible), created when the revision is enabled, with access granted to that AppContainer SID only on the revision's installed package tree, its scratch directory and the filesystem slots of SR-4.6-2, and the Health & Safety Monitor (E-23) **SHALL** then report health `degraded` with cause `partially_confined` instead of `unconfined` while every enabled backend runs in an AppContainer. |
+| Allocation | Elements: E-16 Execution Sandbox, E-15 Server Runtime Manager, E-23 Health & Safety Monitor; Functions: F-41, F-61; External interfaces: X-07; Internal interfaces: I-23 |
+| Verification Method | Test |
+| Verification Statement | In the machine mode, run the hostile fixtures that read the user's profile directory, write outside their scratch directory, open a TCP connection and open the `smcpd` state directory; confirm each is denied; confirm the health cause with all backends contained and `unconfined` after one backend is enabled without containment. |
+| Source | OWNER (2026-10-18 Windows decision: AppContainer, Job Objects, restricted tokens); SEC 4.1; SEC 4.6; Microsoft documentation (AppContainer isolation, Less Privileged AppContainer); `docs/windows-port.md` findings 2 and 3 |
+| Rationale | AppContainer is the strongest native per-process boundary Windows offers to a third-party service. One profile per enabled revision matches release 1.x, which runs one shared instance per revision (FR-5.10 deferred), and lets the access entries on the package tree be written once at enablement instead of walking tens of thousands of files at every start. It is weaker than the Enforced sandbox (no system-call filter; reads of ALL APPLICATION PACKAGES locations), so the health cause names partial confinement and the label stays "not enforced" (SR-4-2). |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.14 — Windows egress mediation
+
+| Field | Value |
+|---|---|
+| ID | FR-21.14 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | In the Windows machine mode, the Egress Broker (E-18) **SHALL** be each contained backend's only network path: the backend's AppContainer has no network capability, the elevated step that enables a server revision **SHALL** create the revision's loopback exemption and the Windows Filtering Platform filters of SR-4.5-3 and the uninstall or disable step **SHALL** remove them, and the broker **SHALL** serve the backend as an HTTP proxy on a loopback port with the destination checks of FR-5 unchanged. |
+| Allocation | Elements: E-18 Egress Broker, E-16 Execution Sandbox; Functions: F-45; External interfaces: X-06, X-07; Internal interfaces: I-25 |
+| Verification Method | Test |
+| Verification Statement | In the machine mode, run the hostile egress fixtures (direct TCP to an external address, DNS over UDP, a connection to another loopback port and an allowed and a denied destination through the proxy); confirm only the allowed proxied destination succeeds and each other attempt is blocked and recorded; disable the revision and confirm its exemption and filters are gone. |
+| Source | OWNER (2026-10-18 Windows decision: Windows Filtering Platform per AppContainer SID); SEC 4.5; Microsoft documentation (AppContainer loopback isolation; WFP ALE connect layer); `docs/windows-port.md` finding 2 |
+| Rationale | An AppContainer without the internet capabilities has no network, and AppContainers cannot reach loopback without an exemption. The exemption covers every loopback port and needs an administrator, so it is made when the revision is enabled (an elevated operation in the machine mode), and the WFP filter is what limits the SID to the broker port. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.15 — WSL2 installation mode
+
+| Field | Value |
+|---|---|
+| ID | FR-21.15 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The `smcpctl install --wsl` command on Windows **SHALL** import a dedicated WSL2 distribution, enable systemd in it, install the linux build for the host architecture inside it by the FR-13.5 procedure with every Section 1.5.1 prerequisite checked in the distribution, set the distribution's `[interop]` `enabled` and `appendWindowsPath` to false, and write a CP-43 credential file on the Windows side whose listener is the distribution's forwarded loopback address. |
+| Allocation | Elements: E-24 Management Console & Control API, E-16 Execution Sandbox, E-23 Health & Safety Monitor; Functions: F-97; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | On a Windows host with WSL2 (Demonstration on a recorded host where the CI runner offers no nested virtualization), run the install; confirm the distribution, its `wsl.conf`, the Enforced prerequisites report and that `smcp-stdio.exe` on the Windows side lists tools through the Gateway; confirm that a Windows binary cannot be started from inside the distribution. |
+| Source | OWNER (2026-10-18 Windows decision: WSL2 + Podman as an Enforced option); WSL documentation (systemd support, `wsl.conf` interop settings, localhost forwarding); WSL2 kernel 6.18 LTS line (2026) |
+| Rationale | The Enforced stack needs a Linux kernel; WSL2 provides one (6.18 LTS since 2026, above the 6.8 minimum). Disabling interop keeps backends inside the distribution from starting Windows programs. The label stays "not enforced" (SR-4-2) because the Windows user can still enter the distribution as root. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.16 — Windows adapters
+
+| Field | Value |
+|---|---|
+| ID | FR-21.16 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, `smcp-stdio.exe` and `smcp-session.exe` **SHALL** behave as FR-12.12 and FR-12.13 state, reading the CP-43 Windows credential file, refusing to read it when its DACL grants access to any SID other than the user, SYSTEM and Administrators, transferring standard input and output as bytes without newline translation, and connecting to the TLS listener or, when the credential file names it, the CP-02 named pipe. |
+| Allocation | Elements: E-33 Harness Adapter Kit; Functions: F-94, F-95; External interfaces: X-01, X-12 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, run the northbound conformance fixtures for both eras through `smcp-stdio.exe` over TLS and over the named pipe; confirm results identical to a direct connection; grant Users read access to the credential file and confirm refusal. |
+| Source | OWNER (2026-10-18 Windows decision: stdio client launching for Windows agents); FR-12.12; FR-12.13; CP-43 |
+| Rationale | Every Windows agent launches stdio servers. CRLF translation would corrupt newline-delimited JSON-RPC, and a credential file readable by other accounts would leak the principal's session. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.17 — Windows client setup and lockdown
+
+| Field | Value |
+|---|---|
+| ID | FR-21.17 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, `smcpctl client setup`, `smcpctl lockdown` and `smcpctl doctor` **SHALL** read and write each local client's configuration at the Windows path that `docs/clients/matrix.json` records for that client and Windows, and **SHALL** report a client as `unsupported on windows` where the matrix records no Windows path. |
+| Allocation | Elements: E-33 Harness Adapter Kit; Functions: F-98; External interfaces: X-12 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, run setup, lockdown and doctor for each local client of Appendix K with a Windows path in the matrix; confirm each file written at that path, the lockdown result and the doctor report; confirm the report for a client without a Windows path. |
+| Source | OWNER (2026-10-18 Windows decision: real-agent compatibility on Windows); FR-15.1; SR-4.9-1 |
+| Rationale | Client configuration files live under `%USERPROFILE%` and `%APPDATA%` on Windows, and managed settings under machine-wide paths; recording them in the matrix keeps the adapters and the documentation from diverging. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.18 — Windows Data Server mode
+
+| Field | Value |
+|---|---|
+| ID | FR-21.18 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Observation Store (E-27) **SHALL** use its JSON Lines backend, `smcpctl doctor` **SHALL** report that DuckDB is not available in a `CGO_ENABLED=0` build, and the graph mirror (E-25) **SHALL** connect only to a Neo4j server on a loopback address that the operator installed, with its credentials protected as FR-21.10 states. |
+| Allocation | Elements: E-27 Observation Store, E-25 Graph Database Engine, E-26 Data Access Service; Functions: F-75, F-70; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, start `smcpd` with observation enabled and with `[graph] enabled` pointing at a loopback Neo4j and at a non-loopback address; confirm JSON Lines partitions, the doctor report, a mirrored event in the loopback case and refusal in the other. |
+| Source | OWNER (2026-10-18 Windows decision); FR-12.11; `internal/obsstore` (DuckDB needs cgo) |
+| Rationale | The release builds without cgo, so the Windows Observation Store has the same JSON Lines fallback as any `CGO_ENABLED=0` build. Installing Neo4j is left to the operator on Windows, as it is optional everywhere (A-9). |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.19 — Windows continuous integration
+
+| Field | Value |
+|---|---|
+| ID | FR-21.19 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The Gateway project **SHALL** run, as required checks for every pull request that changes more than documentation, CI jobs on `windows-latest` and on `windows-11-arm` that build every command, run `go test -short ./...` with Linux- and Darwin-only tests excluded by build constraints or skipped at run time, run the Windows end-to-end tests and the FR-21.20 acceptance subset, run the FR-21.4 installer test, and add their results to the requirement report of FR-12.10. |
+| Allocation | Elements: E-24 Management Console & Control API; Functions: F-97; External interfaces: X-16 |
+| Verification Method | Inspection |
+| Verification Statement | Inspect `.github/workflows/ci.yml`, the branch protection and a pull-request run; confirm both Windows jobs are required, the steps of the statement and that the requirement report of that run lists claims from Windows tests. |
+| Source | OWNER (2026-10-18 Windows decision: CI matrix with windows-latest runners for unit, e2e and an acceptance subset); FR-12.10; `docs/windows-port.md` finding 11 (the `windows` job of #144 is not yet required and runs on x64 only) |
+| Rationale | A platform that no required check builds on regresses silently. The arm64 runner covers the second Windows archive. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.20 — Windows acceptance subset
+
+| Field | Value |
+|---|---|
+| ID | FR-21.20 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The Gateway project **SHALL** run, in each Windows installation mode it qualifies, every Appendix M acceptance scenario that the Standalone profile runs on macOS, and **SHALL** publish the results per mode in the status data next to the Enforced and Standalone results, with each scenario that a mode cannot run listed with its reason. |
+| Allocation | Elements: E-24 Management Console & Control API, E-23 Health & Safety Monitor; Functions: F-61 |
+| Verification Method | Test |
+| Verification Statement | Run the acceptance suite on `windows-latest` in the per-user and machine modes; confirm the published per-mode results and reasons; confirm the results do not change the label that FR-19.3 computes. |
+| Source | OWNER (2026-10-18 Windows decision); FR-19.3; FR-19.4 |
+| Rationale | Gives Windows users the same evidence macOS users have, without letting Windows results stand in for the Enforced results that gate the label. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.21 — Windows real-agent compatibility
+
+| Field | Value |
+|---|---|
+| ID | FR-21.21 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The Gateway project **SHALL** run the real-agent suite on a `windows-latest` runner against each agent of Appendix K that publishes a Windows build, with the Gateway in the per-user mode, and **SHALL** record each result for Windows in `docs/clients/matrix.json`. |
+| Allocation | Elements: E-33 Harness Adapter Kit; Functions: F-94, F-95; External interfaces: X-12 |
+| Verification Method | Demonstration |
+| Verification Statement | Run the suite on Windows; confirm each agent with a Windows build connects through `smcp-stdio.exe` or the TLS listener, an allowed call succeeds, a denied call is refused, and the matrix records the result with the agent version and date. |
+| Source | OWNER (2026-10-18 Windows decision: real-agent compatibility on Windows); FR-15.9 |
+| Rationale | Agents behave differently on Windows (paths, process launch, shells); the matrix states what was observed. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.22 — Unsigned Windows binaries
+
+| Field | Value |
+|---|---|
+| ID | FR-21.22 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | Until FR-20.30 is met, the Gateway release notes, `docs/install.md` and the output of `install.ps1` **SHALL** state that the Windows binaries carry no Authenticode signature, that SmartScreen warns about them and Smart App Control blocks them, and how to verify them with minisign and SHA-256, and `install.ps1` **SHALL** remove the installed files' Mark of the Web only after the verifications of FR-21.4 pass. |
+| Allocation | Elements: E-24 Management Console & Control API; Functions: F-97; External interfaces: X-16 |
+| Verification Method | Test |
+| Verification Statement | Run `install.ps1` by each FR-21.4 invocation with the archive marked as downloaded from the Internet; confirm the printed notice and that installed binaries carry no `Zone.Identifier` stream while a refused download's files keep theirs. Inspect the release notes and `docs/install.md` for the statements. |
+| Source | OWNER (2026-10-18: no Authenticode certificate for now); FR-20.30 (Authenticode signing of the Windows binaries, deferred, naming the repository secrets it needs); Microsoft documentation (SmartScreen application reputation, Smart App Control) |
+| Rationale | Unsigned binaries raise SmartScreen warnings, and Smart App Control blocks them outright, so some users cannot run the Gateway until FR-20.30 is funded. Users need to know why and how to check the files instead of clicking through a warning. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.23 — Windows write durability
+
+| Field | Value |
+|---|---|
+| ID | FR-21.23 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Policy Store, policy activation, the Server Registry and backup restore **SHALL** make each replaced file durable by `FlushFileBuffers` on the written file followed by `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING` and `MOVEFILE_WRITE_THROUGH`, and **SHALL** NOT open or sync directories. |
+| Allocation | Elements: E-05 Policy Administration Service, E-14 Local Server Registry, E-28 Data Lifecycle & Memory Manager; Functions: F-79; External interfaces: X-07; Data stores: D-01 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, publish and activate a policy revision, enable a server and restore a backup; confirm each succeeds and, by a test hook on the file layer, that every replace used a flushed file and a write-through rename and no directory was opened. |
+| Source | OWNER (2026-10-18 Windows decision); `docs/windows-port.md` finding 13 (directory `fsync` fails with "Access is denied" in `internal/policystore`, `internal/policyadmin` and `internal/backup`) |
+| Rationale | Windows refuses to sync a directory, so the Linux rename-then-sync-directory rule cannot be followed and the Policy Store cannot publish today. NTFS journals metadata; a write-through rename after a flushed file is the Windows durability rule, stated so that it is tested rather than patched. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.24 — Defender scan of Windows archives
+
+| Field | Value |
+|---|---|
+| ID | FR-21.24 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | The release workflow **SHALL** scan each Windows archive and its extracted executables with Microsoft Defender (`MpCmdRun.exe -Scan -ScanType 3`) on a Windows runner with current signatures, **SHALL** record the signature version and result in the release notes, and **SHALL** stop publication when a detection is reported until the release manager records a reviewed false-positive submission. |
+| Allocation | Elements: E-24 Management Console & Control API; Functions: F-97; External interfaces: X-16 |
+| Verification Method | Test |
+| Verification Statement | Run the release workflow on a test tag; confirm the scan step, the recorded result and, with the EICAR test file added to a test archive, that publication stops. |
+| Source | OWNER (2026-10-18: Defender and SmartScreen considerations for unsigned binaries) |
+| Rationale | Unsigned Go binaries are a known source of Defender false positives. Finding one before users do lets the project submit it to Microsoft and say so in the release notes. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.25 — Windows filesystem path rules
+
+| Field | Value |
+|---|---|
+| ID | FR-21.25 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Server Runtime Manager (E-15) for filesystem slots and grants, and the Request Inspection Pipeline (E-09) for path rules and path arguments, **SHALL** compare paths case-insensitively after resolving them to final paths with `GetFinalPathNameByHandle`, **SHALL** treat a path with a drive letter or a leading separator as absolute without joining it to the working directory, and **SHALL** refuse a path that contains an alternate data stream, a reserved device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`), a `\\?\` or `\\.\` device prefix, a UNC host, or a junction or symbolic link whose target lies outside the granted root. |
+| Allocation | Elements: E-15 Server Runtime Manager, E-16 Execution Sandbox, E-09 Request Inspection Pipeline; Functions: F-38, F-41; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Grant `C:\data\proj`; attempt slots `c:\DATA\Proj\x` (accepted), `C:\data\proj\a.txt:hidden`, `C:\data\proj\NUL`, `\\?\C:\Windows`, `\\host\share`, and a junction inside the root pointing to `C:\Users`; confirm each refusal with reason `PATH_REFUSED`. Run the request-filter path fixtures with `/etc/passwd`, `C:\Windows\System32` and `..\..\` forms; confirm the same decisions as on Linux for the equivalent paths. |
+| Source | OWNER (2026-10-18 Windows decision); SEC 4.6; `docs/windows-port.md` (request-filter canonicalization resolves `/etc/passwd` under the working directory on Windows) |
+| Rationale | Windows path semantics differ from POSIX in ways that defeat prefix checks written for Linux: case folding, streams, device names, device prefixes, junctions and drive-relative forms. The first Windows test run showed the request filters affected as well as the slots. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### FR-21.26 — Windows free-space measurement
+
+| Field | Value |
+|---|---|
+| ID | FR-21.26 |
+| Parent ID | FR-21 — Windows platform support |
+| Statement | On Windows, the Health & Safety Monitor (E-23) and the Data Lifecycle & Memory Manager (E-28) **SHALL** measure the free space of the volume holding each store with `GetDiskFreeSpaceEx` and **SHALL** apply the same quota and free-space thresholds (FR-9.15, CP-26) as on Linux and macOS. |
+| Allocation | Elements: E-23 Health & Safety Monitor, E-28 Data Lifecycle & Memory Manager; Functions: F-61, F-78; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | On a `windows-latest` runner, start `smcpd` with a quota test hook that reports the volume as nearly full; confirm the warning and the health state that the same condition produces on Linux. |
+| Source | OWNER (2026-10-18 Windows decision); FR-9.15; `docs/windows-port.md` (free disk space is not measured off Linux and macOS) |
+| Rationale | Without a measurement the quota checks silently never fire on Windows, so a full disk would end in failed journal writes instead of an early warning. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-4-2 — Windows profile and label
+
+| Field | Value |
+|---|---|
+| ID | SR-4-2 |
+| Parent ID | SEC-4 — Contained local execution (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | Every installation on a Windows host, and every installation inside WSL (detected from `/proc/sys/kernel/osrelease` containing `microsoft` or `WSL`, with the `WSL_DISTRO_NAME` environment variable as a second signal), **SHALL** run with the Standalone profile restrictions of SR-4-1, **SHALL** never report health `healthy`, and **SHALL** show the label `not enforced` with the installation mode (`windows-user`, `windows-machine` or `wsl2`) in `smcpctl health`, `smcpctl version`, the console banner and the startup diagnostic log entry, even when `profile = "enforced"` is configured inside WSL. |
+| Allocation | Elements: E-23 Health & Safety Monitor, E-14 Local Server Registry, E-24 Management Console & Control API; Functions: F-61, F-65; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Start a per-user, a machine-mode and a WSL2 installation (the last as a systemd service with `profile = "enforced"` and every Linux prerequisite met); confirm in each the label and mode in the four places, health `degraded`, and refusal to enable a `high` package with reason `PROFILE_UNCONFINED`. |
+| Source | SEC 4; OWNER (2026-10-18 Windows decision; honest security posture versus Linux Enforced); `docs/windows-port.md` finding 10 |
+| Rationale | No Windows mode meets the Enforced profile's separation: native modes lack an equivalent sandbox, and in WSL2 any process of the Windows user can run `wsl.exe -u root`, read or replace the Gateway's state and re-enable interop. `WSL_DISTRO_NAME` is set only for processes started through `wsl.exe`, not for a systemd service, so the kernel release is the primary signal. Lifting this for WSL2 would need the agents to run under another Windows account with `wsl.exe` blocked by application control, which a later release can qualify. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2.8-6 — Named-pipe security descriptor
+
+| Field | Value |
+|---|---|
+| ID | SR-2.8-6 |
+| Parent ID | SEC-2.8 — Authenticated transport (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | The Harness Interface Endpoint (E-01) **SHALL** create the CP-02 named pipe with `FILE_FLAG_FIRST_PIPE_INSTANCE` and `PIPE_REJECT_REMOTE_CLIENTS`, and with a protected DACL that grants read and write only to the account running `smcpd` and to the CP-46 `smcp-harness` local group (the installing user in the per-user mode), denies `NT AUTHORITY\NETWORK` and `ANONYMOUS LOGON`, and grants no other SID. |
+| Allocation | Elements: E-01 Harness Interface Endpoint; Functions: F-01; External interfaces: X-01 |
+| Verification Method | Test |
+| Verification Statement | Read the pipe's security descriptor; connect as a user outside the group, through `\\localhost\pipe\` over SMB, and by creating the pipe name before `smcpd` starts; confirm each is refused and that `smcpd` refuses to start with cause `pipe_squatted` in the last case. |
+| Source | SEC 2.8; OWNER (2026-10-18: named pipes with DACLs) |
+| Rationale | The default pipe DACL grants Everyone read access, pipes are reachable over SMB unless remote clients are rejected, and a process that creates the name first can impersonate the server. SEC 2.8 asks for an authenticated transport; for a local pipe that is the DACL plus the peer mapping of FR-21.9. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-2.13-4 — Vault master key on Windows
+
+| Field | Value |
+|---|---|
+| ID | SR-2.13-4 |
+| Parent ID | SEC-2.13 — Encrypted secrets (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | On Windows, the Secret Vault (E-19) **SHALL** keep the vault master key protected with DPAPI (`CryptProtectData`, user scope) under the account running `smcpd`, or age-encrypted under an scrypt passphrase, and never in plaintext. |
+| Allocation | Elements: E-19 Secret Vault, E-22 Key & Trust Anchor Manager; Functions: F-47, F-60 |
+| Verification Method | Test |
+| Verification Statement | Initialize a vault in each Windows mode; confirm the stored key is a DPAPI blob; attempt to decrypt it as another account and from a copy of the state directory on another host; confirm failure; confirm the passphrase option. |
+| Source | SEC 2.13; OWNER (2026-10-18 Windows decision: DPAPI, CNG or TPM key protection); SR-2.13-1; `docs/windows-port.md` finding 1 |
+| Rationale | The Windows counterpart of the macOS Keychain option of SR-2.13-1: in the machine mode the agent's account cannot unprotect a key bound to the virtual service account. DPAPI-NG `SID=` descriptors need the Active Directory Group Key Distribution Service and fail on a workgroup host, so classic DPAPI is used. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-4.1-3 — Windows service and server identities
+
+| Field | Value |
+|---|---|
+| ID | SR-4.1-3 |
+| Parent ID | SEC-4.1 — Separate OS identities (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | In the Windows machine mode, the Gateway **SHALL** run `smcpd` under the CP-46 virtual service account `NT SERVICE\smcpd` and each backend under the AppContainer SID of its enabled server revision (FR-21.13), and neither **SHALL** be `LocalSystem`, a member of Administrators or the operator's account. |
+| Allocation | Elements: E-12 Enforcement Coordinator, E-15 Server Runtime Manager, E-16 Execution Sandbox; External interfaces: X-07 |
+| Verification Method | Inspection |
+| Verification Statement | On a machine-mode host, inspect the tokens of `smcpd` and of the backends of two enabled revisions (Process Explorer or a token query); confirm the account, the distinct AppContainer SIDs and the absence of Administrators membership. |
+| Source | SEC 4.1; OWNER (2026-10-18 Windows decision: virtual service accounts); `docs/windows-port.md` finding 2 |
+| Rationale | The Windows counterpart of SR-4.1-1 and SR-4.1-2: the agent's account cannot read the service's state, and backends of different revisions cannot reach each other's objects. Release 1.x runs one shared instance per revision, so a per-revision SID separates instances too. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-4.5-3 — Windows Filtering Platform egress filters
+
+| Field | Value |
+|---|---|
+| ID | SR-4.5-3 |
+| Parent ID | SEC-4.5 — Backend egress (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | In the Windows machine mode, the Gateway **SHALL** keep persistent Windows Filtering Platform filters in its own provider and sublayer at the ALE connect and ALE receive/accept layers that block every connection whose package ID is a backend AppContainer SID, except TCP connections to the Egress Broker's loopback port, and `smcpctl uninstall` **SHALL** remove the provider, the sublayer and the loopback exemptions. |
+| Allocation | Elements: E-18 Egress Broker, E-16 Execution Sandbox; Functions: F-45; External interfaces: X-06, X-07 |
+| Verification Method | Test |
+| Verification Statement | In the machine mode, enumerate the WFP filters of the Gateway provider; from a contained backend, connect to an external address, to another loopback port and to the broker port; confirm only the broker connection succeeds; uninstall and confirm no Gateway filter or exemption remains. |
+| Source | SEC 4.5; OWNER (2026-10-18: egress control with Windows Filtering Platform per AppContainer SID); `docs/windows-port.md` finding 2 |
+| Rationale | The capability model already denies the network, but SEC 4.5 asks for enforcement independent of the backend; a WFP filter keyed on the package SID holds even if a capability or exemption is added by mistake, and it is the only control that limits the loopback exemption to one port. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-4.6-2 — AppContainer filesystem grants
+
+| Field | Value |
+|---|---|
+| ID | SR-4.6-2 |
+| Parent ID | SEC-4.6 — Filesystem authority (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | In the Windows machine mode, the Execution Sandbox (E-16) **SHALL** give a revision's AppContainer SID access only to the revision's installed package tree (read and execute), its scratch directory and the paths in the intersection of manifest-declared and policy-granted roots (read-only unless a write grant applies), by access control entries written when the revision is enabled or its grants change and removed when it is disabled. |
+| Allocation | Elements: E-16 Execution Sandbox, E-15 Server Runtime Manager; Functions: F-41, F-40; External interfaces: X-07 |
+| Verification Method | Test |
+| Verification Statement | Enable a revision with one read-only and one writable root; confirm the AppContainer SID's entries on each path, that a write to the read-only root and a read outside the roots fail; change the grant and confirm the entries follow; disable the revision and confirm every entry is removed. |
+| Source | SEC 4.6; OWNER (2026-10-18 Windows decision); `docs/windows-port.md` finding 3 |
+| Rationale | The Windows counterpart of SR-4.6-1. Without mounts, the boundary is the set of entries naming the revision's SID. Writing them at enablement rather than at every start avoids walking interpreter and `node_modules` trees on each launch and leaves no stale entries after a crash. |
+| Target release | v1.3.0 (planned, Section 2.8) |
+
+#### SR-4.8-2 — No command interpreter on Windows
+
+| Field | Value |
+|---|---|
+| ID | SR-4.8-2 |
+| Parent ID | SEC-4.8 — Safe process launch (MUST, `MCP_Gateway_Security_SRS.md`) |
+| Statement | On Windows, the Server Runtime Manager (E-15) **SHALL** never start `cmd.exe`, `powershell.exe`, `pwsh.exe` or a `.bat` or `.cmd` file, directly or through `ShellExecute`, to launch a backend. |
+| Allocation | Elements: E-15 Server Runtime Manager; Functions: F-38 |
+| Verification Method | Test |
+| Verification Statement | Attempt to enable packages whose executable is each of those programs and a `.bat` file; confirm refusal; trace process creation (ETW or Job Object accounting) during a full Windows test run and confirm no interpreter was started by `smcpd`. |
+| Source | SEC 4.8; CVE-2024-24576 class; `docs/windows-port.md` finding 9 |
+| Rationale | SR-4.8-1 forbids a shell; on Windows the shell is reached implicitly when a batch file is launched, so the interpreters are named. The rule binds the Server Runtime Manager only: a backend can still start a shell itself (Node's `child_process` with `shell: true`, a renamed copy), which only the machine-mode containment limits. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 ### FR-22 ContextForge integration (planned, v1.3.0)
@@ -8851,7 +9345,7 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | ID | Parameter | Value | Origin |
 |---|---|---|---|
 | CP-01 | Northbound MCP endpoint path | `/mcp` | New |
-| CP-02 | Harness listeners | TLS: `127.0.0.1:8443`; UDS (profile): `/run/smcp/harness.sock` | New |
+| CP-02 | Harness listeners | TLS: `127.0.0.1:8443`; UDS (profile): `/run/smcp/harness.sock`; **Windows (planned v1.3.0, FR-21.8):** named pipe `\\.\pipe\smcp-harness` in the machine mode, `\\.\pipe\smcp-harness-<user SID>` in the per-user mode | New |
 | CP-03 | Admin listener | `127.0.0.1:8444` (TLS; `[admin_listener] address`) | New |
 | CP-04 | Northbound supported protocol versions | `["2026-07-28", "2025-11-25"]`, both served in the baseline | SEC 5.1 |
 | CP-05 | Southbound protocol eras | Modern `2026-07-28`; legacy `2025-11-25` | SEC 5.1 |
@@ -8892,10 +9386,10 @@ Values marked **SEC** are inherited from `MCP_Gateway_Security_SRS.md` Appendix 
 | CP-40 | Research pseudonym function | HMAC-SHA-256, per-dataset key | ARCH §4 E-32 |
 | CP-41 | OAuth parameters | Authorization-code grant (Remote Access listener also: the RFC 8628 device authorization grant used by `smcp-connect`, device code lifetime 10 min, poll interval 5 s); PKCE `S256` only; resource URI `https://127.0.0.1:8443/mcp` (Remote Access listener: the configured public URL followed by `/mcp`); scope prefix `smcp:` with `template`, `purpose`, `project`, `user`; access-token lifetime = CP-18 idle timeout; refresh-token lifetime = CP-18 maximum lifetime; client-secret lifetime = CP-15; `iss` in authorization responses | New |
 | CP-42 | Public tool names | `<alias>_<tool>`; alias `[a-z0-9]{1,16}`; tool part `[A-Za-z0-9_]`; whole name ≤ 64 characters | New |
-| CP-43 | Adapter credential file | `$XDG_CONFIG_HOME/smcp/credentials.toml` (default `~/.config/smcp/`), mode 0600; refresh at 50% of access-token lifetime | New |
+| CP-43 | Adapter credential file | `$XDG_CONFIG_HOME/smcp/credentials.toml` (default `~/.config/smcp/`), mode 0600; **Windows (planned v1.3.0, FR-21.16):** `%APPDATA%\smcp\credentials.toml` with a protected DACL granting only the user, SYSTEM and Administrators; refresh at 50% of access-token lifetime | New |
 | CP-44 | Manifest classes | Risk class `low`, `moderate` or `high`; `high` = general SQL, code or shell execution, CAD scripting, browser automation, or process spawning beyond the declared argument vector (SEC 3.13). Side-effect class per tool: `read`, `write`, `external`, `execute`. `source_trust` per tool: `trusted` (content originates from the operator's own data) or `untrusted` (content from the Internet, third parties or other agents) | New |
 | CP-45 | Approval hold | Hold bound 120 s (`[limits] approval_hold`, configurable 0 to 600 s; 0 disables hold); keep-alive interval 10 s (`[approvals] keepalive`); approval URL `https://<CP-03 admin listener>/approvals/<approvalId>`, or `[approvals] console_url` followed by `/approvals/<approvalId>` when set | New |
-| CP-46 | Directories and service identities | **Enforced:** configuration `/etc/smcp` (root:smcp, 0750); state `/var/lib/smcp` (root:smcp, 0755) with `state/`, the Gateway's state directory (owner `smcp-core`, 0700), `policy/`, `registry/`, `artifacts/` (owner `smcp-core`, 0700), `journal/` (owner `smcp-evidence`, 0700), `keys/` (owner `smcp-keys`, 0700), `vault/` (owner `smcp-vault`, 0700), `exports/` (owner `smcp-core`, 0750; the evidence export, `[evidence] export_dir`), `home/` (root, 0755; the home directories of `smcp-core` and `smcp-srv`, which hold their rootless Podman storage), `srv/` (owner `smcp-core`, group `smcp-srv`, 0751; files shared with server containers, `runtime.shared_dir`); runtime `/run/smcp` (owner `smcp-core`, 0750); logs `/var/log/smcp` (owner `smcp-core`, 0750). Release 1.x runs the evidence exporter, the key manager, the vault and secret broker and the package library inside `smcpd` as `smcp-core` (SR-4.1-1), and SR-2.13-3 denies `smcp-vault` the vault; so the evidence journal and anchor, the keys, the vault, the registry and the artifacts are kept below `state/` (directories 0700, key files 0600), the policy file in `policy/`, and `journal/`, `keys/`, `vault/`, `registry/` and `artifacts/` are created with the owners above and stay empty until a release runs those components under their own identities. Identities `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, and `smcp-srv` with a subordinate range of 65,536 UIDs and GIDs for rootless Podman. **Standalone macOS:** `~/Library/Application Support/smcp-gateway/` with `config/` and `state/`, logs `~/Library/Logs/smcp-gateway/`, all 0700. **Standalone Linux:** configuration `$XDG_CONFIG_HOME/smcp-gateway` (default `~/.config/smcp-gateway`), state `$XDG_STATE_HOME/smcp-gateway` (default `~/.local/state/smcp-gateway`) including `log/`, runtime `$XDG_RUNTIME_DIR/smcp-gateway`, all 0700 | New |
+| CP-46 | Directories and service identities | **Enforced:** configuration `/etc/smcp` (root:smcp, 0750); state `/var/lib/smcp` (root:smcp, 0755) with `state/`, the Gateway's state directory (owner `smcp-core`, 0700), `policy/`, `registry/`, `artifacts/` (owner `smcp-core`, 0700), `journal/` (owner `smcp-evidence`, 0700), `keys/` (owner `smcp-keys`, 0700), `vault/` (owner `smcp-vault`, 0700), `exports/` (owner `smcp-core`, 0750; the evidence export, `[evidence] export_dir`), `home/` (root, 0755; the home directories of `smcp-core` and `smcp-srv`, which hold their rootless Podman storage), `srv/` (owner `smcp-core`, group `smcp-srv`, 0751; files shared with server containers, `runtime.shared_dir`); runtime `/run/smcp` (owner `smcp-core`, 0750); logs `/var/log/smcp` (owner `smcp-core`, 0750). Release 1.x runs the evidence exporter, the key manager, the vault and secret broker and the package library inside `smcpd` as `smcp-core` (SR-4.1-1), and SR-2.13-3 denies `smcp-vault` the vault; so the evidence journal and anchor, the keys, the vault, the registry and the artifacts are kept below `state/` (directories 0700, key files 0600), the policy file in `policy/`, and `journal/`, `keys/`, `vault/`, `registry/` and `artifacts/` are created with the owners above and stay empty until a release runs those components under their own identities. Identities `smcp-core`, `smcp-evidence`, `smcp-keys`, `smcp-vault`, `smcp-data`, `smcp-console`, and `smcp-srv` with a subordinate range of 65,536 UIDs and GIDs for rootless Podman. **Standalone macOS:** `~/Library/Application Support/smcp-gateway/` with `config/` and `state/`, logs `~/Library/Logs/smcp-gateway/`, all 0700. **Standalone Linux:** configuration `$XDG_CONFIG_HOME/smcp-gateway` (default `~/.config/smcp-gateway`), state `$XDG_STATE_HOME/smcp-gateway` (default `~/.local/state/smcp-gateway`) including `log/`, runtime `$XDG_RUNTIME_DIR/smcp-gateway`, all 0700. **Windows (planned v1.3.0, FR-21.5), every directory with inheritance disabled:** *per-user mode* `%LOCALAPPDATA%\smcp-gateway\` with `config\`, `state\`, `log\` and `exports\`, access for the installing user, SYSTEM and Administrators only; binaries in `%LOCALAPPDATA%\Programs\smcp-gateway\`. *Machine mode* binaries in `%ProgramFiles%\smcp-gateway\` (SYSTEM and Administrators full control, Users read and execute); `%ProgramData%\smcp-gateway\` with `config\` (SYSTEM and Administrators full control, `NT SERVICE\smcpd` read), `state\` and `log\` (SYSTEM, Administrators and `NT SERVICE\smcpd` full control), `exports\` (`NT SERVICE\smcpd` modify, local group `smcp-operators` read). Identities: virtual service account `NT SERVICE\smcpd`; local groups `smcp-harness` (named-pipe clients) and `smcp-operators`; one AppContainer profile `smcp.srv.<instance ID>` per backend instance. *WSL2 mode* the Enforced layout inside the distribution `smcp-gateway`; on the Windows side only the CP-43 credential file | New |
 | CP-47 | Upgrade bounds | Health wait after start 60 s; migration time limit 120 s | New |
 | CP-48 | Remote listener | The first of `127.0.0.1:8444` and `127.0.0.1:8445` that the CP-03 admin listener does not use (`127.0.0.1:8445` with the default admin listener; `[remote] address` overrides); TLS, Remote Access Profile only; public name set by the operator | New |
 | CP-49 | Remote limits | Calls 30/min per client ID, burst 5; OAuth endpoints 10 req/s per source address, burst 20; lockout after 5 consecutive failed sign-ins or token requests, for 15 min; body 256 KiB; headers 8 KiB; concurrency 4 per client, 16 total; remote session maximum lifetime 2 h, idle timeout 15 min; pending dynamic registrations at most 32 in total and 4 per source address (IPv6: per /64), each kept 24 h | New |
@@ -9117,12 +9611,12 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 2.5 | Admin identity | MUST | Realized by SR | SR-2.5-1 |
 | 2.6 | Protected admin session | MUST | Realized by SR | SR-2.6-1, SR-2.6-2 |
 | 2.7 | Password verification | MUST | Realized by SR | SR-2.7-1 |
-| 2.8 | Authenticated transport | MUST | Realized by SR | SR-2.8-1, SR-2.8-3, SR-2.8-4, SR-2.8-5 |
+| 2.8 | Authenticated transport | MUST | Realized by SR | SR-2.8-1, SR-2.8-3, SR-2.8-4, SR-2.8-5, SR-2.8-6 |
 | 2.9 | Origin and Host | MUST | Realized by SR | SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-2.9-4 |
 | 2.10 | Credential separation | MUST | Realized by SR | SR-2.10-1, SR-2.10-2 |
 | 2.11 | OAuth boundary | MUST | Realized by SR | SR-2.11-1, SR-2.11-2, SR-2.11-4, SR-2.11-5 |
 | 2.12 | State ownership | MUST | Deferred | SR-2.12-1 (Appendix N) |
-| 2.13 | Encrypted secrets | MUST | Realized by SR | SR-2.13-1, SR-2.13-2, SR-2.13-3, SR-2.13-5 |
+| 2.13 | Encrypted secrets | MUST | Realized by SR | SR-2.13-1, SR-2.13-2, SR-2.13-3, SR-2.13-4, SR-2.13-5 |
 | 2.14 | Minimal backend environment | MUST | Realized by SR | SR-2.14-1 |
 | 3 | Source-inspectable server admission | MUST | Realized by SR | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3-6 |
 | 3.1 | Source availability | MUST | Realized by SR | SR-3.1-1 |
@@ -9139,15 +9633,15 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 3.12 | No administrative tool exposure | MUST | Realized by SR | SR-3.12-1 |
 | 3.13 | High-risk candidates | MUST | Realized by SR | SR-3.13-1 |
 | 3.14 | Stateful tool admission | MUST | Realized by SR | SR-3.14-1 |
-| 4 | Contained local execution | MUST | Realized by SR | SR-4-1, SR-4-3 |
-| 4.1 | Separate OS identities | MUST | Realized by SR | SR-4.1-1, SR-4.1-2 |
+| 4 | Contained local execution | MUST | Realized by SR | SR-4-1, SR-4-2, SR-4-3 |
+| 4.1 | Separate OS identities | MUST | Realized by SR | SR-4.1-1, SR-4.1-2, SR-4.1-3 |
 | 4.2 | Private graph access | MUST | Realized by SR | SR-4.2-1, SR-4.2-2 |
 | 4.3 | CE access boundary | MUST | Deferred | SR-4.3-1 (Appendix N) |
 | 4.4 | Agent network allowlist | MUST | Disposition | Agent-sandbox network policy belongs to the harness deployment outside the SoI. The Security Limitations document (FR-18.2) states that an agent's native network and shell tools bypass the Gateway; the lockdown profiles (FR-15.1) cover MCP configuration only. |
-| 4.5 | Backend egress | MUST | Realized by SR | SR-4.5-1, SR-4.5-2, SR-4.5-4 |
-| 4.6 | Filesystem authority | MUST | Realized by SR | SR-4.6-1 |
+| 4.5 | Backend egress | MUST | Realized by SR | SR-4.5-1, SR-4.5-2, SR-4.5-3, SR-4.5-4 |
+| 4.6 | Filesystem authority | MUST | Realized by SR | SR-4.6-1, SR-4.6-2 |
 | 4.7 | Host-management exclusion | MUST | Realized by SR | SR-4.7-1, SR-4.7-2, SR-4.7-3 |
-| 4.8 | Safe process launch | MUST | Realized by SR | SR-4.8-1 |
+| 4.8 | Safe process launch | MUST | Realized by SR | SR-4.8-1, SR-4.8-2 |
 | 4.9 | Hermes endpoint | MUST | Realized by SR | SR-4.9-1 |
 | 4.10 | Runtime tool guard | MUST | Disposition | Client-side runtime tool guard belongs to the harness. The Gateway supports it with deterministic, manifest-derived catalogs (FR-1.25, FR-1.27) and the Claude Code lockdown profile limits MCP servers to the Gateway (FR-15.2). |
 | 4.11 | Protected client configuration | MUST | Realized by SR | SR-4.11-1, SR-4.11-2 |
@@ -9235,7 +9729,7 @@ Every requirement of `MCP_Gateway_Security_SRS.md` is listed. A MUST is covered 
 | 10.4 | Document authority | SHALL | Disposition | Satisfied by Section 1.4 of this SRS (document authority). |
 | 10.5 | Performance qualification | SHALL | Source of FR | FR-11 |
 | 10.6 | Acceptance evidence | SHALL | Source of FR | FR-8.34, FR-12.9, FR-12.10, FR-19, FR-19.3, FR-19.4 |
-| 10.7 | Release provenance | SHALL | Source of FR | FR-12.8, FR-13.1, FR-13.2, FR-20.23, SR-7-2, FR-22.21 |
+| 10.7 | Release provenance | SHALL | Source of FR | FR-12.8, FR-13.1, FR-13.2, FR-20.23, SR-7-2, FR-21.3, FR-22.21 |
 | 10.8 | Local security review | SHALL | Disposition | Source review of packaged servers is the operator's decision at packaging (FR-14.3, FR-14.5); Gateway release scanning is covered by FR-12.8. |
 | 10.9 | Operator procedures | SHALL | Source of FR | FR-12.7, FR-18, FR-18.4, FR-18.8 |
 
@@ -9245,39 +9739,39 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | Element | Name | Functional (FR) | Security (SR) |
 |---|---|---|---|
-| E-01 | Harness Interface Endpoint | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-1.48, FR-9.17, FR-11, FR-11.5, FR-12, FR-12.1, FR-12.2, FR-12.6, FR-12.8, FR-12.10, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, FR-16.8, FR-16.11 | SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-1, SR-4.14-2, SR-7.11-1 |
-| E-02 | Protocol Mediator | FR-1, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.28, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.42, FR-1.43, FR-1.44, FR-1.45, FR-1.46, FR-1.47, FR-1.48, FR-1.51, FR-3.14, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.1, FR-4.2, FR-5.24, FR-11.5, FR-12.9, FR-18.7, FR-18.9 | SR-2-1, SR-5.1-1, SR-5.2-1, SR-5.2-2, SR-5.3-1, SR-5.6-1, SR-5.11-1, SR-5.6-3 (planned v1.3.0) |
-| E-03 | Identity & Authentication Service | FR-2, FR-2.1, FR-2.5, FR-2.6, FR-2.15, FR-2.17, FR-2.18, FR-2.23, FR-16, FR-16.3, FR-16.5, FR-16.6 | SR-2.1-1, SR-2.1-2, SR-2.1-3, SR-2.11-1, SR-2.11-2, SR-2.11-5, SR-4.14-2 |
+| E-01 | Harness Interface Endpoint | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-1.48, FR-9.17, FR-11, FR-11.5, FR-12, FR-12.1, FR-12.2, FR-12.6, FR-12.8, FR-12.10, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, FR-16.8, FR-16.11, FR-21.8 (planned v1.3.0), FR-21.9 (planned v1.3.0) | SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-1, SR-4.14-2, SR-7.11-1, SR-2.8-6 (planned v1.3.0) |
+| E-02 | Protocol Mediator | FR-1, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.28, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.42, FR-1.43, FR-1.44, FR-1.45, FR-1.46, FR-1.47, FR-1.48, FR-1.51, FR-3.14, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.1, FR-4.2, FR-5.24, FR-11.5, FR-12.9, FR-18.7, FR-18.9, FR-21.8 (planned v1.3.0) | SR-2-1, SR-5.1-1, SR-5.2-1, SR-5.2-2, SR-5.3-1, SR-5.6-1, SR-5.11-1, SR-5.6-3 (planned v1.3.0) |
+| E-03 | Identity & Authentication Service | FR-2, FR-2.1, FR-2.5, FR-2.6, FR-2.15, FR-2.17, FR-2.18, FR-2.23, FR-16, FR-16.3, FR-16.5, FR-16.6, FR-21.9 (planned v1.3.0) | SR-2.1-1, SR-2.1-2, SR-2.1-3, SR-2.11-1, SR-2.11-2, SR-2.11-5, SR-4.14-2 |
 | E-04 | Session Manager | FR-1.48, FR-2, FR-2.2, FR-2.3, FR-2.4, FR-2.6, FR-2.7, FR-2.8, FR-2.9, FR-2.10, FR-2.11, FR-2.12, FR-2.13, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-16.12 | SR-2.1-2, SR-2.3-1, SR-2.11-4, SR-5.13-2 |
-| E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.4, FR-3.5, FR-3.6, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-9.17, FR-10.37, FR-18.5 | SR-1-3, SR-1.1-1, SR-1.1-2, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-7.3-1, SR-7.9-1 |
+| E-05 | Policy Administration Service | FR-3, FR-3.1, FR-3.2, FR-3.4, FR-3.5, FR-3.6, FR-3.8, FR-3.9, FR-6.5, FR-6.9, FR-9.17, FR-10.37, FR-18.5, FR-21.23 (planned v1.3.0) | SR-1-3, SR-1.1-1, SR-1.1-2, SR-1.9-1, SR-1.14-1, SR-1.15-1, SR-3.13-1, SR-7.3-1, SR-7.9-1 |
 | E-06 | Policy Decision Service | FR-3, FR-3.10, FR-3.11, FR-3.12, FR-3.13, FR-11, FR-11.2 | SR-1-2, SR-1.1-1, SR-1.1-2, SR-1.2-1, SR-1.3-1, SR-1.4-1, SR-1.5-1, SR-1.7-1, SR-1.7-2, SR-1.10-1, SR-1.11-1, SR-1.12-1, SR-1.12-2, SR-1.12-3, SR-1.15-1, SR-1.18-1, SR-1.19-1, SR-1.20-1, SR-3.10-1, SR-5.12-1, SR-5.13-2 |
 | E-07 | Approval Service | FR-3, FR-3.14, FR-3.15, FR-3.16, FR-3.17, FR-3.18, FR-3.19, FR-3.20, FR-3.21, FR-3.22, FR-3.23, FR-3.24, FR-3.25 | SR-1.18-2, SR-1.18-3 |
 | E-08 | Access Enforcement Point | FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.35, FR-1.50, FR-1.52, FR-4, FR-4.1, FR-4.3, FR-11.5, FR-22.35 (planned v1.3.0) | SR-1.2-1, SR-3.12-1, SR-5.4-1, SR-5.5-1, SR-5.7-1, SR-5.7-2, SR-5.18-2 |
-| E-09 | Request Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5 | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
+| E-09 | Request Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.5, FR-4.7, FR-4.15, FR-4.16, FR-4.17, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5, FR-21.25 (planned v1.3.0) | SR-1.8-1, SR-1.8-2, SR-1.8-3, SR-1.8-4, SR-1.8-5, SR-1.18-3, SR-5.8-1, SR-5.10-1, SR-5.12-1, SR-5.14-1 |
 | E-10 | Tool Dispatcher | FR-1.32, FR-1.39, FR-1.40, FR-1.41, FR-1.43, FR-4, FR-4.3, FR-4.8, FR-4.9, FR-4.10, FR-4.13, FR-5, FR-5.13, FR-5.14, FR-5.19, FR-5.20, FR-5.21, FR-5.23, FR-5.24, FR-5.26, FR-5.28 (planned v1.3.0), FR-5.29 (planned v1.3.0), FR-5.30 (planned v1.3.0), FR-5.32, FR-5.40, FR-11.5, FR-12.9, FR-22.10 (planned v1.3.0), FR-22.33 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.36 (planned v1.3.0), FR-22.39 (planned v1.3.0) | SR-2.10-1, SR-5.6-2, SR-5.7-3, SR-7.2-1, SR-7.6-2, SR-7.12-1, SR-2.10-2 (planned v1.3.0), SR-5.6-3 (planned v1.3.0) |
 | E-11 | Response Inspection Pipeline | FR-4, FR-4.3, FR-4.4, FR-4.6, FR-4.7, FR-4.11, FR-4.12, FR-4.15, FR-4.16, FR-4.17, FR-4.18, FR-8.27, FR-11.5, FR-19, FR-19.1, FR-19.5, FR-22.43 (planned v1.3.0) | SR-2-1, SR-5.7-3, SR-5.9-1, SR-5.10-1, SR-5.13-1, SR-5.14-1, SR-5.18-1, SR-5.20-1, SR-5.20-2 |
-| E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8, FR-22.35 (planned v1.3.0) | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-5.16-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1 |
-| E-13 | Library Trust Verifier | FR-5, FR-5.1, FR-5.2, FR-5.3, FR-5.4, FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.4, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.11, FR-14.12, FR-18.6, FR-22 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.43 (planned v1.3.0) | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3.1-1, SR-3.2-1, SR-3.5-1, SR-5.9-2, SR-3-6 (planned v1.3.0) |
-| E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.21, FR-5.22, FR-5.39, FR-5.40, FR-14, FR-14.9, FR-19.1, FR-19.5, FR-22.13 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.33 (planned v1.3.0) | SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2, SR-3.8-2 (planned v1.3.0) |
-| E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1, FR-22 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.31 (planned v1.3.0) | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1, SR-4-3 (planned v1.3.0) |
-| E-16 | Execution Sandbox | FR-5, FR-12.3, FR-13.5, FR-19.1, FR-22.24 (planned v1.3.0) | SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2, SR-4.5-4 (planned v1.3.0), SR-4.7-3 (planned v1.3.0) |
+| E-12 | Enforcement Coordinator | FR-3.20, FR-4, FR-4.3, FR-4.13, FR-4.14, FR-11.5, FR-11.10, FR-18.8, FR-21.7 (planned v1.3.0), FR-22.35 (planned v1.3.0) | SR-1.2-2, SR-1.16-1, SR-1.17-1, SR-1.17-2, SR-2.4-1, SR-4.1-1, SR-5.11-1, SR-5.16-1, SR-6.2-1, SR-6.3-1, SR-6.11-1, SR-7.6-1, SR-7.6-2, SR-7.7-1, SR-7.9-1, SR-7.10-1, SR-4.1-3 (planned v1.3.0) |
+| E-13 | Library Trust Verifier | FR-5, FR-5.1, FR-5.2, FR-5.3, FR-5.4, FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.4, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.11, FR-14.12, FR-18.6, FR-21.2 (planned v1.3.0), FR-22 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.43 (planned v1.3.0) | SR-3-1, SR-3-2, SR-3-3, SR-3-4, SR-3-5, SR-3.1-1, SR-3.2-1, SR-3.5-1, SR-5.9-2, SR-3-6 (planned v1.3.0) |
+| E-14 | Local Server Registry | FR-1.26, FR-1.27, FR-1.49, FR-4.16, FR-5, FR-5.5, FR-5.6, FR-5.7, FR-5.8, FR-5.21, FR-5.22, FR-5.39, FR-5.40, FR-14, FR-14.9, FR-19.1, FR-19.5, FR-21.23 (planned v1.3.0), FR-22.13 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.33 (planned v1.3.0) | SR-3-3, SR-3.4-1, SR-3.7-1, SR-3.8-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2, SR-4-2 (planned v1.3.0), SR-3.8-2 (planned v1.3.0) |
+| E-15 | Server Runtime Manager | FR-5, FR-5.9, FR-5.12, FR-5.14, FR-5.15, FR-5.27, FR-5.37, FR-12.3, FR-14.10, FR-19.1, FR-21 (planned v1.3.0), FR-21.2 (planned v1.3.0), FR-21.7 (planned v1.3.0), FR-21.11 (planned v1.3.0), FR-21.12 (planned v1.3.0), FR-21.13 (planned v1.3.0), FR-21.25 (planned v1.3.0), FR-22 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.31 (planned v1.3.0) | SR-2.14-1, SR-3-2, SR-3.6-1, SR-3.8-1, SR-4.8-1, SR-4.1-3 (planned v1.3.0), SR-4.6-2 (planned v1.3.0), SR-4.8-2 (planned v1.3.0), SR-4-3 (planned v1.3.0) |
+| E-16 | Execution Sandbox | FR-5, FR-12.3, FR-13.5, FR-19.1, FR-21 (planned v1.3.0), FR-21.12 (planned v1.3.0), FR-21.13 (planned v1.3.0), FR-21.14 (planned v1.3.0), FR-21.15 (planned v1.3.0), FR-21.25 (planned v1.3.0), FR-22.24 (planned v1.3.0) | SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2, SR-4.1-3 (planned v1.3.0), SR-4.5-3 (planned v1.3.0), SR-4.6-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0), SR-4.7-3 (planned v1.3.0) |
 | E-17 | Runtime Monitor | FR-5, FR-5.33, FR-5.34, FR-5.35 | — |
-| E-18 | Egress Broker | FR-5, FR-5.36, FR-5.37, FR-5.38, FR-6.6, FR-12.2, FR-19.1, FR-22.9 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.43 (planned v1.3.0), FR-22.45 (planned v1.4.0) | SR-4.5-1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1, SR-3.5-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0) |
-| E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.45 (planned v1.4.0) | SR-2.13-1, SR-2.13-3, SR-4.1-1, SR-2.13-5 (planned v1.3.0) |
+| E-18 | Egress Broker | FR-5, FR-5.36, FR-5.37, FR-5.38, FR-6.6, FR-12.2, FR-19.1, FR-21.14 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.43 (planned v1.3.0), FR-22.45 (planned v1.4.0) | SR-4.5-1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1, SR-4.5-3 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0) |
+| E-19 | Secret Vault | FR-6, FR-6.1, FR-6.2, FR-6.3, FR-6.4, FR-6.12, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.45 (planned v1.4.0) | SR-2.13-1, SR-2.13-3, SR-4.1-1, SR-2.13-4 (planned v1.3.0), SR-2.13-5 (planned v1.3.0) |
 | E-20 | Secret Broker | FR-3.1, FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.10, FR-6.11, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.45 (planned v1.4.0) | SR-2-1, SR-2.13-2, SR-2.13-3, SR-7.6-2 |
-| E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8, FR-22.14 (planned v1.3.0), FR-22.39 (planned v1.3.0) | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1, SR-6.18-2 (planned v1.3.0) |
-| E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-13, FR-14, FR-14.8, FR-17, FR-17.7 | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1 |
-| E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, FR-20.5 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.30 (planned v1.3.0) | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1 |
-| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4, FR-20.25 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0) |
-| E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.8, FR-12.11 | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
-| E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8 | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
-| E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11 | SR-4.2-2 |
-| E-28 | Data Lifecycle & Memory Manager | FR-9, FR-9.10, FR-9.11, FR-9.12, FR-9.14, FR-9.15, FR-9.16, FR-11, FR-11.9, FR-12, FR-12.4, FR-12.6, FR-12.7, FR-13, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8 | SR-6.14-1, SR-7.7-1, SR-7.8-1, SR-7.10-1 |
+| E-21 | Audit & Evidence Service | FR-7, FR-7.1, FR-7.2, FR-7.3, FR-7.4, FR-7.5, FR-7.14, FR-9.17, FR-12.7, FR-13.8, FR-16.8, FR-17.7, FR-17.8, FR-21.7 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.39 (planned v1.3.0) | SR-1.2-2, SR-4.1-1, SR-6.1-1, SR-6.2-1, SR-6.3-1, SR-6.4-1, SR-6.5-1, SR-6.7-1, SR-6.10-1, SR-6.11-1, SR-6.12-1, SR-6.13-1, SR-6.15-1, SR-6.16-1, SR-6.18-1, SR-6.19-1, SR-6.20-1, SR-7.7-1, SR-6.18-2 (planned v1.3.0) |
+| E-22 | Key & Trust Anchor Manager | FR-2.18, FR-7, FR-7.7, FR-7.8, FR-7.10, FR-13, FR-14, FR-14.8, FR-17, FR-17.7, FR-21 (planned v1.3.0), FR-21.6 (planned v1.3.0), FR-21.10 (planned v1.3.0) | SR-1.1-2, SR-2.2-1, SR-2.3-1, SR-2.8-4, SR-2.13-1, SR-3-1, SR-6.12-1, SR-2.13-4 (planned v1.3.0) |
+| E-23 | Health & Safety Monitor | FR-7, FR-7.11, FR-7.12, FR-7.13, FR-12.3, FR-13, FR-13.7, FR-13.9, FR-13.10, FR-13.13, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, FR-20.5 (planned v1.3.0), FR-21 (planned v1.3.0), FR-21.1 (planned v1.3.0), FR-21.5 (planned v1.3.0), FR-21.13 (planned v1.3.0), FR-21.15 (planned v1.3.0), FR-21.20 (planned v1.3.0), FR-21.26 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.30 (planned v1.3.0) | SR-4-1, SR-6.11-1, SR-7.3-1, SR-7.10-1, SR-4-2 (planned v1.3.0) |
+| E-24 | Management Console & Control API | FR-2.19, FR-2.23, FR-3.1, FR-3.23, FR-3.24, FR-3.25, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.24, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-11, FR-11.8, FR-12, FR-12.1, FR-12.2, FR-12.4, FR-12.7, FR-12.8, FR-12.10, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.10, FR-13.11, FR-13.12, FR-13.13, FR-14.10, FR-16.5, FR-16.11, FR-17.9, FR-18, FR-18.1, FR-18.2, FR-18.4, FR-18.8, FR-18.9, FR-19, FR-19.2, FR-19.3, FR-19.4, FR-20.25 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-21 (planned v1.3.0), FR-21.1 (planned v1.3.0), FR-21.2 (planned v1.3.0), FR-21.3 (planned v1.3.0), FR-21.4 (planned v1.3.0), FR-21.5 (planned v1.3.0), FR-21.6 (planned v1.3.0), FR-21.7 (planned v1.3.0), FR-21.15 (planned v1.3.0), FR-21.19 (planned v1.3.0), FR-21.20 (planned v1.3.0), FR-21.22 (planned v1.3.0), FR-21.24 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) | SR-1.19-1, SR-2-2, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-2.8-1, SR-2.9-2, SR-2.9-3, SR-3.3-1, SR-3.4-1, SR-3.9-1, SR-4.1-1, SR-4.14-1, SR-6-3, SR-6.16-1, SR-6.17-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0), SR-4-2 (planned v1.3.0) |
+| E-25 | Graph Database Engine | FR-9, FR-9.1, FR-9.18, FR-11.1, FR-12, FR-12.1, FR-12.2, FR-12.8, FR-12.11, FR-21.18 (planned v1.3.0) | SR-4.1-1, SR-4.2-1, SR-7.4-1 |
+| E-26 | Data Access Service | FR-9, FR-9.2, FR-9.3, FR-9.5, FR-9.6, FR-11.1, FR-11.6, FR-11.8, FR-21.18 (planned v1.3.0) | SR-1.13-1, SR-1.13-2, SR-4.2-1, SR-6-3, SR-6.10-1, SR-7.1-1 |
+| E-27 | Observation Store | FR-9, FR-9.7, FR-9.8, FR-9.9, FR-11, FR-11.1, FR-11.6, FR-12, FR-12.1, FR-12.11, FR-21.18 (planned v1.3.0) | SR-4.2-2 |
+| E-28 | Data Lifecycle & Memory Manager | FR-9, FR-9.10, FR-9.11, FR-9.12, FR-9.14, FR-9.15, FR-9.16, FR-11, FR-11.9, FR-12, FR-12.4, FR-12.6, FR-12.7, FR-13, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8, FR-21.5 (planned v1.3.0), FR-21.23 (planned v1.3.0), FR-21.26 (planned v1.3.0) | SR-6.14-1, SR-7.7-1, SR-7.8-1, SR-7.10-1 |
 | E-29 | Observation Collector | FR-1.44, FR-1.45, FR-10, FR-10.1, FR-10.2, FR-10.3, FR-10.4, FR-10.5, FR-10.6, FR-10.7, FR-10.8, FR-10.9, FR-10.10, FR-10.11, FR-10.37, FR-11, FR-11.4 | SR-6.7-1 |
 | E-30 | Behavior Baseline Engine | FR-10, FR-10.12, FR-10.13, FR-10.14, FR-10.15, FR-10.16, FR-10.17, FR-10.18, FR-10.19, FR-10.20, FR-10.21, FR-11.7 | SR-7-1 |
 | E-31 | Anomaly Scorer | FR-4.15, FR-10, FR-10.22, FR-10.23, FR-10.24, FR-10.25, FR-10.26, FR-10.27, FR-10.28, FR-10.29, FR-11, FR-11.3 | SR-1.12-2, SR-7-1 |
 | E-32 | Research Dataset Service | FR-3.1, FR-10, FR-10.30, FR-10.31, FR-10.32, FR-10.33, FR-10.34, FR-10.35, FR-10.36, FR-12.4 | SR-6-1, SR-6-2, SR-6.17-1 |
-| E-33 | Harness Adapter Kit | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.8, FR-15.9, FR-15.10, FR-15.11, FR-16, FR-16.2, FR-16.9, FR-16.10, FR-18, FR-18.2, FR-18.3, FR-20.10 (planned v1.3.0) | SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1, SR-4.11-2 (planned v1.3.0) |
+| E-33 | Harness Adapter Kit | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.8, FR-15.9, FR-15.10, FR-15.11, FR-16, FR-16.2, FR-16.9, FR-16.10, FR-18, FR-18.2, FR-18.3, FR-20.10 (planned v1.3.0), FR-21.2 (planned v1.3.0), FR-21.16 (planned v1.3.0), FR-21.17 (planned v1.3.0), FR-21.21 (planned v1.3.0) | SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1, SR-4.11-2 (planned v1.3.0) |
 | E-34 | Desktop Application | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.6 (planned v1.3.0), FR-20.7 (planned v1.3.0), FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.10 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.27 (planned v1.3.0), FR-20.28 (planned v1.3.0), FR-20.40 (planned v1.3.0), FR-20.41 (planned v1.3.0), FR-20.42 (planned v1.3.0), FR-20.43 (planned v1.3.0), FR-20.44 (planned v1.3.0), FR-20.45 (planned v1.3.0), FR-20.46 (planned v1.3.0), FR-20.47 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-20.52 (planned v1.3.0), FR-22.44 (planned v1.3.0) | SR-2-3 (planned v1.3.0), SR-2-4 (planned v1.3.0), SR-2-5 (planned v1.3.0), SR-2-6 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0), SR-7-2 (planned v1.3.0) |
 | E-35 | Platform Installers | FR-20 (planned v1.3.0), FR-20.16 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.19 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), FR-20.23 (planned v1.3.0), FR-20.24 (planned v1.3.0), FR-20.25 (planned v1.3.0), FR-20.26 (planned v1.3.0), FR-20.27 (planned v1.3.0) | SR-4.11-2 (planned v1.3.0) |
 | E-36 | ContextForge Connector | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.5 (planned v1.3.0), FR-22.6 (planned v1.3.0), FR-22.7 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0), FR-22.12 (planned v1.3.0), FR-22.13 (planned v1.3.0), FR-22.14 (planned v1.3.0), FR-22.15 (planned v1.3.0), FR-22.16 (planned v1.3.0), FR-22.17 (planned v1.3.0), FR-22.18 (planned v1.3.0), FR-22.19 (planned v1.3.0), FR-22.20 (planned v1.3.0), FR-22.21 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.23 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.26 (planned v1.3.0), FR-22.27 (planned v1.3.0), FR-22.28 (planned v1.3.0), FR-22.29 (planned v1.3.0), FR-22.30 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-22.33 (planned v1.3.0), FR-22.34 (planned v1.3.0), FR-22.35 (planned v1.3.0), FR-22.37 (planned v1.3.0), FR-22.38 (planned v1.3.0), FR-22.40 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0), FR-22.43 (planned v1.3.0), FR-22.44 (planned v1.3.0), FR-22.45 (planned v1.4.0) | SR-3-6 (planned v1.3.0), SR-3.2-2 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-3.6-2 (planned v1.3.0), SR-3.8-2 (planned v1.3.0), SR-4-3 (planned v1.3.0), SR-2.10-2 (planned v1.3.0), SR-2.13-5 (planned v1.3.0) |
@@ -9288,10 +9782,10 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Name | Requirements |
 |---|---|---|
-| F-01 | Terminate harness transport | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-9.17, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-2, SR-7.11-1, SR-2.8-2 (deferred) |
-| F-02 | Validate and normalize MCP messages | FR-1, FR-1.4, FR-1.5, FR-1.8, FR-1.10, FR-1.11, FR-1.16, FR-1.21, FR-1.22, FR-1.28, FR-1.33, FR-1.38, FR-1.44, FR-1.45, FR-1.47, FR-4.1, FR-4.2, FR-18.9, SR-5.2-1, SR-5.2-2, SR-5.6-1, SR-5.6-3 (planned v1.3.0) |
+| F-01 | Terminate harness transport | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.41, FR-1.47, FR-9.17, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.6, FR-16.7, SR-2.8-1, SR-2.8-3, SR-2.9-1, SR-2.9-2, SR-2.9-3, SR-4.14-2, SR-7.11-1, FR-21.8 (planned v1.3.0), SR-2.8-6 (planned v1.3.0), SR-2.8-2 (deferred) |
+| F-02 | Validate and normalize MCP messages | FR-1, FR-1.4, FR-1.5, FR-1.8, FR-1.10, FR-1.11, FR-1.16, FR-1.21, FR-1.22, FR-1.28, FR-1.33, FR-1.38, FR-1.44, FR-1.45, FR-1.47, FR-4.1, FR-4.2, FR-18.9, SR-5.2-1, SR-5.2-2, SR-5.6-1, FR-21.8 (planned v1.3.0), SR-5.6-3 (planned v1.3.0) |
 | F-03 | Negotiate protocol profile | FR-1, FR-1.9, FR-1.12, FR-1.17, FR-1.46, SR-5.1-1, SR-5.3-1, SR-5.6-1 |
-| F-04 | Authenticate framework instance | FR-2, FR-2.1, FR-2.15, FR-2.17, FR-2.18, FR-16.3, FR-16.6, SR-2.1-1, SR-2.1-3, SR-2.11-1, SR-2.11-5, SR-4.14-2, SR-2.11-3 (deferred) |
+| F-04 | Authenticate framework instance | FR-2, FR-2.1, FR-2.15, FR-2.17, FR-2.18, FR-16.3, FR-16.6, SR-2.1-1, SR-2.1-3, SR-2.11-1, SR-2.11-5, SR-4.14-2, FR-21.9 (planned v1.3.0), SR-2.11-3 (deferred) |
 | F-05 | Verify session proof | FR-2, FR-2.5, SR-2.1-2, SR-2.1-3 |
 | F-06 | Establish session | FR-2, FR-2.2, FR-2.3, FR-2.4, FR-2.10, FR-2.19, FR-2.20, FR-16.12, SR-2.3-1 |
 | F-07 | Bind Allow policy to session | FR-2, FR-2.4, FR-2.6, FR-2.7, FR-2.12, FR-2.13, FR-2.20, FR-2.21, FR-16.12 |
@@ -9325,16 +9819,16 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-35 | Process revocation feed | FR-5.3, FR-14.12, SR-3-3, SR-3-4 |
 | F-36 | Maintain verified server inventory | FR-1.49, FR-5.5, FR-5.6, FR-5.7, FR-5.39, FR-14.9, SR-3.7-1, SR-3.9-1, SR-3.11-1, SR-3.14-1, SR-4-1, SR-5.9-2, FR-22.13 (planned v1.3.0) |
 | F-37 | Detect drift and expiry | FR-5.8, FR-5.21, FR-5.22, FR-19.1, SR-3.8-1, FR-22.33 (planned v1.3.0), SR-3.8-2 (planned v1.3.0), FR-5.17 (deferred), FR-5.31 (deferred) |
-| F-38 | Instantiate server instance | FR-5.9, FR-5.37, FR-14.10, SR-2.14-1, SR-3-2, SR-3.6-1, SR-4.8-1, FR-22.8 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-5.10 (deferred) |
+| F-38 | Instantiate server instance | FR-5.9, FR-5.37, FR-14.10, SR-2.14-1, SR-3-2, SR-3.6-1, SR-4.8-1, FR-21.11 (planned v1.3.0), FR-21.12 (planned v1.3.0), FR-21.25 (planned v1.3.0), SR-4.8-2 (planned v1.3.0), FR-22.8 (planned v1.3.0), FR-22.24 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-5.10 (deferred) |
 | F-39 | Supervise lifecycle | FR-5.12, FR-5.15, FR-22.23 (planned v1.3.0), FR-5.11 (deferred) |
-| F-40 | Tear down and sanitize | FR-5.14, FR-5.27, SR-3.8-1, FR-5.11 (deferred) |
-| F-41 | Contain server execution | FR-19.1, SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2, FR-22.24 (planned v1.3.0), SR-4.5-4 (planned v1.3.0), SR-4.7-3 (planned v1.3.0) |
+| F-40 | Tear down and sanitize | FR-5.14, FR-5.27, SR-3.8-1, FR-21.7 (planned v1.3.0), SR-4.6-2 (planned v1.3.0), FR-5.11 (deferred) |
+| F-41 | Contain server execution | FR-19.1, SR-4.1-2, SR-4.5-1, SR-4.6-1, SR-4.7-1, SR-4.7-2, FR-21.12 (planned v1.3.0), FR-21.13 (planned v1.3.0), FR-21.25 (planned v1.3.0), SR-4.6-2 (planned v1.3.0), FR-22.24 (planned v1.3.0), SR-4.5-4 (planned v1.3.0), SR-4.7-3 (planned v1.3.0) |
 | F-42 | Observe runtime behavior | FR-5.33 |
 | F-43 | Detect declared-behavior deviation | FR-5.34 |
 | F-44 | Trigger containment response | FR-5.35 |
-| F-45 | Authorize and mediate egress | FR-5.36, FR-5.38, FR-19.1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1, FR-22.40 (planned v1.3.0) |
+| F-45 | Authorize and mediate egress | FR-5.36, FR-5.38, FR-19.1, SR-4.5-2, SR-5.8-2, SR-5.15-1, SR-5.15-2, SR-5.16-1, SR-5.17-1, SR-5.19-1, FR-21.14 (planned v1.3.0), SR-4.5-3 (planned v1.3.0), FR-22.40 (planned v1.3.0) |
 | F-46 | Inject credential at egress | FR-6.6, SR-5.8-2, FR-22.15 (planned v1.3.0), FR-22.40 (planned v1.3.0) |
-| F-47 | Store and protect secrets | FR-6, FR-6.1, FR-6.2, FR-6.12, SR-2.13-1, SR-2.13-5 (planned v1.3.0) |
+| F-47 | Store and protect secrets | FR-6, FR-6.1, FR-6.2, FR-6.12, SR-2.13-1, SR-2.13-4 (planned v1.3.0), SR-2.13-5 (planned v1.3.0) |
 | F-48 | Rotate and retire secrets | FR-6, FR-6.3, FR-6.4, FR-22.32 (planned v1.3.0) |
 | F-49 | Authorize secret use | FR-6, FR-6.11 |
 | F-50 | Deliver secret | FR-6, FR-6.6, FR-6.7, FR-6.8, FR-6.9, FR-6.11, SR-2.13-2, FR-22.15 (planned v1.3.0), FR-22.28 (planned v1.3.0) |
@@ -9347,26 +9841,26 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-57 | Serve audit queries | FR-7.3, FR-8.22, FR-11.8, SR-6.16-1 |
 | F-58 | Manage trust anchors | FR-7.10, FR-14.8 |
 | F-59 | Issue and revoke framework credentials | FR-2.18, FR-7.7, FR-16, FR-16.5, SR-2.2-1, SR-2.3-1, SR-2.11-2, FR-2.14 (deferred), FR-7.15 (deferred) |
-| F-60 | Protect Gateway keys | FR-7.7, FR-7.8, FR-17, FR-17.7, SR-2.8-4, SR-2.13-1, FR-7.15 (deferred), FR-7.9 (deferred) |
-| F-61 | Monitor enforcement health | FR-7.11, FR-7.12, FR-13.9, FR-13.10, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, SR-4-1, SR-6.11-1, FR-20.5 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.30 (planned v1.3.0) |
-| F-62 | Drive fail-closed state | FR-7.12, FR-7.13, FR-9.17, FR-13.9, FR-13.13, SR-7.3-1 |
+| F-60 | Protect Gateway keys | FR-7.7, FR-7.8, FR-17, FR-17.7, SR-2.8-4, SR-2.13-1, FR-21.10 (planned v1.3.0), SR-2.13-4 (planned v1.3.0), FR-7.15 (deferred), FR-7.9 (deferred) |
+| F-61 | Monitor enforcement health | FR-7.11, FR-7.12, FR-13.9, FR-13.10, FR-17, FR-17.1, FR-17.2, FR-17.3, FR-17.4, FR-17.5, FR-17.9, FR-19.3, SR-4-1, SR-6.11-1, FR-20.5 (planned v1.3.0), FR-21.5 (planned v1.3.0), FR-21.13 (planned v1.3.0), FR-21.20 (planned v1.3.0), FR-21.26 (planned v1.3.0), SR-4-2 (planned v1.3.0), FR-22.25 (planned v1.3.0), FR-22.30 (planned v1.3.0) |
+| F-62 | Drive fail-closed state | FR-7.12, FR-7.13, FR-9.17, FR-13.9, FR-13.13, SR-7.3-1, FR-21.7 (planned v1.3.0) |
 | F-63 | Authenticate administrative user | FR-2.19, FR-2.23, FR-8, SR-2.5-1, SR-2.6-1, SR-2.7-1, SR-7.5-1, SR-7.5-2, SR-8.9-1, SR-2.9-4 (planned v1.3.0) |
 | F-64 | Enforce administrative roles | FR-2.23, FR-8, FR-8.2, SR-2-2, SR-6-3, SR-6.16-1 |
-| F-65 | Present management views | FR-8, FR-8.1, FR-8.3, FR-8.4, FR-8.5, FR-8.14, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-13.10, FR-18, FR-18.4, FR-19.2, FR-19.4, SR-3.3-1, SR-3.4-1, SR-6.17-1, FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) |
+| F-65 | Present management views | FR-8, FR-8.1, FR-8.3, FR-8.4, FR-8.5, FR-8.14, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.21, FR-8.22, FR-8.23, FR-8.25, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-13.10, FR-18, FR-18.4, FR-19.2, FR-19.4, SR-3.3-1, SR-3.4-1, SR-6.17-1, FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), SR-4-2 (planned v1.3.0), FR-22.4 (planned v1.3.0), FR-22.41 (planned v1.3.0), FR-22.42 (planned v1.3.0) |
 | F-66 | Estimate observation cost | FR-8.11, FR-3.7 (deferred) |
 | F-67 | Provide parameter-selection workbench | FR-8, FR-8.6, FR-8.7, FR-8.8, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.24, FR-8.25 |
 | F-68 | Present behavior analytics | FR-8, FR-8.13 |
 | F-69 | Present performance and resource views | FR-8, FR-8.15, FR-8.16 |
-| F-70 | Persist and index graph data | FR-9.1, FR-9.18 |
+| F-70 | Persist and index graph data | FR-9.1, FR-9.18, FR-21.18 (planned v1.3.0) |
 | F-71 | Execute bounded graph queries and transactions | FR-9.18 |
 | F-72 | Authorize and execute typed data operations | FR-9.2, FR-9.3, SR-1.13-1, SR-1.13-2, SR-6-3, SR-7.1-1, SR-4.3-1 (deferred) |
 | F-73 | Batch and route writes | FR-9.5, FR-11.6, FR-9.4 (deferred) |
 | F-74 | Apply backpressure | FR-9.6 |
-| F-75 | Store observation and meta-metric records | FR-9.7, FR-9.8, FR-11.6 |
+| F-75 | Store observation and meta-metric records | FR-9.7, FR-9.8, FR-11.6, FR-21.18 (planned v1.3.0) |
 | F-76 | Serve aggregate queries | FR-9.9, FR-11.8 |
 | F-77 | Allocate and enforce memory budgets | FR-9.10, FR-9.11, FR-9.12, FR-11.9 |
-| F-78 | Manage storage tiers, retention and quotas | FR-9.14, FR-9.15, SR-6.14-1, SR-7.10-1, FR-9.13 (deferred) |
-| F-79 | Schedule and verify backups | FR-9.16, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8, SR-7.7-1, SR-7.8-1 |
+| F-78 | Manage storage tiers, retention and quotas | FR-9.14, FR-9.15, SR-6.14-1, SR-7.10-1, FR-21.26 (planned v1.3.0), FR-9.13 (deferred) |
+| F-79 | Schedule and verify backups | FR-9.16, FR-13.7, FR-13.8, FR-17, FR-17.6, FR-18.8, SR-7.7-1, SR-7.8-1, FR-21.23 (planned v1.3.0) |
 | F-80 | Collect raw observables | FR-1.44, FR-1.45, FR-10.1, FR-10.3, FR-11.4 |
 | F-81 | Extract features | FR-10.3, FR-10.5 |
 | F-82 | Apply sampling, sensitivity and escalation rules | FR-10.4, FR-10.6, FR-10.7, FR-10.8, SR-6.7-1, SR-6.6-1 (deferred) |
@@ -9381,11 +9875,11 @@ Use this matrix to code element by element. A requirement allocated to several e
 | F-91 | Manage research capture campaigns | FR-8.17, FR-10.30, FR-10.31 |
 | F-92 | Extract and pseudonymize datasets | FR-10.32, FR-10.33, SR-6-1, SR-6-2 |
 | F-93 | Export datasets with data dictionary | FR-8.17, FR-10.34, FR-10.35, FR-10.36, SR-6-2, SR-6.17-1 |
-| F-94 | Obtain and refresh harness session | FR-12.12, FR-15, FR-15.8, FR-18.3, SR-2.3-2 |
-| F-95 | Bridge stdio to the harness interface | FR-12.13, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.9, FR-18.3 |
+| F-94 | Obtain and refresh harness session | FR-12.12, FR-15, FR-15.8, FR-18.3, SR-2.3-2, FR-21.16 (planned v1.3.0), FR-21.21 (planned v1.3.0) |
+| F-95 | Bridge stdio to the harness interface | FR-12.13, FR-15, FR-15.8, FR-15.9, FR-16, FR-16.9, FR-18.3, FR-21.16 (planned v1.3.0), FR-21.21 (planned v1.3.0) |
 | F-96 | Build, sign and verify server package | FR-14, FR-14.1, FR-14.2, FR-14.3, FR-14.5, FR-14.6, FR-14.7, FR-14.9, FR-14.10, FR-14.12, FR-18.6, SR-3.5-1, FR-22.6 (planned v1.3.0), FR-22.12 (planned v1.3.0) |
-| F-97 | Install, upgrade and remove the Gateway | FR-12.4, FR-12.7, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.11, FR-13.12, FR-13.13, FR-16.11, FR-17.9, FR-18.1, SR-4.14-1, SR-7.5-2, FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-12.5 (deferred) |
-| F-98 | Diagnose and lock down harness configuration | FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.10, FR-15.11, FR-16.10, FR-18, FR-18.2, FR-18.3, SR-4.9-1, SR-4.11-1, SR-4.13-1, FR-20.10 (planned v1.3.0), SR-4.11-2 (planned v1.3.0) |
+| F-97 | Install, upgrade and remove the Gateway | FR-12.4, FR-12.7, FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.4, FR-13.5, FR-13.6, FR-13.7, FR-13.8, FR-13.11, FR-13.12, FR-13.13, FR-16.11, FR-17.9, FR-18.1, SR-4.14-1, SR-7.5-2, FR-20.8 (planned v1.3.0), FR-20.9 (planned v1.3.0), FR-20.12 (planned v1.3.0), FR-21 (planned v1.3.0), FR-21.1 (planned v1.3.0), FR-21.2 (planned v1.3.0), FR-21.3 (planned v1.3.0), FR-21.4 (planned v1.3.0), FR-21.5 (planned v1.3.0), FR-21.6 (planned v1.3.0), FR-21.15 (planned v1.3.0), FR-21.19 (planned v1.3.0), FR-21.22 (planned v1.3.0), FR-21.24 (planned v1.3.0), FR-22.22 (planned v1.3.0), FR-22.31 (planned v1.3.0), FR-22.32 (planned v1.3.0), FR-12.5 (deferred) |
+| F-98 | Diagnose and lock down harness configuration | FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.4, FR-15.5, FR-15.6, FR-15.7, FR-15.10, FR-15.11, FR-16.10, FR-18, FR-18.2, FR-18.3, SR-4.9-1, SR-4.11-1, SR-4.13-1, FR-20.10 (planned v1.3.0), SR-4.11-2 (planned v1.3.0), FR-21.17 (planned v1.3.0) |
 | F-99 | Track session taint | SR-5.13-2 |
 | F-100 | Present desktop status and service control | FR-20 (planned v1.3.0), FR-20.1 (planned v1.3.0), FR-20.2 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.4 (planned v1.3.0), FR-20.14 (planned v1.3.0), FR-20.15 (planned v1.3.0), FR-20.41 (planned v1.3.0), FR-20.45 (planned v1.3.0), FR-20.46 (planned v1.3.0), FR-20.47 (planned v1.3.0), FR-20.48 (planned v1.3.0), FR-20.49 (planned v1.3.0), FR-20.50 (planned v1.3.0), FR-20.51 (planned v1.3.0), FR-20.52 (planned v1.3.0), SR-2-3 (planned v1.3.0), SR-2-7 (planned v1.3.0) |
 | F-101 | Raise desktop approval notices | FR-20.7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0) |
@@ -9402,22 +9896,22 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Requirements |
 |---|---|
-| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-1.51, FR-1.52, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-2.23, FR-3.14, FR-3.16, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.12, FR-12.9, FR-12.12, FR-12.13, FR-15, FR-15.8, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-2.11-4, SR-2.11-5, SR-5.2-1, SR-5.2-2, FR-5.25 (deferred), SR-2.8-2 (deferred), SR-2.11-3 (deferred) |
+| X-01 | FR-1, FR-1.1, FR-1.2, FR-1.3, FR-1.4, FR-1.5, FR-1.6, FR-1.7, FR-1.8, FR-1.9, FR-1.10, FR-1.11, FR-1.12, FR-1.13, FR-1.14, FR-1.15, FR-1.16, FR-1.17, FR-1.18, FR-1.19, FR-1.20, FR-1.21, FR-1.22, FR-1.23, FR-1.24, FR-1.25, FR-1.26, FR-1.27, FR-1.28, FR-1.29, FR-1.30, FR-1.31, FR-1.32, FR-1.33, FR-1.34, FR-1.35, FR-1.36, FR-1.37, FR-1.38, FR-1.39, FR-1.40, FR-1.41, FR-1.42, FR-1.43, FR-1.44, FR-1.46, FR-1.47, FR-1.48, FR-1.50, FR-1.51, FR-1.52, FR-2.2, FR-2.3, FR-2.4, FR-2.5, FR-2.15, FR-2.17, FR-2.18, FR-2.19, FR-2.20, FR-2.21, FR-2.22, FR-2.23, FR-3.14, FR-3.16, FR-3.19, FR-3.21, FR-3.22, FR-3.25, FR-4.12, FR-12.9, FR-12.12, FR-12.13, FR-15, FR-15.8, SR-2-1, SR-2.1-2, SR-2.8-1, SR-2.9-1, SR-2.9-2, SR-2.11-1, SR-2.11-4, SR-2.11-5, SR-5.2-1, SR-5.2-2, FR-21.8 (planned v1.3.0), FR-21.9 (planned v1.3.0), FR-21.16 (planned v1.3.0), SR-2.8-6 (planned v1.3.0), FR-5.25 (deferred), SR-2.8-2 (deferred), SR-2.11-3 (deferred) |
 | X-02 | FR-14, FR-14.3, FR-14.5, FR-14.6, FR-14.9, FR-14.12, FR-22.10 (planned v1.3.0), FR-22.11 (planned v1.3.0) |
 | X-03 | FR-5.1, FR-5.2, FR-5.3, FR-14, FR-14.4, FR-14.11, SR-3-6 (planned v1.3.0) |
 | X-04 | FR-2.19, FR-2.23, FR-8, FR-8.1, FR-8.2, FR-8.3, FR-8.4, FR-8.5, FR-8.6, FR-8.9, FR-8.10, FR-8.11, FR-8.12, FR-8.13, FR-8.14, FR-8.15, FR-8.16, FR-8.17, FR-8.18, FR-8.19, FR-8.20, FR-8.22, FR-8.23, FR-8.24, FR-8.26, FR-8.27, FR-8.28, FR-8.29, FR-8.30, FR-8.31, FR-8.32, FR-8.33, FR-8.34, FR-8.35, FR-16.5, SR-2.5-1, SR-2.8-1, SR-2.9-2, FR-20.6 (planned v1.3.0), SR-2.8-5 (planned v1.3.0), SR-2.9-4 (planned v1.3.0) |
 | X-05 | FR-3.17, FR-3.18, FR-3.23, FR-3.24, FR-3.25, FR-8.21 |
-| X-06 | FR-5.36, FR-5.38, SR-4.5-2, SR-5.15-1, FR-22.40 (planned v1.3.0) |
-| X-07 | FR-12.3, FR-12.4, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1, FR-20.1 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.28 (planned v1.3.0), SR-2-7 (planned v1.3.0), SR-4.7-3 (planned v1.3.0), FR-7.9 (deferred), FR-12.5 (deferred) |
+| X-06 | FR-5.36, FR-5.38, SR-4.5-2, SR-5.15-1, FR-21.14 (planned v1.3.0), SR-4.5-3 (planned v1.3.0), FR-22.40 (planned v1.3.0) |
+| X-07 | FR-12.3, FR-12.4, FR-12.11, FR-13, FR-13.4, FR-13.5, FR-13.6, FR-13.9, FR-13.11, FR-13.12, FR-15.4, SR-4.1-1, SR-4.1-2, SR-4.2-1, SR-4.14-1, SR-7.4-1, FR-20.1 (planned v1.3.0), FR-20.3 (planned v1.3.0), FR-20.28 (planned v1.3.0), SR-2-7 (planned v1.3.0), FR-21 (planned v1.3.0), FR-21.1 (planned v1.3.0), FR-21.5 (planned v1.3.0), FR-21.6 (planned v1.3.0), FR-21.10 (planned v1.3.0), FR-21.11 (planned v1.3.0), FR-21.12 (planned v1.3.0), FR-21.13 (planned v1.3.0), FR-21.14 (planned v1.3.0), FR-21.15 (planned v1.3.0), FR-21.18 (planned v1.3.0), FR-21.23 (planned v1.3.0), FR-21.25 (planned v1.3.0), FR-21.26 (planned v1.3.0), SR-4-2 (planned v1.3.0), SR-4.1-3 (planned v1.3.0), SR-4.5-3 (planned v1.3.0), SR-4.6-2 (planned v1.3.0), SR-4.7-3 (planned v1.3.0), FR-7.9 (deferred), FR-12.5 (deferred) |
 | X-08 | FR-6.2 |
 | X-09 | FR-7.14 |
 | X-10 | FR-10.2 |
 | X-11 | FR-10.34, FR-10.35, FR-10.36, SR-6-1 |
-| X-12 | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.6, FR-15.7, FR-15.8, FR-15.10, FR-15.11, FR-16.9, FR-18.3, SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1 |
+| X-12 | FR-1.48, FR-12.12, FR-12.13, FR-15, FR-15.1, FR-15.2, FR-15.3, FR-15.6, FR-15.7, FR-15.8, FR-15.10, FR-15.11, FR-16.9, FR-18.3, SR-2.3-2, SR-4.9-1, SR-4.11-1, SR-4.13-1, FR-21.16 (planned v1.3.0), FR-21.17 (planned v1.3.0), FR-21.21 (planned v1.3.0) |
 | X-13 | FR-15.9, FR-16, FR-16.1, FR-16.2, FR-16.3, FR-16.4, FR-16.5, FR-16.6, FR-16.7, FR-16.8, FR-16.9, FR-16.10, FR-16.11, FR-16.12, FR-18.3, SR-2.11-2, SR-4.14-1, SR-4.14-2 |
 | X-14 | FR-3.23, FR-20.7 (planned v1.3.0), SR-2.6-2 (planned v1.3.0) |
 | X-15 | FR-17.4, FR-17.5, FR-20.4 (planned v1.3.0), FR-20.5 (planned v1.3.0) |
-| X-16 | FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.7, FR-20 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.23 (planned v1.3.0), SR-7-2 (planned v1.3.0), FR-20.32 (deferred) |
+| X-16 | FR-13, FR-13.1, FR-13.2, FR-13.3, FR-13.7, FR-20 (planned v1.3.0), FR-20.11 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.23 (planned v1.3.0), SR-7-2 (planned v1.3.0), FR-21 (planned v1.3.0), FR-21.2 (planned v1.3.0), FR-21.3 (planned v1.3.0), FR-21.4 (planned v1.3.0), FR-21.19 (planned v1.3.0), FR-21.22 (planned v1.3.0), FR-21.24 (planned v1.3.0), FR-20.32 (deferred) |
 | X-17 | FR-14, FR-14.1, FR-14.2, SR-3.5-1, FR-22.6 (planned v1.3.0) |
 | X-18 | FR-20 (planned v1.3.0), FR-20.13 (planned v1.3.0), FR-20.17 (planned v1.3.0), FR-20.18 (planned v1.3.0), FR-20.20 (planned v1.3.0), FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0), SR-4.11-2 (planned v1.3.0), FR-20.31 (deferred), FR-20.32 (deferred) |
 | X-19 | FR-22 (planned v1.3.0), FR-22.1 (planned v1.3.0), FR-22.2 (planned v1.3.0), FR-22.3 (planned v1.3.0) |
@@ -9449,9 +9943,9 @@ Use this matrix to code element by element. A requirement allocated to several e
 | I-20 | FR-2.11, SR-2.4-1, SR-7.6-2 |
 | I-21 | FR-5.4, FR-5.5, FR-5.39, SR-5.9-2 |
 | I-22 | FR-5.9, FR-5.37 |
-| I-23 | FR-5.9, FR-5.27, FR-22.24 (planned v1.3.0) |
+| I-23 | FR-5.9, FR-5.27, FR-21.13 (planned v1.3.0), FR-22.24 (planned v1.3.0) |
 | I-24 | FR-5.33 |
-| I-25 | FR-5.36, SR-4.5-1, SR-5.16-1, FR-22.9 (planned v1.3.0), FR-22.40 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0) |
+| I-25 | FR-5.36, SR-4.5-1, SR-5.16-1, FR-21.14 (planned v1.3.0), FR-22.9 (planned v1.3.0), FR-22.40 (planned v1.3.0), SR-3.5-2 (planned v1.3.0), SR-4.5-4 (planned v1.3.0) |
 | I-26 | FR-6.6, FR-22.15 (planned v1.3.0) |
 | I-27 | SR-2.13-3, FR-22.28 (planned v1.3.0) |
 | I-28 | FR-6.7, FR-6.8 |
@@ -9475,14 +9969,14 @@ Use this matrix to code element by element. A requirement allocated to several e
 
 | ID | Requirements |
 |---|---|
-| D-01 | FR-2.1, FR-2.18, FR-3.1, FR-3.4, FR-6.5, FR-9.1, FR-9.16, FR-10.30, SR-1.1-1, SR-1.1-2, SR-1.14-1, SR-1.15-1, SR-7.3-1, FR-3.26 (deferred) |
+| D-01 | FR-2.1, FR-2.18, FR-3.1, FR-3.4, FR-6.5, FR-9.1, FR-9.16, FR-10.30, SR-1.1-1, SR-1.1-2, SR-1.14-1, SR-1.15-1, SR-7.3-1, FR-21.23 (planned v1.3.0), FR-3.26 (deferred) |
 | D-02 | FR-1.49, FR-5.4, FR-5.5, FR-5.7, FR-5.8, FR-9.1, FR-9.16 |
 | D-03 | FR-5.39, FR-14.1, SR-3-2 |
 | D-04 | FR-6.1, FR-9.16, SR-2.13-5 (planned v1.3.0) |
 | D-05 | FR-9.1, SR-6.10-1, SR-6.13-1 |
 | D-06 | FR-7.4, FR-7.5, FR-7.14, FR-9.16, FR-13.11, FR-13.12, FR-17.8, SR-1.2-2, SR-6.2-1, SR-6.3-1, SR-6.12-1, SR-6.13-1, FR-20.21 (planned v1.3.0), FR-20.22 (planned v1.3.0) |
 | D-07 | FR-2.8, FR-2.13, FR-2.20, FR-9.1, FR-2.16 (deferred) |
-| D-08 | FR-7.7, FR-7.8, FR-9.16, FR-17.7, SR-1.1-2, SR-2.8-4, FR-7.15 (deferred), FR-7.9 (deferred) |
+| D-08 | FR-7.7, FR-7.8, FR-9.16, FR-17.7, SR-1.1-2, SR-2.8-4, FR-21.10 (planned v1.3.0), FR-7.15 (deferred), FR-7.9 (deferred) |
 | D-09 | FR-9.7, FR-9.8, FR-9.14, FR-9.13 (deferred) |
 | D-10 | FR-9.1, FR-10.13, FR-10.15, FR-10.16, FR-10.18 |
 | D-11 | FR-8.6, FR-8.7, FR-8.8, FR-9.1, FR-10.5, FR-10.37 |
@@ -10101,6 +10595,40 @@ Use this matrix to code element by element. A requirement allocated to several e
 | SR-2.9-4 (planned v1.3.0) | SEC-2.9 | Test | E-24, E-34 | No widened origins for the desktop |
 | SR-4.11-2 (planned v1.3.0) | SEC-4.11 | Test | E-35, E-33 | Installed code outside the agent's reach |
 | SR-7-2 (planned v1.3.0) | SEC-7 | Test | E-34 | Verified updates |
+| FR-21 (planned v1.3.0) | — | Analysis | E-24, E-15, E-16, E-22, E-23 | Windows platform support |
+| FR-21.1 (planned v1.3.0) | FR-21 | Demonstration | E-24, E-23 | Windows host platforms |
+| FR-21.2 (planned v1.3.0) | FR-21 | Test | E-24, E-15, E-13, E-33 | Windows build portability |
+| FR-21.3 (planned v1.3.0) | FR-21 | Inspection | E-24 | Windows release archives |
+| FR-21.4 (planned v1.3.0) | FR-21 | Test | E-24 | PowerShell installer verification |
+| FR-21.5 (planned v1.3.0) | FR-21 | Test | E-28, E-23, E-24 | Windows directories and access control |
+| FR-21.6 (planned v1.3.0) | FR-21 | Test | E-24, E-22 | Windows service management |
+| FR-21.7 (planned v1.3.0) | FR-21 | Test | E-12, E-15, E-21, E-24 | Windows stop and shutdown handling |
+| FR-21.8 (planned v1.3.0) | FR-21 | Test | E-01, E-02 | Named-pipe harness transport |
+| FR-21.9 (planned v1.3.0) | FR-21 | Test | E-03, E-01 | Named-pipe peer mapping |
+| FR-21.10 (planned v1.3.0) | FR-21 | Test | E-22 | Windows key protection |
+| FR-21.11 (planned v1.3.0) | FR-21 | Test | E-15 | Windows backend launch |
+| FR-21.12 (planned v1.3.0) | FR-21 | Test | E-15, E-16 | Job Object resource limits |
+| FR-21.13 (planned v1.3.0) | FR-21 | Test | E-16, E-15, E-23 | AppContainer backend containment |
+| FR-21.14 (planned v1.3.0) | FR-21 | Test | E-18, E-16 | Windows egress mediation |
+| FR-21.15 (planned v1.3.0) | FR-21 | Test | E-24, E-16, E-23 | WSL2 installation mode |
+| FR-21.16 (planned v1.3.0) | FR-21 | Test | E-33 | Windows adapters |
+| FR-21.17 (planned v1.3.0) | FR-21 | Test | E-33 | Windows client setup and lockdown |
+| FR-21.18 (planned v1.3.0) | FR-21 | Test | E-27, E-25, E-26 | Windows Data Server mode |
+| FR-21.19 (planned v1.3.0) | FR-21 | Inspection | E-24 | Windows continuous integration |
+| FR-21.20 (planned v1.3.0) | FR-21 | Test | E-24, E-23 | Windows acceptance subset |
+| FR-21.21 (planned v1.3.0) | FR-21 | Demonstration | E-33 | Windows real-agent compatibility |
+| FR-21.22 (planned v1.3.0) | FR-21 | Test | E-24 | Unsigned Windows binaries |
+| FR-21.23 (planned v1.3.0) | FR-21 | Test | E-05, E-14, E-28 | Windows write durability |
+| FR-21.24 (planned v1.3.0) | FR-21 | Test | E-24 | Defender scan of Windows archives |
+| FR-21.25 (planned v1.3.0) | FR-21 | Test | E-15, E-16, E-09 | Windows filesystem path rules |
+| FR-21.26 (planned v1.3.0) | FR-21 | Test | E-23, E-28 | Windows free-space measurement |
+| SR-4-2 (planned v1.3.0) | SEC-4 | Test | E-23, E-14, E-24 | Windows profile and label |
+| SR-2.8-6 (planned v1.3.0) | SEC-2.8 | Test | E-01 | Named-pipe security descriptor |
+| SR-2.13-4 (planned v1.3.0) | SEC-2.13 | Test | E-19, E-22 | Vault master key on Windows |
+| SR-4.1-3 (planned v1.3.0) | SEC-4.1 | Inspection | E-12, E-15, E-16 | Windows service and server identities |
+| SR-4.5-3 (planned v1.3.0) | SEC-4.5 | Test | E-18, E-16 | Windows Filtering Platform egress filters |
+| SR-4.6-2 (planned v1.3.0) | SEC-4.6 | Test | E-16, E-15 | AppContainer filesystem grants |
+| SR-4.8-2 (planned v1.3.0) | SEC-4.8 | Test | E-15 | No command interpreter on Windows |
 | FR-22 (planned v1.3.0) | — | Analysis | E-36, E-13, E-15 | ContextForge integration |
 | FR-22.1 (planned v1.3.0) | FR-22 | Test | E-36 | Catalog source |
 | FR-22.2 (planned v1.3.0) | FR-22 | Test | E-36 | Bounded catalog parsing |
@@ -10167,9 +10695,9 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 | Check | Result |
 |---|---|
 | Requirements of the current release | 530 total: 368 FR (19 roots), 162 SR |
-| Planned for a later release (Section 2.8) | 113; v1.3.0: FR-5.28, FR-5.29, FR-5.30, FR-20, FR-20.1, FR-20.2, FR-20.3, FR-20.4, FR-20.5, FR-20.6, FR-20.7, FR-20.8, FR-20.9, FR-20.10, FR-20.11, FR-20.12, FR-20.13, FR-20.14, FR-20.15, FR-20.16, FR-20.17, FR-20.18, FR-20.19, FR-20.20, FR-20.21, FR-20.22, FR-20.23, FR-20.24, FR-20.25, FR-20.26, FR-20.27, FR-20.28, FR-20.40, FR-20.41, FR-20.42, FR-20.43, FR-20.44, FR-20.45, FR-20.46, FR-20.47, FR-20.48, FR-20.49, FR-20.50, FR-20.51, FR-20.52, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-4.11-2, SR-7-2, FR-22, FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-22.5, FR-22.6, FR-22.7, FR-22.8, FR-22.9, FR-22.10, FR-22.11, FR-22.12, FR-22.13, FR-22.14, FR-22.15, FR-22.16, FR-22.17, FR-22.18, FR-22.19, FR-22.20, FR-22.21, FR-22.22, FR-22.23, FR-22.24, FR-22.25, FR-22.26, FR-22.27, FR-22.28, FR-22.29, FR-22.30, FR-22.31, FR-22.32, FR-22.33, FR-22.34, FR-22.35, FR-22.36, FR-22.37, FR-22.38, FR-22.39, FR-22.40, FR-22.41, FR-22.42, FR-22.43, FR-22.44, SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3, SR-6.18-2; v1.4.0: FR-22.45 |
+| Planned for a later release (Section 2.8) | 147; v1.3.0: FR-5.28, FR-5.29, FR-5.30, FR-20, FR-20.1, FR-20.2, FR-20.3, FR-20.4, FR-20.5, FR-20.6, FR-20.7, FR-20.8, FR-20.9, FR-20.10, FR-20.11, FR-20.12, FR-20.13, FR-20.14, FR-20.15, FR-20.16, FR-20.17, FR-20.18, FR-20.19, FR-20.20, FR-20.21, FR-20.22, FR-20.23, FR-20.24, FR-20.25, FR-20.26, FR-20.27, FR-20.28, FR-20.40, FR-20.41, FR-20.42, FR-20.43, FR-20.44, FR-20.45, FR-20.46, FR-20.47, FR-20.48, FR-20.49, FR-20.50, FR-20.51, FR-20.52, SR-2-3, SR-2-4, SR-2-5, SR-2-6, SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-4.11-2, SR-7-2, FR-21, FR-21.1, FR-21.2, FR-21.3, FR-21.4, FR-21.5, FR-21.6, FR-21.7, FR-21.8, FR-21.9, FR-21.10, FR-21.11, FR-21.12, FR-21.13, FR-21.14, FR-21.15, FR-21.16, FR-21.17, FR-21.18, FR-21.19, FR-21.20, FR-21.21, FR-21.22, FR-21.23, FR-21.24, FR-21.25, FR-21.26, SR-4-2, SR-2.8-6, SR-2.13-4, SR-4.1-3, SR-4.5-3, SR-4.6-2, SR-4.8-2, FR-22, FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-22.5, FR-22.6, FR-22.7, FR-22.8, FR-22.9, FR-22.10, FR-22.11, FR-22.12, FR-22.13, FR-22.14, FR-22.15, FR-22.16, FR-22.17, FR-22.18, FR-22.19, FR-22.20, FR-22.21, FR-22.22, FR-22.23, FR-22.24, FR-22.25, FR-22.26, FR-22.27, FR-22.28, FR-22.29, FR-22.30, FR-22.31, FR-22.32, FR-22.33, FR-22.34, FR-22.35, FR-22.36, FR-22.37, FR-22.38, FR-22.39, FR-22.40, FR-22.41, FR-22.42, FR-22.43, FR-22.44, SR-3-6, SR-3.2-2, SR-3.5-2, SR-3.6-2, SR-3.8-2, SR-4-3, SR-4.5-4, SR-4.7-3, SR-2.10-2, SR-2.13-5, SR-5.6-3, SR-6.18-2; v1.4.0: FR-22.45 |
 | Deferred from release 1.0 (Appendix N) | 33: FR-2.14, FR-2.16, FR-3.26, FR-3.3, FR-3.7, FR-5.10, FR-5.11, FR-5.16, FR-5.17, FR-5.18, FR-5.25, FR-5.31, FR-7.6, FR-7.15, FR-7.9, FR-9.4, FR-9.13, FR-12.5, SR-1-1, SR-1.6-1, SR-2.8-2, SR-2.11-3, SR-2.12-1, SR-4.3-1, SR-5.1-2, SR-5.3-2, SR-6.6-1, SR-6.8-1, SR-6.9-1, FR-20.29, FR-20.30, FR-20.31, FR-20.32 |
-| Verification methods | Analysis 21, Demonstration 32, Inspection 88, Test 502 |
+| Verification methods | Analysis 22, Demonstration 34, Inspection 91, Test 530 |
 | Unique IDs; required fields; SHALL present; no MUST imperative | Pass |
 | Orphans (non-root without a valid parent) | None |
 | Every SR parent is a MUST in the security SRS | Pass |

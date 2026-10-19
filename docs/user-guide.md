@@ -518,7 +518,7 @@ These are planned for release v1.3.0. They are specified but not built, and none
 
 - **Desktop application.** A tray (menu-bar) icon on macOS, Linux and Windows that shows the Gateway's state, the number of calls waiting for approval, Start, Stop and Restart, a console window and **Set Up a Client**, so you do not need a terminal for daily use ([FR-20](https://secure-mcp-gateway-pearl.vercel.app/requirements/#FR-20)).
 - **Installers.** A macOS `.pkg` and `.dmg`, Linux `.deb`, `.rpm` and AppImage packages, and a Windows `.msi`, each checked with the same minisign signature, Sigstore bundle and checksums as today's archives.
-- **Windows.** The Gateway as a Windows service on Windows 10 22H2 and later and Windows 11 (x86_64), controlled by the desktop application. The Windows requirements are still being written.
+- **Windows.** The Gateway on Windows 11 23H2 and later (x64 and arm64) and Windows Server 2022 and 2025 (x64), installed per user, as a Windows service, or inside a WSL2 distribution, and controlled by the desktop application on x64. Every Windows installation is labelled "not enforced" ([FR-21](https://secure-mcp-gateway-pearl.vercel.app/requirements/#FR-21)).
 - **ContextForge.** Import servers from the IBM ContextForge catalog into your library, under the same packaging, signature and policy checks as any other package, and reach hosted MCP servers through a bundled ContextForge instance that only the Gateway can talk to ([FR-22](https://secure-mcp-gateway-pearl.vercel.app/requirements/#FR-22)).
 
 ## Where to go next
