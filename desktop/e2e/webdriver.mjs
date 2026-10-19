@@ -66,8 +66,16 @@ const session = await waitFor(
 const S = `/session/${session.sessionId}`;
 
 const script = (/** @type {string} */ s, /** @type {unknown[]} */ args = []) => wd("POST", `${S}/execute/sync`, { script: s, args });
-const find = async (/** @type {string} */ css) => (await wd("POST", `${S}/element`, { using: "css selector", value: css }))[ELEMENT];
-const findX = async (/** @type {string} */ xp) => (await wd("POST", `${S}/element`, { using: "xpath", value: xp }))[ELEMENT];
+/** The element reference of a W3C or legacy (JSON Wire) response. */
+const ref = (/** @type {any} */ v) => {
+  const id = v?.[ELEMENT] ?? v?.ELEMENT ?? (v && typeof v === "object" ? Object.values(v)[0] : undefined);
+  if (typeof id !== "string") throw new Error(`no element reference in ${JSON.stringify(v)}`);
+  return id;
+};
+const find = (/** @type {string} */ css) =>
+  waitFor(async () => ref(await wd("POST", `${S}/element`, { using: "css selector", value: css })), `element ${css}`, 15000);
+const findX = (/** @type {string} */ xp) =>
+  waitFor(async () => ref(await wd("POST", `${S}/element`, { using: "xpath", value: xp })), `element ${xp}`, 15000);
 const click = (/** @type {string} */ id) => wd("POST", `${S}/element/${id}/click`, {});
 const type = (/** @type {string} */ id, /** @type {string} */ text) => wd("POST", `${S}/element/${id}/value`, { text });
 const text = async (/** @type {string} */ css) => /** @type {string} */ (await wd("GET", `${S}/element/${await find(css)}/text`));
