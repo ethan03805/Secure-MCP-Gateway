@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -279,6 +280,10 @@ func (r *Runtime) registerChecks() {
 	m.AddQuota(&health.Quota{Name: "journal", Dir: jdir, Limit: a.Config.Evidence.QuotaBytes}) // CP-26, FR-9.15
 	m.Register("clock", health.Clock())
 	m.Register("trust_anchors", health.TrustAnchors(filepath.Join(stateDir, keys.CACertFile), a.Config.Listener.TLSCert))
+	if runtime.GOOS == "windows" {
+		// FR-21.5, FR-21.10: the start check, repeated while running.
+		m.Register("state_protection", health.Every(time.Minute, stateProtection(func() error { return keys.CheckPrivate(stateDir) })))
+	}
 	m.Register("backends", health.Every(10*time.Second, health.Backends(func() map[string]health.Pinger {
 		out := map[string]health.Pinger{}
 		for alias, s := range a.Registry.Servers() {
@@ -592,4 +597,22 @@ func setLevel(lv *slog.LevelVar, s string) error {
 	}
 	lv.Set(l)
 	return nil
+}
+
+// stateProtection turns the Windows state-directory check (keys.CheckPrivate)
+// into the health causes state_acl (a foreign or inherited DACL entry,
+// FR-21.5) and key_protection (a key this account cannot decrypt,
+// FR-21.10). Both hold the Gateway fail-closed.
+func stateProtection(check func() error) health.Check {
+	return func(time.Time) []health.Cause {
+		err := check()
+		switch {
+		case err == nil:
+			return nil
+		case errors.Is(err, keys.ErrKeyProtection):
+			return []health.Cause{{Name: health.CauseKeyProtection, Critical: true, Detail: err.Error()}}
+		default:
+			return []health.Cause{{Name: health.CauseStateACL, Critical: true, Detail: err.Error()}}
+		}
+	}
 }

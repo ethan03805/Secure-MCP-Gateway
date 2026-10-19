@@ -495,11 +495,18 @@ jobs:
   # WINDOWS_TEST_PACKAGES and fails when one of them fails. The last step
   # runs every package once more, records the per-package result in the
   # step summary and never fails the job: it measures the port.
+  # FR-21.19: x64 (windows-latest, Windows Server 2025) and arm64
+  # (windows-11-arm). The requirement claims of the x64 run go to the
+  # status job.
   windows:
-    name: windows
+    name: windows (${{ matrix.runner }})
     needs: [changes, srs, lint]
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     env:
       CGO_ENABLED: "0"
@@ -624,11 +631,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: windows-results
-          path: |
-            build/windows-test.json
-            build/windows-sandbox-test.json
-            build/windows-all-test.json
+          name: windows-results-${{ matrix.runner }}
+          path: build/windows-*-test.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -1622,7 +1626,7 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
         with:
-          name: windows-results
+          name: windows-results-windows-latest
           path: build
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
