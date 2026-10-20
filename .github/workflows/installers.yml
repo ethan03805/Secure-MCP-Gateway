@@ -396,7 +396,10 @@ jobs:
           if [ -n "$SMCP" ]; then set -- "$1" build/installers/$SMCP; fi
           bash scripts/desktop-smoke.sh "$1" "$VERSION" ${2:+"$2"}
       # FR-20.19: the AppImage on a distribution without .deb or .rpm
-      # tooling (Arch Linux; its image exists for amd64 only).
+      # tooling (Arch Linux; its image exists for amd64 only). gtk3 stands
+      # for a graphical desktop: like every AppImage, this one uses the
+      # host's base libraries (fribidi, fontconfig, GL), which a bare
+      # container lacks.
       - name: AppImage on Arch Linux (no dpkg, no rpm)
         if: matrix.format == 'AppImage' && matrix.arch == 'amd64'
         env:
@@ -406,7 +409,7 @@ jobs:
           # shellcheck disable=SC2086 # FILE is a glob
           set -- build/installers/$FILE
           docker run --rm -v "$PWD:/w:ro" -w /w -e VERSION -e PKG="$1" archlinux:latest bash -c \
-            'pacman -Sy --noconfirm --quiet xorg-server-xvfb xorg-xauth which libglvnd mesa >/dev/null && ! command -v dpkg && ! command -v rpm && bash scripts/desktop-smoke.sh "$PKG" "$VERSION"'
+            'pacman -Sy --noconfirm --quiet xorg-server-xvfb xorg-xauth which libglvnd mesa gtk3 >/dev/null && ! command -v dpkg && ! command -v rpm && bash scripts/desktop-smoke.sh "$PKG" "$VERSION"'
       - name: Install, start and remove (Fedora container)
         if: matrix.format == 'rpm'
         env:
