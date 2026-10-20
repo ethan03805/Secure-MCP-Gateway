@@ -17,6 +17,7 @@ import (
 // leaf get limits), and changes nothing when they are already there or
 // when the parent is not offered them.
 func TestEnableDelegatedControllers(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "SR-4.7-2", "FR-13.5")
 	root := t.TempDir()
 	svc := filepath.Join(root, "system.slice", "smcpd.service")

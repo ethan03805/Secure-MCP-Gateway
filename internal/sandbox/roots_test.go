@@ -19,6 +19,7 @@ import (
 // grant that meets no slot is refused. A configured command (no manifest)
 // keeps its grants.
 func TestIntersectRoots(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "SR-4.6-1")
 	roots := []pipeline.Root{{Slot: "docs", Path: "/srv/data/docs"}, {Slot: "out", Path: "/srv/data/out", Write: true}}
 	for _, c := range []struct {
@@ -82,6 +83,7 @@ func mountableDir(t *testing.T) string {
 // artifact tree mounted read-only at its own path and its slot grant cut
 // down to the declared slot; without an image it is refused.
 func TestBuildInterpretedPackage(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "SR-4.6-1", "FR-5.9")
 	rt := testRuntime()
 	state := mountableDir(t)

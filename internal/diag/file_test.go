@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 func TestRotatingFileBounds(t *testing.T) {
@@ -42,9 +43,7 @@ func TestRotatingFileBounds(t *testing.T) {
 		if info.Size() > maxBytes {
 			t.Errorf("%s is %d bytes", e.Name(), info.Size())
 		}
-		if info.Mode().Perm() != 0o600 {
-			t.Errorf("%s mode %o", e.Name(), info.Mode().Perm())
-		}
+		testperm.Equal(t, filepath.Join(filepath.Dir(path), e.Name()), 0o600)
 	}
 	for i := 1; i <= keep; i++ {
 		if _, err := os.Stat(fmt.Sprintf("%s.%d", path, i)); err != nil {

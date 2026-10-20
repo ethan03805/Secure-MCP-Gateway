@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 var recordsV1 = Table{Name: "records", Columns: []Column{
@@ -85,14 +86,11 @@ func TestStoreLayoutAndModes(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				info, _ := d.Info()
 				want := os.FileMode(0o600)
 				if d.IsDir() {
 					want = 0o700
 				}
-				if info.Mode().Perm()&^want != 0 {
-					t.Errorf("%s mode %v, want %v or stricter", p, info.Mode().Perm(), want)
-				}
+				testperm.AtMost(t, p, want)
 				return nil
 			})
 			if err != nil {

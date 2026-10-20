@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"sync"
@@ -35,6 +36,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ids"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 // StoreFile is the vault store under the vault directory.
@@ -236,11 +238,22 @@ func readStore(dir string) (*storeFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	if fi.Mode().Perm()&0o077 != 0 {
-		return nil, fmt.Errorf("%w: %s has mode %o", ErrPermissionsOpen, p, fi.Mode().Perm())
-	}
-	if di, err := os.Stat(dir); err == nil && di.Mode().Perm()&0o077 != 0 {
-		return nil, fmt.Errorf("%w: %s has mode %o", ErrPermissionsOpen, dir, di.Mode().Perm())
+	if runtime.GOOS == "windows" {
+		// No POSIX modes on Windows (FR-21.2): the vault file and its
+		// directory may grant access only to the account running the
+		// Gateway, SYSTEM and Administrators.
+		for _, q := range []string{p, dir} {
+			if err := winsec.CheckOwnerOnly(q); err != nil {
+				return nil, fmt.Errorf("%w: %w", ErrPermissionsOpen, err)
+			}
+		}
+	} else {
+		if fi.Mode().Perm()&0o077 != 0 {
+			return nil, fmt.Errorf("%w: %s has mode %o", ErrPermissionsOpen, p, fi.Mode().Perm())
+		}
+		if di, err := os.Stat(dir); err == nil && di.Mode().Perm()&0o077 != 0 {
+			return nil, fmt.Errorf("%w: %s has mode %o", ErrPermissionsOpen, dir, di.Mode().Perm())
+		}
 	}
 	raw, err := os.ReadFile(p)
 	if err != nil {

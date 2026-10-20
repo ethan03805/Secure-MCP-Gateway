@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 // Concurrent saves of the candidate state (the record-count build, the
@@ -51,7 +53,5 @@ func TestSaveStateConcurrent(t *testing.T) {
 		}
 		t.Fatalf("files left: %v", names)
 	}
-	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
-		t.Fatalf("state file mode %v", info.Mode().Perm())
-	}
+	testperm.Equal(t, path, 0o600)
 }

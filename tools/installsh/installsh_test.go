@@ -95,6 +95,9 @@ func newRelease(t *testing.T, legacy bool) (release, minisign.PrivateKey, string
 // needs, plus the extra names given (when the host has them).
 func toolFarm(t *testing.T, extra ...string) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("install.sh is the Linux and macOS installer; tools/installps1 tests install.ps1")
+	}
 	dir := t.TempDir()
 	base := []string{"sh", "uname", "tar", "gzip", "mktemp", "od", "curl", "sha256sum", "shasum", "perl", "awk", "cut", "sed", "tr",
 		"head", "tail", "dd", "cat", "cp", "chmod", "mv", "mkdir", "rm", "id", "wc", "env", "dirname", "basename", "ls"}

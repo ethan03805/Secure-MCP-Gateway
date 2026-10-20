@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -70,7 +71,8 @@ func TestRequestFilters(t *testing.T) {
 			}},
 		{name: "path inside", filter: IDPathCanonicalize, call: callWith(strSchema("path")), args: map[string]any{"path": "sub/../sub/file.txt"},
 			check: func(t *testing.T, a json.RawMessage, _ *pipeline.Call) {
-				if !strings.Contains(string(a), filepath.Join(root, "sub", "file.txt")) {
+				var got map[string]string
+				if json.Unmarshal(a, &got) != nil || got["path"] != filepath.Join(root, "sub", "file.txt") {
 					t.Fatalf("not canonicalized: %s", a)
 				}
 			}},
@@ -228,7 +230,7 @@ func TestPathCanonicalization(t *testing.T) {
 		"a/b/c.txt":                            filepath.Join(root, "a", "b", "c.txt"),
 		"./a/./b/../b/new.txt":                 filepath.Join(root, "a", "b", "new.txt"),
 		filepath.Join(root, "inner-link", "b"): filepath.Join(root, "a", "b"),
-		"file://" + filepath.Join(root, "a"):   filepath.Join(root, "a"),
+		fileURL(filepath.Join(root, "a")):      filepath.Join(root, "a"),
 		root:                                   root,
 	}
 	for in, want := range allow {
@@ -323,4 +325,12 @@ func TestURLCanonicalization(t *testing.T) {
 	if _, err := sch.Check("http://good.example/"); err == nil {
 		t.Error("scheme allowlist ignored")
 	}
+}
+
+// fileURL is the file URL of an absolute path: file:///C:/x on Windows.
+func fileURL(p string) string {
+	if runtime.GOOS == "windows" {
+		return "file:///" + filepath.ToSlash(p)
+	}
+	return "file://" + p
 }

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
@@ -336,7 +337,9 @@ func init() {
 		Protected:     func(Env) bool { return false },
 		CATrust: func(e Env) (bool, string) {
 			b, _ := readOrNil(e.home(".hermes", "config.yaml"))
-			if strings.Contains(string(b), e.CAFile) {
+			// Setup writes the path as a quoted YAML string, in which a
+			// Windows path's backslashes are escaped.
+			if strings.Contains(string(b), e.CAFile) || strings.Contains(string(b), strconv.Quote(e.CAFile)) {
 				return true, "ssl_verify names the Gateway CA"
 			}
 			return false, "ssl_verify does not name the Gateway CA"

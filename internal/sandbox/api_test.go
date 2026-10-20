@@ -28,6 +28,7 @@ func do(t *testing.T, h http.Handler, method, path, body string) (int, map[strin
 }
 
 func TestRuntimeAPI(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Partial(t, "FR-5.35")
 	h := newHarness(t, testRuntime())
 	p, err := h.l.Launch(context.Background(), h.spec("api"))

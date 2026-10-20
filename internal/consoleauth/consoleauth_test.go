@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -40,7 +41,7 @@ func newFixture(t *testing.T) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	toml := "[admin_listener]\naddress = \"127.0.0.1:8444\"\n[state]\ndir = \"" + dir + "\"\n[admin]\nusername = \"admin\"\npassword_hash = \"" + hash + "\"\n" +
+	toml := "[admin_listener]\naddress = \"127.0.0.1:8444\"\n[state]\ndir = " + strconv.Quote(dir) + "\n[admin]\nusername = \"admin\"\npassword_hash = \"" + hash + "\"\n" +
 		"[[approver]]\nusername = \"sam\"\npassword_hash = \"" + hash + "\"\n"
 	for _, a := range [][2]string{{"olga", "operator"}, {"pat", "policy_author"}, {"aud", "auditor"}, {"rita", "researcher"}} {
 		toml += "[[console.account]]\nusername = \"" + a[0] + "\"\npassword_hash = \"" + hash + "\"\nrole = \"" + a[1] + "\"\n"

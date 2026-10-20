@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -19,6 +20,9 @@ func TestVersionFlag(t *testing.T) {
 		t.Skip("go not on PATH")
 	}
 	bin := filepath.Join(t.TempDir(), "smcpd")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
 	build := exec.Command(goTool, "build", "-ldflags", "-X github.com/ethan03805/secure-mcp-gateway/internal/backend.Version=9.9.9-test", "-o", bin, ".")
 	build.Stderr = os.Stderr
 	if err := build.Run(); err != nil {

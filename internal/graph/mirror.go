@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 // Defaults of the [graph] table.
@@ -265,7 +267,13 @@ func readPassword(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("graph password file: %w", err)
 	}
-	if fi.Mode().Perm()&0o077 != 0 {
+	if runtime.GOOS == "windows" {
+		// No POSIX modes on Windows (FR-21.2): the DACL may grant only the
+		// account running the Gateway, SYSTEM and Administrators.
+		if err := winsec.CheckOwnerOnly(path); err != nil {
+			return "", fmt.Errorf("graph password file must be readable by the Gateway's account only: %w", err)
+		}
+	} else if fi.Mode().Perm()&0o077 != 0 {
 		return "", fmt.Errorf("graph password file %s must not be readable by group or others (mode %v)", path, fi.Mode().Perm())
 	}
 	raw, err := os.ReadFile(path)

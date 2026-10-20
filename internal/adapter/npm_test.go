@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +40,11 @@ func needNode(t *testing.T) string {
 }
 
 func TestNPMUnit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// The npm package checks POSIX modes; FR-21.16 covers the Go
+		// adapters smcp-stdio.exe and smcp-session.exe on Windows.
+		t.Skip("the npm smcp-connect package is not ported to Windows")
+	}
 	node := needNode(t)
 	cmd := exec.Command(node, "--test")
 	cmd.Dir = filepath.Join(npmDir(t), "test")

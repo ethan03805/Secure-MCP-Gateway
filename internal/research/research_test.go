@@ -19,6 +19,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/observe"
 	"github.com/ethan03805/secure-mcp-gateway/internal/obsstore"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 var t0 = time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
@@ -241,10 +242,7 @@ func TestExtractionScopeAndPseudonyms(t *testing.T) {
 	if Pseudonym(k, "agent-a") != p1 {
 		t.Fatal("pseudonym is not HMAC-SHA-256 under the dataset key")
 	}
-	info, _ := os.Stat(filepath.Join(x.KeyDir, m1.DatasetID+".key"))
-	if info.Mode().Perm() != 0o600 {
-		t.Fatal("key file mode")
-	}
+	testperm.Equal(t, filepath.Join(x.KeyDir, m1.DatasetID+".key"), 0o600)
 }
 
 func TestExportFormatsAndManifest(t *testing.T) {

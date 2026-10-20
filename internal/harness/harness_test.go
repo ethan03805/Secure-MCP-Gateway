@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 func testEnv(t *testing.T) Env {
@@ -114,10 +117,7 @@ func TestDoctorReadablePathsStandalone(t *testing.T) {
 	e := testEnv(t)
 	write(t, e.Credentials, "x")
 	locked := filepath.Join(e.Paths[1])
-	if err := os.Chmod(locked, 0o100); err != nil {
-		t.Fatal(err)
-	}
-	defer os.Chmod(locked, 0o700)
+	defer lockDir(t, locked)()
 	r := Doctor(e, []string{"hermes"}, nil)
 	var readable []string
 	standalone := false
@@ -286,7 +286,7 @@ func TestSetupCATrustAndConnection(t *testing.T) {
 		t.Fatal("system trust store change planned without --system-trust")
 	}
 	h, err := registry["hermes"].Setup(e, Options{})
-	if err != nil || !strings.Contains(string(h.Changes[0].After), e.CAFile) {
+	if err != nil || !strings.Contains(string(h.Changes[0].After), "ssl_verify: "+strconv.Quote(e.CAFile)) {
 		t.Fatalf("hermes ssl_verify: %v %s", err, h.Changes[0].After)
 	}
 	// Clients without a confirmed trust mechanism default to smcp-stdio.
@@ -316,4 +316,27 @@ func TestSetupCATrustAndConnection(t *testing.T) {
 	if err != nil || strings.Count(string(p2.Changes[0].After), markBegin) != 1 {
 		t.Fatalf("re-setup: %v %s", err, p2.Changes[0].After)
 	}
+}
+
+// lockDir makes dir unreadable by this account and returns the function
+// that restores it: mode 0100 on Linux and macOS, and on Windows a deny
+// entry for this account's read access (the owner keeps the right to
+// change the DACL back).
+func lockDir(t *testing.T, dir string) func() {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(dir, 0o100); err != nil {
+			t.Fatal(err)
+		}
+		return func() { _ = os.Chmod(dir, 0o700) }
+	}
+	user, err := winsec.ProcessUserSID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := append([]winsec.Entry{{SID: user, Access: winsec.Read, Deny: true}}, winsec.OwnerEntries(user)...)
+	if err := winsec.SetProtectedDACL(dir, entries); err != nil {
+		t.Fatal(err)
+	}
+	return func() { _ = winsec.SetProtectedDACL(dir, winsec.OwnerEntries(user)) }
 }

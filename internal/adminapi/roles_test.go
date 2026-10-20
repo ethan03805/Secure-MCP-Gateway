@@ -3,6 +3,7 @@ package adminapi
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestRoleSeam(t *testing.T) {
 	if err := keys.Ensure(dir); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := config.Parse([]byte("[admin_listener]\naddress = \"127.0.0.1:8444\"\n[state]\ndir = \"" + dir + "\"\n[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$x\"\n"))
+	cfg, err := config.Parse([]byte("[admin_listener]\naddress = \"127.0.0.1:8444\"\n[state]\ndir = " + strconv.Quote(dir) + "\n[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$x\"\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

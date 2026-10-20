@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -21,6 +20,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/observe"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/testperm"
 )
 
 func testConfig(t *testing.T, addr string) *config.Config {
@@ -156,9 +156,7 @@ func TestPublishAndApply(t *testing.T) {
 	if len(revs) != 2 || revs[0].Number != 2 || revs[1].Reason != "shorter retention" {
 		t.Fatalf("revisions: %+v", revs)
 	}
-	if st, _ := os.Stat(filepath.Join(cfg.State.Dir, File)); st.Mode().Perm() != 0o600 {
-		t.Fatalf("mode %v", st.Mode().Perm())
-	}
+	testperm.Equal(t, filepath.Join(cfg.State.Dir, File), 0o600)
 }
 
 // TestBandActionsAndEscalationObjects publishes the FR-8.14 fields of the

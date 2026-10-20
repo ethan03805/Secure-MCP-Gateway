@@ -18,6 +18,7 @@ import (
 // CPU time (the instance's usage sample) and an OOM limit event (a
 // limit_breach event that carries the memory peak).
 func TestMonitorCollectsObservables(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Verifies(t, "FR-5.33")
 	rt := testRuntime()
 	rt.Servers = []config.RuntimeServer{{Alias: "obs", AllowSpawn: true}}
@@ -71,6 +72,7 @@ func TestMonitorCollectsObservables(t *testing.T) {
 // the deviation: `alert` records the deviation and leaves the instance
 // serving; `kill-instance` records it and has the instance killed.
 func TestContainmentActionsWithinOneSecond(t *testing.T) {
+	linuxOnly(t)
 	reqtest.Verifies(t, "FR-5.35")
 	for _, rule := range []string{ActionAlert, ActionKill} {
 		t.Run(rule, func(t *testing.T) {
@@ -123,6 +125,7 @@ func TestContainmentActionsWithinOneSecond(t *testing.T) {
 // TestIntegrationMonitorContainment, whose OOM instance exited with every
 // counter at zero).
 func TestMonitorKeepsPeaksWhenCgroupFilesVanish(t *testing.T) {
+	linuxOnly(t)
 	rt := testRuntime()
 	rt.Servers = []config.RuntimeServer{{Alias: "gone"}}
 	h := newHarness(t, rt)
