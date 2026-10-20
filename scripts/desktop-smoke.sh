@@ -138,7 +138,7 @@ fi
 
 # previous_release <deb|rpm>: installs the previous release's smcp package
 # (SMCP_PREVIOUS_RELEASE, default v1.2.0, checked against its checksum
-# file) and makes a Gateway state with its smcpctl in $work/prev-st, the
+# file) and makes a Gateway state with its smcpctl in $work/prev/st, the
 # existing installation the new packages are installed over (FR-20.21).
 previous_release() {
 	local prev=${SMCP_PREVIOUS_RELEASE:-v1.2.0} asset base sum got
@@ -161,27 +161,30 @@ previous_release() {
 	rpm) priv dnf install -y -q "$work/prev/$asset" >/dev/null ;;
 	esac
 	[ "$(asuser /usr/bin/smcpctl version --short)" = "${prev#v}" ] || fail "the previous release does not report version ${prev#v}"
-	asuser sh -c "umask 077; printf 'smoke-approver-password-1' > '$work/prev-approver'"
-	asuser /usr/bin/smcpctl bootstrap --dir "$work/prev-st" --bootstrap-token --approver-password-file "$work/prev-approver" \
+	# The user's part writes here (the work directory belongs to root in
+	# the Fedora container).
+	if [ "$(id -u)" = 0 ]; then chown smcptest "$work/prev"; fi
+	asuser sh -c "umask 077; printf 'smoke-approver-password-1' > '$work/prev/approver'"
+	asuser /usr/bin/smcpctl bootstrap --dir "$work/prev/st" --bootstrap-token --approver-password-file "$work/prev/approver" \
 		--port 28643 --admin-port 28644 </dev/null >/dev/null
 	# The previous release's smcpd writes its journal, then stops.
-	asuser sh -c "printf '\n[profile]\nmode = \"standalone\"\n' >> '$work/prev-st/smcp.toml'"
-	asuser sh -c "/usr/bin/smcpd --config '$work/prev-st/smcp.toml' > '$work/prev-smcpd.log' 2>&1 &"
+	asuser sh -c "printf '\n[profile]\nmode = \"standalone\"\n' >> '$work/prev/st/smcp.toml'"
+	asuser sh -c "/usr/bin/smcpd --config '$work/prev/st/smcp.toml' > '$work/prev/smcpd.log' 2>&1 &"
 	local ok=0
 	for _ in $(seq 1 60); do
-		if asuser /usr/bin/smcpctl health --config "$work/prev-st/smcp.toml" >/dev/null 2>&1; then ok=1; break; fi
+		if asuser /usr/bin/smcpctl health --config "$work/prev/st/smcp.toml" >/dev/null 2>&1; then ok=1; break; fi
 		sleep 1
 	done
-	[ $ok = 1 ] || { cat "$work/prev-smcpd.log" >&2; fail "smcpd ${prev#v} did not answer health"; }
-	pkill -f "smcpd --config $work/prev-st/" || true
-	for _ in $(seq 1 30); do pgrep -f "smcpd --config $work/prev-st/" >/dev/null || break; sleep 1; done
-	ls "$work/prev-st/state/journal"/segment-*.jsonl >/dev/null || fail "the previous release wrote no journal"
+	[ $ok = 1 ] || { cat "$work/prev/smcpd.log" >&2; fail "smcpd ${prev#v} did not answer health"; }
+	pkill -f "smcpd --config $work/prev/st/" || true
+	for _ in $(seq 1 30); do pgrep -f "smcpd --config $work/prev/st/" >/dev/null || break; sleep 1; done
+	ls "$work/prev/st/state/journal"/segment-*.jsonl >/dev/null || fail "the previous release wrote no journal"
 	prev_digests=$(state_digests)
 	echo "smcp ${prev#v} installed, with a Gateway state of $(printf '%s\n' "$prev_digests" | wc -l | tr -d ' ') files"
 }
 
 state_digests() {
-	(cd "$work/prev-st" && find . -type f ! -path './state/log/*' -print0 | sort -z | xargs -0 sha256sum)
+	(cd "$work/prev/st" && find . -type f ! -path './state/log/*' -print0 | sort -z | xargs -0 sha256sum)
 }
 
 # over_previous: after installing this build's packages over the previous
@@ -193,7 +196,7 @@ over_previous() {
 	if [ "$(id -u)" = 0 ]; then uhome=$(getent passwd smcptest | cut -d: -f6); fi
 	now=$(state_digests)
 	[ "$now" = "$prev_digests" ] || { diff <(echo "$prev_digests") <(echo "$now") >&2 || true; fail "installing over the previous release changed its Gateway state"; }
-	asuser /usr/bin/smcpctl journal verify --dir "$work/prev-st/state/journal" --key "$work/prev-st/state/keys/evidence-genesis.pub" >/dev/null
+	asuser /usr/bin/smcpctl journal verify --dir "$work/prev/st/state/journal" --key "$work/prev/st/state/keys/evidence-genesis.pub" >/dev/null
 	for p in /etc/smcp /var/lib/smcp /etc/systemd/system/smcpd.service "$uhome/.config/smcp-gateway" \
 		"$uhome/.config/systemd/user/smcpd.service"; do
 		[ ! -e "$p" ] || fail "installing the packages created $p"

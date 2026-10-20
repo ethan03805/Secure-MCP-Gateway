@@ -47,7 +47,9 @@ $log = Join-Path $work 'install.log'
 $block = $null
 
 function Msiexec([string[]]$arguments, [string]$what) {
-  $p = Start-Process msiexec.exe -ArgumentList $arguments -Wait -PassThru
+  Write-Host "msiexec $($arguments -join ' ')"
+  $p = Start-Process msiexec.exe -ArgumentList $arguments -PassThru
+  if (-not $p.WaitForExit(600000)) { if (Test-Path $log) { Get-Content $log -Tail 60 }; Fail "msiexec $what did not finish within 10 minutes" }
   if ($p.ExitCode -ne 0) { if (Test-Path $log) { Get-Content $log -Tail 60 }; Fail "msiexec $what exited $($p.ExitCode)" }
 }
 

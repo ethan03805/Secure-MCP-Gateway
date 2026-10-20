@@ -374,7 +374,7 @@ jobs:
           - { arch: amd64, runner: windows-latest }
           - { arch: arm64, runner: windows-11-arm }
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
