@@ -152,7 +152,7 @@ func TestHostedDispatchImage(t *testing.T) {
 	// SR-3.6-2: stdio transport is off in the instance, and during hosted
 	// calls no package manager or new interpreter starts in it and it
 	// connects to nothing but the hosted fixture.
-	ctr := containerOnPort(t, eng, c.inst.Status().Port)
+	ctr := instanceContainer(t, eng, c)
 	if out, err := exec.Command(eng, "inspect", "--format", "{{json .Config.Env}}", ctr).Output(); err != nil || !strings.Contains(string(out), `"MCPGATEWAY_STDIO_TRANSPORT_ENABLED=false"`) {
 		t.Fatalf("stdio transport is not disabled in the instance's configuration (%v)", err)
 	}
@@ -267,15 +267,19 @@ func TestHostedDispatchImage(t *testing.T) {
 	}
 }
 
-// containerOnPort is the container that publishes port.
-func containerOnPort(t *testing.T, eng string, port int) string {
+// instanceContainer is the running container of the Connector's instance,
+// by its name.
+func instanceContainer(t *testing.T, eng string, c *Connector) string {
 	t.Helper()
-	out, err := exec.Command(eng, "ps", "--filter", "publish="+strconv.Itoa(port), "--format", "{{.ID}}").Output()
-	id := strings.TrimSpace(string(out))
-	if err != nil || id == "" || strings.Contains(id, "\n") {
-		t.Fatalf("the container publishing port %d: %q %v", port, id, err)
+	n, ok := c.inst.(interface{ Name() string })
+	if !ok {
+		t.Fatalf("the instance is not a container: %T", c.inst)
 	}
-	return id
+	out, err := exec.Command(eng, "inspect", "--format", "{{.State.Running}}", n.Name()).Output()
+	if err != nil || strings.TrimSpace(string(out)) != "true" {
+		t.Fatalf("the instance's container %s is not running: %q %v", n.Name(), out, err)
+	}
+	return n.Name()
 }
 
 // containerCommands are the command lines of the container's processes
