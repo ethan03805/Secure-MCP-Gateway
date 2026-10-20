@@ -206,7 +206,7 @@ func loadClientConfig(path string, w io.Writer) (*config.Config, error) {
 	dir := filepath.Join(hostRoot, config.EnforcedPublicDir)
 	v, verr := config.LoadClientView(dir)
 	if verr != nil {
-		return nil, fmt.Errorf("%w; the Gateway's client view in %s is not available either (%v): run smcpctl install --profile enforced again, or run this command as a member of group smcp", err, dir, verr)
+		return nil, fmt.Errorf("%w; the Gateway's client view in %s is not available either (%w): run smcpctl install --profile enforced again, or run this command as a member of group smcp", err, dir, verr)
 	}
 	fmt.Fprintf(w, "note: %s is not readable by this user; using the Gateway's client view %s\n", path, filepath.Join(dir, config.ClientViewFile))
 	return v.Config(dir), nil
