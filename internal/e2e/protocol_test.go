@@ -523,6 +523,7 @@ func testDuplicateInFlightID(t *testing.T, f *fixture) {
 		body   string
 	}
 	first := make(chan result, 1)
+	restarts := f.app.Registry.Servers()["t"].Restarts()
 	go func() {
 		s, _, b := f.post(slow, slowHdr)
 		first <- result{s, b}
@@ -548,6 +549,15 @@ func testDuplicateInFlightID(t *testing.T, f *fixture) {
 	r := <-first
 	if rep := decodeRaw(t, r.body); string(rep.ID) != `"dup"` || (rep.Result == nil && rep.Error == nil) {
 		t.Fatalf("first call: %d %s", r.status, r.body)
+	}
+	// t_slow outlasts the 2 s upstream timeout, so the first call ends in
+	// UPSTREAM_TIMEOUT and the instance is replaced. The reuse below waits
+	// for the replacement inside its own 2 s upstream timeout, and on a
+	// loaded host (CI's -race -coverpkg test binary is the backend) the
+	// start can take longer: the reuse then failed with UPSTREAM_TIMEOUT
+	// (CI run 39111205010). It is sent once the replacement serves.
+	if strings.Contains(r.body, `"UPSTREAM_TIMEOUT"`) {
+		f.waitReplaced("t", restarts)
 	}
 	if status, _, body = f.post(echo, echoHdr); status != 200 || !strings.Contains(body, "echo:d") {
 		t.Fatalf("id reuse after completion: %d %s", status, body)

@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
@@ -93,11 +94,18 @@ func (f *fakeManager) ok(argv ...string) bool {
 }
 
 // digests returns the SHA-256 of every regular file under the given roots.
+// It leaves out the running smcpd's journal health probe: a file the
+// Health & Safety Monitor creates and removes in the journal directory
+// every second (health.JournalWritable). It is not part of what install
+// writes, and a walk can list it and then find it gone.
 func digests(t *testing.T, roots ...string) map[string]string {
 	t.Helper()
 	out := map[string]string{}
 	for _, r := range roots {
 		err := filepath.WalkDir(r, func(p string, d fs.DirEntry, err error) error {
+			if err == nil && strings.HasPrefix(d.Name(), health.JournalProbePrefix) {
+				return nil
+			}
 			if err != nil || d.IsDir() || !d.Type().IsRegular() {
 				return err
 			}

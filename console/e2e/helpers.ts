@@ -18,12 +18,18 @@ const cached = new Map<Account, Cookie[]>();
  * the sign-in page; later ones reuse its session cookie (HttpOnly, so it is
  * copied through the browser context, not the page), which keeps the suite
  * under the per-source sign-in rate limit of the control API.
+ *
+ * Navigation waits for the document, not for the load event: in a
+ * console-previous-browsers run Firefox never fired load for a deep link
+ * opened in a second page although every request had completed and the
+ * live stream was open (CI run 39371629741), and goto waited until the
+ * test timed out. The steps after it wait for the view's elements.
  */
 export async function signIn(page: Page, path = "/", as: Account = "administrator") {
   const saved = cached.get(as);
   if (saved) {
     await page.context().addCookies(saved);
-    await page.goto(g.adminURL + path);
+    await page.goto(g.adminURL + path, { waitUntil: "domcontentloaded" });
     const strip = page.getByTestId("status-strip");
     const form = page.getByRole("button", { name: "Sign in" });
     await expect(strip.or(form)).toBeVisible();
@@ -41,7 +47,7 @@ export function forget(as: Account) {
 }
 
 async function uiSignIn(page: Page, path: string, as: Account) {
-  await page.goto(g.adminURL + path);
+  await page.goto(g.adminURL + path, { waitUntil: "domcontentloaded" });
   if (as === "approver") {
     await page.getByLabel("Approver (tool-call approvals)").check();
     await page.getByLabel("Username").fill(g.approverUser);

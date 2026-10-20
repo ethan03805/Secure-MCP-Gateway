@@ -124,8 +124,10 @@ fi
 grep -q '"profile": *"standalone"' "$work/health.json" || { cat "$work/health.json"; fail "health does not report the standalone profile"; }
 
 say "a second smcpctl install changes nothing (FR-13.4)"
+# The running smcpd creates and removes a journal health probe file
+# (.health-probe-*) every second; it is not part of the installation.
 digests() {
-  { find "$cfg_dir" "$state_dir/keys" "$state_dir/tls" "$state_dir/journal" "$unit" -type f -print0 2>/dev/null || true; } \
+  { find "$cfg_dir" "$state_dir/keys" "$state_dir/tls" "$state_dir/journal" "$unit" -type f ! -name '.health-probe-*' -print0 2>/dev/null || true; } \
     | while IFS= read -r -d '' f; do sha "$f"; done | sort
 }
 digests > "$work/digests1"

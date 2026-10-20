@@ -193,6 +193,23 @@ SMCP_E2E_BACKEND = "1"
 	return f
 }
 
+// waitReplaced waits until the instance of server alias that a call ended
+// by an upstream timeout or a failed instance has been replaced and
+// serves: its restart count exceeds before. The next call would otherwise
+// wait for the replacement inside its own 2 s upstream timeout, and on a
+// loaded host (CI's -race -coverpkg test binary is the backend) the start
+// can take longer, so the call ends in UPSTREAM_TIMEOUT instead of the
+// outcome under test.
+func (f *fixture) waitReplaced(alias string, before uint64) {
+	f.t.Helper()
+	srv := f.app.Registry.Servers()[alias]
+	for deadline := time.Now().Add(60 * time.Second); srv.Restarts() <= before; time.Sleep(20 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			f.t.Fatalf("the instance of %s was not replaced", alias)
+		}
+	}
+}
+
 // stop shuts the Gateway down and seals the journal.
 func (f *fixture) stop() {
 	if f.cancel == nil {
@@ -496,9 +513,11 @@ func TestPolicyDecisionsAndErrorMapping(t *testing.T) {
 	}
 	// Upstream timeout (2s configured; tool sleeps 5s): -31009 with reason
 	// UPSTREAM_TIMEOUT (Appendix B), since the backend may have acted.
+	restarts := f.app.Registry.Servers()["t"].Restarts()
 	if we, data = callErr(t, cs, "t_slow", nil); we.Code != edge.CodeIndeterminate || data["reasonCode"] != "UPSTREAM_TIMEOUT" {
 		t.Fatalf("%+v", we)
 	}
+	f.waitReplaced("t", restarts)
 	// Result size bound (64 KiB configured).
 	if we, _ = callErr(t, cs, "t_big", map[string]any{"kib": 128}); we.Code != edge.CodeResponseWithheld {
 		t.Fatalf("%+v", we)
