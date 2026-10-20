@@ -17,9 +17,10 @@ which runs the custom actions. Windows Firewall outbound block rules for
 both msiexec.exe programs (System32 and SysWOW64) keep them off the
 network, and the Windows Filtering Platform connection audit (Security log
 events 5156, connection allowed, and 5157, connection blocked) records
-every connection that they, or a program started from a temporary or the
-Windows Installer directory (where a custom action such as the
-smcp-desktop package's WebView2 bootstrapper is extracted), try. The
+every connection that they, a program started from the Windows Installer
+directory (where custom actions run), or the WebView2 bootstrapper
+try. The temporary directories are not watched as a whole: the
+runner's own agents run from there and talk to GitHub throughout. The
 control test makes msiexec fetch a package from an https URL with the
 block on and requires a blocked connection in the audit and no allowed
 one, so a block or an audit that does not work fails the test. The rules
@@ -33,7 +34,7 @@ only in CI.
 $script:WfpConnectionAudit = '{0CCE9226-69AE-11D9-BED3-505054503030}'
 $script:BlockRule = 'smcp-smoke: no network for Windows Installer (FR-20.20)'
 # Programs whose connections count as the installation's.
-$script:InstallerPrograms = '\\msiexec\.exe$|\\appdata\\local\\temp\\|\\windows\\temp\\|\\windows\\installer\\'
+$script:InstallerPrograms = '\\msiexec\.exe$|\\windows\\installer\\|webview2setup'
 
 function Get-InstallerPrograms {
   @(

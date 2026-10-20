@@ -106,7 +106,10 @@ func (in *installer) windowsMachine() error {
 	base := filepath.Join(programData(), "smcp-gateway")
 	cfgDir, stateDir := filepath.Join(base, "config"), filepath.Join(base, "state")
 	logDir, exports := filepath.Join(base, "log"), filepath.Join(base, "exports")
-	for _, d := range []string{cfgDir, stateDir, logDir, exports} {
+	// Backups beside the state: the service cannot write in the
+	// configuration directory, where the default backups/ would be.
+	backups := filepath.Join(base, "backups")
+	for _, d := range []string{cfgDir, stateDir, logDir, exports, backups} {
 		if err := in.ensureDir(d, 0o700); err != nil {
 			return err
 		}
@@ -131,8 +134,9 @@ func (in *installer) windowsMachine() error {
 		stateDir: append(append([]winsec.Entry(nil), admins...), winsec.Entry{SID: svcSID, Access: winsec.FullControl}),
 		logDir:   append(append([]winsec.Entry(nil), admins...), winsec.Entry{SID: svcSID, Access: winsec.FullControl}),
 		exports:  append(append([]winsec.Entry(nil), admins...), winsec.Entry{SID: svcSID, Access: winsec.Modify}, winsec.Entry{SID: operators, Access: winsec.ReadExecute}),
+		backups:  append(append([]winsec.Entry(nil), admins...), winsec.Entry{SID: svcSID, Access: winsec.FullControl}),
 	}
-	for _, d := range []string{cfgDir, stateDir, logDir, exports} {
+	for _, d := range []string{cfgDir, stateDir, logDir, exports, backups} {
 		if err := winsec.SetProtectedDACL(d, acls[d]); err != nil {
 			return fmt.Errorf("access control list of %s: %w", d, err)
 		}
@@ -166,13 +170,18 @@ sandbox = "appcontainer"
 [evidence]
 export_dir = %q
 
+# Pre-upgrade and on-demand backups: the service cannot write next to this
+# file, and uninstall --purge keeps this directory.
+[backup]
+dir = %q
+
 # The UDS Harness Profile is served over this named pipe when enabled
 # (FR-21.8); members of the local group smcp-harness may connect.
 [uds]
 enabled = false
 path = '\\.\pipe\smcp-harness'
 group = %q
-`, filepath.Join(logDir, "smcpd.log"), exports, groupHarness)
+`, filepath.Join(logDir, "smcpd.log"), exports, backups, groupHarness)
 	res, err := runBootstrap(o, in.out)
 	if err != nil {
 		return err
