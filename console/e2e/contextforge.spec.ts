@@ -81,7 +81,7 @@ test("G-15 lists, filters and shows catalog entries as inert text without remote
   await page.getByRole("button", { name: "Apply filter" }).click();
   await expect(table.getByRole("link")).toHaveCount(1);
   await page.getByLabel("Class").selectOption("");
-  await page.getByLabel("Search").fill("gamma");
+  await page.getByRole("textbox", { name: "Search", exact: true }).fill("gamma");
   await page.getByRole("button", { name: "Apply filter" }).click();
   await expect(page.getByRole("region", { name: "ContextForge catalog entries" }).getByRole("link")).toHaveCount(1);
   expect(asked.some((s) => s.includes("class=local"))).toBe(true);
