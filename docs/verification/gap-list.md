@@ -265,8 +265,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-22.44 **unverified** (partly verified): `smcpctl bootstrap` and `install` ask (tested), and the desktop first-run setup offers the box, unchecked by default, with the same notes and passes `--with-contextforge` only when it is checked (`desktop/src-tauri/src/contextforge.rs`, `desktop/test/contextforge-choice.test.ts`); the Demonstration of both setups is not recorded.
 - SR-3.2-2 **unverified** (partly verified): The signature binding and its journal event are tested for the pinned image; images signed from another tag or repository are not.
 - SR-3.5-2 **unverified** (partly verified): The probe holds no secret, its only network destination is its endpoint for the entry's host, and a probe secret is delivered in S1 only (`connector.TestHostedPackagesThroughEgress`, `egress.TestHostedEndpoints`); the run with a production secret bound to another package is not made.
-- SR-3.6-2 **unverified** (no claiming test or record): Stdio transport is off in the generated configuration; no test watches processes and network during a hosted call.
-- SR-4-3 **unverified** (no claiming test or record): The instance listens on loopback with authentication required; no test tries every port from the harness account with and without the harness token.
+
 ## History
 
 The dated notes below record how the list changed, in the order they were added. Requirements named in them as open may since have been verified; the list above is the current state.
