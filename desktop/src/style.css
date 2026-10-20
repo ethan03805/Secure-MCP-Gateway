@@ -1,10 +1,12 @@
 /*
  * Bundled desktop windows. Rules: docs/design/visual.md.
- * Same tokens as the console (console/src/styles.css), the system typeface
- * of macOS, the console's five-size scale, hairline rules, color for state
+ * Same tokens as the console (console/src/styles.css), the bundled IBM Plex
+ * faces (fonts/plex.css, system fonts as the fallback), the console's
+ * five-size scale, hairline rules, color for state
  * only and always with a word and a shape. No gradients, shadows, blur or
  * decorative motion.
  */
+@import url("fonts/plex.css");
 :root {
   --paper: #f4f5f0;
   --surface: #fbfbf8;
@@ -23,8 +25,8 @@
   --bad-wash: #f6e3e8;
   --pending: #2b4a8c;
   --focus: #1f4fc4;
-  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --fs-1: 0.75rem;
   --fs-2: 0.8125rem;
   --fs-3: 0.875rem;
@@ -73,6 +75,8 @@ h2 { margin: 20px 0 8px; font-size: var(--fs-3); font-weight: 600; }
 p { margin: 0 0 10px; color: var(--ink); }
 .muted { color: var(--ink-3); }
 code, .mono { font-family: var(--mono); font-size: var(--fs-2); }
+/* Only the bundled weights: 600 for emphasis, never a synthesized bold. */
+strong, b { font-weight: 600; }
 
 /* The three tasks: a numbered list with hairline rules, not cards. */
 ol.tasks { list-style: none; margin: 14px 0 12px; padding: 0; border-top: 1px solid var(--rule); counter-reset: task; }

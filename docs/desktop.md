@@ -65,7 +65,7 @@ The tray icon shows one of seven states. Its shape changes with the state as wel
 | Grey hollow square | stopped | The service manager reports the service stopped, and the metrics endpoint does not answer. |
 | Grey ring | unreachable | No metrics reading for 15 seconds while the service is not known to be stopped. Stale data is never shown as healthy. |
 
-The shapes are those of the visual guide ([design/visual.md](design/visual.md)), so they also tell the states apart without color.
+The shapes are those of the visual guide ([design/visual.md](design/visual.md)), so they also tell the states apart without color. On macOS the icon is a monochrome template image that follows the menu bar's color, so only the shape changes; on Linux and Windows it is drawn in the state colors.
 
 The top of the menu repeats the state in words, with the first sentence of what it means, for example "Running, not enforced" and "The Gateway is running and checking every tool call your agents make." Selecting either line opens the **Gateway Status** window, which explains the state, says what to do and offers the control that does it: Start for stopped, Restart for unreachable, Open Console for the others. For unreachable it shows how long ago the status was last read, and on an installation that is not labelled `enforced` it explains what `not enforced` means. The text comes from the shared message catalogue `docs/design/messages.json` (FR-20.48), the same text the console uses.
 

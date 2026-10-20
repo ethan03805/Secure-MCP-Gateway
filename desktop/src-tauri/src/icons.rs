@@ -82,6 +82,34 @@ pub fn rgba(state: TrayState) -> Vec<u8> {
     out
 }
 
+/// Whether the tray takes a monochrome template image. The macOS menu bar
+/// draws a template image in its own color (light, dark or tinted), so the
+/// state is told by silhouette alone; the shapes differ in outline for that
+/// reason (docs/design/visual.md). Linux and Windows panels show the
+/// colored icon of [`rgba`], whose shapes are the same.
+pub const TEMPLATE: bool = cfg!(target_os = "macos");
+
+/// A state's monochrome template image: black, the shape's coverage as
+/// alpha, SIZE × SIZE.
+pub fn template_rgba(state: TrayState) -> Vec<u8> {
+    let mut out = rgba(state);
+    for p in out.chunks_mut(4) {
+        p[0] = 0;
+        p[1] = 0;
+        p[2] = 0;
+    }
+    out
+}
+
+/// The tray image of a state for this platform.
+pub fn tray_rgba(state: TrayState) -> Vec<u8> {
+    if TEMPLATE {
+        template_rgba(state)
+    } else {
+        rgba(state)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,7 +125,9 @@ mod tests {
         let dir = std::path::PathBuf::from(dir);
         std::fs::create_dir_all(&dir).unwrap();
         for s in TrayState::ALL {
-            std::fs::write(dir.join(format!("{}.rgba", s.name().replace(' ', "-"))), rgba(s)).unwrap();
+            let name = s.name().replace(' ', "-");
+            std::fs::write(dir.join(format!("{name}.rgba")), rgba(s)).unwrap();
+            std::fs::write(dir.join(format!("{name}-template.rgba")), template_rgba(s)).unwrap();
         }
     }
 
@@ -130,5 +160,43 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The macOS template images: black only, and every pair of states
+    /// differs in silhouette (coverage alone), since the menu bar recolors
+    /// them and color carries nothing.
+    #[test]
+    fn template_icons_differ_by_silhouette() {
+        claims::partial(&["FR-20.2"]);
+        let icons: Vec<Vec<u8>> = TrayState::ALL.iter().map(|s| template_rgba(*s)).collect();
+        for (i, a) in icons.iter().enumerate() {
+            assert!(
+                a.chunks(4).all(|p| p[0] == 0 && p[1] == 0 && p[2] == 0),
+                "{:?}",
+                TrayState::ALL[i]
+            );
+            assert_eq!(
+                a.chunks(4).map(|p| p[3]).collect::<Vec<_>>(),
+                rgba(TrayState::ALL[i]).chunks(4).map(|p| p[3]).collect::<Vec<_>>(),
+                "the template has the colored icon's shape"
+            );
+            for (j, b) in icons.iter().enumerate().skip(i + 1) {
+                let differ = a
+                    .chunks(4)
+                    .zip(b.chunks(4))
+                    .filter(|(p, q)| (p[3] > 127) != (q[3] > 127))
+                    .count();
+                assert!(
+                    differ > 20,
+                    "{:?} and {:?} have nearly the same silhouette",
+                    TrayState::ALL[i],
+                    TrayState::ALL[j]
+                );
+            }
+        }
+        assert_eq!(
+            tray_rgba(TrayState::Healthy) == template_rgba(TrayState::Healthy),
+            TEMPLATE
+        );
     }
 }

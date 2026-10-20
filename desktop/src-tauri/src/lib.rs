@@ -990,7 +990,9 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
         pending: None,
     };
     let tray = TrayIconBuilder::with_id(TRAY_ID)
-        .icon(Image::new_owned(icons::rgba(view.state), icons::SIZE, icons::SIZE))
+        .icon(Image::new_owned(icons::tray_rgba(view.state), icons::SIZE, icons::SIZE))
+        // macOS: a template image the menu bar recolors (icons::TEMPLATE).
+        .icon_as_template(icons::TEMPLATE)
         .tooltip(view.accessible_name())
         .menu(&menu)
         .show_menu_on_left_click(true)
@@ -1015,10 +1017,11 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
 fn show(shared: &Shared, view: &TrayView, service: ServiceStatus) {
     if let Some(tray) = shared.tray.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
         let _ = tray.set_icon(Some(Image::new_owned(
-            icons::rgba(view.state),
+            icons::tray_rgba(view.state),
             icons::SIZE,
             icons::SIZE,
         )));
+        let _ = tray.set_icon_as_template(icons::TEMPLATE);
         let _ = tray.set_tooltip(Some(view.accessible_name()));
         let label = view.label();
         let _ = tray.set_title(if label.is_empty() { None } else { Some(label) });

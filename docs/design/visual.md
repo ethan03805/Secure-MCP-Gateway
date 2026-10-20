@@ -40,7 +40,7 @@ Charts add the three validated series tokens `--series-1` to `--series-3` and `-
 
 ## Type
 
-- **One family per surface.** The console and the desktop windows use IBM Plex Sans (400, 600) for text and IBM Plex Mono (400, 500) for IDs, revisions, digests, reason codes and counts, bundled locally (FR-8.26). System fonts (`system-ui`, `ui-monospace`) are the fallback. The reference site is a printed-specification layout: Newsreader for long-form text with IBM Plex Mono, as `site/src/app/globals.css` states.
+- **One family per surface.** The console and the desktop windows use IBM Plex Sans (400, 600) for text and IBM Plex Mono (400, 500) for IDs, revisions, digests, reason codes and counts, bundled locally (FR-8.26): the console from the `@fontsource` packages, with the OFL texts served under `/licenses/`, and the desktop application from the vendored files in `desktop/src/fonts/` (the same files, with their OFL texts, recorded by SHA-256 in `desktop/test/fonts.test.ts`). No surface loads a font from a font service. System fonts (`system-ui`, `ui-monospace`) are the fallback. The reference site is a printed-specification layout: Newsreader for long-form text with IBM Plex Mono, as `site/src/app/globals.css` states.
 - **Five sizes**: 12, 13, 14, 16 and 20 px (`--fs-1` to `--fs-5`). Tables and monospaced text 13 px, body 14 px, the `h1` 20 px. No other sizes.
 - Weight 600 for headings and emphasis; no italic for emphasis in UI text.
 
@@ -70,7 +70,13 @@ The tray icon and its accessible name state exactly one of the seven states of F
 
 `running, not enforced` is a Standalone installation whose health is degraded only by the profile's own cause `unconfined` (the gauge `smcp_health_profile_only`): it works as designed, so it is not shown as degraded, and the half-filled square and the `not enforced` label say that the servers are not contained. Any other cause shows `degraded`. In the console the state reads the same (the `profile_only` field of `/admin/v1/health`).
 
-`unreachable` is shown when no status has been read for 15 seconds; it is never shown as the last known state, and stale data is never green. The monochrome menu-bar template image carries the state by shape alone, so the shapes must differ in silhouette.
+`unreachable` is shown when no status has been read for 15 seconds; it is never shown as the last known state, and stale data is never green.
+
+On macOS the tray image is a monochrome template image (black with the shape as alpha; `icons::template_rgba`), which the menu bar draws in its own color in light, dark and tinted menu bars. It carries the state by silhouette alone, so every pair of shapes differs in outline, as `template_icons_differ_by_silhouette` checks. Linux and Windows panels show the same shapes in the state colors (`icons::rgba`).
+
+## Application icon
+
+The application icon is a `--moss` tile with a `--paper` mark: three tool calls arrive from the left at a gate, and one continues to the right. It uses two flat colors and axis-aligned bars, with no gradient, glow, sparkle or letterform. `desktop/scripts/make-icons.py` is the source. It writes `app-icon.svg` and rasterizes the same shapes with exact area coverage into the PNG, `.icns` and `.ico` files Tauri bundles, reproducibly and without an image library. The CI job `desktop` runs it with `--check`. To change the icon, edit the script and run it again. The console's favicon (`console/public/favicon.svg`) is the same tile and mark.
 
 ## Motion
 
