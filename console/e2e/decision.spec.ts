@@ -58,7 +58,13 @@ test("G-14 from a withheld event to its decision, decisive rule, route, server r
     await signIn();
 
     // G-08: rebuild the mirror from this instance's journal (the database
-    // is shared by the runs), with the keyboard.
+    // is shared by the runs), with the keyboard. After the restart the
+    // mirror reconnects to Neo4j, and until it is ready a rebuild is
+    // refused with 503 graph_unavailable (state "connecting").
+    await expect(async () => {
+      const st = await page.request.get(d.adminURL + "/api/v1/graph/status");
+      expect(((await st.json()) as { state: string }).state).toBe("ready");
+    }).toPass({ timeout: 90_000 });
     await go(page, "/data-server");
     const rebuild = page.getByRole("button", { name: "Rebuild from the journal" });
     await rebuild.focus();

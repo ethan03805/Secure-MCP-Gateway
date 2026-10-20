@@ -2,8 +2,10 @@ package analytics
 
 import (
 	"context"
+	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -64,6 +66,21 @@ func TestObservationBatching(t *testing.T) {
 	}
 	bs := &batchStore{}
 	w := newWriter(bs, st.FlushRecords, st.FlushInterval, 20000, diag.Discard())
+	// The writer's thread runs at the default priority here. In the
+	// Gateway it runs under SCHED_IDLE on Linux (idlePriority), which by
+	// design gets no processor time while every processor is busy with
+	// threads of a normal policy, so that storage falls behind instead of
+	// tool calls (FR-11.4; TestIdlePriorityThread tests the policy). The
+	// Linux CI job runs the tests of every package at once under the race
+	// detector and keeps every processor busy; there an idle-policy writer
+	// stored batches 0.4 to 1.3 s late. FR-9.5 is the writer's batching
+	// rule, measured here without that starvation.
+	var prioritized atomic.Bool
+	w.priority = func() bool {
+		runtime.LockOSThread()
+		prioritized.Store(true)
+		return false
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { w.run(ctx); close(done) }()
@@ -82,6 +99,9 @@ func TestObservationBatching(t *testing.T) {
 	time.Sleep(300 * time.Millisecond)
 	cancel()
 	<-done
+	if !prioritized.Load() {
+		t.Fatal("the writer did not set its thread's priority")
+	}
 	bs.mu.Lock()
 	defer bs.mu.Unlock()
 	total := 0

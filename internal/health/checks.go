@@ -124,11 +124,15 @@ func Journal(j JournalState) Check {
 	}
 }
 
+// JournalProbePrefix begins the name of the file JournalWritable creates
+// and removes in the journal directory on every check.
+const JournalProbePrefix = ".health-probe-"
+
 // JournalWritable probes the journal directory by creating, syncing and
 // removing a file.
 func JournalWritable(dir string) Check {
 	return func(time.Time) []Cause {
-		f, err := os.CreateTemp(dir, ".health-probe-*")
+		f, err := os.CreateTemp(dir, JournalProbePrefix+"*")
 		if err == nil {
 			_, err = f.Write([]byte("probe\n"))
 			if serr := f.Sync(); err == nil {

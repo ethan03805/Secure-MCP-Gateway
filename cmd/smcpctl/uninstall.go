@@ -145,7 +145,9 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 			// manager does not know the unit).
 			switch u.kind {
 			case "launchd":
-				_ = runQuiet("launchctl", "bootout", "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel)
+				if err := unloadLaunchd(runQuiet, "gui/"+strconv.Itoa(os.Getuid())+"/"+launchdLabel, launchdUnloadWait, 100*time.Millisecond); err != nil {
+					fmt.Fprintln(out, err)
+				}
 			case "systemd-user":
 				_ = runQuiet("systemctl", "--user", "disable", "--now", systemdUnit)
 			case "systemd-system", "systemd-aux":
@@ -243,6 +245,26 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 		}
 	}
 	fmt.Fprintf(out, "kept: backups in %s (delete them separately)\n", cfg.Backup.Dir)
+	return nil
+}
+
+// launchdUnloadWait bounds how long uninstall waits for launchd to drop
+// the agent: launchd's default ExitTimeOut (20 s) plus a margin.
+const launchdUnloadWait = 30 * time.Second
+
+// unloadLaunchd boots the launchd agent target out and waits until launchd
+// no longer knows it. launchctl bootout can return while launchd is still
+// removing the service (the CI install-standalone job on macOS found
+// com.smcp.gateway still loaded right after uninstall, and gone a moment
+// later), so uninstall waits for `launchctl print` to fail. A target
+// launchd does not know returns at once.
+func unloadLaunchd(run func(argv ...string) error, target string, wait, every time.Duration) error {
+	_ = run("launchctl", "bootout", target) // fails when the agent is not loaded
+	for deadline := time.Now().Add(wait); run("launchctl", "print", target) == nil; time.Sleep(every) {
+		if time.Now().After(deadline) {
+			return fmt.Errorf("launchd agent %s: still loaded %s after launchctl bootout", target, wait)
+		}
+	}
 	return nil
 }
 

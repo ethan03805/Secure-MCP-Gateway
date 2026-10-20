@@ -29,6 +29,9 @@ type writer struct {
 	full     chan struct{} // maxRows rows are queued
 	syncCh   chan chan struct{}
 	log      *slog.Logger
+	// priority runs first on the writer's goroutine and keeps it on its
+	// thread: idlePriority, so that storage yields to tool calls (FR-11.4).
+	priority func() bool
 
 	mu        sync.Mutex
 	dropCount map[string]uint64
@@ -51,7 +54,7 @@ func (w *writer) lastError() string {
 
 func newWriter(s obsstore.Store, maxRows int, interval time.Duration, queue int, log *slog.Logger) *writer {
 	return &writer{store: s, maxRows: maxRows, interval: interval, ch: make(chan tableRow, queue), full: make(chan struct{}, 1),
-		syncCh: make(chan chan struct{}), log: log, dropCount: map[string]uint64{}}
+		syncCh: make(chan chan struct{}), log: log, priority: idlePriority, dropCount: map[string]uint64{}}
 }
 
 // sync writes every row offered before the call, or returns when ctx ends
@@ -109,9 +112,10 @@ func (w *writer) drops() map[string]uint64 {
 }
 
 // run writes batches until ctx ends, on a thread of lowered priority
-// (idlePriority), and writes what is queued before it returns.
+// (w.priority, idlePriority unless a test replaces it), and writes what is
+// queued before it returns.
 func (w *writer) run(ctx context.Context) {
-	idlePriority() // the goroutine keeps its thread until it returns
+	w.priority() // the goroutine keeps its thread until it returns
 	t := time.NewTicker(w.interval)
 	defer t.Stop()
 	buf := map[string][]obsstore.Row{}

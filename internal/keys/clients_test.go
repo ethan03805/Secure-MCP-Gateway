@@ -50,7 +50,11 @@ type tlsClient struct {
 
 var tlsClients = []tlsClient{
 	{"node", "node", func(ctx context.Context, bin, url, caFile string) ([]byte, error) {
-		js := `const https=require('https'),fs=require('fs');https.get(process.argv[1],{ca:fs.readFileSync(process.argv[2])},r=>{let b='';r.on('data',d=>b+=d);r.on('end',()=>{process.stdout.write(b);process.exit(b==='ok'?0:1)})}).on('error',e=>{console.error(e.message);process.exit(1)})`
+		// Each stage goes to stderr with its time, so that a run killed at
+		// the timeout shows where it stopped: the Windows runner timed out
+		// with no output at all now and then (runs 39364606539 and four
+		// pull request runs on 2026-10-20), which could not be reproduced.
+		js := `const t0=Date.now(),L=m=>process.stderr.write('['+(Date.now()-t0)+' ms] '+m+'\n');L('started');const https=require('https'),fs=require('fs');const q=https.get(process.argv[1],{ca:fs.readFileSync(process.argv[2])},r=>{L('response '+r.statusCode);let b='';r.on('data',d=>b+=d);r.on('end',()=>{process.stdout.write(b);process.exit(b==='ok'?0:1)})}).on('error',e=>{console.error(e.message);process.exit(1)});q.on('socket',s=>{L('socket');s.on('connect',()=>L('connected'));s.on('secureConnect',()=>L('TLS established'))})`
 		return exec.CommandContext(ctx, bin, "-e", js, url, caFile).CombinedOutput()
 	}},
 	// Bun uses BoringSSL, as the native Claude Code and OpenCode builds do.
