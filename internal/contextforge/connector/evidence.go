@@ -35,5 +35,33 @@ func (c *Connector) Decorate(ev *audit.Event) {
 	c.routeMu.RUnlock()
 	if ok {
 		ev.Route = maps.Clone(r)
+		if serverClaim(ev) {
+			ev.Route[RouteEvidence] = EvidenceServerAsserted
+		}
 	}
+}
+
+// RouteEvidence is the route field that labels an event of a hosted call
+// whose content the bundled instance asserted, with the value
+// EvidenceServerAsserted (SR-6.18-2).
+const (
+	RouteEvidence          = "evidence"
+	EvidenceServerAsserted = "server_asserted"
+)
+
+// serverClaim reports whether an event records something received from
+// the bundled instance rather than the Gateway's own action: the text it
+// asserted (an error message, a notification), a call's completion, which
+// records the result it returned, and a failure the dispatcher reports
+// for its answer (SR-6.18-2).
+func serverClaim(ev *audit.Event) bool {
+	switch {
+	case ev.Class == "server_asserted":
+		return true
+	case ev.Phase == audit.PhaseCompleted:
+		return true
+	case ev.Origin == "E-10" && (ev.Phase == audit.PhaseFailed || ev.Phase == audit.PhaseIndeterminate):
+		return true
+	}
+	return false
 }

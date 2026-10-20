@@ -77,10 +77,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-21.8 **unverified** (no claiming test or record): Conformance requests run over the named pipe on Windows; the fixtures of both protocol eras compared with the TLS listener and the AF_UNIX scan are not complete.
 - SR-2.8-6 **unverified** (no claiming test or record): The DACL, the first-instance flag, `pipe_squatted` and the name held between connections (security review v1.3, SR-19) are tested; a connection over SMB (`\\localhost\pipe\`) and as a user outside the group are not.
 
-### E-02 Protocol Mediator
-
-- SR-5.6-3 **unverified** (no claiming test or record): The general refusal of resources, prompts and server requests applies to hosted packages, but no bundled-instance stand-in test exists.
-
 ### E-03 Identity & Authentication Service
 
 - FR-21.9 **unverified** (no claiming test or record): SID mapping by impersonation and the key check are tested in the per-user mode; the machine mode and the recorded refusals with the client SID are not.
@@ -139,7 +135,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 ### E-21 Audit & Evidence Service
 
 - FR-22.39 **unverified** (partly verified): Events of a hosted package's revision carry a `route` member (`via` `contextforge`, server ID and revision, virtual server, instance version and digest) and a local revision's carry none (`audit.TestFanoutDecorators`, `connector.TestHostedPackagesThroughEgress`); the decision, intent and outcome events of a call through the full pipeline are not checked.
-- SR-6.18-2 **missing** (no claiming test or record): Results from the bundled instance are not labelled server-asserted with the instance attribution.
 
 ### E-22 Key & Trust Anchor Manager
 
@@ -265,13 +260,11 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-22.34 **unverified** (partly verified): One team, user, gateway and virtual server per package is tested; each gateway's URL is the package's own egress endpoint and each package's calls reach only its fixture (`connector.TestHostedPackagesThroughEgress`); the pinned-image run with two packages through the endpoints is not made.
 - FR-22.37 **unverified** (partly verified): Plugins off and the doubled limits are checked; a hosted call at the Gateway's rate limit and with a withheld result is not.
 - FR-22.38 **unverified** (partly verified): Reconciliation removes excluded objects (tested); the inspection of the admin client's operations is not recorded.
-- FR-22.42 **unverified** (no claiming test or record): `docs/security-limitations.md` states the six points as of v1.3.0, with the residual risks of the [v1.3 security review](../security-review-v1.3.md) (engine `inspect` shows the instance's credentials, Docker Engine before 28.0); the inspection of a release candidate is not recorded.
 - FR-22.43 **missing** (partly verified): The suite asserts HFC-01 to HFC-06, HFC-08, HFC-10, HFC-11 and HFC-13 (the hosted rows against the ContextForge stand-in), the console suite HFC-07 and the contextforge job HFC-12 (`bundle.TestEnforcedImage`); HFC-09 (E-11 filtering and taint of a swapped result through the full pipeline) and HFC-14's refusal by the running instance within the suite are not asserted.
 - FR-22.44 **unverified** (partly verified): `smcpctl bootstrap` and `install` ask (tested), and the desktop first-run setup offers the box, unchecked by default, with the same notes and passes `--with-contextforge` only when it is checked (`desktop/src-tauri/src/contextforge.rs`, `desktop/test/contextforge-choice.test.ts`); the Demonstration of both setups is not recorded.
 - SR-3.2-2 **unverified** (partly verified): The signature binding and its journal event are tested for the pinned image; images signed from another tag or repository are not.
 - SR-3.5-2 **unverified** (partly verified): The probe holds no secret, its only network destination is its endpoint for the entry's host, and a probe secret is delivered in S1 only (`connector.TestHostedPackagesThroughEgress`, `egress.TestHostedEndpoints`); the run with a production secret bound to another package is not made.
-- SR-3.6-2 **unverified** (no claiming test or record): Stdio transport is off in the generated configuration; no test watches processes and network during a hosted call.
-- SR-4-3 **unverified** (no claiming test or record): The instance listens on loopback with authentication required; no test tries every port from the harness account with and without the harness token.
+
 ## History
 
 The dated notes below record how the list changed, in the order they were added. Requirements named in them as open may since have been verified; the list above is the current state.

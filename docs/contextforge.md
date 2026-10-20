@@ -88,7 +88,7 @@ The gateway of each enabled hosted package is registered with the URL of the pac
 
 The package token is bound to the connection as a token source read for each request, never placed in an environment or file (FR-22.36). Package tokens are minted for one day and renewed an hour before they expire: the Connector mints a new token, runs the scope self-check with the new tokens before any is used, switches the connection to the new token and revokes the old one (`contextforge` events `token_renewed`, `token_renewal_failed`); a finding after renewal suspends every hosted package with `CONTEXTFORGE_SCOPE_BROKEN` (FR-22.29).
 
-The events of a call to a hosted package carry a `route` member: `via` `contextforge`, the package server ID and revision, the ContextForge virtual server, and the instance's version and image digest (`managed-process` for the managed process). A local package's events have no `route` (FR-22.39).
+The events of a call to a hosted package carry a `route` member: `via` `contextforge`, the package server ID and revision, the ContextForge virtual server, and the instance's version and image digest (`managed-process` for the managed process). A local package's events have no `route` (FR-22.39). On the events that record what the instance returned (the `server_asserted` events of its error messages and notifications, the call's `completed` event and a failure the dispatcher reports for its answer) the route also has `evidence` `server_asserted`: the instance's claims are attributed to the hosted package revision and the instance, never repeated as fact (SR-6.18-2).
 
 ## Hosted egress
 

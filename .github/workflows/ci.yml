@@ -1404,7 +1404,10 @@ jobs:
   # the generated configuration and credentials, routes the configuration
   # turns off, health, and the instance started through the Connector with
   # its credentials in a vault; and the Enforced containment under rootless
-  # Podman (bundle TestEnforcedImage: FR-22.24, SR-4.5-4, SR-4.7-3, HFC-12).
+  # Podman (bundle TestEnforcedImage: FR-22.24, SR-4.5-4, SR-4.7-3, HFC-12),
+  # no runtime bootstrap and no path around the Gateway (bundle
+  # TestNoRuntimeBootstrapImage, TestNoPathAroundGatewayImage: SR-3.6-2,
+  # SR-4-3).
   # Pulls about 600 MB per engine. Not a required check.
   contextforge:
     name: contextforge

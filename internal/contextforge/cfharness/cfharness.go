@@ -402,7 +402,10 @@ func (e *Env) Launch(revs ...library.Revision) (*Gateway, error) {
 	}
 	reg, err := backend.Start(context.Background(), servers, backend.Options{
 		Limits:   backend.Limits{PerPrincipal: 2, Total: 4, Queue: 4, UpstreamTimeout: 20 * time.Second, ResultBytes: 1 << 20},
-		Launcher: launcher, Manifests: ms, Capabilities: caps})
+		Launcher: launcher, Manifests: ms, Capabilities: caps,
+		// SR-6.18-1, SR-6.18-2: server-asserted text journaled as smcpd
+		// does (app.recordAssertion), through the Connector's decorator.
+		Asserted: func(x backend.Assertion) { _ = e.Fanout.Record(x.Event()) }, AssertInterval: 50 * time.Millisecond})
 	if err != nil {
 		return nil, err
 	}
