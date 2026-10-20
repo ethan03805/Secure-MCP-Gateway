@@ -170,10 +170,12 @@ func TestWindowsStateCopyRefused(t *testing.T) {
 	if err := json.Unmarshal(raw, &rec); err != nil {
 		t.Fatal(err)
 	}
+	// Hosted runners from one image can share a host name, so the name
+	// does not tell the hosts apart; the job runs on a fresh virtual
+	// machine, and every blob below must fail to decrypt here, which a
+	// copy on the same host and account would not.
 	host, _ := os.Hostname()
-	if strings.EqualFold(host, rec.Host) {
-		t.Fatalf("the importing runner %s is the exporting host; a second runner is needed", host)
-	}
+	t.Logf("exported on %s, imported on %s", rec.Host, host)
 	if !rec.Started || len(rec.Blobs) == 0 {
 		t.Fatalf("export record incomplete: %+v", rec)
 	}
