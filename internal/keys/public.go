@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // Public client view files (CP-46 public/; config.ClientView): a copy of
@@ -50,7 +51,9 @@ func PublishPublic(stateDir, dir string, view any) (bool, error) {
 	}{{publicCAFile, ca}, {publicViewFile, v}} {
 		p := filepath.Join(dir, f.name)
 		if cur, err := os.ReadFile(p); err == nil && bytes.Equal(cur, f.data) {
-			if fi, err := os.Stat(p); err == nil && fi.Mode().Perm() == 0o644 {
+			// Windows has no POSIX modes (the view is an Enforced-profile,
+			// Linux file); elsewhere a wrong mode is repaired.
+			if fi, err := os.Stat(p); err == nil && (runtime.GOOS == "windows" || fi.Mode().Perm() == 0o644) {
 				continue
 			}
 		}
