@@ -24,6 +24,7 @@ const ADMIN_PW = "e2e admin password 7f3a";
 const APPROVER_PW = "e2e approver password 9c1d";
 const AXE = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "node_modules", "axe-core", "axe.min.js"), "utf8");
 const ELEMENT = "element-6066-11e4-a52e-4f735466cecc";
+const SECOND_LOG = path.join(os.tmpdir(), "smcp-desktop-second.log");
 
 let failures = 0;
 const fail = (/** @type {string} */ m) => {
@@ -214,49 +215,62 @@ try {
   if (fs.readFileSync(claudeJson, "utf8") !== original) fail("~/.claude.json was not restored");
   else ok("Disconnect restored ~/.claude.json");
 
-  // ---- Deep links (FR-20.28) ----
-  const before = /** @type {string[]} */ (await wd("GET", `${S}/window/handles`)).length;
-  const second = path.join(os.tmpdir(), "smcp-desktop-second.log");
+  // ---- Console window (FR-20.6, SR-2.8-5) and deep links (FR-20.28) ----
   const start = (/** @type {string} */ link) => {
-    const fd = fs.openSync(second, "a");
+    const fd = fs.openSync(SECOND_LOG, "a");
     spawn(APP, [link], { stdio: ["ignore", fd, fd], detached: true }).unref();
   };
-  start("smcp://approvals");
-  const consoleHref = await waitFor(async () => {
-    const handles = /** @type {string[]} */ (await wd("GET", `${S}/window/handles`));
-    if (handles.length <= before) return null;
-    for (const h of handles) {
+  /** The handle and address of the console window, if one is open. */
+  const consoleWindow = async () => {
+    for (const h of /** @type {string[]} */ (await wd("GET", `${S}/window/handles`))) {
       await wd("POST", `${S}/window`, { handle: h });
       const href = /** @type {string} */ (await script("return location.href;"));
       // The console window starts at about:blank; the bundled windows are
       // tauri: pages, except the certificate error page.
-      if (href.startsWith("https://") || href.includes("/error.html")) return href;
+      if (href.startsWith("https://") || href.includes("/error.html")) return { h, href };
     }
     return null;
-  }, "the console window", 60000).catch(async (e) => {
-    fail(String(e));
+  };
+  const describeWindows = async () => {
     const titles = [];
     for (const h of /** @type {string[]} */ (await wd("GET", `${S}/window/handles`))) {
       await wd("POST", `${S}/window`, { handle: h });
       titles.push(`${await wd("GET", `${S}/title`)} <${await script("return location.href;")}>`);
     }
-    console.log(`windows: ${titles.join(" | ")}`);
-    console.log(`second start output:\n${fs.existsSync(second) ? fs.readFileSync(second, "utf8") : "(none)"}`);
-    return "";
+    return titles.join(" | ");
+  };
+  await windowTitled("Set Up the Gateway");
+  await click(await button("Open Console"));
+  const opened = await waitFor(consoleWindow, "the console window", 60000).catch(async (e) => {
+    fail(`${e}; windows: ${await describeWindows().catch((x) => String(x))}`);
+    return null;
   });
-  if (consoleHref) {
-    if (!consoleHref.startsWith("https://127.0.0.1:8444/")) fail(`the console window shows ${consoleHref}`);
-    else ok(`smcp://approvals opened the console window on the admin listener (${consoleHref})`);
+  if (opened) {
+    if (!opened.href.startsWith("https://127.0.0.1:8444/")) fail(`the console window shows ${opened.href}`);
+    else ok(`Open Console loaded the console from the admin listener through the CA-pinned check (${opened.href})`);
+    start("smcp://approvals");
+    const atApprovals = await waitFor(async () => {
+      await wd("POST", `${S}/window`, { handle: opened.h });
+      const href = /** @type {string} */ (await script("return location.href;"));
+      return href.includes("approvals") ? href : null;
+    }, "the console window at Approvals", 30000).catch((e) => {
+      fail(String(e));
+      return "";
+    });
+    if (atApprovals) ok(`smcp://approvals brought the console window to ${atApprovals}`);
+    const here = /** @type {string} */ (await script("return location.href;"));
     start("smcp://approvals?approve=1");
     start("smcp://stop");
+    start(`smcp://approvals/${"a".repeat(64 * 1024)}`);
     await sleep(3000);
     const now = /** @type {string} */ (await script("return location.href;"));
-    if (now !== consoleHref) fail(`a refused link navigated the console window to ${now}`);
+    if (now !== here) fail(`a refused link navigated the console window to ${now}`);
     else ok("refused links left the console window where it was");
   }
 } catch (e) {
   fail(String(e instanceof Error ? e.stack : e));
 } finally {
+  if (failures && fs.existsSync(SECOND_LOG)) console.log(`output of the second starts:\n${fs.readFileSync(SECOND_LOG, "utf8")}`);
   await wd("DELETE", S).catch(() => undefined);
 }
 console.log(failures ? `${failures} failure(s)` : "desktop end-to-end: setup, client setup and deep links passed");

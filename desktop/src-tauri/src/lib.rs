@@ -687,6 +687,7 @@ fn open_console(app: &AppHandle, page: Page) {
         }
     };
     let target = r.admin.page(&page.path());
+    eprintln!("smcp-desktop: console: {target}");
     if let Some(w) = app.get_webview_window(CONSOLE_LABEL) {
         if page != Page::Home {
             let _ = w.navigate(target);

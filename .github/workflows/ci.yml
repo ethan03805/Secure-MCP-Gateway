@@ -759,6 +759,7 @@ jobs:
         working-directory: desktop
         env:
           SMCP_DESKTOP_E2E: "1"
+          RUST_BACKTRACE: "1"
         run: |
           # Claude Code is "installed" for detection (its settings file).
           echo '{"theme":"dark"}' > "$HOME/.claude.json"
@@ -769,7 +770,9 @@ jobs:
       - name: Logs
         if: always()
         run: |
-          cat "$RUNNER_TEMP/tauri-driver.log" 2>/dev/null | tail -100 || true
+          cat "$RUNNER_TEMP/tauri-driver.log" 2>/dev/null | grep -v xdg-desktop-portal | tail -100 || true
+          ps -eo pid,stat,args | grep -E "smcp-desktop|WebKitWebDriver|tauri-driver" | grep -v grep || true
+          coredumpctl list --no-pager 2>/dev/null | tail -5 || true
           journalctl --user -u smcpd.service --no-pager 2>/dev/null | tail -50 || true
 
   # Platform installers (E-35, FR-20.24): build the .deb, .rpm and macOS
