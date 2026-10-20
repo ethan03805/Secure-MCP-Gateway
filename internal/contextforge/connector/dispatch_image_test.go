@@ -61,8 +61,10 @@ func TestHostedDispatchImage(t *testing.T) {
 	if err := os.WriteFile(file, catalog, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := config.Parse([]byte(fmt.Sprintf("[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$v=19$m=65536,t=3,p=1$c2FsdHNhbHQ$aGFzaGhhc2g\"\n[state]\ndir = %q\n[approvals]\nnotify = \"off\"\n[contextforge]\nbundled = true\ncatalog_file = %q\ncatalog_sha256 = %q\n",
-		state, file, packaging.SHA256Hex(catalog))))
+	// The instance runs on the engine the test inspects (the CI host also
+	// has Podman, which FindEngine prefers).
+	cfg, err := config.Parse([]byte(fmt.Sprintf("[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$v=19$m=65536,t=3,p=1$c2FsdHNhbHQ$aGFzaGhhc2g\"\n[state]\ndir = %q\n[approvals]\nnotify = \"off\"\n[contextforge]\nbundled = true\ncatalog_file = %q\ncatalog_sha256 = %q\nengine = %q\n",
+		state, file, packaging.SHA256Hex(catalog), eng)))
 	if err != nil {
 		t.Fatal(err)
 	}
