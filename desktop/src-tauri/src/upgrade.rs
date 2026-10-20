@@ -588,6 +588,7 @@ mod tests {
         std::fs::remove_dir_all(&d).unwrap();
     }
 
+    #[cfg(unix)]
     #[test]
     fn argv_is_fixed_and_carries_no_passphrase() {
         claims::partial(&["FR-20.12"]);

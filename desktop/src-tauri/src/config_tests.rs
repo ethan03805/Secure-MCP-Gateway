@@ -32,7 +32,8 @@ fn no_gateway_secret_or_control_api_in_the_application() {
         if !name.ends_with(".rs") || name == "config_tests.rs" || name == "claims.rs" {
             continue;
         }
-        let src = std::fs::read_to_string(&path).unwrap();
+        // A Windows checkout may have CRLF line ends.
+        let src = std::fs::read_to_string(&path).unwrap().replace("\r\n", "\n");
         let code = src.split("#[cfg(test)]\nmod tests").next().unwrap();
         // First-run setup checks whether a configuration file exists
         // (FR-20.8) and reads no file at all.

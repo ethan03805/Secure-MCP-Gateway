@@ -313,6 +313,9 @@ mod tests {
             mac.ca_file,
             PathBuf::from("/Users/u/Library/Application Support/smcp-gateway/state/tls/ca.crt")
         );
+        // XDG_STATE_HOME counts only as an absolute path, which this
+        // Linux path is only on Unix.
+        #[cfg(unix)]
         assert_eq!(
             default_ca_file("linux", home, Some(Path::new("/x/state"))),
             PathBuf::from("/x/state/smcp-gateway/tls/ca.crt")

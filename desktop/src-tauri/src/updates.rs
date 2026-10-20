@@ -878,7 +878,8 @@ echo "upgrade: upgrade complete"
     fn every_message_code_is_in_the_catalogue() {
         claims::partial(&["FR-20.47", "FR-20.48"]);
         let cat: serde_json::Value = serde_json::from_str(include_str!("../../../docs/design/messages.json")).unwrap();
-        let src = include_str!("updates.rs");
+        // A Windows checkout may have CRLF line ends.
+        let src = include_str!("updates.rs").replace("\r\n", "\n");
         let code_part = src.split("#[cfg(test)]\nmod tests").next().unwrap();
         let mut n = 0;
         for (i, _) in code_part

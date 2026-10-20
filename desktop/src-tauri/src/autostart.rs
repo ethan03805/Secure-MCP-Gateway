@@ -249,6 +249,8 @@ mod tests {
             d.contains(r#"Exec="/home/u/Apps/Secure \"MCP\" \$1 50%%.AppImage""#),
             "{d}"
         );
+        // The AppImage path is a Linux path, absolute only on Unix.
+        #[cfg(unix)]
         assert_eq!(
             program(
                 PathBuf::from("/tmp/.mount_x/usr/bin/smcp-desktop"),

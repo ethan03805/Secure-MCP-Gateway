@@ -67,7 +67,7 @@ try {
   $p = Start-Process $app -ArgumentList '--commands' -Wait -PassThru -RedirectStandardOutput $cmdOut -RedirectStandardError (Join-Path $work 'commands.err')
   Get-Content $cmdOut
   if ($p.ExitCode -ne 0) { Fail "smcp-desktop --commands exited $($p.ExitCode)" }
-  $n = @(Get-Content $cmdOut | Where-Object { ($_ -split "`t")[2] -eq $Version -and ($_ -split "`t")[1].StartsWith($dir) }).Count
+  $n = @(Get-Content $cmdOut | Where-Object { ($_ -split "`t")[2] -eq $Version -and ($_ -split "`t")[1].Replace('\\?\', '').StartsWith($dir, [StringComparison]::OrdinalIgnoreCase) }).Count
   if ($n -ne 6) { Fail "$n of 6 commands beside the application report version $Version" }
   if ((Get-Content (Join-Path $dir 'package-format')).Trim() -ne 'msi') { Fail 'package marker is not msi' }
 
