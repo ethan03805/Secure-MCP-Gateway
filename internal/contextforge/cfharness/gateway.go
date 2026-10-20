@@ -22,11 +22,13 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/connector"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/policystore"
 	"github.com/ethan03805/secure-mcp-gateway/internal/southbound"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
@@ -171,8 +173,11 @@ redirect_uris = ["http://localhost/unused"]
 	if err := os.WriteFile(cfgPath, []byte(toml), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	policy := fmt.Sprintf(`{"revision": "cf-1", "framework_profiles": {"dev": {"templates": ["h"], "default_template": "h"}},
-"templates": {"h": {"rules": [{"id": "none", "server": "none", "tools": ["none"]}%s]}}}`, rules.String())
+	// Each Gateway of an Env imports its own policy revision into the
+	// shared Policy Store.
+	e.gateways++
+	policy := fmt.Sprintf(`{"revision": "cf-%d", "framework_profiles": {"dev": {"templates": ["h"], "default_template": "h"}},
+"templates": {"h": {"rules": [{"id": "none", "server": "none", "tools": ["none"]}%s]}}}`, e.gateways, rules.String())
 	if err := os.WriteFile(filepath.Join(dir, "policy.json"), []byte(policy), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -180,10 +185,15 @@ redirect_uris = ["http://localhost/unused"]
 	if err != nil {
 		t.Fatalf("configuration: %v\n%s", err, toml)
 	}
+	// The Gateway imports its policy file only into an empty Policy Store:
+	// each harness Gateway activates its own (the revisions stay).
+	if err := os.Remove(filepath.Join(e.State, policystore.ControlFile)); err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
 	g := &FullGateway{t: t, e: e, Cfg: cfg, served: make(chan error, 1)}
 	g.RT = library.NewRuntime(e.Lib, library.RuntimeOptions{Hosted: e.Conn.ResolveHosted})
 	e.Conn.SetSuspend(g.RT.SuspendRevision)
-	launcher := connector.WrapLauncher(southbound.Wrap(inproc), func() *connector.Connector { return e.Conn })
+	launcher := connector.WrapLauncher(southbound.Wrap(localOrSubprocess{inproc}), func() *connector.Connector { return e.Conn })
 	opts := app.Options{Log: diag.Discard(), JanitorInterval: 200 * time.Millisecond, Launcher: launcher, Packages: packages{g.RT},
 		Observers:    map[string]audit.Observer{"cfharness": audit.ObserverFunc(g.observe)},
 		WrapInjector: func(next pipeline.SecretHeaderInjector) pipeline.SecretHeaderInjector { return e.Conn.S1Router(next) }}
@@ -201,6 +211,11 @@ redirect_uris = ["http://localhost/unused"]
 	a.Evidence.AddDecorator(e.Conn.Decorate)
 	e.Conn.Start(ctx)
 	e.Conn.RegisterRoutes(a.Admin)
+	if _, err := consoleapi.Attach(a, diag.Discard()); err != nil { // E-24, as smcpd attaches it
+		cancel()
+		a.Close()
+		t.Fatal(err)
+	}
 	if err := a.Listen(); err != nil {
 		cancel()
 		a.Close()
@@ -262,6 +277,10 @@ func (g *FullGateway) Stop() {
 	}
 	g.App.Close()
 	g.cancel = nil
+	// The library and the Connector record to the harness again: the
+	// Gateway's journal is closed.
+	g.e.Lib.SetRecorder(g.e.Fanout)
+	g.e.Conn.SetRecorder(g.e.Fanout)
 }
 
 type bearer struct {
@@ -376,4 +395,17 @@ func (g *FullGateway) Operator() string {
 		g.t.Fatal(err)
 	}
 	return tok
+}
+
+// localOrSubprocess runs the in-process local servers of the options and
+// every other command (a local package's stdio server) as a subprocess.
+type localOrSubprocess struct{ in pipeline.InProcessLauncher }
+
+func (l localOrSubprocess) Name() string   { return "cfharness" }
+func (l localOrSubprocess) Confined() bool { return false }
+func (l localOrSubprocess) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeline.Process, error) {
+	if _, ok := l.in.Servers[spec.Command]; ok {
+		return l.in.Launch(ctx, spec)
+	}
+	return pipeline.SubprocessLauncher{}.Launch(ctx, spec)
 }

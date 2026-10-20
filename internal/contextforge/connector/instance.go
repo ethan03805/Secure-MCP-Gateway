@@ -33,16 +33,18 @@ const ClassInstance = "contextforge"
 // InstanceView is the bundled instance's state for G-15 and smcpctl
 // (FR-22.41).
 type InstanceView struct {
-	State       string    `json:"state"` // disabled, unavailable, stopped, starting, healthy, unhealthy
-	Detail      string    `json:"detail,omitempty"`
-	Version     string    `json:"version"`
-	Image       string    `json:"image"`
-	Verified    string    `json:"verified,omitempty"` // time of the last verification of this image
-	Restarts    int       `json:"restarts"`
-	StartedAt   time.Time `json:"started_at,omitzero"`
-	ReasonCode  string    `json:"reason_code,omitempty"`
-	Unconfined  bool      `json:"unconfined"`
-	EngineIsPod bool      `json:"podman"`
+	State     string    `json:"state"` // disabled, unavailable, stopped, starting, healthy, unhealthy
+	Detail    string    `json:"detail,omitempty"`
+	Version   string    `json:"version"`
+	Image     string    `json:"image"`
+	Verified  string    `json:"verified,omitempty"` // time of the last verification of this image
+	Restarts  int       `json:"restarts"`
+	StartedAt time.Time `json:"started_at,omitzero"`
+	// Port is the loopback port of the instance's listener while it runs.
+	Port        int    `json:"port,omitempty"`
+	ReasonCode  string `json:"reason_code,omitempty"`
+	Unconfined  bool   `json:"unconfined"`
+	EngineIsPod bool   `json:"podman"`
 }
 
 func credentialName(key string) string {
@@ -290,7 +292,7 @@ func (c *Connector) Instance() InstanceView {
 		v.State, v.Detail, v.ReasonCode = "unavailable", c.instErr.Error(), packaging.ReasonOf(c.instErr)
 	default:
 		st := c.inst.Status()
-		v.State, v.Detail, v.Restarts, v.StartedAt = st.State, st.Detail, st.Restarts, st.StartedAt
+		v.State, v.Detail, v.Restarts, v.StartedAt, v.Port = st.State, st.Detail, st.Restarts, st.StartedAt, st.Port
 		if ver, _ := bundle.LoadVerification(c.dir); ver.Matches(&lock, c.platform) {
 			v.Verified = ver.VerifiedAt.Format(time.RFC3339)
 		}

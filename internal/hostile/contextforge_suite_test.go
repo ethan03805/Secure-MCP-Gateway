@@ -137,29 +137,31 @@ var cfChecks = map[string]func(t *testing.T) (string, bool){
 	},
 }
 
-// TestHostileContextForge runs the HFC rows the current build can assert
-// and writes build/hostile-contextforge.json and .md. The rows with hosted
-// packages run against the ContextForge stand-in
-// (contextforge_hosted_test.go); the rows that need the Enforced-profile
-// containment, the console or the full request pipeline name where they
-// are asserted, or what is missing.
+// TestHostileContextForge runs the HFC rows of FR-22.43 in the suite's
+// profile and writes build/hostile-contextforge.json and .md (and
+// hostile-contextforge-enforced.* in the Enforced profile). The rows with
+// hosted packages run against the ContextForge stand-in, the compromised
+// bundled instance of the suite (contextforge_hosted_test.go); HFC-07
+// checks the console's policy for remote media; HFC-12 runs the pinned
+// image under the Enforced containment and is asserted only in the
+// Enforced profile (the contextforge job, SMCP_CONTEXTFORGE_IMAGE=1). In
+// the Enforced profile, where every row applies, the run verifies FR-22.43
+// when every row reached its expected outcome; the Standalone run claims
+// it in part.
 func TestHostileContextForge(t *testing.T) {
-	reqtest.Partial(t, "FR-22.43")
+	profile := suiteProfile()
 	claims := map[string][]string{"HFC-02": {"FR-22.2"}, "HFC-03": {"FR-22.7"}, "HFC-04": {"FR-22.6"}, "HFC-06": {"FR-22.3"},
 		"HFC-05": {"FR-22.40", "SR-3.5-2"}, "HFC-08": {"FR-22.33", "SR-3.8-2"}, "HFC-10": {"FR-22.29"}, "HFC-11": {"FR-22.15", "FR-22.9"},
-		"HFC-13": {"FR-22.33", "SR-5.6-3", "FR-22.38"}, "HFC-01": {"SR-5.9-2"}, "HFC-09": {"SR-6.18-2", "FR-22.39"}, "HFC-14": {"FR-22.28"}}
+		"HFC-13": {"FR-22.33", "SR-5.6-3", "FR-22.38"}, "HFC-01": {"SR-5.9-2"}, "HFC-09": {"SR-6.18-2", "FR-22.39"}, "HFC-14": {"FR-22.28"},
+		"HFC-07": {"FR-22.4"}, "HFC-12": {"SR-4.5-4", "SR-4.7-3"}}
 	var results []Result
+	all := true
 	for _, row := range CFRows {
-		r := Result{Fixture: row.ID, Attack: row.Attack, Expected: row.Expected, Profile: "standalone"}
+		r := Result{Fixture: row.ID, Attack: row.Attack, Expected: row.Expected, Profile: profile}
 		check, ok := cfChecks[row.ID]
-		switch {
-		case !ok && row.ID == "HFC-07":
-			r.Observed = "asserted by console/e2e/contextforge.spec.ts (Playwright, the console job)"
-		case !ok && row.ID == "HFC-12":
-			r.Observed = "Enforced profile: asserted by the contextforge job's rootless Podman run (bundle TestEnforcedImage: connections to the Internet, the LAN, the Gateway's listeners and the Podman socket fail from inside the instance); not run by this suite"
-		case !ok:
+		if !ok {
 			r.Observed = "not asserted"
-		default:
+		} else {
 			t.Run(row.ID, func(t *testing.T) {
 				r.Observed, r.Pass = check(t)
 				if r.Pass && claims[row.ID] != nil {
@@ -167,7 +169,13 @@ func TestHostileContextForge(t *testing.T) {
 				}
 			})
 		}
+		all = all && r.Pass
 		results = append(results, r)
+	}
+	if profile == "enforced" && all {
+		reqtest.Verifies(t, "FR-22.43")
+	} else {
+		reqtest.Partial(t, "FR-22.43")
 	}
 	dir := os.Getenv("SMCP_HOSTILE_OUT")
 	if dir == "" {
@@ -176,11 +184,15 @@ func TestHostileContextForge(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeJSONFile(filepath.Join(dir, "hostile-contextforge.json"), results); err != nil {
+	name := "hostile-contextforge"
+	if profile == "enforced" {
+		name += "-enforced"
+	}
+	if err := writeJSONFile(filepath.Join(dir, name+".json"), results); err != nil {
 		t.Fatal(err)
 	}
-	md := strings.Replace(Markdown(results), "## Hostile fixtures (SRS Appendix L)", "## Hostile ContextForge rows (SRS FR-22.43, planned v1.3.0)", 1)
-	if err := os.WriteFile(filepath.Join(dir, "hostile-contextforge.md"), []byte(md), 0o644); err != nil {
+	md := strings.Replace(Markdown(results), "## Hostile fixtures (SRS Appendix L)", "## Hostile ContextForge rows (SRS FR-22.43, "+profile+" profile)", 1)
+	if err := os.WriteFile(filepath.Join(dir, name+".md"), []byte(md), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range results {

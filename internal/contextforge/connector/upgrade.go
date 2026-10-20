@@ -293,6 +293,9 @@ func (c *Connector) upgradeLocked(ctx context.Context, actor string, rep Upgrade
 		}
 	}
 	prevActive := c.active.Load()
+	c.attMu.Lock()
+	prevAttested := c.loadAttested()
+	c.attMu.Unlock()
 	wasRunning := c.inst.Status().State != bundle.StateStopped
 	oldVer, _ := bundle.LoadVerification(c.dir)
 	if err := c.inst.Stop(ctx); err != nil {
@@ -338,6 +341,11 @@ func (c *Connector) upgradeLocked(ctx context.Context, actor string, rep Upgrade
 			_ = os.Remove(filepath.Join(c.dir, "verified.json"))
 		}
 		c.verified.Store(oldVer)
+		c.attMu.Lock()
+		if err := packaging.WriteJSON(filepath.Join(c.dir, attestedFile), prevAttested, 0o600); err != nil {
+			errs = append(errs, err)
+		}
+		c.attMu.Unlock()
 		rep.Outcome, rep.Step, rep.Error = "rolled_back", step, cause.Error()
 		d := map[string]any{"actor": actor, "from": cur.Version, "to": to.Version, "source": rep.Source, "failed_step": step, "error": cause.Error()}
 		if len(errs) > 0 {
@@ -504,6 +512,11 @@ func (c *Connector) reregisterHosted(ctx context.Context) ([]string, error) {
 		}
 		m, _, err := lib.Manifest(r.ServerID, r.Revision)
 		if err != nil {
+			return checked, fmt.Errorf("%s: %w", r.Key(), err)
+		}
+		// The registration below checks the served tools against the
+		// manifest on the new release (SR-3.8-2).
+		if err := c.attest(r.Key(), c.instanceDigest()); err != nil {
 			return checked, fmt.Errorf("%s: %w", r.Key(), err)
 		}
 		if _, err := c.ResolveHosted(config.Server{Alias: r.Alias, Package: r.ServerID}, m, r); err != nil {

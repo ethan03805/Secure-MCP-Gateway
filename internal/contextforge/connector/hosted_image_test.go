@@ -10,32 +10,53 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
+	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cftest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/southbound"
 )
 
 // hostedUpstream is a hosted MCP server fixture on the host (where
 // cftest.FixtureHost says the container reaches it)
 // with tool names that need the FR-22.10 mapping.
+var (
+	upstreamMu    sync.Mutex
+	upstreamCalls = map[string][]string{} // fixture port -> tool names called
+)
+
+// calledOn returns the tool names the fixture on port was called with.
+func calledOn(port string) []string {
+	upstreamMu.Lock()
+	defer upstreamMu.Unlock()
+	return append([]string(nil), upstreamCalls[port]...)
+}
+
 func hostedUpstream(t *testing.T, host cftest.Host, names ...string) string {
 	t.Helper()
 	s := mcp.NewServer(&mcp.Implementation{Name: "fx-hosted", Version: "2.0.0"}, nil)
+	var port string
 	// ContextForge serves "get_time" and "get-time" under one name (it
 	// turns underscores into hyphens), so a fixture with both is refused
 	// with TOOL_NAME_COLLISION; these three are served apart.
 	for _, n := range names {
 		mcp.AddTool(s, &mcp.Tool{Name: n, Description: "Fixture " + n + "."}, func(_ context.Context, _ *mcp.CallToolRequest, _ map[string]any) (*mcp.CallToolResult, any, error) {
+			upstreamMu.Lock()
+			upstreamCalls[port] = append(upstreamCalls[port], n)
+			upstreamMu.Unlock()
 			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "ok"}}}, nil, nil
 		})
 	}
@@ -47,7 +68,7 @@ func hostedUpstream(t *testing.T, host cftest.Host, names ...string) string {
 	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { r.Host = "127.0.0.1"; h.ServeHTTP(w, r) }), ReadHeaderTimeout: time.Second}
 	go func() { _ = srv.Serve(l) }()
 	t.Cleanup(func() { _ = srv.Close() })
-	_, port, _ := net.SplitHostPort(l.Addr().String())
+	_, port, _ = net.SplitHostPort(l.Addr().String())
 	return port
 }
 
@@ -65,7 +86,7 @@ func TestHostedImportImage(t *testing.T) {
 	if _, err := exec.LookPath("cosign"); err != nil {
 		t.Skip("cosign not installed")
 	}
-	reqtest.Partial(t, "FR-22.9", "FR-22.10", "FR-22.11", "FR-22.12", "FR-22.13", "FR-22.23", "FR-22.32")
+	reqtest.Partial(t, "FR-22.9", "FR-22.11", "FR-22.12", "FR-22.13", "FR-22.23", "FR-22.32")
 	eng, err := exec.LookPath("docker")
 	if err != nil {
 		t.Skip("docker not installed")
@@ -118,6 +139,10 @@ func TestHostedImportImage(t *testing.T) {
 			_ = c.inst.RemoveVolume(context.Background())
 		}
 	})
+	// FR-22.10: an operator's choice of the risk class low is refused.
+	if _, err := c.ProposeLocal("fixture-hosted", LocalImport{RiskClass: "low"}, "op"); err == nil || !strings.Contains(err.Error(), `"low"`) {
+		t.Fatalf("risk class low: %v", err)
+	}
 	p, err := c.ProposeLocal("fixture-hosted", LocalImport{}, "op")
 	if err != nil {
 		t.Fatal(err)
@@ -150,9 +175,47 @@ func TestHostedImportImage(t *testing.T) {
 	if err != nil || got.Outcome != "imported" {
 		t.Fatalf("accept: %v %+v", err, got)
 	}
-	m, _, err := lib.Manifest(got.ServerID, got.Revision)
+	m, mraw, err := lib.Manifest(got.ServerID, got.Revision)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// FR-22.10: the written manifest against the manifest_version 2
+	// schema, its upstream member, and the name derivation, which does not
+	// depend on the order of the probed tools.
+	pm, err := packaging.ParseManifest(mraw)
+	if err != nil || pm.ManifestVersion != 2 {
+		t.Fatalf("manifest against the version 2 schema: %v", err)
+	}
+	up := m.Upstream
+	if up == nil || up.Kind != "contextforge-hosted" || up.Transport == "" || up.EntryID != "fixture-hosted" || up.EntrySHA256 == "" ||
+		up.GatewayName != "smcp-fixture-hosted" || up.GatewaySlug != "smcp-fixture-hosted" || m.ToolsListSHA256 == "" {
+		t.Fatalf("upstream %+v tools_list_sha256 %q", up, m.ToolsListSHA256)
+	}
+	var backends []string
+	for _, tl := range m.Tools {
+		backends = append(backends, tl.BackendName)
+	}
+	fwd, err := contextforge.MapToolNames(up.GatewaySlug, backends)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reversedNames := append([]string(nil), backends...)
+	slices.Reverse(reversedNames)
+	back, err := contextforge.MapToolNames(up.GatewaySlug, reversedNames)
+	if err != nil {
+		t.Fatal(err)
+	}
+	derived, reversed := map[string]string{}, map[string]string{}
+	for _, n := range fwd {
+		derived[n.BackendName] = n.Name
+	}
+	for _, n := range back {
+		reversed[n.BackendName] = n.Name
+	}
+	for _, tl := range m.Tools {
+		if derived[tl.BackendName] != tl.Name || reversed[tl.BackendName] != tl.Name {
+			t.Errorf("tool %s (%s): derived %q, reverse order %q", tl.Name, tl.BackendName, derived[tl.BackendName], reversed[tl.BackendName])
+		}
 	}
 	want := map[string]string{"read_file": "smcp-fixture-hosted-read-file"}
 	for _, tl := range m.Tools {
@@ -191,9 +254,45 @@ func TestHostedImportImage(t *testing.T) {
 	// FR-22.23: an enabled hosted revision keeps the instance running; it
 	// stops IdleStop after the last one is disabled. FR-22.32: uninstall.
 	ctx := context.Background()
-	if _, err := lib.Enable(got.ServerID, got.Revision, library.EnableOptions{}); err != nil {
+	enabled, err := lib.Enable(got.ServerID, got.Revision, library.EnableOptions{})
+	if err != nil {
 		t.Fatal(err)
 	}
+	// FR-22.10: a call to each tool reaches the fixture under its
+	// backend name.
+	rt := library.NewRuntime(lib, library.RuntimeOptions{Hosted: c.ResolveHosted})
+	servers, launcher, err := rt.Prepare(rec, []config.Server{{Alias: enabled.Alias, Package: enabled.ServerID}},
+		WrapLauncher(southbound.Wrap(nil), func() *Connector { return c }), true)
+	if err != nil || len(servers) != 1 {
+		t.Fatalf("prepare: %v %+v", err, servers)
+	}
+	caps := pipeline.NewCapabilities(time.Minute)
+	reg, err := backend.Start(ctx, servers, backend.Options{
+		Limits:   backend.Limits{PerPrincipal: 2, Total: 4, Queue: 4, UpstreamTimeout: 20 * time.Second, ResultBytes: 1 << 20},
+		Launcher: launcher, Manifests: rt, Capabilities: caps})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tl := range m.Tools {
+		public := enabled.Alias + "_" + tl.Name
+		ref := reg.Resolve(public)
+		if ref == nil {
+			t.Fatalf("%s not presented", public)
+		}
+		b := pipeline.Binding{CorrelationID: "c", DecisionID: "d", PolicyRevision: "r", PublicName: public}
+		if res, err := reg.Call(ctx, backend.Dispatch{Principal: "p", Ref: ref, Capability: caps.Issue(b), Binding: b}); err != nil || res.IsError {
+			t.Fatalf("call %s: %v %+v", public, err, res)
+		}
+	}
+	reg.Close()
+	calls := calledOn(port)
+	slices.Sort(calls)
+	wantCalls := []string{"get-time", strings.Repeat("long-name-", 6), "read.file"}
+	slices.Sort(wantCalls)
+	if !slices.Equal(calls, wantCalls) {
+		t.Fatalf("the fixture was called with %v, want %v", calls, wantCalls)
+	}
+	reqtest.Verifies(t, "FR-22.10")
 	clock = time.Now()
 	c.onDemand(ctx)
 	if !c.inst.Healthy() {
@@ -219,7 +318,8 @@ func TestHostedImportImage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.CredentialsRetired != 5 || !rep.VolumeRemoved || len(rep.Suspended) != 1 {
+	// The five instance credentials and the package user's password.
+	if rep.CredentialsRetired != 6 || !rep.VolumeRemoved || len(rep.Suspended) != 1 {
 		t.Fatalf("uninstall %+v", rep)
 	}
 	if r, _ := lib.Get(got.ServerID, got.Revision); r.State != library.StateSuspended {

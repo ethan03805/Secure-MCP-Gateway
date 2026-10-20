@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -84,10 +85,14 @@ type Env struct {
 	// Launch (the Gateway's metadata scan, filters.Inspector.Manifests).
 	WrapManifests func(pipeline.ManifestSource) pipeline.ManifestSource
 
+	digest   atomic.Pointer[string]
 	mu       sync.Mutex
 	resolve  map[string][]netip.Addr
 	dialed   []string
 	fixtures map[netip.Addr]*Fixture
+	wheel    []byte // the local entry's wheel (local.go)
+	localID  string // the local entry's ID (local.go)
+	gateways int    // StartGateway calls (gateway.go)
 	next     byte
 }
 
@@ -95,6 +100,8 @@ type Env struct {
 type Entry struct {
 	ID, URL, AuthType string
 	RequiresAPIKey    bool
+	// LogoURL is the entry's logo_url (HFC-07).
+	LogoURL string
 }
 
 // Options configure New.
@@ -118,6 +125,26 @@ type Options struct {
 	// (FR-22.31).
 	LockKeys          []minisign.PublicKey
 	UpgradeHealthWait time.Duration
+	// Local adds the local catalog entry LocalEntryID and its fake PyPI
+	// index (local.go).
+	Local bool
+	// Image runs the pinned ContextForge image with Engine (an absolute
+	// path of docker or podman) instead of the stand-in; cosign verifies
+	// it, and the hosted egress listener is the one the Connector opens
+	// where the container reaches it. Enforced runs it under the Enforced
+	// containment (rootless Podman).
+	Image    bool
+	Engine   string
+	Enforced bool
+	// Pinned reads the catalog of the pinned release instead of the
+	// fixtures' (Entries are then fixtures only), and the hosted egress
+	// listener reaches the real hosts with the system's DNS and roots
+	// (the live starter-set demonstration).
+	Pinned bool
+	// Now and DemandInterval are the Connector's clock and demand check
+	// interval (FR-22.23).
+	Now            func() time.Time
+	DemandInterval time.Duration
 }
 
 // New builds the environment: a vault and Secret Broker, a library, the
@@ -142,6 +169,9 @@ func New(t *testing.T, o Options) *Env {
 		if en.RequiresAPIKey {
 			catalog.WriteString("    requires_api_key: true\n")
 		}
+		if en.LogoURL != "" {
+			fmt.Fprintf(&catalog, "    logo_url: %q\n", en.LogoURL)
+		}
 		host, _, err := hostOf(en.URL)
 		if err != nil || !strings.HasSuffix(host, "example.com") || e.Fixtures[host] != nil {
 			continue
@@ -154,12 +184,29 @@ func New(t *testing.T, o Options) *Env {
 	for name, addr := range o.Resolve {
 		e.resolve[name] = []netip.Addr{netip.MustParseAddr(addr)}
 	}
-	file := filepath.Join(t.TempDir(), "catalog.yml")
-	if err := os.WriteFile(file, []byte(catalog.String()), 0o600); err != nil {
-		t.Fatal(err)
+	extra := ""
+	if o.Image {
+		extra += fmt.Sprintf("engine = %q\n", o.Engine)
 	}
-	cfg, err := config.Parse([]byte(fmt.Sprintf("[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$v=19$m=65536,t=3,p=1$c2FsdHNhbHQ$aGFzaGhhc2g\"\n[state]\ndir = %q\n[approvals]\nnotify = \"off\"\n[contextforge]\nbundled = true\ncatalog_file = %q\ncatalog_sha256 = %q\n",
-		e.State, file, packaging.SHA256Hex([]byte(catalog.String())))))
+	e.localID = LocalEntryID
+	if o.Pinned {
+		e.localID = "markitdown" // the pinned catalog's local entry
+	}
+	if o.Local {
+		if !o.Pinned {
+			catalog.WriteString(localCatalogEntry)
+		}
+		extra += fmt.Sprintf("pypi_index = %q\n", e.pypi())
+	}
+	if !o.Pinned {
+		file := filepath.Join(t.TempDir(), "catalog.yml")
+		if err := os.WriteFile(file, []byte(catalog.String()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		extra += fmt.Sprintf("catalog_file = %q\ncatalog_sha256 = %q\n", file, packaging.SHA256Hex([]byte(catalog.String())))
+	}
+	cfg, err := config.Parse([]byte(fmt.Sprintf("[admin]\nusername = \"admin\"\npassword_hash = \"$argon2id$v=19$m=65536,t=3,p=1$c2FsdHNhbHQ$aGFzaGhhc2g\"\n[state]\ndir = %q\n[approvals]\nnotify = \"off\"\n[contextforge]\nbundled = true\n%s",
+		e.State, extra)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,13 +235,24 @@ func New(t *testing.T, o Options) *Env {
 		opts.Dial = e.dial
 		return egress.NewHostedGuest(opts, listen, guest)
 	}
-	e.Conn, err = connector.New(connector.Options{Config: cfg, Library: e.Lib, Recorder: e.Fanout, Broker: e.Broker, Version: "test",
-		Runner: e.Runner, Verifier: verifier{}, Egress: open, RenewBefore: o.RenewBefore, RenewInterval: o.RenewInterval,
-		LockKeys: o.LockKeys, UpgradeHealthWait: o.UpgradeHealthWait})
+	copts := connector.Options{Config: cfg, Library: e.Lib, Recorder: e.Fanout, Broker: e.Broker, Version: "test",
+		Runner: e.Runner, Verifier: verifier{e}, Egress: open, RenewBefore: o.RenewBefore, RenewInterval: o.RenewInterval,
+		LockKeys: o.LockKeys, UpgradeHealthWait: o.UpgradeHealthWait, Now: o.Now, DemandInterval: o.DemandInterval}
+	if o.Image {
+		copts.Runner, copts.Verifier, copts.Enforced = nil, nil, o.Enforced
+		e.Runner = nil
+	}
+	if o.Pinned {
+		copts.Egress = nil
+	}
+	e.Conn, err = connector.New(copts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(e.Conn.Close)
+	if o.Image {
+		t.Cleanup(func() { _ = e.Conn.RemoveInstanceData(context.Background()) })
+	}
 	e.Fanout.AddDecorator(e.Conn.Decorate)
 	e.Broker.SetInjector(e.Conn.S1Router(nil))
 	e.enroll()
@@ -551,11 +609,19 @@ func (r *Runner) HostAccess(context.Context) (bundle.HostAccess, error) {
 	return bundle.HostAccess{Listen: netip.MustParseAddr("127.0.0.1")}, nil
 }
 
-type verifier struct{}
+type verifier struct{ e *Env }
 
-func (verifier) Verify(_ context.Context, r *contextforge.LockedRelease, platform string, now time.Time) (*bundle.Verification, error) {
-	return &bundle.Verification{Version: r.Version, IndexDigest: r.Image.IndexDigest, Platform: platform, PlatformDigest: r.Image.Platforms[platform],
+func (v verifier) Verify(_ context.Context, r *contextforge.LockedRelease, platform string, now time.Time) (*bundle.Verification, error) {
+	d := r.Image.Platforms[platform]
+	if p := v.e.digest.Load(); p != nil {
+		d = *p
+	}
+	return &bundle.Verification{Version: r.Version, IndexDigest: r.Image.IndexDigest, Platform: platform, PlatformDigest: d,
 		Issuer: r.Signer.Issuer, VerifiedAt: now}, nil
 }
+
+// SetImageDigest makes the next verifications report the image digest d,
+// as a start from another verified image would (SR-3.8-2).
+func (e *Env) SetImageDigest(d string) { e.digest.Store(&d) }
 
 func (verifier) LocalDigestOK(context.Context, *bundle.Verification, string) error { return nil }

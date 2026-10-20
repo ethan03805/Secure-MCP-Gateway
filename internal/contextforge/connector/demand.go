@@ -75,7 +75,7 @@ func (c *Connector) onDemand(ctx context.Context) {
 	if c.idleSince.IsZero() {
 		c.idleSince = now
 	}
-	if now.Sub(c.idleSince) >= IdleStop-demandTick {
+	if now.Sub(c.idleSince) >= IdleStop-c.o.DemandInterval {
 		if err := c.StopInstance(ctx, "E-36"); err != nil {
 			c.o.Log.Warn("stopping the idle bundled ContextForge instance", "error", err)
 		}
@@ -133,4 +133,20 @@ func (c *Connector) Uninstall(ctx context.Context, actor string) (UninstallRepor
 		}
 	}
 	return rep, nil
+}
+
+// RemoveInstanceData stops the bundled instance and removes its data (D-16)
+// and the backup an upgrade made, keeping its image and credentials (test
+// clean-up).
+func (c *Connector) RemoveInstanceData(ctx context.Context) error {
+	if c.inst == nil {
+		return nil
+	}
+	if err := c.StopInstance(ctx, "E-36"); err != nil {
+		return err
+	}
+	if up, ok := c.inst.(Upgradable); ok {
+		_ = up.DropBackup(ctx)
+	}
+	return c.inst.RemoveVolume(ctx)
 }

@@ -9031,9 +9031,9 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Statement | The ContextForge Connector (E-36) **SHALL** register in the bundled instance only gateways and virtual servers for hosted packages, and **SHALL** NOT create peer-gateway federation, discovery, REST or gRPC tools, A2A agents, prompts or resources. |
 | Allocation | Elements: E-36 ContextForge Connector; Functions: F-109; Internal interfaces: I-43 |
 | Verification Method | Inspection |
-| Verification Statement | Inspect the Connector's admin API client and its reconciliation fixtures; confirm only gateway, virtual-server, token and health operations are issued, and that reconciliation removes an object of each excluded type. |
+| Verification Statement | Inspect the Connector's admin API client and its reconciliation fixtures; confirm only gateway, virtual-server, team, user, token, tool-list and health operations and the reads and removals of reconciliation are issued, and that reconciliation removes an object of each excluded type. |
 | Source | OWNER (using ContextForge as a general federated upstream for remote instances is out of scope); SEC 5.6 |
-| Rationale | Each excluded feature would add a server or capability that never passed the Library. |
+| Rationale | Each excluded feature would add a server or capability that never passed the Library. The verification names team and user operations since 2026-10-20: FR-22.29 (revised after the ContextForge spike) gives each hosted package its own team and non-admin user, which the Connector creates through the admin API. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.39 — Evidence for calls through ContextForge

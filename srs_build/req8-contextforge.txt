@@ -358,9 +358,9 @@ TARGET: v1.3.0
 P: FR-22
 S: The ContextForge Connector (E-36) SHALL register in the bundled instance only gateways and virtual servers for hosted packages, and SHALL NOT create peer-gateway federation, discovery, REST or gRPC tools, A2A agents, prompts or resources.
 A: E-36; F-109; I-43
-V: Inspection | Inspect the Connector's admin API client and its reconciliation fixtures; confirm only gateway, virtual-server, token and health operations are issued, and that reconciliation removes an object of each excluded type.
+V: Inspection | Inspect the Connector's admin API client and its reconciliation fixtures; confirm only gateway, virtual-server, team, user, token, tool-list and health operations and the reads and removals of reconciliation are issued, and that reconciliation removes an object of each excluded type.
 SRC: OWNER (using ContextForge as a general federated upstream for remote instances is out of scope); SEC 5.6
-R: Each excluded feature would add a server or capability that never passed the Library.
+R: Each excluded feature would add a server or capability that never passed the Library. The verification names team and user operations since 2026-10-20: FR-22.29 (revised after the ContextForge spike) gives each hosted package its own team and non-admin user, which the Connector creates through the admin API.
 TARGET: v1.3.0
 
 @FR-22.39 | Evidence for calls through ContextForge

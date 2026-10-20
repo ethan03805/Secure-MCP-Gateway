@@ -98,6 +98,11 @@ func (c *Connector) ResolveHosted(sc config.Server, m *packaging.Manifest, rev l
 			return out, nil
 		}
 	}
+	// SR-3.8-2: the revision's tools were checked against this instance's
+	// code, or it is suspended for drift.
+	if err := c.checkInstanceDigest(rev); err != nil {
+		return sc, err
+	}
 	slug := m.Upstream.GatewaySlug
 	user := "user-" + slug
 	if _, err := c.o.Broker.EnsureComponent(component, user, func() ([]byte, error) {

@@ -23,63 +23,6 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-// probeScript runs inside the instance's container. Each line it prints
-// is "<check> <ok|blocked|error>": TCP connections (a short timeout, so a
-// dropped packet reads as blocked), a write outside the volume, setuid,
-// and the sockets and devices of SR-4.7-3.
-const probeScript = `
-import os, socket, sys
-def tcp(name, host, port):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(3)
-    try:
-        s.connect((host, int(port)))
-        print(name, "ok")
-    except Exception as e:
-        print(name, "blocked", type(e).__name__)
-    finally:
-        s.close()
-args = sys.argv[1:]
-for i in range(0, len(args), 3):
-    tcp(args[i], args[i+1], args[i+2])
-try:
-    open("/etc/smcp-escape", "w").write("x")
-    print("write_root ok")
-except Exception as e:
-    print("write_root blocked", type(e).__name__)
-try:
-    open("/app/data/smcp-probe", "w").write("x")
-    os.remove("/app/data/smcp-probe")
-    print("write_volume ok")
-except Exception as e:
-    print("write_volume blocked", type(e).__name__)
-try:
-    os.setuid(0)
-    print("setuid ok")
-except Exception as e:
-    print("setuid blocked", type(e).__name__)
-def unix(p):
-    if not os.path.exists(p):
-        return "blocked"
-    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.settimeout(3)
-    try:
-        s.connect(p)
-        return "ok"
-    except Exception:
-        return "blocked"
-    finally:
-        s.close()
-for p in ["/run/podman/podman.sock", "/var/run/docker.sock", "/run/docker.sock", "/run/systemd/private", "/run/dbus/system_bus_socket", "/var/run/dbus/system_bus_socket",
-          "/run/user/1000/podman/podman.sock", "/run/user/1001/podman/podman.sock", "/run/user/1000/bus", "/run/user/1001/bus"]:
-    print("path:" + p, unix(p))
-pids = [d for d in os.listdir("/proc") if d.isdigit()]
-print("host_pids", "ok" if len(pids) > 50 else "blocked", len(pids))
-devs = sorted(os.listdir("/dev"))
-extra = [d for d in devs if d.startswith(("sd", "nvme", "vd", "xvd", "mem", "kmsg", "kvm"))]
-print("host_devices", "ok" if extra else "blocked", ",".join(extra))
-`
-
 // TestEnforcedImage runs the pinned image under the Enforced containment
 // with rootless Podman (SMCP_CONTEXTFORGE_ENFORCED=1; the contextforge CI
 // job): podman inspect shows the read-only root, the dropped capabilities,
@@ -214,7 +157,7 @@ func TestEnforcedImage(t *testing.T) {
 			}
 		}
 	}
-	args := []string{"exec", name, "python3", "-c", probeScript,
+	args := []string{"exec", name, "python3", "-c", EscapeProbe,
 		"hosted_listener", "10.0.2.2", hostedFx.port,
 		"gateway_listener", "10.0.2.2", strconv.Itoa(port(other)),
 		"internet", "1.1.1.1", "443",

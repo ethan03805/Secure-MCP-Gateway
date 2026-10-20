@@ -17,7 +17,7 @@ Control API routes of the ContextForge Connector (E-36, SRS FR-22, planned for v
 | `POST /api/v1/contextforge/starter-set` | Administrator, Operator | Start one hosted import per starter-set entry of the release lock (FR-22.17); each proposal gets its own probe and trust decision, and none is enabled. Refused with `CONTEXTFORGE_DISABLED` while `bundled` is false |
 | `POST /api/v1/contextforge/instance/uninstall` | Administrator | Stop and remove the bundled instance, its data volume and image, retire its credentials and suspend every enabled hosted package revision; answers what was removed |
 
-`GET /api/v1/contextforge/status` carries `instance`: `state` (`disabled`, `unavailable` with `reason_code`, `stopped`, `starting`, `healthy`, `unhealthy`), `detail`, `version`, `image`, `verified` (time of the image verification), `restarts`, `started_at` and `unconfined`.
+`GET /api/v1/contextforge/status` carries `instance`: `state` (`disabled`, `unavailable` with `reason_code`, `stopped`, `starting`, `healthy`, `unhealthy`), `detail`, `version`, `image` (or the managed process's interpreter), `verified` (time of the image verification), `restarts`, `started_at`, `port` (the loopback port while it runs) and `unconfined`.
 
 Catalog text is third-party data: show it as inert text and never load `logo_url` (FR-22.4).
 

@@ -224,3 +224,11 @@ func asAPI(err error, target **APIError) bool {
 	}
 	return ok
 }
+
+// AdminObject is an object of the admin API as List reads it.
+type AdminObject = adminObject
+
+// List reads a collection of the admin API (tests and diagnostics).
+func (a *Admin) List(ctx context.Context, path string) ([]AdminObject, error) {
+	return a.list(ctx, path)
+}

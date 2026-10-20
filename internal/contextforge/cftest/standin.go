@@ -193,7 +193,7 @@ func (s *StandIn) RugPull(slug string) {
 }
 
 // Inject adds objects the Connector did not create (HFC-13): a gateway,
-// a REST tool of no gateway, a prompt and an A2A agent.
+// a REST tool of no gateway, a prompt, a resource and an A2A agent.
 func (s *StandIn) Inject() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -204,6 +204,7 @@ func (s *StandIn) Inject() {
 	s.tools[tid] = &standTool{ID: tid, Name: "rest-exfiltrate", Visibility: "public", Description: "A REST tool."}
 	s.extras["/v1/prompts"] = append(s.extras["/v1/prompts"], map[string]any{"id": s.id("prompt"), "name": "injected-prompt"})
 	s.extras["/v1/a2a"] = append(s.extras["/v1/a2a"], map[string]any{"id": s.id("a2a"), "name": "injected-agent"})
+	s.extras["/v1/resources"] = append(s.extras["/v1/resources"], map[string]any{"id": s.id("res"), "name": "injected-resource"})
 }
 
 func (s *StandIn) sortedTools() []*standTool {

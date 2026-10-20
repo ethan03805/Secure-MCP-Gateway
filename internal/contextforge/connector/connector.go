@@ -110,6 +110,9 @@ type Options struct {
 	// UpgradeHealthWait bounds the wait for the upgraded instance's first
 	// healthy answer; default the CP-47 health wait.
 	UpgradeHealthWait time.Duration
+	// DemandInterval is how often the demand for the instance is compared
+	// with its state (FR-22.23); default 5 seconds.
+	DemandInterval time.Duration
 	// Suspend suspends an enabled revision for cause (drift, a broken
 	// scope); smcpd passes library.Runtime.SuspendRevision.
 	Suspend func(id, rev string, cause error) error
@@ -147,7 +150,9 @@ type Connector struct {
 	verified atomic.Pointer[bundle.Verification]
 	// active is the release the instance runs (upgrade.go); nil: the
 	// compiled release lock.
-	active   atomic.Pointer[contextforge.LockedRelease]
+	active atomic.Pointer[contextforge.LockedRelease]
+	// attMu guards attested.json (attested.go).
+	attMu    sync.Mutex
 	platform string
 	instMu   sync.Mutex
 
@@ -200,6 +205,9 @@ func New(o Options) (*Connector, error) {
 	}
 	if o.RenewInterval <= 0 {
 		o.RenewInterval = time.Minute
+	}
+	if o.DemandInterval <= 0 {
+		o.DemandInterval = demandTick
 	}
 	c := &Connector{o: o, dir: filepath.Join(o.Config.State.Dir, dirName), proposals: map[string]*proposal{},
 		hosted: map[string]*hostedPkg{}, reconcileReq: make(chan struct{}, 1), endpoints: map[string]*packageEgress{},
@@ -326,7 +334,7 @@ func (c *Connector) Start(ctx context.Context) {
 		defer c.wg.Done()
 		t := time.NewTicker(time.Minute)
 		defer t.Stop()
-		d := time.NewTicker(demandTick)
+		d := time.NewTicker(c.o.DemandInterval)
 		defer d.Stop()
 		rc := time.NewTicker(ReconcileInterval)
 		defer rc.Stop()

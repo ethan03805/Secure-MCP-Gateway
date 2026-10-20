@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -147,13 +149,46 @@ func TestHostedDispatchImage(t *testing.T) {
 		b := pipeline.Binding{CorrelationID: "c", DecisionID: "d", PolicyRevision: "r", PublicName: public}
 		return reg.Call(context.Background(), backend.Dispatch{Principal: "p", Ref: ref, Capability: caps.Issue(b), Binding: b})
 	}
-	res, err := call(rev.Alias + "_read_file")
-	if err != nil {
-		t.Fatalf("hosted call: %v", err)
+	// SR-3.6-2: stdio transport is off in the instance, and during hosted
+	// calls no package manager or new interpreter starts in it and it
+	// connects to nothing but the hosted fixture.
+	ctr := containerOnPort(t, eng, c.inst.Status().Port)
+	if out, err := exec.Command(eng, "inspect", "--format", "{{json .Config.Env}}", ctr).Output(); err != nil || !strings.Contains(string(out), `"MCPGATEWAY_STDIO_TRANSPORT_ENABLED=false"`) {
+		t.Fatalf("stdio transport is not disabled in the instance's configuration (%v)", err)
+	}
+	before := containerCommands(t, eng, ctr)
+	var res *mcp.CallToolResult
+	for range 5 {
+		res, err = call(rev.Alias + "_read_file")
+		if err != nil {
+			t.Fatalf("hosted call: %v", err)
+		}
 	}
 	if res.IsError || len(res.Content) == 0 || res.Content[0].(*mcp.TextContent).Text != "ok" {
 		t.Fatalf("hosted result %+v", res)
 	}
+	for cmd := range containerCommands(t, eng, ctr) {
+		if !before[cmd] {
+			t.Fatalf("a process started in the instance during hosted calls: %s", cmd)
+		}
+	}
+	// The fixture's addresses as the container reaches them.
+	fixture := map[string]bool{}
+	for _, n := range h.Nets {
+		ip, _, _ := strings.Cut(n, "/")
+		fixture[ip] = true
+	}
+	if ips, err := net.LookupHost(h.Name); err == nil {
+		for _, ip := range ips {
+			fixture[ip] = true
+		}
+	}
+	for _, remote := range containerRemotes(t, eng, ctr) {
+		if !fixture[remote] && !strings.HasPrefix(remote, "127.") {
+			t.Fatalf("the instance connected to %s (the fixture is %v)", remote, h.Nets)
+		}
+	}
+	reqtest.Verifies(t, "SR-3.6-2")
 
 	// FR-22.35: a harness's or agent's credential (an opaque Gateway
 	// access token, and a JWT of another issuer) is refused on every
@@ -230,4 +265,61 @@ func TestHostedDispatchImage(t *testing.T) {
 	if drift == 0 {
 		t.Fatal("no contextforge_drift event")
 	}
+}
+
+// containerOnPort is the container that publishes port.
+func containerOnPort(t *testing.T, eng string, port int) string {
+	t.Helper()
+	out, err := exec.Command(eng, "ps", "--filter", "publish="+strconv.Itoa(port), "--format", "{{.ID}}").Output()
+	id := strings.TrimSpace(string(out))
+	if err != nil || id == "" || strings.Contains(id, "\n") {
+		t.Fatalf("the container publishing port %d: %q %v", port, id, err)
+	}
+	return id
+}
+
+// containerCommands are the command lines of the container's processes
+// (/proc/<pid>/cmdline, read by the image's own Python).
+func containerCommands(t *testing.T, eng, ctr string) map[string]bool {
+	t.Helper()
+	const script = "import os\nfor p in os.listdir('/proc'):\n    if p.isdigit() and int(p) != os.getpid():\n        try:\n            print(open('/proc/'+p+'/cmdline','rb').read().replace(b'\\0', b' ').decode(errors='replace').strip())\n        except OSError:\n            pass\n"
+	out, err := exec.Command(eng, "exec", ctr, "python3", "-c", script).Output()
+	if err != nil {
+		t.Fatalf("processes of the instance: %v", err)
+	}
+	cmds := map[string]bool{}
+	for _, l := range strings.Split(string(out), "\n") {
+		if l = strings.TrimSpace(l); l != "" {
+			cmds[l] = true
+		}
+	}
+	return cmds
+}
+
+// containerRemotes are the remote IPv4 addresses of the connections the
+// container opened: its established TCP connections (/proc/net/tcp)
+// except those to its own listener.
+func containerRemotes(t *testing.T, eng, ctr string) []string {
+	t.Helper()
+	out, err := exec.Command(eng, "exec", ctr, "cat", "/proc/net/tcp").Output()
+	if err != nil {
+		t.Fatalf("connections of the instance: %v", err)
+	}
+	var remotes []string
+	for _, l := range strings.Split(string(out), "\n")[1:] {
+		f := strings.Fields(l)
+		if len(f) < 4 || f[3] != "01" { // ESTABLISHED
+			continue
+		}
+		if _, lport, _ := strings.Cut(f[1], ":"); lport == fmt.Sprintf("%04X", bundle.ContainerPort) {
+			continue // a connection to the instance's listener
+		}
+		hexIP, _, _ := strings.Cut(f[2], ":")
+		n, err := strconv.ParseUint(hexIP, 16, 32)
+		if err != nil {
+			continue
+		}
+		remotes = append(remotes, fmt.Sprintf("%d.%d.%d.%d", n&0xff, n>>8&0xff, n>>16&0xff, n>>24&0xff))
+	}
+	return remotes
 }
