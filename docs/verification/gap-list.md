@@ -77,10 +77,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-21.8 **unverified** (no claiming test or record): Conformance requests run over the named pipe on Windows; the fixtures of both protocol eras compared with the TLS listener and the AF_UNIX scan are not complete.
 - SR-2.8-6 **unverified** (no claiming test or record): The DACL, the first-instance flag, `pipe_squatted` and the name held between connections (security review v1.3, SR-19) are tested; a connection over SMB (`\\localhost\pipe\`) and as a user outside the group are not.
 
-### E-02 Protocol Mediator
-
-- SR-5.6-3 **unverified** (no claiming test or record): The general refusal of resources, prompts and server requests applies to hosted packages, but no bundled-instance stand-in test exists.
-
 ### E-03 Identity & Authentication Service
 
 - FR-21.9 **unverified** (no claiming test or record): SID mapping by impersonation and the key check are tested in the per-user mode; the machine mode and the recorded refusals with the client SID are not.
@@ -139,7 +135,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 ### E-21 Audit & Evidence Service
 
 - FR-22.39 **unverified** (partly verified): Events of a hosted package's revision carry a `route` member (`via` `contextforge`, server ID and revision, virtual server, instance version and digest) and a local revision's carry none (`audit.TestFanoutDecorators`, `connector.TestHostedPackagesThroughEgress`); the decision, intent and outcome events of a call through the full pipeline are not checked.
-- SR-6.18-2 **missing** (no claiming test or record): Results from the bundled instance are not labelled server-asserted with the instance attribution.
 
 ### E-22 Key & Trust Anchor Manager
 

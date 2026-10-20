@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
 
@@ -33,6 +34,30 @@ type Assertion struct {
 	// Dropped counts the assertions of the interval not delivered because
 	// more than maxAssertionsPerInterval arrived.
 	Dropped int
+}
+
+// Event is the server_asserted evidence event of the assertion, attributed
+// to the instance and its server revision (SR-6.18-1). It is not a policy
+// decision and never changes the call it may relate to.
+func (x Assertion) Event() audit.Event {
+	d := map[string]any{"server": x.Server, "instance": x.Instance, "text": x.Text}
+	if x.Method != "" {
+		d["method"] = x.Method
+	}
+	if x.Kind == AssertError {
+		d["code"] = x.Code
+	}
+	if x.Truncated > 0 {
+		d["truncated_bytes"] = x.Truncated
+	}
+	if x.Skipped > 0 {
+		d["skipped_bytes"] = x.Skipped
+	}
+	if x.Dropped > 0 {
+		d["dropped"] = x.Dropped
+	}
+	return audit.Event{Class: "server_asserted", Origin: "E-15", Outcome: x.Kind, ServerRevision: x.ServerRevision,
+		PolicyStatus: "not_evaluated", Detail: d}
 }
 
 const (
