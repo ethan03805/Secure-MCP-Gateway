@@ -66,12 +66,12 @@ func SettingsFrom(cfg *config.Config) (Settings, bool) {
 // Windows machine mode that is NT SERVICE\smcpd, not the administrator
 // who runs smcpctl (SR-2.13-4).
 func initDPAPIVault(s Settings, log *slog.Logger) error {
-	name, err := ResolveKeySource(s.KeySource)
-	if err != nil || name != KeySourceDPAPI {
-		return nil
+	// An unknown key source is reported by OpenVault.
+	if name, rerr := ResolveKeySource(s.KeySource); rerr != nil || name != KeySourceDPAPI {
+		return nil //nolint:nilerr // not a dpapi vault: nothing to create here
 	}
-	if _, err := Inspect(s.VaultDir); !errors.Is(err, ErrNotInitialized) {
-		return nil
+	if _, ierr := Inspect(s.VaultDir); !errors.Is(ierr, ErrNotInitialized) {
+		return nil //nolint:nilerr // an existing or unreadable vault is opened, and reported, by OpenVault
 	}
 	id, err := Init(s.VaultDir, DPAPI{Path: filepath.Join(s.VaultDir, DPAPIKeyFile)})
 	if err != nil {

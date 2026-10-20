@@ -1,6 +1,7 @@
 package winport
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/build"
@@ -183,8 +184,12 @@ func scanWindowsFiles(t *testing.T) []finding {
 			}
 		}
 		pkg, err := ctx.ImportDir(dir, 0)
-		if err != nil {
+		var noGo *build.NoGoError
+		if errors.As(err, &noGo) {
 			return nil // no Go files for windows here
+		}
+		if err != nil {
+			return err
 		}
 		for _, f := range pkg.GoFiles {
 			p := filepath.Join(dir, f)

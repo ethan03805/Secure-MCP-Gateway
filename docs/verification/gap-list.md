@@ -75,11 +75,10 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 ### E-01 Harness Interface Endpoint
 
 - FR-21.8 **unverified** (no claiming test or record): Conformance requests run over the named pipe on Windows; the fixtures of both protocol eras compared with the TLS listener and the AF_UNIX scan are not complete.
-- SR-2.8-6 **unverified** (no claiming test or record): The DACL, the first-instance flag, `pipe_squatted` and the name held between connections (security review v1.3, SR-19) are tested; a connection over SMB (`\\localhost\pipe\`) and as a user outside the group are not.
 
 ### E-03 Identity & Authentication Service
 
-- FR-21.9 **unverified** (no claiming test or record): SID mapping by impersonation and the key check are tested in the per-user mode; the machine mode and the recorded refusals with the client SID are not.
+- FR-21.9 **unverified** (partly verified): Each pipe client is identified by its token's user SID and needs a registered SID and its key; with local test accounts on the Windows runner (`internal/edge.TestWindowsPipeAccounts`) the registered account with its key gets a session, the registered account with a wrong key and an unregistered group member are refused and recorded with their SIDs, and the Gateway's own account is admitted as in the per-user mode. The machine mode, with `smcpd` running as `NT SERVICE\smcpd`, is not run.
 
 ### E-05 Policy Administration Service
 
@@ -96,7 +95,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-12 Enforcement Coordinator
 
-- FR-21.7 **unverified** (partly verified): Service Control Manager stop and the named stop event are tested; a console `CTRL_BREAK` stop with a running backend is tested end to end on the Windows runner (journal stop record, exit 0, no backend left; `internal/acceptance.TestWindowsConsoleStop`), and the `CTRL_CLOSE`, `CTRL_LOGOFF` and `CTRL_SHUTDOWN` handler (stop record first, exit within 4 s) through `cmd/smcpd.TestConsoleCloseHandling`. Windows lets no process send those three events to another, so their delivery to a real `smcpd` is not tested.
+- FR-21.7 **unverified** (partly verified): Service Control Manager stop and the named stop event are tested; a console `CTRL_BREAK` stop with a running backend is tested end to end on the Windows runner (journal stop record, exit 0, no backend left; `internal/acceptance.TestWindowsConsoleStop`), and the `CTRL_CLOSE`, `CTRL_LOGOFF` and `CTRL_SHUTDOWN` handler (stop record first, exit within 4 s) through `cmd/smcpd.TestConsoleCloseHandling`. Windows lets no process send those three events to another, so their delivery to a real `smcpd` is not tested: closing the console window of an `smcpd` started with its own console (`WM_CLOSE` and `WM_SYSCOMMAND SC_CLOSE` posted to the window found through `AttachConsole`) did not deliver `CTRL_CLOSE` on `windows-latest` (2026-10-20), and logoff and shutdown cannot be caused on a hosted runner. A service stop with a running backend is not tested either (the machine-mode smoke test stops a service without one).
 - SR-4.1-3 **unverified** (partly verified): Profile and SID naming are tested (`internal/winsandbox.TestWindowsProfileNames`, partial claim); the token inspection of `smcpd` and two backends on a machine-mode host is not recorded.
 
 ### E-14 Local Server Registry
@@ -129,7 +128,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-19 Secret Vault
 
-- SR-2.13-4 **unverified** (no claiming test or record): The vault master key is a DPAPI blob in the per-user mode; decryption as another account and from another host, and the passphrase option, are not tested on Windows.
 - SR-2.13-5 **unverified** (partly verified): The instance credentials are vault entries in the `component.` namespace; an API-key hosted package's key reaches only the hosted fixture, never the instance stand-in or an event (`connector.TestHostedPackagesThroughEgress`); a D-16 dump of the pinned image after such an import is not inspected.
 
 ### E-21 Audit & Evidence Service
@@ -138,7 +136,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-22 Key & Trust Anchor Manager
 
-- FR-21.10 **unverified** (partly verified): Keys are DPAPI blobs and `key_protection` is raised for an undecryptable key; the copy of the state directory to a second runner is not done.
 
 ### E-23 Health & Safety Monitor
 
@@ -151,10 +148,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-20.48 **unverified** (partly verified): The catalogue holds every reason code with its Table B.2 text and every desktop code; the console (`console/src/messages.ts`) and the desktop windows import it, but no test claims that neither build holds a differing copy.
 - FR-20.49 **unverified** (no claiming test or record): `docs/design/writing.md` exists and `tools/uilint` applies its banned list; the inspection of 30 strings is not recorded under `docs/verification/`.
 - FR-20.50 **unverified** (no claiming test or record): `docs/design/visual.md` exists; the inspection of the desktop windows, five console views and the site pages in both schemes is not recorded.
-- FR-21.1 **unverified** (partly verified): The version refusal is tested; the Windows acceptance subset runs on `windows-latest` and `windows-11-arm` (the owner's 2026-10-20 decision: `windows-11-arm` qualifies Windows 11 arm64 and `windows-latest` stands in for Windows x64), and the run on Windows 11 x64 hardware is blocked on the owner.
-- FR-21.2 **unverified** (no claiming test or record): The `windows` CI job cross-builds and vets every package and runs the `TestWindows*` fail-closed tests, without an FR-21.2 claim.
 - FR-21.3 **external** (no claiming test or record): `.goreleaser.yaml` builds both zips and lists them in the checksum file; `v1.3.0-beta.2` has both zips in its signed checksum file but no Sigstore bundle, because its release run stopped after publishing (fixed on main); needs the inspection of a release whose run completes.
-- FR-21.4 **unverified** (no claiming test or record): `tools/installps1` runs the refusal cases on `windows-latest`; the claim is full only when both verifiers and both invocations ran.
 - FR-21.6 **unverified** (partly verified): The per-user task and Run-key fallback and the machine-mode service are installed by the Windows smoke scripts; restart after `smcpd` ends and the service start before logon after a reboot (Demonstration on a recorded host) are not recorded.
 - FR-21.15 **missing** (partly verified): `smcpctl install --wsl` is built: the distribution, `wsl.conf` with systemd on and interop off, the release's `install.sh`, the Enforced prerequisites report and the Enforced install, as fixed `wsl.exe` argument vectors (`cmd/smcpctl.TestWSLInstallPlan`). It has not run on a host with WSL2 (see Blocked on the owner); the credential file on the Windows side is written by hand afterwards.
 - FR-21.19 **missing** (no claiming test or record): The `windows` jobs run on `windows-latest` and `windows-11-arm`, now with the FR-21.20 acceptance subset and the hostile suite, and send their claims to the status data, but they are not required checks (a branch-protection change by the owner, proposed below) and run only part of `go test -short ./...`.
@@ -178,7 +172,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 - FR-21.16 **unverified** (no claiming test or record): The credential file location and DACL check are tested; the conformance fixtures through `smcp-stdio.exe` over TLS and the named pipe are not.
 - FR-21.17 **unverified** (partly verified): `docs/clients/matrix.json` records the Windows paths of each local client (Hermes Agent and Grok Build unsupported, with the reason); `smcpctl clients setup`, `lockdown` and `doctor` use them and report `unsupported on windows` otherwise (`internal/harness.TestWindowsClientPathsMatchMatrix`, `TestWindowsClientSetupOnHost` and AT-16 on the Windows runner). The paths stay `confirm: true` until FR-21.21 has run each client.
-- FR-21.21 **missing** (partly verified): The Real agents workflow has a `windows-latest` job (`agents (windows)`) for Claude Code, Codex CLI, OpenCode, Gemini CLI and Goose against a per-user Gateway, with the AI Gateway secret; the matrix has no Windows result recorded yet.
+- FR-21.21 **external** (partly verified): The `agents (windows)` job of the Real agents workflow runs on `windows-latest` against a per-user Gateway with the AI Gateway secret (never printed). Claude Code 2.1.302, Codex CLI 0.142.2, OpenCode 1.15.13 and Goose 1.55.0 passed every scenario (signin, catalog, allowed, denied, approval, ungranted; journal verified) in run 39475909294 (2026-10-20), recorded in `docs/clients/matrix.json`; Goose runs with the Gateway CA added to the runner's machine Root store for the run. Gemini CLI is installed but not run: it needs `GEMINI_API_KEY` (see Blocked on the owner).
 
 ### E-34 Desktop Application
 
@@ -266,6 +260,8 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ## History
 
+Updated on 2026-10-20 by the phase-13 windows-verify work: FR-21.1 has a Demonstration record (`FR-21.1.md`, CI run 39465018417, acceptance subset and both installation modes on `windows-latest` and `windows-11-arm`); FR-21.2 is claimed by `tools/winport.TestWindowsBuildPortability` on the Windows runner (cross-build and vet of every package for windows/amd64 and windows/arm64, and a review of every POSIX mode, owner or signal read in the code compiled for Windows); FR-21.4 was already claimed by `tools/installps1` but its claims never reached the status data, because the `windows` job did not upload `build/windows-test.json` (fixed); SR-2.8-6 is claimed by `internal/edge.TestWindowsPipeAccounts` with local test accounts (`internal/wintest`); FR-21.10 and SR-2.13-4 are claimed by `internal/acceptance.TestWindowsStateCopyRefused` in the new `windows-state-copy` job, which starts `smcpd` on a state directory copied from the `windows` job's runner (refused with `key_protection`, no file changed), after the vault gained the `dpapi` key source (the default on Windows; in the machine mode the service creates the vault). Their lines are removed.
+
 The dated notes below record how the list changed, in the order they were added. Requirements named in them as open may since have been verified; the list above is the current state.
 
 Updated on 2026-10-17 against the status data of `58a40c1`: entries that tests now verify or partly verify were removed (FR-1.39, FR-1.40, FR-1.49, FR-5.20, FR-5.24, SR-5.6-2, SR-7.2-1 and FR-19.1 after the hostile-suite fixes).
@@ -328,7 +324,7 @@ Updated on 2026-10-20 by the phase-12 steward pass against the status data of ma
 These open requirements cannot be closed by more code or CI work in this repository. Each needs something only the project owner can provide or decide. Everything else in the list above can be closed by a test, a record or a release run.
 
 - **Three first-time users for the G-04 usability Demonstration** (FR-8.24). Needed: three people who have not used the console, each given the in-console help and the task "create and publish a scoped Observation Policy of at least 10 parameters" in the G-04 Observation & Parameter Workbench, timed from sign-in. The requirement passes when at least two finish within 10 minutes. The owner records each person's time and completion (names are not needed) as a Demonstration record in `docs/verification/FR-8.24.md`, which now holds the scripted run, in the format of `docs/verification/README.md`. The scripted run of the same task (`console/e2e/firsttime.spec.ts`, 16 actions in Chromium, Firefox and WebKit) is supporting evidence only. The alternative is an SRS change that accepts the scripted run as the verification.
-- **A Gemini API key for the Gemini CLI runs** (FR-15.8, FR-15.10, FR-18.3, and the Gemini CLI part of FR-15.1, FR-15.7, SR-4.9-1 and SR-4.11-1). Needed: a Google AI Studio (Gemini API) key stored as the repository Actions secret `GEMINI_API_KEY`. The Vercel AI Gateway key the other clients use does not serve the Gemini API, and the Real agents workflow runs Gemini CLI only when this secret is set (`.github/workflows/agents.yml`). With the key, the matrix job gives Gemini CLI a result and its quick start can be followed at the pinned version.
+- **A Gemini API key for the Gemini CLI runs** (FR-15.8, FR-15.10, FR-18.3, FR-21.21, and the Gemini CLI part of FR-15.1, FR-15.7, SR-4.9-1 and SR-4.11-1). Needed: a Google AI Studio (Gemini API) key stored as the repository Actions secret `GEMINI_API_KEY`. The Vercel AI Gateway key the other clients use does not serve the Gemini API, and the Real agents workflow runs Gemini CLI only when this secret is set (`.github/workflows/agents.yml`). With the key, the matrix job gives Gemini CLI a result and its quick start can be followed at the pinned version.
 - **A decision on Grok Build** (FR-15.8, FR-15.10, FR-18.3, FR-15.1). Grok Build is a local client of SRS Appendix K, but xAI publishes no installable Grok Build CLI, so no pinned version can be installed or run, and its configuration location and lockdown mechanism are unconfirmed. Needed: either a download location and terms that allow running a pinned Grok Build CLI in CI, or an owner decision to change Appendix K (drop Grok Build from the local clients, or record it as not runnable for release 1.x the way live cloud-agent runs were descoped in FR-15.9).
 - **A real tunnel for the Remote Access Profile** (FR-16.1, FR-16.2, FR-16.8). The listener, the origin fields and the tunnel drivers are tested behind a local TLS stand-in and against fake `tailscale` and `cloudflared` binaries. FR-16.2 is a Demonstration with each of Tailscale Funnel and Cloudflare Tunnel on a test host, and FR-16.1 and FR-16.8 need calls through such a tunnel. Needed, either of: (a) the owner runs `smcpctl remote enable tailscale`, `smcpctl remote check` and a few calls through the public name on a host of the owner's tailnet (Funnel is already enabled there), then the same with `cloudflared`, and records the output; or (b) repository Actions secrets for an ephemeral, Funnel-enabled Tailscale auth key and for a Cloudflare named-tunnel token with a hostname on a zone the owner controls, so a CI job can run the Demonstration. Exposing a Gateway on a public name is the owner's decision, which is why this is not done from CI without them.
 

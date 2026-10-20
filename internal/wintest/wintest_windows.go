@@ -109,8 +109,8 @@ func NewUser(t testing.TB, groups ...string) *User {
 	name, _ := windows.UTF16PtrFromString(u.Name)
 	dom, _ := windows.UTF16PtrFromString(".")
 	pw, _ := windows.UTF16PtrFromString(u.Password)
-	r, _, e := procLogonUserW.Call(uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(dom)), uintptr(unsafe.Pointer(pw)),
-		logon32LogonInteractive, logon32ProviderDefault, uintptr(unsafe.Pointer(&u.token)))
+	r, _, e := procLogonUserW.Call(uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(dom)), uintptr(unsafe.Pointer(pw)), //nolint:gosec // G103: Windows API arguments
+		logon32LogonInteractive, logon32ProviderDefault, uintptr(unsafe.Pointer(&u.token))) //nolint:gosec // G103: Windows API arguments
 	if r == 0 {
 		t.Fatalf("LogonUser %s: %v", u.Name, e)
 	}
@@ -120,13 +120,13 @@ func NewUser(t testing.TB, groups ...string) *User {
 	enablePrivileges(t, "SeBackupPrivilege", "SeRestorePrivilege")
 	pi := profileInfo{flags: piNoUI, userName: name}
 	pi.size = uint32(unsafe.Sizeof(pi))
-	if r, _, e := procLoadUserProfileW.Call(uintptr(u.token), uintptr(unsafe.Pointer(&pi))); r == 0 {
+	if r, _, e := procLoadUserProfileW.Call(uintptr(u.token), uintptr(unsafe.Pointer(&pi))); r == 0 { //nolint:gosec // G103: Windows API arguments
 		t.Fatalf("LoadUserProfile %s: %v", u.Name, e)
 	}
 	t.Cleanup(func() {
 		_, _, _ = procUnloadUserProfile.Call(uintptr(u.token), uintptr(pi.profile))
 		sidp, _ := windows.UTF16PtrFromString(u.SID)
-		_, _, _ = procDeleteProfileW.Call(uintptr(unsafe.Pointer(sidp)), 0, 0)
+		_, _, _ = procDeleteProfileW.Call(uintptr(unsafe.Pointer(sidp)), 0, 0) //nolint:gosec // G103: Windows API arguments
 	})
 	return u
 }
