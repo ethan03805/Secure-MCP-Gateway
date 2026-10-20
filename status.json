@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T16:57:38Z",
-  "commit": "f7c763afb97d739f9c60e1b64d0cf20f6623478f",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/f7c763afb97d739f9c60e1b64d0cf20f6623478f",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39451297793",
+  "generatedAt": "2026-10-20T17:39:56Z",
+  "commit": "e1a094c16288ea811a4c4409ef6bdcf2ea75d8d0",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/e1a094c16288ea811a4c4409ef6bdcf2ea75d8d0",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39458994311",
   "tests": {
-    "total": 1954,
-    "passed": 1931,
-    "failed": 2,
+    "total": 1978,
+    "passed": 1957,
+    "failed": 0,
     "skipped": 21,
-    "durationSec": 2791.8,
+    "durationSec": 2438.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -42,14 +42,26 @@
         "skipped": 1
       },
       {
+        "name": "desktop/e2e-linux",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "desktop/e2e-macos",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "desktop/linux",
-        "passed": 99,
+        "passed": 103,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "desktop/macos",
-        "passed": 98,
+        "passed": 102,
         "failed": 0,
         "skipped": 0
       },
@@ -67,7 +79,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 105,
+        "passed": 107,
         "failed": 0,
         "skipped": 0
       },
@@ -133,7 +145,7 @@
       },
       {
         "name": "internal/app",
-        "passed": 5,
+        "passed": 6,
         "failed": 0,
         "skipped": 0
       },
@@ -181,7 +193,7 @@
       },
       {
         "name": "internal/config",
-        "passed": 18,
+        "passed": 20,
         "failed": 0,
         "skipped": 0
       },
@@ -301,7 +313,7 @@
       },
       {
         "name": "internal/keys",
-        "passed": 14,
+        "passed": 15,
         "failed": 0,
         "skipped": 2
       },
@@ -355,8 +367,8 @@
       },
       {
         "name": "internal/perf",
-        "passed": 15,
-        "failed": 2,
+        "passed": 17,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -588,7 +600,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 44.9
+        "pct": 45.1
       },
       {
         "name": "cmd/smcpd",
@@ -616,7 +628,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 79.1
+        "pct": 79.6
       },
       {
         "name": "internal/approval",
@@ -652,7 +664,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 88.8
+        "pct": 89.2
       },
       {
         "name": "internal/consoleapi",
@@ -708,7 +720,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.5
+        "pct": 83.6
       },
       {
         "name": "internal/gwtest",
@@ -760,7 +772,7 @@
       },
       {
         "name": "internal/ops",
-        "pct": 73.9
+        "pct": 73.8
       },
       {
         "name": "internal/packaging",
@@ -824,7 +836,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.8
+        "pct": 79.5
       },
       {
         "name": "internal/session",
@@ -918,9 +930,9 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 489,
+    "verified": 491,
     "partial": 38,
-    "failing": 2,
+    "failing": 0,
     "unverified": 1,
     "byElement": [
       {
@@ -1111,9 +1123,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 62,
+        "verified": 63,
         "partial": 10,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-25",
@@ -1135,9 +1147,9 @@
         "element": "E-27",
         "name": "Observation Store",
         "total": 5,
-        "verified": 4,
+        "verified": 5,
         "partial": 0,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-28",
@@ -4111,7 +4123,7 @@
       {
         "id": "FR-11.6",
         "element": "E-27",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/obsstore.TestIngestRate",
           "internal/perf.TestReplayIngest",
@@ -4129,7 +4141,7 @@
       {
         "id": "FR-11.8",
         "element": "E-24",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/perf.TestReplayIngest",
           "internal/perf/run.TestPerfFR_11_8"
@@ -6897,6 +6909,7 @@
         "element": "E-23",
         "status": "partial",
         "tests": [
+          "desktop/e2e-linux.e2e::linux::metrics_after_setup",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "internal/e2e.TestDesktopMetricsOnRunningGateway",
@@ -6910,8 +6923,12 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/e2e-linux.e2e::linux::console_window",
+          "desktop/e2e-macos.e2e::macos::console_window",
+          "desktop/linux.config_tests::console_first_page_loads_through_webkit",
           "desktop/linux.console::tests::the_window_stays_on_the_admin_origin",
           "desktop/linux.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/macos.config_tests::console_first_page_loads_through_webkit",
           "desktop/macos.console::tests::the_window_stays_on_the_admin_origin",
           "desktop/macos.settings::tests::admin_origin_is_https_origin_only"
         ],
@@ -6940,6 +6957,8 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/e2e-linux.e2e::linux::introduction_then_setup",
+          "desktop/e2e-linux.e2e::linux::setup_without_passwords_in_arguments",
           "desktop/linux.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
           "desktop/linux.setup::tests::offered_only_without_a_configuration",
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
@@ -6962,6 +6981,7 @@
         "tests": [
           "cmd/smcpctl.TestEnforcedScriptHostOnly",
           "cmd/smcpctl.TestInstallCheck",
+          "desktop/e2e-linux.e2e::linux::setup_profile_offer",
           "desktop/linux.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
           "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
           "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one",
@@ -6977,16 +6997,20 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestClientsDetectAndJSONDryRun",
+          "cmd/smcpctl.TestEnforcedClientViewOnHost",
+          "desktop/e2e-linux.e2e::linux::client_setup_claude_code",
           "desktop/linux.clients::tests::commands_are_fixed_and_use_the_connect_alias",
           "desktop/linux.clients::tests::commands_run_in_the_given_directory",
           "desktop/linux.clients::tests::detection_and_previews_parse",
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
           "desktop/linux.clients::tests::only_listed_client_ids_are_used",
+          "desktop/linux.setup::tests::enforced_configuration_in_an_unsearchable_directory_is_found",
           "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
           "desktop/macos.clients::tests::commands_run_in_the_given_directory",
           "desktop/macos.clients::tests::detection_and_previews_parse",
           "desktop/macos.clients::tests::failures_are_explained_with_their_code",
-          "desktop/macos.clients::tests::only_listed_client_ids_are_used"
+          "desktop/macos.clients::tests::only_listed_client_ids_are_used",
+          "desktop/macos.setup::tests::enforced_configuration_in_an_unsearchable_directory_is_found"
         ],
         "target": "v1.3.0"
       },
@@ -6995,6 +7019,7 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/linux.config_tests::reported_version_is_the_configuration_version",
           "desktop/linux.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
           "desktop/linux.release::tests::offline_check_fails_once_without_a_loop",
           "desktop/linux.release::tests::only_https_or_loopback_http",
@@ -7002,6 +7027,7 @@
           "desktop/linux.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
           "desktop/linux.settings::tests::update_checks_default_on_and_older_files_load",
           "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once",
+          "desktop/macos.config_tests::reported_version_is_the_configuration_version",
           "desktop/macos.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
           "desktop/macos.release::tests::offline_check_fails_once_without_a_loop",
           "desktop/macos.release::tests::only_https_or_loopback_http",
@@ -7079,8 +7105,10 @@
       {
         "id": "FR-20.15",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/e2e-linux.e2e::linux::axe_in_application_webview"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7204,11 +7232,15 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/e2e-linux.e2e::linux::deep_links",
+          "desktop/e2e-macos.e2e::macos::deep_links",
+          "desktop/linux.config_tests::linux_desktop_entry_registers_the_link_scheme",
           "desktop/linux.config_tests::only_the_smcp_scheme_is_registered",
           "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/linux.deeplink::tests::accepts_exactly_the_three_forms",
           "desktop/linux.deeplink::tests::ignores_every_other_link",
           "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
+          "desktop/macos.config_tests::linux_desktop_entry_registers_the_link_scheme",
           "desktop/macos.config_tests::only_the_smcp_scheme_is_registered",
           "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/macos.deeplink::tests::accepts_exactly_the_three_forms",
@@ -7220,8 +7252,10 @@
       {
         "id": "FR-20.40",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/e2e-linux.e2e::linux::introduction_then_setup"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8075,6 +8109,7 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/e2e-linux.e2e::linux::setup_without_passwords_in_arguments",
           "desktop/linux.console::tests::the_window_is_incognito_without_devtools",
           "desktop/linux.settings::tests::saved_settings_are_private_and_round_trip",
           "desktop/linux.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
@@ -8163,6 +8198,9 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestEnforcedClientViewOnHost",
+          "desktop/e2e-linux.e2e::linux::console_window",
+          "desktop/e2e-macos.e2e::macos::console_window",
           "desktop/linux.console::tests::the_error_page_offers_no_way_to_proceed",
           "desktop/linux.tlspin::tests::a_rotation_bundle_trusts_both_cas",
           "desktop/linux.tlspin::tests::accepts_a_certificate_made_by_smcpd",
@@ -9082,7 +9120,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9093,7 +9131,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9128,7 +9166,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35555: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37697: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9245,7 +9283,7 @@
     }
   ],
   "acceptance": {
-    "commit": "f7c763afb97d739f9c60e1b64d0cf20f6623478f",
+    "commit": "e1a094c16288ea811a4c4409ef6bdcf2ea75d8d0",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9933,27 +9971,27 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
-    "commit": "f7c763afb97d739f9c60e1b64d0cf20f6623478f",
-    "generatedAt": "2026-10-20T16:11:30Z",
+    "commit": "e1a094c16288ea811a4c4409ef6bdcf2ea75d8d0",
+    "generatedAt": "2026-10-20T16:59:03Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.10",
-      "runner": "GitHub Actions 1000017593",
-      "memoryBytes": 16766414848,
+      "runner": "GitHub Actions 1000017780",
+      "memoryBytes": 16760344576,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 89933590528,
+      "diskFreeBytes": 89146961920,
       "diskDevice": "sda1",
       "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
-      "imageVersion": "20261012.334.1"
+      "imageVersion": "20261018.339.1"
     },
     "referenceHardware": true,
     "referenceClass": "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)",
@@ -9972,7 +10010,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.027271,
+        "value": 0.027562,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9985,7 +10023,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 17.581674,
+        "value": 18.037622,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9998,19 +10036,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.7446814999999987,
+        "value": 0.9215931249999976,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.638 ms, mean of 10.778, 10.539, 10.888, 10.534, 10.582, 11.588, 10.129, 10.065) minus disabled (9.893 ms, mean of 9.795, 9.862, 10.079, 9.993, 10.165, 9.243, 10.240, 9.769), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.447 ms, mean of 10.450, 10.682, 10.371, 10.305, 10.014, 10.357, 9.990, 11.407) minus disabled (9.525 ms, mean of 9.503, 9.508, 9.103, 9.410, 9.864, 9.366, 9.740, 9.710), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9642501490373,
+        "value": 1999.9661789552747,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -10022,7 +10060,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 798.493656,
+        "value": 850.800165,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -10034,12 +10072,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1551.875,
+        "value": 1511.44921875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m20s after start with no traffic: smcpd (124.0 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1427.9 MiB in 2 processes, process 7319 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m17s after start with no traffic: smcpd (101.6 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1409.9 MiB in 2 processes, process 7322 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
