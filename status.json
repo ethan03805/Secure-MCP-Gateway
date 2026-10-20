@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T21:15:47Z",
-  "commit": "5a4d9489327426c1b08399402c45bf4789f434cc",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/5a4d9489327426c1b08399402c45bf4789f434cc",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39481685389",
+  "generatedAt": "2026-10-20T22:37:48Z",
+  "commit": "41f8beac76a1676bc486d8533737475ea6422bfc",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/41f8beac76a1676bc486d8533737475ea6422bfc",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39494907609",
   "tests": {
-    "total": 2234,
-    "passed": 2210,
+    "total": 2316,
+    "passed": 2289,
     "failed": 0,
-    "skipped": 24,
-    "durationSec": 4891.3,
+    "skipped": 27,
+    "durationSec": 3023,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -91,9 +91,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 119,
+        "passed": 121,
         "failed": 0,
-        "skipped": 2
+        "skipped": 0
       },
       {
         "name": "cmd/smcpd",
@@ -130,6 +130,12 @@
         "passed": 1,
         "failed": 0,
         "skipped": 0
+      },
+      {
+        "name": "internal/acceptance/windows-user",
+        "passed": 25,
+        "failed": 0,
+        "skipped": 5
       },
       {
         "name": "internal/adapter",
@@ -235,7 +241,7 @@
       },
       {
         "name": "internal/contextforge/bundle",
-        "passed": 18,
+        "passed": 20,
         "failed": 0,
         "skipped": 0
       },
@@ -247,7 +253,7 @@
       },
       {
         "name": "internal/contextforge/connector",
-        "passed": 16,
+        "passed": 18,
         "failed": 0,
         "skipped": 0
       },
@@ -313,7 +319,7 @@
       },
       {
         "name": "internal/hostile",
-        "passed": 84,
+        "passed": 86,
         "failed": 0,
         "skipped": 1
       },
@@ -322,6 +328,12 @@
         "passed": 30,
         "failed": 0,
         "skipped": 0
+      },
+      {
+        "name": "internal/hostile/windows-user",
+        "passed": 29,
+        "failed": 0,
+        "skipped": 1
       },
       {
         "name": "internal/keys",
@@ -391,7 +403,7 @@
       },
       {
         "name": "internal/pipeline",
-        "passed": 23,
+        "passed": 27,
         "failed": 0,
         "skipped": 0
       },
@@ -511,7 +523,7 @@
       },
       {
         "name": "internal/winsandbox",
-        "passed": 4,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       },
@@ -565,9 +577,9 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 28,
+        "passed": 29,
         "failed": 0,
-        "skipped": 1
+        "skipped": 0
       },
       {
         "name": "tools/sbomcheck",
@@ -640,7 +652,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 79.6
+        "pct": 79.2
       },
       {
         "name": "internal/approval",
@@ -696,15 +708,15 @@
       },
       {
         "name": "internal/contextforge/cfharness",
-        "pct": 85.1
+        "pct": 85.2
       },
       {
         "name": "internal/contextforge/cftest",
-        "pct": 70.3
+        "pct": 71.1
       },
       {
         "name": "internal/contextforge/connector",
-        "pct": 67.4
+        "pct": 67.7
       },
       {
         "name": "internal/diag",
@@ -732,7 +744,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 83.7
       },
       {
         "name": "internal/gwtest",
@@ -848,7 +860,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.7
+        "pct": 79.5
       },
       {
         "name": "internal/session",
@@ -856,7 +868,7 @@
       },
       {
         "name": "internal/southbound",
-        "pct": 86
+        "pct": 86.2
       },
       {
         "name": "internal/southbound/sbtest",
@@ -942,8 +954,8 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 488,
-    "partial": 41,
+    "verified": 491,
+    "partial": 38,
     "failing": 0,
     "unverified": 1,
     "byElement": [
@@ -1135,8 +1147,8 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 60,
-        "partial": 13,
+        "verified": 63,
+        "partial": 10,
         "failing": 0
       },
       {
@@ -1539,7 +1551,8 @@
           "internal/backend.TestProgressRoutedWithGatewayToken",
           "internal/edge.TestProgressRelayedThroughFilters",
           "internal/hostile.TestHostileFixtures/HF-07",
-          "internal/hostile/enforced.TestHostileFixtures/HF-07"
+          "internal/hostile/enforced.TestHostileFixtures/HF-07",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-07"
         ]
       },
       {
@@ -1624,7 +1637,8 @@
         "tests": [
           "internal/backend.TestCollisionDisablesOnlyThatServer",
           "internal/hostile.TestHostileFixtures/HF-14",
-          "internal/hostile/enforced.TestHostileFixtures/HF-14"
+          "internal/hostile/enforced.TestHostileFixtures/HF-14",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-14"
         ]
       },
       {
@@ -1657,7 +1671,8 @@
         "tests": [
           "internal/edge.TestPresentationRescan",
           "internal/hostile.TestHostileFixtures/HF-01",
-          "internal/hostile/enforced.TestHostileFixtures/HF-01"
+          "internal/hostile/enforced.TestHostileFixtures/HF-01",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-01"
         ]
       },
       {
@@ -2204,7 +2219,9 @@
           "internal/hostile.TestHostileFixtures/HF-17",
           "internal/hostile.TestHostileFixtures/HF-19",
           "internal/hostile/enforced.TestHostileFixtures/HF-17",
-          "internal/hostile/enforced.TestHostileFixtures/HF-19"
+          "internal/hostile/enforced.TestHostileFixtures/HF-19",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-17",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-19"
         ]
       },
       {
@@ -2215,7 +2232,8 @@
           "internal/backend.TestResultBoundWhileReading",
           "internal/backend.TestResultBoundsAtTheLimit",
           "internal/hostile.TestHostileFixtures/HF-16",
-          "internal/hostile/enforced.TestHostileFixtures/HF-16"
+          "internal/hostile/enforced.TestHostileFixtures/HF-16",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-16"
         ]
       },
       {
@@ -2288,7 +2306,9 @@
           "internal/hostile.TestHostileFixtures/HF-04",
           "internal/hostile.TestHostileFixtures/HF-05",
           "internal/hostile/enforced.TestHostileFixtures/HF-04",
-          "internal/hostile/enforced.TestHostileFixtures/HF-05"
+          "internal/hostile/enforced.TestHostileFixtures/HF-05",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-04",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-05"
         ]
       },
       {
@@ -2420,7 +2440,8 @@
           "internal/backend.TestInvalidStdoutLine",
           "internal/edge.TestBackendProtocolFailures",
           "internal/hostile.TestHostileFixtures/HF-18",
-          "internal/hostile/enforced.TestHostileFixtures/HF-18"
+          "internal/hostile/enforced.TestHostileFixtures/HF-18",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-18"
         ]
       },
       {
@@ -2449,7 +2470,8 @@
           "console/e2e/webkit.views.spec.ts > Runtime: launcher, prerequisites and instances",
           "internal/backend.TestServerInitiatedRequestsRefused",
           "internal/hostile.TestHostileFixtures/HF-26",
-          "internal/hostile/enforced.TestHostileFixtures/HF-26"
+          "internal/hostile/enforced.TestHostileFixtures/HF-26",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-26"
         ]
       },
       {
@@ -2487,7 +2509,9 @@
           "internal/hostile.TestHostileFixtures/HF-25",
           "internal/hostile.TestHostileFixtures/HF-25",
           "internal/hostile/enforced.TestHostileFixtures/HF-25",
-          "internal/hostile/enforced.TestHostileFixtures/HF-25"
+          "internal/hostile/enforced.TestHostileFixtures/HF-25",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-25",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-25"
         ]
       },
       {
@@ -2730,6 +2754,7 @@
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-08",
           "internal/hostile/enforced.TestHostileFixtures/HF-08",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-08",
           "internal/secrets.TestBrokerLeakDetectionNorthbound",
           "internal/secrets.TestFingerprintSetHoldsNoPlaintext",
           "internal/secrets.TestFingerprintsDetectEncodedForms",
@@ -2812,6 +2837,7 @@
           "internal/acceptance.TestAT13IntegrityPrivacyRetention",
           "internal/acceptance/enforced.TestAT13IntegrityPrivacyRetention",
           "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/windows-user.TestAT13IntegrityPrivacyRetention",
           "internal/audit.TestAnchorDetectsTrailingDeletion",
           "internal/audit.TestCrashRecoveryTruncatedTail",
           "internal/audit.TestJournalChainAndVerify",
@@ -2939,6 +2965,7 @@
           "console/e2e/webkit.views.spec.ts > each role sees only its views and actions",
           "internal/acceptance.TestRoleMatrixEveryOperation",
           "internal/acceptance/offline.TestRoleMatrixEveryOperation",
+          "internal/acceptance/windows-user.TestRoleMatrixEveryOperation",
           "internal/adminapi.TestAppendixCMatrix",
           "internal/adminapi.TestRoleSeam",
           "internal/adminapi.TestRoutesRecordRoles",
@@ -3740,6 +3767,8 @@
           "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
           "internal/e2e.TestGraphMirrorDownDoesNotAffectCalls",
           "internal/e2e.TestTransportAndAuthenticationRules",
           "internal/edge.TestNoSnapshotFailsClosed",
@@ -4102,6 +4131,7 @@
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
           "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/acceptance/windows-user.TestAT20LimitsAndLoad",
           "internal/perf/run.TestPerfFR_11_2"
         ]
       },
@@ -4129,6 +4159,7 @@
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
           "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/acceptance/windows-user.TestAT20LimitsAndLoad",
           "internal/perf/run.TestPerfFR_11_5"
         ]
       },
@@ -4243,7 +4274,8 @@
           "cmd/smcpctl.TestOnlineOpsCommands",
           "internal/acceptance.TestAdminCLIDemonstration",
           "internal/acceptance/enforced.TestAdminCLIDemonstration",
-          "internal/acceptance/offline.TestAdminCLIDemonstration"
+          "internal/acceptance/offline.TestAdminCLIDemonstration",
+          "internal/acceptance/windows-user.TestAdminCLIDemonstration"
         ]
       },
       {
@@ -4272,6 +4304,7 @@
           "internal/acceptance.TestAT21VersionBaseline",
           "internal/acceptance/enforced.TestAT21VersionBaseline",
           "internal/acceptance/offline.TestAT21VersionBaseline",
+          "internal/acceptance/windows-user.TestAT21VersionBaseline",
           "tools/reqreport.TestCargoClaimsBecomeTestEvents",
           "tools/reqreport.TestCargoClaimsRefuseBadLines",
           "tools/reqreport.TestCargoSubcommandWritesEventsAndExitStatus",
@@ -4329,7 +4362,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "analysis: 9 of 13 child requirements verified"
+          "analysis: 12 of 13 child requirements verified"
         ]
       },
       {
@@ -4364,11 +4397,13 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
-          "cmd/smcpctl.TestInstallStandalone"
+          "cmd/smcpctl.TestInstallStandalone",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
@@ -4391,9 +4426,10 @@
       {
         "id": "FR-13.6",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "cmd/smcpctl.TestInstallStandalone"
+          "cmd/smcpctl.TestInstallStandalone",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager"
         ]
       },
       {
@@ -4415,6 +4451,7 @@
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestAT19BackupRestoreRollback",
+          "internal/acceptance/windows-user.TestAT19BackupRestoreRollback",
           "internal/e2e.TestOpsUpgradeMarkerRecorded"
         ]
       },
@@ -4445,13 +4482,15 @@
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager",
           "cmd/smcpctl.TestStandaloneUninstallKeepsEnforcedHost",
           "cmd/smcpctl.TestStandaloneUninstallLeavesEnforcedTable",
           "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge",
-          "cmd/smcpctl.TestUninstallScopeByProfile"
+          "cmd/smcpctl.TestUninstallScopeByProfile",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
@@ -4526,6 +4565,7 @@
           "internal/acceptance.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/windows-user.TestAT06SourceAndBuildEvidence",
           "internal/packaging.TestBuildSignVerifyBinary",
           "docs/verification/inspections.md:548"
         ]
@@ -4614,6 +4654,7 @@
           "internal/acceptance.TestAT16HarnessLockdown",
           "internal/acceptance/enforced.TestAT16HarnessLockdown",
           "internal/acceptance/offline.TestAT16HarnessLockdown",
+          "internal/acceptance/windows-user.TestAT16HarnessLockdown",
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestParseStream"
@@ -4638,6 +4679,7 @@
           "internal/acceptance.TestAT16HarnessLockdown",
           "internal/acceptance/enforced.TestAT16HarnessLockdown",
           "internal/acceptance/offline.TestAT16HarnessLockdown",
+          "internal/acceptance/windows-user.TestAT16HarnessLockdown",
           "internal/harness.TestDoctorInventory",
           "internal/harness.TestDoctorInventoryEveryRecordedClient"
         ]
@@ -4739,6 +4781,7 @@
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
           "internal/acceptance/offline.TestAT18RemoteAccess",
+          "internal/acceptance/windows-user.TestAT18RemoteAccess",
           "internal/remote.TestRemoteSessionAndOriginEvidence"
         ]
       },
@@ -4783,6 +4826,7 @@
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
           "internal/acceptance/offline.TestAT18RemoteAccess",
+          "internal/acceptance/windows-user.TestAT18RemoteAccess",
           "internal/remote.TestDynamicRegistrationNeedsApproval"
         ]
       },
@@ -4869,6 +4913,7 @@
         "tests": [
           "internal/acceptance.TestDiagnosticLogLevelsAndContent",
           "internal/acceptance/offline.TestDiagnosticLogLevelsAndContent",
+          "internal/acceptance/windows-user.TestDiagnosticLogLevelsAndContent",
           "internal/diag.TestDaemonLoggerJSONLinesAndLevels"
         ]
       },
@@ -4891,6 +4936,8 @@
           "internal/acceptance.TestDiagnosticLogLevelsAndContent",
           "internal/acceptance/offline.TestDiagnosticLogExcludesSecrets",
           "internal/acceptance/offline.TestDiagnosticLogLevelsAndContent",
+          "internal/acceptance/windows-user.TestDiagnosticLogExcludesSecrets",
+          "internal/acceptance/windows-user.TestDiagnosticLogLevelsAndContent",
           "internal/diag.TestRedactSensitiveAttributes",
           "internal/secrets.TestBrokerLeakDetectionNorthbound"
         ]
@@ -4975,7 +5022,8 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestDocumentationSetFR18"
+          "cmd/smcpctl.TestDocumentationSetFR18",
+          "cmd/smcpctl.TestInstallGuideWalkthrough"
         ]
       },
       {
@@ -5056,7 +5104,8 @@
         "status": "verified",
         "tests": [
           "internal/hostile.TestHostileFixtures",
-          "internal/hostile/enforced.TestHostileFixtures"
+          "internal/hostile/enforced.TestHostileFixtures",
+          "internal/hostile/windows-user.TestHostileFixtures"
         ]
       },
       {
@@ -5066,6 +5115,7 @@
         "tests": [
           "internal/hostile.TestHostileFixtures",
           "internal/hostile/enforced.TestHostileFixtures",
+          "internal/hostile/windows-user.TestHostileFixtures",
           "docs/verification/inspections.md:87"
         ]
       },
@@ -5077,6 +5127,7 @@
           "internal/acceptance.TestAT21VersionBaseline",
           "internal/acceptance/enforced.TestAT21VersionBaseline",
           "internal/acceptance/offline.TestAT21VersionBaseline",
+          "internal/acceptance/windows-user.TestAT21VersionBaseline",
           "tools/reqreport.TestAcceptanceResults",
           "tools/reqreport.TestReleaseLabel",
           "docs/verification/FR-19.3.md:5"
@@ -5089,6 +5140,7 @@
         "tests": [
           "internal/acceptance.TestEveryScenarioHasEvidence",
           "internal/acceptance/offline.TestEveryScenarioHasEvidence",
+          "internal/acceptance/windows-user.TestEveryScenarioHasEvidence",
           "tools/reqreport.TestAcceptanceResults",
           "tools/reqreport.TestLoadScenariosFromSRS"
         ]
@@ -5110,6 +5162,7 @@
           "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
           "internal/policyadmin.TestLoadImportsOnceThenUsesTheStore",
           "docs/verification/inspections.md:473"
         ]
@@ -5123,6 +5176,7 @@
           "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
           "internal/policystore.TestRevisionRecordAndSignature",
           "internal/policystore.TestTamperingIsDetected"
         ]
@@ -5145,6 +5199,7 @@
           "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
           "internal/edge.TestNoSnapshotFailsClosed",
           "internal/policy.TestNoSnapshotDenies"
         ]
@@ -5157,6 +5212,7 @@
           "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
           "internal/e2e.TestJournalUnwritableDuringTraffic",
           "internal/edge.TestIntentCommitFailureJournalUnavailable"
         ]
@@ -5177,6 +5233,7 @@
           "internal/acceptance.TestAT02ExactAuthorization",
           "internal/acceptance/enforced.TestAT02ExactAuthorization",
           "internal/acceptance/offline.TestAT02ExactAuthorization",
+          "internal/acceptance/windows-user.TestAT02ExactAuthorization",
           "internal/policy.TestCompileAndDecide"
         ]
       },
@@ -5188,6 +5245,7 @@
           "internal/acceptance.TestAT02ExactAuthorization",
           "internal/acceptance/enforced.TestAT02ExactAuthorization",
           "internal/acceptance/offline.TestAT02ExactAuthorization",
+          "internal/acceptance/windows-user.TestAT02ExactAuthorization",
           "internal/policy.TestDenyPrecedence"
         ]
       },
@@ -5225,9 +5283,11 @@
           "internal/acceptance.TestAT02ExactAuthorization",
           "internal/acceptance/enforced.TestAT02ExactAuthorization",
           "internal/acceptance/offline.TestAT02ExactAuthorization",
+          "internal/acceptance/windows-user.TestAT02ExactAuthorization",
           "internal/edge.TestArgumentSchemaValidation",
           "internal/hostile.TestHostileFixtures/HF-13",
-          "internal/hostile/enforced.TestHostileFixtures/HF-13"
+          "internal/hostile/enforced.TestHostileFixtures/HF-13",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-13"
         ]
       },
       {
@@ -5238,6 +5298,7 @@
           "internal/filters.TestImportMetadataScan",
           "internal/hostile.TestHostileFixtures/HF-10",
           "internal/hostile/enforced.TestHostileFixtures/HF-10",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-10",
           "internal/pipeline.TestSchemaDialects"
         ]
       },
@@ -5253,6 +5314,9 @@
           "internal/hostile/enforced.TestHostileFixtures/HF-10",
           "internal/hostile/enforced.TestHostileFixtures/HF-11",
           "internal/hostile/enforced.TestHostileFixtures/HF-12",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-10",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-11",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-12",
           "internal/pipeline.TestSchemaResourceBounds"
         ]
       },
@@ -5263,7 +5327,8 @@
         "tests": [
           "internal/filters.TestPathCanonicalization",
           "internal/hostile.TestHostileFixtures/HF-22",
-          "internal/hostile/enforced.TestHostileFixtures/HF-22"
+          "internal/hostile/enforced.TestHostileFixtures/HF-22",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-22"
         ]
       },
       {
@@ -5282,6 +5347,7 @@
           "internal/acceptance.TestAT04RoutingAndOverlap",
           "internal/acceptance/enforced.TestAT04RoutingAndOverlap",
           "internal/acceptance/offline.TestAT04RoutingAndOverlap",
+          "internal/acceptance/windows-user.TestAT04RoutingAndOverlap",
           "internal/policy.TestOverlappingPermitsRejected"
         ]
       },
@@ -5301,6 +5367,7 @@
           "internal/acceptance.TestAT04RoutingAndOverlap",
           "internal/acceptance/enforced.TestAT04RoutingAndOverlap",
           "internal/acceptance/offline.TestAT04RoutingAndOverlap",
+          "internal/acceptance/windows-user.TestAT04RoutingAndOverlap",
           "internal/policy.TestSingleRoute"
         ]
       },
@@ -5364,6 +5431,7 @@
           "internal/acceptance.TestAT05PublicationAndRevocationRace",
           "internal/acceptance/enforced.TestAT05PublicationAndRevocationRace",
           "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/windows-user.TestAT05PublicationAndRevocationRace",
           "internal/policyadmin.TestActivationCrashAtEachStep",
           "internal/policyadmin.TestPublishOrderAndFailures",
           "internal/policystore.TestActivationAndRestore"
@@ -5377,6 +5445,7 @@
           "internal/acceptance.TestAT05PublicationAndRevocationRace",
           "internal/acceptance/enforced.TestAT05PublicationAndRevocationRace",
           "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/windows-user.TestAT05PublicationAndRevocationRace",
           "internal/edge.TestEmergencyStopSerializedWithLaunch",
           "internal/edge.TestRevocationSerializedWithLaunch"
         ]
@@ -5413,6 +5482,7 @@
           "internal/acceptance.TestAT15ConsoleAuthority",
           "internal/acceptance/enforced.TestAT15ConsoleAuthority",
           "internal/acceptance/offline.TestAT15ConsoleAuthority",
+          "internal/acceptance/windows-user.TestAT15ConsoleAuthority",
           "internal/approval.TestBindingRefusesEveryMismatch",
           "internal/approval.TestCanonicalDigest",
           "internal/approval.TestExpiry",
@@ -5461,6 +5531,7 @@
           "internal/acceptance.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
           "internal/edge.TestPrincipalFromTokenOnly"
         ]
       },
@@ -5480,6 +5551,7 @@
           "internal/acceptance.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -5490,6 +5562,7 @@
         "tests": [
           "internal/acceptance.TestResearcherRoleLimits",
           "internal/acceptance/offline.TestResearcherRoleLimits",
+          "internal/acceptance/windows-user.TestResearcherRoleLimits",
           "internal/adminapi.TestResearcherExclusions"
         ]
       },
@@ -5527,6 +5600,7 @@
           "internal/acceptance.TestAT05PublicationAndRevocationRace",
           "internal/acceptance/enforced.TestAT05PublicationAndRevocationRace",
           "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
+          "internal/acceptance/windows-user.TestAT05PublicationAndRevocationRace",
           "internal/e2e.TestRevocationUnderLoad"
         ]
       },
@@ -5540,6 +5614,8 @@
           "internal/acceptance/enforced.TestAT15ConsoleAuthority",
           "internal/acceptance/offline.TestAT15ConsoleAuthority",
           "internal/acceptance/offline.TestControlAPIOnlyOnAdminListener",
+          "internal/acceptance/windows-user.TestAT15ConsoleAuthority",
+          "internal/acceptance/windows-user.TestControlAPIOnlyOnAdminListener",
           "internal/adminapi.TestControlAPIAuthenticationAndCSRF"
         ]
       },
@@ -5574,6 +5650,7 @@
           "internal/acceptance.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTLSProfileOnBothListeners",
           "internal/e2e.TestTransportAndAuthenticationRules",
           "internal/keys.TestCANameConstraintsAndLifetimes"
@@ -5604,6 +5681,7 @@
           "internal/acceptance.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -5615,6 +5693,7 @@
           "internal/acceptance.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -5626,6 +5705,7 @@
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
           "internal/acceptance/offline.TestAT18RemoteAccess",
+          "internal/acceptance/windows-user.TestAT18RemoteAccess",
           "docs/verification/inspections.md:132"
         ]
       },
@@ -5717,6 +5797,7 @@
           "internal/acceptance.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/windows-user.TestAT06SourceAndBuildEvidence",
           "internal/library.TestSignatureTrust"
         ]
       },
@@ -5728,6 +5809,7 @@
           "internal/acceptance.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/windows-user.TestAT06SourceAndBuildEvidence",
           "internal/library.TestSourceEvidenceAndProvenanceBinding"
         ]
       },
@@ -5739,6 +5821,7 @@
           "internal/acceptance.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/windows-user.TestAT06SourceAndBuildEvidence",
           "internal/library.TestArtifactReverifiedAtLaunch",
           "internal/library.TestMissingTreeRecreatedFromArtifact",
           "internal/secrets.TestRefusedLaunchWithdrawsDeliveries"
@@ -5752,6 +5835,7 @@
           "internal/acceptance.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/enforced.TestAT06SourceAndBuildEvidence",
           "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
+          "internal/acceptance/windows-user.TestAT06SourceAndBuildEvidence",
           "internal/library.TestSourceEvidenceAndProvenanceBinding"
         ]
       },
@@ -5835,6 +5919,7 @@
         "tests": [
           "internal/hostile.TestHostileFixtures/HF-13",
           "internal/hostile/enforced.TestHostileFixtures/HF-13",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-13",
           "internal/library.TestEnablementDigestBinding"
         ]
       },
@@ -5847,6 +5932,8 @@
           "internal/hostile.TestHostileFixtures/HF-13",
           "internal/hostile/enforced.TestHostileFixtures/HF-03",
           "internal/hostile/enforced.TestHostileFixtures/HF-13",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-03",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-13",
           "internal/library.TestDriftAtStartSuspends",
           "internal/library.TestDriftOnListChangedSuspendsAndTearsDown"
         ]
@@ -5868,7 +5955,8 @@
         "tests": [
           "internal/edge.TestNewToolsDenied",
           "internal/hostile.TestHostileFixtures/HF-03",
-          "internal/hostile/enforced.TestHostileFixtures/HF-03"
+          "internal/hostile/enforced.TestHostileFixtures/HF-03",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-03"
         ]
       },
       {
@@ -5980,6 +6068,7 @@
           "internal/acceptance.TestAT10WebBroker",
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
+          "internal/acceptance/windows-user.TestAT10WebBroker",
           "internal/egress.TestConnectTunnel",
           "internal/egress.TestNetnsEnforcement",
           "internal/egress.TestOnlyCurrentGrantsAreForwarded",
@@ -5995,6 +6084,7 @@
           "cmd/smcpctl.TestRuntimeSpecEgressAndSlotMounts",
           "internal/hostile.TestHostileFixtures/HF-22",
           "internal/hostile/enforced.TestHostileFixtures/HF-22",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-22",
           "internal/sandbox.TestBuildInterpretedPackage",
           "internal/sandbox.TestIntegrationPackagedServerSlotsAndEnvironment",
           "internal/sandbox.TestIntegrationSandboxConfinesServer",
@@ -6046,6 +6136,7 @@
           "internal/acceptance.TestAT16HarnessLockdown",
           "internal/acceptance/enforced.TestAT16HarnessLockdown",
           "internal/acceptance/offline.TestAT16HarnessLockdown",
+          "internal/acceptance/windows-user.TestAT16HarnessLockdown",
           "internal/harness.TestDoctorInventory",
           "scripts/agents.TestCheckDoctor",
           "scripts/agents.TestCheckLocked",
@@ -6061,6 +6152,7 @@
           "internal/acceptance.TestAT16HarnessLockdown",
           "internal/acceptance/enforced.TestAT16HarnessLockdown",
           "internal/acceptance/offline.TestAT16HarnessLockdown",
+          "internal/acceptance/windows-user.TestAT16HarnessLockdown",
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckDoctor",
           "scripts/agents.TestCheckLocked",
@@ -6094,6 +6186,7 @@
           "internal/acceptance.TestAT18RemoteAccess",
           "internal/acceptance/enforced.TestAT18RemoteAccess",
           "internal/acceptance/offline.TestAT18RemoteAccess",
+          "internal/acceptance/windows-user.TestAT18RemoteAccess",
           "internal/remote.TestRemoteRequiresApprovedClientToken"
         ]
       },
@@ -6113,6 +6206,7 @@
           "internal/acceptance.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/enforced.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
           "internal/edge.TestHeaderBodyAgreement"
         ]
       },
@@ -6151,6 +6245,7 @@
           "internal/acceptance.TestAT02ExactAuthorization",
           "internal/acceptance/enforced.TestAT02ExactAuthorization",
           "internal/acceptance/offline.TestAT02ExactAuthorization",
+          "internal/acceptance/windows-user.TestAT02ExactAuthorization",
           "internal/e2e.TestTransportAndAuthenticationRules"
         ]
       },
@@ -6170,7 +6265,8 @@
         "tests": [
           "internal/backend.TestNoSouthboundCapabilities",
           "internal/hostile.TestHostileFixtures/HF-26",
-          "internal/hostile/enforced.TestHostileFixtures/HF-26"
+          "internal/hostile/enforced.TestHostileFixtures/HF-26",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-26"
         ]
       },
       {
@@ -6206,10 +6302,12 @@
           "internal/acceptance.TestAT09RequestAndResponseFilters",
           "internal/acceptance/enforced.TestAT09RequestAndResponseFilters",
           "internal/acceptance/offline.TestAT09RequestAndResponseFilters",
+          "internal/acceptance/windows-user.TestAT09RequestAndResponseFilters",
           "internal/filters.TestOutboundArgumentFiltering",
           "internal/filters.TestSecretArgumentFilter",
           "internal/hostile.TestHostileFixtures/HF-09",
           "internal/hostile/enforced.TestHostileFixtures/HF-09",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-09",
           "internal/secrets.TestBrokerLeakDetectionNorthbound"
         ]
       },
@@ -6229,6 +6327,7 @@
           "internal/acceptance.TestAT09RequestAndResponseFilters",
           "internal/acceptance/enforced.TestAT09RequestAndResponseFilters",
           "internal/acceptance/offline.TestAT09RequestAndResponseFilters",
+          "internal/acceptance/windows-user.TestAT09RequestAndResponseFilters",
           "internal/edge.TestProgressRelayedThroughFilters",
           "internal/edge.TestResponseSurfacesOnTheWire",
           "internal/filters.TestResponseSurfaces",
@@ -6237,7 +6336,10 @@
           "internal/hostile.TestHostileFixtures/HF-07",
           "internal/hostile/enforced.TestHostileFixtures/HF-05",
           "internal/hostile/enforced.TestHostileFixtures/HF-06",
-          "internal/hostile/enforced.TestHostileFixtures/HF-07"
+          "internal/hostile/enforced.TestHostileFixtures/HF-07",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-05",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-06",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-07"
         ]
       },
       {
@@ -6252,7 +6354,10 @@
           "internal/hostile.TestHostileFixtures/HF-15",
           "internal/hostile/enforced.TestHostileFixtures/HF-01",
           "internal/hostile/enforced.TestHostileFixtures/HF-02",
-          "internal/hostile/enforced.TestHostileFixtures/HF-15"
+          "internal/hostile/enforced.TestHostileFixtures/HF-15",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-01",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-02",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-15"
         ]
       },
       {
@@ -6272,7 +6377,9 @@
           "internal/hostile.TestHostileFixtures/HF-08",
           "internal/hostile.TestHostileFixtures/HF-16",
           "internal/hostile/enforced.TestHostileFixtures/HF-08",
-          "internal/hostile/enforced.TestHostileFixtures/HF-16"
+          "internal/hostile/enforced.TestHostileFixtures/HF-16",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-08",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-16"
         ]
       },
       {
@@ -6301,6 +6408,7 @@
           "internal/e2e.TestSessionTaintEndToEnd",
           "internal/hostile.TestHostileFixtures/HF-04",
           "internal/hostile/enforced.TestHostileFixtures/HF-04",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-04",
           "internal/library.TestManifestClassesReachTools",
           "internal/policy.TestSessionTaintObligation",
           "internal/policy.TestTaintClassesRestrictOnly"
@@ -6313,7 +6421,8 @@
         "tests": [
           "internal/filters.TestUnicodeCorpus",
           "internal/hostile.TestHostileFixtures/HF-27",
-          "internal/hostile/enforced.TestHostileFixtures/HF-27"
+          "internal/hostile/enforced.TestHostileFixtures/HF-27",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-27"
         ]
       },
       {
@@ -6324,6 +6433,7 @@
           "internal/acceptance.TestAT10WebBroker",
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
+          "internal/acceptance/windows-user.TestAT10WebBroker",
           "internal/egress.TestRebindingAndRedirects",
           "internal/hostile/enforced.TestHostileFixtures/HF-24",
           "internal/sandbox.TestIntegrationEgressBroker"
@@ -6337,6 +6447,7 @@
           "internal/acceptance.TestAT10WebBroker",
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
+          "internal/acceptance/windows-user.TestAT10WebBroker",
           "internal/egress.TestReservedAddressesRefused",
           "internal/hostile/enforced.TestHostileFixtures/HF-24"
         ]
@@ -6349,6 +6460,7 @@
           "internal/acceptance.TestAT10WebBroker",
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
+          "internal/acceptance/windows-user.TestAT10WebBroker",
           "internal/backend.TestDispatchDeliversEgressCapabilities",
           "internal/egress.TestEgressCapabilities",
           "internal/egress.TestLaunchedProcessIssues"
@@ -6387,6 +6499,7 @@
           "internal/acceptance.TestAT10WebBroker",
           "internal/acceptance/enforced.TestAT10WebBroker",
           "internal/acceptance/offline.TestAT10WebBroker",
+          "internal/acceptance/windows-user.TestAT10WebBroker",
           "internal/egress.TestPublicFetch"
         ]
       },
@@ -6494,6 +6607,7 @@
           "internal/acceptance.TestAT13IntegrityPrivacyRetention",
           "internal/acceptance/enforced.TestAT13IntegrityPrivacyRetention",
           "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/windows-user.TestAT13IntegrityPrivacyRetention",
           "internal/secrets.TestFingerprintsShortValueAndRedaction"
         ]
       },
@@ -6538,6 +6652,7 @@
           "internal/acceptance.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/enforced.TestAT03PolicyAuthorityAndOutage",
           "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
+          "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
           "internal/graph.TestOutageBackfillKeepsPolicyStatus"
         ]
       },
@@ -6559,6 +6674,7 @@
           "internal/acceptance.TestAT13IntegrityPrivacyRetention",
           "internal/acceptance/enforced.TestAT13IntegrityPrivacyRetention",
           "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
+          "internal/acceptance/windows-user.TestAT13IntegrityPrivacyRetention",
           "internal/analytics.TestPurgeReceipt"
         ]
       },
@@ -6644,10 +6760,12 @@
           "internal/acceptance.TestAT14RetryAndCrash",
           "internal/acceptance/enforced.TestAT14RetryAndCrash",
           "internal/acceptance/offline.TestAT14RetryAndCrash",
+          "internal/acceptance/windows-user.TestAT14RetryAndCrash",
           "internal/backend.TestInstanceFailureNotRetried",
           "internal/edge.TestInstanceFailureIndeterminate",
           "internal/hostile.TestHostileFixtures/HF-17",
-          "internal/hostile/enforced.TestHostileFixtures/HF-17"
+          "internal/hostile/enforced.TestHostileFixtures/HF-17",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-17"
         ]
       },
       {
@@ -6712,6 +6830,8 @@
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestBackupUnderLoadComponents",
+          "internal/acceptance/windows-user.TestAT19BackupRestoreRollback",
+          "internal/acceptance/windows-user.TestBackupUnderLoadComponents",
           "internal/audit.TestSealUnsignedAndFlush",
           "internal/e2e.TestOpsOnlineBackup",
           "internal/edge.TestDrainStopReleasesInFlightResults",
@@ -6726,6 +6846,7 @@
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestAT19BackupRestoreRollback",
+          "internal/acceptance/windows-user.TestAT19BackupRestoreRollback",
           "internal/backup.TestRestoreGraphUnavailable",
           "internal/backup.TestRestoreReappliesDirectoryRevocations",
           "internal/backup.TestRestoreVerifiesBeforeSwapping",
@@ -6740,6 +6861,7 @@
           "internal/acceptance.TestAT19BackupRestoreRollback",
           "internal/acceptance/enforced.TestAT19BackupRestoreRollback",
           "internal/acceptance/offline.TestAT19BackupRestoreRollback",
+          "internal/acceptance/windows-user.TestAT19BackupRestoreRollback",
           "internal/e2e.TestPolicyRollbackKeepsRevocations"
         ]
       },
@@ -6751,6 +6873,7 @@
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
           "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/acceptance/windows-user.TestAT20LimitsAndLoad",
           "internal/e2e.TestOpsMetricsAndHealthGate",
           "internal/health.TestChecks"
         ]
@@ -6766,6 +6889,8 @@
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
           "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
           "internal/acceptance/offline.TestAT20LimitsAndLoad",
+          "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
+          "internal/acceptance/windows-user.TestAT20LimitsAndLoad",
           "internal/edge.TestDefaultBoundsAreAppendixA",
           "internal/edge.TestPreParseBounds"
         ]
@@ -6795,6 +6920,7 @@
           "internal/acceptance.TestAT15ConsoleAuthority",
           "internal/acceptance/enforced.TestAT15ConsoleAuthority",
           "internal/acceptance/offline.TestAT15ConsoleAuthority",
+          "internal/acceptance/windows-user.TestAT15ConsoleAuthority",
           "internal/adminapi.TestBrowserMutationsNeedCSRFAndIfMatch",
           "internal/adminapi.TestObjectOfPattern",
           "internal/adminapi.TestPerObjectRevisions"
@@ -7650,7 +7776,8 @@
         "element": "E-12",
         "status": "partial",
         "tests": [
-          "cmd/smcpd.TestConsoleCloseHandling"
+          "cmd/smcpd.TestConsoleCloseHandling",
+          "internal/acceptance/windows-user.TestWindowsConsoleStop"
         ],
         "target": "v1.3.0"
       },
@@ -7684,7 +7811,9 @@
         "tests": [
           "internal/library.TestWindowsEnableRefusesShellLaunch",
           "internal/pipeline.TestCheckLaunchSpecWindowsRules",
-          "internal/winsandbox.TestCheckCommand"
+          "internal/pipeline.TestWindowsSubprocessLauncher",
+          "internal/winsandbox.TestCheckCommand",
+          "internal/winsandbox.TestWindowsArgumentsAndJobFromCreation"
         ],
         "target": "v1.3.0"
       },
@@ -7694,7 +7823,18 @@
         "status": "partial",
         "tests": [
           "internal/app.TestRuntimeLimits",
-          "internal/pipeline.TestLimitsForDefaults"
+          "internal/hostile.TestWindowsJobForkBomb",
+          "internal/hostile.TestWindowsJobMemoryBlowUp",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-20",
+          "internal/hostile/windows-user.TestHostileFixtures/HF-21",
+          "internal/pipeline.TestLimitsForDefaults",
+          "internal/pipeline.TestWindowsLaunchProcessLimit",
+          "internal/pipeline.TestWindowsSubprocessLauncher",
+          "internal/winsandbox.TestWindowsJobCPURate",
+          "internal/winsandbox.TestWindowsJobMemoryLimit",
+          "internal/winsandbox.TestWindowsJobProcessLimit",
+          "internal/winsandbox.TestWindowsKillOnClose",
+          "internal/winsandbox.TestWindowsManagedProcess"
         ],
         "target": "v1.3.0"
       },
@@ -7705,7 +7845,10 @@
         "tests": [
           "cmd/smcpd.TestMachineRuntime",
           "internal/library.TestContainmentFollowsRegistryStates",
-          "internal/profile.TestPartiallyConfinedCause"
+          "internal/pipeline.TestWindowsMachineModePlacement",
+          "internal/profile.TestPartiallyConfinedCause",
+          "internal/winsandbox.TestWindowsAppContainerEscapes",
+          "internal/winsandbox.TestWindowsProfileNames"
         ],
         "target": "v1.3.0"
       },
@@ -7715,7 +7858,9 @@
         "status": "partial",
         "tests": [
           "internal/egress.TestAttachFixedProxyPort",
-          "internal/library.TestContainmentFollowsRegistryStates"
+          "internal/library.TestContainmentFollowsRegistryStates",
+          "internal/pipeline.TestWindowsMachineModePlacement",
+          "internal/winsandbox.TestWindowsWFPEgress"
         ],
         "target": "v1.3.0"
       },
@@ -7804,6 +7949,7 @@
         "element": "E-15",
         "status": "partial",
         "tests": [
+          "internal/acceptance/windows-user.TestWindowsPathRefusedEndToEnd",
           "internal/packaging.TestSlotPathWindowsRules"
         ],
         "target": "v1.3.0"
@@ -7820,7 +7966,7 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
-          "analysis: 3 of 45 child requirements verified"
+          "analysis: 4 of 45 child requirements verified"
         ],
         "target": "v1.3.0"
       },
@@ -8078,7 +8224,8 @@
         "tests": [
           "internal/contextforge/bundle.TestManagedProcess",
           "internal/contextforge/bundle.TestProcessVerifier",
-          "internal/contextforge/connector.TestBundledInstanceImage"
+          "internal/contextforge/connector.TestBundledInstanceImage",
+          "internal/winsandbox.TestWindowsManagedProcess"
         ],
         "target": "v1.3.0"
       },
@@ -8268,8 +8415,10 @@
       {
         "id": "FR-22.42",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "docs/verification/FR-22.42.md:5"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8591,8 +8740,10 @@
       {
         "id": "SR-3.6-2",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/contextforge/bundle.TestNoRuntimeBootstrapImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8608,8 +8759,10 @@
       {
         "id": "SR-4.1-3",
         "element": "E-12",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/winsandbox.TestWindowsProfileNames"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8629,15 +8782,20 @@
       {
         "id": "SR-4-3",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/contextforge/bundle.TestNoPathAroundGatewayImage"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "SR-4.5-3",
         "element": "E-18",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/pipeline.TestWindowsMachineModePlacement",
+          "internal/winsandbox.TestWindowsWFPEgress"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8655,7 +8813,10 @@
         "element": "E-16",
         "status": "partial",
         "tests": [
-          "internal/library.TestContainmentFollowsRegistryStates"
+          "internal/library.TestContainmentFollowsRegistryStates",
+          "internal/pipeline.TestWindowsMachineModePlacement",
+          "internal/winsandbox.TestWindowsAppContainerEscapes",
+          "internal/winsandbox.TestWindowsGrantsFollowAndRevoke"
         ],
         "target": "v1.3.0"
       },
@@ -8674,10 +8835,14 @@
         "element": "E-15",
         "status": "partial",
         "tests": [
+          "internal/acceptance/windows-user.TestWindowsZZProcessTrace",
           "internal/library.TestWindowsEnableRefusesShellLaunch",
           "internal/pipeline.TestCheckLaunchSpecWindowsRules",
+          "internal/pipeline.TestWindowsLaunchRefusesInterpreters",
           "internal/winsandbox.TestCheckCommand",
-          "internal/winsandbox.TestInterpreterStartedBy"
+          "internal/winsandbox.TestInterpreterStartedBy",
+          "internal/winsandbox.TestWindowsProcessTrace",
+          "internal/winsandbox.TestWindowsStartRefusesInterpreters"
         ],
         "target": "v1.3.0"
       },
@@ -8696,8 +8861,9 @@
       {
         "id": "SR-5.6-3",
         "element": "E-02",
-        "status": "partial",
+        "status": "verified",
         "tests": [
+          "internal/contextforge/connector.TestHostedUnqualifiedCapabilities",
           "internal/hostile.TestHostileContextForge/HFC-13"
         ],
         "target": "v1.3.0"
@@ -8705,8 +8871,10 @@
       {
         "id": "SR-6.18-2",
         "element": "E-21",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/contextforge/connector.TestHostedResultsServerAsserted"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -9437,7 +9605,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 7 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9472,7 +9640,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:43875: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:45261: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9589,13 +9757,15 @@
     }
   ],
   "acceptance": {
-    "commit": "5a4d9489327426c1b08399402c45bf4789f434cc",
+    "commit": "41f8beac76a1676bc486d8533737475ea6422bfc",
     "label": "enforced",
     "reasons": [],
     "total": 21,
     "enforcedPassed": 21,
     "standalonePassed": 20,
-    "windowsPassed": {},
+    "windowsPassed": {
+      "windows-user": 14
+    },
     "scenarios": [
       {
         "id": "AT-01",
@@ -9618,8 +9788,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -9641,6 +9810,11 @@
             "test": "internal/acceptance/offline.TestAT01IdentityAndLocalHTTP",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT01IdentityAndLocalHTTP",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -9663,8 +9837,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -9686,6 +9859,11 @@
             "test": "internal/acceptance/offline.TestAT02ExactAuthorization",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT02ExactAuthorization",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -9710,8 +9888,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -9733,6 +9910,11 @@
             "test": "internal/acceptance/offline.TestAT03PolicyAuthorityAndOutage",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT03PolicyAuthorityAndOutage",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -9753,8 +9935,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -9776,6 +9957,11 @@
             "test": "internal/acceptance/offline.TestAT04RoutingAndOverlap",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT04RoutingAndOverlap",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -9797,8 +9983,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -9820,6 +10005,11 @@
             "test": "internal/acceptance/offline.TestAT05PublicationAndRevocationRace",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT05PublicationAndRevocationRace",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -9844,8 +10034,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -9867,6 +10056,11 @@
             "test": "internal/acceptance/offline.TestAT06SourceAndBuildEvidence",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT06SourceAndBuildEvidence",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -9958,7 +10152,7 @@
           },
           "windows-user": {
             "result": "not-run",
-            "reason": "no automated result in this mode"
+            "reason": "HF-23 and HF-24 need the network isolation of the Enforced sandbox; the per-user mode runs servers as ordinary processes in Job Objects, which assert HF-20 and HF-21 only (FR-21.12)"
           },
           "wsl2": {
             "result": "not-run",
@@ -9993,8 +10187,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10018,6 +10211,11 @@
             "profile": "standalone"
           },
           {
+            "test": "internal/acceptance/windows-user.TestAT09RequestAndResponseFilters",
+            "result": "pass",
+            "profile": "windows-user"
+          },
+          {
             "test": "internal/hostile.TestHostileFixtures/AT-09",
             "result": "pass",
             "profile": "standalone"
@@ -10026,6 +10224,11 @@
             "test": "internal/hostile/enforced.TestHostileFixtures/AT-09",
             "result": "pass",
             "profile": "enforced"
+          },
+          {
+            "test": "internal/hostile/windows-user.TestHostileFixtures/AT-09",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10048,8 +10251,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10071,6 +10273,11 @@
             "test": "internal/acceptance/offline.TestAT10WebBroker",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT10WebBroker",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10093,7 +10300,7 @@
           },
           "windows-user": {
             "result": "not-run",
-            "reason": "no automated result in this mode"
+            "reason": "needs a Neo4j database: set SMCP_NEO4J_URL (and SMCP_NEO4J_USER, SMCP_NEO4J_PASSWORD); the CI runs it with the Neo4j service container of acceptance-enforced, which Windows runners cannot run"
           },
           "wsl2": {
             "result": "not-run",
@@ -10138,7 +10345,7 @@
           },
           "windows-user": {
             "result": "not-run",
-            "reason": "no automated result in this mode"
+            "reason": "needs a Neo4j database: set SMCP_NEO4J_URL (and SMCP_NEO4J_USER, SMCP_NEO4J_PASSWORD); the CI runs it with the Neo4j service container of acceptance-enforced, which Windows runners cannot run"
           },
           "wsl2": {
             "result": "not-run",
@@ -10192,8 +10399,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10215,6 +10421,11 @@
             "test": "internal/acceptance/offline.TestAT13IntegrityPrivacyRetention",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT13IntegrityPrivacyRetention",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10235,8 +10446,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10258,6 +10468,11 @@
             "test": "internal/acceptance/offline.TestAT14RetryAndCrash",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT14RetryAndCrash",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10279,8 +10494,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10302,6 +10516,11 @@
             "test": "internal/acceptance/offline.TestAT15ConsoleAuthority",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT15ConsoleAuthority",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10324,8 +10543,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10347,6 +10565,11 @@
             "test": "internal/acceptance/offline.TestAT16HarnessLockdown",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT16HarnessLockdown",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10368,7 +10591,7 @@
           },
           "windows-user": {
             "result": "not-run",
-            "reason": "no automated result in this mode"
+            "reason": "runs in the offline CI job (SMCP_ACCEPTANCE_OFFLINE=1, SMCP_REFPKG_DIR), which blocks outbound access with a Linux network namespace"
           },
           "wsl2": {
             "result": "not-run",
@@ -10408,8 +10631,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10431,6 +10653,11 @@
             "test": "internal/acceptance/offline.TestAT18RemoteAccess",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT18RemoteAccess",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10454,7 +10681,7 @@
           },
           "windows-user": {
             "result": "not-run",
-            "reason": "no automated result in this mode"
+            "reason": "smcpctl upgrade does not handle the Windows zip archives or restart the per-user task yet, so the upgrade rollback of FR-13.8 is not run on Windows"
           },
           "wsl2": {
             "result": "not-run",
@@ -10476,6 +10703,11 @@
             "test": "internal/acceptance/offline.TestAT19BackupRestoreRollback",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT19BackupRestoreRollback",
+            "result": "skip",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10499,7 +10731,7 @@
           },
           "windows-user": {
             "result": "not-run",
-            "reason": "no automated result in this mode"
+            "reason": "the FR-11 latency budgets are set for the reference hardware (docs/reference-hardware.md); this Windows runner measured p95 gateway overhead 53.23 ms and decision 0.000 ms"
           },
           "wsl2": {
             "result": "not-run",
@@ -10521,6 +10753,11 @@
             "test": "internal/acceptance/offline.TestAT20LimitsAndLoad",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT20LimitsAndLoad",
+            "result": "skip",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10541,8 +10778,7 @@
             "reason": "no automated result in this mode"
           },
           "windows-user": {
-            "result": "not-run",
-            "reason": "no automated result in this mode"
+            "result": "pass"
           },
           "wsl2": {
             "result": "not-run",
@@ -10564,6 +10800,11 @@
             "test": "internal/acceptance/offline.TestAT21VersionBaseline",
             "result": "pass",
             "profile": "standalone"
+          },
+          {
+            "test": "internal/acceptance/windows-user.TestAT21VersionBaseline",
+            "result": "pass",
+            "profile": "windows-user"
           }
         ],
         "records": []
@@ -10572,27 +10813,27 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "failure"
+    "conclusion": "success"
   },
   "performance": {
     "schema": 1,
-    "commit": "5a4d9489327426c1b08399402c45bf4789f434cc",
-    "generatedAt": "2026-10-20T19:29:22Z",
+    "commit": "41f8beac76a1676bc486d8533737475ea6422bfc",
+    "generatedAt": "2026-10-20T21:50:11Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
       "goVersion": "go1.26.10",
-      "runner": "GitHub Actions 1000018387",
-      "memoryBytes": 16760340480,
+      "runner": "GitHub Actions 1000019038",
+      "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 89146138624,
+      "diskFreeBytes": 89932488704,
       "diskDevice": "nvme0n1p1",
       "diskModel": "MSFT NVMe Accelerator v1.0",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
-      "imageVersion": "20261018.339.1"
+      "imageVersion": "20261012.334.1"
     },
     "referenceHardware": true,
     "referenceClass": "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)",
@@ -10611,7 +10852,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.011077,
+        "value": 0.016344,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -10624,7 +10865,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 10.565458,
+        "value": 42.746105,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -10637,19 +10878,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.24048112500000052,
+        "value": 0.2439251250000014,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (6.150 ms, mean of 5.983, 5.776, 5.936, 5.762, 5.997, 6.223, 6.929, 6.595) minus disabled (5.910 ms, mean of 6.026, 5.643, 5.451, 5.720, 5.827, 6.037, 6.432, 6.142), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (8.126 ms, mean of 8.126, 7.880, 7.926, 7.889, 8.493, 8.060, 8.125, 8.509) minus disabled (7.882 ms, mean of 7.894, 7.855, 8.078, 7.822, 7.837, 7.678, 7.900, 7.992), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.965275306246,
+        "value": 1999.96617504874,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -10661,7 +10902,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 475.000487,
+        "value": 587.764881,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -10673,12 +10914,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1509.58203125,
+        "value": 1549.17578125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m16s after start with no traffic: smcpd (98.8 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1410.8 MiB in 2 processes, process 7086 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m16s after start with no traffic: smcpd (124.9 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1424.3 MiB in 2 processes, process 7074 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
