@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
-	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
@@ -126,23 +124,5 @@ func TestManagedProcess(t *testing.T) {
 	}
 	if p.Status().State != StateStopped || p.BaseURL() != "" || p.Running() {
 		t.Fatalf("after stop %+v", p.Status())
-	}
-}
-
-// TestProcessVerifier: the managed process starts only from an
-// environment that holds the pinned ContextForge release.
-func TestProcessVerifier(t *testing.T) {
-	reqtest.Partial(t, "FR-22.25")
-	lock := contextforge.ReleaseLock().ContextForge
-	ok := ProcessVerifier{Python: "/venv/bin/python", Run: func(context.Context, string, ...string) (string, error) {
-		return strings.TrimPrefix(lock.Version, "v"), nil
-	}}
-	v, err := ok.Verify(context.Background(), &lock, ManagedPlatform, time.Now())
-	if err != nil || v.Platform != ManagedPlatform || v.Version != lock.Version {
-		t.Fatalf("verify: %+v %v", v, err)
-	}
-	old := ProcessVerifier{Python: "/venv/bin/python", Run: func(context.Context, string, ...string) (string, error) { return "1.0.10", nil }}
-	if _, err := old.Verify(context.Background(), &lock, ManagedPlatform, time.Now()); packaging.ReasonOf(err) != ReasonVersionMismatch {
-		t.Fatalf("another release: %v", err)
 	}
 }

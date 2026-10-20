@@ -196,7 +196,7 @@ S: On a host without the Enforced profile that has no Podman or Docker, and on e
 A: E-36; F-108; X-20
 V: Test | Install the managed-process form from a wheel directory with networking blocked, from a directory with one wheel replaced, and with an extra unlisted wheel; confirm the first installs and the others are refused naming the wheel.
 SRC: OWNER (managed process elsewhere; version pinned and verified); SEC 3.6; CF: PyPI package `mcp-contextforge-gateway`
-R: Without a container engine ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image. Hosts with Podman or Docker run the verified image instead (FR-22.25).
+R: Without a container engine ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image. Hosts with Podman or Docker run the verified image instead (FR-22.25). The wheel set is pinned per platform for CPython 3.12 (linux/amd64, linux/arm64, darwin/arm64, windows/amd64; `scripts/contextforge-wheels.py` derives it from the release's `uv.lock`); Windows on arm64 installs the windows/amd64 set under an x64 interpreter, because four dependencies of v1.0.11 (brotli, cryptography, httptools, jq) publish no win_arm64 wheel (2026-10-20).
 TARGET: v1.3.0
 
 @FR-22.21 | License and SBOM records
