@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -70,6 +71,9 @@ func TestWindowsZZProcessTrace(t *testing.T) {
 	}
 	if p := os.Getenv("SMCP_PROCESS_TRACE"); p != "" {
 		b, _ := json.MarshalIndent(map[string]any{"total": total, "unnamed": unnamed, "processes": recs}, "", "  ")
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(p, b, 0o600); err != nil {
 			t.Error(err)
 		}

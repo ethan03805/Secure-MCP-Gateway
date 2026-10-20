@@ -612,10 +612,11 @@ jobs:
       # .../internal/acceptance/windows-user (the Linux run has tests of the
       # same names) and merged by the status job.
       - name: Windows acceptance subset (per-user mode) and process trace
-        env:
-          SMCP_PROCESS_TRACE: build/windows-process-trace.json
         run: |
           mkdir -p build
+          # The tests run in the package directory: an absolute Windows path.
+          SMCP_PROCESS_TRACE=$(cygpath -w "$PWD/build/windows-process-trace.json")
+          export SMCP_PROCESS_TRACE
           rc=0
           go test -count=1 -json -timeout 30m ./internal/acceptance/ > build/acceptance-windows-raw.json || rc=$?
           jq -c 'if .Package then .Package += "/windows-user" else . end' build/acceptance-windows-raw.json > build/windows-acceptance-test.json
