@@ -131,6 +131,17 @@ func writeBundle(path string, certs ...*x509.Certificate) error {
 // rotMu serializes rotations within one process.
 var rotMu sync.Mutex
 
+// WithRotationLock runs f while no rotation in this process is writing
+// the CA bundle or the listener certificate. Finishing a CA rotation
+// writes the new CA before it reissues the listener certificate, so a
+// reader between the two writes would see a listener certificate that the
+// active CA did not issue.
+func WithRotationLock(f func()) {
+	rotMu.Lock()
+	defer rotMu.Unlock()
+	f()
+}
+
 // RotateLeaf reissues the listener certificate from the active CA now,
 // whatever its remaining validity (`smcpctl keys rotate tls`).
 func RotateLeaf(stateDir string, names ...string) (TLSStatus, error) {
