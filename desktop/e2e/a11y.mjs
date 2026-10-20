@@ -211,8 +211,9 @@ const kb = await chromium.launch();
   if (calls.at(-1) !== 'intro_close {"flag":"completed"}') fail(`Done did not complete: ${calls.join(", ")}`);
 
   // First-run setup by keyboard alone (FR-20.15): focus starts on the
-  // heading, Tab reaches the profile and the four password fields in
-  // order, a mismatch is reported on its field, and Enter submits.
+  // heading, Tab reaches the profile, the bundled ContextForge box
+  // (unchecked, FR-22.44) and the four password fields in order, a
+  // mismatch is reported on its field, and Enter submits.
   await page.goto(`${base}/setup.html?demo=form-enforced`);
   await page.waitForSelector("#stage-title");
   if ((await focused()) !== "stage-title") fail(`setup: initial focus on ${await focused()}, not the heading`);
@@ -220,6 +221,9 @@ const kb = await chromium.launch();
   if ((await focused()) !== "profile-standalone") fail(`setup: Tab reaches ${await focused()}, not the profile`);
   await page.keyboard.press("ArrowDown");
   if ((await focused()) !== "profile-enforced") fail(`setup: arrow key reaches ${await focused()}, not Enforced`);
+  await page.keyboard.press("Tab");
+  if ((await focused()) !== "contextforge") fail(`setup: Tab reaches ${await focused()}, not the ContextForge choice`);
+  if (await page.isChecked("#contextforge")) fail("setup: the ContextForge choice starts checked");
   const typeInto = async (/** @type {string} */ id, /** @type {string} */ text) => {
     await page.keyboard.press("Tab");
     if ((await focused()) !== id) fail(`setup: Tab reaches ${await focused()}, not ${id}`);
@@ -238,7 +242,7 @@ const kb = await chromium.launch();
   await page.keyboard.type("approver password 2");
   await page.keyboard.press("Enter");
   const run = calls.find((c) => c.startsWith("setup_run")) ?? "";
-  if (run !== 'setup_run {"profile":"enforced","admin":"admin password 1","approver":"approver password 2"}') fail(`setup: submitted ${run || "nothing"}`);
+  if (run !== 'setup_run {"profile":"enforced","admin":"admin password 1","approver":"approver password 2","contextforge":false}') fail(`setup: submitted ${run || "nothing"}`);
   // A failed setup: Try Again by keyboard returns to the form.
   await page.goto(`${base}/setup.html?demo=failed`);
   await page.waitForSelector("#stage-title");
