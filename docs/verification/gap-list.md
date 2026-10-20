@@ -236,7 +236,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-22.30 **unverified** (partly verified): Starting, health checks, restarts and `contextforge_unhealthy` are tested; the timed first answer on an empty D-16 and a local tool succeeding during the outage are not.
 - FR-22.32 **unverified** (partly verified): `smcpctl contextforge uninstall` is tested; `smcpctl uninstall` removing the instance and `journal verify` afterwards are not.
 - FR-22.33 **unverified** (partly verified): Reconciliation, suspension and the `Unknown tool` mapping are tested against the pinned image; the 5-second start after an unknown tool and every listed change in one run are not.
-- FR-22.43 **unverified** (partly verified): Every HFC row is asserted; `hostile.TestHostileContextForge` claims the requirement only when all rows pass in the Enforced profile, which the contextforge CI job runs (HFC-12 starts the pinned image under the Enforced containment); the claim is pending that job's result on main.
 - FR-22.44 **unverified** (partly verified): `smcpctl bootstrap` and `install` ask (tested), and the desktop first-run setup offers the box, unchecked by default, with the same notes and passes `--with-contextforge` only when it is checked (`desktop/src-tauri/src/contextforge.rs`, `desktop/test/contextforge-choice.test.ts`); the Demonstration of both setups is not recorded.
 
 ## History
