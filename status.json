@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T13:28:33Z",
-  "commit": "636c58223b2812f42a10002e56a233a77fc88ad1",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/636c58223b2812f42a10002e56a233a77fc88ad1",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39420577360",
+  "generatedAt": "2026-10-20T14:08:25Z",
+  "commit": "e61559cba50d39c58804e4282abfcce4578aa79a",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/e61559cba50d39c58804e4282abfcce4578aa79a",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39429145330",
   "tests": {
-    "total": 1926,
-    "passed": 1905,
-    "failed": 0,
-    "skipped": 21,
-    "durationSec": 2359.9,
+    "total": 1835,
+    "passed": 1810,
+    "failed": 1,
+    "skipped": 24,
+    "durationSec": 2194.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -43,13 +43,7 @@
       },
       {
         "name": "desktop/linux",
-        "passed": 95,
-        "failed": 0,
-        "skipped": 0
-      },
-      {
-        "name": "desktop/macos",
-        "passed": 94,
+        "passed": 98,
         "failed": 0,
         "skipped": 0
       },
@@ -67,9 +61,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 103,
+        "passed": 101,
         "failed": 0,
-        "skipped": 0
+        "skipped": 2
       },
       {
         "name": "cmd/smcpd",
@@ -241,8 +235,8 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 68,
-        "failed": 0,
+        "passed": 67,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -541,9 +535,9 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 28,
+        "passed": 27,
         "failed": 0,
-        "skipped": 0
+        "skipped": 1
       },
       {
         "name": "tools/sbomcheck",
@@ -688,7 +682,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.3
       },
       {
         "name": "internal/egress",
@@ -828,7 +822,7 @@
       },
       {
         "name": "internal/southbound",
-        "pct": 85.3
+        "pct": 85.5
       },
       {
         "name": "internal/southbound/sbtest",
@@ -844,7 +838,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 81.2
+        "pct": 80
       },
       {
         "name": "internal/versions",
@@ -914,10 +908,10 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 491,
-    "partial": 38,
-    "failing": 0,
-    "unverified": 1,
+    "verified": 480,
+    "partial": 40,
+    "failing": 6,
+    "unverified": 4,
     "byElement": [
       {
         "element": "E-01",
@@ -1011,9 +1005,9 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 15,
+        "verified": 14,
         "partial": 0,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-13",
@@ -1083,7 +1077,7 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 21,
-        "verified": 18,
+        "verified": 17,
         "partial": 3,
         "failing": 0
       },
@@ -1099,16 +1093,16 @@
         "element": "E-23",
         "name": "Health & Safety Monitor",
         "total": 13,
-        "verified": 13,
+        "verified": 7,
         "partial": 0,
-        "failing": 0
+        "failing": 5
       },
       {
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 63,
-        "partial": 10,
+        "verified": 60,
+        "partial": 12,
         "failing": 0
       },
       {
@@ -2733,10 +2727,8 @@
       {
         "id": "FR-7",
         "element": "E-21",
-        "status": "verified",
-        "tests": [
-          "analysis: all 12 child requirements verified"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-7.1",
@@ -2829,7 +2821,7 @@
       {
         "id": "FR-7.11",
         "element": "E-23",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/analytics.TestObservationStoreReachability",
           "internal/e2e.TestHealthFaultEachDependency",
@@ -2847,7 +2839,7 @@
       {
         "id": "FR-7.12",
         "element": "E-23",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestDaemonWiresEveryElement",
           "console/e2e/chromium.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
@@ -4299,10 +4291,8 @@
       {
         "id": "FR-13",
         "element": "E-24",
-        "status": "partial",
-        "tests": [
-          "analysis: 12 of 13 child requirements verified"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-13.1",
@@ -4336,13 +4326,11 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
-          "cmd/smcpctl.TestInstallStandalone",
-          "cmd/smcpctl.TestInstallStandaloneServiceManager",
-          "tools/reqreport.TestInstallProfilesEvidence"
+          "cmd/smcpctl.TestInstallStandalone"
         ]
       },
       {
@@ -4365,10 +4353,9 @@
       {
         "id": "FR-13.6",
         "element": "E-24",
-        "status": "verified",
+        "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestInstallStandalone",
-          "cmd/smcpctl.TestInstallStandaloneServiceManager"
+          "cmd/smcpctl.TestInstallStandalone"
         ]
       },
       {
@@ -4406,7 +4393,7 @@
       {
         "id": "FR-13.10",
         "element": "E-23",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "cmd/smcpctl.TestOnlineOpsCommands",
           "cmd/smcpctl.TestStandaloneLabelInEveryPlace",
@@ -4420,15 +4407,13 @@
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "verified",
+        "status": "partial",
         "tests": [
           "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
-          "cmd/smcpctl.TestInstallStandaloneServiceManager",
           "cmd/smcpctl.TestStandaloneUninstallKeepsEnforcedHost",
           "cmd/smcpctl.TestStandaloneUninstallLeavesEnforcedTable",
           "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge",
-          "cmd/smcpctl.TestUninstallScopeByProfile",
-          "tools/reqreport.TestInstallProfilesEvidence"
+          "cmd/smcpctl.TestUninstallScopeByProfile"
         ]
       },
       {
@@ -4604,7 +4589,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (636c58223b28, 2026-10-20T12:22:20Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39420577188"
+          "workflow agents-lockdown at main (e06a1f6e70d2, 2026-10-20T13:59:57Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39434584473"
         ]
       },
       {
@@ -4673,7 +4658,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (636c58223b28, 2026-10-20T12:22:18Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39420577188"
+          "workflow agents at main (e06a1f6e70d2, 2026-10-20T13:59:55Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39434584473"
         ]
       },
       {
@@ -4834,10 +4819,8 @@
       {
         "id": "FR-17",
         "element": "E-23",
-        "status": "verified",
-        "tests": [
-          "analysis: all 9 child requirements verified"
-        ]
+        "status": "unverified",
+        "tests": []
       },
       {
         "id": "FR-17.1",
@@ -4875,7 +4858,7 @@
       {
         "id": "FR-17.4",
         "element": "E-23",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/config.TestOpsDefaults",
           "internal/e2e.TestOpsMetricsAndHealthGate",
@@ -4885,7 +4868,7 @@
       {
         "id": "FR-17.5",
         "element": "E-23",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/e2e.TestOpsMetricsAndHealthGate",
           "internal/metrics.TestExpositionFromEvidence"
@@ -4952,8 +4935,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestDocumentationSetFR18",
-          "cmd/smcpctl.TestInstallGuideWalkthrough"
+          "cmd/smcpctl.TestDocumentationSetFR18"
         ]
       },
       {
@@ -6723,7 +6705,7 @@
       {
         "id": "SR-7.10-1",
         "element": "E-12",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
@@ -6834,14 +6816,7 @@
           "desktop/linux.state::tests::accessible_names_state_the_state",
           "desktop/linux.state::tests::six_states_from_metrics_and_service",
           "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced",
-          "desktop/linux.state::tests::start_stop_restart_follow_the_service",
-          "desktop/macos.icons::tests::distinct_icons",
-          "desktop/macos.icons::tests::template_icons_differ_by_silhouette",
-          "desktop/macos.service::tests::status_from_the_service_manager",
-          "desktop/macos.state::tests::accessible_names_state_the_state",
-          "desktop/macos.state::tests::six_states_from_metrics_and_service",
-          "desktop/macos.state::tests::standalone_profile_only_is_running_not_enforced",
-          "desktop/macos.state::tests::start_stop_restart_follow_the_service"
+          "desktop/linux.state::tests::start_stop_restart_follow_the_service"
         ],
         "target": "v1.3.0"
       },
@@ -6854,12 +6829,7 @@
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
           "desktop/linux.service::tests::reports_outcome_and_error_text_within_30_seconds",
           "desktop/linux.service::tests::status_from_the_service_manager",
-          "desktop/linux.service::tests::the_system_runner_runs_without_a_shell_and_times_out",
-          "desktop/macos.service::tests::detects_the_unit_smcpctl_installed",
-          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
-          "desktop/macos.service::tests::reports_outcome_and_error_text_within_30_seconds",
-          "desktop/macos.service::tests::status_from_the_service_manager",
-          "desktop/macos.service::tests::the_system_runner_runs_without_a_shell_and_times_out"
+          "desktop/linux.service::tests::the_system_runner_runs_without_a_shell_and_times_out"
         ],
         "target": "v1.3.0"
       },
@@ -6875,15 +6845,7 @@
           "desktop/linux.state::tests::poll_a_live_endpoint_then_lose_it",
           "desktop/linux.state::tests::six_states_from_metrics_and_service",
           "desktop/linux.state::tests::stale_data_is_unreachable_never_healthy",
-          "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced",
-          "desktop/macos.health::tests::fetches_over_loopback_only",
-          "desktop/macos.health::tests::parses_the_desktop_gauges",
-          "desktop/macos.settings::tests::defaults_are_cp03_and_cp51_and_metrics_must_be_loopback",
-          "desktop/macos.state::tests::not_enforced_label_unless_the_exposition_says_enforced",
-          "desktop/macos.state::tests::poll_a_live_endpoint_then_lose_it",
-          "desktop/macos.state::tests::six_states_from_metrics_and_service",
-          "desktop/macos.state::tests::stale_data_is_unreachable_never_healthy",
-          "desktop/macos.state::tests::standalone_profile_only_is_running_not_enforced"
+          "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced"
         ],
         "target": "v1.3.0"
       },
@@ -6893,7 +6855,6 @@
         "status": "partial",
         "tests": [
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
-          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "internal/e2e.TestDesktopMetricsOnRunningGateway",
           "internal/metrics.TestDesktopGauges",
           "internal/metrics.TestProfileGauges"
@@ -6906,9 +6867,7 @@
         "status": "partial",
         "tests": [
           "desktop/linux.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/linux.settings::tests::admin_origin_is_https_origin_only",
-          "desktop/macos.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/macos.settings::tests::admin_origin_is_https_origin_only"
+          "desktop/linux.settings::tests::admin_origin_is_https_origin_only"
         ],
         "target": "v1.3.0"
       },
@@ -6921,12 +6880,7 @@
           "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::no_notice_while_notifications_are_off",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
-          "desktop/macos.console::tests::approvals_open_at_g13",
-          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
-          "desktop/macos.notify::tests::no_notice_while_notifications_are_off",
-          "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count"
+          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count"
         ],
         "target": "v1.3.0"
       },
@@ -6940,13 +6894,7 @@
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
-          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
-          "desktop/macos.setup::tests::offered_only_without_a_configuration",
-          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
-          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
-          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only"
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only"
         ],
         "target": "v1.3.0"
       },
@@ -6958,9 +6906,7 @@
           "cmd/smcpctl.TestEnforcedScriptHostOnly",
           "cmd/smcpctl.TestInstallCheck",
           "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
-          "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one",
-          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only",
-          "desktop/macos.setup::tests::the_prerequisite_check_names_each_missing_one"
+          "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one"
         ],
         "target": "v1.3.0"
       },
@@ -6974,12 +6920,7 @@
           "desktop/linux.clients::tests::commands_run_in_the_given_directory",
           "desktop/linux.clients::tests::detection_and_previews_parse",
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
-          "desktop/linux.clients::tests::only_listed_client_ids_are_used",
-          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
-          "desktop/macos.clients::tests::commands_run_in_the_given_directory",
-          "desktop/macos.clients::tests::detection_and_previews_parse",
-          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
-          "desktop/macos.clients::tests::only_listed_client_ids_are_used"
+          "desktop/linux.clients::tests::only_listed_client_ids_are_used"
         ],
         "target": "v1.3.0"
       },
@@ -6994,14 +6935,7 @@
           "desktop/linux.release::tests::parses_a_stable_release_and_skips_prereleases",
           "desktop/linux.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
           "desktop/linux.settings::tests::update_checks_default_on_and_older_files_load",
-          "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once",
-          "desktop/macos.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
-          "desktop/macos.release::tests::offline_check_fails_once_without_a_loop",
-          "desktop/macos.release::tests::only_https_or_loopback_http",
-          "desktop/macos.release::tests::parses_a_stable_release_and_skips_prereleases",
-          "desktop/macos.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
-          "desktop/macos.settings::tests::update_checks_default_on_and_older_files_load",
-          "desktop/macos.updates::tests::manual_check_reports_newer_latest_and_offline_once"
+          "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once"
         ],
         "target": "v1.3.0"
       },
@@ -7016,14 +6950,7 @@
           "desktop/linux.upgrade::tests::installation_comes_from_the_service_definition",
           "desktop/linux.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
           "desktop/linux.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
-          "desktop/linux.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin",
-          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
-          "desktop/macos.upgrade::tests::argv_is_fixed_and_carries_no_passphrase",
-          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
-          "desktop/macos.upgrade::tests::installation_comes_from_the_service_definition",
-          "desktop/macos.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
-          "desktop/macos.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
-          "desktop/macos.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin"
+          "desktop/linux.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin"
         ],
         "target": "v1.3.0"
       },
@@ -7039,15 +6966,7 @@
           "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/linux.release::tests::downloads_are_bounded_and_new_files",
           "desktop/linux.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
-          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
-          "desktop/macos.config_tests::no_updater_or_shell_plugin",
-          "desktop/macos.installer::tests::appimage_is_replaced_atomically_and_executable",
-          "desktop/macos.installer::tests::detects_the_installation_kind",
-          "desktop/macos.installer::tests::picks_the_installer_of_the_kind_that_installed_the_app",
-          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
-          "desktop/macos.release::tests::downloads_are_bounded_and_new_files",
-          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
-          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one"
+          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one"
         ],
         "target": "v1.3.0"
       },
@@ -7060,12 +6979,7 @@
           "desktop/linux.autostart::tests::off_until_turned_on_and_off_again",
           "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/linux.config_tests::single_instance_is_the_first_plugin",
-          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
-          "desktop/macos.autostart::tests::entries_name_this_program_only",
-          "desktop/macos.autostart::tests::off_until_turned_on_and_off_again",
-          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
-          "desktop/macos.config_tests::single_instance_is_the_first_plugin",
-          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing"
+          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing"
         ],
         "target": "v1.3.0"
       },
@@ -7091,9 +7005,7 @@
           "cmd/smcpctl.TestMacPkgBuildScript",
           "cmd/smcpctl.TestMacPkgLinuxBuildScript",
           "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
-          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
-          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
-          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path"
+          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path"
         ],
         "target": "v1.3.0"
       },
@@ -7113,10 +7025,7 @@
         "tests": [
           "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
           "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
-          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
-          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
-          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path",
-          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only"
+          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only"
         ],
         "target": "v1.3.0"
       },
@@ -7201,12 +7110,7 @@
           "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/linux.deeplink::tests::accepts_exactly_the_three_forms",
           "desktop/linux.deeplink::tests::ignores_every_other_link",
-          "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
-          "desktop/macos.config_tests::only_the_smcp_scheme_is_registered",
-          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
-          "desktop/macos.deeplink::tests::accepts_exactly_the_three_forms",
-          "desktop/macos.deeplink::tests::ignores_every_other_link",
-          "desktop/macos.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
+          "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
         ],
         "target": "v1.3.0"
       },
@@ -7222,8 +7126,7 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
-          "desktop/linux.intro::tests::shows_until_completed_or_skipped",
-          "desktop/macos.intro::tests::shows_until_completed_or_skipped"
+          "desktop/linux.intro::tests::shows_until_completed_or_skipped"
         ],
         "target": "v1.3.0"
       },
@@ -7232,8 +7135,7 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
-          "desktop/linux.intro::tests::only_the_flag_is_stored",
-          "desktop/macos.intro::tests::only_the_flag_is_stored"
+          "desktop/linux.intro::tests::only_the_flag_is_stored"
         ],
         "target": "v1.3.0"
       },
@@ -7257,9 +7159,7 @@
         "status": "partial",
         "tests": [
           "desktop/linux.explain::tests::every_state_has_an_explanation",
-          "desktop/linux.explain::tests::status_lines_name_the_state_and_one_sentence",
-          "desktop/macos.explain::tests::every_state_has_an_explanation",
-          "desktop/macos.explain::tests::status_lines_name_the_state_and_one_sentence"
+          "desktop/linux.explain::tests::status_lines_name_the_state_and_one_sentence"
         ],
         "target": "v1.3.0"
       },
@@ -7278,11 +7178,7 @@
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
-          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
-          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
-          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue"
+          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue"
         ],
         "target": "v1.3.0"
       },
@@ -7293,8 +7189,6 @@
         "tests": [
           "desktop/linux.explain::tests::every_state_has_an_explanation",
           "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
-          "desktop/macos.explain::tests::every_state_has_an_explanation",
-          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue",
           "internal/edge.TestMessageCatalogue"
         ],
         "target": "v1.3.0"
@@ -7781,6 +7675,7 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestBootstrapContextForgeChoice",
+          "desktop/linux.contextforge::tests::flag_only_when_chosen",
           "internal/contextforge/connector.TestHostedImportNeedsBundledInstance",
           "internal/library.TestHostedAdmission"
         ],
@@ -7993,7 +7888,10 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestBootstrapContextForgeChoice",
-          "cmd/smcpctl.TestContextForgeChoice"
+          "cmd/smcpctl.TestContextForgeChoice",
+          "desktop/linux.contextforge::tests::flag_only_when_chosen",
+          "desktop/linux.contextforge::tests::progress_reports_the_choice_off_by_default",
+          "desktop/linux.contextforge::tests::retry_carries_the_choice"
         ],
         "target": "v1.3.0"
       },
@@ -8010,9 +7908,7 @@
         "status": "partial",
         "tests": [
           "desktop/linux.config_tests::no_gateway_secret_or_control_api_in_the_application",
-          "desktop/linux.setup::tests::offered_only_without_a_configuration",
-          "desktop/macos.config_tests::no_gateway_secret_or_control_api_in_the_application",
-          "desktop/macos.setup::tests::offered_only_without_a_configuration"
+          "desktop/linux.setup::tests::offered_only_without_a_configuration"
         ],
         "target": "v1.3.0"
       },
@@ -8024,11 +7920,7 @@
           "desktop/linux.console::tests::the_window_is_incognito_without_devtools",
           "desktop/linux.settings::tests::saved_settings_are_private_and_round_trip",
           "desktop/linux.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
-          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
-          "desktop/macos.console::tests::the_window_is_incognito_without_devtools",
-          "desktop/macos.settings::tests::saved_settings_are_private_and_round_trip",
-          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
-          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments"
+          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments"
         ],
         "target": "v1.3.0"
       },
@@ -8042,13 +7934,7 @@
           "desktop/linux.config_tests::commands_are_declared_and_registered_once",
           "desktop/linux.config_tests::no_updater_or_shell_plugin",
           "desktop/linux.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
-          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
-          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
-          "desktop/macos.clients::tests::only_listed_client_ids_are_used",
-          "desktop/macos.config_tests::commands_are_declared_and_registered_once",
-          "desktop/macos.config_tests::no_updater_or_shell_plugin",
-          "desktop/macos.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
-          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only"
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only"
         ],
         "target": "v1.3.0"
       },
@@ -8059,10 +7945,7 @@
         "tests": [
           "desktop/linux.config_tests::bundled_pages_are_self_only",
           "desktop/linux.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/linux.settings::tests::admin_origin_is_https_origin_only",
-          "desktop/macos.config_tests::bundled_pages_are_self_only",
-          "desktop/macos.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/macos.settings::tests::admin_origin_is_https_origin_only"
+          "desktop/linux.settings::tests::admin_origin_is_https_origin_only"
         ],
         "target": "v1.3.0"
       },
@@ -8075,12 +7958,7 @@
           "desktop/linux.deeplink::tests::ignores_every_other_link",
           "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
-          "desktop/macos.console::tests::approvals_open_at_g13",
-          "desktop/macos.deeplink::tests::ignores_every_other_link",
-          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
-          "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count"
+          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count"
         ],
         "target": "v1.3.0"
       },
@@ -8093,12 +7971,7 @@
           "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
-          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
-          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
-          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
-          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
-          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
-          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here"
+          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here"
         ],
         "target": "v1.3.0"
       },
@@ -8111,12 +7984,7 @@
           "desktop/linux.tlspin::tests::a_rotation_bundle_trusts_both_cas",
           "desktop/linux.tlspin::tests::accepts_a_certificate_made_by_smcpd",
           "desktop/linux.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
-          "desktop/linux.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing",
-          "desktop/macos.console::tests::the_error_page_offers_no_way_to_proceed",
-          "desktop/macos.tlspin::tests::a_rotation_bundle_trusts_both_cas",
-          "desktop/macos.tlspin::tests::accepts_a_certificate_made_by_smcpd",
-          "desktop/macos.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
-          "desktop/macos.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing"
+          "desktop/linux.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing"
         ],
         "target": "v1.3.0"
       },
@@ -8322,15 +8190,7 @@
           "desktop/linux.verify::tests::real_release_signature_verifies_with_the_embedded_key",
           "desktop/linux.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
           "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
-          "desktop/linux.verify::tests::version_rule_refuses_equal_and_older",
-          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
-          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
-          "desktop/macos.verify::tests::cosign_argv_is_fixed",
-          "desktop/macos.verify::tests::real_cosign_with_the_release_bundle",
-          "desktop/macos.verify::tests::real_release_signature_verifies_with_the_embedded_key",
-          "desktop/macos.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
-          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
-          "desktop/macos.verify::tests::version_rule_refuses_equal_and_older"
+          "desktop/linux.verify::tests::version_rule_refuses_equal_and_older"
         ],
         "target": "v1.3.0"
       }
@@ -8347,7 +8207,7 @@
         "internal/authguard",
         "internal/remote"
       ],
-      "note": "TLS 1.3 loopback harness listener and the UDS Harness Profile socket (CP-02, mode 0660, newline-delimited JSON-RPC, peer UID plus a bearer key hashed with Argon2id, smcpctl uds key), POST-only MCP endpoint, header and body bounds, Host and Origin checks, CP-09 connection and unauthenticated-work limits (QUEUE_FULL before the body is read), per-source rate limits and lockout with bounded source tables (IPv6 counted per /64). When the Evidence Journal cannot be opened for writing at start, smcpd answers every harness request with HTTP 503 and -31004 JOURNAL_UNAVAILABLE and starts normally once the journal directory is writable (FR-9.17, AT-03). The Remote Access listener (internal/remote) adds CP-49 bounds, the public-name Host check, OAuth rates per forwarded source address, call rates per client ID and lockout of both (FR-16.6), and follows listener certificate rotation; in the Enforced profile smcpctl remote enable first installs the nftables table inet smcp_remote, which drops non-loopback connections to the CP-02, CP-03, CP-48 and CP-51 ports, and remote disable removes it (SR-4.14-1, internal/tunnel; a pf anchor is documented for macOS). Requirement report (main 383485d): 26 of 31 verified; partly verified: FR-12 (parent, 10 of 12 child requirements verified), FR-12.2 (the offline job does not run AT-07, AT-08 and AT-10), FR-16 (parent, 9 of 12 child requirements verified), FR-16.1 (the Remote Access listener is tested behind a local tunnel stand-in), FR-16.2 (the tunnel drivers are tested against fake tailscale and cloudflared binaries). Deferred from 1.0 (SRS Appendix N): the mTLS Harness Profile."
+      "note": "TLS 1.3 loopback harness listener and the UDS Harness Profile socket (CP-02, mode 0660, newline-delimited JSON-RPC, peer UID plus a bearer key hashed with Argon2id, smcpctl uds key), POST-only MCP endpoint, header and body bounds, Host and Origin checks, CP-09 connection and unauthenticated-work limits (QUEUE_FULL before the body is read), per-source rate limits and lockout with bounded source tables (IPv6 counted per /64). When the Evidence Journal cannot be opened for writing at start, smcpd answers every harness request with HTTP 503 and -31004 JOURNAL_UNAVAILABLE and starts normally once the journal directory is writable (FR-9.17, AT-03). The Remote Access listener (internal/remote) adds CP-49 bounds, the public-name Host check, OAuth rates per forwarded source address, call rates per client ID and lockout of both (FR-16.6), and follows listener certificate rotation; in the Enforced profile smcpctl remote enable first installs the nftables table inet smcp_remote, which drops non-loopback connections to the CP-02, CP-03, CP-48 and CP-51 ports, and remote disable removes it (SR-4.14-1, internal/tunnel; a pf anchor is documented for macOS). Requirement report (main fe82231): 26 of 31 verified; partly verified: FR-12 (parent, 10 of 12 child requirements verified), FR-12.2 (the offline job does not run AT-07, AT-08 and AT-10), FR-16 (parent, 9 of 12 child requirements verified), FR-16.1 (the Remote Access listener is tested behind a local tunnel stand-in), FR-16.2 (the tunnel drivers are tested against fake tailscale and cloudflared binaries). Deferred from 1.0 (SRS Appendix N): the mTLS Harness Profile. On Windows (planned for v1.3.0) the UDS Harness Profile is served over the CP-02 named pipe (internal/winpipe): first-instance creation (health cause pipe_squatted), remote clients rejected and a protected DACL. Planned for v1.3.0 (not counted above): 2 allocated, 2 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-02",
@@ -8358,7 +8218,7 @@
         "internal/edge",
         "internal/conformance"
       ],
-      "note": "Both protocol eras through the MCP Go SDK in stateless mode, method allowlist, -32600 for batches and 202 for unknown notifications, cache hints, HMAC-protected pagination cursors, trace context and clientInfo capture, hold-mode keep-alives, listen streams bounded per session (CP-20) and in total with write deadlines, list_changed after policy activation and server suspension. Errors carry the Appendix B code with reasonCode, correlationId, decisionId and the Table B.2 data.message; internal/e2e.TestEveryReasonCodeEndToEnd drives running Gateways into every code and every reason a request can produce (FR-1.51), and Table B.3 names the codes no request reaches. Backend progress is relayed with the northbound token at most 10 per second per request (CP-21), each message through the response filters. Server-initiated requests other than ping get -32601 and an InputRequiredResult maps to -31010. The FR-12.9 conformance suite (internal/conformance) drives a complete Gateway with the mcp-spec examples and validates every message against schema.json. internal/secrets.TestSecretsNeverNorthbound delivers a secret in each mode (S1 to S4), echoes it through results, tool errors, JSON-RPC errors and progress notifications, and finds it nowhere northbound (SR-2-1). Requirement report (main 383485d): all 43 verified. Deferred from 1.0 (Appendix N): the MRTR Relay Profile."
+      "note": "Both protocol eras through the MCP Go SDK in stateless mode, method allowlist, -32600 for batches and 202 for unknown notifications, cache hints, HMAC-protected pagination cursors, trace context and clientInfo capture, hold-mode keep-alives, listen streams bounded per session (CP-20) and in total with write deadlines, list_changed after policy activation and server suspension. Errors carry the Appendix B code with reasonCode, correlationId, decisionId and the Table B.2 data.message; internal/e2e.TestEveryReasonCodeEndToEnd drives running Gateways into every code and every reason a request can produce (FR-1.51), and Table B.3 names the codes no request reaches. Backend progress is relayed with the northbound token at most 10 per second per request (CP-21), each message through the response filters. Server-initiated requests other than ping get -32601 and an InputRequiredResult maps to -31010. The FR-12.9 conformance suite (internal/conformance) drives a complete Gateway with the mcp-spec examples and validates every message against schema.json. internal/secrets.TestSecretsNeverNorthbound delivers a secret in each mode (S1 to S4), echoes it through results, tool errors, JSON-RPC errors and progress notifications, and finds it nowhere northbound (SR-2-1). Requirement report (main fe82231): all 43 verified. Deferred from 1.0 (Appendix N): the MRTR Relay Profile. Planned for v1.3.0 (not counted above): 1 allocated, 1 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-03",
@@ -8371,7 +8231,7 @@
         "internal/remote",
         "internal/principals"
       ],
-      "note": "OAuth 2.1 authorization server (metadata, PKCE S256, resource, iss), pre-registered clients, Client ID Metadata Documents fetched only for CP-52 allowlisted URLs, sign-in by Session Approver accounts only (the Administrator is refused), Argon2id, rate limits, lockout with backoff and dummy verification; a second redemption of an authorization code ends the session the first created. Principals, OAuth client credentials and Session Approver accounts created from the control API (internal/principals, G-11) are found next to those of smcp.toml; revocations and suspensions run under the Enforcement Coordinator's gate. UDS clients authenticate by kernel peer UID plus a bearer key (FR-2.15). Remote Access adds RFC 7591 registration with operator approval and per-source quotas, the RFC 8628 device grant and a cross-client Session Approver lockout. Requirement report (main 383485d): all 13 verified. Deferred from 1.0 (Appendix N): mTLS client authentication and the open metadata fetch rule SR-2.11-3."
+      "note": "OAuth 2.1 authorization server (metadata, PKCE S256, resource, iss), pre-registered clients, Client ID Metadata Documents fetched only for CP-52 allowlisted URLs, sign-in by Session Approver accounts only (the Administrator is refused), Argon2id, rate limits, lockout with backoff and dummy verification; a second redemption of an authorization code ends the session the first created. Principals, OAuth client credentials and Session Approver accounts created from the control API (internal/principals, G-11) are found next to those of smcp.toml; revocations and suspensions run under the Enforcement Coordinator's gate. UDS clients authenticate by kernel peer UID plus a bearer key (FR-2.15). Remote Access adds RFC 7591 registration with operator approval and per-source quotas, the RFC 8628 device grant and a cross-client Session Approver lockout. Requirement report (main fe82231): all 13 verified. Deferred from 1.0 (Appendix N): mTLS client authentication and the open metadata fetch rule SR-2.11-3. On Windows (planned for v1.3.0) a named-pipe client is identified by the user SID of its token, read by impersonation (FR-21.9). Planned for v1.3.0 (not counted above): 1 allocated, 1 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-04",
@@ -8381,7 +8241,7 @@
       "packages": [
         "internal/session"
       ],
-      "note": "Session store with CP-18 lifetimes, per-principal limits, scope-to-template mapping, harness type and version recorded at creation, baseline context key per session (FR-2.13), project-root claims narrowing path roots, session API, refresh-token rotation with reuse detection, janitors that keep suspended sessions, per-session lifetime for remote sessions, which are created only for templates the active Framework Profile marks remote_allowed and remote.templates lists (FR-16.12, REMOTE_TEMPLATE_REFUSED otherwise); operators suspend and resume sessions (FR-2.8). Session taint is tracked by the policy layer. Requirement report (main 383485d): all 18 verified. Sessions, taint, rate windows and quotas are in memory and end at a restart; survival across restarts (FR-2.16) is deferred from 1.0 (Appendix N)."
+      "note": "Session store with CP-18 lifetimes, per-principal limits, scope-to-template mapping, harness type and version recorded at creation, baseline context key per session (FR-2.13), project-root claims narrowing path roots, session API, refresh-token rotation with reuse detection, janitors that keep suspended sessions, per-session lifetime for remote sessions, which are created only for templates the active Framework Profile marks remote_allowed and remote.templates lists (FR-16.12, REMOTE_TEMPLATE_REFUSED otherwise); operators suspend and resume sessions (FR-2.8). Session taint is tracked by the policy layer. Requirement report (main fe82231): all 18 verified. Sessions, taint, rate windows and quotas are in memory and end at a restart; survival across restarts (FR-2.16) is deferred from 1.0 (Appendix N)."
     },
     {
       "id": "E-05",
@@ -8393,7 +8253,7 @@
         "internal/policyadmin",
         "internal/policy"
       ],
-      "note": "Signed Policy Store (Ed25519, immutable revision files named by digest, signed active record with atomic activation), start-up import and fail-closed verification, publish with optional parent check, rollback as a new revision, diff, overlap analysis (SR-1.9-1), simulation from the journal or fixtures, /api/v1/policy* and smcpctl policy. Audit Profiles, Observation Policies and Anomaly Response Policies are published as numbered revisions by internal/obspolicy and Secret Use Policies by the Secret Broker; FR-3.1 names where each policy object type lives. Revocations, principal and server suspensions live outside the policy document and survive a policy rollback and an application rollback (AT-19 suspends a server revision before both, SR-7.9-1). Requirement report (main 383485d): all 18 verified. Deferred from 1.0 (Appendix N): draft workspaces (FR-3.3), observation cost estimates (FR-3.7), Response Policy and Runtime Profile objects (FR-3.26), manifest ceiling checks at publication (SR-1-1), retention validation (SR-6.9-1)."
+      "note": "Signed Policy Store (Ed25519, immutable revision files named by digest, signed active record with atomic activation), start-up import and fail-closed verification, publish with optional parent check, rollback as a new revision, diff, overlap analysis (SR-1.9-1), simulation from the journal or fixtures, /api/v1/policy* and smcpctl policy. Audit Profiles, Observation Policies and Anomaly Response Policies are published as numbered revisions by internal/obspolicy and Secret Use Policies by the Secret Broker; FR-3.1 names where each policy object type lives. Revocations, principal and server suspensions live outside the policy document and survive a policy rollback and an application rollback (AT-19 suspends a server revision before both, SR-7.9-1). Requirement report (main fe82231): all 18 verified. Deferred from 1.0 (Appendix N): draft workspaces (FR-3.3), observation cost estimates (FR-3.7), Response Policy and Runtime Profile objects (FR-3.26), manifest ceiling checks at publication (SR-1-1), retention validation (SR-6.9-1). On Windows (planned for v1.3.0) the Policy Store replaces files with flushed write-through renames and opens no directory (internal/durable, FR-21.23). Planned for v1.3.0 (not counted above): 1 allocated, 1 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-06",
@@ -8403,7 +8263,7 @@
       "packages": [
         "internal/policy"
       ],
-      "note": "Default-deny decisions with deny-rule precedence, argument predicates (FR-3.6), prerequisites, routes, approval floor by side-effect class (SR-1.18-1), restrict-only session taint, sliding-window rates with CP-11 burst, per-session quotas, CP-12 evaluation bounds, filter, secret-use, egress and runtime obligations (FR-3.12), profile and template intersection, the decision explanation route (SR-1.19-1), Diff and Simulate. A build tag smcp_broken produces a deliberately defective decider for the FR-15.8 broken-build check; release builds never set it. Requirement report (main 383485d): all 22 verified. Deferred from 1.0 (Appendix N): permits bound to revision IDs (SR-1.6-1)."
+      "note": "Default-deny decisions with deny-rule precedence, argument predicates (FR-3.6), prerequisites, routes, approval floor by side-effect class (SR-1.18-1), restrict-only session taint, sliding-window rates with CP-11 burst, per-session quotas, CP-12 evaluation bounds, filter, secret-use, egress and runtime obligations (FR-3.12), profile and template intersection, the decision explanation route (SR-1.19-1), Diff and Simulate. A build tag smcp_broken produces a deliberately defective decider for the FR-15.8 broken-build check; release builds never set it. Requirement report (main fe82231): all 22 verified. Deferred from 1.0 (Appendix N): permits bound to revision IDs (SR-1.6-1)."
     },
     {
       "id": "E-07",
@@ -8413,7 +8273,7 @@
       "packages": [
         "internal/approval"
       ],
-      "note": "Persisted one-use approvals bound per SR-1.18-2, re-approval after a transforming filter (SR-1.18-3), CP-17 expiry, hold mode with keep-alives and the -31002 fallback carrying approvalId, expiresAt and approvalUrl, Approver accounts, /api/v1/approvals* with a watch stream that ends when its token ends, the harness status route, smcpctl approvals (show prints the anomaly evidence), desktop notification, the G-13 view. Anomaly-band approvals carry the band, contributing feature, z-score, baseline snapshot and context, shown in G-13 (FR-3.18, inspection record on a live approval). Approval events of remote calls carry the remote origin fields. The real-agent suite holds and approves a call from each passing client, and a recorded Claude Code run covers the four FR-3.25 cases. Requirement report (main 383485d): all 13 verified. Nothing allocated to E-07 is deferred."
+      "note": "Persisted one-use approvals bound per SR-1.18-2, re-approval after a transforming filter (SR-1.18-3), CP-17 expiry, hold mode with keep-alives and the -31002 fallback carrying approvalId, expiresAt and approvalUrl, Approver accounts, /api/v1/approvals* with a watch stream that ends when its token ends, the harness status route, smcpctl approvals (show prints the anomaly evidence), desktop notification, the G-13 view. Anomaly-band approvals carry the band, contributing feature, z-score, baseline snapshot and context, shown in G-13 (FR-3.18, inspection record on a live approval). Approval events of remote calls carry the remote origin fields. The real-agent suite holds and approves a call from each passing client, and a recorded Claude Code run covers the four FR-3.25 cases. Requirement report (main fe82231): all 13 verified. Nothing allocated to E-07 is deferred."
     },
     {
       "id": "E-08",
@@ -8424,7 +8284,7 @@
         "internal/edge",
         "internal/filters"
       ],
-      "note": "Session-scoped catalog per policy revision, updated in place on policy activation and server suspension with list_changed, unknown-tool rejection, approval hint (FR-1.50), metadata rule-set screen at presentation (FR-1.52), the gateway-admin class (SR-3.12-1), valid data: icons kept (SR-5.18-2), HMAC-protected pagination cursors. Requirement report (main 383485d): all 18 verified. Deferred from 1.0 (Appendix N): manifest handle contracts (SR-2.12-1)."
+      "note": "Session-scoped catalog per policy revision, updated in place on policy activation and server suspension with list_changed, unknown-tool rejection, approval hint (FR-1.50), metadata rule-set screen at presentation (FR-1.52), the gateway-admin class (SR-3.12-1), valid data: icons kept (SR-5.18-2), HMAC-protected pagination cursors. Requirement report (main fe82231): all 18 verified. Deferred from 1.0 (Appendix N): manifest handle contracts (SR-2.12-1). Tools of hosted ContextForge packages (planned for v1.3.0) are presented and dispatched only through the pipeline (FR-22.35). Planned for v1.3.0 (not counted above): 1 allocated, 1 partly verified; what each lacks is in the gap list."
     },
     {
       "id": "E-09",
@@ -8436,7 +8296,7 @@
         "internal/filters",
         "internal/secrets"
       ],
-      "note": "Ordered request chain with mandatory and policy-obliged filters, CP-14 deadline, panic as block: schema-validate (no external $ref; the CP-36 bound runs from the validator's start), size-limit, unicode-control, secret-fingerprint, path-canonicalize, url-canonicalize, injection-detect (tag only), pii-detect on arguments when the decision names it (a blocking data-class rule refuses with DATA_CLASS_IN_ARGUMENTS, SR-5.8-1), the vault's secret-in-arguments filter, request scoring as the last filter; a transforming filter causes a second decision before launch (SR-5.12-1). Versioned rule sets with digests, a required-literal prefilter, and measured corpus rates published in the status data (FR-19.5). Requirement report (main 383485d): all 16 verified. Nothing allocated to E-09 is deferred."
+      "note": "Ordered request chain with mandatory and policy-obliged filters, CP-14 deadline, panic as block: schema-validate (no external $ref; the CP-36 bound runs from the validator's start), size-limit, unicode-control, secret-fingerprint, path-canonicalize, url-canonicalize, injection-detect (tag only), pii-detect on arguments when the decision names it (a blocking data-class rule refuses with DATA_CLASS_IN_ARGUMENTS, SR-5.8-1), the vault's secret-in-arguments filter, request scoring as the last filter; a transforming filter causes a second decision before launch (SR-5.12-1). Versioned rule sets with digests, a required-literal prefilter, and measured corpus rates published in the status data (FR-19.5). Requirement report (main fe82231): all 16 verified. Nothing allocated to E-09 is deferred."
     },
     {
       "id": "E-10",
@@ -8447,7 +8307,7 @@
         "internal/backend",
         "internal/southbound"
       ],
-      "note": "stdio dispatch with CP-10 concurrency and queue bounds, CP-13 upstream timeout, bounded result reading, backend error mapping, cancellation propagated to the backend with notifications/cancelled (FR-5.26), suspension of a server on drift or on a changed command file (SR-3.6-1). No client capability is declared southbound; server-initiated requests other than ping are refused with -32601 and an InputRequiredResult with -31010. Backend progress travels on a Gateway-issued token. An instance that times out or fails is replaced; the third unexpected exit within five minutes suspends the revision (FR-5.12). When dispatching to an instance attached to the Egress Broker it delivers the call's one-use egress capabilities in _meta. Requirement report (main 383485d): all 22 verified. Deferred from 1.0 (Appendix N): per-session and per-call instances, the modern-era southbound probe and requests (FR-5.16 to FR-5.18, SR-5.1-2, SR-5.3-2). The southbound Streamable HTTP client (FR-5.28 to FR-5.30, planned for v1.3.0) is in internal/southbound: url servers, header mirroring and encoding, JSON and SSE responses, sessions, resumption, hostile rows over HTTP (TestHostileHTTPFixtures); the list-change listen stream of the modern era (FR-5.31) stays deferred."
+      "note": "stdio dispatch with CP-10 concurrency and queue bounds, CP-13 upstream timeout, bounded result reading, backend error mapping, cancellation propagated to the backend with notifications/cancelled (FR-5.26), suspension of a server on drift or on a changed command file (SR-3.6-1). No client capability is declared southbound; server-initiated requests other than ping are refused with -32601 and an InputRequiredResult with -31010. Backend progress travels on a Gateway-issued token. An instance that times out or fails is replaced; the third unexpected exit within five minutes suspends the revision (FR-5.12). When dispatching to an instance attached to the Egress Broker it delivers the call's one-use egress capabilities in _meta. Requirement report (main fe82231): all 22 verified. Deferred from 1.0 (Appendix N): per-session and per-call instances, the modern-era southbound probe and requests (FR-5.16 to FR-5.18, SR-5.1-2, SR-5.3-2). The southbound Streamable HTTP client (FR-5.28 to FR-5.30, planned for v1.3.0) is in internal/southbound: url servers, header mirroring and encoding, JSON and SSE responses, sessions, resumption, hostile rows over HTTP (TestHostileHTTPFixtures); the list-change listen stream of the modern era (FR-5.31) stays deferred. Planned for v1.3.0 (not counted above): 5 allocated, 3 verified, 2 partly verified; what each lacks is in the gap list."
     },
     {
       "id": "E-11",
@@ -8458,7 +8318,7 @@
         "internal/filters",
         "internal/edge"
       ],
-      "note": "Response chain: size-limit (size and depth), output-schema, content-type-gate, secret-fingerprint (redact or withhold with SECRET_LEAK), unicode-control, pii-detect, injection-marker, delimit-untrusted (FR-4.18), the vault's leak filter, response scoring as the last filter; provenance with disposition and tags; every malformed result envelope is refused (SR-5.20-1). Relayed progress messages pass the same chain. Requirement report (main 383485d): all 10 verified. Deferred from 1.0 (Appendix N): Response Policy objects (FR-3.26) and handle ownership (SR-2.12-1); response handling is set by permit-rule obligations and [filters]."
+      "note": "Response chain: size-limit (size and depth), output-schema, content-type-gate, secret-fingerprint (redact or withhold with SECRET_LEAK), unicode-control, pii-detect, injection-marker, delimit-untrusted (FR-4.18), the vault's leak filter, response scoring as the last filter; provenance with disposition and tags; every malformed result envelope is refused (SR-5.20-1). Relayed progress messages pass the same chain. Requirement report (main fe82231): all 10 verified. Deferred from 1.0 (Appendix N): Response Policy objects (FR-3.26) and handle ownership (SR-2.12-1); response handling is set by permit-rule obligations and [filters]."
     },
     {
       "id": "E-12",
@@ -8469,7 +8329,7 @@
         "internal/edge",
         "internal/pipeline"
       ],
-      "note": "One-use launch capability bound to correlation, decision, policy revision and tool; pre-launch and pre-release rechecks under the coordinator's gate, which also serializes credential revocation, principal suspension and server revision suspension (SR-1.16-1) and rechecks principal, credential and revision state at launch (SR-1.17-1); authorized committed with fsync before the capability and delivered before release; a failed release recheck returns RELEASE_REFUSED; emergency stop cancels calls in flight and a drain stop lets them finish for backups (SR-7.7-1); the health gate refuses calls. A failed journal write refuses the call with JOURNAL_UNAVAILABLE. TestIntentCrashConsistency kills a child Gateway at every journal write and flush through a fault-injecting segment layer and checks that no dispatch lacks its intent record (SR-6.2-1). Requirement report (main 383485d): all 15 verified. Nothing allocated to E-12 is deferred. In release 1.x the Gateway's components run inside smcpd as smcp-core; the separation enforced is between smcpd and the servers (smcp-srv), as the narrowed SR-4.1-1 states."
+      "note": "One-use launch capability bound to correlation, decision, policy revision and tool; pre-launch and pre-release rechecks under the coordinator's gate, which also serializes credential revocation, principal suspension and server revision suspension (SR-1.16-1) and rechecks principal, credential and revision state at launch (SR-1.17-1); authorized committed with fsync before the capability and delivered before release; a failed release recheck returns RELEASE_REFUSED; emergency stop cancels calls in flight and a drain stop lets them finish for backups (SR-7.7-1); the health gate refuses calls. A failed journal write refuses the call with JOURNAL_UNAVAILABLE. TestIntentCrashConsistency kills a child Gateway at every journal write and flush through a fault-injecting segment layer and checks that no dispatch lacks its intent record (SR-6.2-1). Requirement report (main fe82231): all 15 verified. Nothing allocated to E-12 is deferred. In release 1.x the Gateway's components run inside smcpd as smcp-core; the separation enforced is between smcpd and the servers (smcp-srv), as the narrowed SR-4.1-1 states. On Windows (planned for v1.3.0) a Service Control Manager stop, or the named stop event of a per-user installation, is the orderly stop (FR-21.7). Planned for v1.3.0 (not counted above): 2 allocated, 2 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-13",
@@ -8481,7 +8341,7 @@
         "internal/library",
         "cmd/smcpctl"
       ],
-      "note": "Recipes, package build (npm, PyPI, OCI or binary by digest, locked dependency closure, live probe, Appendix J manifest), smcpctl package build --sandbox podman probing the candidate with no network and only its own files mounted (SR-3.5-1, PACKAGING hostile fixture), minisign signing and offline verification, trust anchors scoped to risk classes with fingerprint confirmation, revocation entries and the revocation feed with a staleness block (SR-3-4), library scan and import with receipts, tools withheld by the import-time metadata scan kept in the registry and listed (SR-5.9-2), artifact re-verification before every launch, egress grants checked against the manifest's declared capabilities (EGRESS_EXCEEDS_MANIFEST); TestIntegrationPackageBuildEachType builds a package of each artifact type in the linux-integration job, with the OCI image probed by rootless Podman (FR-14.1); bootstrap packages the reference server; reference packages for filesystem, git, fetch and memory are built, signed, imported and called by the reference-packages workflow (passed on tag v1.0.0, FR-14.9), and an inspection record checks their provenance (FR-14.5). The packaging guide was followed for a non-reference server (FR-18.6 Inspection record). Requirement report (main 383485d): 23 of 25 verified; partly verified: FR-14 (parent, 11 of 12 child requirements verified), FR-14.3 (the reference servers are packaged with the unconfined probe; the Podman probe is tested with the hostile packaging fixture only)."
+      "note": "Recipes, package build (npm, PyPI, OCI or binary by digest, locked dependency closure, live probe, Appendix J manifest), smcpctl package build --sandbox podman probing the candidate with no network and only its own files mounted (SR-3.5-1, PACKAGING hostile fixture), minisign signing and offline verification, trust anchors scoped to risk classes with fingerprint confirmation, revocation entries and the revocation feed with a staleness block (SR-3-4), library scan and import with receipts, tools withheld by the import-time metadata scan kept in the registry and listed (SR-5.9-2), artifact re-verification before every launch, egress grants checked against the manifest's declared capabilities (EGRESS_EXCEEDS_MANIFEST); TestIntegrationPackageBuildEachType builds a package of each artifact type in the linux-integration job, with the OCI image probed by rootless Podman (FR-14.1); bootstrap packages the reference server; reference packages for filesystem, git, fetch and memory are built, signed, imported and called by the reference-packages workflow (passed on tag v1.0.0, FR-14.9), and an inspection record checks their provenance (FR-14.5). The packaging guide was followed for a non-reference server (FR-18.6 Inspection record). Requirement report (main fe82231): 23 of 25 verified; partly verified: FR-14 (parent, 11 of 12 child requirements verified), FR-14.3 (the reference servers are packaged with the unconfined probe; the Podman probe is tested with the hostile packaging fixture only). Planned for v1.3.0 (not counted above): 1 allocated, 1 verified; what each lacks is in the gap list."
     },
     {
       "id": "E-14",
@@ -8492,7 +8352,7 @@
         "internal/library",
         "internal/backend"
       ],
-      "note": "Content-addressed artifact store, directory library (FR-5.1), immutable revisions and registry states, enablement checks (Standalone refuses high risk, alias uniqueness, expiry), operator classification overrides (SR-3.11-1), drift detection at start and on list_changed that suspends the revision, suspended tools recorded on the revision, /api/v1/packages, smcpctl package and the G-10 view (enable, suspend, retire). A tool-name collision disables only the colliding revision. A revision enabled while smcpd runs is launched at the next start. Requirement report (main 383485d): all 13 verified. Deferred from 1.0 (Appendix N): era consistency at start (FR-5.17), the southbound list-change watch (FR-5.31) and manifest ceiling checks (SR-1-1)."
+      "note": "Content-addressed artifact store, directory library (FR-5.1), immutable revisions and registry states, enablement checks (Standalone refuses high risk, alias uniqueness, expiry), operator classification overrides (SR-3.11-1), drift detection at start and on list_changed that suspends the revision, suspended tools recorded on the revision, /api/v1/packages, smcpctl package and the G-10 view (enable, suspend, retire). A tool-name collision disables only the colliding revision. A revision enabled while smcpd runs is launched at the next start. Requirement report (main fe82231): all 13 verified. Deferred from 1.0 (Appendix N): era consistency at start (FR-5.17), the southbound list-change watch (FR-5.31) and manifest ceiling checks (SR-1-1). Hosted ContextForge packages (manifest_version 2, planned for v1.3.0) are admitted only while the bundled instance is enabled, start disabled, and are suspended on drift found through the instance (FR-22.13, FR-22.22, SR-3.8-2). Planned for v1.3.0 (not counted above): 2 allocated, 2 partly verified; what each lacks is in the gap list."
     },
     {
       "id": "E-15",
@@ -8504,7 +8364,7 @@
         "internal/backend",
         "internal/pipeline"
       ],
-      "note": "Launch specification from configuration and enabled package revisions, rootless Podman launcher (Enforced, optionally as the CP-46 identity smcp-srv) and subprocess launcher (Standalone), environment allowlist checked on a real instance against its manifest (FR-5.37, SR-2.14-1), mount grants cut to the manifest's declared filesystem slots, packaged node and python servers run on their image's interpreter, bounded stderr with delivered secret values redacted, FR-5.27 shutdown sequence, reaping of leftover containers, relaunch of failed instances with a crash-loop threshold. Command-configured servers are content-addressed at first launch (artifact_recorded, optional command_sha256) and a changed file is refused at relaunch (SR-3.6-1). Requirement report (main 383485d): all 9 verified. Deferred from 1.0 (Appendix N): per-session and per-call instance scopes and idle teardown (FR-5.10, FR-5.11) and Runtime Profile objects (FR-3.26)."
+      "note": "Launch specification from configuration and enabled package revisions, rootless Podman launcher (Enforced, optionally as the CP-46 identity smcp-srv) and subprocess launcher (Standalone), environment allowlist checked on a real instance against its manifest (FR-5.37, SR-2.14-1), mount grants cut to the manifest's declared filesystem slots, packaged node and python servers run on their image's interpreter, bounded stderr with delivered secret values redacted, FR-5.27 shutdown sequence, reaping of leftover containers, relaunch of failed instances with a crash-loop threshold. Command-configured servers are content-addressed at first launch (artifact_recorded, optional command_sha256) and a changed file is refused at relaunch (SR-3.6-1). Requirement report (main fe82231): all 9 verified. Deferred from 1.0 (Appendix N): per-session and per-call instance scopes and idle teardown (FR-5.10, FR-5.11) and Runtime Profile objects (FR-3.26). On Windows (planned for v1.3.0) backends start through CreateProcess in their own Job Object with the CP-24 limits and kill-on-close, and interpreters and batch files are refused (internal/winsandbox; FR-21.11, FR-21.12, SR-4.8-2). Planned for v1.3.0 (not counted above): 7 allocated, 4 partly verified, 3 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-16",
@@ -8517,7 +8377,7 @@
         "packaging/linux",
         "internal/posixacl"
       ],
-      "note": "Rootless Podman with read-only root, no capabilities, no-new-privileges, default seccomp, a distinct user namespace per instance, private namespaces, CP-24 cgroup limits with delegated controllers (CPU limit exceeded on a real container), size-bounded tmpfs, mounts limited to the intersection of the Runtime Profile grant and the manifest's declared slots (SR-4.6-1). network = egress attaches the instance to the Egress Broker on slirp4netns with nftables in its namespace allowing only TCP to its broker listeners. S2 and S3 secret files are mounted read-only at /smcp/secrets with POSIX ACL entries for the instance UID. packaging/linux installs the CP-46 identities including smcp-srv, nftables, systemd units and the AppArmor profiles smcpd and smcp-server (enforce mode); CI runs smcpd.service under real systemd with sandboxed tool calls, and AT-08 passes in the Enforced profile. Requirement report (main 383485d): all 5 verified. The smcp-server AppArmor profile covers image-less servers only and no SELinux module ships, so hosts with SELinux instead of AppArmor have no host MAC profile for smcpd."
+      "note": "Rootless Podman with read-only root, no capabilities, no-new-privileges, default seccomp, a distinct user namespace per instance, private namespaces, CP-24 cgroup limits with delegated controllers (CPU limit exceeded on a real container), size-bounded tmpfs, mounts limited to the intersection of the Runtime Profile grant and the manifest's declared slots (SR-4.6-1). network = egress attaches the instance to the Egress Broker on slirp4netns with nftables in its namespace allowing only TCP to its broker listeners. S2 and S3 secret files are mounted read-only at /smcp/secrets with POSIX ACL entries for the instance UID. packaging/linux installs the CP-46 identities including smcp-srv, nftables, systemd units and the AppArmor profiles smcpd and smcp-server (enforce mode); CI runs smcpd.service under real systemd with sandboxed tool calls, and AT-08 passes in the Enforced profile. Requirement report (main fe82231): all 5 verified. The smcp-server AppArmor profile covers image-less servers only and no SELinux module ships, so hosts with SELinux instead of AppArmor have no host MAC profile for smcpd. In the Windows machine mode (planned for v1.3.0) each enabled server revision runs under its own AppContainer profile with grants on its package tree, scratch directory and granted roots only, reported as partially_confined (FR-21.13, SR-4.6-2). Planned for v1.3.0 (not counted above): 4 allocated, 2 partly verified, 2 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-17",
@@ -8527,7 +8387,7 @@
       "packages": [
         "internal/sandbox"
       ],
-      "note": "Runtime Monitor: cgroup sampling and inotify on memory and PID events, podman events, process creation evaluated against the manifest's declared behavior (FR-5.34), deviation (UNDECLARED_PROCESS, EXEC_INTO_INSTANCE), limit_breach (memory, PIDs and CPU), instance_killed and instance_exited evidence, alert and kill-instance actions; revisions are suspended by the crash-loop threshold. Requirement report (main 383485d): all 3 verified. Nothing allocated to E-17 is deferred. File opens outside mounts and network attempts are prevented by the sandbox, not observed (FR-5.33 leaves them out)."
+      "note": "Runtime Monitor: cgroup sampling and inotify on memory and PID events, podman events, process creation evaluated against the manifest's declared behavior (FR-5.34), deviation (UNDECLARED_PROCESS, EXEC_INTO_INSTANCE), limit_breach (memory, PIDs and CPU), instance_killed and instance_exited evidence, alert and kill-instance actions; revisions are suspended by the crash-loop threshold. Requirement report (main fe82231): all 3 verified. Nothing allocated to E-17 is deferred. File opens outside mounts and network attempts are prevented by the sandbox, not observed (FR-5.33 leaves them out)."
     },
     {
       "id": "E-18",
@@ -8537,7 +8397,7 @@
       "packages": [
         "internal/egress"
       ],
-      "note": "Per-instance forward proxy (CONNECT with SNI check, plain HTTP), per-destination TLS-originating endpoints, grants by host, port, method and class, one-use capabilities per call (SR-5.16-1, Smcp-Egress-Auth), broker DNS with optional resolvers and rebinding defense, reserved-address refusal, redirect checks, outbound secret-fingerprint scan (SR-5.8-2, EGRESS_SECRET_DETECTED), request size, response size and duration bounded by the smallest of the Runtime Profile, the manifest's egress rule and the decision's egress_limits obligation (FR-5.38), rate limits, public-fetch profile, egress evidence naming the call, /api/v1/egress and smcpctl egress. Enforced for sandboxed servers; advisory proxy variables in Standalone. AT-10 passes in both profiles (TestAT10WebBroker). Requirement report (main 383485d): all 9 verified. Nothing allocated to E-18 is deferred. In the Standalone profile the broker is advisory (proxy variables) and a one-use capability can be used by another process of the same user while the call runs (security review RR-09)."
+      "note": "Per-instance forward proxy (CONNECT with SNI check, plain HTTP), per-destination TLS-originating endpoints, grants by host, port, method and class, one-use capabilities per call (SR-5.16-1, Smcp-Egress-Auth), broker DNS with optional resolvers and rebinding defense, reserved-address refusal, redirect checks, outbound secret-fingerprint scan (SR-5.8-2, EGRESS_SECRET_DETECTED), request size, response size and duration bounded by the smallest of the Runtime Profile, the manifest's egress rule and the decision's egress_limits obligation (FR-5.38), rate limits, public-fetch profile, egress evidence naming the call, /api/v1/egress and smcpctl egress. Enforced for sandboxed servers; advisory proxy variables in Standalone. AT-10 passes in both profiles (TestAT10WebBroker). Requirement report (main fe82231): all 9 verified. Nothing allocated to E-18 is deferred. In the Standalone profile the broker is advisory (proxy variables) and a one-use capability can be used by another process of the same user while the call runs (security review RR-09). In the Windows machine mode (planned for v1.3.0) Windows Filtering Platform filters in the Gateway's provider limit contained backends to the broker's loopback proxy port (FR-21.14, SR-4.5-3). Planned for v1.3.0 (not counted above): 3 allocated, 1 partly verified, 2 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-19",
@@ -8547,7 +8407,7 @@
       "packages": [
         "internal/secrets"
       ],
-      "note": "Age-encrypted versioned vault, master key in the macOS Keychain or passphrase-wrapped (SR-2.13-1), owner-only file modes, rotation with CP-15 overlap and retirement, smcpctl secrets and /api/v1/secrets (metadata only), the vault_unavailable health check (FR-7.11). On the Enforced CI host every CP-46 identity other than smcp-core is denied reading the vault and its passphrase file (SR-2.13-3); the vault and the Secret Broker share smcpd's identity. Requirement report (main 383485d): all 8 verified. E-19 stays recorded as partial because the vault and the Secret Broker run under smcpd's one identity, a known gap of release 1.x (docs/security-limitations.md, SR-2.13-3 as narrowed)."
+      "note": "Age-encrypted versioned vault, master key in the macOS Keychain or passphrase-wrapped (SR-2.13-1), owner-only file modes, rotation with CP-15 overlap and retirement, smcpctl secrets and /api/v1/secrets (metadata only), the vault_unavailable health check (FR-7.11). On the Enforced CI host every CP-46 identity other than smcp-core is denied reading the vault and its passphrase file (SR-2.13-3); the vault and the Secret Broker share smcpd's identity. Requirement report (main fe82231): all 8 verified. E-19 stays recorded as partial because the vault and the Secret Broker run under smcpd's one identity, a known gap of release 1.x (docs/security-limitations.md, SR-2.13-3 as narrowed). On Windows (planned for v1.3.0) the vault master key is a DPAPI blob of the account running smcpd; the bundled ContextForge credentials are vault entries in the component. namespace (SR-2.13-4, SR-2.13-5). Planned for v1.3.0 (not counted above): 2 allocated, 1 partly verified, 1 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-20",
@@ -8557,7 +8417,7 @@
       "packages": [
         "internal/secrets"
       ],
-      "note": "Secret Use Policy file, edited, validated, published and rolled back from G-02 (FR-8.4), S1 header injection through the Egress Broker (also for sandboxed servers with network = egress), S2 per-call files, S3 per-instance files (mounted read-only into the sandbox), S4 environment with waiver, secret_use evidence without values naming the secret on early denials, HMAC leak fingerprints for the filters, the Egress Broker and the Observation Collector (P-142) registered from the broker's byte slices without string copies (SR-2.13-2, narrowed to what Go allows and verified by inspection), leak suspension and resume, withdrawal on emergency stop and when a launch is refused (LAUNCH_FAILED), secret bindings in the permission report. TestEnforcedSecretDelivery runs S1, S2 and S3 deliveries through real smcpd and rootless Podman in the acceptance-enforced job (FR-6.6 to FR-6.8). smcpd builds the Secret Broker with attachSecrets before app.Start, and cmd/smcpd.TestLeakFingerprintsWiring checks that a value delivered at launch is detected raw, Base64, hex, URL-encoded and as a 12-character fragment by the Response Inspection Pipeline and the Observation Collector (FR-6.10). Requirement report (main 383485d): all 7 verified. Launch-time deliveries are not withdrawn at session end because instances are not session-scoped (FR-5.10 is deferred)."
+      "note": "Secret Use Policy file, edited, validated, published and rolled back from G-02 (FR-8.4), S1 header injection through the Egress Broker (also for sandboxed servers with network = egress), S2 per-call files, S3 per-instance files (mounted read-only into the sandbox), S4 environment with waiver, secret_use evidence without values naming the secret on early denials, HMAC leak fingerprints for the filters, the Egress Broker and the Observation Collector (P-142) registered from the broker's byte slices without string copies (SR-2.13-2, narrowed to what Go allows and verified by inspection), leak suspension and resume, withdrawal on emergency stop and when a launch is refused (LAUNCH_FAILED), secret bindings in the permission report. TestEnforcedSecretDelivery runs S1, S2 and S3 deliveries through real smcpd and rootless Podman in the acceptance-enforced job (FR-6.6 to FR-6.8). smcpd builds the Secret Broker with attachSecrets before app.Start, and cmd/smcpd.TestLeakFingerprintsWiring checks that a value delivered at launch is detected raw, Base64, hex, URL-encoded and as a 12-character fragment by the Response Inspection Pipeline and the Observation Collector (FR-6.10). Requirement report (main fe82231): all 7 verified. Launch-time deliveries are not withdrawn at session end because instances are not session-scoped (FR-5.10 is deferred)."
     },
     {
       "id": "E-21",
@@ -8567,7 +8427,7 @@
       "packages": [
         "internal/audit"
       ],
-      "note": "Signed hash-chained JSON Lines journal with group-committed fsync, crash recovery, signed anchor, verifier that follows evidence-key transitions and counts unsigned open events, evidence export of closed segments whose anchor only moves forward, CP-27 unsigned-age rule, CP-26 storage quota, purge receipts, a segment-file seam for fault injection (audit.Options.OpenSegment), non-blocking observers feeding the graph mirror and observation. A failed write fails the endpoint closed; AT-11 to AT-14 pass in both profiles. The graph mirror feed and the evidence exporter each hold every event once after crashing mid-batch (SR-6.10-1). An Enforced installation copies closed segments and the signed anchor to /var/lib/smcp/exports, and the evidence key and the copies are refused to every identity other than smcp-core on the CI host (SR-6.12-1). Requirement report (main 383485d): 18 of 21 verified; partly verified: FR-16.8 (the fields are tested on the listener; calls through a real tunnel are not), SR-6.1-1 (no single test triggers every event class under the most minimal policy), SR-6.7-1 (the AT-13 run checks credential formats, not a secret delivered by the Secret Broker on every captured surface). Anchor rollback with segment deletion is detectable only with an off-host export (RR-08); the journal has no index for queries (FR-11.8). Deferred from 1.0 (Appendix N): alerts (FR-7.6), payload capture and encryption (SR-6.6-1, SR-6.8-1)."
+      "note": "Signed hash-chained JSON Lines journal with group-committed fsync, crash recovery, signed anchor, verifier that follows evidence-key transitions and counts unsigned open events, evidence export of closed segments whose anchor only moves forward, CP-27 unsigned-age rule, CP-26 storage quota, purge receipts, a segment-file seam for fault injection (audit.Options.OpenSegment), non-blocking observers feeding the graph mirror and observation. A failed write fails the endpoint closed; AT-11 to AT-14 pass in both profiles. The graph mirror feed and the evidence exporter each hold every event once after crashing mid-batch (SR-6.10-1). An Enforced installation copies closed segments and the signed anchor to /var/lib/smcp/exports, and the evidence key and the copies are refused to every identity other than smcp-core on the CI host (SR-6.12-1). Requirement report (main fe82231): 18 of 21 verified; partly verified: FR-16.8 (the fields are tested on the listener; calls through a real tunnel are not), SR-6.1-1 (no single test triggers every event class under the most minimal policy), SR-6.7-1 (the AT-13 run checks credential formats, not a secret delivered by the Secret Broker on every captured surface). Anchor rollback with segment deletion is detectable only with an off-host export (RR-08); the journal has no index for queries (FR-11.8). Deferred from 1.0 (Appendix N): alerts (FR-7.6), payload capture and encryption (SR-6.6-1, SR-6.8-1). Planned for v1.3.0 (not counted above): 2 allocated, 2 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-22",
@@ -8578,7 +8438,7 @@
         "internal/keys",
         "internal/packaging"
       ],
-      "note": "CP-53 server CA (365 days, path length 0, dNSName constraints) and listener certificate (90 days, renewed at 30), hot reload on every listener including the remote one (the certificate file is checked at every TLS handshake, so the first connection after a CA switch gets the new certificate), CA rotation with overlap, evidence-key rotation with signed transition, policy-signing key, package trust anchors, operator token, installation ID, UDS bearer keys; smcpd refuses to start when the operator token or a private key file is readable by group or others, and warns when an older CA still has iPAddress constraints. FR-7.8 lists the key purposes release 1.0 has, verified by inspection. TestOpsKeyRotationUnderTraffic keeps calls running through TLS, CA and evidence-key rotation (FR-17.7; during a CA overlap the listener presents the outgoing CA's certificate, as the narrowed statement says). Requirement report (main 383485d): all 8 verified. Deferred from 1.0 (Appendix N): the client CA and certificate issuance (FR-7.15, FR-2.14), TPM or Keychain sealing of private keys (FR-7.9) and payload encryption keys (SR-6.8-1)."
+      "note": "CP-53 server CA (365 days, path length 0, dNSName constraints) and listener certificate (90 days, renewed at 30), hot reload on every listener including the remote one (the certificate file is checked at every TLS handshake, so the first connection after a CA switch gets the new certificate), CA rotation with overlap, evidence-key rotation with signed transition, policy-signing key, package trust anchors, operator token, installation ID, UDS bearer keys; smcpd refuses to start when the operator token or a private key file is readable by group or others, and warns when an older CA still has iPAddress constraints. FR-7.8 lists the key purposes release 1.0 has, verified by inspection. TestOpsKeyRotationUnderTraffic keeps calls running through TLS, CA and evidence-key rotation (FR-17.7; during a CA overlap the listener presents the outgoing CA's certificate, as the narrowed statement says). Requirement report (main fe82231): all 8 verified. Deferred from 1.0 (Appendix N): the client CA and certificate issuance (FR-7.15, FR-2.14), TPM or Keychain sealing of private keys (FR-7.9) and payload encryption keys (SR-6.8-1). On Windows (planned for v1.3.0) private keys and the operator token are DPAPI blobs of the account running smcpd, checked by DACL instead of file mode (FR-21.10). Planned for v1.3.0 (not counted above): 1 allocated, 1 partly verified; what each lacks is in the gap list."
     },
     {
       "id": "E-23",
@@ -8592,7 +8452,7 @@
         "internal/profile",
         "internal/diag"
       ],
-      "note": "Health and Safety Monitor with one-second checks, fail-closed latch with 10 s recovery and acknowledgment of integrity causes, edge gate, health of the graph mirror, Observation Store, observation degradation, revocation feed, storage quotas, vault availability and decision-snapshot currency, every check on every evaluation (FR-7.11, TestHealthFaultEachDependency faults each dependency in a running Gateway), loopback Prometheus metrics with a Host check, rotating redacted diagnostic log with call tracing at debug (TestDiagnosticLogExcludesSecrets runs the real smcpd at debug with a delivered secret and refreshed tokens, FR-17.3), configuration reload of the CP-50 keys, configuration schema version check (FR-13.13, narrowed to one version), profile decision with the not-enforced label. Listeners are bound before anything else opens a socket. Requirement report (main 383485d): all 13 verified. Nothing allocated to E-23 is deferred."
+      "note": "Health and Safety Monitor with one-second checks, fail-closed latch with 10 s recovery and acknowledgment of integrity causes, edge gate, health of the graph mirror, Observation Store, observation degradation, revocation feed, storage quotas, vault availability and decision-snapshot currency, every check on every evaluation (FR-7.11, TestHealthFaultEachDependency faults each dependency in a running Gateway), loopback Prometheus metrics with a Host check, rotating redacted diagnostic log with call tracing at debug (TestDiagnosticLogExcludesSecrets runs the real smcpd at debug with a delivered secret and refreshed tokens, FR-17.3), configuration reload of the CP-50 keys, configuration schema version check (FR-13.13, narrowed to one version), profile decision with the not-enforced label. Listeners are bound before anything else opens a socket. Requirement report (main fe82231): all 13 verified. Nothing allocated to E-23 is deferred. For v1.3.0 (planned): the gauges smcp_profile_standalone and smcp_health_profile_only for the desktop tray (FR-20.5); the Windows health causes state_acl, key_protection, pipe_squatted and partially_confined, and contextforge_unconfined and contextforge_unhealthy; Windows and WSL installations labelled \"not enforced\" with their installation mode (SR-4-2). Planned for v1.3.0 (not counted above): 3 allocated, 2 partly verified, 1 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-24",
@@ -8611,7 +8471,7 @@
         "internal/principals",
         "internal/filterapi"
       ],
-      "note": "smcpctl covers bootstrap, install, configuration, journal, policy, approvals, approvers, packages, trust, filters, secrets, egress, runtime, graph, observe, keys, uds, backup, restore, upgrade (verified minisign release), uninstall, remote, clients, lockdown and doctor. Control API with every Appendix C role from one route matrix (TestRoleMatrixEveryOperation performs every OpenAPI operation as every role on a running smcpd, FR-8.2), per-object If-Match revisions (SR-8.9-1) and GET /api/v1/openapi.json describing every route (rendered on the project site). Embedded React console with views G-01 to G-14 under a strict CSP: HttpOnly SameSite=Strict cookie sessions with a CSRF token, inert rendering of hostile evidence (AT-07, also against a sandboxed server in the console-enforced job), per-field help, keyboard-only flows for every view, including G-10 suspend and enable, G-08 key rotation and graph rebuild, G-01 health acknowledgment, instance kill and export downloads, and axe WCAG 2.2 AA checks in Chromium, Firefox and WebKit. G-02 includes a Secret Use Policy editor (FR-8.4). Releases: install.sh with minisign and Sigstore checks, Homebrew tap (verified by the tap workflow for v1.0.0 and v1.1.0, FR-13.3), SBOM per archive with a license check and provenance files (build recipe, lockfiles, PROVENANCE.md, THIRD_PARTY_NOTICES.txt) in archives built after v1.0.0, release label from the acceptance results (v1.0.0 labelled \"enforced\", FR-19.3 Inspection record); v1.0.0-rc.1 to rc.3, v1.0.0, v1.1.0-rc.1, rc.2 and v1.1.0 published (v1.1.0 on 2026-10-18, labelled \"enforced\", its SBOMs and bundle inspected for FR-12.1 and FR-12.8); smcpctl install is verified on macOS arm64, Ubuntu and the Enforced host (FR-13.4, FR-13.5, FR-13.11) and a Standalone uninstall leaves an Enforced installation alone; runbooks executed against a real smcpd (FR-18.8). Requirement report (main 383485d): 62 of 73 verified; partly verified: FR-8 (parent, 30 of 35 child requirements verified), FR-8.16 (cache hit ratios and the Observation Store's memory use against its budget are not shown), FR-8.24 (a scripted first-time task, not the Demonstration with three first-time users), FR-8.30 (current browser engines only; the previous major version of each browser and Safari itself are not run), FR-8.32 (the Runtime instance kill is done against a mocked instance table), FR-8.33 (the Runtime instance kill is done against a mocked instance table), FR-12.7 (20 of the 23 subcommands run on one installation in each profile (TestAdminCLIDemonstration); install --profile enforced and upgrade on a real Enforced installation, and a Demonstration record of a release build, are missing), FR-13 (parent, 12 of 13 child requirements verified), FR-13.7 (the launchd and systemd service paths of each profile are not exercised), FR-18 (parent; FR-18.1 is partly verified and FR-18.3 is unverified), FR-18.1 (the install guide has not been followed on clean hosts). Deferred from 1.0 (Appendix N): per-element services (FR-12.5)."
+      "note": "smcpctl covers bootstrap, install, configuration, journal, policy, approvals, approvers, packages, trust, filters, secrets, egress, runtime, graph, observe, keys, uds, backup, restore, upgrade (verified minisign release), uninstall, remote, clients, lockdown and doctor. Control API with every Appendix C role from one route matrix (TestRoleMatrixEveryOperation performs every OpenAPI operation as every role on a running smcpd, FR-8.2), per-object If-Match revisions (SR-8.9-1) and GET /api/v1/openapi.json describing every route (rendered on the project site). Embedded React console with views G-01 to G-14 under a strict CSP: HttpOnly SameSite=Strict cookie sessions with a CSRF token, inert rendering of hostile evidence (AT-07, also against a sandboxed server in the console-enforced job), per-field help, keyboard-only flows for every view, including G-10 suspend and enable, G-08 key rotation and graph rebuild, G-01 health acknowledgment, instance kill and export downloads, and axe WCAG 2.2 AA checks in Chromium, Firefox and WebKit. G-02 includes a Secret Use Policy editor (FR-8.4). Releases: install.sh with minisign and Sigstore checks, Homebrew tap (verified by the tap workflow for v1.0.0 and v1.1.0, FR-13.3), SBOM per archive with a license check and provenance files (build recipe, lockfiles, PROVENANCE.md, THIRD_PARTY_NOTICES.txt) in archives built after v1.0.0, release label from the acceptance results (v1.0.0 labelled \"enforced\", FR-19.3 Inspection record); v1.0.0-rc.1 to rc.3, v1.0.0, v1.1.0-rc.1, rc.2 and v1.1.0 published (v1.1.0 on 2026-10-18, labelled \"enforced\", its SBOMs and bundle inspected for FR-12.1 and FR-12.8); smcpctl install is verified on macOS arm64, Ubuntu and the Enforced host (FR-13.4, FR-13.5, FR-13.11) and a Standalone uninstall leaves an Enforced installation alone; runbooks executed against a real smcpd (FR-18.8). Requirement report (main fe82231): 63 of 73 verified; partly verified: FR-8 (parent, 31 of 35 child requirements verified), FR-8.24 (A scripted first-time task, not the Demonstration with three first-time users), FR-8.30 (the CI job `console-previous-browsers` runs the suite on the builds of Playwright 1.63.0 (Chromium 153, Firefox 155, WebKit 26.6); the previous major release of each browser product (no Playwright release has Chromium 155 or Firefox 156) and Safari itself are not run), FR-8.32 (axe (full WCAG 2.2 AA tag set) runs on every view as it loads and on the keyboard specs' intermediate states, not on every state of the other specs), FR-8.33 (the Runtime instance kill on a real instance runs in Chromium only (CI job `console-enforced`), and no claim aggregates the per-test results into a full claim), FR-12.7 (20 of the 23 subcommands run on one installation in each profile (TestAdminCLIDemonstration); install --profile enforced and upgrade on a real Enforced installation, and a Demonstration record of a release build, are missing), FR-13 (parent, 12 of 13 child requirements verified), FR-13.7 (the launchd and systemd service paths of each profile are not exercised), FR-18 (parent, 7 of 9 child requirements verified), FR-18.1 (the install guide has not been followed on clean hosts). Deferred from 1.0 (Appendix N): per-element services (FR-12.5). For v1.3.0 (planned): smcpctl install on Windows (per user, and --machine for the service), install.ps1 and the Windows zip archives with the Defender scan, smcpctl catalog and contextforge, console view G-15, smcpctl clients detect --json for the desktop application, and the shared message catalogue docs/design/messages.json. Release v1.2.0 was published on 2026-10-19 and the pre-release v1.3.0-beta.1 on 2026-10-20. Planned for v1.3.0 (not counted above): 19 allocated, 1 verified, 9 partly verified, 9 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-25",
@@ -8621,7 +8481,7 @@
       "packages": [
         "internal/graph"
       ],
-      "note": "Neo4j Community Edition 2026.05.0 integration, disabled unless [graph] enabled: ordered migrations with uniqueness constraints for every Appendix D label, engine settings and heap checks against CP-33, a health check that reports degraded and never fail-closed, smcpctl graph config. AT-11 and AT-12 run against a real Neo4j in the acceptance-enforced and graph jobs. On an Enforced host the nftables set graph_ports (7687) admits only smcp-core, drops other interfaces and rejects new connections opened by smcp-data, checked on the CI host with every other identity (SR-4.2-1). Requirement report (main 383485d): 4 of 7 verified; partly verified: FR-9 (parent; FR-9.1, FR-9.10 and FR-9.11 are partly verified), FR-9.1 (relationship types owned by other elements are not created by the mirror), SR-7.4-1 (the engine itself is not run as smcp-data on an Enforced host with its configuration and firewall rules inspected together). Deferred from 1.0 (Appendix N): per-element services (FR-12.5)."
+      "note": "Neo4j Community Edition 2026.05.0 integration, disabled unless [graph] enabled: ordered migrations with uniqueness constraints for every Appendix D label, engine settings and heap checks against CP-33, a health check that reports degraded and never fail-closed, smcpctl graph config. AT-11 and AT-12 run against a real Neo4j in the acceptance-enforced and graph jobs. On an Enforced host the nftables set graph_ports (7687) admits only smcp-core, drops other interfaces and rejects new connections opened by smcp-data, checked on the CI host with every other identity (SR-4.2-1). Requirement report (main fe82231): 4 of 7 verified; partly verified: FR-9 (parent, 13 of 16 child requirements verified), FR-9.1 (relationship types owned by other elements are not created by the mirror), SR-7.4-1 (the engine itself is not run as smcp-data on an Enforced host with its configuration and firewall rules inspected together). Deferred from 1.0 (Appendix N): per-element services (FR-12.5)."
     },
     {
       "id": "E-26",
@@ -8631,7 +8491,7 @@
       "packages": [
         "internal/graph"
       ],
-      "note": "Data Access Service with a digest-checked template catalog, declared and bound parameters, server-side timeouts; the evidence mirror is an idempotent audit observer with journal catch-up and rebuild; /api/v1/graph* and canned queries. Observation batching and backpressure (FR-9.5, FR-9.6) are verified. Requirement report (main 383485d): all 8 verified. Deferred from 1.0 (Appendix N): write priority classes (FR-9.4) and peer credentials of the Data Access Service (SR-4.3-1)."
+      "note": "Data Access Service with a digest-checked template catalog, declared and bound parameters, server-side timeouts; the evidence mirror is an idempotent audit observer with journal catch-up and rebuild; /api/v1/graph* and canned queries. Observation batching and backpressure (FR-9.5, FR-9.6) are verified. Requirement report (main fe82231): all 8 verified. Deferred from 1.0 (Appendix N): write priority classes (FR-9.4) and peer credentials of the Data Access Service (SR-4.3-1)."
     },
     {
       "id": "E-27",
@@ -8641,7 +8501,7 @@
       "packages": [
         "internal/obsstore"
       ],
-      "note": "Observation Store tables partitioned by UTC day with one column per catalog parameter and a spans table, write-once batches of at most 1,000 rows or 200 ms on a low-priority writer, DuckDB with zstd Parquet (cgo builds) or JSON Lines (release archives), aggregate queries with parity between backends, CP-25 retention, storage quota with a health warning at 80%, a published memory budget (G-08). DuckDB partitions with 16 or more files under 32 MiB are compacted at start and every minute on an idle-priority thread with a crash marker. The perf job replays 2,000 records per second for 10 minutes into the DuckDB store with no backpressure signal (FR-11.6). The Observation Store files on the Enforced CI host are inspected (SR-4.2-2). Requirement report (main 383485d): all 5 verified. Release archives built without cgo have no Parquet."
+      "note": "Observation Store tables partitioned by UTC day with one column per catalog parameter and a spans table, write-once batches of at most 1,000 rows or 200 ms on a low-priority writer, DuckDB with zstd Parquet (cgo builds) or JSON Lines (release archives), aggregate queries with parity between backends, CP-25 retention, storage quota with a health warning at 80%, a published memory budget (G-08). DuckDB partitions with 16 or more files under 32 MiB are compacted at start and every minute on an idle-priority thread with a crash marker. The perf job replays 2,000 records per second for 10 minutes into the DuckDB store with no backpressure signal (FR-11.6). The Observation Store files on the Enforced CI host are inspected (SR-4.2-2). Requirement report (main fe82231): all 5 verified. Release archives built without cgo have no Parquet. Planned for v1.3.0 (not counted above): 1 allocated, 1 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-28",
@@ -8653,7 +8513,7 @@
         "internal/backup",
         "internal/obsstore"
       ],
-      "note": "Graph retention in bounded batches, heap sampling with pressure flag, DuckDB memory limit, degradation stages under memory or queue pressure in a fixed order (FR-9.12), observation and research dataset retention, encrypted online backup after a drain whose archive manifest names the Server Registry and the signed Policy Store (TestBackupUnderLoadComponents checks every component under load, SR-7.7-1), scheduled backups (FR-9.16) and a restore that verifies the signed Policy Store, re-applies suspensions, credential, package and client revocations and, with [graph] enabled, rebuilds the graph mirror from the restored journal (SR-7.8-1; smcpctl backup, restore). Version purge (internal/versions, POST /api/v1/versions/purge, Administrator only) deletes a version only when no journal event references it and commits the receipt first (SR-6.14-1). The CP-46 directories of the Enforced CI host and of Standalone installs on Ubuntu and macOS have an Inspection record (FR-12.4). Requirement report (main 383485d): 10 of 12 verified; partly verified: FR-9.10 (the page-cache measurement and the other budgeted components are not covered), FR-9.11 (the page-cache measurement and the other budgeted components are not covered). Deferred from 1.0 (Appendix N): storage tiering (FR-9.13)."
+      "note": "Graph retention in bounded batches, heap sampling with pressure flag, DuckDB memory limit, degradation stages under memory or queue pressure in a fixed order (FR-9.12), observation and research dataset retention, encrypted online backup after a drain whose archive manifest names the Server Registry and the signed Policy Store (TestBackupUnderLoadComponents checks every component under load, SR-7.7-1), scheduled backups (FR-9.16) and a restore that verifies the signed Policy Store, re-applies suspensions, credential, package and client revocations and, with [graph] enabled, rebuilds the graph mirror from the restored journal (SR-7.8-1; smcpctl backup, restore). Version purge (internal/versions, POST /api/v1/versions/purge, Administrator only) deletes a version only when no journal event references it and commits the receipt first (SR-6.14-1). The CP-46 directories of the Enforced CI host and of Standalone installs on Ubuntu and macOS have an Inspection record (FR-12.4). Requirement report (main fe82231): 10 of 12 verified; partly verified: FR-9.10 (the page-cache measurement and the other budgeted components are not covered), FR-9.11 (the page-cache measurement and the other budgeted components are not covered). Deferred from 1.0 (Appendix N): storage tiering (FR-9.13). On Windows (planned for v1.3.0) the CP-46 directories get protected DACLs and free space is measured with GetDiskFreeSpaceEx (FR-21.5, FR-21.26). Planned for v1.3.0 (not counted above): 1 allocated, 1 partly verified; what each lacks is in the gap list."
     },
     {
       "id": "E-29",
@@ -8665,7 +8525,7 @@
         "internal/analytics",
         "internal/obspolicy"
       ],
-      "note": "Observation Collector as an audit observer plus mandatory probes run inline on the call's goroutine: one record per call with the computed catalog parameters, deterministic sampling, capture escalation, scope by principal, framework type, template, server and tool, drop counting, meta-metrics, per-stage and per-filter spans with thread CPU time (FR-10.2); batched queue taken every 10 ms; never blocks a call. Drop counts per reason equal the injected volume under backpressure at the collector queue, the Observation Store writer and the evidence fan-out (FR-10.8). Published Observation Policies apply at once, baseline contexts at the next start. Requirement report (main 383485d): 9 of 14 verified; partly verified: FR-10 (parent; FR-10.1, FR-10.2, FR-10.5 and FR-10.10 are partly verified), FR-10.1 (the collector's offer path is tested with consumption stalled; instrumented elements processing calls during the stall are not), FR-10.2 (only the edge's stages emit spans; a call without an approval has no approval span), FR-10.5 (the fixture covers the argument features only), FR-10.10 (P-213 is computed from journal timestamps; no independent harness-side measurement is compared). Missing: S3 payload capture and first-N-per-session capture. Deferred from 1.0 (Appendix N): policy-directed payload capture (SR-6.6-1)."
+      "note": "Observation Collector as an audit observer plus mandatory probes run inline on the call's goroutine: one record per call with the computed catalog parameters, deterministic sampling, capture escalation, scope by principal, framework type, template, server and tool, drop counting, meta-metrics, per-stage and per-filter spans with thread CPU time (FR-10.2); batched queue taken every 10 ms; never blocks a call. Drop counts per reason equal the injected volume under backpressure at the collector queue, the Observation Store writer and the evidence fan-out (FR-10.8). Published Observation Policies apply at once, baseline contexts at the next start. Requirement report (main fe82231): 9 of 14 verified; partly verified: FR-10 (parent, 33 of 37 child requirements verified), FR-10.1 (the collector's offer path is tested with consumption stalled; instrumented elements processing calls during the stall are not), FR-10.2 (only the edge's stages emit spans; a call without an approval has no approval span), FR-10.5 (the fixture covers the argument features only), FR-10.10 (P-213 is computed from journal timestamps; no independent harness-side measurement is compared). Missing: S3 payload capture and first-N-per-session capture. Deferred from 1.0 (Appendix N): policy-directed payload capture (SR-6.6-1)."
     },
     {
       "id": "E-30",
@@ -8675,7 +8535,7 @@
       "packages": [
         "internal/baseline"
       ],
-      "note": "Welford statistics with optional decay, log1p and Box-Cox transforms, t-digest median and MAD, category and transition surprise, learning exclusions, sealed snapshots, drift reports, promotion and rollback, integrity events. Baseline contexts and bands come from the published Observation Policy, with a baseline context key per session (FR-2.13). Requirement report (main 383485d): all 11 verified. Nothing allocated to E-30 is deferred."
+      "note": "Welford statistics with optional decay, log1p and Box-Cox transforms, t-digest median and MAD, category and transition surprise, learning exclusions, sealed snapshots, drift reports, promotion and rollback, integrity events. Baseline contexts and bands come from the published Observation Policy, with a baseline context key per session (FR-2.13). Requirement report (main fe82231): all 11 verified. Nothing allocated to E-30 is deferred."
     },
     {
       "id": "E-31",
@@ -8685,7 +8545,7 @@
       "packages": [
         "internal/anomaly"
       ],
-      "note": "Digest-verified atomic snapshot load, z and robust z with sigma floors, max-|z| combination naming the feature, CP-30 bands and uncharacterized, asynchronous alerts and capture escalation, optional synchronous approval and withhold obligations (off by default) as the last filters of the chains, per-band actions from the published Anomaly Response Policy (restrict-only, alert-only bands, the uncharacterized state maps to record, escalate or approve), anomaly evidence on the approval record. Requirement report (main 383485d): all 10 verified. Nothing allocated to E-31 is deferred."
+      "note": "Digest-verified atomic snapshot load, z and robust z with sigma floors, max-|z| combination naming the feature, CP-30 bands and uncharacterized, asynchronous alerts and capture escalation, optional synchronous approval and withhold obligations (off by default) as the last filters of the chains, per-band actions from the published Anomaly Response Policy (restrict-only, alert-only bands, the uncharacterized state maps to record, escalate or approve), anomaly evidence on the approval record. Requirement report (main fe82231): all 10 verified. Nothing allocated to E-31 is deferred."
     },
     {
       "id": "E-32",
@@ -8695,7 +8555,7 @@
       "packages": [
         "internal/research"
       ],
-      "note": "Campaign life cycle with clocks and quota, exports in Parquet, CSV, JSON Lines and GraphML (including the audit subgraph) with per-dataset HMAC pseudonyms, dictionary, manifest and checksums, CSV formula neutralization, export files opened inside their root, retention that deletes datasets and their keys (FR-9.14). A CI virtual environment with pinned pyarrow, pandas and NetworkX loads every export format (FR-10.34). Researcher accounts create, submit and stop campaigns and export their datasets. Requirement report (main 383485d): all 9 verified. Release archives are built without cgo and cannot write Parquet; build from source with cgo for Parquet exports."
+      "note": "Campaign life cycle with clocks and quota, exports in Parquet, CSV, JSON Lines and GraphML (including the audit subgraph) with per-dataset HMAC pseudonyms, dictionary, manifest and checksums, CSV formula neutralization, export files opened inside their root, retention that deletes datasets and their keys (FR-9.14). A CI virtual environment with pinned pyarrow, pandas and NetworkX loads every export format (FR-10.34). Researcher accounts create, submit and stop campaigns and export their datasets. Requirement report (main fe82231): all 9 verified. Release archives are built without cgo and cannot write Parquet; build from source with cgo for Parquet exports."
     },
     {
       "id": "E-33",
@@ -8711,23 +8571,27 @@
         "cmd/smcp-connect",
         "packaging/npm/smcp-connect"
       ],
-      "note": "smcp-session, smcp-stdio (both eras, UDS dialing) and smcp-connect (binary and npm) with the CP-43 credential file; smcpctl clients setup, lockdown and doctor for the seven local clients; Tailscale Funnel and Cloudflare tunnel drivers. TestConformanceThroughAdapters runs the northbound conformance checks relayed through smcp-stdio and through smcp-connect behind a test tunnel and requires each response to equal a direct connection's (FR-12.13, FR-16.9). The session helper is demonstrated with Claude Code (headersHelper) and Codex CLI (env_http_headers fed by smcp-session --env) (FR-12.12). The real-agent suite passes Claude Code 2.1.302, Codex CLI 0.142.2, Hermes Agent 0.17.0, OpenCode 1.15.13 and Goose 1.55.0 on every scenario, and its broken-build check turns a client to fail against a deliberately broken smcpd. The Real agents lockdown job follows the Claude Code quick start at the pinned version and applies smcpctl lockdown apply: a second MCP server in user and project scope does not load, the Read of the Gateway state directory and the Edit of its own .mcp.json are refused, and doctor flags both extra servers. smcpctl doctor runs on the Enforced CI host as the harness user (FR-15.4). Gemini CLI is not run (no GEMINI_API_KEY) and Grok Build is not run (no public CLI). Requirement report (main 383485d): 11 of 20 verified; partly verified: FR-15 (parent, 5 of 10 child requirements verified), FR-15.1 (only Claude Code is run with its lockdown at the pinned version), FR-15.2 (claimed in full only by the lockdown job of a release tag), FR-15.7 (only Claude Code connects over TLS with what smcpctl clients setup wrote), FR-15.8 (Gemini CLI and Grok Build are not run; the matrix result is a full claim only from a release tag), FR-15.10 (Gemini CLI and Grok Build have no result in the matrix job), SR-4.9-1 (only Claude Code is started at its pinned version with a second server added), SR-4.11-1 (only Claude Code is started at its pinned version with its lockdown); unverified: FR-18.3 (Gemini CLI needs a GEMINI_API_KEY and Grok Build has no installable CLI, so their quick starts are not followed). Live cloud-agent runs (Grok Bot, ChatGPT agent, Meta Muse) are descoped from release 1.x; FR-15.9 and FR-16.10 are verified by Inspection records of the documented modes and vendor settings, reviewed 2026-10-18."
+      "note": "smcp-session, smcp-stdio (both eras, UDS dialing) and smcp-connect (binary and npm) with the CP-43 credential file; smcpctl clients setup, lockdown and doctor for the seven local clients; Tailscale Funnel and Cloudflare tunnel drivers. TestConformanceThroughAdapters runs the northbound conformance checks relayed through smcp-stdio and through smcp-connect behind a test tunnel and requires each response to equal a direct connection's (FR-12.13, FR-16.9). The session helper is demonstrated with Claude Code (headersHelper) and Codex CLI (env_http_headers fed by smcp-session --env) (FR-12.12). The real-agent suite passes Claude Code 2.1.302, Codex CLI 0.142.2, Hermes Agent 0.17.0, OpenCode 1.15.13 and Goose 1.55.0 on every scenario, and its broken-build check turns a client to fail against a deliberately broken smcpd. The Real agents lockdown job follows the Claude Code quick start at the pinned version and applies smcpctl lockdown apply: a second MCP server in user and project scope does not load, the Read of the Gateway state directory and the Edit of its own .mcp.json are refused, and doctor flags both extra servers. smcpctl doctor runs on the Enforced CI host as the harness user (FR-15.4). Gemini CLI is not run (no GEMINI_API_KEY) and Grok Build is not run (no public CLI). Requirement report (main fe82231): 12 of 21 verified; partly verified: FR-15 (parent, 6 of 11 child requirements verified), FR-15.1 (only Claude Code is run with its lockdown at the pinned version), FR-15.2 (claimed in full only by the lockdown job of a release tag), FR-15.7 (only Claude Code connects over TLS with what smcpctl clients setup wrote), FR-15.8 (gemini CLI and Grok Build are not run; the matrix result is a full claim only from a release tag), FR-15.10 (gemini CLI and Grok Build have no result in the matrix job), SR-4.9-1 (only Claude Code is started at its pinned version with a second server added), SR-4.11-1 (only Claude Code is started at its pinned version with its lockdown); not verified: FR-18.3 (gemini CLI needs a GEMINI_API_KEY and Grok Build has no installable CLI, so their quick starts are not followed). Live cloud-agent runs (Grok Bot, ChatGPT agent, Meta Muse) are descoped from release 1.x; FR-15.9 and FR-16.10 are verified by Inspection records of the documented modes and vendor settings, reviewed 2026-10-18. On Windows (planned for v1.3.0) the adapters read the CP-43 credential file from %APPDATA% after a DACL check and can connect over the named pipe (FR-21.16). Planned for v1.3.0 (not counted above): 3 allocated, 3 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-34",
       "name": "Desktop Application",
       "subsystem": "SS-8",
       "implementation": "partial",
-      "packages": [],
-      "note": "Desktop Application (Tauri 2 tray app for macOS, Linux and Windows): planned for v1.3.0. Foundation in desktop/ (tray states from the metrics endpoint, service control, console window with Gateway-CA pinning and no IPC, count-only approval notifications, single instance); setup, client setup, updates, installers and Windows are not built yet. Every requirement allocated to it is planned (SRS FR-20, SR-2-3 to SR-2-7, SR-2.6-2, SR-2.8-5, SR-2.9-4, SR-7-2; SRS Section 2.8) and is not counted in the current requirement set."
+      "packages": [
+        "desktop"
+      ],
+      "note": "Desktop Application (Tauri 2 tray application, planned for v1.3.0). Built for macOS arm64 and Linux x86_64 and arm64: tray states and accessible names from the CP-51 metrics endpoint (\"running, not enforced\" when only the Standalone profile's own cause degrades health), service control through launchd and systemd with fixed argument vectors, the console window loaded from the admin listener with Gateway-CA pinning, no IPC and a non-persistent data store, count-only approval notifications that open G-13, the first-run introduction, first-run setup through smcpctl install with password files, client setup through smcpctl clients detect and connect, update checks against GitHub Releases with minisign, SHA-256 and cosign verification before an installer or smcpctl upgrade runs, smcp:// deep links, single instance and start at login, bundled IBM Plex fonts and template tray icons. The Rust tests send their requirement claims to the status data (claims.rs), and the desktop-e2e (linux) job completes first-run setup against the real binaries under Xvfb. Not built: the Windows 11 application (Service Control Manager control, WebView2) and the bundled ContextForge choice in first-run setup (FR-22.44). Published only in the pre-release v1.3.0-beta.1 (Linux packages and AppImage, macOS .dmg). Planned for v1.3.0 (not counted above): 35 allocated, 26 partly verified, 9 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-35",
       "name": "Platform Installers",
       "subsystem": "SS-8",
-      "implementation": "not-started",
-      "packages": [],
-      "note": "Platform Installers (macOS pkg and dmg, Linux deb, rpm and AppImage, Windows msi): planned for v1.3.0, without platform code signing; installers are verified with the release minisign signature, Sigstore bundle and SHA-256 checksums. Every requirement allocated to it is planned (SRS FR-20, SR-4.11-2; SRS Section 2.8). Platform signing, notarization and MSIX are deferred (Appendix N)."
+      "implementation": "partial",
+      "packages": [
+        "packaging/installers"
+      ],
+      "note": "Platform Installers (planned for v1.3.0), without platform code signing and verified with the release minisign signature, Sigstore bundle and SHA-256 checksums. Published since v1.2.0: the smcp .deb and .rpm for amd64 and arm64 (nFPM through GoReleaser; the pre-removal script stops only a system service) and the macOS arm64 command-line .pkg, built on Linux. In the pre-release v1.3.0-beta.1: the smcp-desktop .deb, .rpm and AppImage for amd64 and arm64 and the macOS arm64 .dmg with the application and the commands, ad-hoc signed. On main: the smcp .msi for Windows amd64 and arm64 (WiX Toolset, per machine, no service). installers.yml builds, installs, exercises and removes each on a runner of its platform before the release job (scripts/package-smoke.sh, scripts/desktop-smoke.sh and the Windows smoke steps); a truncated or altered package is refused, installers-broken.yml shows that a broken installer stops the release, and install.sh --package verifies and installs a package. Not built: the smcp-desktop .msi for Windows 11 x64. Planned for v1.3.0 (not counted above): 11 allocated, 8 partly verified, 3 with no claim yet; what each lacks is in the gap list. Platform signing, notarization, MSIX and signed APT and RPM repositories are deferred (Appendix N)."
     },
     {
       "id": "E-36",
@@ -8739,7 +8603,7 @@
         "internal/contextforge/connector",
         "internal/contextforge/bundle"
       ],
-      "note": "Planned for v1.3.0 (FR-22, SRS Section 2.8; not counted in the current requirement set). Built: release lock with the pinned catalog compiled in, catalog source checks, bounded parsing, classification, tool-name mapping, control API /api/v1/contextforge/* and smcpctl catalog and contextforge, local and hosted catalog import with the trust decision and the catalog import key (manifest_version 2, SR-3-6), catalog_import and catalog_trust_decision events, the bundled instance (hardened configuration, vault credentials, cosign verification, loopback container, health supervision, on-demand start, uninstall), per-package provisioning, scope self-check and reconciliation, the starter set, the setup choice, G-15 and the hostile rows HFC-02, HFC-03, HFC-04 and HFC-06. Not built: dispatch of enabled hosted packages (needs the southbound HTTP transport), E-18 endpoints per hosted package, the Enforced-profile containment of the instance, the managed-process form, upgrade with rollback."
+      "note": "ContextForge Connector (planned for v1.3.0). Built: the release lock pinning ContextForge v1.0.11 (image index and platform digests, catalog digest, signer identity, starter set) with the pinned catalog compiled in; catalog source checks, bounded parsing, classification and tool-name mapping; control API /api/v1/contextforge/*, smcpctl catalog and contextforge, and console view G-15; local-entry import with the trust decision and the catalog import key; hosted-entry import (manifest_version 2, probe through the bundled instance); catalog_import and catalog_trust_decision events; the opt-in choice in smcpctl bootstrap and install; the bundled instance as a hardened loopback container (generated configuration, vault credentials, cosign and SBOM attestation verification, health supervision, start on demand, uninstall); per-package teams, users, gateways, virtual servers and tokens with the scope self-check; reconciliation every 5 minutes with drift suspension; hosted dispatch over the southbound Streamable HTTP client; hostile rows HFC-02, HFC-03, HFC-04, HFC-06, HFC-10 and HFC-14. Not built: an Egress Broker endpoint per hosted package and the narrowed probe, the probe secret of API-key entries, the Enforced-profile containment of the instance, the managed-process form, upgrade with rollback, token renewal before expiry, the ContextForge evidence fields, the signed release lock and the ContextForge SBOMs. Planned for v1.3.0 (not counted above): 38 allocated, 3 verified, 27 partly verified, 8 with no claim yet; what each lacks is in the gap list."
     }
   ],
   "agents": [
@@ -9008,7 +8872,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9019,7 +8883,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 9 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9054,7 +8918,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:32997: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36747: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9171,7 +9035,7 @@
     }
   ],
   "acceptance": {
-    "commit": "636c58223b2812f42a10002e56a233a77fc88ad1",
+    "commit": "e61559cba50d39c58804e4282abfcce4578aa79a",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9859,27 +9723,27 @@
   },
   "ci": {
     "workflow": "CI",
-    "conclusion": "success"
+    "conclusion": "failure"
   },
   "performance": {
     "schema": 1,
-    "commit": "636c58223b2812f42a10002e56a233a77fc88ad1",
-    "generatedAt": "2026-10-20T12:49:19Z",
+    "commit": "e61559cba50d39c58804e4282abfcce4578aa79a",
+    "generatedAt": "2026-10-20T13:30:11Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000016683",
-      "memoryBytes": 16766414848,
+      "runner": "GitHub Actions 1000016765",
+      "memoryBytes": 16760340480,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90409459712,
+      "diskFreeBytes": 89622183936,
       "diskDevice": "sda1",
       "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
-      "imageVersion": "20261012.334.1"
+      "imageVersion": "20261018.339.1"
     },
     "referenceHardware": true,
     "referenceClass": "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)",
@@ -9898,7 +9762,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.033901,
+        "value": 0.029746,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9911,7 +9775,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 17.540739,
+        "value": 19.418426,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9924,19 +9788,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.6959267499999982,
+        "value": 0.8543027500000004,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.525 ms, mean of 10.740, 10.588, 10.393, 10.586, 10.418, 10.648, 10.522, 10.306) minus disabled (9.829 ms, mean of 10.193, 9.453, 9.979, 9.659, 9.757, 9.981, 9.946, 9.664), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (11.084 ms, mean of 11.111, 11.478, 11.199, 11.259, 11.031, 11.050, 11.038, 10.504) minus disabled (10.229 ms, mean of 9.795, 10.177, 9.876, 10.121, 10.482, 10.330, 10.732, 10.321), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9656621762197,
+        "value": 1999.96659059477,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9948,7 +9812,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 766.55626,
+        "value": 846.946184,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9960,12 +9824,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1565.265625,
+        "value": 1518.75,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m17s after start with no traffic: smcpd (131.1 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1434.1 MiB in 2 processes, process 4233 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m18s after start with no traffic: smcpd (97.4 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1421.4 MiB in 2 processes, process 4296 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
