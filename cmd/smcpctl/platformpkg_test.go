@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"encoding/xml"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -528,6 +530,37 @@ func TestDesktopDebVersionOrdersBeforeRelease(t *testing.T) {
 	for _, want := range []string{`dpkg --compare-versions "$1" lt "$final"`, `rpm.vercmp('$1', '$final')`, `before_final "$debver" deb`} {
 		if !strings.Contains(string(smoke), want) {
 			t.Errorf("scripts/desktop-smoke.sh lacks the order check %q", want)
+		}
+	}
+}
+
+// TestWixSourcesParse: the WiX sources of both .msi packages are XML that
+// the WiX compiler accepts, with no "--" in a comment, and run the
+// package-removal custom action on removal only (FR-20.22).
+func TestWixSourcesParse(t *testing.T) {
+	reqtest.Partial(t, "FR-20.22")
+	for _, f := range []string{"packaging/installers/windows/smcp.wxs", "packaging/installers/desktop/package-removal.wxs"} {
+		b, err := os.ReadFile(filepath.Join(repoRoot, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range regexp.MustCompile(`(?s)<!--(.*?)-->`).FindAllStringSubmatch(string(b), -1) {
+			if strings.Contains(c[1], "--") || strings.HasSuffix(c[1], "-") {
+				t.Errorf("%s: an XML comment holds \"--\": %.60q", f, c[1])
+			}
+		}
+		d := xml.NewDecoder(bytes.NewReader(b))
+		for {
+			if _, err := d.Token(); err == io.EOF {
+				break
+			} else if err != nil {
+				t.Fatalf("%s: %v", f, err)
+			}
+		}
+		for _, want := range []string{`uninstall --package-removal`, `Impersonate="no"`, `Before="RemoveFiles"`, `REMOVE~=`, `NOT UPGRADINGPRODUCTCODE`} {
+			if !strings.Contains(string(b), want) {
+				t.Errorf("%s lacks %s", f, want)
+			}
 		}
 	}
 }

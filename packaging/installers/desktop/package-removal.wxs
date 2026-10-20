@@ -6,10 +6,10 @@
   component group SmcpPackageRemoval).
 
   When the package is removed (not upgraded), before its files go, it runs
-  the packaged `smcpctl uninstall --package-removal` as the system
+  the packaged smcpctl uninstall with its package-removal option as the system
   account, as the smcp .msi and the .deb and .rpm pre-removal scripts do:
   that stops and removes the machine-mode service smcpd when it runs this
-  package's smcpd or the copy `smcpctl install --machine` made from it,
+  package's smcpd or the copy that the machine-mode smcpctl install made from it,
   and keeps the configuration, state, journal, keys, backups and every
   per-user task. A failure never stops the removal.
 -->
