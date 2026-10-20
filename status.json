@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T06:58:02Z",
-  "commit": "a63d3a2db932961f01614d5418855195d5b3c5ca",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a63d3a2db932961f01614d5418855195d5b3c5ca",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39375479991",
+  "generatedAt": "2026-10-20T07:56:17Z",
+  "commit": "06d6fffb0128c30ce0a1eb145489aca79cd12bae",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/06d6fffb0128c30ce0a1eb145489aca79cd12bae",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39383391560",
   "tests": {
-    "total": 1876,
-    "passed": 1857,
+    "total": 1924,
+    "passed": 1905,
     "failed": 0,
     "skipped": 19,
-    "durationSec": 3602.3,
+    "durationSec": 3276.8,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -19,7 +19,7 @@
       },
       {
         "name": "console/e2e/chromium",
-        "passed": 75,
+        "passed": 78,
         "failed": 0,
         "skipped": 1
       },
@@ -31,25 +31,25 @@
       },
       {
         "name": "console/e2e/firefox",
-        "passed": 75,
+        "passed": 78,
         "failed": 0,
         "skipped": 1
       },
       {
         "name": "console/e2e/webkit",
-        "passed": 75,
+        "passed": 78,
         "failed": 0,
         "skipped": 1
       },
       {
         "name": "desktop/linux",
-        "passed": 92,
+        "passed": 94,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "desktop/macos",
-        "passed": 91,
+        "passed": 93,
         "failed": 0,
         "skipped": 0
       },
@@ -67,7 +67,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 100,
+        "passed": 102,
         "failed": 0,
         "skipped": 0
       },
@@ -210,8 +210,20 @@
         "skipped": 0
       },
       {
+        "name": "internal/contextforge/bundle",
+        "passed": 13,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/contextforge/cftest",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/contextforge/connector",
-        "passed": 6,
+        "passed": 11,
         "failed": 0,
         "skipped": 0
       },
@@ -253,7 +265,7 @@
       },
       {
         "name": "internal/filters",
-        "passed": 65,
+        "passed": 66,
         "failed": 0,
         "skipped": 0
       },
@@ -277,7 +289,7 @@
       },
       {
         "name": "internal/hostile",
-        "passed": 73,
+        "passed": 81,
         "failed": 0,
         "skipped": 1
       },
@@ -295,7 +307,7 @@
       },
       {
         "name": "internal/library",
-        "passed": 39,
+        "passed": 40,
         "failed": 0,
         "skipped": 0
       },
@@ -421,7 +433,7 @@
       },
       {
         "name": "internal/secrets",
-        "passed": 33,
+        "passed": 34,
         "failed": 0,
         "skipped": 1
       },
@@ -452,6 +464,12 @@
       {
         "name": "internal/versions",
         "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "internal/winpath",
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
@@ -524,7 +542,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.6,
+    "totalPct": 75.3,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -552,11 +570,11 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 45.2
+        "pct": 44.8
       },
       {
         "name": "cmd/smcpd",
-        "pct": 2.9
+        "pct": 2.8
       },
       {
         "name": "console",
@@ -564,7 +582,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 73.1
+        "pct": 72.4
       },
       {
         "name": "internal/adminapi",
@@ -631,8 +649,16 @@
         "pct": 89.5
       },
       {
+        "name": "internal/contextforge/bundle",
+        "pct": 49.7
+      },
+      {
+        "name": "internal/contextforge/cftest",
+        "pct": 23.1
+      },
+      {
         "name": "internal/contextforge/connector",
-        "pct": 71.3
+        "pct": 46.1
       },
       {
         "name": "internal/diag",
@@ -648,7 +674,7 @@
       },
       {
         "name": "internal/egress",
-        "pct": 84.5
+        "pct": 84.4
       },
       {
         "name": "internal/filterapi",
@@ -656,15 +682,15 @@
       },
       {
         "name": "internal/filters",
-        "pct": 89.2
+        "pct": 89
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 83.7
       },
       {
         "name": "internal/gwtest",
-        "pct": 80
+        "pct": 80.8
       },
       {
         "name": "internal/harness",
@@ -676,7 +702,7 @@
       },
       {
         "name": "internal/hostile",
-        "pct": 64.9
+        "pct": 62.2
       },
       {
         "name": "internal/ids",
@@ -688,7 +714,7 @@
       },
       {
         "name": "internal/library",
-        "pct": 85.3
+        "pct": 84.6
       },
       {
         "name": "internal/metrics",
@@ -716,7 +742,7 @@
       },
       {
         "name": "internal/packaging",
-        "pct": 75.2
+        "pct": 75.1
       },
       {
         "name": "internal/packaging/pkgtest",
@@ -728,7 +754,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 91.5
+        "pct": 91.4
       },
       {
         "name": "internal/policy",
@@ -768,7 +794,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 84.3
+        "pct": 84.4
       },
       {
         "name": "internal/sandbox/probe",
@@ -776,7 +802,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 80
+        "pct": 79.8
       },
       {
         "name": "internal/session",
@@ -791,16 +817,24 @@
         "pct": 96.3
       },
       {
+        "name": "internal/testperm",
+        "pct": 58.8
+      },
+      {
         "name": "internal/testport",
         "pct": 81.6
       },
       {
         "name": "internal/tunnel",
-        "pct": 80
+        "pct": 81.2
       },
       {
         "name": "internal/versions",
         "pct": 82.8
+      },
+      {
+        "name": "internal/winpath",
+        "pct": 100
       },
       {
         "name": "internal/winsandbox",
@@ -4548,7 +4582,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (42074b086183, 2026-10-20T06:55:15Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39380672976"
+          "workflow agents-lockdown at main (86368619e2e2, 2026-10-20T07:50:14Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39387700335"
         ]
       },
       {
@@ -4617,7 +4651,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (42074b086183, 2026-10-20T06:55:13Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39380672976"
+          "workflow agents at main (86368619e2e2, 2026-10-20T07:50:12Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39387700335"
         ]
       },
       {
@@ -7030,7 +7064,11 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestMacPkgBuildScript",
-          "cmd/smcpctl.TestMacPkgLinuxBuildScript"
+          "cmd/smcpctl.TestMacPkgLinuxBuildScript",
+          "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
+          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path"
         ],
         "target": "v1.3.0"
       },
@@ -7048,7 +7086,11 @@
         "element": "E-35",
         "status": "partial",
         "tests": [
+          "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
           "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path",
           "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only"
         ],
         "target": "v1.3.0"
@@ -7488,8 +7530,10 @@
       {
         "id": "FR-21.25",
         "element": "E-15",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/filters.TestWindowsPathRules"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7526,7 +7570,8 @@
         "element": "E-36",
         "status": "verified",
         "tests": [
-          "internal/contextforge.TestBoundedParsing"
+          "internal/contextforge.TestBoundedParsing",
+          "internal/hostile.TestHostileContextForge/HFC-02"
         ],
         "target": "v1.3.0"
       },
@@ -7535,7 +7580,8 @@
         "element": "E-36",
         "status": "verified",
         "tests": [
-          "internal/contextforge.TestClassificationReasons"
+          "internal/contextforge.TestClassificationReasons",
+          "internal/hostile.TestHostileContextForge/HFC-06"
         ],
         "target": "v1.3.0"
       },
@@ -7544,6 +7590,9 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
+          "console/e2e/chromium.contextforge.spec.ts > G-15 lists, filters and shows catalog entries as inert text without remote requests",
+          "console/e2e/firefox.contextforge.spec.ts > G-15 lists, filters and shows catalog entries as inert text without remote requests",
+          "console/e2e/webkit.contextforge.spec.ts > G-15 lists, filters and shows catalog entries as inert text without remote requests",
           "internal/contextforge/connector.TestListFilters"
         ],
         "target": "v1.3.0"
@@ -7553,7 +7602,13 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestCatalogCLIThroughGateway"
+          "cmd/smcpctl.TestCatalogCLIThroughGateway",
+          "console/e2e/chromium.contextforge.spec.ts > G-15 offers import to Operators",
+          "console/e2e/chromium.contextforge.spec.ts > G-15 shows the catalog to Auditors without import actions",
+          "console/e2e/firefox.contextforge.spec.ts > G-15 offers import to Operators",
+          "console/e2e/firefox.contextforge.spec.ts > G-15 shows the catalog to Auditors without import actions",
+          "console/e2e/webkit.contextforge.spec.ts > G-15 offers import to Operators",
+          "console/e2e/webkit.contextforge.spec.ts > G-15 shows the catalog to Auditors without import actions"
         ],
         "target": "v1.3.0"
       },
@@ -7562,7 +7617,8 @@
         "element": "E-36",
         "status": "verified",
         "tests": [
-          "internal/contextforge/connector.TestLocalImportPinned"
+          "internal/contextforge/connector.TestLocalImportPinned",
+          "internal/hostile.TestHostileContextForge/HFC-04"
         ],
         "target": "v1.3.0"
       },
@@ -7571,7 +7627,8 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
-          "internal/contextforge.TestCatalogCodeHasNoNetworkOrExec"
+          "internal/contextforge.TestCatalogCodeHasNoNetworkOrExec",
+          "internal/hostile.TestHostileContextForge/HFC-03"
         ],
         "target": "v1.3.0"
       },
@@ -7585,8 +7642,10 @@
       {
         "id": "FR-22.9",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/connector.TestHostedImportImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7594,7 +7653,9 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
-          "internal/contextforge.TestMapToolNames"
+          "internal/contextforge.TestMapToolNames",
+          "internal/contextforge/connector.TestHostedImportImage",
+          "internal/contextforge/connector.TestHostedProcessRenames"
         ],
         "target": "v1.3.0"
       },
@@ -7603,6 +7664,7 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
+          "internal/contextforge/connector.TestHostedImportImage",
           "internal/contextforge/connector.TestTrustDecisionAndEvidence"
         ],
         "target": "v1.3.0"
@@ -7612,6 +7674,7 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
+          "internal/contextforge/connector.TestHostedImportImage",
           "internal/contextforge/connector.TestTrustDecisionAndEvidence"
         ],
         "target": "v1.3.0"
@@ -7621,7 +7684,9 @@
         "element": "E-14",
         "status": "partial",
         "tests": [
-          "internal/contextforge/connector.TestTrustDecisionAndEvidence"
+          "internal/contextforge/connector.TestHostedImportImage",
+          "internal/contextforge/connector.TestTrustDecisionAndEvidence",
+          "internal/library.TestHostedAdmission"
         ],
         "target": "v1.3.0"
       },
@@ -7655,7 +7720,8 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
-          "internal/contextforge.TestReleaseLock"
+          "internal/contextforge.TestReleaseLock",
+          "internal/contextforge/connector.TestStarterSetOffer"
         ],
         "target": "v1.3.0"
       },
@@ -7671,8 +7737,12 @@
       {
         "id": "FR-22.19",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestVerifier",
+          "internal/contextforge/bundle.TestVerifierNetwork",
+          "internal/contextforge/connector.TestBundledInstanceImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7694,15 +7764,19 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
-          "internal/contextforge/connector.TestHostedImportNeedsBundledInstance"
+          "cmd/smcpctl.TestBootstrapContextForgeChoice",
+          "internal/contextforge/connector.TestHostedImportNeedsBundledInstance",
+          "internal/library.TestHostedAdmission"
         ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.23",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/connector.TestHostedImportImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7717,6 +7791,7 @@
         "element": "E-15",
         "status": "partial",
         "tests": [
+          "internal/contextforge/connector.TestBundledInstanceImage",
           "internal/winsandbox.TestWindowsManagedProcess"
         ],
         "target": "v1.3.0"
@@ -7724,36 +7799,57 @@
       {
         "id": "FR-22.26",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestPinnedImage",
+          "internal/contextforge/bundle.TestSupervision"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.27",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestGeneratedConfiguration",
+          "internal/contextforge/bundle.TestPinnedImage"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.28",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestCredentials",
+          "internal/contextforge/bundle.TestPinnedImage",
+          "internal/contextforge/bundle.TestStartRefusesWeakCredentials",
+          "internal/contextforge/bundle.TestSupervision",
+          "internal/contextforge/connector.TestBundledInstanceImage",
+          "internal/contextforge/connector.TestInstanceNeedsVault",
+          "internal/secrets.TestComponentCredentials"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.29",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestIsolationImage",
+          "internal/contextforge/bundle.TestSelfCheckFindings"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.30",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestPinnedImage",
+          "internal/contextforge/bundle.TestSupervision",
+          "internal/contextforge/connector.TestBundledInstanceImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7766,22 +7862,29 @@
       {
         "id": "FR-22.32",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/connector.TestHostedImportImage"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.33",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestReconcileImage",
+          "internal/contextforge/connector.TestHostedProcessRenames"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.34",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestIsolationImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7801,15 +7904,21 @@
       {
         "id": "FR-22.37",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestGeneratedConfiguration",
+          "internal/contextforge/bundle.TestPinnedImage"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.38",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestIsolationImage",
+          "internal/contextforge/bundle.TestReconcileImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7829,8 +7938,14 @@
       {
         "id": "FR-22.41",
         "element": "E-24",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "console/e2e/chromium.contextforge.spec.ts > G-15 offers import to Operators",
+          "console/e2e/firefox.contextforge.spec.ts > G-15 offers import to Operators",
+          "console/e2e/webkit.contextforge.spec.ts > G-15 offers import to Operators",
+          "internal/contextforge/connector.TestBundledInstanceImage",
+          "internal/contextforge/connector.TestInstanceNeedsVault"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7843,15 +7958,20 @@
       {
         "id": "FR-22.43",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileContextForge"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.44",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestBootstrapContextForgeChoice",
+          "cmd/smcpctl.TestContextForgeChoice"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8012,15 +8132,22 @@
       {
         "id": "SR-2.13-5",
         "element": "E-19",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/connector.TestBundledInstanceImage",
+          "internal/secrets.TestComponentCredentials"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "SR-3.2-2",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestVerifier",
+          "internal/contextforge/bundle.TestVerifierNetwork",
+          "internal/contextforge/connector.TestBundledInstanceImage"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8033,8 +8160,10 @@
       {
         "id": "SR-3-6",
         "element": "E-13",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/library.TestHostedAdmission"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8581,9 +8710,10 @@
       "implementation": "partial",
       "packages": [
         "internal/contextforge",
-        "internal/contextforge/connector"
+        "internal/contextforge/connector",
+        "internal/contextforge/bundle"
       ],
-      "note": "Planned for v1.3.0 (FR-22, SRS Section 2.8; not counted in the current requirement set). Built: release lock packaging/contextforge.lock.json with the pinned catalog compiled in, catalog source checks, bounded parsing, classification, hosted tool-name mapping, control API /api/v1/contextforge/* and smcpctl catalog, local-entry import through packaging with the trust decision, the catalog import key and catalog_import and catalog_trust_decision events. Not built: the bundled ContextForge instance and its lifecycle, hosted probe and manifest_version 2, per-package isolation, reconciliation, G-15, hostile rows HFC-01 to HFC-14."
+      "note": "Planned for v1.3.0 (FR-22, SRS Section 2.8; not counted in the current requirement set). Built: release lock with the pinned catalog compiled in, catalog source checks, bounded parsing, classification, tool-name mapping, control API /api/v1/contextforge/* and smcpctl catalog and contextforge, local and hosted catalog import with the trust decision and the catalog import key (manifest_version 2, SR-3-6), catalog_import and catalog_trust_decision events, the bundled instance (hardened configuration, vault credentials, cosign verification, loopback container, health supervision, on-demand start, uninstall), per-package provisioning, scope self-check and reconciliation, the starter set, the setup choice, G-15 and the hostile rows HFC-02, HFC-03, HFC-04 and HFC-06. Not built: dispatch of enabled hosted packages (needs the southbound HTTP transport), E-18 endpoints per hosted package, the Enforced-profile containment of the instance, the managed-process form, upgrade with rollback."
     }
   ],
   "agents": [
@@ -8898,7 +9028,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:40529: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41291: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9015,7 +9145,7 @@
     }
   ],
   "acceptance": {
-    "commit": "a63d3a2db932961f01614d5418855195d5b3c5ca",
+    "commit": "06d6fffb0128c30ce0a1eb145489aca79cd12bae",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9707,18 +9837,18 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "a63d3a2db932961f01614d5418855195d5b3c5ca",
-    "generatedAt": "2026-10-20T06:14:58Z",
+    "commit": "06d6fffb0128c30ce0a1eb145489aca79cd12bae",
+    "generatedAt": "2026-10-20T07:01:07Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000014690",
+      "runner": "GitHub Actions 1000015008",
       "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90413641728,
+      "diskFreeBytes": 90410643456,
       "diskDevice": "sda1",
       "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
@@ -9742,7 +9872,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.045739,
+        "value": 0.027501,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9755,7 +9885,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 15.429718,
+        "value": 18.893051,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9768,19 +9898,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.8669351249999995,
+        "value": 0.5403756250000011,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.719 ms, mean of 10.918, 10.249, 10.749, 10.791, 10.830, 10.512, 10.770, 10.929) minus disabled (9.852 ms, mean of 9.684, 9.924, 10.289, 10.027, 9.735, 9.997, 9.622, 9.534), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.464 ms, mean of 10.274, 10.486, 10.757, 10.717, 10.678, 10.224, 10.578, 10.002) minus disabled (9.924 ms, mean of 9.945, 9.911, 9.794, 9.472, 10.701, 9.897, 9.707, 9.965), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9661280603304,
+        "value": 1999.965734403742,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9792,7 +9922,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 760.461167,
+        "value": 814.50396,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9804,12 +9934,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1557.0078125,
+        "value": 1543.7890625,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m16s after start with no traffic: smcpd (124.1 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1432.9 MiB in 2 processes, process 4349 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m16s after start with no traffic: smcpd (122.8 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1421.0 MiB in 2 processes, process 4254 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
