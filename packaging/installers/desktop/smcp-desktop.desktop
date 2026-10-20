@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories={{categories}}
+Comment=Tray, service control and console window for the Secure MCP Gateway
+Exec={{exec}}
+StartupWMClass={{exec}}
+Icon={{icon}}
+Name=Secure MCP Gateway
+Terminal=false
+Type=Application

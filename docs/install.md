@@ -92,15 +92,18 @@ export PATH="$PWD/build/bin:$PATH"
 
 Builds with cgo (the default when a C compiler is present) use DuckDB for the Observation Store and can export Parquet. Release archives are built with `CGO_ENABLED=0` and use the JSON Lines store instead ([observation.md](observation.md)).
 
-## Option 4: platform packages (.deb, .rpm, macOS .pkg)
+## Option 4: platform packages (.deb, .rpm, macOS .pkg and .dmg, AppImage)
 
-Planned for release v1.3.0 (SRS FR-20.17 to FR-20.26); no published release has them yet. The release workflow builds them from the tag, installs, exercises and removes each one on a runner of its platform before it publishes anything (`.github/workflows/installers.yml` with `scripts/package-smoke.sh`), and lists each in the signed checksum file. The desktop application packages (`smcp-desktop`, the `.dmg`, the AppImage and the Windows `.msi`) come later.
+Planned for release v1.3.0 (SRS FR-20.17 to FR-20.26); no published release has them yet. The release workflow builds them from the tag, installs, exercises and removes each one on a runner of its platform before it publishes anything (`.github/workflows/installers.yml` with `scripts/package-smoke.sh`), and lists each in the signed checksum file. The desktop application installers (`smcp-desktop` `.deb` and `.rpm`, the `.dmg` and the AppImage) are built and smoke-tested the same way (`scripts/desktop-smoke.sh`); the `.dmg` needs a Mac to build, and a release made while no macOS runner was available has none. The Windows `.msi` comes later.
 
 | File | Platform | Installs |
 |---|---|---|
 | `smcp_<version>_amd64.deb`, `smcp_<version>_arm64.deb` | Debian, Ubuntu | `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio`, `smcp-connect`, `smcp-refserver` in `/usr/bin`; README, CHANGELOG, LICENSE, SBOM, `PROVENANCE.md` and the third-party notices in `/usr/share/doc/smcp`; the marker `/usr/lib/smcp/package-format` |
 | `smcp-<version>-1.x86_64.rpm`, `smcp-<version>-1.aarch64.rpm` | Fedora, RHEL and derivatives | The same |
-| `smcp_<version>_darwin_arm64.pkg` | macOS 13 or later on Apple silicon | The same binaries in `/usr/local/lib/smcp`, each with an ad-hoc signature, with links in `/usr/local/bin`; documents in `/usr/local/share/doc/smcp` |
+| `smcp_<version>_darwin_arm64.pkg` | macOS 13 or later on Apple silicon | The same binaries in `/usr/local/lib/smcp`, each with an ad-hoc signature, with links in `/usr/local/bin`; documents in `/usr/local/share/doc/smcp`. The desktop application is in the `.dmg` (next row): the `.pkg` is built on Linux, and the application only on a Mac |
+| `smcp-desktop_<version>_darwin_arm64.dmg` | macOS 14 or later on Apple silicon | A disk image with `Secure MCP Gateway.app`, which holds the six commands in `Contents/MacOS`; drag it to Applications. No administrator password is needed, and the copy belongs to your user, so `smcpctl doctor` reports it as writable (SR-4.11-2) |
+| `smcp-desktop_<version>_amd64.deb`, `smcp-desktop_<version>_arm64.deb`, `smcp-desktop-<version>-1.x86_64.rpm`, `smcp-desktop-<version>-1.aarch64.rpm` | Debian, Ubuntu; Fedora, RHEL (WebKitGTK 4.1 and a StatusNotifier or AppIndicator tray) | The desktop application in `/usr/bin/smcp-desktop` with its menu entry; depends on the `smcp` package of exactly the same version, which provides the commands, so install both together |
+| `smcp-desktop_<version>_linux_amd64.AppImage`, `smcp-desktop_<version>_linux_arm64.AppImage` | Other Linux distributions with a graphical desktop (the host provides the OpenGL, OpenGL ES and EGL libraries, as for every AppImage) | The desktop application with the six commands inside; runs without root and without a package manager. Like the `.dmg`, it is writable by your user |
 
 A pre-release version such as `1.3.0-rc.1` is written `1.3.0~rc.1` in the Linux file names, so that the package managers order it before `1.3.0`.
 
@@ -137,6 +140,9 @@ sudo apt install ./smcp_<version>_amd64.deb            # Debian, Ubuntu
 sudo dnf install ./smcp-<version>-1.x86_64.rpm         # Fedora, RHEL
 sudo installer -pkg smcp_<version>_darwin_arm64.pkg -target /   # macOS
 smcpctl version
+# Desktop application, Linux: both packages in one command.
+sudo apt install ./smcp_<version>_amd64.deb ./smcp-desktop_<version>_amd64.deb
+sudo dnf install ./smcp-<version>-1.x86_64.rpm ./smcp-desktop-<version>-1.x86_64.rpm
 ```
 
 On macOS, `sudo installer` in Terminal installs the package without a Gatekeeper prompt. Opening the downloaded `.pkg` in Finder instead shows, on macOS 15 and later, the dialog **"smcp_<version>_darwin_arm64.pkg" Not Opened** ("Apple could not verify ... is free of malware that may harm your Mac or compromise your privacy"), with the buttons Done and Move to Trash. This is the expected prompt for a package without a Developer ID signature; any other wording (for example a damaged or revoked package) is not, and you should check the download again. After verifying the package as above, click Done, open System Settings, Privacy & Security, scroll to Security, where the message **"smcp_<version>_darwin_arm64.pkg" was blocked to protect your Mac** is shown with an **Open Anyway** button; click it, confirm with your password, and the Installer opens. The button is offered for about an hour after the blocked attempt. Earlier macOS versions show a similar "cannot be opened because it is from an unidentified developer" dialog and the same Open Anyway button.
@@ -145,7 +151,7 @@ On macOS, `sudo installer` in Terminal installs the package without a Gatekeeper
 
 ```sh
 smcpctl uninstall --config ~/.config/smcp-gateway/smcp.toml   # first, as each user with a Standalone service
-sudo apt remove smcp        # or: sudo dnf remove smcp
+sudo apt remove smcp-desktop smcp        # or: sudo dnf remove smcp-desktop smcp
 ```
 
 Removing the package removes its files and, through its pre-removal script (`smcpctl uninstall --package-removal`), stops, disables and removes a system-wide `smcpd.service` and `smcp-nftables.service` that `smcpctl install --profile enforced` created. It keeps the configuration, the state with the evidence journal and the evidence public key, the backups, and every other host object, so `smcpctl journal verify --dir <state>/journal --key <state>/keys/evidence-genesis.pub` still works after a fresh install (FR-20.22). The package manager does not run as each user, so per-user services (the Standalone launchd agent or systemd user unit) are removed by `smcpctl uninstall` before the package is removed; to delete configuration, state, keys and the journal as well, run `smcpctl uninstall --purge` before removing the package. `apt purge smcp` removes nothing more: the package owns no configuration file.

@@ -14,6 +14,7 @@
 
 pub mod autostart;
 pub mod clients;
+pub mod commands;
 pub mod console;
 pub mod deeplink;
 pub mod explain;

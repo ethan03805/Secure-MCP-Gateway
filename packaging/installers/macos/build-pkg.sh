@@ -3,7 +3,7 @@
 # (SRS FR-20.17, FR-20.21, FR-20.26, SR-4.11-2) with pkgbuild and
 # productbuild. Runs on macOS only.
 #
-#   packaging/installers/macos/build-pkg.sh <version> <binary dir> <output dir>
+#   packaging/installers/macos/build-pkg.sh <version> <binary dir> <output dir> [<application bundle>]
 #
 # <binary dir> holds the darwin-arm64 release binaries, or is GoReleaser's
 # dist directory with one <id>_darwin_arm64_v8.0/ directory per binary
@@ -17,17 +17,21 @@
 #   /usr/local/bin/<binaries>               symbolic links to the above
 #   /usr/local/share/doc/smcp/              README, CHANGELOG, LICENSE, SBOM,
 #                                           provenance and notices
+#   /Applications/Secure MCP Gateway.app    the Desktop Application, when
+#                                           <application bundle> is given
+#                                           (packaging/installers/desktop/
+#                                           build.sh), ad-hoc signed
 #
 # It has no pre- or post-install script: it creates no configuration,
 # state, keys, launchd agent or account and starts nothing (FR-20.21);
 # `smcpctl install` does that. The .pkg itself carries no signature
 # (productsign with a Developer ID certificate is FR-20.29, deferred).
-# When the desktop application exists, this package gains the application
-# bundle in /Applications (FR-20.17).
+# The application bundle is not relocatable: the Installer puts it in
+# /Applications even when a copy of it exists elsewhere (FR-20.17).
 set -euo pipefail
 
-[ $# -eq 3 ] || { echo "usage: $0 <version> <binary dir> <output dir>" >&2; exit 2; }
-version=$1 bindir=$2 outdir=$3
+[ $# -eq 3 ] || [ $# -eq 4 ] || { echo "usage: $0 <version> <binary dir> <output dir> [<application bundle>]" >&2; exit 2; }
+version=$1 bindir=$2 outdir=$3 appsrc=${4:-}
 [ "$(uname -s)" = Darwin ] || { echo "build-pkg.sh: pkgbuild runs on macOS only" >&2; exit 1; }
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../.." && pwd)
@@ -63,11 +67,27 @@ for f in "$repo"/build/sbom/*.spdx.json "$repo"/build/provenance/*; do
 	[ -f "$f" ] && install -m 0644 "$f" "$root/usr/local/share/doc/smcp/$(basename "$f")"
 done
 
+app="Secure MCP Gateway.app"
+if [ -n "$appsrc" ]; then
+	[ -x "$appsrc/Contents/MacOS/smcp-desktop" ] || { echo "build-pkg.sh: $appsrc is not the desktop application bundle" >&2; exit 1; }
+	codesign --verify --deep --strict "$appsrc" || { echo "build-pkg.sh: $appsrc has no valid (ad-hoc) signature" >&2; exit 1; }
+	install -d -m 0755 "$root/Applications"
+	ditto "$appsrc" "$root/Applications/$app"
+fi
+
 # Strip extended attributes (quarantine, provenance) from the payload.
 xattr -rc "$root"
 
+# Bundles are relocatable by default; this one must go to /Applications.
+pkgbuild --analyze --root "$root" "$work/components.plist" >/dev/null
+i=0
+while plutil -extract "$i" xml1 -o /dev/null "$work/components.plist" 2>/dev/null; do
+	plutil -replace "$i.BundleIsRelocatable" -bool NO "$work/components.plist"
+	i=$((i + 1))
+done
+
 COPYFILE_DISABLE=1 pkgbuild --root "$root" --identifier "$identifier" --version "$version" \
-	--install-location / --ownership recommended \
+	--install-location / --ownership recommended --component-plist "$work/components.plist" \
 	"$work/component.pkg"
 # The payload lists /usr, /usr/local, /usr/local/bin and so on. pkgbuild
 # marks the package overwrite-permissions="true", which would reset the
@@ -76,6 +96,10 @@ COPYFILE_DISABLE=1 pkgbuild --root "$root" --identifier "$identifier" --version 
 # the package creates get the payload's owner and mode.
 pkgutil --expand "$work/component.pkg" "$work/component"
 sed -i '' 's/overwrite-permissions="true"/overwrite-permissions="false"/' "$work/component/PackageInfo"
+if grep -A2 '<relocate>' "$work/component/PackageInfo" | grep -q '<bundle '; then
+	echo "build-pkg.sh: the application bundle is relocatable" >&2
+	exit 1
+fi
 grep -q 'overwrite-permissions="false"' "$work/component/PackageInfo" || { echo "build-pkg.sh: PackageInfo not patched" >&2; exit 1; }
 if grep -q 'postinstall-action="none"' "$work/component/PackageInfo" && [ ! -e "$work/component/Scripts" ]; then :; else
 	echo "build-pkg.sh: the component package has scripts or a post-install action" >&2
@@ -84,6 +108,9 @@ fi
 pkgutil --flatten "$work/component" "$work/smcp-component.pkg"
 rm -rf "$work/component" "$work/component.pkg"
 
+# The commands run on macOS 13; the application needs macOS 14 (FR-20.1).
+minos=13.0
+[ -z "$appsrc" ] || minos=14.0
 cat >"$work/distribution.xml" <<XML
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
@@ -91,7 +118,7 @@ cat >"$work/distribution.xml" <<XML
     <options customize="never" require-scripts="false" hostArchitectures="arm64"/>
     <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
     <volume-check>
-        <allowed-os-versions><os-version min="13.0"/></allowed-os-versions>
+        <allowed-os-versions><os-version min="$minos"/></allowed-os-versions>
     </volume-check>
     <choices-outline><line choice="default"><line choice="$identifier"/></line></choices-outline>
     <choice id="default"/>
@@ -120,4 +147,7 @@ for b in "${binaries[@]}"; do
 	printf '%s\n' "$payload" | grep -qx "./usr/local/lib/smcp/$b" || { echo "build-pkg.sh: $b missing from the payload" >&2; exit 1; }
 	printf '%s\n' "$payload" | grep -qx "./usr/local/bin/$b" || { echo "build-pkg.sh: link $b missing from the payload" >&2; exit 1; }
 done
+if [ -n "$appsrc" ]; then
+	printf '%s\n' "$payload" | grep -qx "./Applications/$app/Contents/MacOS/smcp-desktop" || { echo "build-pkg.sh: the application is missing from the payload" >&2; exit 1; }
+fi
 echo "$out"

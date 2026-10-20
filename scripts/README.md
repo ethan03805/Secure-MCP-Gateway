@@ -23,6 +23,7 @@ directory inside the repository.
 | `package-enforced.sh` | `installers.yml` (CI and release, `.deb` amd64) | Install the smcp `.deb` and the Enforced profile from it on an Ubuntu runner; check that `smcpd.service` runs the package's `/usr/bin/smcpd` with no copy in `/usr/local/bin`, then reinstall, remove (system service gone, evidence kept) and install again over the kept state (FR-13.5, FR-20.21, FR-20.22) |
 | `ci-systemd.sh` | `ci-integration.sh` (enforced section) | `smcpctl install --profile enforced` twice, then smcpd.service under systemd with servers as `smcp-srv` |
 | `ci-install-standalone.sh` | CI job `install-standalone` | `smcpctl install` with the runner's systemd user manager or launchd, a second install, uninstall |
+| `desktop-smoke.sh` | `installers.yml` (CI and release) | Install and start one Desktop Application installer (`.dmg`, `smcp-desktop` `.deb` or `.rpm`, AppImage); check signatures or package dependencies and that `smcp-desktop --commands` finds the six commands at the release version (FR-20.17 to FR-20.19, FR-20.24, FR-20.26) |
 
 ## Merge queue
 
