@@ -384,6 +384,8 @@ pub struct Progress {
     pub service_done: bool,
     pub output: Vec<String>,
     pub failure: Option<Failure>,
+    /// The bundled ContextForge choice (FR-22.44, contextforge.rs).
+    pub contextforge: bool,
 }
 
 impl Default for Progress {
@@ -395,6 +397,7 @@ impl Default for Progress {
             service_done: false,
             output: Vec::new(),
             failure: None,
+            contextforge: false,
         }
     }
 }
@@ -443,7 +446,7 @@ impl Progress {
             return;
         }
         self.state = RunState::Failed;
-        let retry = retry_command(profile);
+        let retry = crate::contextforge::retry(retry_command(profile), self.contextforge);
         let (code, detail) = if let Some(e) = &exit.spawn_error {
             ("SETUP_BOOTSTRAP_FAILED", format!("smcpctl could not be started: {e}"))
         } else if exit.timed_out {
@@ -637,7 +640,8 @@ impl Session {
                 return;
             }
         };
-        let argv = install_argv(smcpctl, profile, &files);
+        let chosen = self.progress.lock().unwrap_or_else(|e| e.into_inner()).contextforge;
+        let argv = crate::contextforge::with_choice(install_argv(smcpctl, profile, &files), chosen);
         let me = self.clone();
         let exit = run_streaming(
             &argv,

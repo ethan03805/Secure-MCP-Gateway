@@ -16,6 +16,7 @@ pub mod autostart;
 pub mod clients;
 pub mod commands;
 pub mod console;
+pub mod contextforge;
 pub mod deeplink;
 pub mod explain;
 pub mod health;
@@ -410,6 +411,7 @@ fn setup_run(
     profile: setup::Profile,
     admin: setup::Secret,
     approver: setup::Secret,
+    contextforge: Option<bool>,
 ) -> Result<(), Vec<SetupRefusal>> {
     only_window(&webview, SETUP_LABEL).map_err(|_| refusal("SETUP_NOT_ALLOWED"))?;
     setup::validate(&admin, &approver).map_err(|errs| {
@@ -435,6 +437,8 @@ fn setup_run(
     if !session.begin(profile) {
         return Err(refusal("SETUP_RUNNING"));
     }
+    // FR-22.44: off unless the operator checked the box.
+    session.progress.lock().unwrap_or_else(|e| e.into_inner()).contextforge = contextforge == Some(true);
     std::thread::spawn(move || {
         session.execute(&smcpctl, profile, admin, approver, &std::env::temp_dir());
     });
