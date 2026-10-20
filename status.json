@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T16:04:53Z",
-  "commit": "d05955fc8cb547beaa297de9a88e7e5f5d526ecd",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/d05955fc8cb547beaa297de9a88e7e5f5d526ecd",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39439516362",
+  "generatedAt": "2026-10-20T16:57:38Z",
+  "commit": "f7c763afb97d739f9c60e1b64d0cf20f6623478f",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/f7c763afb97d739f9c60e1b64d0cf20f6623478f",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39451297793",
   "tests": {
-    "total": 1838,
-    "passed": 1815,
-    "failed": 0,
-    "skipped": 23,
-    "durationSec": 2635.8,
+    "total": 1954,
+    "passed": 1931,
+    "failed": 2,
+    "skipped": 21,
+    "durationSec": 2791.8,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -48,6 +48,12 @@
         "skipped": 0
       },
       {
+        "name": "desktop/macos",
+        "passed": 98,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "cmd/smcp-hostile",
         "passed": 1,
         "failed": 0,
@@ -61,9 +67,9 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 103,
+        "passed": 105,
         "failed": 0,
-        "skipped": 1
+        "skipped": 0
       },
       {
         "name": "cmd/smcpd",
@@ -139,7 +145,7 @@
       },
       {
         "name": "internal/audit",
-        "passed": 28,
+        "passed": 29,
         "failed": 0,
         "skipped": 0
       },
@@ -205,7 +211,7 @@
       },
       {
         "name": "internal/contextforge/bundle",
-        "passed": 13,
+        "passed": 18,
         "failed": 0,
         "skipped": 0
       },
@@ -217,7 +223,7 @@
       },
       {
         "name": "internal/contextforge/connector",
-        "passed": 13,
+        "passed": 16,
         "failed": 0,
         "skipped": 0
       },
@@ -247,7 +253,7 @@
       },
       {
         "name": "internal/egress",
-        "passed": 31,
+        "passed": 33,
         "failed": 0,
         "skipped": 1
       },
@@ -283,7 +289,7 @@
       },
       {
         "name": "internal/hostile",
-        "passed": 81,
+        "passed": 86,
         "failed": 0,
         "skipped": 1
       },
@@ -349,8 +355,8 @@
       },
       {
         "name": "internal/perf",
-        "passed": 17,
-        "failed": 0,
+        "passed": 15,
+        "failed": 2,
         "skipped": 0
       },
       {
@@ -445,7 +451,7 @@
       },
       {
         "name": "internal/southbound",
-        "passed": 7,
+        "passed": 8,
         "failed": 0,
         "skipped": 0
       },
@@ -535,9 +541,9 @@
       },
       {
         "name": "tools/reqreport",
-        "passed": 27,
+        "passed": 28,
         "failed": 0,
-        "skipped": 1
+        "skipped": 0
       },
       {
         "name": "tools/sbomcheck",
@@ -554,7 +560,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 75,
+    "totalPct": 76.1,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -582,11 +588,11 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 44.8
+        "pct": 44.9
       },
       {
         "name": "cmd/smcpd",
-        "pct": 4.4
+        "pct": 4.3
       },
       {
         "name": "console",
@@ -610,7 +616,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 79
+        "pct": 79.1
       },
       {
         "name": "internal/approval",
@@ -618,7 +624,7 @@
       },
       {
         "name": "internal/audit",
-        "pct": 84.3
+        "pct": 84.4
       },
       {
         "name": "internal/authguard",
@@ -662,15 +668,19 @@
       },
       {
         "name": "internal/contextforge/bundle",
-        "pct": 49.7
+        "pct": 70.2
+      },
+      {
+        "name": "internal/contextforge/cfharness",
+        "pct": 85.1
       },
       {
         "name": "internal/contextforge/cftest",
-        "pct": 23.1
+        "pct": 70.3
       },
       {
         "name": "internal/contextforge/connector",
-        "pct": 41.8
+        "pct": 67.4
       },
       {
         "name": "internal/diag",
@@ -682,11 +692,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.4
+        "pct": 91.5
       },
       {
         "name": "internal/egress",
-        "pct": 84.5
+        "pct": 85
       },
       {
         "name": "internal/filterapi",
@@ -698,7 +708,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.5
       },
       {
         "name": "internal/gwtest",
@@ -726,7 +736,7 @@
       },
       {
         "name": "internal/library",
-        "pct": 83.3
+        "pct": 85
       },
       {
         "name": "internal/metrics",
@@ -822,7 +832,7 @@
       },
       {
         "name": "internal/southbound",
-        "pct": 85.3
+        "pct": 85.8
       },
       {
         "name": "internal/southbound/sbtest",
@@ -908,9 +918,9 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 488,
-    "partial": 41,
-    "failing": 0,
+    "verified": 489,
+    "partial": 38,
+    "failing": 2,
     "unverified": 1,
     "byElement": [
       {
@@ -1101,9 +1111,9 @@
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
-        "verified": 60,
-        "partial": 13,
-        "failing": 0
+        "verified": 62,
+        "partial": 10,
+        "failing": 1
       },
       {
         "element": "E-25",
@@ -1125,9 +1135,9 @@
         "element": "E-27",
         "name": "Observation Store",
         "total": 5,
-        "verified": 5,
+        "verified": 4,
         "partial": 0,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-28",
@@ -4101,7 +4111,7 @@
       {
         "id": "FR-11.6",
         "element": "E-27",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/obsstore.TestIngestRate",
           "internal/perf.TestReplayIngest",
@@ -4119,7 +4129,7 @@
       {
         "id": "FR-11.8",
         "element": "E-24",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/perf.TestReplayIngest",
           "internal/perf/run.TestPerfFR_11_8"
@@ -4295,7 +4305,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "analysis: 9 of 13 child requirements verified"
+          "analysis: 12 of 13 child requirements verified"
         ]
       },
       {
@@ -4330,11 +4340,13 @@
       {
         "id": "FR-13.4",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedInstallOnHost",
           "cmd/smcpctl.TestInstallEnforcedFake",
-          "cmd/smcpctl.TestInstallStandalone"
+          "cmd/smcpctl.TestInstallStandalone",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
@@ -4357,9 +4369,10 @@
       {
         "id": "FR-13.6",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
-          "cmd/smcpctl.TestInstallStandalone"
+          "cmd/smcpctl.TestInstallStandalone",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager"
         ]
       },
       {
@@ -4411,13 +4424,15 @@
       {
         "id": "FR-13.11",
         "element": "E-24",
-        "status": "partial",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestEnforcedUninstallAndPurgeOnHost",
+          "cmd/smcpctl.TestInstallStandaloneServiceManager",
           "cmd/smcpctl.TestStandaloneUninstallKeepsEnforcedHost",
           "cmd/smcpctl.TestStandaloneUninstallLeavesEnforcedTable",
           "cmd/smcpctl.TestUninstallKeepsEvidenceAndPurge",
-          "cmd/smcpctl.TestUninstallScopeByProfile"
+          "cmd/smcpctl.TestUninstallScopeByProfile",
+          "tools/reqreport.TestInstallProfilesEvidence"
         ]
       },
       {
@@ -4593,7 +4608,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (cd64f857cb46, 2026-10-20T15:42:47Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39447887149"
+          "workflow agents-lockdown at main (e1a094c16288, 2026-10-20T16:46:22Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39458994151"
         ]
       },
       {
@@ -4662,7 +4677,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (cd64f857cb46, 2026-10-20T15:42:44Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39447887149"
+          "workflow agents at main (e1a094c16288, 2026-10-20T16:46:20Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39458994151"
         ]
       },
       {
@@ -6213,6 +6228,7 @@
         "status": "verified",
         "tests": [
           "internal/filters.TestImportMetadataScan",
+          "internal/hostile.TestHostileContextForge/HFC-01",
           "internal/hostile.TestHostileFixtures/HF-01",
           "internal/hostile.TestHostileFixtures/HF-02",
           "internal/hostile.TestHostileFixtures/HF-15",
@@ -6823,7 +6839,14 @@
           "desktop/linux.state::tests::accessible_names_state_the_state",
           "desktop/linux.state::tests::six_states_from_metrics_and_service",
           "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced",
-          "desktop/linux.state::tests::start_stop_restart_follow_the_service"
+          "desktop/linux.state::tests::start_stop_restart_follow_the_service",
+          "desktop/macos.icons::tests::distinct_icons",
+          "desktop/macos.icons::tests::template_icons_differ_by_silhouette",
+          "desktop/macos.service::tests::status_from_the_service_manager",
+          "desktop/macos.state::tests::accessible_names_state_the_state",
+          "desktop/macos.state::tests::six_states_from_metrics_and_service",
+          "desktop/macos.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/macos.state::tests::start_stop_restart_follow_the_service"
         ],
         "target": "v1.3.0"
       },
@@ -6836,7 +6859,12 @@
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
           "desktop/linux.service::tests::reports_outcome_and_error_text_within_30_seconds",
           "desktop/linux.service::tests::status_from_the_service_manager",
-          "desktop/linux.service::tests::the_system_runner_runs_without_a_shell_and_times_out"
+          "desktop/linux.service::tests::the_system_runner_runs_without_a_shell_and_times_out",
+          "desktop/macos.service::tests::detects_the_unit_smcpctl_installed",
+          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/macos.service::tests::reports_outcome_and_error_text_within_30_seconds",
+          "desktop/macos.service::tests::status_from_the_service_manager",
+          "desktop/macos.service::tests::the_system_runner_runs_without_a_shell_and_times_out"
         ],
         "target": "v1.3.0"
       },
@@ -6852,7 +6880,15 @@
           "desktop/linux.state::tests::poll_a_live_endpoint_then_lose_it",
           "desktop/linux.state::tests::six_states_from_metrics_and_service",
           "desktop/linux.state::tests::stale_data_is_unreachable_never_healthy",
-          "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced"
+          "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/macos.health::tests::fetches_over_loopback_only",
+          "desktop/macos.health::tests::parses_the_desktop_gauges",
+          "desktop/macos.settings::tests::defaults_are_cp03_and_cp51_and_metrics_must_be_loopback",
+          "desktop/macos.state::tests::not_enforced_label_unless_the_exposition_says_enforced",
+          "desktop/macos.state::tests::poll_a_live_endpoint_then_lose_it",
+          "desktop/macos.state::tests::six_states_from_metrics_and_service",
+          "desktop/macos.state::tests::stale_data_is_unreachable_never_healthy",
+          "desktop/macos.state::tests::standalone_profile_only_is_running_not_enforced"
         ],
         "target": "v1.3.0"
       },
@@ -6862,6 +6898,7 @@
         "status": "partial",
         "tests": [
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "internal/e2e.TestDesktopMetricsOnRunningGateway",
           "internal/metrics.TestDesktopGauges",
           "internal/metrics.TestProfileGauges"
@@ -6874,7 +6911,9 @@
         "status": "partial",
         "tests": [
           "desktop/linux.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/linux.settings::tests::admin_origin_is_https_origin_only"
+          "desktop/linux.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/macos.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/macos.settings::tests::admin_origin_is_https_origin_only"
         ],
         "target": "v1.3.0"
       },
@@ -6887,7 +6926,12 @@
           "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::no_notice_while_notifications_are_off",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count"
+          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/macos.console::tests::approvals_open_at_g13",
+          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/macos.notify::tests::no_notice_while_notifications_are_off",
+          "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count"
         ],
         "target": "v1.3.0"
       },
@@ -6901,7 +6945,13 @@
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only"
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/macos.setup::tests::offered_only_without_a_configuration",
+          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only"
         ],
         "target": "v1.3.0"
       },
@@ -6914,7 +6964,10 @@
           "cmd/smcpctl.TestInstallCheck",
           "desktop/linux.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
           "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
-          "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one"
+          "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one",
+          "desktop/macos.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
+          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/macos.setup::tests::the_prerequisite_check_names_each_missing_one"
         ],
         "target": "v1.3.0"
       },
@@ -6928,7 +6981,12 @@
           "desktop/linux.clients::tests::commands_run_in_the_given_directory",
           "desktop/linux.clients::tests::detection_and_previews_parse",
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
-          "desktop/linux.clients::tests::only_listed_client_ids_are_used"
+          "desktop/linux.clients::tests::only_listed_client_ids_are_used",
+          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/macos.clients::tests::commands_run_in_the_given_directory",
+          "desktop/macos.clients::tests::detection_and_previews_parse",
+          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
+          "desktop/macos.clients::tests::only_listed_client_ids_are_used"
         ],
         "target": "v1.3.0"
       },
@@ -6943,7 +7001,14 @@
           "desktop/linux.release::tests::parses_a_stable_release_and_skips_prereleases",
           "desktop/linux.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
           "desktop/linux.settings::tests::update_checks_default_on_and_older_files_load",
-          "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once"
+          "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once",
+          "desktop/macos.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
+          "desktop/macos.release::tests::offline_check_fails_once_without_a_loop",
+          "desktop/macos.release::tests::only_https_or_loopback_http",
+          "desktop/macos.release::tests::parses_a_stable_release_and_skips_prereleases",
+          "desktop/macos.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
+          "desktop/macos.settings::tests::update_checks_default_on_and_older_files_load",
+          "desktop/macos.updates::tests::manual_check_reports_newer_latest_and_offline_once"
         ],
         "target": "v1.3.0"
       },
@@ -6958,7 +7023,14 @@
           "desktop/linux.upgrade::tests::installation_comes_from_the_service_definition",
           "desktop/linux.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
           "desktop/linux.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
-          "desktop/linux.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin"
+          "desktop/linux.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin",
+          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/macos.upgrade::tests::argv_is_fixed_and_carries_no_passphrase",
+          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/macos.upgrade::tests::installation_comes_from_the_service_definition",
+          "desktop/macos.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
+          "desktop/macos.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
+          "desktop/macos.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin"
         ],
         "target": "v1.3.0"
       },
@@ -6974,7 +7046,15 @@
           "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/linux.release::tests::downloads_are_bounded_and_new_files",
           "desktop/linux.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
-          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one"
+          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/macos.config_tests::no_updater_or_shell_plugin",
+          "desktop/macos.installer::tests::appimage_is_replaced_atomically_and_executable",
+          "desktop/macos.installer::tests::detects_the_installation_kind",
+          "desktop/macos.installer::tests::picks_the_installer_of_the_kind_that_installed_the_app",
+          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/macos.release::tests::downloads_are_bounded_and_new_files",
+          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one"
         ],
         "target": "v1.3.0"
       },
@@ -6987,7 +7067,12 @@
           "desktop/linux.autostart::tests::off_until_turned_on_and_off_again",
           "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/linux.config_tests::single_instance_is_the_first_plugin",
-          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing"
+          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/macos.autostart::tests::entries_name_this_program_only",
+          "desktop/macos.autostart::tests::off_until_turned_on_and_off_again",
+          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/macos.config_tests::single_instance_is_the_first_plugin",
+          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing"
         ],
         "target": "v1.3.0"
       },
@@ -7013,7 +7098,9 @@
           "cmd/smcpctl.TestMacPkgBuildScript",
           "cmd/smcpctl.TestMacPkgLinuxBuildScript",
           "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
-          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path"
+          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
+          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path"
         ],
         "target": "v1.3.0"
       },
@@ -7033,7 +7120,10 @@
         "tests": [
           "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
           "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
-          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only"
+          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path",
+          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only"
         ],
         "target": "v1.3.0"
       },
@@ -7118,7 +7208,12 @@
           "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/linux.deeplink::tests::accepts_exactly_the_three_forms",
           "desktop/linux.deeplink::tests::ignores_every_other_link",
-          "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
+          "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
+          "desktop/macos.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/macos.deeplink::tests::accepts_exactly_the_three_forms",
+          "desktop/macos.deeplink::tests::ignores_every_other_link",
+          "desktop/macos.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
         ],
         "target": "v1.3.0"
       },
@@ -7134,7 +7229,8 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
-          "desktop/linux.intro::tests::shows_until_completed_or_skipped"
+          "desktop/linux.intro::tests::shows_until_completed_or_skipped",
+          "desktop/macos.intro::tests::shows_until_completed_or_skipped"
         ],
         "target": "v1.3.0"
       },
@@ -7143,7 +7239,8 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
-          "desktop/linux.intro::tests::only_the_flag_is_stored"
+          "desktop/linux.intro::tests::only_the_flag_is_stored",
+          "desktop/macos.intro::tests::only_the_flag_is_stored"
         ],
         "target": "v1.3.0"
       },
@@ -7167,7 +7264,9 @@
         "status": "partial",
         "tests": [
           "desktop/linux.explain::tests::every_state_has_an_explanation",
-          "desktop/linux.explain::tests::status_lines_name_the_state_and_one_sentence"
+          "desktop/linux.explain::tests::status_lines_name_the_state_and_one_sentence",
+          "desktop/macos.explain::tests::every_state_has_an_explanation",
+          "desktop/macos.explain::tests::status_lines_name_the_state_and_one_sentence"
         ],
         "target": "v1.3.0"
       },
@@ -7186,7 +7285,11 @@
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue"
+          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
+          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue"
         ],
         "target": "v1.3.0"
       },
@@ -7197,6 +7300,8 @@
         "tests": [
           "desktop/linux.explain::tests::every_state_has_an_explanation",
           "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/macos.explain::tests::every_state_has_an_explanation",
+          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue",
           "internal/edge.TestMessageCatalogue"
         ],
         "target": "v1.3.0"
@@ -7562,7 +7667,11 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
-          "internal/contextforge/connector.TestHostedImportImage"
+          "cmd/smcpctl.TestCatalogImportProbeSecret",
+          "internal/contextforge/connector.TestHostedImportImage",
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress",
+          "internal/egress.TestHostedEndpoints",
+          "internal/hostile.TestHostileContextForge/HFC-11"
         ],
         "target": "v1.3.0"
       },
@@ -7620,8 +7729,12 @@
       {
         "id": "FR-22.15",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress",
+          "internal/egress.TestHostedEndpoints",
+          "internal/hostile.TestHostileContextForge/HFC-11"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7684,6 +7797,7 @@
         "tests": [
           "cmd/smcpctl.TestBootstrapContextForgeChoice",
           "desktop/linux.contextforge::tests::flag_only_when_chosen",
+          "desktop/macos.contextforge::tests::flag_only_when_chosen",
           "internal/contextforge/connector.TestHostedImportNeedsBundledInstance",
           "internal/library.TestHostedAdmission"
         ],
@@ -7701,8 +7815,11 @@
       {
         "id": "FR-22.24",
         "element": "E-15",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestEnforcedImage",
+          "internal/contextforge/bundle.TestEnforcedStart"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7710,6 +7827,8 @@
         "element": "E-15",
         "status": "partial",
         "tests": [
+          "internal/contextforge/bundle.TestManagedProcess",
+          "internal/contextforge/bundle.TestProcessVerifier",
           "internal/contextforge/connector.TestBundledInstanceImage",
           "internal/winsandbox.TestWindowsManagedProcess"
         ],
@@ -7720,6 +7839,8 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
+          "internal/contextforge/bundle.TestEnforcedImage",
+          "internal/contextforge/bundle.TestManagedProcess",
           "internal/contextforge/bundle.TestPinnedImage",
           "internal/contextforge/bundle.TestSupervision"
         ],
@@ -7731,7 +7852,9 @@
         "status": "partial",
         "tests": [
           "internal/contextforge/bundle.TestGeneratedConfiguration",
-          "internal/contextforge/bundle.TestPinnedImage"
+          "internal/contextforge/bundle.TestHostAccess",
+          "internal/contextforge/bundle.TestPinnedImage",
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress"
         ],
         "target": "v1.3.0"
       },
@@ -7757,7 +7880,11 @@
         "tests": [
           "internal/contextforge/bundle.TestIsolationImage",
           "internal/contextforge/bundle.TestSelfCheckFindings",
-          "internal/contextforge/connector.TestHostedDispatchImage"
+          "internal/contextforge/connector.TestHostedDispatchImage",
+          "internal/contextforge/connector.TestHostedScopeBroken",
+          "internal/contextforge/connector.TestHostedTokenRenewal",
+          "internal/hostile.TestHostileContextForge/HFC-10",
+          "internal/southbound.TestTokenSource"
         ],
         "target": "v1.3.0"
       },
@@ -7795,7 +7922,9 @@
         "tests": [
           "internal/contextforge/bundle.TestReconcileImage",
           "internal/contextforge/connector.TestHostedDispatchImage",
-          "internal/contextforge/connector.TestHostedProcessRenames"
+          "internal/contextforge/connector.TestHostedProcessRenames",
+          "internal/hostile.TestHostileContextForge/HFC-08",
+          "internal/hostile.TestHostileContextForge/HFC-13"
         ],
         "target": "v1.3.0"
       },
@@ -7805,7 +7934,8 @@
         "status": "partial",
         "tests": [
           "internal/contextforge/bundle.TestIsolationImage",
-          "internal/contextforge/connector.TestHostedDispatchImage"
+          "internal/contextforge/connector.TestHostedDispatchImage",
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress"
         ],
         "target": "v1.3.0"
       },
@@ -7823,7 +7953,10 @@
         "element": "E-10",
         "status": "partial",
         "tests": [
-          "internal/contextforge/connector.TestHostedDispatchImage"
+          "internal/contextforge/connector.TestHostedDispatchImage",
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress",
+          "internal/contextforge/connector.TestHostedTokenRenewal",
+          "internal/southbound.TestTokenSource"
         ],
         "target": "v1.3.0"
       },
@@ -7843,22 +7976,32 @@
         "status": "partial",
         "tests": [
           "internal/contextforge/bundle.TestIsolationImage",
-          "internal/contextforge/bundle.TestReconcileImage"
+          "internal/contextforge/bundle.TestReconcileImage",
+          "internal/hostile.TestHostileContextForge/HFC-13"
         ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.39",
         "element": "E-21",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/audit.TestFanoutDecorators",
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-22.40",
         "element": "E-18",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestHostAccess",
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress",
+          "internal/egress.TestHostedEndpoints",
+          "internal/egress.TestHostedSSEEndpointRewrite",
+          "internal/hostile.TestHostileContextForge/HFC-05"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7886,6 +8029,8 @@
         "element": "E-36",
         "status": "partial",
         "tests": [
+          "internal/contextforge/bundle.TestEnforcedImage",
+          "internal/contextforge/connector.TestHostedScopeBroken",
           "internal/hostile.TestHostileContextForge"
         ],
         "target": "v1.3.0"
@@ -7899,7 +8044,10 @@
           "cmd/smcpctl.TestContextForgeChoice",
           "desktop/linux.contextforge::tests::flag_only_when_chosen",
           "desktop/linux.contextforge::tests::progress_reports_the_choice_off_by_default",
-          "desktop/linux.contextforge::tests::retry_carries_the_choice"
+          "desktop/linux.contextforge::tests::retry_carries_the_choice",
+          "desktop/macos.contextforge::tests::flag_only_when_chosen",
+          "desktop/macos.contextforge::tests::progress_reports_the_choice_off_by_default",
+          "desktop/macos.contextforge::tests::retry_carries_the_choice"
         ],
         "target": "v1.3.0"
       },
@@ -7916,7 +8064,9 @@
         "status": "partial",
         "tests": [
           "desktop/linux.config_tests::no_gateway_secret_or_control_api_in_the_application",
-          "desktop/linux.setup::tests::offered_only_without_a_configuration"
+          "desktop/linux.setup::tests::offered_only_without_a_configuration",
+          "desktop/macos.config_tests::no_gateway_secret_or_control_api_in_the_application",
+          "desktop/macos.setup::tests::offered_only_without_a_configuration"
         ],
         "target": "v1.3.0"
       },
@@ -7928,7 +8078,11 @@
           "desktop/linux.console::tests::the_window_is_incognito_without_devtools",
           "desktop/linux.settings::tests::saved_settings_are_private_and_round_trip",
           "desktop/linux.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
-          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments"
+          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.console::tests::the_window_is_incognito_without_devtools",
+          "desktop/macos.settings::tests::saved_settings_are_private_and_round_trip",
+          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments"
         ],
         "target": "v1.3.0"
       },
@@ -7942,7 +8096,13 @@
           "desktop/linux.config_tests::commands_are_declared_and_registered_once",
           "desktop/linux.config_tests::no_updater_or_shell_plugin",
           "desktop/linux.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
-          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only"
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/macos.clients::tests::only_listed_client_ids_are_used",
+          "desktop/macos.config_tests::commands_are_declared_and_registered_once",
+          "desktop/macos.config_tests::no_updater_or_shell_plugin",
+          "desktop/macos.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
+          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only"
         ],
         "target": "v1.3.0"
       },
@@ -7953,7 +8113,10 @@
         "tests": [
           "desktop/linux.config_tests::bundled_pages_are_self_only",
           "desktop/linux.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/linux.settings::tests::admin_origin_is_https_origin_only"
+          "desktop/linux.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/macos.config_tests::bundled_pages_are_self_only",
+          "desktop/macos.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/macos.settings::tests::admin_origin_is_https_origin_only"
         ],
         "target": "v1.3.0"
       },
@@ -7966,7 +8129,12 @@
           "desktop/linux.deeplink::tests::ignores_every_other_link",
           "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count"
+          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/macos.console::tests::approvals_open_at_g13",
+          "desktop/macos.deeplink::tests::ignores_every_other_link",
+          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count"
         ],
         "target": "v1.3.0"
       },
@@ -7980,7 +8148,13 @@
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
           "desktop/linux.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
-          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here"
+          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/macos.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here"
         ],
         "target": "v1.3.0"
       },
@@ -7993,7 +8167,12 @@
           "desktop/linux.tlspin::tests::a_rotation_bundle_trusts_both_cas",
           "desktop/linux.tlspin::tests::accepts_a_certificate_made_by_smcpd",
           "desktop/linux.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
-          "desktop/linux.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing"
+          "desktop/linux.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing",
+          "desktop/macos.console::tests::the_error_page_offers_no_way_to_proceed",
+          "desktop/macos.tlspin::tests::a_rotation_bundle_trusts_both_cas",
+          "desktop/macos.tlspin::tests::accepts_a_certificate_made_by_smcpd",
+          "desktop/macos.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
+          "desktop/macos.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing"
         ],
         "target": "v1.3.0"
       },
@@ -8035,6 +8214,7 @@
         "status": "partial",
         "tests": [
           "internal/contextforge/connector.TestBundledInstanceImage",
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress",
           "internal/secrets.TestComponentCredentials"
         ],
         "target": "v1.3.0"
@@ -8053,8 +8233,12 @@
       {
         "id": "SR-3.5-2",
         "element": "E-36",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/connector.TestHostedPackagesThroughEgress",
+          "internal/egress.TestHostedEndpoints",
+          "internal/hostile.TestHostileContextForge/HFC-05"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8078,7 +8262,8 @@
         "element": "E-14",
         "status": "partial",
         "tests": [
-          "internal/contextforge/connector.TestHostedDispatchImage"
+          "internal/contextforge/connector.TestHostedDispatchImage",
+          "internal/hostile.TestHostileContextForge/HFC-08"
         ],
         "target": "v1.3.0"
       },
@@ -8124,8 +8309,11 @@
       {
         "id": "SR-4.5-4",
         "element": "E-16",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestEnforcedImage",
+          "internal/contextforge/bundle.TestEnforcedStart"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8143,8 +8331,11 @@
       {
         "id": "SR-4.7-3",
         "element": "E-16",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/contextforge/bundle.TestEnforcedImage",
+          "internal/contextforge/bundle.TestEnforcedStart"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8175,8 +8366,10 @@
       {
         "id": "SR-5.6-3",
         "element": "E-02",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/hostile.TestHostileContextForge/HFC-13"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8199,7 +8392,15 @@
           "desktop/linux.verify::tests::real_release_signature_verifies_with_the_embedded_key",
           "desktop/linux.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
           "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
-          "desktop/linux.verify::tests::version_rule_refuses_equal_and_older"
+          "desktop/linux.verify::tests::version_rule_refuses_equal_and_older",
+          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/macos.verify::tests::cosign_argv_is_fixed",
+          "desktop/macos.verify::tests::real_cosign_with_the_release_bundle",
+          "desktop/macos.verify::tests::real_release_signature_verifies_with_the_embedded_key",
+          "desktop/macos.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
+          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/macos.verify::tests::version_rule_refuses_equal_and_older"
         ],
         "target": "v1.3.0"
       }
@@ -8881,7 +9082,7 @@
       "attack": "Never responding",
       "expected": "As HF-17",
       "fixture": "HF-19",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8927,7 +9128,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:34017: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:35555: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9044,7 +9245,7 @@
     }
   ],
   "acceptance": {
-    "commit": "d05955fc8cb547beaa297de9a88e7e5f5d526ecd",
+    "commit": "f7c763afb97d739f9c60e1b64d0cf20f6623478f",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9736,23 +9937,23 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "d05955fc8cb547beaa297de9a88e7e5f5d526ecd",
-    "generatedAt": "2026-10-20T15:21:15Z",
+    "commit": "f7c763afb97d739f9c60e1b64d0cf20f6623478f",
+    "generatedAt": "2026-10-20T16:11:30Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.10",
-      "runner": "GitHub Actions 1000017362",
-      "memoryBytes": 16760344576,
+      "runner": "GitHub Actions 1000017593",
+      "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 89148895232,
+      "diskFreeBytes": 89933590528,
       "diskDevice": "sda1",
       "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
-      "imageVersion": "20261018.339.1"
+      "imageVersion": "20261012.334.1"
     },
     "referenceHardware": true,
     "referenceClass": "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)",
@@ -9771,7 +9972,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.039434,
+        "value": 0.027271,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9784,7 +9985,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 19.39372,
+        "value": 17.581674,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9797,19 +9998,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.6513899999999992,
+        "value": 0.7446814999999987,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.752 ms, mean of 10.589, 11.051, 10.589, 10.911, 10.268, 11.045, 10.517, 11.049) minus disabled (10.101 ms, mean of 9.912, 10.660, 9.990, 9.570, 9.950, 10.563, 9.816, 10.348), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.638 ms, mean of 10.778, 10.539, 10.888, 10.534, 10.582, 11.588, 10.129, 10.065) minus disabled (9.893 ms, mean of 9.795, 9.862, 10.079, 9.993, 10.165, 9.243, 10.240, 9.769), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9646250257053,
+        "value": 1999.9642501490373,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9821,7 +10022,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 869.731516,
+        "value": 798.493656,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9833,12 +10034,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1502.8203125,
+        "value": 1551.875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m18s after start with no traffic: smcpd (98.8 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1404.0 MiB in 2 processes, process 7381 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m20s after start with no traffic: smcpd (124.0 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1427.9 MiB in 2 processes, process 7319 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
