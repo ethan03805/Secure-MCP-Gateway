@@ -379,22 +379,28 @@
         "action": "No action needed. Open the console to review recent calls and approvals.",
         "control": "open-console"
       },
+      "running": {
+        "label": "Running",
+        "meaning": "The Gateway is running and checking every tool call your agents make. This Standalone installation does not contain the MCP servers: they run as your user without container or network isolation.",
+        "action": "No action needed if you chose Standalone. Open the console to review recent calls and approvals.",
+        "control": "open-console"
+      },
       "degraded": {
         "label": "Degraded",
         "meaning": "The Gateway is running and checking tool calls, but part of it is not working as configured.",
-        "action": "Open the console and check Health for the cause.",
+        "action": "Open the console and check Causes in Gateway control.",
         "control": "open-console"
       },
       "degraded-not-enforced": {
         "label": "Degraded",
-        "meaning": "The Gateway is running and checking tool calls. A Standalone installation always reports degraded, because its MCP servers run as ordinary processes without container or network isolation.",
-        "action": "No action needed if you chose Standalone. To see every cause, open the console and check Health.",
+        "meaning": "The Gateway is running and checking tool calls, but part of it is not working as configured. This is a cause besides the Standalone profile, which does not contain MCP servers.",
+        "action": "Open the console and check Causes in Gateway control.",
         "control": "open-console"
       },
       "fail-closed": {
         "label": "Fail-closed",
         "meaning": "The Gateway is refusing every tool call because a check it depends on is not available. Your agents get an error instead of a result.",
-        "action": "Open the console and check Health for the cause. Calls are accepted again when the cause is fixed.",
+        "action": "Open the console and check Causes in Gateway control. Calls are accepted again when the cause is fixed.",
         "control": "open-console"
       },
       "emergency-stop": {

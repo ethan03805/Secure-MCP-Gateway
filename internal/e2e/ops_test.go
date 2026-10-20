@@ -244,15 +244,41 @@ func TestDesktopMetricsOnRunningGateway(t *testing.T) {
 			}
 		}
 	}
-	want("smcp_release_enforced 0", "smcp_emergency_stop 0")
+	want("smcp_release_enforced 0", "smcp_emergency_stop 0", "smcp_profile_standalone 1")
+	// smcp_health_profile_only is 1 exactly when the control API reports a
+	// degraded state whose only cause is "unconfined", and the control API
+	// says the same in profile_only.
+	profileOnly := func() string {
+		t.Helper()
+		st, body := f.admin("GET", "/admin/v1/health", f.operator, nil)
+		if st != 200 {
+			t.Fatalf("health: %d %v", st, body)
+		}
+		causes, _ := body["causes"].([]any)
+		only := body["state"] == "degraded" && len(causes) > 0
+		for _, c := range causes {
+			only = only && c == "unconfined"
+		}
+		if body["profile_only"] != only {
+			t.Fatalf("profile_only %v for state %v causes %v", body["profile_only"], body["state"], causes)
+		}
+		if only {
+			return "smcp_health_profile_only 1"
+		}
+		return "smcp_health_profile_only 0"
+	}
+	want(profileOnly())
 	if st, body := f.admin("POST", "/admin/v1/stop", f.operator, map[string]any{"reason": "desktop metrics test"}); st != 200 {
 		t.Fatalf("stop: %d %v", st, body)
 	}
-	want("smcp_release_enforced 0", "smcp_emergency_stop 1")
+	want("smcp_release_enforced 0", "smcp_emergency_stop 1", "smcp_health_profile_only 0")
+	if got := profileOnly(); got != "smcp_health_profile_only 0" {
+		t.Fatalf("emergency stop: %s", got)
+	}
 	if st, body := f.admin("POST", "/admin/v1/resume", f.operator, map[string]any{}); st != 200 {
 		t.Fatalf("resume: %d %v", st, body)
 	}
-	want("smcp_release_enforced 0", "smcp_emergency_stop 0")
+	want("smcp_release_enforced 0", "smcp_emergency_stop 0", profileOnly())
 }
 
 func TestOpsMetricsAndHealthGate(t *testing.T) {

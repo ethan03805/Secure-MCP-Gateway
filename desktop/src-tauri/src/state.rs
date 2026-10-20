@@ -1,4 +1,4 @@
-//! Tray state (SRS FR-20.2, FR-20.4): which of the six states the tray
+//! Tray state (SRS FR-20.2, FR-20.4): which of the seven states the tray
 //! shows, computed from the latest metrics reads and the service manager's
 //! view of the service. Stale data never reads as healthy: when no
 //! exposition has been read for [`STALE_AFTER`], the state is
@@ -14,10 +14,14 @@ pub const STALE_AFTER: Duration = Duration::from_secs(15);
 /// 5 seconds; every 2 keeps a change within the 10-second bound).
 pub const POLL_INTERVAL: Duration = Duration::from_secs(2);
 
-/// The six tray states of FR-20.2.
+/// The seven tray states of FR-20.2. `Running` is a Standalone Gateway
+/// whose health is degraded only by the profile's own cause (`unconfined`):
+/// it works as designed and is shown as "running, not enforced" instead of
+/// "degraded" (`smcp_health_profile_only`, FR-20.5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TrayState {
     Healthy,
+    Running,
     Degraded,
     FailClosed,
     EmergencyStop,
@@ -26,8 +30,9 @@ pub enum TrayState {
 }
 
 impl TrayState {
-    pub const ALL: [TrayState; 6] = [
+    pub const ALL: [TrayState; 7] = [
         TrayState::Healthy,
+        TrayState::Running,
         TrayState::Degraded,
         TrayState::FailClosed,
         TrayState::EmergencyStop,
@@ -39,6 +44,7 @@ impl TrayState {
     pub fn name(self) -> &'static str {
         match self {
             TrayState::Healthy => "healthy",
+            TrayState::Running => "running",
             TrayState::Degraded => "degraded",
             TrayState::FailClosed => "fail-closed",
             TrayState::EmergencyStop => "emergency stop",
@@ -145,6 +151,9 @@ impl Monitor {
                 } else {
                     match e.health_state {
                         0 => TrayState::Healthy,
+                        // Degraded only by the Standalone profile's own
+                        // cause: running as designed, not enforced.
+                        1 if e.profile_only == Some(true) => TrayState::Running,
                         1 => TrayState::Degraded,
                         _ => TrayState::FailClosed,
                     }
@@ -189,6 +198,7 @@ mod tests {
             pending_approvals: pending,
             release_enforced: enforced,
             emergency_stop: stop,
+            profile_only: None,
         }
     }
 
@@ -217,7 +227,41 @@ mod tests {
         );
         // Each state has a distinct name.
         let names: std::collections::HashSet<_> = TrayState::ALL.iter().map(|s| s.name()).collect();
-        assert_eq!(names.len(), 6);
+        assert_eq!(names.len(), 7);
+    }
+
+    /// A Standalone Gateway degraded only by `unconfined` reads as running,
+    /// not enforced; any other cause, an Enforced Gateway or an older
+    /// release without the gauge reads as degraded.
+    #[test]
+    fn standalone_profile_only_is_running_not_enforced() {
+        claims::partial(&["FR-20.2", "FR-20.4"]);
+        let t0 = Instant::now();
+        let mut m = Monitor::default();
+        for (only, stop, want) in [
+            (Some(true), Some(false), TrayState::Running),
+            (Some(false), Some(false), TrayState::Degraded),
+            (None, Some(false), TrayState::Degraded),
+            (Some(true), Some(true), TrayState::EmergencyStop),
+        ] {
+            let mut e = expo(1, 0, Some(false), stop);
+            e.profile_only = only;
+            m.record_ok(t0, e);
+            let v = m.view(t0, ServiceStatus::Running);
+            assert_eq!(v.state, want, "{only:?} {stop:?}");
+            assert!(v.not_enforced);
+        }
+        let mut e = expo(1, 0, Some(false), Some(false));
+        e.profile_only = Some(true);
+        m.record_ok(t0, e);
+        let v = m.view(t0, ServiceStatus::Running);
+        assert_eq!(v.label(), "not enforced");
+        assert_eq!(v.accessible_name(), "Secure MCP Gateway: running (not enforced)");
+        // Stale, it is unreachable like every other state.
+        assert_eq!(
+            m.view(t0 + STALE_AFTER, ServiceStatus::Running).state,
+            TrayState::Unreachable
+        );
     }
 
     #[test]

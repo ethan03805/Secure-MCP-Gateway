@@ -3,14 +3,19 @@
 // status line (in Rust, from the same catalogue) and the status window use
 // the same entries.
 
-/** The six tray states of FR-20.2, as the Rust side names them. */
-export const STATES = ["healthy", "degraded", "fail-closed", "emergency-stop", "stopped", "unreachable"] as const;
+/**
+ * The seven tray states of FR-20.2, as the Rust side names them. "running"
+ * is a Standalone Gateway degraded only by its profile's own cause
+ * (smcp_health_profile_only, FR-20.5): shown as "Running, not enforced".
+ */
+export const STATES = ["healthy", "running", "degraded", "fail-closed", "emergency-stop", "stopped", "unreachable"] as const;
 export type TrayState = (typeof STATES)[number];
 export type Control = "open-console" | "start" | "restart";
 export type Tone = "ok" | "warn" | "bad" | "idle";
 
 const TONES: Record<TrayState, Tone> = {
   healthy: "ok",
+  running: "ok",
   degraded: "warn",
   "fail-closed": "bad",
   "emergency-stop": "bad",
@@ -21,6 +26,7 @@ const TONES: Record<TrayState, Tone> = {
 /** Whether a state comes from a fresh metrics reading. */
 const READING: Record<TrayState, boolean> = {
   healthy: true,
+  running: true,
   degraded: true,
   "fail-closed": true,
   "emergency-stop": true,
@@ -67,7 +73,8 @@ function isState(s: string): s is TrayState {
 
 /**
  * The explanation of a health reading. A degraded Gateway that is not
- * labelled enforced uses the catalogue's degraded-not-enforced entry: a
+ * labelled enforced uses the catalogue's degraded-not-enforced entry (a
+ * cause besides the profile's own; the profile alone is "running"): a
  * Standalone installation is never healthy (FR-13.10).
  */
 export function explain(catalogue: Catalogue, h: Health): Explanation {

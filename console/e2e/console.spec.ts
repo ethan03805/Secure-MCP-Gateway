@@ -59,7 +59,7 @@ test("emergency stop refuses calls and resume restores them", async ({ page }) =
   const strip = page.getByTestId("status-strip");
   await expect(strip).toContainText(/policy \S+/);
   await expect(strip).toContainText(/\d+ sessions?/);
-  await expect(strip).toContainText(/healthy|degraded|fail-closed/);
+  await expect(strip).toContainText(/healthy|running, not enforced|degraded|fail-closed/);
   await expect(page.getByRole("table", { name: "Health causes" })).toBeVisible();
   await page.getByTestId("emergency-button").click();
   const dialog = page.getByRole("dialog", { name: "Emergency stop" });

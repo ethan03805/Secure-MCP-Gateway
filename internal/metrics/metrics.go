@@ -16,8 +16,11 @@
 // and, for the desktop application's tray (FR-20.5), two gauges without
 // labels:
 //
-//	smcp_release_enforced  gauge 1 only while the release label is "enforced"
-//	smcp_emergency_stop    gauge 1 only while the emergency stop is set
+//	smcp_release_enforced     gauge 1 only while the release label is "enforced"
+//	smcp_emergency_stop       gauge 1 only while the emergency stop is set
+//	smcp_profile_standalone   gauge 1 only while the profile is Standalone
+//	smcp_health_profile_only  gauge 1 only while health is degraded by the
+//	                          profile's own cause alone ("unconfined")
 //
 // Call counts and decision latency come from evidence events through an
 // audit.Observer, so they count exactly what the journal recorded; the
@@ -111,6 +114,12 @@ type Sources struct {
 	// reports false, so the tray never reads "enforced" by default.
 	ReleaseEnforced func() bool
 	EmergencyStop   func() bool
+	// ProfileStandalone reports whether the Gateway runs the Standalone
+	// profile; ProfileOnly whether the health state is degraded by the
+	// profile's own cause alone, so the tray shows "running, not enforced"
+	// instead of "degraded" (FR-20.2, FR-20.5). Nil reports false.
+	ProfileStandalone func() bool
+	ProfileOnly       func() bool
 }
 
 // Registry holds the metric values.
@@ -253,6 +262,8 @@ func (r *Registry) Write(w io.Writer) {
 	}
 	gauge("smcp_release_enforced", "1 while the release label is \"enforced\", 0 otherwise.", flag(r.src.ReleaseEnforced))
 	gauge("smcp_emergency_stop", "1 while the emergency stop is set, 0 otherwise.", flag(r.src.EmergencyStop))
+	gauge("smcp_profile_standalone", "1 while the Gateway runs the Standalone profile, 0 otherwise.", flag(r.src.ProfileStandalone))
+	gauge("smcp_health_profile_only", "1 while the health state is degraded only by the profile's own cause (unconfined), 0 otherwise.", flag(r.src.ProfileOnly))
 	fmt.Fprintf(w, "# HELP smcp_backend_instances_running Running backend server instances.\n# TYPE smcp_backend_instances_running gauge\n")
 	if r.src.Backends != nil {
 		aliases := r.src.Backends()

@@ -4,7 +4,7 @@
 import { useState, type ReactNode } from "react";
 import { ApiError, post } from "../api";
 import { useResource } from "../data";
-import { causeText, useHealth } from "../health";
+import { causeText, stateOf, useHealth } from "../health";
 import { usePerm } from "../perm";
 import { Link } from "../router";
 import type { EventPage, Principals, ServerView, VerifyResult } from "../types";
@@ -407,7 +407,7 @@ export function Control() {
               <>
                 <KV
                   rows={[
-                    ["State", <StateLabel tone={toneOf(h.state)}>{h.state}</StateLabel>],
+                    ["State", <StateLabel tone={stateOf(h).tone}>{stateOf(h).word}</StateLabel>],
                     ["Profile", <>{h.profile} <span className="muted">({h.release_label})</span></>],
                     ["Policy revision", h.policy_revision ? <Mono>{h.policy_revision}</Mono> : <span className="muted">none</span>],
                     ["Active sessions", <Mono>{h.sessions}</Mono>],
@@ -422,7 +422,8 @@ export function Control() {
                       <strong>Not enforced.</strong> The Standalone profile decides, filters and records the tool calls that go through the Gateway, but it does
                       not contain the servers. Each server runs as your user without a sandbox and can read and write your files and reach the network
                       directly; the agent also runs as your user and its own tools (shell, file editing) never pass through the Gateway. Servers rated high
-                      risk are refused, and health stays degraded with the cause unconfined. Containment needs the Enforced profile on Linux. Details:
+                      risk are refused. Health reports degraded with the cause unconfined; while that is the only cause the console and the desktop app show
+                      the state as running, not enforced. Containment needs the Enforced profile on Linux. Details:
                       docs/security-limitations.md.
                     </p>
                   </div>

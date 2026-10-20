@@ -26,11 +26,11 @@ TARGET: v1.3.0
 
 @FR-20.2 | Tray icon and menu
 P: FR-20
-S: The Desktop Application (E-34) SHALL show a tray (menu-bar) icon whose image and accessible name state one of `healthy`, `degraded`, `fail-closed`, `emergency stop`, `stopped` or `unreachable`, and a menu with the items Open Console, Approvals (with the pending count), Start, Stop, Restart, Set Up a Client, Check for Updates, Settings and Quit, where Start is enabled only while the service is stopped and Stop and Restart only while it runs.
+S: The Desktop Application (E-34) SHALL show a tray (menu-bar) icon whose image and accessible name state one of `healthy`, `running, not enforced`, `degraded`, `fail-closed`, `emergency stop`, `stopped` or `unreachable`, where `running, not enforced` is shown in place of `degraded` while the exposition reports that the health state is degraded only by the Standalone profile's own cause (FR-20.5), and a menu with the items Open Console, Approvals (with the pending count), Start, Stop, Restart, Set Up a Client, Check for Updates, Settings and Quit, where Start is enabled only while the service is stopped and Stop and Restart only while it runs.
 A: E-34; F-100; I-40
-V: Test | Drive the Gateway through each of the six states with a test harness; confirm the icon and accessible name for each and the enabled state of Start, Stop and Restart; open each menu item and confirm its action.
+V: Test | Drive the Gateway through each of the seven states with a test harness; confirm the icon and accessible name for each and the enabled state of Start, Stop and Restart; open each menu item and confirm its action.
 SRC: OWNER (start/stop/status of smcpd, health at a glance)
-R: The tray is where the user looks first; it must say what state the Gateway is in without opening anything.
+R: The tray is where the user looks first; it must say what state the Gateway is in without opening anything. A Standalone installation always reports degraded with the cause `unconfined` (FR-13.10), which a new user reads as a fault; `running, not enforced` says that it works as designed and keeps the `not enforced` label in the state itself (owner decision, 2026-10-19).
 TARGET: v1.3.0
 
 @FR-20.3 | Service control
@@ -53,11 +53,11 @@ TARGET: v1.3.0
 
 @FR-20.5 | Desktop health metrics
 P: FR-20
-S: The metrics endpoint SHALL expose, in addition to the FR-17.5 metric set, a gauge `smcp_release_enforced` whose value is 1 only while the release label is `enforced` and 0 otherwise and a gauge `smcp_emergency_stop` whose value is 1 only while the emergency stop is set, both without labels, and the first-run setup of FR-20.8 SHALL leave metrics enabled on the CP-51 address.
+S: The metrics endpoint SHALL expose, in addition to the FR-17.5 metric set, a gauge `smcp_release_enforced` whose value is 1 only while the release label is `enforced` and 0 otherwise and a gauge `smcp_emergency_stop` whose value is 1 only while the emergency stop is set, a gauge `smcp_profile_standalone` whose value is 1 only while the Gateway runs the Standalone profile and a gauge `smcp_health_profile_only` whose value is 1 only while the health state is degraded and every cause is the profile's own (`unconfined`), all without labels, and the first-run setup of FR-20.8 SHALL leave metrics enabled on the CP-51 address.
 A: E-23; F-61; X-15
-V: Test | Scrape the endpoint on an Enforced and a Standalone installation and with the emergency stop set and cleared; confirm both gauges and their values; run the first-run setup and confirm metrics are enabled on the CP-51 address.
+V: Test | Scrape the endpoint on an Enforced and a Standalone installation and with the emergency stop set and cleared; confirm the four gauges and their values, and that `smcp_health_profile_only` is 0 while any other cause is present; run the first-run setup and confirm metrics are enabled on the CP-51 address.
 SRC: OWNER (health at a glance)
-R: The tray needs the release label and the emergency stop, which the existing metric set does not carry, and must not need the operator token to read them.
+R: The tray needs the release label, the emergency stop and whether the degraded state comes only from the profile, which the existing metric set does not carry, and must not need the operator token to read them.
 TARGET: v1.3.0
 
 @FR-20.6 | Console in a native window
@@ -354,9 +354,9 @@ TARGET: v1.3.0
 
 @FR-20.45 | Tray state explanations
 P: FR-20
-S: For each of the six tray states of FR-20.2, the Desktop Application (E-34) SHALL show in the tray menu a status line with the state's name and one sentence saying what the state means for the tool calls of the user's agents, and in a status window opened from that line the same sentence, the next action and a control that performs it where the application has one (Start for `stopped`, Open Console for `fail-closed`, `emergency stop` and `degraded`), the time of the last metrics reading for `unreachable`, and, on an installation not labelled `enforced`, the `not enforced` label with a sentence saying what it means.
+S: For each of the seven tray states of FR-20.2, the Desktop Application (E-34) SHALL show in the tray menu a status line with the state's name and one sentence saying what the state means for the tool calls of the user's agents, and in a status window opened from that line the same sentence, the next action and a control that performs it where the application has one (Start for `stopped`, Open Console for `fail-closed`, `emergency stop`, `degraded` and `running, not enforced`), the time of the last metrics reading for `unreachable`, and, on an installation not labelled `enforced`, the `not enforced` label with a sentence saying what it means.
 A: E-34; F-100
-V: Test | Drive the Gateway through each of the six states with the FR-20.2 test harness; confirm the status line's name and sentence, and the window's sentence, next action and control, against the message catalogue of FR-20.48; activate each control and confirm its action; confirm the last-reading time for `unreachable` and the `not enforced` explanation on a Standalone installation.
+V: Test | Drive the Gateway through each of the seven states with the FR-20.2 test harness; confirm the status line's name and sentence, and the window's sentence, next action and control, against the message catalogue of FR-20.48; activate each control and confirm its action; confirm the last-reading time for `unreachable` and the `not enforced` explanation on a Standalone installation.
 SRC: OWNER (status explanations for each tray state: what it means, what to do)
 R: A state name alone does not tell a new user whether their agents' calls are being refused or what to do about it. `fail-closed` means calls are refused on purpose, and the user needs to read that, not infer it from a color.
 TARGET: v1.3.0
@@ -383,7 +383,7 @@ TARGET: v1.3.0
 P: FR-20
 S: The Gateway source SHALL keep one machine-readable message catalogue, `docs/design/messages.json`, that maps every Appendix B reason code to its Table B.2 `data.message` text, and every Desktop Application error and tray state to a title, a what-happened sentence, an optional why sentence and a what-to-do sentence, and the Management Console & Control API (E-24) and the Desktop Application (E-34) SHALL take the text they show for a reason code, a desktop error or a tray state from that catalogue at build time.
 A: E-24; E-34; F-65; F-100; F-103
-V: Test | In CI, confirm that the catalogue holds every reason code of Table B.2 with identical text and every reason code the error builder of FR-1.51 emits; confirm that every desktop error code raised in the application source and each of the six tray states has an entry with the required parts; confirm that the console and desktop builds import their reason-code, error and state text from the catalogue and hold no differing copy.
+V: Test | In CI, confirm that the catalogue holds every reason code of Table B.2 with identical text and every reason code the error builder of FR-1.51 emits; confirm that every desktop error code raised in the application source and each of the seven tray states has an entry with the required parts; confirm that the console and desktop builds import their reason-code, error and state text from the catalogue and hold no differing copy.
 SRC: OWNER (a reason-code to message catalogue shared by desktop and console); FR-1.51; FR-18.7
 R: Three copies of the same message (on the wire, in the console, in the desktop application) drift. One catalogue checked against Appendix B keeps what the agent's user, the operator and the desktop user read the same.
 TARGET: v1.3.0
@@ -399,7 +399,7 @@ TARGET: v1.3.0
 
 @FR-20.50 | Visual design guide
 P: FR-20
-S: The Gateway source SHALL include a visual design guide, `docs/design/visual.md`, that is the normative reference for the console, the bundled windows of the Desktop Application (E-34) and the project site, that extends the console rules of `docs/console-style.md`, and that defines at least: the color tokens of the light and dark schemes; one typeface family with a fixed type scale; dense, left-aligned layout; WCAG 2.2 AA contrast and a visible focus indicator; state colors that always carry a text label and a shape, including the six tray states; motion limited to showing a change of state and removed under reduced motion; and a list of banned visual patterns, including decorative gradients, glassmorphism, sparkle icons, decorative glow and shadow, oversized rounded cards and card grids, decorative shapes, stock or 3D illustration, centered-everything layouts and decorative animation, each with what to do instead.
+S: The Gateway source SHALL include a visual design guide, `docs/design/visual.md`, that is the normative reference for the console, the bundled windows of the Desktop Application (E-34) and the project site, that extends the console rules of `docs/console-style.md`, and that defines at least: the color tokens of the light and dark schemes; one typeface family with a fixed type scale; dense, left-aligned layout; WCAG 2.2 AA contrast and a visible focus indicator; state colors that always carry a text label and a shape, including the seven tray states; motion limited to showing a change of state and removed under reduced motion; and a list of banned visual patterns, including decorative gradients, glassmorphism, sparkle icons, decorative glow and shadow, oversized rounded cards and card grids, decorative shapes, stock or 3D illustration, centered-everything layouts and decorative animation, each with what to do instead.
 A: E-24; E-34; F-65; F-100; F-103
 V: Inspection | Inspect the guide for each listed topic and for the banned list; inspect each bundled desktop window, five console views and the site's home and install pages against it in the light and dark schemes; record the result under `docs/verification/`.
 SRC: OWNER (visual fidelity and style; avoid generally recognized AI design patterns in the user interface, 2026-10-18); FR-8.35

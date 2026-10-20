@@ -30,6 +30,8 @@ A configuration written by `smcpctl bootstrap` enables the endpoint on the admin
 | `smcp_backend_instances_running` | gauge | `server_alias` |
 | `smcp_release_enforced` | gauge | none; 1 while the release label is `enforced`, 0 otherwise (FR-20.5, read by the desktop tray) |
 | `smcp_emergency_stop` | gauge | none; 1 while the emergency stop is set, 0 otherwise (FR-20.5, read by the desktop tray) |
+| `smcp_profile_standalone` | gauge | none; 1 while the Gateway runs the Standalone profile, 0 otherwise (FR-20.5) |
+| `smcp_health_profile_only` | gauge | none; 1 while the health state is degraded and every cause is the profile's own (`unconfined`), 0 otherwise; the tray then shows `running, not enforced` (FR-20.2, FR-20.5) |
 
 Call counts are taken from the evidence events the journal accepted, so they match the journal. Example scrape configuration:
 

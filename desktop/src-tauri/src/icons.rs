@@ -1,7 +1,8 @@
-//! Tray icons for the six states (SRS FR-20.2), drawn at start-up so the
+//! Tray icons for the seven states (SRS FR-20.2), drawn at start-up so the
 //! state is told by shape as well as color. The shapes are those of
 //! `docs/design/visual.md` ("Tray states"), the same as the Gateway Status
-//! window's: a filled square (healthy), a diamond (degraded), a triangle
+//! window's: a filled square (healthy), a half-filled square (running, not
+//! enforced), a diamond (degraded), a triangle
 //! (fail-closed), a triangle with a bar under it (emergency stop), a hollow
 //! square (stopped) and a ring (unreachable).
 
@@ -27,6 +28,13 @@ fn shade(state: TrayState, x: f64, y: f64) -> Option<Rgb> {
     let triangle = |top: f64, base: f64| y <= base && y >= top + 2.0 * x.abs();
     match state {
         TrayState::Healthy => (x.abs() <= 0.62 && y.abs() <= 0.62).then_some(GREEN),
+        // Running, not enforced: a square, its left half filled. The
+        // Gateway decides and records calls, but servers are not contained.
+        TrayState::Running => {
+            let outer = x.abs() <= 0.68 && y.abs() <= 0.68;
+            let inner = x.abs() < 0.46 && y.abs() < 0.46;
+            (outer && (!inner || x <= 0.0)).then_some(GREEN)
+        }
         TrayState::Degraded => (x.abs() + y.abs() <= 0.85).then_some(AMBER),
         TrayState::FailClosed => triangle(-0.8, 0.75).then_some(RED),
         TrayState::EmergencyStop => {
@@ -94,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn six_distinct_icons() {
+    fn distinct_icons() {
         claims::partial(&["FR-20.2"]);
         let icons: Vec<Vec<u8>> = TrayState::ALL.iter().map(|s| rgba(*s)).collect();
         for (i, a) in icons.iter().enumerate() {

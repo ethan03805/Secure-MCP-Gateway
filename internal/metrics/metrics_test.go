@@ -155,3 +155,37 @@ func TestDesktopGauges(t *testing.T) {
 		t.Fatalf("absent sources must report 0:\n%s", expo)
 	}
 }
+
+// TestProfileGauges: smcp_profile_standalone and smcp_health_profile_only
+// are gauges without labels that follow their sources and report 0 when
+// the sources are absent (FR-20.5).
+func TestProfileGauges(t *testing.T) {
+	reqtest.Partial(t, "FR-20.5")
+	standalone, only := false, false
+	r := New(nil, Sources{ProfileStandalone: func() bool { return standalone }, ProfileOnly: func() bool { return only }})
+	scrape := func(r *Registry) string {
+		var buf bytes.Buffer
+		r.Write(&buf)
+		return buf.String()
+	}
+	digit := map[bool]string{false: "0", true: "1"}
+	for _, c := range []struct{ standalone, only bool }{{false, false}, {true, false}, {true, true}} {
+		standalone, only = c.standalone, c.only
+		expo := scrape(r)
+		for _, w := range []string{
+			"smcp_profile_standalone " + digit[c.standalone] + "\n",
+			"smcp_health_profile_only " + digit[c.only] + "\n",
+			"# TYPE smcp_profile_standalone gauge\n", "# TYPE smcp_health_profile_only gauge\n",
+		} {
+			if !strings.Contains(expo, w) {
+				t.Errorf("%+v: exposition lacks %q", c, w)
+			}
+		}
+		if strings.Contains(expo, "smcp_profile_standalone{") || strings.Contains(expo, "smcp_health_profile_only{") {
+			t.Error("profile gauges carry labels")
+		}
+	}
+	if expo := scrape(New(nil, Sources{})); !strings.Contains(expo, "smcp_profile_standalone 0\n") || !strings.Contains(expo, "smcp_health_profile_only 0\n") {
+		t.Fatalf("absent sources must report 0:\n%s", expo)
+	}
+}

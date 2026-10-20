@@ -48,6 +48,7 @@ fn catalogue() -> &'static Catalogue {
 pub fn key(state: TrayState) -> &'static str {
     match state {
         TrayState::Healthy => "healthy",
+        TrayState::Running => "running",
         TrayState::Degraded => "degraded",
         TrayState::FailClosed => "fail-closed",
         TrayState::EmergencyStop => "emergency-stop",
@@ -57,8 +58,8 @@ pub fn key(state: TrayState) -> &'static str {
 }
 
 /// The explanation of a state. A degraded Gateway that is not labelled
-/// enforced gets the Standalone explanation: a Standalone installation is
-/// never healthy (FR-13.10).
+/// enforced gets the Standalone explanation (a cause besides the profile's
+/// own); one degraded only by the profile's own cause is `Running`.
 pub fn state_text(state: TrayState, not_enforced: bool) -> &'static StateText {
     let k = if state == TrayState::Degraded && not_enforced {
         "degraded-not-enforced"
@@ -112,7 +113,12 @@ mod tests {
             assert_eq!(key(s), s.name().replace(' ', "-"), "catalogue key of {s:?}");
         }
         assert_eq!(state_text(TrayState::Stopped, false).control, "start");
-        for s in [TrayState::FailClosed, TrayState::EmergencyStop, TrayState::Degraded] {
+        for s in [
+            TrayState::FailClosed,
+            TrayState::EmergencyStop,
+            TrayState::Degraded,
+            TrayState::Running,
+        ] {
             assert_eq!(state_text(s, false).control, "open-console", "{s:?}");
         }
         assert!(state_text(TrayState::Unreachable, false)
@@ -142,6 +148,13 @@ mod tests {
         let (title, line) = status_lines(&v);
         assert_eq!(title, "Fail-closed, not enforced");
         assert!(line.ends_with('.') && !line.contains(". "), "{line}");
+        let (title, line) = status_lines(&TrayView {
+            state: TrayState::Running,
+            not_enforced: true,
+            pending: Some(0),
+        });
+        assert_eq!(title, "Running, not enforced");
+        assert!(!line.contains("degraded"), "{line}");
         let (title, _) = status_lines(&TrayView {
             state: TrayState::Unreachable,
             not_enforced: true,

@@ -8,6 +8,8 @@ export interface Health {
   release_label: string;
   /** windows-user, windows-machine or wsl2 on Windows and in WSL (SR-4-2). */
   installation_mode?: string;
+  /** Degraded only by the profile's own cause (Standalone: unconfined); shown as "running, not enforced". */
+  profile_only?: boolean;
   profile_reasons?: string[];
   version: string;
   policy_revision?: string;

@@ -104,7 +104,7 @@ The lint also checks the stylesheets for the banned visual patterns of the [visu
 
 **Unreachable tray state.** Before: tray stays green with "Healthy" after the Gateway stops answering. After: tray shows the ring shape and "unreachable", and the menu says "No status from the Gateway for 15 seconds. Open the console or restart the service." (FR-20.4)
 
-**Standalone label.** Before: "Protected" on a macOS install. After: "healthy, not enforced" with the `not enforced` label kept beside the state.
+**Standalone label.** Before: "Protected" on a macOS install, or "degraded" for a Standalone installation that works as designed. After: "running, not enforced", the `not enforced` label part of the state, and "degraded" only when a cause besides the profile's own is present.
 
 **Setup failure.** Before: "Setup failed! Please try again." After: "Setup stopped: port 8443 is already in use by another program. Quit that program or choose another port, then run setup again." The setup window also states before installation that the Standalone profile is labelled `not enforced`.
 
