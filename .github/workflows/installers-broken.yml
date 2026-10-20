@@ -5,17 +5,18 @@
 # The job `publish` stands in for release.yml's release job: it has the
 # same dependency (needs: installers) and only prints. The job `verdict`
 # passes when the installers workflow failed and `publish` was skipped,
-# and fails otherwise, so a smoke test that let a broken installer through
-# would turn this workflow red.
+# and fails otherwise. Read the result from `verdict`: the run as a whole
+# always ends "failure", because the installers workflow it calls fails on
+# purpose (a reusable workflow call cannot be continue-on-error).
 #
-# Manual (workflow_dispatch) and weekly; it builds every installer, so it
-# does not run on each pull request. Not a required check.
+# Manual only (workflow_dispatch), before a release (docs/release-
+# checklist.md): it builds every installer, and a scheduled run would show
+# a failed run every week. Not a required check. Run 39354773190 on main
+# 199cdc6: smoke deb (amd64) failed, publish skipped, verdict passed.
 name: installers-broken
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "17 6 * * 1"
 
 permissions:
   contents: read
