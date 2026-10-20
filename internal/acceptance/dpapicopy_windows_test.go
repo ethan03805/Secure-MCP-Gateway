@@ -180,10 +180,12 @@ func TestWindowsStateCopyRefused(t *testing.T) {
 	// The artifact does not carry access control lists: give the copy the
 	// owner-only DACL the Gateway gives its state, so that the start is
 	// refused for the keys and not for the DACL (FR-21.5).
-	if err := winsec.SecureOwnerOnly(dir); err != nil {
-		t.Fatal(err)
-	}
 	state := filepath.Join(dir, "state")
+	for _, d := range []string{dir, state} {
+		if err := winsec.SecureOwnerOnly(d); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for name, sum := range rec.Blobs {
 		b, err := os.ReadFile(filepath.Join(state, filepath.FromSlash(name)))
 		if err != nil {
