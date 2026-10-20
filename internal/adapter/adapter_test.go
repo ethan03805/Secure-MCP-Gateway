@@ -344,27 +344,38 @@ func TestStdioBridgeRawEquivalence(t *testing.T) {
 // socket and relays newline-delimited messages unchanged in both
 // directions (FR-12.13 with the UDS Harness Profile).
 func TestRelayUnixSocket(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("the UDS Harness Profile is refused on Windows; its transport there is the named pipe (FR-21.8)")
-	}
 	reqtest.Partial(t, "FR-12.13")
 	dir := testport.SocketDir(t)
-	sock := filepath.Join(dir, "h.sock")
-	u, err := user.Current()
-	if err != nil {
-		t.Fatal(err)
-	}
-	grp, err := user.LookupGroupId(u.Gid)
-	if err != nil {
-		t.Skipf("primary group: %v", err)
-	}
 	const key = "adapter uds key 0123456789"
 	hash, err := keys.HashPassword(key)
 	if err != nil {
 		t.Fatal(err)
 	}
-	gwtest.Start(t, fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = %q\n[[uds.peer]]\nuid = %d\nprincipal = \"cc\"\nkey_hash = %q\n",
-		sock, grp.Name, os.Getuid(), hash))
+	var sock string
+	if runtime.GOOS == "windows" {
+		// FR-21.16: the same relay over the CP-02 named pipe, the peer
+		// identified by this process's user SID (FR-21.9).
+		reqtest.Partial(t, "FR-21.16", "FR-21.8")
+		sid, err := winsec.ProcessUserSID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sock = fmt.Sprintf(`\\.\pipe\smcp-test-adapter-%d-%d`, os.Getpid(), testport.Free(t))
+		gwtest.Start(t, fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = \"smcp-harness-test-absent\"\n[[uds.peer]]\nsid = %q\nprincipal = \"cc\"\nkey_hash = %q\n",
+			sock, sid, hash))
+	} else {
+		sock = filepath.Join(dir, "h.sock")
+		u, err := user.Current()
+		if err != nil {
+			t.Fatal(err)
+		}
+		grp, err := user.LookupGroupId(u.Gid)
+		if err != nil {
+			t.Skipf("primary group: %v", err)
+		}
+		gwtest.Start(t, fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = %q\n[[uds.peer]]\nuid = %d\nprincipal = \"cc\"\nkey_hash = %q\n",
+			sock, grp.Name, os.Getuid(), hash))
+	}
 	write := func(k string) string {
 		path := filepath.Join(dir, "cred-"+k[:3]+".toml")
 		body := fmt.Sprintf("[gateway]\nurl = \"https://unused.invalid/mcp\"\nsocket = %q\nuds_key = %q\n[client]\nid = \"unused\"\n", sock, k)

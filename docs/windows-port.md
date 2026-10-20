@@ -43,7 +43,6 @@ Each feature that is not ported refuses with an error naming the FR-21 requireme
 
 | Where | Behavior on Windows | Until |
 |---|---|---|
-| `edge.ListenUDS` | refuses to listen, so no AF_UNIX socket is created | FR-21.8 named pipe and FR-21.9 SID mapping |
 | `profile.Resolve` | `profile = "enforced"` fails; `auto` resolves to Standalone, label "not enforced", installation mode `windows-user` (the machine-mode service reports `windows-machine`). Inside WSL every mode, `enforced` included, resolves to Standalone with mode `wsl2` | permanent (SR-4-2) |
 | `sandbox.FromConfig` (unchanged) | `[runtime] sandbox = "podman"` fails the essential `os` check | permanent |
 
@@ -78,6 +77,7 @@ These run in the per-user mode too; they give the macOS Standalone posture plus 
 | Request filter path canonicalization (`internal/filters`, `internal/winpath`) | A drive letter or a leading separator makes a path absolute, so `/etc/passwd` resolves on the current drive and is outside every granted root instead of being joined to one; streams (`a.txt:s`), reserved device names (`NUL`, `COM1`), `\\?\` and `\\.\` prefixes, UNC hosts and `C:x` forms are refused; containment is case-insensitive after resolution (junctions and links included); `file:///C:/x` URLs are read as `C:/x`. Filesystem slots of packaged servers (reason `PATH_REFUSED`) are not done yet. | FR-21.25 |
 | `pipeline.CheckLaunchSpec` | A server command is absolute by the FR-21.25 rule (drive letter or leading separator) and may not use a refused form. | FR-21.25, SR-3.6-1 |
 | Vault, graph password file, adapter credential file | Checked by DACL (this account, SYSTEM and Administrators) instead of mode; `smcp-session` writes `credentials.toml` with that DACL. | FR-21.2, FR-21.16 (CP-43), FR-21.18 |
+| UDS Harness Profile (`internal/edge`, `internal/winpipe`) | Served over the CP-02 named pipe; no AF_UNIX socket. `FILE_FLAG_FIRST_PIPE_INSTANCE` (a pre-existing name stops the start with `pipe_squatted`), `PIPE_REJECT_REMOTE_CLIENTS`, protected DACL: read and write for the account running `smcpd` and the `[uds] group` local group when it exists, deny NETWORK and ANONYMOUS LOGON; clients cannot create instances. `[[uds.peer]] sid` registers a peer; the SID comes from the client's token (`ImpersonateNamedPipeClient`, `OpenThreadToken`). `smcp-stdio.exe` relays over the pipe. | FR-21.8, FR-21.9, SR-2.8-6, FR-21.16 |
 | Secret files read by `smcpctl` (`--admin-password-file` and the like) | No mode check; the file's DACL may grant only this account, SYSTEM and Administrators (`winsec.CheckOwnerOnly`). | FR-21.2 |
 
 ## Boundary between the platform runtime and the Windows sandbox

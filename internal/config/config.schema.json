@@ -176,9 +176,11 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["uid", "principal", "key_hash"],
+            "required": ["principal", "key_hash"],
+            "anyOf": [{ "required": ["uid"] }, { "required": ["sid"] }],
             "properties": {
               "uid": { "type": "integer", "minimum": 0 },
+              "sid": { "type": "string", "pattern": "^[Ss]-1(-[0-9]+)+$" },
               "principal": { "type": "string", "minLength": 1 },
               "key_hash": { "type": "string", "minLength": 1 },
               "template": { "type": "string", "minLength": 1 }

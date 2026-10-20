@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"sync"
 	"time"
 )
@@ -18,7 +17,9 @@ import (
 // JSON-RPC: it authenticates once with the peer's bearer key
 // ([gateway] uds_key) and then copies lines unchanged in both directions.
 // The Gateway checks the kernel-reported UID of this process and the key;
-// the session lasts as long as the connection.
+// the session lasts as long as the connection. On Windows [gateway] socket
+// names the CP-02 named pipe instead, and the Gateway reads this process's
+// user SID from the pipe (FR-21.16, FR-21.9).
 
 // methodUDSAuthenticate is the first message on the socket
 // (edge.MethodUDSAuthenticate).
@@ -33,8 +34,7 @@ func RunUDS(ctx context.Context, socket, key string, in io.Reader, out io.Writer
 	if key == "" {
 		return errors.New("[gateway] uds_key is not set")
 	}
-	var d net.Dialer
-	c, err := d.DialContext(ctx, "unix", socket)
+	c, err := dialHarness(ctx, socket)
 	if err != nil {
 		return fmt.Errorf("gateway socket: %w", err)
 	}
