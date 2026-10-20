@@ -37,6 +37,8 @@ An emergency stop (`smcpctl stop`) also makes the reported state `fail-closed`; 
 | `graph_mirror_unavailable` | no | | `[graph] enabled` and the graph database cannot be reached or written, or the mirror refused to start; a connected mirror probes the database every 0.5 s |
 | `observation_store_unavailable` | no | | Observation is enabled and the Observation Store could not be opened, its directory no longer accepts files, or its last batch write failed |
 | `revocation_feed_stale` | no | | The package library's revocation feed has not been read successfully for more than 24 h (CP-34); new imports are refused until it can be (SR-3-4) |
+| `contextforge_unconfined` | no | | The bundled ContextForge instance runs outside the Enforced profile, so the E-16 sandbox and E-18 egress confinement do not apply to it (FR-22.25; planned v1.3.0) |
+| `contextforge_unhealthy` | no | | The bundled ContextForge instance failed three health checks in a row and is being restarted; hosted tools fail meanwhile, other servers are not affected (FR-22.30; planned v1.3.0) |
 
 Every check runs on every evaluation, once per second, so a fault is reported within 2 seconds (FR-7.11; `internal/e2e` `TestHealthFaultEachDependency` faults each dependency in turn). Only `backend_unreachable` (every 10 s) and the storage quotas (every minute) are sampled less often. The vault (E-19), the graph mirror, the Observation Store and the observation degradation stage register their own checks with `health.Monitor.Register`; only the vault check is critical, the others report `degraded`, never `fail-closed`.
 

@@ -193,6 +193,9 @@ var routeRoles = map[string][]string{
 	"GET /api/v1/contextforge/proposals":                opsRead,
 	"GET /api/v1/contextforge/proposals/{id}":           opsRead,
 	"POST /api/v1/contextforge/proposals/{id}/decision": operator,
+	"POST /api/v1/contextforge/instance/start":          operator,
+	"POST /api/v1/contextforge/instance/stop":           operator,
+	"POST /api/v1/contextforge/starter-set":             operator,
 }
 
 // refine narrows a route's roles by the request: it returns false when the

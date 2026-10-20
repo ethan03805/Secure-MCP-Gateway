@@ -174,8 +174,10 @@ func (w *wiring) elements() []element {
 		switch {
 		case st.CatalogError != "":
 			add("E-36", "ContextForge Connector", elementDegraded, "catalog refused: "+st.CatalogReason)
+		case st.Bundled && st.Instance.State == "unavailable":
+			add("E-36", "ContextForge Connector", elementDegraded, "bundled instance unavailable: "+st.Instance.ReasonCode)
 		case st.Bundled:
-			add("E-36", "ContextForge Connector", elementActive, fmt.Sprintf("catalog %s; bundled instance not built yet", st.CatalogSHA256[:12]))
+			add("E-36", "ContextForge Connector", elementActive, fmt.Sprintf("catalog %s; bundled instance %s", st.CatalogSHA256[:12], st.Instance.State))
 		default:
 			add("E-36", "ContextForge Connector", elementActive, fmt.Sprintf("catalog %s, %d entries; bundled instance off", st.CatalogSHA256[:12], st.CatalogEntries))
 		}

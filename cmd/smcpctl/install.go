@@ -73,6 +73,7 @@ func installCmd(args []string, out io.Writer) error {
 	fs.IntVar(&o.adminPort, "admin-port", 8444, "control API listener port on 127.0.0.1")
 	fs.IntVar(&o.metricsPort, "metrics-port", -1, "metrics endpoint port on 127.0.0.1 (default admin port + 1; 0 turns metrics off)")
 	fs.StringVar(&o.notify, "notify", "auto", "approval desktop notifications: auto, off, osascript, terminal-notifier or notify-send")
+	fs.BoolFunc("with-contextforge", "enable the bundled ContextForge instance and fetch its pinned image (FR-22.22)", func(string) error { o.contextforge = "yes"; return nil })
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

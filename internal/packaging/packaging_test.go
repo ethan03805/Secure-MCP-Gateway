@@ -52,6 +52,13 @@ func reason(err error) string { return packaging.ReasonOf(err) }
 
 func TestEmbeddedSchemaMatchesPublished(t *testing.T) {
 	reqtest.Partial(t, "FR-14.11")
+	pub2, err := os.ReadFile("../../docs/schemas/manifest.v2.schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(pub2, packaging.ManifestV2SchemaJSON()) {
+		t.Fatal("internal/packaging/manifest.v2.schema.json differs from docs/schemas/manifest.v2.schema.json; copy the published schema")
+	}
 	pub, err := os.ReadFile("../../docs/schemas/manifest.schema.json")
 	if err != nil {
 		t.Fatal(err)
@@ -119,9 +126,15 @@ func TestManifestSchemaValidation(t *testing.T) {
 		}
 	}
 	m := fixtureManifest(t)
+	m["manifest_version"] = 3
+	if err := parse(t, m); reason(err) != packaging.ReasonManifestVersion || !strings.Contains(err.Error(), "3") {
+		t.Errorf("version 3: %v", err)
+	}
+	// A local package that calls itself hosted fails the version 2 schema.
+	m = fixtureManifest(t)
 	m["manifest_version"] = 2
-	if err := parse(t, m); reason(err) != packaging.ReasonManifestVersion || !strings.Contains(err.Error(), "2") {
-		t.Errorf("version 2: %v", err)
+	if err := parse(t, m); reason(err) != packaging.ReasonManifestSchema || !strings.Contains(err.Error(), "manifest.v2.schema.json") {
+		t.Errorf("version 2 local manifest: %v", err)
 	}
 }
 

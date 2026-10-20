@@ -31,7 +31,7 @@ test("administrator signs in, sees enforcement state and signs out", async ({ pa
   const strip = page.getByTestId("status-strip");
   await expect(strip).toContainText("not enforced");
   await expect(strip).toContainText("policy r1");
-  await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link")).toHaveCount(17);
+  await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link")).toHaveCount(18);
   await expect(page.getByRole("heading", { name: /First-run checklist/ })).toBeVisible();
   // CA-15: the account name alone beside the role, and "live updates".
   await expect(strip).toContainText(/Administrator\s*admin(?!:)/);

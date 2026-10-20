@@ -36,6 +36,8 @@ const paths = [
   "/policy/filters",
   "/policy/secret-use",
   "/audit/graph",
+  "/contextforge",
+  "/contextforge/instance",
 ];
 
 function poison(v: unknown): unknown {

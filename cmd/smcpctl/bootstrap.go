@@ -199,6 +199,10 @@ type bootstrapOpts struct {
 	metricsPort             int
 	notify                  string
 	quiet                   bool // no "Next steps" text (install prints its own)
+	// contextforge is the operator's choice for the bundled ContextForge
+	// instance (FR-22.44): "yes" (--with-contextforge), or "" to ask on a
+	// terminal and otherwise leave it off.
+	contextforge string
 }
 
 // bootstrapResult reports what runBootstrap created.
@@ -221,11 +225,15 @@ func bootstrap(args []string, out io.Writer) error {
 	fs.IntVar(&o.adminPort, "admin-port", 8444, "control API listener port on 127.0.0.1")
 	fs.IntVar(&o.metricsPort, "metrics-port", -1, "metrics endpoint port on 127.0.0.1 (default admin port + 1; 0 turns metrics off)")
 	fs.StringVar(&o.notify, "notify", "auto", "approval desktop notifications: auto, off, osascript, terminal-notifier or notify-send")
+	withCF := fs.Bool("with-contextforge", false, "enable the bundled ContextForge instance and fetch its pinned image (default: ask on a terminal, otherwise off)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
 		return errPasswordArg
+	}
+	if *withCF {
+		o.contextforge = "yes"
 	}
 	abs, err := filepath.Abs(*dir)
 	if err != nil {
@@ -288,6 +296,11 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 		if o.refserver, err = filepath.Abs(o.refserver); err != nil {
 			return r, err
 		}
+		if o.contextforge == "" && stdinIsTerminal() {
+			if askContextForge(os.Stdin, out) {
+				o.contextforge = "yes"
+			}
+		}
 	}
 	if o.sandbox == "" {
 		o.sandbox = filepath.Join(abs, "sandbox")
@@ -329,7 +342,7 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 			maddr = config.DefaultMetricsAddress
 		}
 		body := fmt.Sprintf(exampleConfig, listen, "https://"+listen, fmt.Sprintf("127.0.0.1:%d", o.adminPort), adminLine, approverHash, RefPackageID, refSHA, o.sandbox,
-			o.notify, mport != 0, maddr, stateValue, policyValue, o.extraConfig)
+			o.notify, mport != 0, maddr, stateValue, policyValue, contextforgeConfig(o.contextforge == "yes")+o.extraConfig)
 		if o.noRefServer {
 			body = withoutRefServer(body)
 		}
@@ -339,6 +352,9 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 		r.cfgCreated = true
 		if !o.quiet {
 			fmt.Fprintln(out, "wrote", cfgPath)
+		}
+		if o.contextforge == "yes" {
+			fetchContextForge(out)
 		}
 	} else {
 		if !o.quiet {

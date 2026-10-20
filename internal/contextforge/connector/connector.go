@@ -28,9 +28,11 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/bundle"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
 )
 
 // Files under <state>/contextforge.
@@ -56,6 +58,8 @@ const (
 type Importer interface {
 	Dir() string
 	Import(dir string, o library.ImportOptions) (*library.Receipt, error)
+	Revisions() []library.Revision
+	SetState(id, rev, state, reason, actor string) (library.Revision, string, error)
 }
 
 // Options configure a Connector.
@@ -71,6 +75,19 @@ type Options struct {
 	// (SR-3.5-1); until that probe is wired, local imports are refused
 	// with SANDBOXED_PROBE_UNAVAILABLE.
 	Confined bool
+	// Broker holds the bundled instance's credentials (nil without
+	// [secrets]; the instance then cannot run).
+	Broker *secrets.Broker
+	// EndpointFor maps a hosted URL to the URL the bundled instance
+	// registers for it (the entry's E-18 endpoint). Nil: the hosted URL
+	// itself.
+	EndpointFor func(hostedURL string) (string, error)
+	// SSRFAllowed are the networks the bundled instance may reach (the
+	// E-18 endpoint addresses, FR-22.27).
+	SSRFAllowed []string
+	// Enforced is true in the Enforced profile; elsewhere the bundled
+	// instance is reported contextforge_unconfined (FR-22.25).
+	Enforced bool
 	Interp   packaging.Interpreters
 	Version  string
 	Now      func() time.Time
@@ -92,6 +109,21 @@ type Connector struct {
 	mu        sync.Mutex
 	proposals map[string]*proposal
 	imports   *importsDoc
+
+	// The bundled instance (instance.go); nil unless [contextforge]
+	// bundled is true and it could be prepared (instErr says why not).
+	inst     *bundle.Instance
+	instErr  error
+	verifier *bundle.Verifier
+	verified *bundle.Verification
+	platform string
+	instMu   sync.Mutex
+
+	// Demand for the instance (demand.go, FR-22.23).
+	demandMu     sync.Mutex
+	probes       int
+	operatorHold bool
+	idleSince    time.Time
 
 	wg sync.WaitGroup
 }
@@ -126,6 +158,9 @@ func New(o Options) (*Connector, error) {
 	var err error
 	if c.imports, err = loadImports(filepath.Join(c.dir, importsFile)); err != nil {
 		return nil, err
+	}
+	if o.Config.ContextForge.Bundled {
+		c.setupInstance()
 	}
 	c.cat, c.catErr = loadCatalog(o.Config.ContextForge)
 	if c.catErr != nil {
@@ -209,8 +244,11 @@ func (c *Connector) keyEnrolled() (bool, []string) {
 // Catalog returns the loaded catalog or the reason it was refused.
 func (c *Connector) Catalog() (*contextforge.Catalog, error) { return c.cat, c.catErr }
 
-// Close waits for running builds.
-func (c *Connector) Close() { c.wg.Wait() }
+// Close stops the bundled instance and waits for running builds.
+func (c *Connector) Close() {
+	c.closeInstance()
+	c.wg.Wait()
+}
 
 // Start runs the proposal janitor until ctx ends.
 func (c *Connector) Start(ctx context.Context) {
@@ -219,12 +257,16 @@ func (c *Connector) Start(ctx context.Context) {
 		defer c.wg.Done()
 		t := time.NewTicker(time.Minute)
 		defer t.Stop()
+		d := time.NewTicker(demandTick)
+		defer d.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-t.C:
 				c.expire()
+			case <-d.C:
+				c.onDemand(ctx)
 			}
 		}
 	}()

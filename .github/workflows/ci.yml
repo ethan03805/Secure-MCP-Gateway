@@ -1127,7 +1127,7 @@ jobs:
       - name: Standalone profile
         run: |
           mkdir -p build
-          if ! go test -tags hostile -count=1 -json -run TestHostileFixtures ./internal/hostile/ > build/hostile-standalone-test.json; then
+          if ! go test -tags hostile -count=1 -json -run 'TestHostileFixtures|TestHostileContextForge' ./internal/hostile/ > build/hostile-standalone-test.json; then
             echo "::warning::hostile suite (standalone): a harness check failed; see build/hostile-standalone-test.json"
           fi
       - name: Streamable HTTP transport (FR-5.28; every applicable row must pass)
@@ -1168,6 +1168,7 @@ jobs:
         if: always()
         run: |
           if [ -f build/hostile.md ]; then cat build/hostile.md >> "$GITHUB_STEP_SUMMARY"; else echo "no hostile results" >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f build/hostile-contextforge.md ]; then cat build/hostile-contextforge.md >> "$GITHUB_STEP_SUMMARY"; fi
           jq -r -s 'map(select(.Action == "output" and (.Output | test("pass=|skip|enforced profile unavailable")))) | .[].Output' build/hostile-*-test.json 2>/dev/null || true
       - name: Upload the results
         if: always()
@@ -1181,6 +1182,52 @@ jobs:
             build/hostile-enforced.json
             build/hostile-standalone-test.json
             build/hostile-enforced-test.json
+            build/hostile-contextforge.json
+            build/hostile-contextforge.md
+          if-no-files-found: warn
+          retention-days: 14
+
+  # The bundled ContextForge instance against the pinned image (E-36,
+  # docs/contextforge.md; planned v1.3.0): image verification with cosign,
+  # the generated configuration and credentials, routes the configuration
+  # turns off, health, and the instance started through the Connector with
+  # its credentials in a vault. Pulls about 600 MB. Not a required check.
+  contextforge:
+    name: contextforge
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Pinned image tests
+        env:
+          SMCP_CONTEXTFORGE_IMAGE: "1"
+        run: |
+          mkdir -p build
+          rc=0
+          go test -count=1 -json -run 'Image|Network' ./internal/contextforge/... > build/contextforge-test.json || rc=$?
+          jq -r 'select(.Action == "output") | .Output' build/contextforge-test.json | grep -E '^(--- |ok |FAIL|PASS|    .*(healthy after|SKIP|skip))' || true
+          exit "$rc"
+      - name: Remove the instance's containers and volumes
+        if: always()
+        run: |
+          docker ps -aq --filter label=smcp.component=contextforge | xargs -r docker rm -f
+          docker volume ls -q | grep '^smcp-c' | xargs -r docker volume rm -f || true
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: contextforge-results
+          path: build/contextforge-test.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -1423,7 +1470,7 @@ jobs:
     if: >-
       always() && github.event_name != 'pull_request' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration, install-standalone, install-guide, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop, windows]
+    needs: [srs, go, lint, site, security, linux-integration, install-standalone, install-guide, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop, windows, contextforge]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -1456,6 +1503,11 @@ jobs:
         continue-on-error: true
         with:
           name: graph-results
+          path: build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: contextforge-results
           path: build
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
@@ -1540,6 +1592,14 @@ jobs:
             merged=1
           else
             echo "no graph results"
+          fi
+          # The pinned ContextForge image tests skip in the go job; their
+          # run in the contextforge job comes later, so it is counted.
+          if [ -s build/contextforge-test.json ]; then
+            cat build/contextforge-test.json >> build/all-test.json
+            merged=1
+          else
+            echo "no contextforge results"
           fi
           # The perf measurements, the Enforced-profile acceptance run, the
           # offline acceptance run (FR-11, FR-19.3, FR-12.2) and the Go tests

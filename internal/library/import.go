@@ -114,6 +114,12 @@ func (l *Library) doImport(dir string, o ImportOptions, rc *Receipt) error {
 	}
 	rc.Checks = append(rc.Checks, verifyChecks...)
 	m, ix := pkg.Manifest, pkg.Index
+	if m.Hosted() {
+		if err := l.admitHosted(pkg); err != nil {
+			return err
+		}
+		rc.Checks = append(rc.Checks, "hosted_admission")
+	}
 	rc.ManifestSHA256 = ix.Manifest.SHA256
 	if id, err := packaging.ParseKeyID(ix.SignerKeyID); err == nil {
 		if _, an, err := anchors.Resolver()(id); err == nil && an != nil {
@@ -201,7 +207,7 @@ func (l *Library) store(p *packaging.Package) (string, error) {
 			return "", err
 		}
 	}
-	if p.Manifest.Artifact.Type == "oci" {
+	if p.Manifest.Artifact.Type == "oci" || p.Manifest.Artifact.Type == packaging.ArtifactHosted {
 		return "", nil
 	}
 	tree := l.TreePath(sum)
@@ -522,6 +528,9 @@ func (l *Library) checkEnable(r *Revision, o EnableOptions) error {
 	if err != nil {
 		return err
 	}
+	if m.Hosted() && !l.hosted() {
+		return errf(ReasonContextForgeDisabled, "%s is a hosted package and [contextforge] bundled is false (FR-22.22)", r.Key())
+	}
 	if o.Standalone && m.HighestRisk() == "high" {
 		return errf(ReasonProfile, "%s has risk class high; the Standalone profile cannot confine it (SR-4-1)", r.Key())
 	}
@@ -621,4 +630,35 @@ func EnablementDigest(m *packaging.Manifest) (string, error) {
 		return "", err
 	}
 	return packaging.SHA256Hex(raw), nil
+}
+
+func (l *Library) hosted() bool { return l.hostedAllowed != nil && l.hostedAllowed() }
+
+// admitHosted applies SR-3-6 to a hosted package: the bundled instance is
+// enabled, and the provenance statement records the operator's trust
+// decision acknowledging that the server's code cannot be inspected. The
+// version 2 schema already requires every tool's source trust to be
+// untrusted and the risk class to be moderate or higher.
+func (l *Library) admitHosted(p *packaging.Package) error {
+	if !l.hosted() {
+		return errf(ReasonContextForgeDisabled, "%s@%s is a hosted package and [contextforge] bundled is false (FR-22.22)", p.Index.ServerID, p.Index.Revision)
+	}
+	td := p.Provenance.TrustDecision
+	switch {
+	case td == nil:
+		return errf(ReasonHostedAdmission, "the provenance statement records no trust decision (SR-3-6)")
+	case !strings.Contains(td.Text, "cannot be inspected"):
+		return errf(ReasonHostedAdmission, "the trust decision does not acknowledge that the server's code cannot be inspected (SR-3-6)")
+	case packaging.SHA256Hex([]byte(td.Text)) != td.PresentedSHA256:
+		return errf(ReasonHostedAdmission, "the trust decision's digest does not match its text")
+	}
+	for _, t := range p.Manifest.Tools {
+		if t.SourceTrust != "untrusted" {
+			return errf(ReasonHostedAdmission, "tool %s is not untrusted (SR-3-6)", t.Name)
+		}
+	}
+	if r := p.Manifest.HighestRisk(); r != "moderate" && r != "high" {
+		return errf(ReasonHostedAdmission, "risk class %s is below moderate (SR-3-6)", r)
+	}
+	return nil
 }

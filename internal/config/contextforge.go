@@ -16,4 +16,9 @@ type ContextForge struct {
 	// fetches the operator-pinned artifact from (default the public ones).
 	NPMRegistry string `toml:"npm_registry" json:"npm_registry,omitempty"`
 	PyPIIndex   string `toml:"pypi_index" json:"pypi_index,omitempty"`
+	// Engine is the container engine (podman or docker) that runs the
+	// bundled instance; default: podman, else docker, from PATH.
+	Engine string `toml:"engine" json:"engine,omitempty"`
+	// Cosign verifies the image signature (FR-22.19); default from PATH.
+	Cosign string `toml:"cosign" json:"cosign,omitempty"`
 }
