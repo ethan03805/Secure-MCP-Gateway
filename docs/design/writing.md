@@ -78,6 +78,7 @@ The lint fails on these in UI strings (case-insensitive, whole words; "just" doe
 | next-generation, next-gen | the version or the property |
 | world-class, best-in-class, state-of-the-art | the measured property, or nothing |
 | harness the power, unleash | use, run, start |
+| harness, harnesses | agent, agents ([terminology](#terminology)). Where the SRS term matters, define it once with an allowlist entry; identifiers such as `harness_version` are not words and do not match. |
 | streamline, streamlined | the step that was removed: "in one step", "without restarting" |
 | blazing fast | the measured time |
 | in today's | nothing: start with the point |

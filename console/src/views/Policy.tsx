@@ -860,7 +860,7 @@ export function Policy({ path }: { path: string }) {
       </PageHeader>
       <Help>
         <p>
-          A <strong>Framework Profile</strong> lists the templates a kind of harness may use. A <strong>Session Allow template</strong> holds permit and deny
+          A <strong>Framework Profile</strong> lists the templates a kind of agent may use. A <strong>Session Allow template</strong> holds permit and deny
           rules; a deny rule wins over every permit for the same tool. <strong>Approval</strong> holds a call for a person's decision. Optional{" "}
           <strong>filters</strong> run in addition to the mandatory ones. Validate a draft before you publish it; the diff marks changes that widen authority,
           and the simulation replays recent calls from the journal under the draft. Published revisions are signed and never change; a rollback publishes an

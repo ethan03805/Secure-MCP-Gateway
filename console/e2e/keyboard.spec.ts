@@ -1020,7 +1020,7 @@ test("G-10 suspend and enable of the running server and G-01 health acknowledgme
     await fromTop(page);
     await activate(page, ack);
     await expect(ack).toHaveCount(0);
-    await expect(page.getByRole("table", { name: "Health monitor causes" }).getByRole("row").filter({ hasText: "trust_anchor_invalid" })).toContainText("admin");
+    await expect(page.getByRole("table", { name: "Health causes" }).getByRole("row").filter({ hasText: "trust_anchor_invalid" })).toContainText("admin");
     await axe(page, "G-01 cause acknowledged");
     // With the bundle restored and the acknowledgment given, the latch is
     // released once the cause has been clear for 10 s.

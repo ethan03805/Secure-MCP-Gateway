@@ -127,7 +127,7 @@ function useChecklist(): CheckItem[] {
   const srv = servers.status === "ok" ? servers.data.servers : null;
   const packaged = srv ? srv.filter((s) => s.state === "running" && s.verified).length : null;
   const running = srv ? srv.filter((s) => s.state === "running").length : 0;
-  const harness = sessions.status === "ok" ? sessions.data.events.length > 0 || (h?.sessions ?? 0) > 0 : null;
+  const agent = sessions.status === "ok" ? sessions.data.events.length > 0 || (h?.sessions ?? 0) > 0 : null;
   const tested = approved.status === "ok" && denied.status === "ok" ? approved.data.events.length + denied.data.events.length > 0 : null;
   let backupDone: boolean | null = null;
   let backupDetail: ReactNode = "Backups are not available in this build.";
@@ -154,7 +154,7 @@ function useChecklist(): CheckItem[] {
           ? "Unknown"
           : approvers > 0
             ? `${approvers} Session Approver account${approvers === 1 ? "" : "s"} configured.`
-            : "No Session Approver account. Add one in Sessions and principals: a harness cannot sign in without it.",
+            : "No Session Approver account. Add one in Sessions and principals: an agent cannot sign in without it.",
       to: "/sessions",
       action: "Sessions and principals",
     },
@@ -178,14 +178,14 @@ function useChecklist(): CheckItem[] {
       action: "Policy studio",
     },
     {
-      item: "First harness connected",
-      done: harness,
-      detail: harness ? (
-        "A harness session has been recorded in the journal."
+      item: "First agent connected",
+      done: agent,
+      detail: agent ? (
+        "An agent session has been recorded in the journal."
       ) : (
         <>
-          No harness session has been recorded yet. Connect an AI client with <Mono>smcpctl clients setup</Mono> and sign it in as a Session Approver
-          (docs/quickstart.md).
+          No agent session has been recorded yet. Connect an agent such as Claude Code with <Mono>smcpctl connect</Mono> and sign it in as a Session
+          Approver (docs/quickstart.md).
         </>
       ),
       to: "/sessions",
@@ -238,12 +238,24 @@ interface MonitorCause {
   acked_by?: string;
 }
 
-/** Health monitor causes, including latched ones that need acknowledgment (FR-7.13). */
-function Causes() {
+/** One row of the merged causes table: a cause of the health report, the health monitor's record of it, or both. */
+interface CauseRow {
+  name: string;
+  monitor?: MonitorCause;
+}
+
+/**
+ * The causes that reduce enforcement, in one table (CA-12): the causes of
+ * the health report (the state shown in the status bar) merged by name with
+ * the health monitor's causes, which add cleared causes still latched for
+ * acknowledgment (FR-7.13), the time each began and the acknowledgment.
+ * Roles that cannot read the monitor see the report's causes only.
+ */
+function Causes({ causes }: { causes: string[] }) {
   const perm = usePerm();
-  const res = useResource<{ state: string; causes: MonitorCause[]; checked_at: string }>(perm.can("GET /api/v1/health/status") ? "/api/v1/health/status" : null);
+  const canMonitor = perm.can("GET /api/v1/health/status");
+  const res = useResource<{ state: string; causes: MonitorCause[]; checked_at: string }>(canMonitor ? "/api/v1/health/status" : null);
   const [error, setError] = useState<ApiError | null>(null);
-  if (!perm.can("GET /api/v1/health/status")) return null;
   const ack = async (cause: string) => {
     setError(null);
     try {
@@ -253,44 +265,108 @@ function Causes() {
       setError(e instanceof ApiError ? e : new ApiError(0, "client", String(e)));
     }
   };
+  const table = (monitor: MonitorCause[] | null) => {
+    const byName = new Map<string, CauseRow>(causes.map((c) => [c, { name: c }]));
+    for (const m of monitor ?? []) byName.set(m.name, { name: m.name, monitor: m });
+    const rows = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+    const columns: Column<CauseRow>[] = [
+      { key: "name", label: "Cause", sort: (c) => c.name, render: (c) => <Mono>{c.name}</Mono> },
+      {
+        key: "state",
+        label: "State",
+        sort: (c) => (c.monitor && !c.monitor.active ? 1 : 0),
+        className: "nowrap",
+        render: (c) =>
+          !c.monitor || c.monitor.active ? (
+            <StateLabel tone={c.monitor?.critical ? "bad" : "warn"}>{c.monitor?.critical ? "active, critical" : "active"}</StateLabel>
+          ) : (
+            <StateLabel tone="ok">cleared</StateLabel>
+          ),
+      },
+      { key: "meaning", label: "Meaning", render: (c) => causeText[c.name] ?? c.monitor?.detail ?? "See docs/troubleshooting.md." },
+    ];
+    if (monitor) {
+      columns.push(
+        { key: "since", label: "Since", render: (c) => (c.monitor?.since ? <Time value={c.monitor.since} /> : "none") },
+        {
+          key: "ack",
+          label: "Acknowledgment",
+          render: (c) =>
+            c.monitor?.ack_required ? (
+              perm.can("POST /api/v1/health/ack") ? (
+                <button type="button" className="link" onClick={() => void ack(c.name)}>
+                  Acknowledge {c.name}
+                </button>
+              ) : (
+                "required"
+              )
+            ) : c.monitor?.acked_by ? (
+              <Mono>{c.monitor.acked_by}</Mono>
+            ) : (
+              <span className="muted">not needed</span>
+            ),
+        },
+      );
+    }
+    return (
+      <DataTable
+        caption="Health causes"
+        rows={rows}
+        rowKey={(c) => c.name}
+        empty="No cause reduces enforcement. A cause appears here when a monitored condition degrades the Gateway or holds it fail-closed."
+        columns={columns}
+      />
+    );
+  };
   return (
-    <Section title="Health monitor">
+    <Section title="Causes">
+      <p className="small">
+        Why the state is not healthy. A cleared integrity cause stays listed, and keeps the Gateway fail-closed, until an Administrator acknowledges it.
+      </p>
       {error && <ErrorBlock error={error} />}
-      <Loaded res={res} what="the health monitor" route="/api/v1/health/status">
-        {(h) => (
-          <DataTable
-            caption="Health monitor causes"
-            rows={h.causes}
-            rowKey={(c) => c.name}
-            empty="The health monitor reports no cause. A cause appears here when a monitored condition degrades the Gateway."
-            columns={[
-              { key: "name", label: "Cause", sort: (c) => c.name, render: (c) => <Mono>{c.name}</Mono> },
-              { key: "state", label: "State", sort: (c) => String(c.active), render: (c) => (c.active ? <StateLabel tone={c.critical ? "bad" : "warn"}>{c.critical ? "active, critical" : "active"}</StateLabel> : <StateLabel tone="ok">cleared</StateLabel>) },
-              { key: "detail", label: "Detail", render: (c) => c.detail },
-              { key: "since", label: "Since", render: (c) => <Time value={c.since} /> },
-              {
-                key: "ack",
-                label: "Acknowledgment",
-                render: (c) =>
-                  c.ack_required ? (
-                    perm.can("POST /api/v1/health/ack") ? (
-                      <button type="button" className="link" onClick={() => void ack(c.name)}>
-                        Acknowledge {c.name}
-                      </button>
-                    ) : (
-                      "required"
-                    )
-                  ) : c.acked_by ? (
-                    <Mono>{c.acked_by}</Mono>
-                  ) : (
-                    <span className="muted">not needed</span>
-                  ),
-              },
-            ]}
-          />
-        )}
-      </Loaded>
+      {canMonitor ? (
+        <Loaded res={res} what="the health monitor" route="/api/v1/health/status">
+          {(h) => table(h.causes)}
+        </Loaded>
+      ) : (
+        table(null)
+      )}
     </Section>
+  );
+}
+
+/** Why the installation runs the Standalone profile, with the next step (CA-13). */
+function ProfileReasons({ reasons }: { reasons: string[] }) {
+  if (reasons.length === 1 && reasons[0] === "standalone profile configured") {
+    return (
+      <>
+        <h3 className="sub">Why this installation is Standalone</h3>
+        <p className="small">
+          The configuration selects it: <Mono>[profile] mode = "standalone"</Mono> in smcp.toml. To contain servers, install the Enforced profile on a Linux
+          host by following docs/enforced-profile.md.
+        </p>
+      </>
+    );
+  }
+  return (
+    <>
+      <h3 className="sub">Why this installation is Standalone</h3>
+      <p className="small">
+        The Enforced profile needs Linux on amd64 or arm64 with rootless Podman, nftables, cgroup v2, systemd and a confining launcher. Not met on this
+        host:
+      </p>
+      <ul className="plain">
+        {reasons.map((r) => (
+          <li key={r}>
+            <Mono>{r}</Mono>
+          </li>
+        ))}
+      </ul>
+      <p className="small">
+        To contain servers, install the Enforced profile on a Linux host that meets these requirements: docs/enforced-profile.md lists each one and how to
+        check it. On macOS the Standalone profile is the only one.
+      </p>
+    </>
   );
 }
 
@@ -305,19 +381,19 @@ export function Control() {
     <>
       <PageHeader code="G-01" title="Gateway control">
         <p>
-          The Gateway stands between agent harnesses (AI clients such as Claude Code) and the MCP servers it launches: it decides each tool call against the
+          The Gateway stands between your agents (AI clients such as Claude Code) and the MCP servers it launches: it decides each tool call against the
           active policy, holds calls that need a person's approval, and records every step in a signed journal. This view shows whether that is in force, why,
           and the controls that change it. Emergency stop is in the bar at the top of every view.
         </p>
       </PageHeader>
       <Help>
         <p>
-          <strong>Emergency stop</strong> refuses every tool call until someone resumes. Use it when a harness or server behaves in a way policy did not
+          <strong>Emergency stop</strong> refuses every tool call until someone resumes. Use it when an agent or server behaves in a way policy did not
           anticipate. <strong>Reload policy</strong> activates the policy file after you edit it. Health states: healthy (all controls active), degraded (the
           Gateway runs with a reduced guarantee, listed under causes) and fail-closed (every call is refused).
         </p>
         <p>
-          Terms: a <strong>harness</strong> is the AI client that calls tools through the Gateway; when it connects, a person signs it in on the Gateway's sign-in page
+          Terms: an <strong>agent</strong> is the AI client that calls tools through the Gateway (the SRS calls its runtime the harness); when it connects, a person signs it in on the Gateway's sign-in page
           with a <strong>Session Approver</strong> account. A <strong>server</strong> is a backend MCP server the Gateway launches. An <strong>approval</strong> is a
           held tool call that an <strong>Approver</strong> or the Administrator approves or denies in Approvals. The <strong>profile</strong> is Standalone (not
           enforced: servers run without a sandbox) or Enforced (Linux with rootless Podman: each server is contained).
@@ -351,37 +427,13 @@ export function Control() {
                     </p>
                   </div>
                 )}
-                <h3 className="sub">Causes</h3>
-                {h.causes.length === 0 ? (
-                  <p className="empty">No cause reduces enforcement.</p>
-                ) : (
-                  <DataTable
-                    caption="Health causes"
-                    columns={[
-                      { key: "cause", label: "Cause", render: (c: string) => <Mono>{c}</Mono> },
-                      { key: "meaning", label: "Meaning", render: (c: string) => causeText[c] ?? "See docs/troubleshooting.md." },
-                    ]}
-                    rows={h.causes}
-                    rowKey={(c) => c}
-                    empty=""
-                  />
-                )}
-                {h.profile_reasons && h.profile_reasons.length > 0 && (
-                  <>
-                    <h3 className="sub">Enforced-profile requirements this host does not meet</h3>
-                    <ul className="plain">
-                      {h.profile_reasons.map((r) => (
-                        <li key={r}>{r}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
+                {h.profile_reasons && h.profile_reasons.length > 0 && <ProfileReasons reasons={h.profile_reasons} />}
               </>
             )}
           </Loaded>
         </Section>
       )}
-      <Causes />
+      <Causes causes={health?.status === "ok" ? health.data.causes : []} />
       {perm.can("POST /admin/v1/policy/reload") && (
         <Section title="Actions">
           <ReloadPolicy />

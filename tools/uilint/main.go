@@ -259,6 +259,7 @@ var Banned = []string{
 	"next-generation", "next-gen",
 	"world-class", "best-in-class", "state-of-the-art",
 	"harness the power", "unleash(es|ed)?",
+	"harness(es)?", // terminology: UI text says "agent" (docs/design/writing.md)
 	"streamline(s|d)?",
 	"in today's",
 	"journey",

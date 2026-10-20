@@ -91,7 +91,7 @@ export function EmergencyControl({ compact = false }: { compact?: boolean }) {
           ) : (
             <>
               <p>
-                The Gateway refuses every tool call at once: no call is dispatched to a server and no result of a call in flight is released to a harness.
+                The Gateway refuses every tool call at once: no call is dispatched to a server and no result of a call in flight is released to an agent.
                 The stop lasts until someone resumes, also across sessions. It is recorded in the evidence journal with your account and the reason.
               </p>
               <label className="field">

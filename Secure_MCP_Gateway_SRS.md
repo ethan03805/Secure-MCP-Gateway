@@ -2693,7 +2693,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-8.8 |
 | Parent ID | FR-8 — Management product |
-| Statement | The Observation & Parameter Workbench view (G-04) **SHALL** provide the editable presets Minimal security floor, Security standard, Behavior characterization, Performance profiling and Research — full capture, and **SHALL** save user-defined presets. |
+| Statement | The Observation & Parameter Workbench view (G-04) **SHALL** provide the editable presets Minimal security floor, Security standard, Behavior characterization, Performance profiling and Research: full capture, and **SHALL** save user-defined presets. |
 | Allocation | Elements: E-24 Management Console & Control API; Functions: F-67; Data stores: D-11 |
 | Verification Method | Demonstration |
 | Verification Statement | Apply each preset, modify one and save it as a new preset. |
@@ -2992,7 +2992,7 @@ Functional requirements make the Gateway work. Each is allocated to the element 
 |---|---|
 | ID | FR-8.31 |
 | Parent ID | FR-8 — Management product |
-| Statement | The Gateway Control view (G-01) **SHALL** show a first-run checklist with the items administrator created, Session Approver created, first server packaged and enabled, first policy revision published, first harness connected, approval tested and backup configured, each marked done from Gateway state and linked to the view that completes it. |
+| Statement | The Gateway Control view (G-01) **SHALL** show a first-run checklist with the items administrator created, Session Approver created, first server packaged and enabled, first policy revision published, first agent connected, approval tested and backup configured, each marked done from Gateway state and linked to the view that completes it. |
 | Allocation | Elements: E-24 Management Console & Control API; Functions: F-65; External interfaces: X-04 |
 | Verification Method | Test |
 | Verification Statement | Start from a fresh installation; complete each item; confirm each is marked done from Gateway state and not from a manual tick. |

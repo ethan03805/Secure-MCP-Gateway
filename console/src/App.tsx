@@ -25,7 +25,7 @@ const kindHelp: Record<Kind, string> = {
   administrator: "The account smcpctl bootstrap created (username admin). It may open every view and take every action.",
   approver: "Decides tool calls that a policy rule holds for a person. Accounts are [[approvals.account]] entries in smcp.toml.",
   session_approver:
-    "Approves agent harnesses (AI clients such as Claude Code) on the Gateway's own sign-in page when they connect; in the console it approves remote client registrations. Accounts are [[approver]] entries in smcp.toml.",
+    "Approves agents (AI clients such as Claude Code) on the Gateway's own sign-in page when they connect; in the console it approves remote client registrations. Accounts are [[approver]] entries in smcp.toml.",
   console: "Accounts from [[console.account]] in smcp.toml. The account's role decides which views you see.",
 };
 
@@ -181,6 +181,17 @@ function SignIn({ onSignedIn, expired }: { onSignedIn: (c: Credentials) => void;
   );
 }
 
+/**
+ * The account name of an actor such as "admin:admin" or "approver:alice",
+ * for the status bar (CA-15): the role is shown beside it, so the kind
+ * prefix is left out. Other actors are shown whole.
+ */
+function accountName(actor: string): string {
+  const i = actor.indexOf(":");
+  if (i > 0 && ["admin", "approver", "console", "session_approver"].includes(actor.slice(0, i))) return actor.slice(i + 1);
+  return actor;
+}
+
 function StatusStrip({ cred, onSignOut }: { cred: Credentials; onSignOut: () => void }) {
   const health = useHealth();
   const live = useLive();
@@ -217,12 +228,12 @@ function StatusStrip({ cred, onSignOut }: { cred: Credentials; onSignOut: () => 
         <span className="strip-item">reading health</span>
       )}
       <span className="strip-item strip-live" title={live.lastEvent ? `last change ${live.lastEvent}` : undefined}>
-        {live.connected ? "live" : live.available ? "not live: refresh to update" : "updates on reload"}
+        {live.connected ? "live updates" : live.available ? "no live updates: reload to update" : "updates on reload"}
       </span>
       <span className="strip-spacer" />
       {(perm.can("POST /admin/v1/stop") || perm.can("POST /admin/v1/resume")) && <EmergencyControl compact />}
       <span className="strip-item">
-        {roleLabel[cred.role]} <Mono>{perm.actor || cred.actor}</Mono>
+        {roleLabel[cred.role]} <Mono title={perm.actor || cred.actor}>{accountName(perm.actor || cred.actor)}</Mono>
       </span>
       <button type="button" className="btn-quiet" onClick={onSignOut}>
         Sign out
@@ -237,10 +248,13 @@ function Nav({ current }: { current?: ViewDef }) {
   const groups = [...new Set(shown.map((v) => v.group))];
   return (
     <nav className="rail" aria-label="Views">
-      {groups.map((g) => (
+      {groups.map((g, i) => (
         <div key={g} className="rail-group">
-          <h2>{g}</h2>
-          <ul>
+          {/* A label, not a heading: the view's h1 is the first heading of the page (CA-14). */}
+          <p className="rail-label" id={`rail-group-${i}`}>
+            {g}
+          </p>
+          <ul aria-labelledby={`rail-group-${i}`}>
             {shown
               .filter((v) => v.group === g)
               .map((v) => (

@@ -36,7 +36,7 @@ function SessionList() {
             rowKey={(s) => s.id}
             initialSort="created"
             initialDir="desc"
-            empty="No harness is connected. A session appears here when a harness signs in through OAuth or the session API."
+            empty="No agent is connected. A session appears here when an agent signs in through OAuth or the session API."
           />
         )}
       </Loaded>
@@ -320,7 +320,7 @@ function IssueCredential({ principals, onDone }: { principals: string[]; onDone:
         }}
       >
         <p className="small">
-          A credential is an OAuth client bound to one principal. Public clients (harnesses on this machine) prove possession with PKCE; a confidential client also
+          A credential is an OAuth client bound to one principal. Public clients (agents on this machine) prove possession with PKCE; a confidential client also
           gets a secret, shown once.
         </p>
         <div className="rule-grid">
@@ -373,7 +373,7 @@ function SessionApproverAccounts() {
               rows={d.approvers}
               rowKey={(a) => a.username}
               initialSort="user"
-              empty="No Session Approver account exists, so no harness can sign in through OAuth. Create one below."
+              empty="No Session Approver account exists, so no agent can sign in through OAuth. Create one below."
               columns={[
                 { key: "user", label: "Username", sort: (a) => a.username, render: (a) => <Mono>{a.username}</Mono> },
                 { key: "source", label: "Defined in", sort: (a) => a.source, render: (a) => (a.source === "file" ? "smcp.toml" : "console") },
@@ -413,7 +413,7 @@ function SessionApproverAccounts() {
           }}
         >
           <p className="small">
-            A Session Approver signs harnesses in at the Gateway's sign-in page and can use nothing else. Give it its own password: the Gateway refuses the
+            A Session Approver signs agents in at the Gateway's sign-in page and can use nothing else. Give it its own password: the Gateway refuses the
             Administrator's password.
           </p>
           <div className="rule-grid">
@@ -435,7 +435,7 @@ function SessionApproverAccounts() {
       <ReasonDialog
         open={removing !== ""}
         title={`Remove Session Approver ${removing}`}
-        text={<p>The account can no longer sign harnesses in, and its console sessions end. Sessions it approved earlier are not affected.</p>}
+        text={<p>The account can no longer sign agents in, and its console sessions end. Sessions it approved earlier are not affected.</p>}
         action="Remove Session Approver"
         danger
         route={`/api/v1/approvers/${encodeURIComponent(removing)}/remove`}
@@ -500,7 +500,7 @@ function PrincipalTables({ withPrincipals, withApprovers }: { withPrincipals: bo
                 rows={d.session_approvers}
                 rowKey={(a) => a.username}
                 initialSort="user"
-                empty="No Session Approver account exists, so no harness can sign in through OAuth. The Administrator creates one in this view or with smcpctl approvers add."
+                empty="No Session Approver account exists, so no agent can sign in through OAuth. The Administrator creates one in this view or with smcpctl approvers add."
                 columns={[{ key: "user", label: "Username", sort: (a) => a.username, render: (a) => <Mono>{a.username}</Mono> }]}
               />
             </Section>
@@ -569,7 +569,7 @@ function SessionDetail({ id }: { id: string }) {
                 ["Project", s.project || <span className="muted">none</span>],
                 ["End user", s.end_user || <span className="muted">none</span>],
                 ["Approved by", s.approved_by || <span className="muted">session API</span>],
-                ["Harness version", s.harness_version || <span className="muted">not reported</span>],
+                ["Agent version", s.harness_version || <span className="muted">not reported</span>],
                 ["Listener", <Mono>{s.listener}</Mono>],
                 ["Created", <Time value={s.created_at} />],
                 ["Idle deadline", <Time value={s.idle_deadline} />],
@@ -583,7 +583,7 @@ function SessionDetail({ id }: { id: string }) {
       <ReasonDialog
         open={open === "terminate"}
         title="Terminate this session"
-        text={<p>The harness loses access at once: its calls in flight are cancelled and its tokens stop working. It has to sign in again to continue.</p>}
+        text={<p>The agent loses access at once: its calls in flight are cancelled and its tokens stop working. It has to sign in again to continue.</p>}
         action="Terminate session"
         danger
         route={`${base}/terminate`}
@@ -597,7 +597,7 @@ function SessionDetail({ id }: { id: string }) {
       <ReasonDialog
         open={open === "suspend"}
         title="Suspend this session"
-        text={<p>The harness's tokens are refused and its calls in flight are refused, until you resume the session. The session keeps its deadlines and expires as usual.</p>}
+        text={<p>The agent's tokens are refused and its calls in flight are refused, until you resume the session. The session keeps its deadlines and expires as usual.</p>}
         action="Suspend session"
         route={`${base}/suspend`}
         onClose={() => setOpen(null)}
@@ -610,7 +610,7 @@ function SessionDetail({ id }: { id: string }) {
       <ReasonDialog
         open={open === "resume"}
         title="Resume this session"
-        text={<p>The harness may use the session again with its current tokens.</p>}
+        text={<p>The agent may use the session again with its current tokens.</p>}
         action="Resume session"
         route={`${base}/resume`}
         onClose={() => setOpen(null)}
@@ -633,13 +633,13 @@ export function Sessions({ path }: { path: string }) {
   return (
     <>
       <PageHeader code="G-11" title="Sessions and principals">
-        <p>Harness sessions, the framework instances (principals) that may open them, their OAuth client credentials and the Session Approvers.</p>
+        <p>Agent sessions, the framework instances (principals) that may open them, their OAuth client credentials and the Session Approvers.</p>
       </PageHeader>
       <Help>
         <p>
           A session binds one principal to one Session Allow template for a bounded time. Suspending a session refuses its tokens and calls until it is resumed;
-          terminating it cancels its calls and revokes its tokens, and the harness must sign in again. Principals and credentials created here are kept in the
-          state directory and take effect at once; those in smcp.toml are edited there and can be suspended here. Session Approver accounts sign harnesses
+          terminating it cancels its calls and revokes its tokens, and the agent must sign in again. Principals and credentials created here are kept in the
+          state directory and take effect at once; those in smcp.toml are edited there and can be suspended here. Session Approver accounts sign agents
           in and do nothing else; the Administrator creates and removes them here, each with its own password.
         </p>
       </Help>

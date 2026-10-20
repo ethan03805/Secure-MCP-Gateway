@@ -8,7 +8,7 @@ export const policyHelp: Record<string, string> = {
   revision: "Revision ID of the document: letters, digits, dot, dash or underscore, at most 64 characters. Every published document needs a new ID; a published ID never carries other content.",
   framework_profiles: "Framework Profiles by name. A principal's profile in smcp.toml or G-11 names one; it decides which templates the principal's sessions may use.",
   "framework_profiles[].templates": "Templates that sessions of this profile may use. Each must exist in the document.",
-  "framework_profiles[].default_template": "Template used when the harness asks for none. It must be one of the profile's templates.",
+  "framework_profiles[].default_template": "Template used when the agent asks for none. It must be one of the profile's templates.",
   "framework_profiles[].calls_per_minute": "Rate bound for all calls under this profile, at least 1. Empty means no profile bound.",
   "framework_profiles[].servers": "Authority ceiling: the server aliases this profile's sessions may reach through any template. Absent means unrestricted. Edit it in the document (JSON).",
   "framework_profiles[].high_risk": "High-risk tool classes (general-sql, code-execution, cad-scripting, browser-automation) the profile's sessions may be granted. Edit it in the document (JSON).",
