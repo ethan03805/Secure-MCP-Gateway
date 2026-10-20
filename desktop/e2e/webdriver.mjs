@@ -189,7 +189,14 @@ try {
   // The lockdown profile writes managed settings that need root; preview
   // and apply without it.
   await click(await find("#lockdown"));
-  await waitFor(async () => !(await script("return [...document.querySelectorAll('h3')].some(h => h.textContent === 'Lockdown profile');")), "the preview without the lockdown", 60000);
+  await waitFor(
+    () =>
+      script(
+        "const l = document.getElementById('lockdown'); return !!l && !l.checked && document.querySelectorAll('p.change').length > 0 && ![...document.querySelectorAll('h3')].some(h => h.textContent === 'Lockdown profile');",
+      ),
+    "the preview without the lockdown",
+    60000,
+  );
   const changes = /** @type {string[]} */ (await script("return [...document.querySelectorAll('p.change')].map(p => p.textContent);"));
   if (!changes.some((c) => c.includes(claudeJson))) fail(`the preview does not name ${claudeJson}: ${changes.join(" | ")}`);
   else ok(`the preview names ${changes.length} change(s), including ${claudeJson}`);
@@ -209,7 +216,12 @@ try {
 
   // ---- Deep links (FR-20.28) ----
   const before = /** @type {string[]} */ (await wd("GET", `${S}/window/handles`)).length;
-  spawn(APP, ["smcp://approvals"], { stdio: "ignore", detached: true }).unref();
+  const second = path.join(os.tmpdir(), "smcp-desktop-second.log");
+  const start = (/** @type {string} */ link) => {
+    const fd = fs.openSync(second, "a");
+    spawn(APP, [link], { stdio: ["ignore", fd, fd], detached: true }).unref();
+  };
+  start("smcp://approvals");
   const consoleHref = await waitFor(async () => {
     const handles = /** @type {string[]} */ (await wd("GET", `${S}/window/handles`));
     if (handles.length <= before) return null;
@@ -221,15 +233,22 @@ try {
       if (href.startsWith("https://") || href.includes("/error.html")) return href;
     }
     return null;
-  }, "the console window", 60000).catch((e) => {
+  }, "the console window", 60000).catch(async (e) => {
     fail(String(e));
+    const titles = [];
+    for (const h of /** @type {string[]} */ (await wd("GET", `${S}/window/handles`))) {
+      await wd("POST", `${S}/window`, { handle: h });
+      titles.push(`${await wd("GET", `${S}/title`)} <${await script("return location.href;")}>`);
+    }
+    console.log(`windows: ${titles.join(" | ")}`);
+    console.log(`second start output:\n${fs.existsSync(second) ? fs.readFileSync(second, "utf8") : "(none)"}`);
     return "";
   });
   if (consoleHref) {
     if (!consoleHref.startsWith("https://127.0.0.1:8444/")) fail(`the console window shows ${consoleHref}`);
     else ok(`smcp://approvals opened the console window on the admin listener (${consoleHref})`);
-    spawn(APP, ["smcp://approvals?approve=1"], { stdio: "ignore", detached: true }).unref();
-    spawn(APP, ["smcp://stop"], { stdio: "ignore", detached: true }).unref();
+    start("smcp://approvals?approve=1");
+    start("smcp://stop");
     await sleep(3000);
     const now = /** @type {string} */ (await script("return location.href;"));
     if (now !== consoleHref) fail(`a refused link navigated the console window to ${now}`);

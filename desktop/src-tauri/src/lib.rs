@@ -960,8 +960,11 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // A deep link opened while the application runs arrives here
             // on Linux and Windows (FR-20.28); any other second start
-            // focuses the console window.
-            open_console(app, deeplink::from_args(argv).unwrap_or(Page::Home))
+            // focuses the console window. The plugin may call this off the
+            // main thread, where windows must not be built.
+            let page = deeplink::from_args(argv).unwrap_or(Page::Home);
+            let a = app.clone();
+            let _ = app.run_on_main_thread(move || open_console(&a, page));
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
