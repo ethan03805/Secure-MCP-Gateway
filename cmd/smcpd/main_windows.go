@@ -20,6 +20,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
+	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsvc"
 )
 
@@ -147,6 +148,8 @@ func (s service) Execute(_ []string, req <-chan svc.ChangeRequest, status chan<-
 }
 
 func runService(cfgPath, level string) error {
+	// Only smcpctl install --machine registers the service (SR-4-2).
+	installMode = profile.ModeWindowsMachine
 	return svc.Run(winsvc.ServiceName, service{cfgPath: cfgPath, level: level})
 }
 
