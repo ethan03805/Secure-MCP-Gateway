@@ -279,7 +279,7 @@ func (r *Runtime) registerChecks() {
 	m.Register("disk", health.Disk(jdir))
 	m.AddQuota(&health.Quota{Name: "journal", Dir: jdir, Limit: a.Config.Evidence.QuotaBytes}) // CP-26, FR-9.15
 	m.Register("clock", health.Clock())
-	m.Register("trust_anchors", health.TrustAnchors(filepath.Join(stateDir, keys.CACertFile), a.Config.Listener.TLSCert))
+	m.Register("trust_anchors", trustAnchors(filepath.Join(stateDir, keys.CACertFile), a.Config.Listener.TLSCert))
 	if runtime.GOOS == "windows" {
 		// FR-21.5, FR-21.10: the start check, repeated while running.
 		m.Register("state_protection", health.Every(time.Minute, stateProtection(func() error { return keys.CheckPrivate(stateDir) })))
@@ -614,5 +614,19 @@ func stateProtection(check func() error) health.Check {
 		default:
 			return []health.Cause{{Name: health.CauseStateACL, Critical: true, Detail: err.Error()}}
 		}
+	}
+}
+
+// trustAnchors is health.TrustAnchors read under the rotation lock, so a
+// CA rotation finishing in this process (new CA written, listener
+// certificate not yet reissued) is never seen half done: that state would
+// raise trust_anchor_invalid, an integrity cause that holds the Gateway
+// fail-closed until an operator acknowledges it.
+func trustAnchors(caFile, certFile string) health.Check {
+	check := health.TrustAnchors(caFile, certFile)
+	return func(now time.Time) []health.Cause {
+		var out []health.Cause
+		keys.WithRotationLock(func() { out = check(now) })
+		return out
 	}
 }
