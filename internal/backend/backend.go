@@ -121,6 +121,24 @@ type Server struct {
 	crashes  []time.Time // unexpected exits within CrashWindow (guarded by mu)
 }
 
+// Contained reports whether the server's instances run in an AppContainer
+// (the Windows machine mode, FR-21.13).
+func (s *Server) Contained() bool { return s.spec.Container != "" }
+
+// AllContained reports whether every server runs contained, and at least
+// one server is configured (FR-21.13).
+func AllContained(servers map[string]*Server) bool {
+	if len(servers) == 0 {
+		return false
+	}
+	for _, s := range servers {
+		if !s.Contained() {
+			return false
+		}
+	}
+	return true
+}
+
 // FR-5.12: a server revision whose instance exits unexpectedly CrashLimit
 // times within CrashWindow is suspended instead of restarted again.
 const (
@@ -499,7 +517,8 @@ const envelopeBytes = 64 << 10
 func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error) {
 	spec := pipeline.ServerSpec{Alias: sc.Alias, Command: sc.Command, Args: sc.Args, Dir: sc.Dir, RiskClasses: sc.RiskClasses, HighRisk: sc.HighRisk(),
 		Runtime: sc.Runtime, ArtifactRoot: sc.ArtifactRoot, Roots: SpecRoots(sc), URL: sc.URL, CAFile: sc.CAFile,
-		Limits: pipeline.ResourceLimits{MemoryBytes: sc.MemoryBytes, CPUs: sc.CPUs, Processes: sc.Pids}}
+		Limits:    pipeline.ResourceLimits{MemoryBytes: sc.MemoryBytes, CPUs: sc.CPUs, Processes: sc.Pids},
+		Container: sc.Container, EgressProxyPort: sc.EgressProxyPort}
 	if spec.URL != "" {
 		// FR-5.28: a server reached over Streamable HTTP runs outside the
 		// Gateway's sandbox in every profile, so a high-risk class is

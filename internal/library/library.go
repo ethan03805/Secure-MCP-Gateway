@@ -131,6 +131,12 @@ type Options struct {
 	Dir string
 	Log *slog.Logger
 	Now func() time.Time
+	// Containment, when set, places each enabled revision in its own
+	// containment (the Windows machine mode, FR-21.13).
+	Containment Containment
+	// Bindings returns the [[server]] alias and slot paths that use a
+	// server ID, for the containment's grants (SR-4.6-2).
+	Bindings func(serverID string) (SlotBinding, bool)
 }
 
 // Library is the verifier and registry.
@@ -151,6 +157,9 @@ type Library struct {
 	// (SR-3-4).
 	feedReadAt  time.Time
 	feedAlerted bool
+
+	containment Containment
+	bindings    func(serverID string) (SlotBinding, bool)
 }
 
 // Open loads the registry and takes the exclusive registry lock.
@@ -167,7 +176,7 @@ func Open(o Options) (*Library, error) {
 	if o.Now == nil {
 		o.Now = time.Now
 	}
-	l := &Library{stateDir: o.StateDir, dir: o.Dir, log: o.Log, now: o.Now}
+	l := &Library{stateDir: o.StateDir, dir: o.Dir, log: o.Log, now: o.Now, containment: o.Containment, bindings: o.Bindings}
 	l.feedReadAt = o.Now()
 	for _, d := range []string{l.path(), l.path("artifacts", "sha256"), l.path("unpacked"), l.path("revisions"), l.path("receipts"), l.path("evidence"), l.path("work"), l.dir} {
 		if err := os.MkdirAll(d, 0o700); err != nil {

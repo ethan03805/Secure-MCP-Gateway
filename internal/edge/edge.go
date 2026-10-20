@@ -566,7 +566,7 @@ type Health struct {
 func (g *Gateway) Health() Health {
 	h := Health{State: "healthy", Causes: []string{}, Profile: g.prof.Profile, ReleaseLabel: g.prof.Label, InstallationMode: g.prof.InstallMode, ProfileReasons: g.prof.Reasons,
 		Version: backend.Version, Sessions: len(g.store.Active()), Launcher: g.reg.Launcher().Name(), Servers: []string{}}
-	if c := g.prof.Degraded(); c != "" {
+	if c := g.prof.Cause(backend.AllContained(g.reg.Servers())); c != "" {
 		h.State, h.Causes = "degraded", append(h.Causes, c)
 	}
 	for alias, s := range g.reg.Servers() {

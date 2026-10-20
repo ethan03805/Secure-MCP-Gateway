@@ -99,7 +99,7 @@ func helper(mode string, args []string) int {
 		}
 		fmt.Println("spun")
 		return 0
-	case "tree": // start one grandchild, print its PID, wait for stdin
+	case "tree", "holdtree": // start one grandchild, print its PID, wait for stdin (tree) or forever (holdtree)
 		cmd := exec.Command(os.Args[0])
 		cmd.Env = append(os.Environ(), helperEnv+"=sleep")
 		w, err := cmd.StdinPipe()
@@ -111,6 +111,9 @@ func helper(mode string, args []string) int {
 			return 1
 		}
 		fmt.Println(cmd.Process.Pid)
+		if mode == "holdtree" {
+			time.Sleep(time.Hour)
+		}
 		_, _ = io.Copy(io.Discard, os.Stdin)
 		w.Close()
 		return 0
@@ -129,6 +132,15 @@ func helper(mode string, args []string) int {
 		fmt.Printf("%d %s", p.Pid, line)
 		_, _ = io.Copy(io.Discard, os.Stdin)
 		in.Close()
+		return 0
+	case "escape": // run each probe "op:arg" and print the results as JSON
+		out := map[string]string{}
+		for _, a := range args {
+			op, arg, _ := strings.Cut(a, ":")
+			out[a] = probe(op, arg)
+		}
+		b, _ := json.Marshal(out)
+		fmt.Println(string(b))
 		return 0
 	}
 	fmt.Fprintln(os.Stderr, "unknown helper mode", mode)

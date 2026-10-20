@@ -303,8 +303,12 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 		host, guest = req.Network.ListenAddr, req.Network.GuestAddr
 	}
 	var allow []netip.AddrPort
+	var port uint16
+	if req.Network != nil {
+		port = req.Network.ProxyPort
+	}
 	listen := func(h http.Handler) (string, error) {
-		ln, err := net.Listen("tcp", netip.AddrPortFrom(host, 0).String())
+		ln, err := net.Listen("tcp", netip.AddrPortFrom(host, port).String())
 		if err != nil {
 			return "", fmt.Errorf("egress: listen on %s: %w", host, err)
 		}
@@ -328,7 +332,7 @@ func (b *Broker) Attach(_ context.Context, req pipeline.EgressRequest) (att *pip
 		return nil, err
 	}
 	for _, g := range b.o.Grants.Grants(req.Alias) {
-		if g.EndpointEnv == "" {
+		if g.EndpointEnv == "" || port != 0 {
 			continue
 		}
 		u, err := listen(b.endpointHandler(in, g.EndpointEnv, g.Host, g.Ports[0]))

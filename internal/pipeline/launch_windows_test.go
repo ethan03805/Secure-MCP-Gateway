@@ -27,6 +27,8 @@ func TestMain(m *testing.M) {
 	switch os.Getenv(helperEnv) {
 	case "":
 		os.Exit(m.Run())
+	case "probe": // run each "op:arg" probe, print the results as one JSON line
+		probeMain(os.Args[1:])
 	case "echo": // echo stdin lines, note them on stderr
 		fmt.Fprintln(os.Stderr, "echo backend ready")
 		sc := bufio.NewScanner(os.Stdin)

@@ -44,6 +44,28 @@ func TestWindowsAndWSLProfiles(t *testing.T) {
 	}
 }
 
+// TestPartiallyConfinedCause: the machine mode with every backend in an
+// AppContainer reports partially_confined; one uncontained backend, or
+// another mode, reports unconfined (FR-21.13).
+func TestPartiallyConfinedCause(t *testing.T) {
+	reqtest.Partial(t, "FR-21.13")
+	machine, _ := Resolve("auto", "subprocess", false, Host{OS: "windows", Arch: "amd64", InstallMode: ModeWindowsMachine})
+	user, _ := Resolve("auto", "subprocess", false, Host{OS: "windows", Arch: "amd64", InstallMode: ModeWindowsUser})
+	enforced, _ := Resolve("auto", "podman", true, Host{OS: "linux", Arch: "amd64", Podman: true, Rootless: true, Nftables: true, CgroupV2: true, Systemd: true})
+	for _, c := range []struct {
+		r    Report
+		all  bool
+		want string
+	}{
+		{machine, true, CausePartiallyConfined}, {machine, false, CauseUnconfined},
+		{user, true, CauseUnconfined}, {enforced, true, ""}, {enforced, false, ""},
+	} {
+		if got := c.r.Cause(c.all); got != c.want {
+			t.Errorf("%s contained=%v: %q, want %q", c.r.InstallMode, c.all, got, c.want)
+		}
+	}
+}
+
 func TestIsWSL(t *testing.T) {
 	reqtest.Partial(t, "SR-4-2")
 	for _, c := range []struct {

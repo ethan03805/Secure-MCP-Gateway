@@ -600,7 +600,10 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-results
-          path: build/windows-*-test.json
+          path: |
+            build/windows-test.json
+            build/windows-sandbox-test.json
+            build/windows-all-test.json
           if-no-files-found: warn
           retention-days: 14
 

@@ -69,19 +69,19 @@ func NewJob(l Limits, onViolation func(Violation)) (*Job, error) {
 	}
 	j := &Job{h: h, limits: l, notify: onViolation, done: make(chan struct{})}
 	if err := j.configure(); err != nil {
-		windows.CloseHandle(h)
+		_ = windows.CloseHandle(h)
 		return nil, err
 	}
 	port, err := windows.CreateIoCompletionPort(windows.InvalidHandle, 0, 0, 1)
 	if err != nil {
-		windows.CloseHandle(h)
+		_ = windows.CloseHandle(h)
 		return nil, fmt.Errorf("job completion port: %w", err)
 	}
 	acp := associateCompletionPort{CompletionKey: 1, CompletionPort: port}
 	if _, err := windows.SetInformationJobObject(h, windows.JobObjectAssociateCompletionPortInformation,
 		uintptr(unsafe.Pointer(&acp)), uint32(unsafe.Sizeof(acp))); err != nil {
-		windows.CloseHandle(port)
-		windows.CloseHandle(h)
+		_ = windows.CloseHandle(port)
+		_ = windows.CloseHandle(h)
 		return nil, fmt.Errorf("associate job completion port: %w", err)
 	}
 	j.port = port
@@ -233,7 +233,7 @@ func (j *Job) Close() error {
 	if port != 0 {
 		_ = windows.PostQueuedCompletionStatus(port, 0, 0, nil)
 		<-j.done
-		windows.CloseHandle(port)
+		_ = windows.CloseHandle(port)
 	}
 	return err
 }

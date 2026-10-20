@@ -283,7 +283,12 @@ func (r *Runtime) registerChecks() {
 		return out
 	}, 2*time.Second)))
 	if a.Profile.Profile == profile.Standalone {
-		m.Register("profile", health.Static(health.CauseUnconfined, "standalone profile: server instances run unconfined", func() bool { return true }))
+		m.Register("profile", func(time.Time) []health.Cause {
+			if a.Profile.Cause(backend.AllContained(a.Registry.Servers())) == profile.CausePartiallyConfined {
+				return []health.Cause{{Name: profile.CausePartiallyConfined, Detail: "Windows machine mode: every backend runs in its AppContainer, which is weaker than the Enforced sandbox"}}
+			}
+			return []health.Cause{{Name: health.CauseUnconfined, Detail: "standalone profile: server instances run unconfined"}}
+		})
 	}
 	m.Register("manifests", health.Static(health.CauseUnverified, "tool lists come from live servers, not signed manifests", func() bool {
 		for _, s := range a.Registry.Servers() {

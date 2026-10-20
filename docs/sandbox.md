@@ -98,7 +98,7 @@ The `[runtime]` table of `smcp.toml`. All keys are optional.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `sandbox` | `"podman"` when `[profile] mode = "enforced"`, else `"none"` | `"podman"` runs servers in containers; `"none"` runs them as child processes. `"podman"` with `mode = "standalone"` is a configuration error |
+| `sandbox` | `"podman"` when `[profile] mode = "enforced"`, else `"none"` | `"podman"` runs servers in containers; `"none"` runs them as child processes. `"podman"` with `mode = "standalone"` is a configuration error. `"appcontainer"` (Windows machine mode only) runs each packaged server in the AppContainer of its enabled revision; see [windows-port.md](windows-port.md#appcontainer-and-egress-filters-machine-mode-fr-2113-fr-2114). It is a configuration error with `mode = "enforced"` |
 | `podman` | `podman` on `PATH` | Absolute path of the Podman binary |
 | `image` | none | Default image for every server, by digest (`name@sha256:<64 hex>`). Without an image the Gateway uses an empty root directory and mounts the server executable read-only |
 | `memory_bytes` | 536870912 (512 MiB, CP-24) | Memory limit; swap is disabled (`--memory-swap` equals the limit). Minimum 16 MiB |

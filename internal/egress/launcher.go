@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"net/netip"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 )
@@ -38,7 +39,13 @@ func (l *attachingLauncher) Confined() bool { return l.inner.Confined() }
 // environment (they replace configured variables of the same name) and
 // starts the instance.
 func (l *attachingLauncher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeline.Process, error) {
-	att, err := l.att.Attach(ctx, pipeline.EgressRequest{Alias: spec.Alias})
+	req := pipeline.EgressRequest{Alias: spec.Alias}
+	if spec.EgressProxyPort != 0 {
+		// A Windows AppContainer whose WFP filters let it reach this one
+		// loopback port (FR-21.14): the filters are the confinement.
+		req.Network = &pipeline.EgressNetwork{LauncherConfines: true, ListenAddr: netip.MustParseAddr("127.0.0.1"), ProxyPort: spec.EgressProxyPort}
+	}
+	att, err := l.att.Attach(ctx, req)
 	if err != nil {
 		return nil, err
 	}

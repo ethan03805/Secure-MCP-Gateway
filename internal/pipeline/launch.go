@@ -72,6 +72,13 @@ type ServerSpec struct {
 	// has no manifest. A launcher applies them where the configuration sets
 	// no per-server value.
 	Limits ResourceLimits
+	// Container is the AppContainer profile the instance runs under in the
+	// Windows machine mode (FR-21.13), or "".
+	Container string
+	// EgressProxyPort, when not zero, is the loopback port on which the
+	// Egress Broker must serve the instance's proxy: the only port the
+	// instance's WFP filters let it reach (FR-21.14).
+	EgressProxyPort uint16
 }
 
 // ResultTooLargeCode and ResultTooLargeMessage mark the error response that

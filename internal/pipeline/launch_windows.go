@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -45,8 +47,27 @@ func startChild(l SubprocessLauncher, spec ServerSpec, env []string, stdin, stdo
 	}
 	c.job = job
 	c.jobRef.Store(job)
+	var container *winsandbox.Container
+	if spec.Container != "" {
+		// FR-21.13: the revision's AppContainer, whose profile and access
+		// entries the enable step created. The scratch directory is the
+		// instance's temporary directory.
+		if container, err = winsandbox.OpenProfile(spec.Container); err != nil {
+			errR.Close()
+			errW.Close()
+			job.Close()
+			return nil, err
+		}
+		if spec.Dir != "" {
+			env = slices.DeleteFunc(slices.Clone(env), func(kv string) bool {
+				k, _, _ := strings.Cut(kv, "=")
+				return strings.EqualFold(k, "TEMP") || strings.EqualFold(k, "TMP")
+			})
+			env = append(env, "TEMP="+spec.Dir, "TMP="+spec.Dir)
+		}
+	}
 	p, err := winsandbox.Start(winsandbox.StartOptions{Path: spec.Command, Args: spec.Args, Env: env, Dir: spec.Dir,
-		Stdin: stdin, Stdout: stdout, Stderr: errW, Job: job})
+		Stdin: stdin, Stdout: stdout, Stderr: errW, Job: job, Container: container})
 	errW.Close()
 	if err != nil {
 		errR.Close()
@@ -85,7 +106,7 @@ func (c *jobChild) Wait() error {
 }
 
 func (c *jobChild) Terminate() error {
-	return errors.New("Windows has no SIGTERM for a backend process")
+	return errors.New("no SIGTERM for a backend process on Windows")
 }
 
 func (c *jobChild) Kill() error { return c.job.Terminate(1) }
