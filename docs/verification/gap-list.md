@@ -87,7 +87,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-08 Access Enforcement Point
 
-- FR-22.35 **unverified** (partly verified): A granted hosted call carries the pipeline events; the ungranted call and the harness token sent directly to the instance are not in the same test.
 
 ### E-10 Tool Dispatcher
 
@@ -101,25 +100,19 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-14 Local Server Registry
 
-- FR-22.13 **unverified** (partly verified): Imported packages are verified and disabled; the active policy revision and session catalogs are not checked after import.
-- SR-3.8-2 **unverified** (partly verified): Tool-list drift suspends the revision (tested); a start from a different verified image is not.
 
 ### E-15 Server Runtime Manager
 
 - FR-21.11 **unverified** (partly verified): `CreateProcess` with C runtime quoting, the job attached at creation and the shell refusal are tested; one claim does not cover the package enablement with every argument form through a running Gateway.
 - FR-21.12 **unverified** (partly verified): Memory, process and CPU limits and kill-on-close are tested on Windows runners, and the hostile suite runs through a running per-user Gateway with HF-20 and HF-21 asserted under Job Object limits (`internal/hostile`, mode `windows-user`); the CP-24 default values themselves are not exercised by a hostile row.
 - FR-21.25 **unverified** (partly verified): The path rules are tested on every platform (`internal/winpath`) and on Windows; the request filter returns `PATH_REFUSED` (now in Appendix B) for the Windows-only forms, and filesystem slots are refused with `PATH_REFUSED` for those forms and for a junction leading outside the slot (`packaging.CheckSlotPath`, tested on the runner). The request-filter fixtures compared with Linux are not claimed in full.
-- FR-22.8 **unverified** (no claiming test or record): A local-entry package is an ordinary package, but no test enables one with the bundled instance stopped and running and checks that the instance receives nothing.
-- FR-22.24 **unverified** (partly verified): In the Enforced profile the instance is a rootless Podman container with its own user namespace on slirp4netns, and an nftables table in its namespace admits only its listener and the hosted egress listener before its process starts (`bundle.TestEnforcedStart`; `bundle.TestEnforcedImage` in the contextforge job checks `podman inspect` and the blocked connections, writes and setuid from inside); the memory after 20 hosted calls is not measured.
 - FR-22.25 **unverified** (partly verified): The container form is tested; the managed-process form (`bundle.Process`, in a Job Object through `winsandbox.StartManaged` on Windows, `[contextforge] python`) is tested with a stand-in process for its environment, working directory and limits (`bundle.TestManagedProcess`), and `winsandbox.ContextForgeUnconfinedCheck` is registered on Windows; the managed process now runs from a virtual environment installed from the wheel set (FR-22.20), but a start of the real ContextForge as a managed process (Windows, or a host without an engine) is not run.
 - SR-4.8-2 **unverified** (partly verified): Enablement and launch refuse every interpreter form; the Windows acceptance run is traced with a Job Object holding the test binary and every process it creates (`winsandbox.TraceCurrentProcess`), and no interpreter started by `smcpd` is found (`TestWindowsZZProcessTrace`, trace in the `windows` job artifact). The trace covers the per-user acceptance run, not every Windows test package, and names no process that ends before it can be opened.
 
 ### E-16 Execution Sandbox
 
 - FR-21.13 **unverified** (partly verified): Per-revision AppContainer profiles, grants and `partially_confined` are tested on the Windows runner; `smcpctl install --machine` now writes `[runtime] sandbox = "appcontainer"` and the machine-mode service uses it for an older configuration (`cmd/smcpd.TestMachineRuntime`), so packaged servers start in their placements under `NT SERVICE\smcpd`. The hostile fixtures through a machine-mode Gateway are not run.
-- SR-4.5-4 **unverified** (partly verified): The Enforced containment admits only the hosted egress listener; `bundle.TestEnforcedImage` (contextforge job) checks that the Internet, the slirp4netns DNS, a LAN address and another host listener are unreachable from inside; the run with ContextForge's own SSRF allowlist set to allow everything is not made.
 - SR-4.6-2 **unverified** (partly verified): Grants follow enablement and are revoked (Windows test); a write to a read-only root through a running machine-mode Gateway is not tested.
-- SR-4.7-3 **unverified** (partly verified): `bundle.TestEnforcedImage` (contextforge job) checks from inside the instance that no engine or bus socket, host process or host disk is visible; host namespaces are checked through `podman inspect`.
 
 ### E-18 Egress Broker
 
@@ -134,7 +127,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-21 Audit & Evidence Service
 
-- FR-22.39 **unverified** (partly verified): Events of a hosted package's revision carry a `route` member (`via` `contextforge`, server ID and revision, virtual server, instance version and digest) and a local revision's carry none (`audit.TestFanoutDecorators`, `connector.TestHostedPackagesThroughEgress`); the decision, intent and outcome events of a call through the full pipeline are not checked.
 
 ### E-22 Key & Trust Anchor Manager
 
@@ -233,36 +225,19 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-36 ContextForge Connector
 
-- FR-22.1 **unverified** (partly verified): The pinned and operator catalog digests are checked; the run with outbound network blocked is not.
-- FR-22.7 **unverified** (partly verified): The install text is never executed (source check and HFC-03); the marker-file fixture through a full import is not run.
-- FR-22.9 **unverified** (partly verified): The probe registers the entry with an endpoint of its own for the entry's host, an API-key entry needs a probe secret delivered in S1 by the Egress Broker, and the secret reaches the fixture and not the instance stand-in (`connector.TestHostedPackagesThroughEgress`); the run with a second fixture host and the inspection of the pinned image's environment, files and database are not made.
-- FR-22.10 **unverified** (partly verified): Manifest version 2, name mapping and renames are tested against the pinned image; the operator `low` refusal and the reverse-order probe are not in one claim.
-- FR-22.11 **unverified** (partly verified): Provenance members are written for local and hosted imports; the inspection record of two imported packages is not made.
+- FR-22.11 **missing** (partly verified): The provenance statement records the catalog, entry, release, instance digest, probe time and TLS key digest (logged for a hosted and a local package of the pinned catalog by `connector.TestStarterSetLive`); the hosted server's `serverInfo` name and version are not recorded, because the pinned instance stores no `serverInfo` of a registered gateway and its handshake test endpoint refuses the probe's private egress address while SSRF protection is on.
 - FR-22.12 **unverified** (partly verified): The trust decision is presented and recorded; the decline through G-15 is not tested.
-- FR-22.14 **unverified** (partly verified): Both events are recorded; `smcpctl journal verify` after a refused and a declined import is not run in the same test.
-- FR-22.15 **unverified** (partly verified): An API-key entry's manifest declares one `S1` slot for its host; the S1 grant of the package's alias is bound at its endpoint and a grant for another host is refused (`connector.TestHostedPackagesThroughEgress`); the readback refusal through the control API and the memory dump of the pinned image are not checked.
-- FR-22.16 **unverified** (partly verified): The `changed` mark is tested; the enabled revision serving unchanged and the re-import as a new revision are not tested together.
-- FR-22.17 **unverified** (partly verified): The starter set is in the release lock and offered only with the bundled instance; the Demonstration is not recorded.
+- FR-22.15 **unverified** (partly verified): An API-key entry's manifest declares one `S1` slot for its host; the S1 grant of the package's alias is bound at its endpoint and a grant for another host is refused (`connector.TestHostedPackagesThroughEgress`); with the pinned image the key reaches the fixture as a header and is in neither the instance's environment, data volume, database nor process memory (`connector.TestHostedEgressImage`, Linux with sudo in the contextforge job); the readback refusal through the control API is not checked in the same test.
 - FR-22.18 **unverified** (partly verified): The release lock pins the image, the wheel set of each platform with SHA-256 and PyPI URL, the catalog, the signer and the starter set; the release workflow signs it with the release key and checks the advisories (`scripts/contextforge-release-assets.sh`, `tools/cfadvisory`), and the contextforge job builds the same assets with a key of the run. The Inspection of a release candidate (its lock, signature and advisory record) is not recorded: it needs the next pre-release tag.
-- FR-22.19 **unverified** (partly verified): cosign verification of the pinned image is tested against the network; the re-tagged unsigned image and another workflow identity are not.
 - FR-22.21 **unverified** (partly verified): The release publishes the ContextForge license and notice and the SPDX SBOMs of the pinned image and of each wheel set, and `tools/sbomcheck -identifiers` fails on a component without an SPDX license identifier (`TestIdentifiers`; the contextforge job runs it against a wheel SBOM with ContextForge's license removed). The Inspection of a release candidate's SBOM set is not recorded: it needs the next pre-release tag.
 - FR-22.22 **unverified** (partly verified): The choice, the configuration value and the refusals are tested; that no artifact is fetched on a no is not checked against the engine.
-- FR-22.23 **unverified** (partly verified): The instance starts with a hosted revision and stops after it; the probe case and the 30-second bound are not claimed in one test.
-- FR-22.26 **unverified** (partly verified): The listener is on loopback on a fresh port in every form; the scan of non-loopback addresses and the Enforced firewall rule for the Gateway identity are not built (in rootless Podman the published port is a slirp4netns listener another local user can reach, and a host rule needs root).
 - FR-22.27 **unverified** (partly verified): The generated configuration and the refusal of a changed key are tested against the pinned image; the route-family requests and the telemetry check are not all claimed.
-- FR-22.28 **unverified** (partly verified): Generation, vault storage and the weak-credential refusal are tested; a token signed with a published key against the running instance, and generation at upgrade (FR-22.31), are not.
 - FR-22.29 **unverified** (partly verified): Teams, users, tokens and the self-check are tested against v1.0.11; a token is renewed an hour before its one-day expiry with a self-check before use and the old token revoked (`connector.TestHostedTokenRenewal` with two-second tokens), and a leaking stand-in suspends every hosted package (`connector.TestHostedScopeBroken`, HFC-10); renewal against the pinned image is not run.
 - FR-22.30 **unverified** (partly verified): Starting, health checks, restarts and `contextforge_unhealthy` are tested; the timed first answer on an empty D-16 and a local tool succeeding during the outage are not.
-- FR-22.31 **missing** (no claiming test or record): Upgrade with rollback is not built: `smcpctl contextforge` has no upgrade subcommand. A second release to upgrade from exists upstream (v1.0.10 of 2026-09-07; v1.0.11 of 2026-09-28 is the latest), so the test needs the feature, not the owner; the signed-lock case needs the release key (FR-22.18).
 - FR-22.32 **unverified** (partly verified): `smcpctl contextforge uninstall` is tested; `smcpctl uninstall` removing the instance and `journal verify` afterwards are not.
 - FR-22.33 **unverified** (partly verified): Reconciliation, suspension and the `Unknown tool` mapping are tested against the pinned image; the 5-second start after an unknown tool and every listed change in one run are not.
-- FR-22.34 **unverified** (partly verified): One team, user, gateway and virtual server per package is tested; each gateway's URL is the package's own egress endpoint and each package's calls reach only its fixture (`connector.TestHostedPackagesThroughEgress`); the pinned-image run with two packages through the endpoints is not made.
-- FR-22.37 **unverified** (partly verified): Plugins off and the doubled limits are checked; a hosted call at the Gateway's rate limit and with a withheld result is not.
-- FR-22.38 **unverified** (partly verified): Reconciliation removes excluded objects (tested); the inspection of the admin client's operations is not recorded.
-- FR-22.43 **missing** (partly verified): The suite asserts HFC-01 to HFC-06, HFC-08, HFC-10, HFC-11 and HFC-13 (the hosted rows against the ContextForge stand-in), the console suite HFC-07 and the contextforge job HFC-12 (`bundle.TestEnforcedImage`); HFC-09 (E-11 filtering and taint of a swapped result through the full pipeline) and HFC-14's refusal by the running instance within the suite are not asserted.
+- FR-22.43 **unverified** (partly verified): Every HFC row is asserted; `hostile.TestHostileContextForge` claims the requirement only when all rows pass in the Enforced profile, which the contextforge CI job runs (HFC-12 starts the pinned image under the Enforced containment); the claim is pending that job's result on main.
 - FR-22.44 **unverified** (partly verified): `smcpctl bootstrap` and `install` ask (tested), and the desktop first-run setup offers the box, unchecked by default, with the same notes and passes `--with-contextforge` only when it is checked (`desktop/src-tauri/src/contextforge.rs`, `desktop/test/contextforge-choice.test.ts`); the Demonstration of both setups is not recorded.
-- SR-3.2-2 **unverified** (partly verified): The signature binding and its journal event are tested for the pinned image; images signed from another tag or repository are not.
-- SR-3.5-2 **unverified** (partly verified): The probe holds no secret, its only network destination is its endpoint for the entry's host, and a probe secret is delivered in S1 only (`connector.TestHostedPackagesThroughEgress`, `egress.TestHostedEndpoints`); the run with a production secret bound to another package is not made.
 
 ## History
 

@@ -61,4 +61,5 @@ Some Test-method requirements are verified by a GitHub Actions workflow that is 
 - [FR-12.4.md](FR-12.4.md): the CP-46 directories, owners and modes of the Enforced CI host and of the Standalone installs on Ubuntu and macOS (Inspection).
 - [SR-4.2-2.md](SR-4.2-2.md): the owner and modes of the Observation Store's files on the Enforced CI host (Inspection).
 - [FR-11.md](FR-11.md): the review of the FR-11 performance report of a `perf` run on the recorded reference hardware, with every FR-11 child verified (Analysis).
+- [FR-22.17.md](FR-22.17.md): the ContextForge starter set imported from the real hosted servers through the pinned image (Demonstration).
 - [gap-list.md](gap-list.md): every requirement that is not verified, grouped by element, with what is missing, ending with what only the owner can provide.
