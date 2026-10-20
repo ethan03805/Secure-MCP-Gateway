@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
@@ -153,7 +154,7 @@ func TestEnforcedUninstallAndPurgeOnHost(t *testing.T) {
 	if m == nil || segSums[filepath.Base(m[1])] != m[2] {
 		t.Fatalf("purge printed %v; segment digests %v", m, segSums)
 	}
-	for _, p := range []string{cfg, state} {
+	for _, p := range []string{cfg, state, config.EnforcedPublicDir} {
 		if exists(p) {
 			t.Errorf("purge left %s", p)
 		}

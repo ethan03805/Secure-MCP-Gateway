@@ -16,6 +16,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
@@ -385,11 +386,40 @@ func TestInstallEnforcedFake(t *testing.T) {
 	if st, _ := os.Stat(cfgPath); st.Mode().Perm() != 0o640 {
 		t.Fatalf("config mode %v", st.Mode())
 	}
+	// The client view (CP-46 public/): the CA certificate and the addresses,
+	// world-readable, nothing secret, for users who cannot read /etc/smcp.
+	pub := filepath.Join(root, config.EnforcedPublicDir)
+	if !strings.Contains(string(script), "ensure_dir "+config.EnforcedPublicDir+" smcp-core \"$group\" 0755") {
+		t.Fatal("install-enforced.sh does not create the client view directory for smcp-core, mode 0755")
+	}
+	stateCA, _ := os.ReadFile(filepath.Join(root, enforcedState, keys.CACertFile))
+	pubCA, err := os.ReadFile(filepath.Join(pub, config.PublicCAFile))
+	if err != nil || len(stateCA) == 0 || !bytes.Equal(pubCA, stateCA) {
+		t.Fatalf("published CA differs from the state CA (%v)", err)
+	}
+	view, err := config.LoadClientView(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.Profile != "enforced" || view.MCPURL != cfg.ResourceURI() || view.AdminURL != cfg.AdminURL() || view.CAFile != filepath.Join(pub, config.PublicCAFile) {
+		t.Fatalf("client view %+v", view)
+	}
+	for _, f := range []string{config.PublicCAFile, config.ClientViewFile} {
+		if st, err := os.Stat(filepath.Join(pub, f)); err != nil || st.Mode().Perm() != 0o644 {
+			t.Fatalf("%s: %v %v", f, err, st)
+		}
+	}
+	rawView, _ := os.ReadFile(filepath.Join(pub, config.ClientViewFile))
+	for _, secret := range []string{"argon2", "password", "token", "secret", "PRIVATE KEY"} {
+		if strings.Contains(strings.ToLower(string(rawView)), strings.ToLower(secret)) {
+			t.Fatalf("client view mentions %q: %s", secret, rawView)
+		}
+	}
 	if _, err := os.Stat(filepath.Join(root, enforcedPolicyDir, "smcp.toml")); err == nil {
 		t.Fatal("bootstrap copy of smcp.toml left in the policy directory")
 	}
 	ch := strings.Join(chowned, "\n")
-	for _, want := range []string{filepath.Join(root, enforcedState) + " smcp-core:smcp", filepath.Join(root, enforcedPolicyDir) + " smcp-core:smcp", cfgPath + " root:smcp"} {
+	for _, want := range []string{filepath.Join(root, enforcedState) + " smcp-core:smcp", filepath.Join(root, enforcedPolicyDir) + " smcp-core:smcp", cfgPath + " root:smcp", pub + " smcp-core:smcp"} {
 		if !strings.Contains(ch, want) {
 			t.Fatalf("not chowned: %s\n%s", want, ch)
 		}

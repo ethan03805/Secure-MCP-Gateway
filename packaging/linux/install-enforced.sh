@@ -179,6 +179,10 @@ ensure_dir /var/lib/smcp/vault smcp-vault "$group" 0700
 ensure_dir /var/lib/smcp/exports smcp-core "$group" 0750
 # backup.dir of the installed configuration (pre-upgrade backups).
 ensure_dir /var/lib/smcp/backups smcp-core "$group" 0700
+# The client view (CP-46 public/): the Gateway CA certificate and the
+# listener addresses, which smcpd publishes for users' desktop application
+# and smcpctl connect; nothing secret.
+ensure_dir /var/lib/smcp/public smcp-core "$group" 0755
 # The Gateway's state directory (state.dir) and smcp-core's home, which
 # holds rootless Podman's container storage.
 ensure_dir /var/lib/smcp/state smcp-core "$group" 0700

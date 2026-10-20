@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/adminapi"
+	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/backup"
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
@@ -124,6 +125,7 @@ func (r *Runtime) Rotate(req RotateRequest, actor string) (map[string]any, error
 			if err != nil {
 				return nil, err
 			}
+			app.PublishClientView(cfg, r.log)
 			r.commit("key_rotated", "SERVER_CA_ACTIVATED", actor, map[string]any{"kind": "ca", "stage": "finished"})
 			return map[string]any{"kind": "ca", "stage": "finished", "ca_not_after": st.CANotAfter, "listener_not_after": st.LeafNotAfter}, nil
 		}
@@ -143,6 +145,7 @@ func (r *Runtime) Rotate(req RotateRequest, actor string) (map[string]any, error
 		if overlap == 0 {
 			stage = "finished"
 		}
+		app.PublishClientView(cfg, r.log)
 		r.commit("key_rotated", "SERVER_CA_ROTATION_STARTED", actor, map[string]any{"kind": "ca", "stage": stage, "switch_at": rot.SwitchAt, "next_ca_sha256": rot.NextCA.SHA256})
 		return map[string]any{"kind": "ca", "stage": stage, "switch_at": rot.SwitchAt, "next_ca": rot.NextCA, "listener_not_after": st.LeafNotAfter,
 			"trust_bundle": filepath.Join(cfg.State.Dir, keys.CACertFile)}, nil

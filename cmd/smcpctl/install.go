@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	linuxpkg "github.com/ethan03805/secure-mcp-gateway/packaging/linux"
 )
 
@@ -671,6 +672,9 @@ func (in *installer) enforced() error {
 	if err != nil {
 		return err
 	}
+	if err := in.publishClientView(cfg); err != nil {
+		return err
+	}
 	if in.noStart {
 		in.step("skipped", "service start and health check (--no-start)")
 	} else {
@@ -694,6 +698,28 @@ for a build whose AT-01 to AT-21 acceptance evidence passed.
 Check the host:  sudo -u smcp-core XDG_RUNTIME_DIR=/run/smcp smcpctl runtime doctor --config %s
 Check health:    sudo -u smcp-core smcpctl health --config %s
 `, systemdUnit, enforcedConfig, enforcedConfig)
+	return nil
+}
+
+// publishClientView writes the client view of CP-46 public/ (the CA
+// certificate and client.json, config.ClientView), which the desktop
+// application and `smcpctl connect` read when they run as a user who cannot
+// read /etc/smcp or the state directory. smcpd keeps it current (CA
+// rotation); install writes it so it exists before the first start and on
+// installations made before the directory existed.
+func (in *installer) publishClientView(cfg *config.Config) error {
+	dir := cfg.PublicDir()
+	if err := in.ensureDir(dir, 0o755); err != nil {
+		return err
+	}
+	wrote, err := keys.PublishPublic(cfg.State.Dir, dir, cfg.ClientView(dir))
+	if err != nil {
+		return fmt.Errorf("client view %s: %w", dir, err)
+	}
+	if err := in.chownTree(dir, "smcp-core", "smcp"); err != nil {
+		return fmt.Errorf("chown %s: %w", dir, err)
+	}
+	in.step(verb(wrote), "client view "+dir+" (the Gateway CA certificate and addresses, readable by every user)")
 	return nil
 }
 

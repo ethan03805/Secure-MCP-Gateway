@@ -122,7 +122,9 @@ files=$(for b in "${commands[@]}"; do printf '%s\n%s\n' "/usr/bin/$b" "$work/bin
 # the application's name.
 jq -n --arg v "$version" --arg deb "smcp (= $debver)" \
 	--arg desktop "$here/smcp-desktop.desktop" --argjson files "$files" \
-	'{version: $v, productName: "smcp-desktop", bundle: {linux: {
+	'{version: $v, productName: "smcp-desktop", bundle: {
+	longDescription: "Tray, service control and console window for the Secure MCP Gateway. The Gateway commands come from the smcp package of the same version.",
+	linux: {
 		deb: {depends: [$deb, "libwebkit2gtk-4.1-0", "libgtk-3-0", "libayatana-appindicator3-1"], desktopTemplate: $desktop},
 		appimage: {files: $files}}}}' >"$work/tauri.json"
 rm -rf "$target/release/bundle/deb" "$target/release/bundle/appimage"
@@ -140,6 +142,20 @@ one() { # directory pattern
 }
 deb=$(one "$target/release/bundle/deb" '*.deb')
 appimage=$(one "$target/release/bundle/appimage" '*.AppImage')
+# The .deb's version: Tauri writes the configuration's version
+# (1.3.0-beta.2), which dpkg reads as upstream version 1.3.0 with Debian
+# revision beta.2 and orders after the final 1.3.0, so the release would
+# not upgrade a beta. Repack it with the smcp package's version
+# (1.3.0~beta.2, ordered before 1.3.0), and list each dependency once
+# (Tauri adds its own WebKitGTK and GTK entries to those given above).
+mkdir -p "$work/debroot"
+dpkg-deb -R "$deb" "$work/debroot"
+control=$work/debroot/DEBIAN/control
+deps=$(sed -n 's/^Depends: //p' "$control" | tr ',' '\n' | sed 's/^ *//; s/ *$//' | awk 'NF && !seen[$0]++' | paste -sd, - | sed 's/,/, /g')
+sed -i -e "s/^Version: .*/Version: $debver/" -e "s/^Depends: .*/Depends: $deps/" "$control"
+dpkg-deb --root-owner-group -Zgzip -b "$work/debroot" "$work/smcp-desktop.deb" >/dev/null
+deb=$work/smcp-desktop.deb
+[ "$(dpkg-deb -f "$deb" Version)" = "$debver" ] || { echo "build.sh: the .deb version is not $debver" >&2; exit 1; }
 [ "$(dpkg-deb -f "$deb" Package)" = smcp-desktop ] || { echo "build.sh: the .deb is not package smcp-desktop" >&2; exit 1; }
 dpkg-deb -f "$deb" Depends | grep -qF "smcp (= $debver)" || { echo "build.sh: the .deb does not depend on smcp (= $debver)" >&2; exit 1; }
 if dpkg-deb -c "$deb" | grep -Eq '/usr/bin/smcp(d|ctl|-session|-stdio|-connect|-refserver)$'; then

@@ -83,11 +83,16 @@ pub fn config_paths(h: &Host) -> Vec<PathBuf> {
 /// in a directory the user cannot search (the Enforced `/etc/smcp`) counts
 /// as existing.
 pub fn configured(h: &Host) -> bool {
-    let exists = |p: &Path| match std::fs::symlink_metadata(p) {
+    config_paths(h).iter().any(|p| present(p)) || service::detect(h).is_some()
+}
+
+/// Whether a file exists, counting one in a directory the user cannot
+/// search (the Enforced `/etc/smcp`, root:smcp 0750) as existing.
+pub fn present(p: &Path) -> bool {
+    match std::fs::symlink_metadata(p) {
         Ok(_) => true,
         Err(e) => e.kind() == std::io::ErrorKind::PermissionDenied,
-    };
-    config_paths(h).iter().any(|p| exists(p)) || service::detect(h).is_some()
+    }
 }
 
 /// The places `smcpctl` is looked for, in order: beside the application's
@@ -735,6 +740,29 @@ mod tests {
         // A service unit without the configuration still counts.
         touch(&root.join("home/.config/systemd/user/smcpd.service"));
         assert!(configured(&linux));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    /// The Enforced configuration sits in /etc/smcp (root:smcp 0750), which
+    /// the user cannot search: client setup still finds it by path and
+    /// passes it to smcpctl connect, which reads the client view instead.
+    #[cfg(unix)]
+    #[test]
+    fn enforced_configuration_in_an_unsearchable_directory_is_found() {
+        use std::os::unix::fs::PermissionsExt;
+        claims::partial(&["FR-20.10"]);
+        if unsafe { libc::geteuid() } == 0 {
+            return; // root searches every directory
+        }
+        let root = tmp("unsearchable");
+        let linux = host("linux", &root);
+        let cfg = root.join("etc/smcp/smcp.toml");
+        touch(&cfg);
+        std::fs::set_permissions(root.join("etc/smcp"), std::fs::Permissions::from_mode(0o000)).unwrap();
+        assert!(!cfg.exists(), "the test needs a directory this user cannot search");
+        assert!(present(&cfg));
+        assert_eq!(crate::clients::config_path(&linux), Some(cfg));
+        std::fs::set_permissions(root.join("etc/smcp"), std::fs::Permissions::from_mode(0o750)).unwrap();
         std::fs::remove_dir_all(&root).unwrap();
     }
 

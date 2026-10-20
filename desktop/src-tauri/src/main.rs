@@ -8,5 +8,12 @@ fn main() {
     if std::env::args().nth(1).as_deref() == Some("--commands") {
         std::process::exit(smcp_desktop::commands::print_report());
     }
+    // `smcp-desktop --version`: the version the application was built with,
+    // the one its update check compares with releases (FR-20.11, FR-20.13);
+    // the installer smoke tests require the release's version.
+    if std::env::args().nth(1).as_deref() == Some("--version") {
+        println!("{}", smcp_desktop::app_version());
+        return;
+    }
     smcp_desktop::run();
 }

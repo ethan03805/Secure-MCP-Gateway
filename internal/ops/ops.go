@@ -406,6 +406,8 @@ func (r *Runtime) maintainKeys(now time.Time) {
 		r.log.Warn("listener certificate reissued", "not_after", st.LeafNotAfter)
 		r.commit("key_rotated", "LISTENER_CERT_RENEWED", "system", map[string]any{"kind": "tls", "not_after": st.LeafNotAfter})
 	}
+	// The trust bundle changes when a CA rotation starts or finishes.
+	app.PublishClientView(cfg, r.log)
 }
 
 func (r *Runtime) commit(outcome, reason, actor string, detail map[string]any) {

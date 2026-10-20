@@ -229,6 +229,15 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 		return err
 	}
 	fmt.Fprintf(out, "removed %s\n", cfg.State.Dir)
+	// The client view (CP-46 public/) copies the state's CA certificate.
+	if dir := cfg.PublicDir(); dir != "" {
+		if _, err := os.Stat(dir); err == nil {
+			if err := os.RemoveAll(dir); err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "removed %s\n", dir)
+		}
+	}
 	// The diagnostic log may live outside the state directory; only its
 	// own files are removed, never the directory it sits in.
 	logs, _ := filepath.Glob(cfg.Log.File + "*")

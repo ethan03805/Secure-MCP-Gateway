@@ -7,11 +7,13 @@
 //
 //   APP=<path of smcp-desktop, with smcpctl, smcpd and smcp-refserver
 //   beside it> node e2e/webdriver.mjs     (tauri-driver on 127.0.0.1:4444)
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { consoleAndLinks } from "./console.mjs";
+import { Results } from "./results.mjs";
 
 const APP = process.env.APP;
 if (!APP || !process.env.SMCP_DESKTOP_E2E) {
@@ -25,12 +27,21 @@ const APPROVER_PW = "e2e approver password 9c1d";
 const AXE = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "node_modules", "axe-core", "axe.min.js"), "utf8");
 const ELEMENT = "element-6066-11e4-a52e-4f735466cecc";
 
-let failures = 0;
-const fail = (/** @type {string} */ m) => {
-  failures++;
-  console.log(`FAIL ${m}`);
-};
-const ok = (/** @type {string} */ m) => console.log(`ok   ${m}`);
+// Each test claims requirements partly (FR-12.10): the run covers Linux
+// only, and each requirement asks for more (docs/verification/gap-list.md).
+// The claims reach the status job through `reqreport cargo`.
+const r = new Results("e2e::linux", {
+  introduction_then_setup: ["FR-20.8", "FR-20.40"],
+  setup_profile_offer: ["FR-20.9"],
+  setup_without_passwords_in_arguments: ["FR-20.8", "SR-2-4"],
+  metrics_after_setup: ["FR-20.5"],
+  client_setup_claude_code: ["FR-20.10"],
+  axe_in_application_webview: ["FR-20.15"],
+  console_window: ["FR-20.6", "SR-2.8-5"],
+  deep_links: ["FR-20.28"],
+});
+const fail = (/** @type {string} */ m) => r.fail(m);
+const ok = (/** @type {string} */ m) => r.ok(m);
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
 
 /** @param {string} method @param {string} p @param {unknown} [body] */
@@ -115,6 +126,7 @@ const stageTitle = () => text("#stage-title").catch(() => "");
 
 try {
   // ---- Introduction, then first-run setup (FR-20.40, FR-20.8) ----
+  r.begin("introduction_then_setup");
   await windowTitled("Introduction");
   ok("the introduction opens at the first start");
   // Skip closes the window, so the click may report the window as gone.
@@ -124,10 +136,12 @@ try {
   await windowTitled("Set Up the Gateway", 60000);
   await waitFor(() => find("#setup-form"), "the setup form", 60000);
   ok("first-run setup follows the introduction when no configuration exists");
+  r.begin("axe_in_application_webview");
   await axe("setup form");
 
   // FR-20.9: Enforced is offered only with every prerequisite; the
   // Standalone statement is shown before installation.
+  r.begin("setup_profile_offer");
   const statement = await text("#standalone-statement");
   if (!/not enforced/.test(statement) || !/without container or network isolation/.test(statement)) fail(`standalone statement: ${statement}`);
   const enforced = await script("const e = document.getElementById('profile-enforced'); return e ? { disabled: e.disabled, missing: [...e.parentElement.querySelectorAll('li')].map(l => l.textContent) } : null;");
@@ -141,6 +155,7 @@ try {
   await type(await find("#approverRepeat"), APPROVER_PW);
 
   // FR-20.8: no password in any process argument list, sampled every 100 ms.
+  r.begin("setup_without_passwords_in_arguments");
   let samples = 0;
   let leaked = "";
   let sampling = true;
@@ -179,18 +194,23 @@ try {
     fail("the smcpd user unit is not active");
   }
   // FR-20.5: metrics on the CP-51 address, with the desktop gauges.
+  r.begin("metrics_after_setup");
   const metrics = await waitFor(async () => (await fetch("http://127.0.0.1:9464/metrics")).text(), "metrics on 127.0.0.1:9464");
   if (!/^smcp_release_enforced /m.test(metrics) || !/^smcp_emergency_stop /m.test(metrics)) fail("the metrics endpoint lacks the desktop gauges");
   else ok("metrics are on at 127.0.0.1:9464 with smcp_release_enforced and smcp_emergency_stop");
+  r.begin("axe_in_application_webview");
   await axe("setup done");
 
   // ---- Client setup (FR-20.10) ----
+  r.begin("client_setup_claude_code");
   const claudeJson = path.join(HOME, ".claude.json");
   const original = fs.readFileSync(claudeJson, "utf8");
   await click(await button("Set Up a Client"));
   await windowTitled("Set Up a Client", 30000);
   await waitFor(async () => (await stageTitle()) === "Agents on this computer", "the client list", 60000);
+  r.begin("axe_in_application_webview");
   await axe("client list");
+  r.begin("client_setup_claude_code");
   await click(await button("Connect Claude Code"));
   await waitFor(() => find("#lockdown"), "the preview", 60000);
   // The lockdown profile writes managed settings that need root; preview
@@ -207,7 +227,9 @@ try {
   const changes = /** @type {string[]} */ (await script("return [...document.querySelectorAll('p.change')].map(p => p.textContent);"));
   if (!changes.some((c) => c.includes(claudeJson))) fail(`the preview does not name ${claudeJson}: ${changes.join(" | ")}`);
   else ok(`the preview names ${changes.length} change(s), including ${claudeJson}`);
+  r.begin("axe_in_application_webview");
   await axe("client preview");
+  r.begin("client_setup_claude_code");
   if (fs.readFileSync(claudeJson, "utf8") !== original) fail("a file changed before Connect");
   else ok("nothing was written before Connect");
   await click(await button("Connect"));
@@ -221,10 +243,34 @@ try {
   if (fs.readFileSync(claudeJson, "utf8") !== original) fail("~/.claude.json was not restored");
   else ok("Disconnect restored ~/.claude.json");
 
-  // The console window is checked without WebDriver below: under
-  // WebKitWebDriver the application exited as soon as it opened the
-  // console window (CI, October 2026), so that window is checked with the
-  // application running on its own.
+  // The console window is checked without WebDriver below. In #177 the
+  // application exited under WebKitWebDriver as soon as it opened the
+  // console window; the cause was the Tauri navigation inside
+  // with_webview, which held the main thread (fixed in #177). Since then
+  // this diagnostic (no claim, never a failure) logs "application
+  // running" with the session intact (CI run 39437949982). The console
+  // window stays outside the WebDriver session: it is the only incognito
+  // window, and wry gives an incognito webview its own ephemeral
+  // WebKitWebContext with automation disallowed, so it cannot be driven
+  // and is checked with the application running on its own.
+  try {
+    await windowTitled("Set Up the Gateway", 10000);
+    await click(await button("Open Console"));
+    await sleep(10000);
+    let alive = true;
+    try {
+      execFileSync("pgrep", ["-f", APP], { stdio: "ignore" });
+    } catch {
+      alive = false;
+    }
+    const handles = await wd("GET", `${S}/window/handles`).then(
+      (h) => `${h.length} window(s)`,
+      (e) => `session error: ${String(e).slice(0, 300)}`,
+    );
+    console.log(`diagnostic: console window opened under WebKitWebDriver: application ${alive ? "running" : "exited"}; WebDriver session: ${handles}`);
+  } catch (e) {
+    console.log(`diagnostic: console window under WebKitWebDriver: ${String(e).slice(0, 500)}`);
+  }
 } catch (e) {
   fail(String(e instanceof Error ? e.stack : e));
 } finally {
@@ -232,64 +278,9 @@ try {
 }
 
 // ---- Console window (FR-20.6, SR-2.8-5) and deep links (FR-20.28) ----
-// The application runs on its own now (no automation). A link is passed as
-// an argument, as the desktop entry does; the application logs each
-// console page it opens ("smcp-desktop: console: <url>") and each refusal
-// of the listener's certificate.
-await sleep(2000);
-const LOG = path.join(os.tmpdir(), "smcp-desktop-direct.log");
-fs.writeFileSync(LOG, "");
-const startApp = (/** @type {string[]} */ args) => {
-  const fd = fs.openSync(LOG, "a");
-  return spawn(APP, args, { stdio: ["ignore", fd, fd] });
-};
-const consoleLines = () => fs.readFileSync(LOG, "utf8").split("\n").filter((l) => l.startsWith("smcp-desktop: console: "));
-/** Waits at most 30 s for a second start to hand its link over and exit. */
-const exitOf = (/** @type {import("node:child_process").ChildProcess} */ p) =>
-  new Promise((resolve, reject) => {
-    const t = setTimeout(() => {
-      p.kill();
-      reject(new Error("a second start did not exit within 30 s"));
-    }, 30000);
-    p.on("exit", () => {
-      clearTimeout(t);
-      resolve(undefined);
-    });
-  });
-const first = startApp(["smcp://approvals"]);
-let exited = /** @type {number | null | string} */ (null);
-first.on("exit", (code, sig) => (exited = code ?? sig));
-try {
-  await waitFor(async () => consoleLines().some((l) => l.endsWith(" https://127.0.0.1:8444/approvals")), "smcp://approvals to open the console at Approvals", 60000);
-  ok("smcp://approvals at start opened the console window at https://127.0.0.1:8444/approvals");
-  // The tray keeps updating, so the main loop runs with the console open.
-  await waitFor(async () => /smcp-desktop: tray: /.test(fs.readFileSync(LOG, "utf8")), "the tray state with the console window open", 20000);
-  ok("the tray state updates with the console window open");
-  await sleep(5000);
-  const log = fs.readFileSync(LOG, "utf8");
-  if (exited !== null) fail(`the application exited (${exited}) after opening the console window`);
-  else if (/console refused/.test(log)) fail(`the console window refused the Gateway's certificate: ${log.split("\n").filter((l) => l.includes("refused")).join(" | ")}`);
-  else ok("the console window accepted the admin listener's certificate (CA-pinned) and the application keeps running");
-  const n = consoleLines().length;
-  for (const bad of ["smcp://approvals?approve=1", "smcp://stop", "smcp://approvals/not-a-uuid", `smcp://approvals/${"a".repeat(64 * 1024)}`]) {
-    const p = startApp([bad]);
-    await exitOf(p);
-  }
-  await sleep(2000);
-  const ignored = fs.readFileSync(LOG, "utf8").split("\n").filter((l) => l === "smcp-desktop: second start: link ignored").length;
-  if (consoleLines().length !== n) fail(`a refused link opened a console page: ${consoleLines().slice(n).join(" | ")}`);
-  else if (ignored !== 4) fail(`the running application ignored ${ignored} of the 4 refused links it should have received`);
-  else ok("the 4 refused links reached the running application, which ignored them");
-  const id = "0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b";
-  const p = startApp([`smcp://approvals/${id}`]);
-  await exitOf(p);
-  await waitFor(async () => consoleLines().slice(n).some((l) => l.endsWith(`/approvals/${id}`)), "an approval link to reach the running application", 20000);
-  ok("an approval link reached the running application, which opened that approval in the console window");
-} catch (e) {
-  fail(String(e instanceof Error ? e.stack : e));
-  console.log(`application output:\n${fs.readFileSync(LOG, "utf8").split("\n").filter((l) => !l.includes("xdg-desktop-portal")).slice(-40).join("\n")}`);
-} finally {
-  first.kill();
-}
-console.log(failures ? `${failures} failure(s)` : "desktop end-to-end: setup, client setup, console window and deep links passed");
-process.exit(failures ? 1 : 0);
+// The application runs on its own now (no automation): console.mjs.
+await new Promise((res) => setTimeout(res, 2000));
+await consoleAndLinks(APP, "https://127.0.0.1:8444", r, { secondStarts: true });
+const passed = r.write();
+console.log(passed ? "desktop end-to-end: setup, client setup, console window and deep links passed" : `${r.failures} failure(s)`);
+process.exit(passed ? 0 : 1);
