@@ -20,9 +20,9 @@ directory inside the repository.
 | `release-sbom.sh` | GoReleaser before hook | Write `build/sbom/sbom.spdx.json`, the SBOM placed in every release archive (FR-13.1) |
 | `package-smoke.sh` | `installers.yml` (CI and release) | Install one platform installer (`.deb`, `.rpm` or macOS `.pkg`), check its files, owners and versions, run bootstrap, smcpd, a backup and doctor with temporary state, remove it and check that the evidence is kept (FR-20.21, FR-20.22, FR-20.24, SR-4.11-2) |
 | `package-broken.sh` | `installers.yml` (CI and release) | Truncate and alter a copy of a `.deb`, `.rpm` or `.pkg`; check that the package manager refuses each, that `package-smoke.sh` stops, and that nothing is installed (FR-20.24) |
-| `desktop-smoke.sh` | `installers.yml` (CI and release) | Install and start one Desktop Application installer (`.dmg`, `smcp-desktop` `.deb` or `.rpm`, AppImage); check signatures or package dependencies and that `smcp-desktop --commands` finds the six commands at the release version (FR-20.17 to FR-20.19, FR-20.24, FR-20.26) |
 | `ci-systemd.sh` | `ci-integration.sh` (enforced section) | `smcpctl install --profile enforced` twice, then smcpd.service under systemd with servers as `smcp-srv` |
 | `ci-install-standalone.sh` | CI job `install-standalone` | `smcpctl install` with the runner's systemd user manager or launchd, a second install, uninstall |
+| `desktop-smoke.sh` | `installers.yml` (CI and release) | Install and start one Desktop Application installer (`.dmg`, `smcp-desktop` `.deb` or `.rpm`, AppImage); check signatures or package dependencies and that `smcp-desktop --commands` finds the six commands at the release version (FR-20.17 to FR-20.19, FR-20.24, FR-20.26) |
 
 ## Merge queue
 
