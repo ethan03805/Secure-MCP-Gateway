@@ -82,7 +82,9 @@ try {
   Step 'URL scheme smcp (FR-20.28)'
   $cmd = (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\smcp\shell\open\command').'(default)'
   Write-Host "smcp: $cmd"
-  if ($cmd -notlike "*smcp-desktop.exe*%1*") { Fail "smcp is not registered for smcp-desktop.exe: $cmd" }
+  # Windows Installer may write the 8.3 short form of the path.
+  if ($cmd -notmatch '^"([^"]+)" "%1"$') { Fail "unexpected smcp command: $cmd" }
+  if ((Get-Item -LiteralPath $Matches[1]).FullName -ne (Get-Item -LiteralPath $app).FullName) { Fail "smcp is not registered for $app`: $cmd" }
   if ($null -eq (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\smcp' -Name 'URL Protocol' -ErrorAction SilentlyContinue)) { Fail 'smcp has no URL Protocol value' }
 
   Step 'test certificates (openssl)'
