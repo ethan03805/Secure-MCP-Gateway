@@ -74,12 +74,19 @@ const ref = (/** @type {any} */ v) => {
 };
 const find = (/** @type {string} */ css) =>
   waitFor(async () => ref(await wd("POST", `${S}/element`, { using: "css selector", value: css })), `element ${css}`, 15000);
-const findX = (/** @type {string} */ xp) =>
-  waitFor(async () => ref(await wd("POST", `${S}/element`, { using: "xpath", value: xp })), `element ${xp}`, 15000);
 const click = (/** @type {string} */ id) => wd("POST", `${S}/element/${id}/click`, {});
 const type = (/** @type {string} */ id, /** @type {string} */ text) => wd("POST", `${S}/element/${id}/value`, { text });
 const text = async (/** @type {string} */ css) => /** @type {string} */ (await wd("GET", `${S}/element/${await find(css)}/text`));
-const button = (/** @type {string} */ label) => findX(`//button[normalize-space(.)=${JSON.stringify(label)}]`);
+/** The button whose text is label, found in the page itself. */
+const button = (/** @type {string} */ label) =>
+  waitFor(
+    async () => ref(await script("return [...document.querySelectorAll('button')].find(b => b.textContent.trim() === arguments[0]) || null;", [label])),
+    `the button ${label}`,
+    30000,
+  ).catch(async (e) => {
+    const text = await script("return document.body.innerText;").catch(() => "");
+    throw new Error(`${e}\npage text:\n${String(text).slice(0, 1500)}`);
+  });
 
 /** Switches to the window whose document title starts with prefix. */
 async function windowTitled(/** @type {string} */ prefix, ms = 30000) {
