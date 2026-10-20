@@ -126,6 +126,18 @@ jobs:
           ls -l build/dist/*.deb build/dist/*.rpm
           n=$(find build/dist -maxdepth 1 \( -name '*.deb' -o -name '*.rpm' \) | wc -l | tr -d ' ')
           [ "$n" = 4 ] || { echo "::error::expected 4 packages (deb and rpm, amd64 and arm64), found $n"; exit 1; }
+          # Each name in the checksum file is a file here and a name GitHub
+          # keeps as a release asset (it renames "~" and other characters
+          # to "."), so `sha256sum --check` works on the downloaded release.
+          # The snapshot version (1.2.1-snapshot.<commit>) is a pre-release
+          # like v1.3.0-rc.1, so CI exercises the pre-release names.
+          sums=build/dist/smcp_${version}_checksums.txt
+          [ "$(wc -l < "$sums")" -ge 4 ] || { echo "::error::$sums lists fewer than 4 files"; exit 1; }
+          while read -r _ name; do
+            printf '%s\n' "$name" | grep -Eqx '[A-Za-z0-9_-]([A-Za-z0-9._-]*[A-Za-z0-9_-])?' \
+              || { echo "::error::$name in $sums is not a valid GitHub release asset name"; exit 1; }
+            [ -f "build/dist/$name" ] || { echo "::error::$name in $sums is not in build/dist"; exit 1; }
+          done < "$sums"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installers-linux
@@ -357,6 +369,12 @@ jobs:
           case "$ARCH" in amd64) rpm=$(ls build/installers/smcp-*.x86_64.rpm) ;; arm64) rpm=$(ls build/installers/smcp-*.aarch64.rpm) ;; esac
           dpkg-deb -x "$deb" "$RUNNER_TEMP/smcp"
           bash packaging/installers/desktop/build.sh "$VERSION" "$RUNNER_TEMP/smcp/usr/bin" build/desktop "$deb" "$rpm"
+          # As for the smcp packages: release asset names (no "~"), checked
+          # on the snapshot's pre-release version.
+          for f in build/desktop/*.deb build/desktop/*.rpm build/desktop/*.AppImage; do
+            basename "$f" | grep -Eqx '[A-Za-z0-9_-]([A-Za-z0-9._-]*[A-Za-z0-9_-])?' \
+              || { echo "::error::$(basename "$f") is not a valid GitHub release asset name"; exit 1; }
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installers-desktop-linux-${{ matrix.arch }}

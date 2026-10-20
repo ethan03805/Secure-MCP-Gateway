@@ -730,3 +730,26 @@ Observations:
 - `smcpctl upgrade` from v1.0.0 to the candidate v1.1.0-rc.2 (same commit) reported `release verified`, the backup, `upgrade complete` and version `1.1.0-rc.2`; the journal verified afterwards.
 
 Deviation: none.
+
+## FR-13.1 Release archives (v1.2.0)
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-13.1 |
+| Commit | `176c7256437038ae8f2b878e461581c688c6bb16` |
+| Profile and platform | Not profile-specific; the GitHub Releases v1.2.0-rc.1 and v1.2.0, inspected on macOS 26.6.2, darwin/arm64 |
+| Date | 2026-10-19 |
+| Executor | Claude Code agent (v1.2.0 release task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: downloaded the assets of v1.2.0 (release run 39325918743) and of the candidate v1.2.0-rc.1 on the same commit (release run 39321753402), verified the checksum file with minisign against the key in `SECURITY.md` and with `cosign verify-blob` against its Sigstore bundle, ran `shasum -a 256 -c` on the checksum file, compared the names in the checksum file with the asset names, ran `install.sh` without `--version` from `main` into an empty directory, and ran `smcpctl upgrade` from v1.1.0 to v1.2.0-rc.1.
+
+Observations:
+
+- Four archives, `smcp_1.2.0_darwin_arm64.tar.gz`, `_darwin_amd64`, `_linux_amd64` and `_linux_arm64` (`.goreleaser.yaml:109`), each with the binaries, `LICENSE`, the documents, `sbom.spdx.json`, `PROVENANCE.md`, `THIRD_PARTY_NOTICES.txt`, the recipe and the lockfiles (`.goreleaser.yaml:116` to `.goreleaser.yaml:130`); the release workflow checked each archive for all of them before signing (`.github/workflows/release.yml:111`).
+- First release with platform installers: `smcp_1.2.0_amd64.deb`, `smcp_1.2.0_arm64.deb`, `smcp-1.2.0-1.x86_64.rpm`, `smcp-1.2.0-1.aarch64.rpm` (`.goreleaser.yaml:149`) and `smcp_1.2.0_darwin_arm64.pkg`, each installed, exercised and removed by `scripts/package-smoke.sh` in the `installers` job that the release job needs (`.github/workflows/release.yml:34`), and uploaded unchanged (`.goreleaser.yaml:295`).
+- `smcp_1.2.0_checksums.txt` (`.goreleaser.yaml:204`) lists 13 files, the four archives, their four SBOMs and the five installers (`.goreleaser.yaml:212`), and every name is a release asset; `shasum -c` verified all 13. The file is signed with minisign (`.goreleaser.yaml:221`; "Signature and comment signature verified") and by cosign keyless ("Verified OK"). `release-label.md` and the release notes carry the label "enforced" (21 of 21 scenarios in the Enforced profile, 20 of 21 in Standalone).
+- `install.sh` resolved the latest release to v1.2.0, verified the signatures and the checksum, and installed binaries that report `1.2.0`. The tap formula is 1.2.0 and the `tap` workflow passed (run 39330362409). `smcpctl upgrade` from v1.1.0 to v1.2.0-rc.1 reported `release verified` and `upgrade complete`.
+
+Deviation: in the pre-release v1.2.0-rc.1 the checksum file named the four Linux packages with `~` (`smcp_1.2.0~rc.1_amd64.deb`), while GitHub stored them with `.` (`smcp_1.2.0.rc.1_amd64.deb`), so `shasum -c` on the downloaded pre-release failed for those four files. The final release has no `~` in any name and is not affected. Fixed after the release in `.goreleaser.yaml` (the package file names replace `~` with `.`) with checks in `.github/workflows/installers.yml` and `.github/workflows/release.yml`.

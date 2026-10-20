@@ -348,6 +348,37 @@ func TestInstallersInChecksumFile(t *testing.T) {
 	}
 }
 
+// TestPackageFileNamesAreAssetNames: a pre-release package (version
+// 1.3.0~rc.1 inside the .deb and .rpm) has no "~" in its file name, which
+// GitHub would rename on upload so that the name in the signed checksum
+// file no longer matches the asset (FR-20.23; found in the v1.2.0-rc.1
+// rehearsal). The installers workflow checks the names in the checksum
+// file of a snapshot, whose version is a pre-release, and the release
+// workflow checks them against the uploaded assets.
+func TestPackageFileNamesAreAssetNames(t *testing.T) {
+	reqtest.Partial(t, "FR-20.23")
+	if n := goreleaserBlock(t, "nfpms"); !strings.Contains(n, `file_name_template: '{{ replace .ConventionalFileName "~" "." }}'`) {
+		t.Error(`the nfpms file_name_template does not replace "~" in the file name`)
+	}
+	if b, err := os.ReadFile(filepath.Join(repoRoot, "packaging/installers/desktop/build.sh")); err != nil {
+		t.Fatal(err)
+	} else if !strings.Contains(string(b), `tr '~' '.'`) {
+		t.Error(`desktop/build.sh does not replace "~" in the smcp-desktop .deb and .rpm file names`)
+	}
+	for f, want := range map[string]string{
+		"installers.yml": "is not a valid GitHub release asset name",
+		"release.yml":    "is not an asset of release",
+	} {
+		b, err := os.ReadFile(filepath.Join(repoRoot, ".github/workflows", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), want) {
+			t.Errorf("%s lacks the checksum file name check %q", f, want)
+		}
+	}
+}
+
 // TestMacPkgBuildScript inspects packaging/installers/macos/build-pkg.sh:
 // pkgbuild and productbuild (FR-20.17), the binaries in /usr/local/lib/smcp
 // with links in /usr/local/bin, root ownership (SR-4.11-2), an ad-hoc
