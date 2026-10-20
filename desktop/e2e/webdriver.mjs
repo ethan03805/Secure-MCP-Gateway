@@ -243,15 +243,16 @@ try {
   if (fs.readFileSync(claudeJson, "utf8") !== original) fail("~/.claude.json was not restored");
   else ok("Disconnect restored ~/.claude.json");
 
-  // The console window is checked without WebDriver below: under
-  // WebKitWebDriver the application exited as soon as it opened the
-  // console window (CI, October 2026), so that window is checked with the
-  // application running on its own. The console window is the only
-  // incognito window, and wry gives an incognito webview its own ephemeral
-  // WebKitWebContext with automation disallowed, while the automated
-  // windows share one context. This diagnostic (no claim, never a failure)
-  // opens it from the setup window under WebDriver and records what
-  // happens to the application and the session.
+  // The console window is checked without WebDriver below. In #177 the
+  // application exited under WebKitWebDriver as soon as it opened the
+  // console window; the cause was the Tauri navigation inside
+  // with_webview, which held the main thread (fixed in #177). Since then
+  // this diagnostic (no claim, never a failure) logs "application
+  // running" with the session intact (CI run 39437949982). The console
+  // window stays outside the WebDriver session: it is the only incognito
+  // window, and wry gives an incognito webview its own ephemeral
+  // WebKitWebContext with automation disallowed, so it cannot be driven
+  // and is checked with the application running on its own.
   try {
     await windowTitled("Set Up the Gateway", 10000);
     await click(await button("Open Console"));
