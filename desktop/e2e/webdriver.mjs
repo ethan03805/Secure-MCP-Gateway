@@ -254,8 +254,10 @@ try {
     await new Promise((r) => p.on("exit", r));
   }
   await sleep(2000);
+  const ignored = fs.readFileSync(LOG, "utf8").split("\n").filter((l) => l === "smcp-desktop: second start: link ignored").length;
   if (consoleLines().length !== n) fail(`a refused link opened a console page: ${consoleLines().slice(n).join(" | ")}`);
-  else ok("refused links reached the running application and opened nothing");
+  else if (ignored !== 4) fail(`the running application ignored ${ignored} of the 4 refused links it should have received`);
+  else ok("the 4 refused links reached the running application, which ignored them");
   const id = "0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b";
   const p = startApp([`smcp://approvals/${id}`]);
   await new Promise((r) => p.on("exit", r));

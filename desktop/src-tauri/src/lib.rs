@@ -960,10 +960,15 @@ pub fn run() {
         // First, so a second start only focuses the first (FR-20.14).
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // A deep link opened while the application runs arrives here
-            // on Linux and Windows (FR-20.28); any other second start
-            // focuses the console window. The plugin may call this off the
-            // main thread, where windows must not be built.
-            let page = deeplink::from_args(argv).unwrap_or(Page::Home);
+            // on Linux and Windows (FR-20.28); a refused link is ignored,
+            // and a second start without a link focuses the console window.
+            // The plugin may call this off the main thread, where windows
+            // must not be built.
+            let Some(page) = deeplink::on_second_start(&argv) else {
+                eprintln!("smcp-desktop: second start: link ignored");
+                return;
+            };
+            eprintln!("smcp-desktop: second start");
             let a = app.clone();
             let _ = app.run_on_main_thread(move || open_console(&a, page));
         }))
