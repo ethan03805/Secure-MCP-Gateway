@@ -305,8 +305,18 @@ jobs:
         run: npm run check-diagrams
         working-directory: site
 
+  # security has the same needs as the heavy jobs, so on a pull request
+  # GitHub creates it in the same step as them. A job that waits for its
+  # needs has no check run yet, while the skipped go, linux-integration and
+  # console of the earlier draft run of the same commit still satisfy
+  # branch protection; the pending required security check keeps the pull
+  # request blocked until the new heavy checks exist (docs/ci.md, "Staged
+  # pull request runs and draft pull requests"). It runs on drafts and when
+  # srs or lint failed.
   security:
     name: security
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
