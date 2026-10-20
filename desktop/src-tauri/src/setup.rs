@@ -947,7 +947,18 @@ mod tests {
             .into_iter()
             .find(|p| p.is_file())
             .expect("no configuration was written");
-        assert!(service::detect(&host).is_some(), "no service was installed");
+        // The service definition: on Windows the per-user task (or Run
+        // value) file beside the configuration, which service::detect also
+        // reads but only with an smcpctl in an installed place.
+        let installed = |h: &Host| {
+            if h.os == "windows" {
+                let dir = cfg.parent().unwrap();
+                dir.join(service::WIN_TASK_FILE).is_file() || dir.join(service::WIN_RUN_FILE).is_file()
+            } else {
+                service::detect(h).is_some()
+            }
+        };
+        assert!(installed(&host), "no service was installed");
         let state = cfg.parent().unwrap().parent().unwrap().join("state");
         assert!(
             state.join("keys").join("evidence-genesis.pub").is_file(),
@@ -984,7 +995,7 @@ mod tests {
             String::from_utf8_lossy(&out.stdout),
             String::from_utf8_lossy(&out.stderr)
         );
-        assert!(service::detect(&host).is_none(), "the service is still installed");
+        assert!(!installed(&host), "the service is still installed");
     }
 
     #[test]
