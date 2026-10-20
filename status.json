@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T09:44:53Z",
-  "commit": "45a6a7359caefe702be972567b272bc872260c7f",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/45a6a7359caefe702be972567b272bc872260c7f",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39394936017",
+  "generatedAt": "2026-10-20T10:40:14Z",
+  "commit": "a1c1615c0d8554584c737c4a5d45d18ecbfab9ce",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/a1c1615c0d8554584c737c4a5d45d18ecbfab9ce",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39401304503",
   "tests": {
-    "total": 1923,
-    "passed": 1902,
-    "failed": 2,
+    "total": 1903,
+    "passed": 1884,
+    "failed": 0,
     "skipped": 19,
-    "durationSec": 1987.5,
+    "durationSec": 2572.1,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -109,7 +109,7 @@
       },
       {
         "name": "internal/adapter",
-        "passed": 21,
+        "passed": 20,
         "failed": 0,
         "skipped": 0
       },
@@ -235,7 +235,7 @@
       },
       {
         "name": "internal/durable",
-        "passed": 2,
+        "passed": 1,
         "failed": 0,
         "skipped": 0
       },
@@ -247,8 +247,8 @@
       },
       {
         "name": "internal/edge",
-        "passed": 148,
-        "failed": 1,
+        "passed": 144,
+        "failed": 0,
         "skipped": 1
       },
       {
@@ -265,7 +265,7 @@
       },
       {
         "name": "internal/filters",
-        "passed": 66,
+        "passed": 65,
         "failed": 0,
         "skipped": 0
       },
@@ -283,7 +283,7 @@
       },
       {
         "name": "internal/health",
-        "passed": 8,
+        "passed": 7,
         "failed": 0,
         "skipped": 0
       },
@@ -301,7 +301,7 @@
       },
       {
         "name": "internal/keys",
-        "passed": 15,
+        "passed": 14,
         "failed": 0,
         "skipped": 2
       },
@@ -342,6 +342,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/ops",
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/packaging",
         "passed": 16,
         "failed": 0,
@@ -355,13 +361,13 @@
       },
       {
         "name": "internal/perf/run",
-        "passed": 5,
-        "failed": 1,
+        "passed": 6,
+        "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/pipeline",
-        "passed": 27,
+        "passed": 23,
         "failed": 0,
         "skipped": 0
       },
@@ -475,7 +481,7 @@
       },
       {
         "name": "internal/winpipe",
-        "passed": 2,
+        "passed": 1,
         "failed": 0,
         "skipped": 0
       },
@@ -487,13 +493,13 @@
       },
       {
         "name": "internal/winsec",
-        "passed": 7,
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "internal/winsvc",
-        "passed": 6,
+        "passed": 4,
         "failed": 0,
         "skipped": 0
       },
@@ -620,7 +626,7 @@
       },
       {
         "name": "internal/backend",
-        "pct": 92.7
+        "pct": 92.4
       },
       {
         "name": "internal/backup",
@@ -676,7 +682,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.3
+        "pct": 91.5
       },
       {
         "name": "internal/egress",
@@ -692,7 +698,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.5
       },
       {
         "name": "internal/gwtest",
@@ -708,7 +714,7 @@
       },
       {
         "name": "internal/hostile",
-        "pct": 62.2
+        "pct": 62.4
       },
       {
         "name": "internal/ids",
@@ -744,7 +750,7 @@
       },
       {
         "name": "internal/ops",
-        "pct": 73.4
+        "pct": 73.5
       },
       {
         "name": "internal/packaging",
@@ -800,7 +806,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 84.3
+        "pct": 84.4
       },
       {
         "name": "internal/sandbox/probe",
@@ -808,7 +814,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.5
+        "pct": 79.8
       },
       {
         "name": "internal/session",
@@ -816,7 +822,7 @@
       },
       {
         "name": "internal/southbound",
-        "pct": 85.3
+        "pct": 85.5
       },
       {
         "name": "internal/southbound/sbtest",
@@ -902,18 +908,18 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 490,
+    "verified": 491,
     "partial": 38,
-    "failing": 2,
+    "failing": 0,
     "unverified": 1,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 25,
+        "verified": 26,
         "partial": 5,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-02",
@@ -1566,8 +1572,7 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
-          "internal/edge.TestUDSHarnessTransport",
-          "internal/edge.TestWindowsPipeTransport"
+          "internal/edge.TestUDSHarnessTransport"
         ]
       },
       {
@@ -1753,8 +1758,7 @@
         "element": "E-03",
         "status": "verified",
         "tests": [
-          "internal/edge.TestUDSPeerAndKey",
-          "internal/edge.TestWindowsPipePeerAndKey"
+          "internal/edge.TestUDSPeerAndKey"
         ]
       },
       {
@@ -4086,7 +4090,7 @@
       {
         "id": "FR-11.5",
         "element": "E-01",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
@@ -4283,7 +4287,6 @@
           "internal/adapter.TestRelayUnixSocket",
           "internal/adapter.TestStdioBridgeRawEquivalence",
           "internal/adapter.TestStdioBridgeWithSDKClient",
-          "internal/adapter.TestWindowsPipeRelay",
           "internal/conformance.TestConformanceThroughAdapters"
         ]
       },
@@ -4595,7 +4598,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (a1c1615c0d85, 2026-10-20T09:43:40Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39401304266"
+          "workflow agents-lockdown at main (0292e9eb2aa4, 2026-10-20T10:37:49Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39407593245"
         ]
       },
       {
@@ -4664,7 +4667,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (a1c1615c0d85, 2026-10-20T09:43:38Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39401304266"
+          "workflow agents at main (0292e9eb2aa4, 2026-10-20T10:37:46Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39407593245"
         ]
       },
       {
@@ -7333,8 +7336,7 @@
         "element": "E-24",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestInstallWindowsVersionRefused",
-          "internal/winsvc.TestWindowsHostVersionSupported"
+          "cmd/smcpctl.TestInstallWindowsVersionRefused"
         ],
         "target": "v1.3.0"
       },
@@ -7365,8 +7367,7 @@
         "status": "partial",
         "tests": [
           "cmd/smcpctl.TestInstallWindowsUser",
-          "internal/keys.TestWindowsKeyProtection",
-          "internal/winsec.TestWindowsProtectedDACL"
+          "internal/ops.TestStateProtectionCauses"
         ],
         "target": "v1.3.0"
       },
@@ -7377,39 +7378,29 @@
         "tests": [
           "cmd/smcpctl.TestInstallWindowsRunKeyFallback",
           "cmd/smcpctl.TestInstallWindowsUser",
-          "cmd/smcpctl.TestInstallWindowsWithoutLauncher",
-          "internal/winsvc.TestWindowsSuperviseRestartsAndStops"
+          "cmd/smcpctl.TestInstallWindowsWithoutLauncher"
         ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-21.7",
         "element": "E-12",
-        "status": "partial",
-        "tests": [
-          "internal/winsvc.TestWindowsSuperviseRestartsAndStops"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
         "id": "FR-21.8",
         "element": "E-01",
-        "status": "partial",
-        "tests": [
-          "internal/adapter.TestWindowsPipeRelay",
-          "internal/edge.TestWindowsPipePeerAndKey",
-          "internal/edge.TestWindowsPipeTransport"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
         "id": "FR-21.9",
         "element": "E-03",
-        "status": "partial",
-        "tests": [
-          "internal/edge.TestWindowsPipePeerAndKey",
-          "internal/winpipe.TestWindowsPipeListenDialIdentify"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
@@ -7417,8 +7408,7 @@
         "element": "E-22",
         "status": "partial",
         "tests": [
-          "internal/keys.TestWindowsKeyProtection",
-          "internal/winsec.TestWindowsDPAPIRoundTrip"
+          "internal/ops.TestStateProtectionCauses"
         ],
         "target": "v1.3.0"
       },
@@ -7429,7 +7419,6 @@
         "tests": [
           "internal/library.TestWindowsEnableRefusesShellLaunch",
           "internal/pipeline.TestCheckLaunchSpecWindowsRules",
-          "internal/pipeline.TestWindowsSubprocessLauncher",
           "internal/winsandbox.TestCheckCommand"
         ],
         "target": "v1.3.0"
@@ -7440,9 +7429,7 @@
         "status": "partial",
         "tests": [
           "internal/app.TestRuntimeLimits",
-          "internal/pipeline.TestLimitsForDefaults",
-          "internal/pipeline.TestWindowsLaunchProcessLimit",
-          "internal/pipeline.TestWindowsSubprocessLauncher"
+          "internal/pipeline.TestLimitsForDefaults"
         ],
         "target": "v1.3.0"
       },
@@ -7452,7 +7439,6 @@
         "status": "partial",
         "tests": [
           "internal/library.TestContainmentFollowsRegistryStates",
-          "internal/pipeline.TestWindowsMachineModePlacement",
           "internal/profile.TestPartiallyConfinedCause"
         ],
         "target": "v1.3.0"
@@ -7463,8 +7449,7 @@
         "status": "partial",
         "tests": [
           "internal/egress.TestAttachFixedProxyPort",
-          "internal/library.TestContainmentFollowsRegistryStates",
-          "internal/pipeline.TestWindowsMachineModePlacement"
+          "internal/library.TestContainmentFollowsRegistryStates"
         ],
         "target": "v1.3.0"
       },
@@ -7478,10 +7463,8 @@
       {
         "id": "FR-21.16",
         "element": "E-33",
-        "status": "partial",
-        "tests": [
-          "internal/adapter.TestWindowsPipeRelay"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
@@ -7529,11 +7512,8 @@
       {
         "id": "FR-21.23",
         "element": "E-05",
-        "status": "partial",
-        "tests": [
-          "internal/durable.TestWindowsDurableWrites",
-          "internal/winsec.TestWindowsFreeBytesAndReplace"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
@@ -7546,20 +7526,15 @@
       {
         "id": "FR-21.25",
         "element": "E-15",
-        "status": "partial",
-        "tests": [
-          "internal/filters.TestWindowsPathRules"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
         "id": "FR-21.26",
         "element": "E-23",
-        "status": "partial",
-        "tests": [
-          "internal/health.TestWindowsFreeSpaceMeasured",
-          "internal/winsec.TestWindowsFreeBytesAndReplace"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
@@ -8122,10 +8097,8 @@
       {
         "id": "SR-2.8-6",
         "element": "E-01",
-        "status": "failing",
-        "tests": [
-          "internal/edge.TestWindowsPipeSecurityDescriptor"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
@@ -8149,10 +8122,8 @@
       {
         "id": "SR-2.13-4",
         "element": "E-19",
-        "status": "partial",
-        "tests": [
-          "internal/winsec.TestWindowsDPAPIRoundTrip"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
@@ -8237,10 +8208,8 @@
       {
         "id": "SR-4.5-3",
         "element": "E-18",
-        "status": "partial",
-        "tests": [
-          "internal/pipeline.TestWindowsMachineModePlacement"
-        ],
+        "status": "planned",
+        "tests": [],
         "target": "v1.3.0"
       },
       {
@@ -8255,8 +8224,7 @@
         "element": "E-16",
         "status": "partial",
         "tests": [
-          "internal/library.TestContainmentFollowsRegistryStates",
-          "internal/pipeline.TestWindowsMachineModePlacement"
+          "internal/library.TestContainmentFollowsRegistryStates"
         ],
         "target": "v1.3.0"
       },
@@ -8274,7 +8242,6 @@
         "tests": [
           "internal/library.TestWindowsEnableRefusesShellLaunch",
           "internal/pipeline.TestCheckLaunchSpecWindowsRules",
-          "internal/pipeline.TestWindowsLaunchRefusesInterpreters",
           "internal/winsandbox.TestCheckCommand"
         ],
         "target": "v1.3.0"
@@ -8981,7 +8948,7 @@
       "attack": "Slow-drip response",
       "expected": "Call ends at the CP-13 deadline with `-31009` `UPSTREAM_TIMEOUT`; instance restarted",
       "fixture": "HF-17",
-      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
+      "observed": "standalone: call: error -31009 UPSTREAM_TIMEOUT after 2.1s (upstream_timeout 2s); instance restarted: true (next echo answered) | enforced: call: error -31009 UPSTREAM_TIMEOUT after 2s (upstream_timeout 2s); instance restarted: true (next echo answered)",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9050,7 +9017,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:38183: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39325: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9167,7 +9134,7 @@
     }
   ],
   "acceptance": {
-    "commit": "45a6a7359caefe702be972567b272bc872260c7f",
+    "commit": "a1c1615c0d8554584c737c4a5d45d18ecbfab9ce",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9859,20 +9826,20 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "45a6a7359caefe702be972567b272bc872260c7f",
-    "generatedAt": "2026-10-20T09:11:59Z",
+    "commit": "a1c1615c0d8554584c737c4a5d45d18ecbfab9ce",
+    "generatedAt": "2026-10-20T09:58:31Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000015784",
+      "runner": "GitHub Actions 1000016069",
       "memoryBytes": 16766414848,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90410278912,
-      "diskDevice": "nvme0n1p1",
-      "diskModel": "MSFT NVMe Accelerator v1.0",
+      "diskFreeBytes": 90409672704,
+      "diskDevice": "sda1",
+      "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
       "imageVersion": "20261012.334.1"
@@ -9894,7 +9861,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.018748,
+        "value": 0.035626,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9907,11 +9874,11 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 83.090269,
+        "value": 18.204864,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
-        "pass": false,
+        "pass": true,
         "complete": true,
         "method": "real smcpd with synchronous scoring, 8 concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (request receipt to delivered, minus dispatched to the backend's response)"
       },
@@ -9920,19 +9887,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.2743663750000014,
+        "value": 0.9247753750000012,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (8.295 ms, mean of 8.001, 7.979, 8.587, 8.194, 8.299, 8.528, 8.396, 8.373) minus disabled (8.020 ms, mean of 8.017, 7.493, 7.819, 7.928, 8.351, 8.309, 7.961, 8.284), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.533 ms, mean of 10.532, 10.864, 10.561, 11.088, 10.485, 10.333, 10.635, 9.771) minus disabled (9.609 ms, mean of 9.629, 9.826, 9.405, 9.799, 9.967, 9.449, 9.652, 9.143), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9654847223292,
+        "value": 1999.965846873228,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9944,7 +9911,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 664.999205,
+        "value": 806.878668,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9956,12 +9923,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1552.46875,
+        "value": 1538.46875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m18s after start with no traffic: smcpd (125.4 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1427.1 MiB in 2 processes, process 4014 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m17s after start with no traffic: smcpd (120.4 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1418.1 MiB in 2 processes, process 4258 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
