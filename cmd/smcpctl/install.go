@@ -51,11 +51,12 @@ type installer struct {
 	noStart    bool
 	healthWait time.Duration
 	boot       bootstrapOpts
+	win        winHooks // Windows per-user mode (install_winuser.go)
 }
 
 func installCmd(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
-	profile := fs.String("profile", "standalone", "platform profile: standalone (macOS, Linux) or enforced (Linux, as root)")
+	profile := fs.String("profile", "standalone", "platform profile: standalone (macOS, Linux, Windows per-user) or enforced (Linux, as root)")
 	binDir := fs.String("bin-dir", "", "directory holding smcpd, smcpctl and smcp-refserver (default: the directory of this smcpctl)")
 	noStart := fs.Bool("no-start", false, "write the service unit but do not load or start it, and skip the health check")
 	check := fs.Bool("check", false, "check the profile's prerequisites (FR-13.5) and the binaries, change nothing, and exit non-zero naming each missing one")
@@ -96,7 +97,7 @@ func installCmd(args []string, out io.Writer) error {
 
 func newInstaller(out io.Writer) *installer {
 	in := &installer{goos: runtime.GOOS, home: homeDir(), getenv: os.Getenv, uid: os.Getuid(), root: hostRoot, out: out,
-		healthWait: installHealthWait}
+		healthWait: installHealthWait, win: defaultWinHooks()}
 	if exe, err := os.Executable(); err == nil {
 		in.binDir = filepath.Dir(exe)
 	}
@@ -224,6 +225,16 @@ func (in *installer) layout() (standaloneLayout, error) {
 			sandbox:  filepath.Join(base, "sandbox"),
 			unit:     filepath.Join(in.home, "Library", "LaunchAgents", launchdLabel+".plist"),
 		}, nil
+	case "windows":
+		// CP-46, Windows per-user mode (FR-21.5).
+		base := filepath.Join(in.localAppData(), "smcp-gateway")
+		return standaloneLayout{
+			cfgDir:   filepath.Join(base, "config"),
+			stateDir: filepath.Join(base, "state"),
+			logDir:   filepath.Join(base, "log"),
+			sandbox:  filepath.Join(base, "sandbox"),
+			unit:     filepath.Join(base, "config", winTaskFile),
+		}, nil
 	case "linux":
 		state := filepath.Join(in.xdg("XDG_STATE_HOME", ".local/state"), "smcp-gateway")
 		l := standaloneLayout{
@@ -238,7 +249,7 @@ func (in *installer) layout() (standaloneLayout, error) {
 		}
 		return l, nil
 	}
-	return standaloneLayout{}, fmt.Errorf("the Standalone profile is installed on macOS and Linux, not %s", in.goos)
+	return standaloneLayout{}, fmt.Errorf("the Standalone profile is installed on macOS, Linux and Windows, not %s", in.goos)
 }
 
 // standaloneConfigPath is where install writes the Standalone
@@ -277,6 +288,9 @@ func (in *installer) needBinaries(names ...string) error {
 }
 
 func (in *installer) standalone() error {
+	if in.goos == "windows" {
+		return in.windowsUser()
+	}
 	l, err := in.layout()
 	if err != nil {
 		return err

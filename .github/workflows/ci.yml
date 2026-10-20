@@ -566,7 +566,7 @@ jobs:
             ./internal/policyadmin ./internal/policystore
             ./internal/posixacl ./internal/profile ./internal/reqtest
             ./internal/sandbox/probe ./internal/session ./internal/testport
-            ./internal/versions ./internal/winsandbox ./internal/winsec ./packaging/linux
+            ./internal/versions ./internal/winsandbox ./internal/winsec ./internal/winsvc ./packaging/linux
             ./tools/provenance ./tools/reqreport ./tools/sbomcheck
             ./tools/uilint
         run: |
@@ -577,7 +577,7 @@ jobs:
           # (build/windows-test.json, FR-21.19); their names are unique to
           # Windows, so they never replace a Linux result of the same test.
           rc=0
-          go test -json -count=1 -run '^TestWindows' ./internal/keys ./internal/pipeline ./internal/edge ./internal/winsec ./internal/durable ./internal/health > build/windows-test.json || rc=1
+          go test -json -count=1 -run '^TestWindows' ./internal/keys ./internal/pipeline ./internal/edge ./internal/winsec ./internal/winsvc ./internal/durable ./internal/health > build/windows-test.json || rc=1
           jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Package | sub(".*/secure-mcp-gateway/"; ""))\t\(.Test)"' build/windows-test.json
           exit "$rc"
       # The Windows backend sandbox (FR-21.11, FR-21.12, SR-4.8-2): Job
@@ -594,6 +594,16 @@ jobs:
             jq -r 'select(.Action == "output") | .Output' build/windows-sandbox-test.json | tail -200
             exit 1
           fi
+      # FR-21.5, FR-21.6, FR-21.7, FR-21.10: smcpctl install in the per-user
+      # mode, the DACLs and DPAPI keys, the task, a killed smcpd restarted
+      # by its supervisor, and uninstall's orderly stop through the stop
+      # event (scripts/windows-install-smoke.ps1).
+      - name: Per-user install smoke test
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build\win\bin | Out-Null
+          foreach ($c in 'smcpd', 'smcpctl', 'smcp-refserver') { go build -o "build\win\bin\$c.exe" "./cmd/$c"; if ($LASTEXITCODE) { exit 1 } }
+          ./scripts/windows-install-smoke.ps1 -BinDir build\win\bin
       - name: Every package, measured (informational, never fails)
         continue-on-error: true
         run: |

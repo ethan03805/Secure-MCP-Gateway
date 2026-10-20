@@ -277,7 +277,9 @@ func (f *Fetcher) fetchPyPI(ctx context.Context, r ArtifactRef, dir string) (*Fe
 }
 
 func (f *Fetcher) fetchBinary(ctx context.Context, r ArtifactRef, dir string) (*Fetched, error) {
-	name := path.Base(r.Name)
+	// A local artifact is a path of this platform (with backslashes on
+	// Windows); a download names its file by the last URL path element.
+	name := filepath.Base(r.Name)
 	if strings.HasPrefix(r.Name, "https://") {
 		u, err := url.Parse(r.Name)
 		if err != nil {

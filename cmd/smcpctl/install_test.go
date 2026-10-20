@@ -133,7 +133,7 @@ func testInstaller(t *testing.T, goos, home string, env map[string]string, f *fa
 	pw := t.TempDir()
 	var out bytes.Buffer
 	in := &installer{goos: goos, home: home, getenv: func(k string) string { return env[k] }, uid: os.Getuid(),
-		binDir: binDir, out: &out, run: f.run, ok: f.ok, healthWait: installHealthWait,
+		binDir: binDir, out: &out, run: f.run, ok: f.ok, healthWait: installHealthWait, win: defaultWinHooks(),
 		chown:     func(string, string, string) error { return nil },
 		chownTree: func(string, string, string) error { return nil },
 		boot: bootstrapOpts{
@@ -271,9 +271,9 @@ func TestInstallRefusals(t *testing.T) {
 	reqtest.Partial(t, "FR-13.5")
 	home := t.TempDir()
 	f := &fakeManager{t: t}
-	in, out := testInstaller(t, "windows", home, nil, f)
-	if err := in.standalone(); err == nil || !strings.Contains(err.Error(), "macOS and Linux") {
-		t.Fatalf("standalone on windows: %v", err)
+	in, out := testInstaller(t, "freebsd", home, nil, f)
+	if err := in.standalone(); err == nil || !strings.Contains(err.Error(), "macOS, Linux and Windows") {
+		t.Fatalf("standalone on freebsd: %v", err)
 	}
 	in.goos = "darwin"
 	if err := in.enforced(); err == nil || !strings.Contains(err.Error(), "needs Linux") {

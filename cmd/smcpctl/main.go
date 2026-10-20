@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"golang.org/x/term"
@@ -17,6 +18,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 const usage = `usage: smcpctl <command> [flags]
@@ -248,7 +250,13 @@ func readPrivateFile(path string) ([]byte, error) {
 	if !st.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s is not a regular file", path)
 	}
-	if perm := st.Mode().Perm(); perm&0o077 != 0 {
+	if runtime.GOOS == "windows" {
+		// No POSIX modes on Windows: only this account, SYSTEM and
+		// Administrators may have access (FR-21.2).
+		if err := winsec.CheckOwnerOnly(path); err != nil {
+			return nil, fmt.Errorf("a secret file must be readable by your account only: %w", err)
+		}
+	} else if perm := st.Mode().Perm(); perm&0o077 != 0 {
 		return nil, fmt.Errorf("%s has mode %04o; a secret file must be mode 0600 or stricter (chmod 600 %s)", path, perm, path)
 	}
 	return io.ReadAll(io.LimitReader(f, 64<<10))

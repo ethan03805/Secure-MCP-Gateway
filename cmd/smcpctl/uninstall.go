@@ -63,7 +63,7 @@ func scopeFor(profileMode string) uninstallScope {
 // profile being uninstalled.
 func (s uninstallScope) removesUnit(kind string) bool {
 	switch kind {
-	case "launchd", "systemd-user":
+	case "launchd", "systemd-user", "win-task", "win-run":
 		return !s.enforced
 	default: // systemd-system, systemd-aux, nft-ruleset
 		return s.enforced
@@ -147,6 +147,8 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 				_ = runQuiet("systemctl", "--user", "disable", "--now", systemdUnit)
 			case "systemd-system", "systemd-aux":
 				_ = runQuiet(asRoot("systemctl", "disable", filepath.Base(u.path))...)
+			case "win-task", "win-run":
+				winRemoveUnit(u)
 			}
 		}
 		err := os.Remove(u.path)
@@ -188,6 +190,7 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 		if pkgFormat != "" {
 			break
 		}
+		name = exeName(runtime.GOOS, name)
 		for _, p := range []string{filepath.Join(*binDir, name), filepath.Join(*binDir, name+".prev")} {
 			if err := os.Remove(p); err == nil {
 				fmt.Fprintf(out, "removed %s\n", p)
