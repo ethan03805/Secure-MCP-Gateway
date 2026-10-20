@@ -391,6 +391,9 @@ func (l *Library) applyRevocations(actor string, rep *ScanReport) []string {
 				gone = append(gone, r.Alias)
 			}
 			l.setState(r, StateRevoked, "revocation entry: "+rv.Reason, actor)
+			if err := l.release(r, actor); err != nil {
+				rep.Errors = append(rep.Errors, err.Error())
+			}
 			_ = l.evidence(audit.Event{Origin: "E-13", Outcome: "revoked", ReasonCode: ReasonRevoked, ServerRevision: key,
 				Detail: map[string]any{"reason": rv.Reason, "signer_key_id": rv.SignerKeyID, "revoked_at": rv.RevokedAt}})
 		}
@@ -479,9 +482,16 @@ func (l *Library) Enable(id, rev string, o EnableOptions) (Revision, error) {
 	if err != nil {
 		return *r, err
 	}
+	if err := l.contain(r, o.Actor); err != nil {
+		_ = l.evidence(audit.Event{Outcome: "enable_refused", ReasonCode: packaging.ReasonOf(err), ServerRevision: r.Key(), Detail: map[string]any{"actor": o.Actor, "error": err.Error()}})
+		return *r, err
+	}
 	for _, x := range l.doc.Revisions {
 		if x != r && x.ServerID == id && x.State == StateEnabled {
 			l.setState(x, StateVerifiedDisabled, "superseded by "+rev, o.Actor)
+			if err := l.release(x, o.Actor); err != nil {
+				l.log.Warn("containment of a superseded revision not removed", "revision", x.Key(), "err", err)
+			}
 		}
 	}
 	if o.Alias != "" {
@@ -575,10 +585,14 @@ func (l *Library) SetState(id, rev, state, reason, actor string) (Revision, stri
 	if err := l.save(); err != nil {
 		return *r, gone, err
 	}
+	var relErr error
+	if state != StateSuspended {
+		relErr = l.release(r, actor)
+	}
 	if state == StateRetired {
 		l.collect()
 	}
-	return *r, gone, l.evidence(audit.Event{Outcome: state, ServerRevision: r.Key(), Detail: map[string]any{"actor": actor, "reason": reason}})
+	return *r, gone, errors.Join(l.evidence(audit.Event{Outcome: state, ServerRevision: r.Key(), Detail: map[string]any{"actor": actor, "reason": reason}}), relErr)
 }
 
 // collect removes cached artifacts no non-retired revision references

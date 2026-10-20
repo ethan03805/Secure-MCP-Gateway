@@ -62,6 +62,13 @@ type EgressNetwork struct {
 	// cannot confine the namespace must close the attachment and fail the
 	// launch.
 	LauncherConfines bool
+	// ProxyPort, when not zero, is the port on which the broker binds the
+	// instance's proxy listener, because the instance's confinement lets it
+	// reach that port only (the Windows Filtering Platform filters of a
+	// Windows AppContainer, FR-21.14). The broker then binds no destination
+	// endpoints: the instance reaches every granted destination through the
+	// proxy.
+	ProxyPort uint16
 }
 
 // EgressAttachment is the result of Attach.

@@ -1,15 +1,37 @@
 package library
 
 import (
+	"errors"
 	"log/slog"
+	"path/filepath"
+	"runtime"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
 
-// OpenConfigured opens the library named by a Gateway configuration.
+// OpenConfigured opens the library named by a Gateway configuration. With
+// [runtime] sandbox = "appcontainer" (the Windows machine mode, FR-21.13)
+// each enabled revision gets its AppContainer placement, recorded under
+// <state>/appcontainer.
 func OpenConfigured(cfg *config.Config, log *slog.Logger) (*Library, error) {
-	return Open(Options{StateDir: cfg.State.Dir, Dir: cfg.Packages.Library, Log: log})
+	o := Options{StateDir: cfg.State.Dir, Dir: cfg.Packages.Library, Log: log}
+	if cfg.Runtime.Sandbox == "appcontainer" {
+		if runtime.GOOS != "windows" {
+			return nil, errors.New(`runtime.sandbox = "appcontainer" needs Windows`)
+		}
+		o.Containment = winsandbox.Placements{Dir: filepath.Join(cfg.State.Dir, "appcontainer")}
+		o.Bindings = func(serverID string) (SlotBinding, bool) {
+			for _, s := range cfg.Servers {
+				if s.Package == serverID {
+					return SlotBinding{Alias: s.Alias, Slots: s.Slots}, true
+				}
+			}
+			return SlotBinding{}, false
+		}
+	}
+	return Open(o)
 }
 
 // Interpreters returns the configured runtime paths.

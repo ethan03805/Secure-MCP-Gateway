@@ -89,7 +89,14 @@ func Start(o StartOptions) (*os.Process, error) {
 			return nil, err
 		}
 	}
-	env, err := envBlock(o.Env)
+	required := []string{"SYSTEMROOT"}
+	if o.Container != nil {
+		// CreateProcess rewrites these for an AppContainer (to the
+		// container's own folders) and fails with ERROR_ENVVAR_NOT_FOUND
+		// when one is missing from the block.
+		required = append(required, "LOCALAPPDATA", "APPDATA", "USERPROFILE", "TEMP", "TMP")
+	}
+	env, err := envBlock(o.Env, required...)
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +163,11 @@ func Start(o StartOptions) (*os.Process, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CreateProcess %s: %w", o.Path, err)
 	}
-	windows.CloseHandle(pi.Thread)
+	_ = windows.CloseHandle(pi.Thread)
 	// os.FindProcess opens a second handle by PID; the PID cannot be reused
 	// while pi.Process is open.
 	p, ferr := os.FindProcess(int(pi.ProcessId))
-	windows.CloseHandle(pi.Process)
+	_ = windows.CloseHandle(pi.Process)
 	if ferr != nil {
 		_ = o.Job.Terminate(1)
 		return nil, fmt.Errorf("open process %d: %w", pi.ProcessId, ferr)
@@ -188,21 +195,23 @@ type securityCapabilities struct {
 
 // envBlock builds a Unicode environment block: KEY=value strings sorted by
 // name without regard to case, each terminated by NUL, and a final NUL.
-func envBlock(env []string) (*uint16, error) {
+// Each required variable the block lacks is taken from the Gateway's
+// environment.
+func envBlock(env []string, required ...string) (*uint16, error) {
 	env = slices.Clone(env)
-	has := false
+	has := map[string]bool{}
 	for _, kv := range env {
 		if strings.Contains(kv, "\x00") {
 			return nil, fmt.Errorf("environment entry contains NUL")
 		}
 		k, _, _ := strings.Cut(kv, "=")
-		if strings.EqualFold(k, "SYSTEMROOT") {
-			has = true
-		}
+		has[strings.ToUpper(k)] = true
 	}
-	if !has {
-		if v := os.Getenv("SYSTEMROOT"); v != "" {
-			env = append(env, "SYSTEMROOT="+v)
+	for _, k := range required {
+		if !has[k] {
+			if v := os.Getenv(k); v != "" {
+				env = append(env, k+"="+v)
+			}
 		}
 	}
 	slices.SortStableFunc(env, func(a, b string) int {

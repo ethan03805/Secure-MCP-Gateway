@@ -152,6 +152,24 @@ func Resolve(mode string, launcherName string, launcherConfined bool, host Host)
 	return r, nil
 }
 
+// Health causes of the Standalone profile.
+const (
+	CauseUnconfined        = "unconfined"
+	CausePartiallyConfined = "partially_confined"
+)
+
+// Cause reports the health cause of the profile given whether every
+// enabled backend runs contained: in the Windows machine mode, when every
+// backend runs in its AppContainer, partially_confined instead of
+// unconfined (FR-21.13). "" when the profile is Enforced.
+func (r Report) Cause(allContained bool) string {
+	c := r.Degraded()
+	if c == CauseUnconfined && allContained && r.InstallMode == ModeWindowsMachine {
+		return CausePartiallyConfined
+	}
+	return c
+}
+
 // Degraded reports the health cause of the profile, or "" when none.
 func (r Report) Degraded() string {
 	if r.Profile == Standalone {

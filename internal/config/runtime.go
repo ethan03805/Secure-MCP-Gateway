@@ -171,6 +171,9 @@ func (r *Runtime) check(c *Config) error {
 	if r.Sandbox == "podman" && c.Profile.Mode == "standalone" {
 		return fmt.Errorf(`runtime.sandbox = "podman" contradicts profile.mode = "standalone"`)
 	}
+	if r.Sandbox == "appcontainer" && c.Profile.Mode == "enforced" {
+		return fmt.Errorf(`runtime.sandbox = "appcontainer" contradicts profile.mode = "enforced": a Windows installation is never enforced (SR-4-2)`)
+	}
 	if r.Podman != "" && !filepath.IsAbs(r.Podman) {
 		return fmt.Errorf("runtime.podman must be an absolute path")
 	}

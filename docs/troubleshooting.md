@@ -153,6 +153,7 @@ These appear in the evidence journal, the diagnostic log or command output, not 
 | `SOURCE_EVIDENCE_MISSING` | Package verify, import | The provenance statement lacks a source digest or licenses (SR-3.1-1) | Rebuild the package with complete provenance |
 | `UNPINNED_LAUNCH` | Package verify, import, start | The launch vector runs a package runner, installer or shell (SR-3.6-1) | Package a pinned executable instead |
 | `SHELL_LAUNCH` | Package enable, start (Windows) | The executable is `cmd.exe`, `powershell.exe`, `pwsh.exe` or a `.bat` or `.cmd` file, which Windows runs through a command interpreter (FR-21.11, SR-4.8-2) | Package the server's real executable, not a wrapper script |
+| `CONTAINMENT_FAILED` | Package enable, start (Windows machine mode) | The revision's AppContainer profile, access entries or egress filters could not be set up, or a start found none (FR-21.13, FR-21.14) | Run `smcpctl package enable` again from an elevated prompt; the egress filters need an administrator |
 | `UNPINNED_REFERENCE` | Package build | The artifact reference has no exact version or digest | Pin the version or digest in the recipe |
 | `ERA_UNSUPPORTED` | Package build | The server negotiated a protocol version a manifest cannot declare | Build against a server version that speaks a supported protocol version |
 | `FETCH_FAILED` | Package build | The registry or file could not be read | Check network access and the reference |

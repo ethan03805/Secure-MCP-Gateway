@@ -163,9 +163,16 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	if err := rt.lib.ensureTree(rev); err != nil {
 		return sc, err
 	}
+	pl, err := rt.lib.placement(rev)
+	if err != nil {
+		return sc, err
+	}
 	work := rt.lib.path("work", sc.Alias)
 	if err := os.MkdirAll(work, 0o700); err != nil {
 		return sc, err
+	}
+	if pl != nil && filepath.Clean(pl.Scratch) != filepath.Clean(work) {
+		return sc, errf(ReasonContainment, "%s: the AppContainer placement grants %s, not this server's scratch directory %s; run the enable step again", rev.Key(), pl.Scratch, work)
 	}
 	in := packaging.LaunchInput{Manifest: m, Alias: sc.Alias, Slots: sc.Slots, Env: sc.Env, WorkDir: work, Interp: rt.o.Interp}
 	if m.Artifact.Type == "oci" {
@@ -193,7 +200,8 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	return config.Server{Alias: sc.Alias, Command: spec.Command, Args: spec.Args, Env: spec.Env, SecretEnv: sc.SecretEnv, Dir: spec.Dir,
 		RiskClasses: sc.RiskClasses, Package: sc.Package, PackageSHA256: sc.PackageSHA256, Slots: sc.Slots,
 		Runtime: spec.Runtime, ArtifactRoot: spec.ArtifactRoot, Roots: roots,
-		MemoryBytes: spec.Limits.MemoryBytes, CPUs: spec.Limits.CPUs, Pids: spec.Limits.Processes}, nil
+		MemoryBytes: spec.Limits.MemoryBytes, CPUs: spec.Limits.CPUs, Pids: spec.Limits.Processes,
+		Container: placementProfile(pl), EgressProxyPort: placementPort(pl)}, nil
 }
 
 // Resolve returns the launch configuration of a packaged [[server]] entry

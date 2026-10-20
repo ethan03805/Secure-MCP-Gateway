@@ -301,6 +301,11 @@ type Server struct {
 	MemoryBytes int64   `toml:"-" json:"-"`
 	CPUs        float64 `toml:"-" json:"-"`
 	Pids        int     `toml:"-" json:"-"`
+	// Container is the AppContainer profile of the enabled revision in the
+	// Windows machine mode (FR-21.13), and EgressProxyPort the loopback
+	// port its WFP filters let it reach (FR-21.14); set by the library.
+	Container       string `toml:"-" json:"-"`
+	EgressProxyPort uint16 `toml:"-" json:"-"`
 }
 
 // SlotRoot is one manifest-declared filesystem slot bound to a host path;
