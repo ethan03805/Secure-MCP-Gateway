@@ -1,8 +1,8 @@
 # Continuous integration. The job names srs, go, lint, site, security,
 # linux-integration and console are required status checks on main;
-# renaming one breaks branch protection, so keep them stable (go,
-# linux-integration and console carry a " (draft)" suffix on draft pull
-# requests only, on purpose). Do not add paths-ignore to this workflow: a
+# renaming one breaks branch protection, so keep them stable (a job
+# skipped by its if: reports its name unevaluated, so these names must stay
+# literal). Do not add paths-ignore to this workflow: a
 # required check that never reports blocks the pull request. Pull requests
 # that change only documentation skip heavy jobs through the changes job
 # instead (docs/ci.md); a new heavy job gets the same needs: and if: as
@@ -156,7 +156,7 @@ jobs:
           fi
 
   go:
-    name: ${{ github.event.pull_request.draft && 'go (draft)' || 'go' }}
+    name: go
     needs: [changes, srs, lint]
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.go != 'skip') }}
     runs-on: ubuntu-24.04
@@ -332,7 +332,7 @@ jobs:
           extra_args: --results=verified,unknown
 
   linux-integration:
-    name: ${{ github.event.pull_request.draft && 'linux-integration (draft)' || 'linux-integration' }}
+    name: linux-integration
     needs: [changes, srs, lint]
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
@@ -749,7 +749,7 @@ jobs:
   # per browser. The requirement claims of the run (build/console-*-test.json,
   # FR-8.34) go to the status job.
   console:
-    name: ${{ github.event.pull_request.draft && 'console (draft)' || 'console' }}
+    name: console
     needs: [changes, srs, lint]
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
