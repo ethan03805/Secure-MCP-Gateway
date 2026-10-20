@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"net/netip"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -138,7 +142,7 @@ func TestEnforcedImage(t *testing.T) {
 		// SR-4.5-4: ContextForge's own SSRF allowlist admits everything;
 		// the namespace must hold regardless.
 		Settings:    Settings{SSRFAllowed: []string{"0.0.0.0/0", "::/0"}, Limits: Limits{UpstreamTimeout: 45 * time.Second, CallsPerMinute: 60, Concurrency: 16}},
-		Credentials: func() (Credentials, error) { return creds, nil }, HealthWait: 180 * time.Second})
+		Credentials: func() (Credentials, error) { return creds, nil }, HealthWait: 180 * time.Second, Ports: EnforcedPorts})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,6 +289,81 @@ func TestEnforcedImage(t *testing.T) {
 	if !t.Failed() {
 		reqtest.Verifies(t, "FR-22.24", "SR-4.5-4", "SR-4.7-3")
 	}
+	listenerFirewall(t, in)
+}
+
+// listenerFirewall is FR-22.26 for the Enforced instance: its listener
+// port is one of EnforcedPorts and is on no address of the host but
+// loopback; with the output rule of the table inet smcp
+// (packaging/linux/nftables/smcp.nft) for the Gateway's identity (here the
+// account the test runs as, in place of smcp-core) the Gateway connects and
+// another local user (nobody) is refused. It needs sudo for nft and to
+// connect as nobody.
+func listenerFirewall(t *testing.T, in *Instance) {
+	t.Helper()
+	port := in.Status().Port
+	if !EnforcedPorts.Contains(port) {
+		t.Fatalf("listener port %d is outside %+v", port, EnforcedPorts)
+	}
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range addrs {
+		ipn, ok := a.(*net.IPNet)
+		if !ok || ipn.IP.IsLoopback() || ipn.IP.IsLinkLocalUnicast() {
+			continue
+		}
+		c, err := net.DialTimeout("tcp", net.JoinHostPort(ipn.IP.String(), strconv.Itoa(port)), 2*time.Second)
+		if err == nil {
+			c.Close()
+			t.Errorf("the instance's port %d answers on %s", port, ipn.IP)
+		}
+	}
+	if os.Getenv("SMCP_CONTEXTFORGE_FIREWALL") != "1" {
+		t.Log("SMCP_CONTEXTFORGE_FIREWALL unset: the host rule for other users is not loaded here")
+		reqtest.Partial(t, "FR-22.26")
+		return
+	}
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "packaging", "linux", "nftables", "smcp.nft"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	set := regexp.MustCompile(`(?s)\tset contextforge_ports \{.*?\n\t\}`).Find(raw)
+	rule := regexp.MustCompile(`.*tcp dport @contextforge_ports .*`).Find(raw)
+	if set == nil || rule == nil {
+		t.Fatal("smcp.nft lacks the contextforge_ports set or rule")
+	}
+	me, err := user.Current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := "table inet smcp_cf_test {\n" + string(set) + "\n\tchain output {\n\t\ttype filter hook output priority filter; policy accept;\n" +
+		strings.Replace(string(rule), `"smcp-core"`, strconv.Quote(me.Username), 1) + "\n\t}\n}\n"
+	f := filepath.Join(t.TempDir(), "cf-test.nft")
+	if err := os.WriteFile(f, []byte(table), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.Command("sudo", "-n", "nft", "-f", f).CombinedOutput(); err != nil {
+		t.Fatalf("load the rule: %v: %s\n%s", err, out, table)
+	}
+	t.Cleanup(func() { _ = exec.Command("sudo", "-n", "nft", "delete", "table", "inet", "smcp_cf_test").Run() })
+	t.Logf("loaded for %s:\n%s", me.Username, table)
+	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	resp, err := http.Get("http://" + addr + "/health")
+	if err != nil {
+		t.Fatalf("the Gateway's identity cannot reach the instance: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("/health as the Gateway's identity: %d", resp.StatusCode)
+	}
+	out, err := exec.Command("sudo", "-n", "-u", "nobody", "timeout", "5", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/"+strconv.Itoa(port)).CombinedOutput()
+	if err == nil {
+		t.Fatalf("another local user (nobody) connected to the instance's port %d", port)
+	}
+	t.Logf("nobody -> %s refused: %s", addr, strings.TrimSpace(string(out)))
+	reqtest.Verifies(t, "FR-22.26")
 }
 
 // memBelow checks that the container's resident memory is below the

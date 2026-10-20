@@ -246,11 +246,11 @@ TARGET: v1.3.0
 
 @FR-22.26 | Loopback-only listener
 P: FR-22
-S: The ContextForge Connector (E-36) SHALL bind the bundled instance's HTTP listener only to a loopback address on a port chosen at each start and, in the Enforced profile, SHALL install a host firewall rule that accepts connections to that port only from the Gateway's service identity.
+S: The ContextForge Connector (E-36) SHALL bind the bundled instance's HTTP listener only to a loopback address on a port chosen at each start and, in the Enforced profile, SHALL choose that port from a reserved port range for which the Enforced installation installs a host firewall rule that accepts connections only from the Gateway's service identity.
 A: E-36; E-15; F-108; I-43; I-13
 V: Test | Start the bundled instance; scan every non-loopback address of the host for the port, and in the Enforced profile connect to the port as the Gateway identity and as another local user; confirm no non-loopback listener exists, the Gateway connects, and the other user's connection is refused.
 SRC: OWNER (bound to loopback only; its admin UI and API not exposed); SEC 4.4; SEC 4.14
-R: ContextForge listens on `0.0.0.0:4444` by default; the Gateway must be its only client.
+R: ContextForge listens on `0.0.0.0:4444` by default; the Gateway must be its only client. Changed on 2026-10-20 to match what can be built: smcpd runs as `smcp-core` without CAP_NET_ADMIN on the host, so it cannot install a host rule at each start; the Enforced installation (root) loads the rule with the table `inet smcp` for the reserved range 28400 to 28499 (outside the Linux ephemeral range), and the Connector picks the listener port from that range. In rootless Podman the published port is a slirp4netns listener on loopback, which the rule restricts to `smcp-core`.
 TARGET: v1.3.0
 
 @FR-22.27 | Hardened configuration

@@ -1453,6 +1453,7 @@ jobs:
           SMCP_CONTEXTFORGE_IMAGE: "1"
           SMCP_CONTEXTFORGE_ENFORCED: "1"
           SMCP_CONTEXTFORGE_PYTHON: /usr/bin/python3.12
+          SMCP_CONTEXTFORGE_FIREWALL: "1"
         run: |
           mkdir -p build
           rc=0

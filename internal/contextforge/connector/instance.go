@@ -87,10 +87,17 @@ func (c *Connector) setupInstance() {
 	}
 	lock := c.lock()
 	sum := sha256.Sum256([]byte(c.o.Config.State.Dir))
+	// FR-22.26: in the Enforced profile the listener port is one of the
+	// ports the installation's host firewall rule admits from smcp-core
+	// only.
+	var ports bundle.PortRange
+	if c.o.Enforced {
+		ports = bundle.EnforcedPorts
+	}
 	l := c.o.Config.Limits
 	inst, err := bundle.New(bundle.Options{Engine: eng, Image: lock.ImageRef(c.platform), Name: "smcp-contextforge-" + hex.EncodeToString(sum[:4]),
 		Settings:    bundle.Settings{SSRFAllowed: c.o.SSRFAllowed, Limits: bundle.Limits{UpstreamTimeout: l.UpstreamTimeout.Duration, CallsPerMinute: l.PrincipalCallsPerMin, Concurrency: l.ToolConcurrencyTotal}},
-		Credentials: c.credentials, OnState: c.instanceState, Log: c.o.Log, Enforced: c.o.Enforced})
+		Credentials: c.credentials, OnState: c.instanceState, Log: c.o.Log, Enforced: c.o.Enforced, Ports: ports})
 	if err != nil {
 		c.instErr = err
 		return
