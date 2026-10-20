@@ -69,7 +69,7 @@ key_hash = %q
 template = "ro"
 [[uds.peer]]
 sid = %q
-principal = "self"
+principal = "cc"
 key_hash = %q
 template = "ro"
 `, path, group, registered.SID, udsKeyHash(t), self, udsKeyHash(t))})
@@ -162,7 +162,7 @@ template = "ro"
 
 	// The Gateway's own account, as in the per-user mode.
 	own := dialUDS(t, path).authenticate(udsKey)
-	if r, _ := own["result"].(map[string]any); r["principal"] != "self" {
+	if r, _ := own["result"].(map[string]any); r["sessionId"] == nil || r["principal"] != "cc" {
 		t.Fatalf("own account: %v", own)
 	}
 	sessions := 0

@@ -25,7 +25,10 @@ var (
 	procPostMessageW     = user32Console.NewProc("PostMessageW")
 )
 
-const wmClose = 0x0010
+const (
+	wmSysCommand = 0x0112
+	scClose      = 0xF060
+)
 
 // TestWindowsConsoleClose: a console smcpd with a running backend, in a
 // console of its own, receives CTRL_CLOSE when that console's window is
@@ -127,8 +130,10 @@ func TestWindowsConsoleCloseHelper(t *testing.T) {
 	if hwnd == 0 {
 		t.Fatalf("process %d's console has no window", pid)
 	}
-	if r, _, e := procPostMessageW.Call(hwnd, wmClose, 0, 0); r == 0 {
-		t.Fatalf("PostMessage WM_CLOSE: %v", e)
+	// The close button sends WM_SYSCOMMAND SC_CLOSE, which the console
+	// host turns into WM_CLOSE.
+	if r, _, e := procPostMessageW.Call(hwnd, wmSysCommand, scClose, 0); r == 0 {
+		t.Fatalf("PostMessage WM_SYSCOMMAND SC_CLOSE: %v", e)
 	}
 	fmt.Println("posted WM_CLOSE to the console window", hwnd)
 }

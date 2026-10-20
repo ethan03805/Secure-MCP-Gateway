@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
@@ -65,7 +66,9 @@ func (d DPAPI) Load() (string, error) {
 	}
 	b, err := winsec.Unprotect(raw)
 	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrLocked, err)
+		// The cause the Gateway reports for any key it cannot decrypt
+		// (FR-21.10).
+		return "", fmt.Errorf("%w: %w: %s: %w", ErrLocked, keys.ErrKeyProtection, d.Path, err)
 	}
 	return strings.TrimSpace(string(b)), nil
 }

@@ -197,26 +197,29 @@ func TestWindowsStateCopyRefused(t *testing.T) {
 		}
 	}
 	before := treeDigests(t, state)
-	cmd := exec.Command(bin("smcpd"), "--config", filepath.Join(dir, "smcp.toml"))
-	cmd.Dir = dir
-	done := make(chan struct{})
-	var out []byte
-	var runErr error
-	go func() { out, runErr = cmd.CombinedOutput(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(90 * time.Second):
-		_ = cmd.Process.Kill()
-		<-done
-		t.Fatalf("smcpd with a copied state directory did not stop:\n%s", out)
+	// The configuration as copied (the dpapi vault is opened first), and
+	// the same configuration without [secrets], so that the private keys
+	// themselves are reached: both starts are refused with key_protection.
+	cfg := filepath.Join(dir, "smcp.toml")
+	raw, err = os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if runErr == nil {
-		t.Fatalf("smcpd started with a state directory copied from %s:\n%s", rec.Host, out)
+	noVault := strings.Replace(string(raw), "\n[secrets]\nkey_source = \"dpapi\"\n", "\n", 1)
+	if noVault == string(raw) {
+		t.Fatal("the copied configuration has no [secrets] table")
 	}
-	if !strings.Contains(string(out), "key_protection") {
-		t.Fatalf("smcpd refused the copy without the cause key_protection:\n%s", out)
+	keysOnly := filepath.Join(dir, "smcp-keys-only.toml")
+	if err := os.WriteFile(keysOnly, []byte(noVault), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	t.Logf("refused: %s", lastLine(string(out)))
+	for _, c := range []string{cfg, keysOnly} {
+		out := refusedStart(t, dir, c)
+		if !strings.Contains(out, "key_protection") {
+			t.Fatalf("smcpd --config %s refused the copy without the cause key_protection:\n%s", filepath.Base(c), out)
+		}
+		t.Logf("%s refused: %s", filepath.Base(c), lastLine(out))
+	}
 	// The vault master key cannot be unlocked either (SR-2.13-4).
 	if _, err := (secrets.DPAPI{Path: filepath.Join(state, "vault", secrets.DPAPIKeyFile)}).Load(); !errors.Is(err, secrets.ErrLocked) {
 		t.Fatalf("vault master key on a second host: %v", err)
@@ -252,6 +255,29 @@ func TestWindowsStateCopyRefused(t *testing.T) {
 	} else {
 		reqtest.Partial(t, "SR-2.13-4")
 	}
+}
+
+// refusedStart runs smcpd with cfg and returns its output; it fails the
+// test when smcpd starts or does not stop.
+func refusedStart(t *testing.T, dir, cfg string) string {
+	t.Helper()
+	cmd := exec.Command(bin("smcpd"), "--config", cfg)
+	cmd.Dir = dir
+	done := make(chan struct{})
+	var out []byte
+	var runErr error
+	go func() { out, runErr = cmd.CombinedOutput(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(90 * time.Second):
+		_ = cmd.Process.Kill()
+		<-done
+		t.Fatalf("smcpd with a copied state directory did not stop:\n%s", out)
+	}
+	if runErr == nil {
+		t.Fatalf("smcpd started with a copied state directory:\n%s", out)
+	}
+	return string(out)
 }
 
 func digest(b []byte) string {
