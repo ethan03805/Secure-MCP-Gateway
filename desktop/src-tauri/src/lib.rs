@@ -1187,17 +1187,7 @@ pub fn run() {
             // and a second start without a link focuses the console window.
             // Tauri dispatches the window operations to the main thread.
             let Some(page) = deeplink::on_second_start(&argv) else {
-                // Name the refused link when it is short plain text, for
-                // diagnosis; nothing is sent anywhere.
-                let shown: Vec<&str> = argv
-                    .iter()
-                    .skip(1)
-                    .filter(|a| {
-                        deeplink::is_link(a) && a.len() <= deeplink::MAX_LEN && a.chars().all(|c| c.is_ascii_graphic())
-                    })
-                    .map(String::as_str)
-                    .collect();
-                eprintln!("smcp-desktop: second start: link ignored {shown:?}");
+                eprintln!("smcp-desktop: second start: link ignored");
                 return;
             };
             eprintln!("smcp-desktop: second start");
