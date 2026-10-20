@@ -9,12 +9,15 @@
 </head>
 <body>
 <main class="panel" role="alert">
-  <!-- Text of CONSOLE_CERTIFICATE_INVALID in docs/design/messages.json (FR-20.47, FR-20.48). -->
-  <h1>The console's certificate was refused</h1>
-  <p>The console's address did not present a certificate from this Gateway's certificate authority, so the console was not loaded. Nothing from that address was shown, and this window has no way to continue past this page (SR-2.8-5).</p>
+  <!-- The marked parts are CONSOLE_CERTIFICATE_INVALID of docs/design/messages.json,
+       filled in by scripts/copy-static.mjs at build time (FR-20.47, FR-20.48):
+       the page runs no script, so it cannot read the catalogue itself. -->
+  <h1>{{CONSOLE_CERTIFICATE_INVALID.title}}</h1>
+  <p>{{CONSOLE_CERTIFICATE_INVALID.what}} Nothing from that address was shown, and this window has no way to continue past this page (SR-2.8-5).</p>
   <h2>Why this happens</h2>
-  <p>Another program may be using the console's address, or the Gateway's certificates were replaced.</p>
+  <p>{{CONSOLE_CERTIFICATE_INVALID.why}}</p>
   <h2>What to do</h2>
+  <p>{{CONSOLE_CERTIFICATE_INVALID.todo}}</p>
   <ul>
     <li>Restart the Gateway from the menu bar, then open the console again.</li>
     <li>Check in Settings that the admin listener address is the one in your Gateway configuration (<code>[admin_listener] address</code>) and that the CA file is the installation's <code>tls/ca.crt</code>, or empty for the default.</li>

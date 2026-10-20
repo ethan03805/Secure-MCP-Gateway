@@ -32,7 +32,7 @@ export const STEPS: readonly IntroStep[] = [
       "Every tool call an agent makes goes through the Gateway. The Gateway checks the call against your policy, records it in the Evidence Journal, and holds a call that needs approval until a person decides.",
     ],
     tasks: [
-      { title: "Set up the Gateway", text: "Create its accounts and keys and start it on this Mac." },
+      { title: "Set up the Gateway", text: "Create its accounts and keys and start it on this computer." },
       { title: "Connect an agent", text: "Point an agent such as Claude Code at the Gateway." },
       { title: "Review and approve", text: "See what your agents did and decide held calls in the console." },
     ],
@@ -43,7 +43,8 @@ export const STEPS: readonly IntroStep[] = [
     title: "Set up the Gateway",
     body: [
       "Setup asks for two passwords, one for the Administrator account and one for the Approver account, then creates the Gateway's keys and starts the Gateway service.",
-      "On a Mac the Gateway runs in the Standalone profile and is labelled not enforced. Policy checks, approvals and the Evidence Journal work, but MCP servers run as ordinary processes, without container or network isolation.",
+      "On macOS and Windows, and on Linux without the Enforced prerequisites, the Gateway runs in the Standalone profile and is labelled not enforced. Policy checks, approvals and the Evidence Journal work, but MCP servers run as ordinary processes, without container or network isolation.",
+      "On Linux with every Enforced prerequisite, setup also offers the Enforced profile, which runs MCP servers in containers with their own network rules.",
     ],
     actions: [
       {
@@ -57,7 +58,7 @@ export const STEPS: readonly IntroStep[] = [
     id: "connect",
     title: "Connect an agent",
     body: [
-      "Choose an agent installed on this Mac. Before changing anything, the app shows the exact changes it will make to the agent's settings, and you can remove them later from the same window.",
+      "Choose an agent installed on this computer. Before changing anything, the app shows the exact changes it will make to the agent's settings, and you can remove them later from the same window.",
       "After that, the agent's tool calls go through the Gateway.",
     ],
     actions: [
