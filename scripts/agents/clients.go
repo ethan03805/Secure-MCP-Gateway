@@ -327,15 +327,21 @@ func goose() *client {
 		// Linux it reads SSL_CERT_FILE. The suite never edits the keychain.
 		reason = "on macOS Goose verifies TLS only against the system keychain; the suite does not add the Gateway CA to it (runs on Linux)"
 	}
-	if runtime.GOOS == "windows" {
-		// The same verifier uses the Windows certificate store there, and
-		// Goose reads its configuration from %APPDATA%, not XDG_CONFIG_HOME.
-		reason = "on Windows Goose verifies TLS only against the Windows certificate store; the suite does not add the Gateway CA to it (runs on Linux)"
+	if runtime.GOOS == "windows" && os.Getenv(certStoreEnv) != "1" {
+		// The same verifier uses the Windows certificate store there. The
+		// suite adds the Gateway CA to the machine's Root store only on a
+		// disposable host that asks for it (the CI runner, certStoreEnv).
+		reason = "on Windows Goose verifies TLS only against the Windows certificate store; set " + certStoreEnv + "=1 on a disposable host to let the suite add the Gateway CA to it"
 	}
 	return &client{
 		ID: "goose", Name: "Goose", Framework: "goose", Bins: []string{"goose"}, NeedsKey: aiKeyEnv, NotRunReason: reason,
 		setup: func(c *client, e *runEnv) error {
 			dir := filepath.Join(e.dir, "xdg-config", "goose")
+			if runtime.GOOS == "windows" {
+				// Goose reads %APPDATA%\Block\goose there, not
+				// XDG_CONFIG_HOME; GOOSE_PATH_ROOT moves its directories.
+				dir = filepath.Join(e.dir, "goose-root", "config")
+			}
 			if err := os.MkdirAll(dir, 0o700); err != nil {
 				return err
 			}
@@ -361,6 +367,9 @@ func goose() *client {
 				"OPENAI_BASE_PATH=v1/chat/completions",
 				"SSL_CERT_FILE="+e.caBundle,
 				"GOOSE_DISABLE_KEYRING=1")
+			if runtime.GOOS == "windows" {
+				cmd.Env = append(cmd.Env, "GOOSE_PATH_ROOT="+filepath.Join(e.dir, "goose-root"))
+			}
 			return cmd
 		},
 	}

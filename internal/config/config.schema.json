@@ -489,7 +489,7 @@
       "additionalProperties": false,
       "properties": {
         "vault_dir": { "type": "string", "minLength": 1 },
-        "key_source": { "type": "string", "enum": ["auto", "keychain", "passphrase"] },
+        "key_source": { "type": "string", "enum": ["auto", "keychain", "dpapi", "passphrase"] },
         "passphrase_file": { "type": "string", "minLength": 1 },
         "use_policy_file": { "type": "string", "minLength": 1 },
         "runtime_dir": { "type": "string", "minLength": 1 },

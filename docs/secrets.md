@@ -18,7 +18,7 @@ Secrets are enabled by a `[secrets]` table in the Gateway configuration. Without
 
 ```toml
 [secrets]
-key_source       = "auto"            # auto, keychain or passphrase
+key_source       = "auto"            # auto, keychain, dpapi or passphrase
 passphrase_file  = "vault-pass"      # passphrase key source only; mode 0600 or stricter
 use_policy_file  = "secret-use.json" # Secret Use Policy; absent means no bindings
 # vault_dir      = "state/vault"     # default <state>/vault
@@ -28,8 +28,8 @@ use_policy_file  = "secret-use.json" # Secret Use Policy; absent means no bindin
 
 | Key | Default | Meaning |
 |---|---|---|
-| `vault_dir` | `<state.dir>/vault` | Directory of `secrets.json` (the store) and, for the passphrase source, `master.age`. Created with mode 0700; the Gateway refuses to open a store or directory readable by group or others. |
-| `key_source` | `auto` | Where `smcpctl secrets init` keeps the master key. `keychain`: a generic password item in the login Keychain (macOS only). `passphrase`: `master.age`, encrypted with age to an scrypt passphrase. `auto` picks `keychain` on macOS and `passphrase` elsewhere. After init the store records the source and the Gateway uses it. |
+| `vault_dir` | `<state.dir>/vault` | Directory of `secrets.json` (the store) and, for the passphrase source, `master.age` (for the dpapi source, `master.dpapi`). Created with mode 0700; the Gateway refuses to open a store or directory readable by group or others. |
+| `key_source` | `auto` | Where `smcpctl secrets init` keeps the master key. `keychain`: a generic password item in the login Keychain (macOS only). `dpapi`: `master.dpapi`, encrypted with DPAPI (user scope) under the account that runs `smcpd` (Windows only, SR-2.13-4); another account or a copy on another host cannot decrypt it. `passphrase`: `master.age`, encrypted with age to an scrypt passphrase. `auto` picks `keychain` on macOS, `dpapi` on Windows and `passphrase` elsewhere. After init the store records the source and the Gateway uses it. With the dpapi source and no vault yet, `smcpd` creates the vault at its start: in the Windows machine mode only `NT SERVICE\smcpd` can protect a key for itself, so leave `smcpctl secrets init` out there. |
 | `passphrase_file` | none | File holding the vault passphrase, read by `smcpd` to unlock a passphrase vault. Must be mode 0600 or stricter. `smcpctl secrets init` prompts for the passphrase when this key and `--passphrase-file` are both absent. |
 | `use_policy_file` | none | The Secret Use Policy file (below). Relative paths are resolved against the configuration directory. |
 | `runtime_dir` | Linux: `$XDG_RUNTIME_DIR/smcp-secrets` when it is a tmpfs, else `/dev/shm/smcp-secrets-<uid>`, else `<state.dir>/run/secrets`; macOS: `<state.dir>/run/secrets` | Parent of the instance-private directories that hold S2 and S3 files. Created with mode 0700 and emptied when the Gateway starts. The Gateway logs a warning when it is not a tmpfs. |
@@ -43,7 +43,7 @@ All commands take `--config <file>` (default `smcp.toml`). Every command except 
 
 | Command | What it does |
 |---|---|
-| `smcpctl secrets init [--key-source auto\|keychain\|passphrase] [--passphrase-file F]` | Offline. Creates the vault and its master key. Refuses an existing vault. The passphrase must have 12 or more characters. |
+| `smcpctl secrets init [--key-source auto\|keychain\|dpapi\|passphrase] [--passphrase-file F]` | Offline. Creates the vault and its master key. Refuses an existing vault. The passphrase must have 12 or more characters. |
 | `smcpctl secrets list` | Vault status (vault ID, key source, runtime directory and whether it is a tmpfs, rotation overlap, number of registered fingerprints, suspended secrets), the active Secret Use Policy and the metadata of every secret. |
 | `smcpctl secrets show NAME` | Metadata and versions of one secret, and whether it is suspended. |
 | `smcpctl secrets set NAME [--type T] [--owner O] [--description D] [--expires RFC3339] [--value-file F]` | Creates a secret as version 1. Types: `api_key`, `token`, `password`, `certificate`, `connection_string`, `generic` (default). Owner defaults to the authenticated actor. Values must have 8 to 32768 bytes. |

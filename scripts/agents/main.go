@@ -250,6 +250,14 @@ func run(ctx context.Context, o options, stdout io.Writer) ([]agentResult, error
 		if err := caBundle(bundle, g.ca); err != nil {
 			return nil, err
 		}
+		if runtime.GOOS == "windows" && os.Getenv(certStoreEnv) == "1" {
+			// Goose on Windows trusts only the certificate store (FR-21.21).
+			remove, err := trustInMachineStore(ctx, g.ca, logf)
+			if err != nil {
+				return nil, err
+			}
+			defer remove()
+		}
 		approvals := g.approvalsAvailable(ctx)
 		for i, c := range clients {
 			if !slices.Contains(runnable, c) {

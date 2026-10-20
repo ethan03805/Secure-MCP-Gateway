@@ -171,7 +171,7 @@ func secretsRotate(name, path string, args []string, out io.Writer) error {
 func secretsInit(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("secrets init", flag.ContinueOnError)
 	cfgPath := fs.String("config", "smcp.toml", "configuration file")
-	source := fs.String("key-source", "", "auto, keychain or passphrase (default [secrets] key_source)")
+	source := fs.String("key-source", "", "auto, keychain, dpapi or passphrase (default [secrets] key_source)")
 	ppFile := fs.String("passphrase-file", "", "read the vault passphrase from this file (mode 0600) instead of a prompt")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -195,6 +195,11 @@ func secretsInit(args []string, out io.Writer) error {
 	switch name {
 	case secrets.KeySourceKeychain:
 		ks = secrets.Keychain{}
+	case secrets.KeySourceDPAPI:
+		ks, err = secrets.KeySourceFor(st.VaultDir, name, nil)
+		if err != nil {
+			return err
+		}
 	default:
 		pf := *ppFile
 		if pf == "" {

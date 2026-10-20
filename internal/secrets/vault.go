@@ -180,6 +180,8 @@ func KeySourceFor(dir, name string, passphrase func() (string, error)) (KeySourc
 		return Keychain{Account: account}, nil
 	case KeySourcePassphrase:
 		return Passphrase{Path: filepath.Join(dir, MasterKeyFile), Passphrase: passphrase}, nil
+	case KeySourceDPAPI:
+		return DPAPI{Path: filepath.Join(dir, DPAPIKeyFile)}, nil
 	}
 	return nil, fmt.Errorf("unknown key source %q", name)
 }

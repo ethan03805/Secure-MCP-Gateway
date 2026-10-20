@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -467,6 +469,7 @@ func startSession(ctx context.Context, cmd *exec.Cmd, c *client, buf *bytes.Buff
 	if err != nil {
 		return err
 	}
+	cmd.WaitDelay = pipeWaitDelay
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -479,7 +482,7 @@ func startSession(ctx context.Context, cmd *exec.Cmd, c *client, buf *bytes.Buff
 		}
 		return serr
 	case <-ctx.Done():
-		_ = cmd.Process.Kill()
+		killTree(cmd)
 		<-sess
 		_ = cmd.Wait()
 		return ctx.Err()
@@ -500,6 +503,7 @@ func (l *lockedWriter) Write(p []byte) (int, error) {
 
 func startAndWait(ctx context.Context, cmd *exec.Cmd) error {
 	// exec.CommandContext semantics on a command built without a context.
+	cmd.WaitDelay = pipeWaitDelay
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -509,10 +513,29 @@ func startAndWait(ctx context.Context, cmd *exec.Cmd) error {
 	case err := <-done:
 		return err
 	case <-ctx.Done():
-		_ = cmd.Process.Kill()
+		killTree(cmd)
 		<-done
 		return ctx.Err()
 	}
+}
+
+// pipeWaitDelay bounds how long Wait keeps reading the output pipes after
+// the process ended: a grandchild that inherited them (the node.exe or
+// native binary behind an npm .cmd shim on Windows) must not hold the run
+// past its time limit. Real agents run 39465017761 waited 40 minutes for
+// one Codex CLI prompt with a 4-minute limit that way.
+const pipeWaitDelay = 10 * time.Second
+
+// killTree ends the agent process and, on Windows, every process it
+// started (taskkill /T), since killing the shim leaves its children.
+func killTree(cmd *exec.Cmd) {
+	if cmd.Process == nil {
+		return
+	}
+	if runtime.GOOS == "windows" {
+		_ = exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
+	}
+	_ = cmd.Process.Kill()
 }
 
 // redact removes secrets from captured agent output before it is written.

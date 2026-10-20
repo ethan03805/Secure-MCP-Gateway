@@ -105,6 +105,12 @@ func dialUDS(t *testing.T, path string) *udsClient {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return wrapUDS(t, c)
+}
+
+// wrapUDS reads the newline-delimited messages of an open connection.
+func wrapUDS(t *testing.T, c net.Conn) *udsClient {
+	t.Helper()
 	t.Cleanup(func() { c.Close() })
 	u := &udsClient{t: t, c: c, lines: make(chan map[string]any, 64), replies: map[string]map[string]any{}}
 	go func() {

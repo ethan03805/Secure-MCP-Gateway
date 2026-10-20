@@ -60,6 +60,27 @@ func SettingsFrom(cfg *config.Config) (Settings, bool) {
 	return s, true
 }
 
+// initDPAPIVault creates the vault at the Gateway's start when the key
+// source resolves to dpapi (Windows) and no vault exists yet. Only the
+// account that runs smcpd can protect a DPAPI key for itself, and in the
+// Windows machine mode that is NT SERVICE\smcpd, not the administrator
+// who runs smcpctl (SR-2.13-4).
+func initDPAPIVault(s Settings, log *slog.Logger) error {
+	name, err := ResolveKeySource(s.KeySource)
+	if err != nil || name != KeySourceDPAPI {
+		return nil
+	}
+	if _, err := Inspect(s.VaultDir); !errors.Is(err, ErrNotInitialized) {
+		return nil
+	}
+	id, err := Init(s.VaultDir, DPAPI{Path: filepath.Join(s.VaultDir, DPAPIKeyFile)})
+	if err != nil {
+		return err
+	}
+	log.Info("secret vault created with a DPAPI master key for this account", "vault", id)
+	return nil
+}
+
 // OpenVault unlocks the configured vault. passphrase supplies the
 // passphrase of a passphrase-source vault; nil reads passphrase_file.
 func OpenVault(s Settings, passphrase func() (string, error), o VaultOptions) (*Vault, error) {
@@ -114,6 +135,9 @@ func Configure(cfg *config.Config, o *app.Options, injector pipeline.SecretHeade
 	use, err := LoadUsePolicy(s.UsePolicyFile, cfg.Servers)
 	if err != nil {
 		return nil, fmt.Errorf("secret use policy: %w", err)
+	}
+	if err := initDPAPIVault(s, log); err != nil {
+		return nil, fmt.Errorf("vault %s: %w", s.VaultDir, err)
 	}
 	v, err := OpenVault(s, nil, VaultOptions{})
 	if err != nil {
