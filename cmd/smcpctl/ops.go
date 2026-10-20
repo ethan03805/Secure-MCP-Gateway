@@ -71,12 +71,15 @@ func healthCmd(args []string, out io.Writer) error {
 		return err
 	}
 	state, _ := res["state"].(string)
-	label := ""
+	label, mode := "", ""
 	if info, ok := res["info"].(map[string]any); ok {
 		label, _ = info["release_label"].(string)
+		mode, _ = info["installation_mode"].(string)
 	} else {
 		label, _ = res["release_label"].(string)
+		mode, _ = res["installation_mode"].(string)
 	}
+	label = labelWithMode(label, mode)
 	var causes []string
 	switch cs := res["causes"].(type) {
 	case []any:
@@ -130,9 +133,19 @@ func versionCmd(args []string, out io.Writer) error {
 	}
 	c.http.Timeout = 3 * time.Second
 	if res, _, err := c.do("GET", "/admin/v1/health", nil); err == nil {
-		fmt.Fprintf(out, "smcpd %v (%v profile, %v)\n", res["version"], res["profile"], res["release_label"])
+		mode, _ := res["installation_mode"].(string)
+		fmt.Fprintf(out, "smcpd %v (%v profile, %v)\n", res["version"], res["profile"], labelWithMode(fmt.Sprint(res["release_label"]), mode))
 	}
 	return nil
+}
+
+// labelWithMode adds the Windows or WSL installation mode to the release
+// label (SR-4-2): "not enforced, windows-user".
+func labelWithMode(label, mode string) string {
+	if mode == "" {
+		return label
+	}
+	return label + ", " + mode
 }
 
 func keysCmd(args []string, out io.Writer) error {

@@ -59,6 +59,8 @@ Each cause in `causes` has `name`, `critical`, `integrity`, `detail`, `active`, 
 
 The harness listener's unauthenticated `GET /healthz` reports `state`, `causes`, `profile`, `release_label` and `version`, and answers HTTP 503 while fail-closed.
 
+On a Windows host and inside WSL the report also carries `installation_mode` (`windows-user`, `windows-machine` or `wsl2`; in `info` and `gateway`), and `smcpctl health` and `smcpctl version` print it after the label, for example `release label: not enforced, windows-user`. These installations always run the Standalone profile (SR-4-2): inside WSL even `[profile] mode = "enforced"` with every Linux prerequisite met gives the Standalone profile, because any process of the Windows user can enter the distribution as root. WSL is detected from `/proc/sys/kernel/osrelease` (containing `microsoft` or `WSL`), with `WSL_DISTRO_NAME` as a second signal.
+
 ## Errors
 
 | Message or code | Meaning |
