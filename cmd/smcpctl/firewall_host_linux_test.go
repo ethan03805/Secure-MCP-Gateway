@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -138,5 +139,52 @@ func TestGraphPortFirewallOnHost(t *testing.T) {
 func waitCount(n *atomic.Int64, want int64) {
 	for i := 0; i < 50 && n.Load() < want; i++ {
 		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// TestContextForgePortFirewallOnHost runs on the Enforced installation of
+// scripts/ci-systemd.sh with the nftables table inet smcp loaded. A
+// listener stands in for the bundled ContextForge instance on a port of
+// the set contextforge_ports. FR-22.26 (the installed rule): smcp-core,
+// the Gateway's identity, connects; every other CP-46 identity, nobody,
+// root and the operator's account are refused before they reach it. The
+// pinned image in that port range is checked by the contextforge job
+// (bundle TestEnforcedImage).
+func TestContextForgePortFirewallOnHost(t *testing.T) {
+	if os.Getenv("SMCP_ENFORCED_FIREWALL_TEST") != "1" {
+		t.Skip("needs the Enforced installation's nftables table; set SMCP_ENFORCED_FIREWALL_TEST=1 after scripts/ci-systemd.sh installed it")
+	}
+	reqtest.Partial(t, "FR-22.26")
+	var accepted *atomic.Int64
+	addr := ""
+	for p := 28400; p <= 28499 && addr == ""; p++ {
+		ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(p)))
+		if err != nil {
+			continue
+		}
+		ln.Close()
+		accepted, addr = listen(t, net.JoinHostPort("127.0.0.1", strconv.Itoa(p)))
+	}
+	if addr == "" {
+		t.Fatal("no free port in 28400-28499")
+	}
+	if ok, out := connectAs(t, "smcp-core", addr); !ok {
+		t.Fatalf("smcp-core cannot connect to %s: %s", addr, out)
+	}
+	waitCount(accepted, 1)
+	for _, id := range append(append([]string{}, otherIdentities...), "root") {
+		if ok, out := connectAs(t, id, addr); ok {
+			t.Errorf("%s connected to the instance's port %s", id, addr)
+		} else {
+			t.Logf("%s -> %s refused: %s", id, addr, out)
+		}
+	}
+	if c, err := net.DialTimeout("tcp", addr, 3*time.Second); err == nil {
+		c.Close()
+		t.Errorf("the operator's account connected to the instance's port %s", addr)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if got := accepted.Load(); got != 1 {
+		t.Errorf("%d connections reached the listener, want only smcp-core's", got)
 	}
 }

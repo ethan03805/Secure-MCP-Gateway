@@ -316,6 +316,7 @@ host_test() {
 
 say "graph engine port admits only smcp-core; smcp-data opens no connections (SR-4.2-1, SR-7.4-1)"
 host_test ./cmd/smcpctl/ TestGraphPortFirewallOnHost SMCP_ENFORCED_FIREWALL_TEST || fail "graph port firewall"
+host_test ./cmd/smcpctl/ TestContextForgePortFirewallOnHost SMCP_ENFORCED_FIREWALL_TEST || fail "ContextForge port firewall"
 
 say "unit hardening in effect"
 systemctl show smcpd.service -p User -p ProtectSystem -p ProtectHome -p PrivateTmp -p NoNewPrivileges \

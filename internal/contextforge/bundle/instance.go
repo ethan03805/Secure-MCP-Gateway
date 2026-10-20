@@ -2,6 +2,7 @@ package bundle
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -69,7 +70,24 @@ type Options struct {
 	// Enforced runs the instance under the Enforced containment
 	// (network.go, FR-22.24): rootless Podman only.
 	Enforced bool
+	// Ports, when set, is the range the listener port is chosen from at
+	// each start: in the Enforced profile EnforcedPorts, the ports the
+	// installation's host firewall rule admits from the Gateway's identity
+	// only (FR-22.26). Zero: any free loopback port.
+	Ports PortRange
 }
+
+// PortRange is an inclusive range of TCP ports.
+type PortRange struct{ First, Last int }
+
+// EnforcedPorts are the loopback ports of the bundled instance in the
+// Enforced profile: the set contextforge_ports of the table inet smcp
+// (packaging/linux/nftables/smcp.nft), whose output rule refuses every
+// connection to them that does not come from smcp-core (FR-22.26).
+var EnforcedPorts = PortRange{First: 28400, Last: 28499}
+
+// Contains reports whether port is in the range.
+func (r PortRange) Contains(port int) bool { return port >= r.First && port <= r.Last }
 
 // Status is the instance's state for G-15 and smcpctl.
 type Status struct {
@@ -284,7 +302,7 @@ func (i *Instance) prepareVolume(ctx context.Context) error {
 // environment, so no credential is on a command line or in a file.
 func (i *Instance) run(ctx context.Context, env map[string]string, creds Credentials) error {
 	_ = i.remove(ctx)
-	port, err := freeLoopbackPort()
+	port, err := pickPort(i.o.Ports)
 	if err != nil {
 		return err
 	}
@@ -449,6 +467,31 @@ func redactOutput(out string, creds Credentials) string {
 		}
 	}
 	return out
+}
+
+// pickPort chooses a free loopback port: in r when it is set, starting
+// at a random offset, otherwise any.
+func pickPort(r PortRange) (int, error) {
+	if r.First == 0 {
+		return freeLoopbackPort()
+	}
+	n := r.Last - r.First + 1
+	if n <= 0 {
+		return 0, fmt.Errorf("bundle: empty port range %d-%d", r.First, r.Last)
+	}
+	var b [2]byte
+	_, _ = rand.Read(b[:])
+	off := int(b[0])<<8 | int(b[1])
+	for k := 0; k < n; k++ {
+		p := r.First + (off+k)%n
+		l, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(p)))
+		if err != nil {
+			continue
+		}
+		_ = l.Close()
+		return p, nil
+	}
+	return 0, fmt.Errorf("bundle: no free loopback port in %d-%d", r.First, r.Last)
 }
 
 func freeLoopbackPort() (int, error) {
