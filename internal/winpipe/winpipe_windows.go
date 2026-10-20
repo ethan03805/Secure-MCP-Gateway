@@ -35,6 +35,7 @@ type Listener struct {
 
 	mu      sync.Mutex
 	pending windows.Handle // the instance waiting for the next client
+	waiting windows.Handle // the instance an Accept is waiting on
 	closed  bool
 }
 
@@ -74,7 +75,7 @@ func Listen(name string, entries []winsec.Entry) (*Listener, error) {
 		_ = windows.CloseHandle(h)
 		return nil, err
 	}
-	return &Listener{name: name, sa: sa, closeEv: ev, pending: h}, nil
+	return &Listener{name: name, sa: sa, closeEv: ev, pending: h, waiting: windows.InvalidHandle}, nil
 }
 
 // Addr implements net.Listener.
@@ -105,14 +106,20 @@ func (l *Listener) Accept() (net.Conn, error) {
 	}
 	h := l.pending
 	l.pending = windows.InvalidHandle
-	l.mu.Unlock()
 	if h == windows.InvalidHandle {
 		var err error
 		if h, err = createInstance(l.name, l.sa, false); err != nil {
+			l.mu.Unlock()
 			return nil, err
 		}
 	}
-	if err := l.connect(h); err != nil {
+	l.waiting = h
+	l.mu.Unlock()
+	err := l.connect(h)
+	l.mu.Lock()
+	l.waiting = windows.InvalidHandle // DACL no longer reads through h
+	l.mu.Unlock()
+	if err != nil {
 		_ = windows.CloseHandle(h)
 		return nil, err
 	}
@@ -127,6 +134,30 @@ func (l *Listener) Accept() (net.Conn, error) {
 	}
 	f := os.NewFile(uintptr(h), l.name)
 	return &Conn{f: f, name: l.name, sid: sid}, nil
+}
+
+// DACL reads the security descriptor of the pipe through a server
+// instance of this listener (SR-2.8-6): the instance waiting for a
+// client, or a new one kept for the next Accept. It opens no client
+// connection, so the answer does not depend on how a serving Gateway
+// treats a connection that never authenticates.
+func (l *Listener) DACL() (protected, null bool, entries []winsec.Entry, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.closed {
+		return false, false, nil, net.ErrClosed
+	}
+	h := l.waiting
+	if h == windows.InvalidHandle {
+		if l.pending == windows.InvalidHandle {
+			if l.pending, err = createInstance(l.name, l.sa, false); err != nil {
+				l.pending = windows.InvalidHandle
+				return false, false, nil, err
+			}
+		}
+		h = l.pending
+	}
+	return winsec.DACLHandle(h, windows.SE_KERNEL_OBJECT)
 }
 
 // connect waits, interruptibly, for a client to open the instance h.
@@ -287,7 +318,11 @@ func Dial(ctx context.Context, name string) (net.Conn, error) {
 	}
 }
 
-// DACL reads the pipe's DACL through a client handle (tests, doctor).
+// DACL reads the pipe's DACL through a client handle (doctor). The
+// handle is a connection: a server that drops a client which sends
+// nothing can disconnect it before the read, which then fails with
+// ERROR_PIPE_NOT_CONNECTED. The server reads its own pipe with
+// Listener.DACL.
 func DACL(name string) (protected, null bool, entries []winsec.Entry, err error) {
 	n, err := windows.UTF16PtrFromString(name)
 	if err != nil {

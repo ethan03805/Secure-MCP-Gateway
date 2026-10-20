@@ -66,13 +66,33 @@ func TestWindowsPipeTransport(t *testing.T) {
 // group need a second account.
 func TestWindowsPipeSecurityDescriptor(t *testing.T) {
 	reqtest.Partial(t, "SR-2.8-6")
-	h, path := udsHarness(t, harnessOpts{}, os.Getuid(), "ro")
-	_ = h
-	protected, null, entries, err := winpipe.DACL(path)
+	// The Gateway's own listener and serving loop, as udsHarness builds
+	// them, with the listener kept: the DACL is read through a server
+	// instance. Read through a client handle it would race the serving
+	// loop, which disconnects a connection that never authenticates.
+	self := selfSID(t)
+	path := fmt.Sprintf(`\\.\pipe\smcp-test-%d-%d`, os.Getpid(), testport.Free(t))
+	h := newHarness(t, harnessOpts{toml: fmt.Sprintf("[uds]\nenabled = true\npath = %q\ngroup = \"smcp-harness-test-absent\"\n[[uds.peer]]\nsid = %q\nprincipal = \"cc\"\nkey_hash = %q\ntemplate = \"ro\"\n",
+		path, self, udsKeyHash(t))})
+	ln, err := h.gw.ListenUDS()
 	if err != nil {
 		t.Fatal(err)
 	}
-	self := selfSID(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- h.gw.ServeUDS(ctx, ln) }()
+	defer func() {
+		cancel()
+		<-done
+	}()
+	pl, ok := ln.(*winpipe.Listener)
+	if !ok {
+		t.Fatalf("ListenUDS returned %T, want *winpipe.Listener", ln)
+	}
+	protected, null, entries, err := pl.DACL()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !protected || null {
 		t.Fatalf("pipe DACL protected=%v null=%v", protected, null)
 	}
