@@ -26,11 +26,11 @@
     "requirements": [
       "FR-14.9"
     ],
-    "ref": "v1.3.0-beta.1",
-    "commit": "93bc1d9b8cb21c0537db274fe6345323a56416ff",
+    "ref": "v1.3.0-beta.2",
+    "commit": "fe82231b29c71528b99c68d0dd8fda3465d804fd",
     "conclusion": "success",
-    "date": "2026-10-20T09:16:18Z",
-    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39398963939"
+    "date": "2026-10-20T12:06:20Z",
+    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39419231445"
   },
   {
     "workflow": "tap",
