@@ -61,10 +61,12 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
@@ -100,7 +102,12 @@ type Endpoint struct {
 // NewHTTPClient returns the client the transport uses: no proxy, no
 // redirects, TLS 1.2 or later verified against the system roots or only
 // the roots in caFile, bounded connection setup and response headers.
-func NewHTTPClient(caFile string) (*http.Client, error) {
+func NewHTTPClient(caFile string) (*http.Client, error) { return newHTTPClient(caFile, false) }
+
+// newHTTPClient builds the client; guard refuses connections to the
+// addresses of refusedAddr (for an endpoint whose host is a name or a
+// public address).
+func newHTTPClient(caFile string, guard bool) (*http.Client, error) {
 	tc := &tls.Config{MinVersion: tls.VersionTLS12}
 	if caFile != "" {
 		pem, err := os.ReadFile(caFile) //nolint:gosec // operator-configured path
@@ -116,7 +123,7 @@ func NewHTTPClient(caFile string) (*http.Client, error) {
 	return &http.Client{
 		Transport: &http.Transport{
 			Proxy:                  nil,
-			DialContext:            (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+			DialContext:            dialer(guard).DialContext,
 			TLSClientConfig:        tc,
 			TLSHandshakeTimeout:    10 * time.Second,
 			MaxResponseHeaderBytes: 64 << 10,
@@ -126,6 +133,63 @@ func NewHTTPClient(caFile string) (*http.Client, error) {
 		},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}, nil
+}
+
+func dialer(guard bool) *net.Dialer {
+	d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
+	if guard {
+		// The check runs on the address actually dialed, after name
+		// resolution, so a name that resolves (or rebinds) to a refused
+		// address is caught.
+		d.Control = func(_, address string, _ syscall.RawConn) error {
+			host, _, err := net.SplitHostPort(address)
+			if err != nil {
+				return err
+			}
+			ip, err := netip.ParseAddr(host)
+			if err != nil {
+				return err
+			}
+			if why := refusedAddr(ip); why != "" {
+				return fmt.Errorf("southbound: %s resolves to a %s address; use a loopback URL for a local server", address, why)
+			}
+			return nil
+		}
+	}
+	return d
+}
+
+// cloudMetadata are instance-metadata addresses outside link-local.
+var cloudMetadata = []netip.Addr{
+	netip.MustParseAddr("100.100.100.200"),
+	netip.MustParseAddr("192.0.0.192"),
+	netip.MustParseAddr("fd00:ec2::254"),
+	netip.MustParseAddr("fd20:ce::254"),
+}
+
+// refusedAddr names the class of an address a url server whose URL does not
+// name loopback must not reach: loopback (a local service reached through
+// a public name, DNS rebinding), link-local (including 169.254.169.254),
+// cloud metadata, multicast and unspecified. Private ranges stay allowed,
+// for servers on the local network.
+func refusedAddr(ip netip.Addr) string {
+	ip = ip.Unmap()
+	switch {
+	case ip.IsLoopback():
+		return "loopback"
+	case ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.Zone() != "":
+		return "link-local"
+	case ip.IsMulticast() || ip.IsInterfaceLocalMulticast():
+		return "multicast"
+	case ip.IsUnspecified():
+		return "unspecified"
+	}
+	for _, m := range cloudMetadata {
+		if ip == m {
+			return "cloud-metadata"
+		}
+	}
+	return ""
 }
 
 // Conn is one connection to a Streamable HTTP server, presented as a
@@ -171,7 +235,7 @@ func Dial(ep Endpoint) (*Conn, error) {
 	}
 	h := ep.HTTP
 	if h == nil {
-		if h, err = NewHTTPClient(ep.CAFile); err != nil {
+		if h, err = newHTTPClient(ep.CAFile, !IsLoopbackHost(u.Hostname())); err != nil {
 			return nil, err
 		}
 	}

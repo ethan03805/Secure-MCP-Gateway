@@ -436,6 +436,63 @@ func TestHTTPTLSAndCredentials(t *testing.T) {
 	}
 }
 
+// TestHTTPCancellation: cancelling a dispatched call to a Streamable HTTP
+// instance closes the call's response stream (the server sees its request
+// end) and sends notifications/cancelled naming the request ID; the
+// instance keeps serving.
+func TestHTTPCancellation(t *testing.T) {
+	s := sbtest.New()
+	t.Cleanup(s.Close)
+	s.SSE = true
+	ids := make(chan json.RawMessage, 1)
+	ended := make(chan struct{}, 1)
+	var block atomic.Bool
+	block.Store(true)
+	s.Call = func(w *sbtest.W, m sbtest.Msg) json.RawMessage {
+		if !block.Load() {
+			return nil
+		}
+		w.Start()
+		w.Flush()
+		ids <- m.ID
+		<-w.Request().Context().Done()
+		ended <- struct{}{}
+		return sbtest.Handled
+	}
+	r, caps := startHTTP(t, s.URL, httpOpts{timeout: 30 * time.Second})
+	ctx, cancel := context.WithCancel(context.Background())
+	errc := make(chan error, 1)
+	go func() {
+		_, err := r.Call(ctx, dispatch(caps, r.Resolve("h_echo"), "c1", `{}`))
+		errc <- err
+	}()
+	id := <-ids
+	cancel()
+	if err := <-errc; !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v", err)
+	}
+	select {
+	case <-ended:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the response stream stayed open")
+	}
+	waitFor(t, func() bool {
+		for _, p := range s.Posts("notifications/cancelled") {
+			var params struct {
+				RequestID json.RawMessage `json:"requestId"`
+			}
+			if json.Unmarshal(p.Msg.Params, &params) == nil && string(params.RequestID) == string(id) {
+				return true
+			}
+		}
+		return false
+	})
+	block.Store(false)
+	if got, err := callText(t, r, caps, "h_echo", "c2", `{"after":true}`); err != nil || got != `{"after":true}` {
+		t.Fatalf("after cancellation: %q %v", got, err)
+	}
+}
+
 // TestHTTPServerFailures: a server-initiated request on a response stream
 // is refused with -32601 (FR-5.20 as for stdio); a server that stops
 // answering times the call out and the instance is replaced; an endpoint
