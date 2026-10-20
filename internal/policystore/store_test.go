@@ -4,12 +4,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 const doc1 = `{"revision": "r1", "framework_profiles": {"dev": {"templates": ["ro"], "default_template": "ro"}},
@@ -65,7 +67,12 @@ func TestRevisionRecordAndSignature(t *testing.T) {
 	if _, _, err := s2.Active(); err != nil {
 		t.Fatal(err)
 	}
-	if st, err := os.Stat(filepath.Join(dir, KeyFile)); err != nil || st.Mode().Perm() != 0o600 {
+	if runtime.GOOS == "windows" {
+		// No POSIX modes on Windows: the key is a DPAPI blob (FR-21.10).
+		if b, err := os.ReadFile(filepath.Join(dir, KeyFile)); err != nil || !winsec.IsProtectedBlob(b) {
+			t.Fatalf("key file is not a DPAPI blob: %v", err)
+		}
+	} else if st, err := os.Stat(filepath.Join(dir, KeyFile)); err != nil || st.Mode().Perm() != 0o600 {
 		t.Fatalf("key file mode: %v %v", st.Mode(), err)
 	}
 	exp, err := s2.Export("r2")
@@ -152,7 +159,8 @@ func TestPublishedRevisionsAreImmutable(t *testing.T) {
 	// The file is named by its content digest and is read-only.
 	path := filepath.Join(dir, RevisionsDir, rev.Record.Digest+".json")
 	st, err := os.Stat(path)
-	if err != nil || st.Mode().Perm() != 0o400 {
+	// Windows reports the read-only attribute as mode 0444.
+	if want := os.FileMode(0o400); err != nil || (runtime.GOOS != "windows" && st.Mode().Perm() != want) || st.Mode().Perm()&0o222 != 0 {
 		t.Fatalf("mode %v %v", st.Mode(), err)
 	}
 	// The writer never replaces an existing file.

@@ -19,6 +19,15 @@ func TestStorageQuotaLevels(t *testing.T) {
 	m := New(Options{})
 	m.AddQuota(&Quota{Name: "journal", Dir: dir, Limit: 10000, Interval: time.Nanosecond})
 	m.AddQuota(&Quota{Name: "observation_store", Dir: t.TempDir(), Limit: 10000, Interval: time.Nanosecond})
+	// tick waits until the clock has moved: the quota check measures at
+	// most once per Interval, and on Windows time.Now advances in steps of
+	// up to 15.6 ms, so two evaluations can read the same instant.
+	tick := func() {
+		t0 := time.Now()
+		for !time.Now().After(t0) {
+			time.Sleep(time.Millisecond)
+		}
+	}
 	fill := func(name string, n int) {
 		t.Helper()
 		if err := os.WriteFile(filepath.Join(dir, name), make([]byte, n), 0o600); err != nil {
@@ -55,12 +64,14 @@ func TestStorageQuotaLevels(t *testing.T) {
 		t.Fatalf("other store: %+v", l)
 	}
 	fill("b", 3000) // 80%
+	tick()
 	m.Evaluate()
 	r = m.Report()
 	if l := level(r, "journal"); l.Percent != 80 || !l.Warning || !warned(r) {
 		t.Fatalf("80%%: %+v causes %+v", l, r.Causes)
 	}
 	fill("c", 1500) // 95%
+	tick()
 	m.Evaluate()
 	r = m.Report()
 	l := level(r, "journal")

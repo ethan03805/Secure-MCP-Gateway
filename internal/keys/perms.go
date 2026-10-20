@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 // PrivateFiles are the state files whose disclosure gives control of the
@@ -17,21 +16,20 @@ var PrivateFiles = []string{CAKeyFile, CANextKeyFile, ServerKeyFile, EvidenceKey
 // other accounts can read or write.
 var ErrPermissionsOpen = errors.New("private state file is accessible to other accounts")
 
-// ErrUnprotectedPlatform is returned by CheckPrivate on Windows, where file
-// modes do not protect the private files and the DACL check (FR-21.5) and
-// DPAPI key protection (FR-21.10) are not implemented yet. The Gateway
-// refuses to start rather than run with keys it cannot show are private.
-var ErrUnprotectedPlatform = errors.New("private state file protection is not implemented on Windows (FR-21.5 DACL check, FR-21.10 DPAPI); refusing to start with unverified signing keys and operator token")
-
 // CheckPrivate refuses a state directory in which a private file exists
 // with group or other permission bits. Ensure creates these files with
 // mode 0600; a looser mode means they were copied, restored or changed by
 // hand, and any local account could read the operator token or the
-// signing keys. Missing files are not an error. On Windows it always
-// fails with ErrUnprotectedPlatform.
+// signing keys. Missing files are not an error.
+//
+// On Windows no file mode is read (FR-21.2). Instead the state directory
+// must have a protected DACL and it and every private file may grant
+// access only to the account running the Gateway, SYSTEM and
+// Administrators (ErrStateACL, FR-21.5), and every private file must be a
+// DPAPI blob this account can decrypt (ErrKeyProtection, FR-21.10).
 func CheckPrivate(stateDir string) error {
-	if runtime.GOOS == "windows" {
-		return ErrUnprotectedPlatform
+	if !modeChecked {
+		return checkPlatform(stateDir)
 	}
 	for _, name := range PrivateFiles {
 		p := filepath.Join(stateDir, name)
@@ -49,5 +47,5 @@ func CheckPrivate(stateDir string) error {
 			return fmt.Errorf("%w: %s has mode %04o; run chmod 600 %s", ErrPermissionsOpen, p, perm, p)
 		}
 	}
-	return nil
+	return checkPlatform(stateDir)
 }

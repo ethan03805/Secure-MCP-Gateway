@@ -519,42 +519,52 @@ jobs:
       #     Windows: internal/backend, internal/edge, internal/filters,
       #     internal/pipeline (its TestWindows* tests run in the next step)
       #   Linux sandbox (fake Podman uses syscall.Exec): internal/sandbox
-      #   POSIX file-mode checks in code or tests (FR-21.5): internal/keys,
+      #   POSIX file-mode checks in code or tests (FR-21.5):
       #     internal/secrets, internal/graph, internal/obsstore,
       #     internal/baseline, internal/principals, internal/diag,
       #     internal/obspolicy, internal/research, internal/approval,
       #     internal/harness, scripts/agents
-      #   directory fsync refused by Windows ("Access is denied"):
-      #     internal/policystore, internal/policyadmin, internal/backup
       #   Windows paths written into TOML basic strings by the tests:
       #     internal/adminapi, internal/consoleauth, internal/filterapi,
       #     internal/openapi, tools/openapi
       #   POSIX default paths (/usr/bin/podman, sudo): internal/config,
       #     internal/packaging (also: no .exe, launch refused)
-      #   free disk space not measured off Linux and macOS: internal/health
       #   POSIX path canonicalization of the request filters (FR-21.25):
       #     internal/policy, internal/filters
       #   tools absent on Windows (sh, nft): tools/installsh, internal/tunnel
       #   binaries built without .exe: cmd/smcpd, cmd/smcp-refserver
       #   timing on a shared runner: internal/perf
-      # The Test*Windows* gate tests of internal/keys, internal/pipeline and
-      # internal/edge check that unported features fail closed.
+      # The TestWindows* tests of internal/pipeline and internal/edge check
+      # that unported features fail closed; those of internal/keys,
+      # internal/winsec, internal/durable and internal/health check the
+      # DACL, DPAPI, write-through and free-space ports (FR-21.5, FR-21.10,
+      # FR-21.23, FR-21.26).
       - name: Test the packages that pass on Windows, and the fail-closed gates
         env:
           WINDOWS_TEST_PACKAGES: >-
             ./cmd/smcp-hostile ./docs ./internal/acceptance ./internal/analytics
             ./internal/anomaly ./internal/audit ./internal/authguard
-            ./internal/consoleapi ./internal/egress ./internal/hostile
+            ./internal/backup ./internal/cachestats ./internal/consoleapi
+            ./internal/contextforge ./internal/durable ./internal/egress
+            ./internal/health ./internal/hostile ./internal/keys
             ./internal/library ./internal/metrics ./internal/observe
+            ./internal/policyadmin ./internal/policystore
             ./internal/posixacl ./internal/profile ./internal/reqtest
             ./internal/sandbox/probe ./internal/session ./internal/testport
-            ./internal/versions ./internal/winsandbox ./packaging/linux
+            ./internal/versions ./internal/winsandbox ./internal/winsec ./packaging/linux
             ./tools/provenance ./tools/reqreport ./tools/sbomcheck
+            ./tools/uilint
         run: |
           mkdir -p build
           # shellcheck disable=SC2086 # the list is split on purpose
           go test -short -count=1 $WINDOWS_TEST_PACKAGES
-          go test -count=1 -run 'Windows' ./internal/keys ./internal/pipeline ./internal/edge -v | grep -E '^(=== RUN|--- |ok|FAIL|PASS)'
+          # The Windows-only tests' requirement claims go to the status job
+          # (build/windows-test.json, FR-21.19); their names are unique to
+          # Windows, so they never replace a Linux result of the same test.
+          rc=0
+          go test -json -count=1 -run '^TestWindows' ./internal/keys ./internal/pipeline ./internal/edge ./internal/winsec ./internal/durable ./internal/health > build/windows-test.json || rc=1
+          jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Package | sub(".*/secure-mcp-gateway/"; ""))\t\(.Test)"' build/windows-test.json
+          exit "$rc"
       # The Windows backend sandbox (FR-21.11, FR-21.12, SR-4.8-2): Job
       # Objects, launch and the hostile resource fixtures on this runner.
       # Their requirement claims are merged by the status job.
@@ -1450,6 +1460,11 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
         with:
+          name: windows-results
+          path: build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
           pattern: desktop-results-*
           merge-multiple: true
           path: build
@@ -1458,11 +1473,6 @@ jobs:
         with:
           pattern: install-guide-results-*
           merge-multiple: true
-          path: build
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        continue-on-error: true
-        with:
-          name: windows-results
           path: build
       - name: Fetch the results of the separate verification workflows (site-data/workflows.json; FR-13.3 tap, FR-14.9 reference packages)
         run: |
@@ -1522,6 +1532,13 @@ jobs:
               echo "no $f"
             fi
           done
+          # The Windows-only tests of the windows job (FR-21).
+          if [ -s build/windows-test.json ]; then
+            cat build/windows-test.json >> build/all-test.json
+            merged=1
+          else
+            echo "no windows results"
+          fi
           # The Windows backend sandbox tests on windows-latest (FR-21).
           if [ -s build/windows-sandbox-test.json ]; then
             cat build/windows-sandbox-test.json >> build/all-test.json

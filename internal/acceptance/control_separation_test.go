@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
@@ -49,7 +50,7 @@ func harnessClientCert(t *testing.T, g *gateway) tls.Certificate {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keyPEM, err := os.ReadFile(filepath.Join(g.state, "tls", "ca.key"))
+	keyPEM, err := keys.ReadPrivateFile(filepath.Join(g.state, "tls", "ca.key"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +193,7 @@ templates = ["read-only"]
 		g.mustCtl("remote", "enable", "--provider", "manual", "--public-url", public)
 	}
 
-	opTok, err := os.ReadFile(filepath.Join(g.state, "keys", "admin.token"))
+	opTok, err := keys.ReadPrivateFile(filepath.Join(g.state, "keys", "admin.token"))
 	if err != nil {
 		t.Fatal(err)
 	}

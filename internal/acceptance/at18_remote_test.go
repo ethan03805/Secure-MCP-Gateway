@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
 )
@@ -28,7 +29,7 @@ import (
 // the tunnel connectors do. It returns the public URL.
 func (g *gateway) tunnel(remoteAddr string) string {
 	g.t.Helper()
-	cert, err := tls.LoadX509KeyPair(filepath.Join(g.state, "tls", "server.crt"), filepath.Join(g.state, "tls", "server.key"))
+	cert, err := keys.LoadKeyPair(filepath.Join(g.state, "tls", "server.crt"), filepath.Join(g.state, "tls", "server.key"))
 	if err != nil {
 		g.t.Fatal(err)
 	}

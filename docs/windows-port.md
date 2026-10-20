@@ -2,7 +2,7 @@
 
 For contributors. The owner decided on 2026-10-18 that the Gateway also runs on Windows (SRS FR-21, planned for v1.3.0; the requirements are in `srs_build/req7-windows.txt`, pull request #131). This page records where the code stood when the port started, what the first step changed, what each FR-21 area will cost, and the requirements that look infeasible or mis-specified as written.
 
-No Windows installation mode is supported yet. A Windows build of `smcpd` refuses to start (see [What fails closed](#what-fails-closed-on-windows-today)).
+No Windows installation mode is supported yet. A Windows build of `smcpd` starts with keys protected by DPAPI in a state directory with a protected DACL and launches backends in Job Objects, but refuses to open the UDS Harness Profile (see [What fails closed](#what-fails-closed-on-windows-today)).
 
 ## Measured gaps (2026-10-18, commit d9dde78)
 
@@ -43,7 +43,6 @@ Each feature that is not ported refuses with an error naming the FR-21 requireme
 
 | Where | Behavior on Windows | Until |
 |---|---|---|
-| `keys.CheckPrivate` (called by `app.Start`) | `smcpd` refuses to start: file modes do not protect the CA, listener and evidence keys or the operator token, and their DACLs are not checked | FR-21.5 DACL check and FR-21.10 DPAPI |
 | `edge.ListenUDS` | refuses to listen, so no AF_UNIX socket is created | FR-21.8 named pipe and FR-21.9 SID mapping |
 | `profile.Resolve` | `profile = "enforced"` fails; `auto` resolves to Standalone, label "not enforced", installation mode `windows-user` (the machine-mode service reports `windows-machine`). Inside WSL every mode, `enforced` included, resolves to Standalone with mode `wsl2` | permanent (SR-4-2) |
 | `sandbox.FromConfig` (unchanged) | `[runtime] sandbox = "podman"` fails the essential `os` check | permanent |
@@ -62,6 +61,24 @@ Since 2026-10-19 `pipeline.SubprocessLauncher` starts backends on Windows throug
 - `cmd.exe`, `powershell.exe`, `pwsh.exe` and `.bat` or `.cmd` files are refused at enablement (reason `SHELL_LAUNCH`) and again at launch (SR-4.8-2). The check reads Windows path rules on every platform: case is ignored, trailing dots and spaces are stripped, and alternate data streams are refused. A renamed copy of an interpreter is not recognized by name.
 
 These run in the per-user mode too; they give the macOS Standalone posture plus resource limits, not confinement, and the label stays "not enforced" (SR-4-2).
+
+### Ported since the first step
+
+| Where | Behavior on Windows | Requirement |
+|---|---|---|
+| `keys.CheckPrivate` (called by `app.Start`) | Reads no file mode. Refuses to start with `state_acl` when the state directory's DACL is not protected or grants an account other than the one running `smcpd`, SYSTEM and Administrators, or when a private file grants one; refuses with `key_protection` when a private file is not a DPAPI blob this account can decrypt. The file is left as it is. | FR-21.5, FR-21.10 |
+| `keys.Ensure` (`smcpctl bootstrap`, `smcpctl install`) | Gives the state directory a protected DACL (inheritance disabled; full control for the current account, SYSTEM and Administrators) and writes the CA, listener, evidence and pending keys and the operator token as DPAPI blobs (`CryptProtectData`, user scope). The policy-signing key of `internal/policystore` is a DPAPI blob too. | FR-21.5, FR-21.10 |
+| `internal/durable` (Policy Store, `keys.WriteFileAtomic` and its users: backup restore, principals, observation objects, the package index) | A flushed file is renamed with `MoveFileEx` and `MOVEFILE_REPLACE_EXISTING` and `MOVEFILE_WRITE_THROUGH`; a new immutable revision with `MoveFileEx` without replace (it refuses an existing name); no directory is opened. Linux and macOS keep rename and directory `fsync`. | FR-21.23 |
+| `health.FreeBytes` | `GetDiskFreeSpaceEx`, so the `audit_capacity` and `disk_low` checks fire on Windows. | FR-21.26 |
+
+## Boundary between the platform runtime and the Windows sandbox
+
+Two streams of work port the Gateway to Windows. The platform runtime (`internal/winsec`, `internal/durable`, the named-pipe transport in `internal/edge`, the service, `smcpctl install`, `install.ps1`, the archives and the MSI) and the Windows sandbox (backend launch and Job Objects, FR-21.11, FR-21.12, SR-4.8-2; AppContainer profiles and their grants, FR-21.13, SR-4.1-3, SR-4.6-2; WFP egress, FR-21.14, SR-4.5-3; the bundled ContextForge Job Object). They meet at these points, and neither changes the other's files:
+
+- `internal/winsec` is the shared primitive layer. The sandbox uses `ProcessUserSID`, `LookupSID`, `Grant` and `Revoke` (an allow entry for an AppContainer SID on a package tree, scratch directory or slot, inherited below a directory) and `SecurityAttributes` (a protected descriptor for an object it creates), and may add its own files to the package (`appcontainer_windows.go`, `job_windows.go`) without changing the existing functions' behavior.
+- Backend launch belongs to the sandbox (`internal/winsandbox`, used by `pipeline.SubprocessLauncher` on Windows; see above). The platform runtime never starts a backend.
+- The installation mode (`windows-user`, `windows-machine`) is decided by the platform runtime (the service and `smcpctl install`) and read by the sandbox to choose AppContainer containment in the machine mode.
+- A state directory and its keys are the platform runtime's; the sandbox never grants an AppContainer SID access to them.
 
 ## Continuous integration
 
