@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
 // Fuzz targets of the security review of v1.3.0
@@ -18,6 +20,9 @@ import (
 // and free of NUL, line breaks and carriage returns (they become the
 // Last-Event-ID header of a resumption).
 func FuzzSSEReader(f *testing.F) {
+	// FR-5.28 and FR-5.30 in part (SSE responses, comments, the message
+	// bound): the regression test of finding SR-21 of the review.
+	reqtest.Partial(f, "FR-5.28", "FR-5.30")
 	for _, s := range []string{
 		"data: {\"jsonrpc\":\"2.0\"}\n\n",
 		": comment\nid: 7\nretry: 100\ndata: a\ndata: b\n\n",
@@ -58,6 +63,7 @@ func FuzzSSEReader(f *testing.F) {
 // (visible ASCII, space or tab, no leading or trailing white space) and
 // decodes to the original.
 func FuzzEncodeValue(f *testing.F) {
+	reqtest.Partial(f, "FR-5.29") // the encoding rules, for any value
 	for _, s := range []string{"us-west1", "Hello, 世界", " padded ", "a\r\nX-Injected: 1", "=?base64?x?=", "\x00", "\xff\xfe"} {
 		f.Add(s)
 	}
@@ -81,6 +87,7 @@ func FuzzEncodeValue(f *testing.F) {
 // that is not an RFC 9110 token, so mirrored arguments cannot add or split
 // headers.
 func FuzzHeaderParams(f *testing.F) {
+	reqtest.Partial(f, "FR-5.29") // mirrored header names, for any schema
 	for _, s := range []string{
 		`{"type":"object","properties":{"region":{"type":"string","x-mcp-header":"Region"}}}`,
 		`{"properties":{"a":{"type":"string","x-mcp-header":"X: y\r\nEvil"}}}`,
