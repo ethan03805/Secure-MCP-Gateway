@@ -30,6 +30,42 @@
       "identifier": "LicenseRef-c02e3dc1587f49e4876c8b75ae9e534739a00e834b609395cc2bb2fd24452dfe",
       "license": "Apache-2.0 AND BSD-3-Clause",
       "reason": "hash of the module's NOTICE.txt, the attribution notice that Apache-2.0 section 4(d) requires, not a license; the module is Apache-2.0 with BSD-3-Clause parts (LICENSE.txt)"
+    },
+    {
+      "package": "smcpd",
+      "identifier": "license",
+      "license": "Apache-2.0",
+      "reason": "syft's Windows (PE) binary cataloger lists smcpd.exe of the Windows zip archives as a package without license information; it is the Gateway's own executable, built from github.com/ethan03805/secure-mcp-gateway (Apache-2.0, LICENSE), whose module and dependencies the same SBOM lists with their licenses"
+    },
+    {
+      "package": "smcpctl",
+      "identifier": "license",
+      "license": "Apache-2.0",
+      "reason": "syft's Windows (PE) binary cataloger lists smcpctl.exe of the Windows zip archives as a package without license information; it is the Gateway's own executable, built from github.com/ethan03805/secure-mcp-gateway (Apache-2.0, LICENSE), whose module and dependencies the same SBOM lists with their licenses"
+    },
+    {
+      "package": "smcp-session",
+      "identifier": "license",
+      "license": "Apache-2.0",
+      "reason": "syft's Windows (PE) binary cataloger lists smcp-session.exe of the Windows zip archives as a package without license information; it is the Gateway's own executable, built from github.com/ethan03805/secure-mcp-gateway (Apache-2.0, LICENSE), whose module and dependencies the same SBOM lists with their licenses"
+    },
+    {
+      "package": "smcp-stdio",
+      "identifier": "license",
+      "license": "Apache-2.0",
+      "reason": "syft's Windows (PE) binary cataloger lists smcp-stdio.exe of the Windows zip archives as a package without license information; it is the Gateway's own executable, built from github.com/ethan03805/secure-mcp-gateway (Apache-2.0, LICENSE), whose module and dependencies the same SBOM lists with their licenses"
+    },
+    {
+      "package": "smcp-connect",
+      "identifier": "license",
+      "license": "Apache-2.0",
+      "reason": "syft's Windows (PE) binary cataloger lists smcp-connect.exe of the Windows zip archives as a package without license information; it is the Gateway's own executable, built from github.com/ethan03805/secure-mcp-gateway (Apache-2.0, LICENSE), whose module and dependencies the same SBOM lists with their licenses"
+    },
+    {
+      "package": "smcp-refserver",
+      "identifier": "license",
+      "license": "Apache-2.0",
+      "reason": "syft's Windows (PE) binary cataloger lists smcp-refserver.exe of the Windows zip archives as a package without license information; it is the Gateway's own executable, built from github.com/ethan03805/secure-mcp-gateway (Apache-2.0, LICENSE), whose module and dependencies the same SBOM lists with their licenses"
     }
   ]
 }
