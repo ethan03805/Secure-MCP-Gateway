@@ -18,8 +18,8 @@ import (
 // named test passed:
 //
 //	go run ./tools/reqreport join -test desktop/join::fr_20_8 -full FR-20.8 \
-//	    -need build/desktop-e2e-linux-test.json:e2e::linux::introduction_then_setup \
-//	    -need build/desktop-setup-macos-test.json:setup::tests::first_run_setup_with_the_real_smcpctl \
+//	    -need build/desktop-e2e-linux-test.json#e2e::linux::introduction_then_setup \
+//	    -need build/desktop-setup-macos-test.json#setup::tests::first_run_setup_with_the_real_smcpctl \
 //	    -out build/desktop-join-test.json
 //
 // The test fails when a named test failed, and is skipped, claiming
@@ -39,7 +39,7 @@ func runJoin(args []string, stdout io.Writer) (int, error) {
 	why := flags.String("why", "", "what the named tests cover together, printed with the claim")
 	out := flags.String("out", "-", "events file to append to (- for standard output)")
 	var needs needList
-	flags.Var(&needs, "need", "<events file>:<test name>; repeatable")
+	flags.Var(&needs, "need", "<events file>#<test name>; repeatable")
 	if err := flags.Parse(args); err != nil {
 		return 2, err
 	}
@@ -53,9 +53,9 @@ func runJoin(args []string, stdout io.Writer) (int, error) {
 	}
 	results := map[string]string{}
 	for _, n := range needs {
-		file, name, ok := strings.Cut(n, ":")
+		file, name, ok := strings.Cut(n, "#")
 		if !ok {
-			return 2, fmt.Errorf("-need %q: want <file>:<test>", n)
+			return 2, fmt.Errorf("-need %q: want <file>#<test>", n)
 		}
 		results[n] = testResult(file, name)
 	}

@@ -1938,11 +1938,11 @@ jobs:
           s=setup::tests::first_run_setup_with_the_real_smcpctl
           go run ./tools/reqreport join -test desktop/join::fr_20_8 -full FR-20.8 -out build/desktop-join-test.json \
             -why "first-run setup completed through the setup window's code with the real smcpctl on Ubuntu (through the window), macOS arm64, Windows x64 and Windows 11 arm64, no password in any command line sampled every 100 ms or left in a file; a failing install shows its output and the retry command" \
-            -need build/desktop-e2e-linux-test.json:e2e::linux::introduction_then_setup \
-            -need build/desktop-e2e-linux-test.json:e2e::linux::setup_without_passwords_in_arguments \
-            -need "build/desktop-setup-macos-test.json:$s" -need "build/desktop-setup-windows-test.json:$s" \
-            -need "build/desktop-setup-windows-arm64-test.json:$s" \
-            -need build/desktop-linux-test.json:setup::tests::progress_follows_the_two_steps_and_explains_failures
+            -need build/desktop-e2e-linux-test.json#e2e::linux::introduction_then_setup \
+            -need build/desktop-e2e-linux-test.json#e2e::linux::setup_without_passwords_in_arguments \
+            -need "build/desktop-setup-macos-test.json#$s" -need "build/desktop-setup-windows-test.json#$s" \
+            -need "build/desktop-setup-windows-arm64-test.json#$s" \
+            -need build/desktop-linux-test.json#setup::tests::progress_follows_the_two_steps_and_explains_failures
           if [ -s build/desktop-join-test.json ]; then cat build/desktop-join-test.json >> build/all-test.json; fi
           # The Windows-only tests of the windows job (FR-21).
           if [ -s build/windows-test.json ]; then

@@ -58,27 +58,27 @@ func TestJoinClaimsOnlyWhenEveryPlatformPassed(t *testing.T) {
 		}
 		return log.Tests[0]
 	}
-	if tr := run(mac+":a::setup", win+":a::setup"); tr.Result != "pass" || len(tr.Claims) != 1 || tr.Claims[0].ID != "FR-20.8" || tr.Claims[0].Partial {
+	if tr := run(mac+"#a::setup", win+"#a::setup"); tr.Result != "pass" || len(tr.Claims) != 1 || tr.Claims[0].ID != "FR-20.8" || tr.Claims[0].Partial {
 		t.Errorf("all passed: %s %+v", tr.Result, tr.Claims)
 	}
-	if tr := run(mac+":a::setup", bad+":a::setup"); tr.Result != "fail" || len(tr.Claims) != 1 {
+	if tr := run(mac+"#a::setup", bad+"#a::setup"); tr.Result != "fail" || len(tr.Claims) != 1 {
 		t.Errorf("one failed: %s %+v", tr.Result, tr.Claims)
 	}
 	for _, needs := range [][]string{
-		{mac + ":a::setup", filepath.Join(dir, "none.json") + ":a::setup"},
-		{mac + ":a::setup", win + ":a::other"},
-		{mac + ":a::setup", skipped + ":a::setup"},
+		{mac + "#a::setup", filepath.Join(dir, "none.json") + "#a::setup"},
+		{mac + "#a::setup", win + "#a::other"},
+		{mac + "#a::setup", skipped + "#a::setup"},
 	} {
 		if tr := run(needs...); tr.Result != "skip" || len(tr.Claims) != 0 {
 			t.Errorf("%v: %s %+v", needs, tr.Result, tr.Claims)
 		}
 	}
-	evs := joinEvents("j", "p", []string{"FR-20.8"}, "why", []string{"x:y"}, map[string]string{"x:y": "pass"}, time.Unix(0, 0))
+	evs := joinEvents("j", "p", []string{"FR-20.8"}, "why", []string{"x#y"}, map[string]string{"x#y": "pass"}, time.Unix(0, 0))
 	var b strings.Builder
 	for _, e := range evs {
 		b.WriteString(e.Output)
 	}
-	if !strings.Contains(b.String(), "x:y pass") || !strings.Contains(b.String(), "why") {
+	if !strings.Contains(b.String(), "x#y pass") || !strings.Contains(b.String(), "why") {
 		t.Errorf("events do not name the joined tests:\n%s", b.String())
 	}
 }
