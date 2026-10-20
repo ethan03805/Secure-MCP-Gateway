@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/sys/windows"
-
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
@@ -24,25 +22,11 @@ const (
 	groupOperators = "smcp-operators"
 )
 
-// programData and programFiles ask Windows for the folders instead of
-// reading the ProgramData and ProgramFiles environment variables, which a
-// process of the user can set for the user's later sessions (HKCU
-// Environment), elevated ones included: the machine mode must not put the
-// service binary or its state in a folder the user chose (security review
-// v1.3, SR-20).
-func programData() string {
-	if p, err := windows.KnownFolderPath(windows.FOLDERID_ProgramData, 0); err == nil && p != "" {
-		return p
-	}
-	return `C:\ProgramData`
-}
-
-func programFiles() string {
-	if p, err := windows.KnownFolderPath(windows.FOLDERID_ProgramFiles, 0); err == nil && p != "" {
-		return p
-	}
-	return `C:\Program Files`
-}
+// The machine-mode folders come from Windows, not from environment
+// variables the user can set (winsvc.ProgramData, security review v1.3,
+// SR-20).
+func programData() string  { return winsvc.ProgramData() }
+func programFiles() string { return winsvc.ProgramFiles() }
 
 // machineConfigPath is the machine-mode configuration (CP-46).
 func machineConfigPath() string {

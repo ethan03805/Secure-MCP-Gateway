@@ -116,6 +116,13 @@ func (l *Listener) Accept() (net.Conn, error) {
 	l.waiting = h
 	l.mu.Unlock()
 	err := l.connect(h)
+	for errors.Is(err, windows.ERROR_NO_DATA) {
+		// A client opened the instance and closed it again before it was
+		// accepted: free the instance and wait for the next client, so a
+		// short-lived client does not end the listener.
+		_ = windows.DisconnectNamedPipe(h)
+		err = l.connect(h)
+	}
 	l.mu.Lock()
 	l.waiting = windows.InvalidHandle // DACL no longer reads through h
 	if err == nil && !l.closed && l.pending == windows.InvalidHandle {

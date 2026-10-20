@@ -216,20 +216,32 @@ func TestWindowsPipeNameHeldBetweenAccepts(t *testing.T) {
 	if !errors.Is(err, ErrSquatted) {
 		t.Fatalf("squat attempt: %v", err)
 	}
-	// The listener still serves the next client.
+	// A client that opens the waiting instance and leaves before it is
+	// accepted does not end the listener, and the next client is served.
+	gone, err := Dial(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gone.Close()
+	errs := make(chan error, 1)
 	go func() {
-		if c, err := ln.Accept(); err == nil {
-			accepted <- c
+		c, err := ln.Accept()
+		if err != nil {
+			errs <- err
+			return
 		}
+		accepted <- c
 	}()
 	c2, err := Dial(ctx, name)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c2.Close()
+	defer c2.Close()
 	select {
 	case sc := <-accepted:
 		sc.Close()
+	case err := <-errs:
+		t.Fatalf("Accept after a client left: %v", err)
 	case <-time.After(5 * time.Second):
 		t.Fatal("the next Accept did not serve the client")
 	}

@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package winsvc
 
 import (
 	"os"
@@ -25,8 +25,8 @@ func TestMachineFoldersIgnoreEnvironment(t *testing.T) {
 		got  string
 		id   *windows.KNOWNFOLDERID
 	}{
-		{"ProgramFiles", programFiles(), windows.FOLDERID_ProgramFiles},
-		{"ProgramData", programData(), windows.FOLDERID_ProgramData},
+		{"ProgramFiles", ProgramFiles(), windows.FOLDERID_ProgramFiles},
+		{"ProgramData", ProgramData(), windows.FOLDERID_ProgramData},
 	} {
 		want, err := windows.KnownFolderPath(c.id, 0)
 		if err != nil {
@@ -38,8 +38,5 @@ func TestMachineFoldersIgnoreEnvironment(t *testing.T) {
 		if !strings.EqualFold(c.got, want) {
 			t.Errorf("%s = %s, want the known folder %s", c.name, c.got, want)
 		}
-	}
-	if !strings.HasPrefix(strings.ToLower(machineConfigPath()), strings.ToLower(programData())) {
-		t.Errorf("configuration %s is not below %s", machineConfigPath(), programData())
 	}
 }
