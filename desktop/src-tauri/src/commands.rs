@@ -66,10 +66,27 @@ pub fn find_in(name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
     dirs.iter().map(|d| d.join(&f)).find(|p| p.is_file())
 }
 
+/// A path with links resolved. On Windows `canonicalize` returns the
+/// `\\?\C:\...` form, which is the same file; the plain `C:\...` form is
+/// kept so that paths shown and compared stay as the user knows them.
+pub fn real_path(p: &Path) -> PathBuf {
+    let r = std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
+    strip_verbatim(r)
+}
+
+/// Removes the `\\?\` prefix of a drive path (not of a `\\?\UNC\` path).
+pub fn strip_verbatim(p: PathBuf) -> PathBuf {
+    let s = p.to_string_lossy();
+    match s.strip_prefix(r"\\?\") {
+        Some(rest) if !rest.starts_with(r"UNC\") && rest.as_bytes().get(1) == Some(&b':') => PathBuf::from(rest),
+        _ => p,
+    }
+}
+
 /// Finds a Gateway command for the running application.
 pub fn find(name: &str) -> Option<PathBuf> {
     let exe = std::env::current_exe().ok()?;
-    let exe = std::fs::canonicalize(&exe).unwrap_or(exe);
+    let exe = real_path(&exe);
     find_in(name, &search_dirs(&exe))
 }
 
@@ -81,7 +98,10 @@ pub fn version_of(name: &str, path: &Path) -> Option<String> {
     } else {
         &["--version"]
     };
-    let out = Command::new(path).args(args).output().ok()?;
+    let out = crate::service::no_console(&mut Command::new(path))
+        .args(args)
+        .output()
+        .ok()?;
     if !out.status.success() {
         return None;
     }
@@ -121,7 +141,7 @@ pub fn report(dirs: &[PathBuf]) -> (Vec<String>, bool) {
 /// `smcp-desktop --commands`: prints the report and returns the exit code.
 pub fn print_report() -> i32 {
     let exe = match std::env::current_exe() {
-        Ok(e) => std::fs::canonicalize(&e).unwrap_or(e),
+        Ok(e) => real_path(&e),
         Err(e) => {
             eprintln!("smcp-desktop: cannot locate its own executable: {e}");
             return 1;
@@ -135,6 +155,30 @@ pub fn print_report() -> i32 {
         0
     } else {
         1
+    }
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn verbatim_drive_paths_lose_their_prefix() {
+        crate::claims::partial(&["FR-20.20"]);
+        assert_eq!(
+            strip_verbatim(PathBuf::from(
+                r"\\?\C:\Program Files\Secure MCP Gateway\smcp-desktop.exe"
+            )),
+            PathBuf::from(r"C:\Program Files\Secure MCP Gateway\smcp-desktop.exe")
+        );
+        for keep in [
+            r"\\?\UNC\server\share\x.exe",
+            r"C:\x.exe",
+            "/usr/bin/smcp-desktop",
+            r"\\?\Volume{1}\x",
+        ] {
+            assert_eq!(strip_verbatim(PathBuf::from(keep)), PathBuf::from(keep));
+        }
     }
 }
 

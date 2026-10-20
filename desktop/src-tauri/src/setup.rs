@@ -73,9 +73,20 @@ pub fn config_paths(h: &Host) -> Vec<PathBuf> {
                 v.push(etc.join("smcp/smcp.toml"));
             }
         }
+        // The per-user and the machine mode (FR-21.6, CP-46).
+        "windows" => {
+            v.extend(h.win.user_config_dir().map(|d| config_file(&d)));
+            v.extend(h.win.machine_config_dir().map(|d| config_file(&d)));
+        }
         _ => {}
     }
     v
+}
+
+/// The Gateway configuration file in a Windows configuration directory
+/// (named here only, SR-2-3; the application never reads it).
+pub fn config_file(dir: &Path) -> PathBuf {
+    dir.join("smcp.toml")
 }
 
 /// Whether a Gateway is already set up on this host: a configuration file
@@ -96,9 +107,11 @@ pub fn present(p: &Path) -> bool {
 }
 
 /// The places `smcpctl` is looked for, in order: beside the application's
-/// executable (the `.dmg` and AppImage bundle it there), then where the
-/// `.pkg`, the Linux packages, Homebrew and `install.sh` put it. Fixed at
-/// build time except for the two directories; never PATH.
+/// executable (the `.dmg`, the AppImage and the `smcp-desktop` `.msi`
+/// bundle it there), then where the `.pkg`, the Linux packages, Homebrew
+/// and `install.sh` put it, and on Windows where the `smcp` `.msi` and
+/// `install.ps1` put it. Fixed at build time except for the directories
+/// named by the environment; never PATH.
 pub fn smcpctl_candidates(exe_dir: Option<&Path>, h: &Host) -> Vec<PathBuf> {
     let name = if h.os == "windows" { "smcpctl.exe" } else { "smcpctl" };
     let mut v = Vec::new();
@@ -110,6 +123,14 @@ pub fn smcpctl_candidates(exe_dir: Option<&Path>, h: &Host) -> Vec<PathBuf> {
             v.push(Path::new(d).join(name));
         }
         v.push(h.home.join(".local/bin").join(name));
+    } else {
+        v.extend(h.win.machine_smcpctl());
+        v.extend(
+            h.win
+                .local_app_data
+                .as_ref()
+                .map(|d| d.join("Programs").join("smcp-gateway").join(name)),
+        );
     }
     v
 }
@@ -356,6 +377,7 @@ impl SecretFiles {
     /// and `approver` (mode 0600), each with its password and no newline.
     pub fn create(base: &Path, admin: &Secret, approver: &Secret) -> std::io::Result<SecretFiles> {
         let dir = base.join(unique_name());
+        #[cfg_attr(not(unix), allow(unused_mut))]
         let mut b = std::fs::DirBuilder::new();
         #[cfg(unix)]
         {
@@ -559,6 +581,7 @@ pub fn run_streaming_in(
         };
     };
     let mut cmd = Command::new(prog);
+    service::no_console(&mut cmd);
     cmd.args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -712,6 +735,7 @@ mod tests {
             xdg_config_home: None,
             etc_systemd: root.join("etc/systemd/system"),
             uid: 501,
+            win: Default::default(),
         }
     }
 
@@ -740,6 +764,23 @@ mod tests {
         // A service unit without the configuration still counts.
         touch(&root.join("home/.config/systemd/user/smcpd.service"));
         assert!(configured(&linux));
+
+        // Windows: the per-user and the machine-mode configuration.
+        let win = Host {
+            os: "windows",
+            win: crate::service::WinDirs {
+                local_app_data: Some(root.join("Local")),
+                program_data: Some(root.join("ProgramData")),
+                ..Default::default()
+            },
+            ..host("windows", &root)
+        };
+        assert!(!configured(&win));
+        touch(&root.join("Local/smcp-gateway/config/smcp.toml"));
+        assert!(configured(&win));
+        std::fs::remove_dir_all(root.join("Local")).unwrap();
+        touch(&root.join("ProgramData/smcp-gateway/config/smcp.toml"));
+        assert!(configured(&win));
         std::fs::remove_dir_all(&root).unwrap();
     }
 
@@ -776,7 +817,7 @@ mod tests {
         assert_eq!(c[0], exe.join("smcpctl"));
         assert!(c.contains(&PathBuf::from("/usr/bin/smcpctl")));
         assert!(c.contains(&PathBuf::from("/usr/local/bin/smcpctl")));
-        assert!(c.iter().all(|p| p.is_absolute()));
+        assert!(c.iter().all(|p| p.is_absolute() || !cfg!(unix)));
         touch(&exe.join("smcpctl"));
         assert_eq!(find_smcpctl(Some(&exe), &h), Some(exe.join("smcpctl")));
         let w = Host {
@@ -784,6 +825,27 @@ mod tests {
             ..h.clone()
         };
         assert_eq!(smcpctl_candidates(Some(&exe), &w), vec![exe.join("smcpctl.exe")]);
+        // Beside the app (smcp-desktop .msi), then the smcp .msi and
+        // machine mode, then install.ps1; never PATH.
+        let w = Host {
+            win: crate::service::WinDirs {
+                local_app_data: Some(root.join("Local")),
+                program_files: Some(root.join("Program Files")),
+                ..Default::default()
+            },
+            ..w
+        };
+        assert_eq!(
+            smcpctl_candidates(Some(&exe), &w),
+            vec![
+                exe.join("smcpctl.exe"),
+                root.join("Program Files").join("smcp-gateway").join("smcpctl.exe"),
+                root.join("Local")
+                    .join("Programs")
+                    .join("smcp-gateway")
+                    .join("smcpctl.exe"),
+            ]
+        );
         std::fs::remove_dir_all(&root).unwrap();
     }
 

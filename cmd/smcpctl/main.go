@@ -43,6 +43,7 @@ Offline:
                    only checks the profile's prerequisites
   upgrade          install a new release with backup, health check and rollback
   uninstall        remove services and binaries, keep evidence (--purge removes all)
+  service          status, start, stop or restart the installed service
   version          print the version (and the running Gateway's label)
 
 Control API (running Gateway; backup and keys also work offline):
@@ -129,6 +130,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = uninstallCmd(args[1:], os.Stdin, stdout)
 	case args[0] == "stop":
 		err = stopCmd(args[1:], stdout)
+	case args[0] == "service":
+		err = serviceCmd(args[1:], stdout)
 	case args[0] == "resume":
 		err = control(args[1:], stdout, "POST", "/admin/v1/resume", map[string]any{})
 	case args[0] == "policy" && sub("reload"):
@@ -173,6 +176,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	if err != nil {
 		fmt.Fprintln(stderr, "smcpctl:", err)
+		var ec interface{ smcpctlExitCode() int }
+		if errors.As(err, &ec) {
+			return ec.smcpctlExitCode()
+		}
 		return 1
 	}
 	return 0

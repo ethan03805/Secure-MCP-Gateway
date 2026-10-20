@@ -31,7 +31,10 @@
 # only be built on a Mac: the desktop-macos job (installers-desktop-
 # macos.yml) builds and smoke-tests it before the release job. A failed
 # build or test stops publication; no macOS runner is a warning, and the
-# release is published without the .dmg.
+# release is published without the .dmg. The smcp-desktop .msi for
+# windows-amd64 and windows-arm64 (FR-20.20) is built, installed, started
+# and removed on Windows runners by the installers job and blocks like the
+# Linux packages.
 #
 # Windows (SRS FR-21.3, FR-21.24): the windows-scan job (windows-scan.yml)
 # builds the Windows binaries as GoReleaser does and scans them with
@@ -235,13 +238,16 @@ jobs:
           pv=$(printf '%s' "$version" | sed 's/-/./')
           for pattern in "smcp_${pv}_amd64.deb" "smcp_${pv}_arm64.deb" "smcp-${pv}-1.x86_64.rpm" "smcp-${pv}-1.aarch64.rpm" "smcp_${version}_darwin_arm64.pkg" \
             "smcp-desktop_${pv}_amd64.deb" "smcp-desktop_${pv}_arm64.deb" "smcp-desktop-${pv}-1.x86_64.rpm" "smcp-desktop-${pv}-1.aarch64.rpm" \
-            "smcp-desktop_${version}_linux_amd64.AppImage" "smcp-desktop_${version}_linux_arm64.AppImage" "smcp-desktop_${version}_darwin_arm64.dmg"; do
+            "smcp-desktop_${version}_linux_amd64.AppImage" "smcp-desktop_${version}_linux_arm64.AppImage" "smcp-desktop_${version}_darwin_arm64.dmg" \
+            "smcp_${version}_windows_amd64.msi" "smcp_${version}_windows_arm64.msi" \
+            "smcp-desktop_${version}_windows_amd64.msi" "smcp-desktop_${version}_windows_arm64.msi"; do
             [ -f "build/installers/$pattern" ] || [ -f "build/installers-pending/$pattern" ] || echo "::warning::no installer named $pattern"
           done
           echo "$n installers listed in $sums" >> "$GITHUB_STEP_SUMMARY"
-          # 5 command-line installers and 6 Linux desktop installers; the
-          # .dmg is the 12th when a macOS runner built it.
-          [ "$n" -ge 11 ] || { echo "::error::expected at least 11 installers, found $n"; exit 1; }
+          # 7 command-line installers (.deb, .rpm, .pkg, .msi), 6 Linux
+          # desktop installers and the 2 smcp-desktop .msi; the .dmg is the
+          # 16th when a macOS runner built it.
+          [ "$n" -ge 15 ] || { echo "::error::expected at least 15 installers, found $n"; exit 1; }
       # GitHub renames asset names with characters such as "~"; then
       # `sha256sum --check` on the downloaded release fails for those files.
       # The held-back .pkg (build/installers-pending/) is uploaded later by

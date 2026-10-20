@@ -143,6 +143,8 @@ pub fn default_ca_file(os: &str, home: &Path, xdg_state_home: Option<&Path>) -> 
 pub fn default_ca_file_in(os: &str, home: &Path, xdg_state_home: Option<&Path>, enforced: &Path) -> PathBuf {
     match os {
         "macos" => home.join("Library/Application Support/smcp-gateway/state/tls/ca.crt"),
+        // The per-user mode's state directory, %LOCALAPPDATA%\smcp-gateway\state.
+        "windows" => home.join(r"AppData\Local\smcp-gateway\state\tls\ca.crt"),
         _ => {
             let standalone = xdg_state_home
                 .filter(|p| p.is_absolute())
@@ -311,6 +313,9 @@ mod tests {
             mac.ca_file,
             PathBuf::from("/Users/u/Library/Application Support/smcp-gateway/state/tls/ca.crt")
         );
+        // XDG_STATE_HOME counts only as an absolute path, which this
+        // Linux path is only on Unix.
+        #[cfg(unix)]
         assert_eq!(
             default_ca_file("linux", home, Some(Path::new("/x/state"))),
             PathBuf::from("/x/state/smcp-gateway/tls/ca.crt")
@@ -341,6 +346,14 @@ mod tests {
         assert_eq!(default_ca_file_in("linux", home, Some(&state), &published), standalone);
         std::fs::remove_dir_all(&dir).unwrap();
         assert_eq!(ENFORCED_CA_FILE, "/var/lib/smcp/public/ca.crt");
+        // Windows: the per-user mode's state directory under %LOCALAPPDATA%.
+        assert_eq!(
+            default_ca_file("windows", Path::new(r"C:\Users\u"), None)
+                .display()
+                .to_string()
+                .replace('/', r"\"),
+            r"C:\Users\u\AppData\Local\smcp-gateway\state\tls\ca.crt"
+        );
         let bad = Settings {
             admin_url: "http://x".into(),
             metrics_address: "192.0.2.1:9464".into(),

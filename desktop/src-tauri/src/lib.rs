@@ -38,6 +38,13 @@ pub mod verify;
 mod tlshook_linux;
 #[cfg(target_os = "macos")]
 mod tlshook_macos;
+#[cfg(windows)]
+mod tlshook_windows;
+pub mod tlswebview2;
+#[cfg(windows)]
+mod toast_windows;
+#[cfg(windows)]
+mod winproc;
 
 #[cfg(test)]
 mod claims;
@@ -779,7 +786,20 @@ fn notify(app: &AppHandle, body: &str) {
 /// default one, so it can never approve, deny or reply. On macOS and Linux
 /// a thread waits for the activation; at most `notify::MAX_WAITING` wait at
 /// once, and a notification beyond that is shown without click-through.
+/// On Windows the toast's activation handler opens the view.
 fn notify_approvals(app: &AppHandle, body: &str) {
+    #[cfg(windows)]
+    {
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|e| e.parent().map(std::path::Path::to_path_buf))
+            .unwrap_or_default();
+        let id = toast_windows::app_id(&app.config().identifier, &exe_dir);
+        let handle = app.clone();
+        if toast_windows::show(&id, notify::TITLE, body, move || open_console(&handle, Page::Approvals)).is_ok() {
+            return;
+        }
+    }
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
         if let Some(slot) = notify::Waiting::take() {
@@ -933,9 +953,25 @@ fn open_console(app: &AppHandle, page: Page) {
             let _ = &w2;
             webkit2gtk::WebViewExt::load_uri(&wv, target.as_str());
         }
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        #[cfg(windows)]
         {
-            // No certificate hook on this platform yet: fail closed.
+            let pin = tlswebview2::Pin {
+                host: r.admin.host.clone(),
+                port: r.admin.port,
+                anchors,
+            };
+            let accepted = || eprintln!("smcp-desktop: console certificate accepted");
+            // As on Linux, the page is loaded through the web view itself
+            // from this closure, not through a Tauri navigation.
+            let _ = &w2;
+            if let Err(e) = tlshook_windows::install(&pw.controller(), pin, refused.clone(), accepted, target.as_str())
+            {
+                refused(e);
+            }
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
+        {
+            // No certificate hook on this platform: fail closed.
             let _ = (&pw, &anchors, &target, &w2);
             refused("the console window is not supported on this platform yet".into());
         }

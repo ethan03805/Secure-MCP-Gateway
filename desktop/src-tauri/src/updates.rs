@@ -291,6 +291,11 @@ impl Updates {
                 Some(format!("The Gateway was installed by the {f} package and is updated with it: update the app, which installs both.")),
             ),
             Err(NotHere::Unreadable(m)) => (None, false, Some(format!("The Gateway service definition could not be read: {m}"))),
+            Err(NotHere::Windows) => (
+                None,
+                false,
+                Some("On Windows the Gateway is upgraded with smcpctl upgrade in a terminal, or with the smcp-desktop .msi, which Update App installs.".to_string()),
+            ),
         };
         self.set(|v| {
             v.gateway = version.map(|x| x.to_string());
@@ -873,7 +878,8 @@ echo "upgrade: upgrade complete"
     fn every_message_code_is_in_the_catalogue() {
         claims::partial(&["FR-20.47", "FR-20.48"]);
         let cat: serde_json::Value = serde_json::from_str(include_str!("../../../docs/design/messages.json")).unwrap();
-        let src = include_str!("updates.rs");
+        // A Windows checkout may have CRLF line ends.
+        let src = include_str!("updates.rs").replace("\r\n", "\n");
         let code_part = src.split("#[cfg(test)]\nmod tests").next().unwrap();
         let mut n = 0;
         for (i, _) in code_part

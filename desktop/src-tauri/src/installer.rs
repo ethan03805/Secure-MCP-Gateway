@@ -150,6 +150,7 @@ fn arch_tokens(kind: &Kind, arch: &str) -> &'static [&'static str] {
         (Kind::AppImage(_), "aarch64") => &["arm64", "aarch64"],
         (Kind::MacPkg | Kind::MacDmg, "aarch64") => &["arm64", "aarch64"],
         (Kind::Msi, "x86_64") => &["x64", "amd64"],
+        (Kind::Msi, "aarch64") => &["arm64"],
         _ => &[],
     }
 }
@@ -209,7 +210,11 @@ pub fn files_for(kind: &Kind, v: &Version, arch: &str, assets: &[Asset]) -> Resu
             })?,
         ],
         Kind::AppImage(_) => vec![pick("AppImage", &|n| n.ends_with(".AppImage") && has_arch(n))?],
-        Kind::Msi => vec![pick("Windows installer", &|n| n.ends_with(".msi") && has_arch(n))?],
+        // The smcp-desktop .msi carries the commands too (FR-20.20); the
+        // smcp .msi of the same release is for hosts without the app.
+        Kind::Msi => vec![pick("smcp-desktop Windows installer", &|n| {
+            desktop(n) && n.ends_with(".msi") && has_arch(n)
+        })?],
     })
 }
 
@@ -351,7 +356,10 @@ mod tests {
         "smcp-desktop-1.4.0-1.aarch64.rpm",
         "smcp-desktop_1.4.0_amd64.AppImage",
         "smcp-desktop_1.4.0_aarch64.AppImage",
-        "smcp-desktop_1.4.0_x64_en-US.msi",
+        "smcp_1.4.0_windows_amd64.msi",
+        "smcp_1.4.0_windows_arm64.msi",
+        "smcp-desktop_1.4.0_windows_amd64.msi",
+        "smcp-desktop_1.4.0_windows_arm64.msi",
     ];
 
     #[test]
@@ -378,7 +386,10 @@ mod tests {
             f(&Kind::AppImage("/x".into()), "aarch64"),
             ["smcp-desktop_1.4.0_aarch64.AppImage"]
         );
-        assert_eq!(f(&Kind::Msi, "x86_64"), ["smcp-desktop_1.4.0_x64_en-US.msi"]);
+        // The smcp-desktop .msi, never the smcp one (FR-20.20), for both
+        // Windows architectures.
+        assert_eq!(f(&Kind::Msi, "x86_64"), ["smcp-desktop_1.4.0_windows_amd64.msi"]);
+        assert_eq!(f(&Kind::Msi, "aarch64"), ["smcp-desktop_1.4.0_windows_arm64.msi"]);
         // No Intel macOS application (FR-20.1), no file of another version,
         // and an ambiguous release is refused.
         assert!(files_for(&Kind::MacPkg, &v, "x86_64", &a).is_err());

@@ -32,7 +32,8 @@ fn no_gateway_secret_or_control_api_in_the_application() {
         if !name.ends_with(".rs") || name == "config_tests.rs" || name == "claims.rs" {
             continue;
         }
-        let src = std::fs::read_to_string(&path).unwrap();
+        // A Windows checkout may have CRLF line ends.
+        let src = std::fs::read_to_string(&path).unwrap().replace("\r\n", "\n");
         let code = src.split("#[cfg(test)]\nmod tests").next().unwrap();
         // First-run setup checks whether a configuration file exists
         // (FR-20.8) and reads no file at all.
@@ -299,6 +300,27 @@ fn only_the_smcp_scheme_is_registered() {
     let compact: String = LIB.chars().filter(|c| !c.is_whitespace()).collect();
     assert!(compact.contains("urls.iter().find_map(|u|deeplink::parse(u.as_str()))"));
     assert!(compact.contains("deeplink::from_args(std::env::args())"));
+}
+
+/// FR-20.20: the Windows installer embeds the WebView2 bootstrapper, which
+/// the bundler's package runs only when no WebView2 runtime is installed,
+/// so a host that has the runtime gets no download; the package refuses
+/// a downgrade (SR-7-2: an older release is never installed over a newer
+/// one); and the `smcp` scheme is registered by the package (the same
+/// `plugins.deep-link` list, FR-20.28).
+#[test]
+fn the_windows_installer_embeds_the_webview2_bootstrapper() {
+    claims::partial(&["FR-20.20", "FR-20.1"]);
+    let c = conf();
+    let w = &c["bundle"]["windows"];
+    assert_eq!(
+        w["webviewInstallMode"],
+        serde_json::json!({"type": "embedBootstrapper", "silent": true})
+    );
+    assert_eq!(w["allowDowngrades"], serde_json::json!(false));
+    assert_eq!(w["wix"]["language"], serde_json::json!("en-US"));
+    // MSI only (WiX): no NSIS settings, no signing command.
+    assert!(w.get("nsis").is_none() && w.get("signCommand").is_none());
 }
 
 #[test]

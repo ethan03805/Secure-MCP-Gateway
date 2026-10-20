@@ -405,6 +405,7 @@ pub fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     if let Some(parent) = dir.parent() {
         std::fs::create_dir_all(parent)?;
     }
+    #[cfg_attr(not(unix), allow(unused_mut))]
     let mut b = std::fs::DirBuilder::new();
     #[cfg(unix)]
     {

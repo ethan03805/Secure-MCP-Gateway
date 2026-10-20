@@ -33,7 +33,12 @@
 # packages. The macOS .dmg needs a macOS runner (Tauri links WebKit and
 # AppKit): installers-desktop-macos.yml builds and smoke-tests it and,
 # like the .pkg smoke test, does not block when no runner starts. The
-# Windows .msi is built elsewhere.
+# smcp-desktop .msi (FR-20.20) for windows-amd64 and windows-arm64 is built
+# by packaging/installers/desktop/build-msi.ps1 from the Windows binaries of
+# build-windows, on windows-latest and windows-11-arm, and installed,
+# started (the console window's certificate check) and removed by
+# scripts/desktop-msi-smoke.ps1 on the same runner before it is uploaded;
+# it blocks like the other packages.
 name: installers
 
 on:
@@ -218,7 +223,7 @@ jobs:
   # Windows Installer packages of the CLI and Gateway (SRS FR-21.3,
   # FR-20.18, SR-4.11-2) for amd64 and arm64, built with the WiX Toolset
   # from packaging/installers/windows/smcp.wxs. The Desktop Application's
-  # .msi (FR-20.20) is built with the desktop application, not here.
+  # .msi (FR-20.20) is built from the same binaries by build-desktop-windows.
   build-windows:
     name: build .msi
     runs-on: windows-latest
@@ -280,6 +285,77 @@ jobs:
         with:
           name: installers-windows
           path: build/installers/*.msi
+          if-no-files-found: error
+          retention-days: 14
+      # Not an installer: the binaries the smcp-desktop .msi carries.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-binaries
+          path: build/win/*/*.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  # The smcp-desktop .msi (FR-20.20, FR-20.1) on a runner of each
+  # architecture: windows-latest (Windows Server, x64; it stands in for a
+  # Windows 11 x64 host, which GitHub does not offer) and windows-11-arm
+  # (Windows 11, arm64). Built with the Tauri bundler (WiX), then
+  # installed, started and removed on the same runner; only a package that
+  # passed is uploaded.
+  build-desktop-windows:
+    name: build and smoke desktop .msi (${{ matrix.arch }})
+    needs: build-windows
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: amd64, wix: x64, runner: windows-latest }
+          - { arch: arm64, wix: arm64, runner: windows-11-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - name: Check out with LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          if ! command -v rustup >/dev/null; then
+            case "$RUNNER_ARCH" in ARM64) triple=aarch64-pc-windows-msvc ;; *) triple=x86_64-pc-windows-msvc ;; esac
+            curl -fsSL --proto '=https' -o "$RUNNER_TEMP/rustup-init.exe" "https://static.rust-lang.org/rustup/dist/$triple/rustup-init.exe"
+            "$RUNNER_TEMP/rustup-init.exe" -y --default-toolchain none --profile minimal
+            export PATH="$USERPROFILE/.cargo/bin:$PATH"
+            echo "$USERPROFILE/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-binaries
+          path: build/win
+      - name: Build (packaging/installers/desktop/build-msi.ps1)
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.build-windows.outputs.version }}
+          WIXARCH: ${{ matrix.wix }}
+          ARCH: ${{ matrix.arch }}
+        run: ./packaging/installers/desktop/build-msi.ps1 -Version $env:VERSION -Arch $env:WIXARCH -BinDir "build\win\$($env:ARCH)" -OutDir build\desktop
+      - name: Install, start and remove (scripts/desktop-msi-smoke.ps1)
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.build-windows.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: ./scripts/desktop-msi-smoke.ps1 -Msi "build\desktop\smcp-desktop_$($env:VERSION)_windows_$($env:ARCH).msi" -Version $env:VERSION
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-desktop-windows-${{ matrix.arch }}
+          path: build/desktop/*.msi
           if-no-files-found: error
           retention-days: 14
 
