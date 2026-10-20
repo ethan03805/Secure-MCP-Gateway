@@ -122,6 +122,14 @@ shasum -a 256 --check --ignore-missing smcp_<version>_checksums.txt  # macOS
 
 `minisign` must print `Signature and comment signature verified` and a trusted comment naming that checksum file, `cosign` `Verified OK`, and the checksum line of your package `OK`. If any check fails, do not install the package. Packages are downloaded from the [release page](https://github.com/ethan03805/Secure-MCP-Gateway/releases) once a release has them.
 
+`install.sh --package` does the same checks for you: it downloads the package of this host's format (`--package=deb`, `--package=rpm` or `--package=pkg` to choose), verifies the checksum file's minisign signature with the release key, the Sigstore bundle when `cosign` is installed and the package's SHA-256, and only then saves it (in `--dir`, default the current directory). Run as root it also installs the package with `apt-get`, `dnf` or `installer`, which upgrades an installed `smcp`; otherwise it prints that command. A package that fails a check is neither saved nor installed, and an installed older version stays as it is:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sudo sh -s -- --version v<version> --package
+```
+
+After an upgrade, restart a running Gateway service (`systemctl --user restart smcpd.service`, `sudo systemctl restart smcpd.service` for the Enforced profile, or `launchctl kickstart -k gui/$(id -u)/com.smcp.gateway` on macOS).
+
 ### Install
 
 ```sh

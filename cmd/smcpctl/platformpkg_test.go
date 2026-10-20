@@ -469,6 +469,25 @@ func TestDoctorReportsWritableBinaries(t *testing.T) {
 	if f := binaryWritableFindings(exe, 0, true, all); len(f) != 1 || f[0].Fails() || !strings.Contains(f[0].Message, "root") {
 		t.Errorf("as root: %v", f)
 	}
+	// An AppImage (FR-20.19): the binaries are on its read-only mount, the
+	// image file is the user's.
+	appDir := t.TempDir()
+	img := filepath.Join(t.TempDir(), "smcp-desktop.AppImage")
+	inImage := filepath.Join(appDir, "usr", "bin", "smcpctl")
+	t.Setenv("APPIMAGE", img)
+	t.Setenv("APPDIR", appDir)
+	onlyImage := func(p string) bool { return p == img }
+	if f := binaryWritableFindings(inImage, 1000, true, onlyImage); len(f) != 1 || f[0].Path != img || !f[0].Fails() {
+		t.Errorf("writable AppImage: %v", f)
+	}
+	if f := binaryWritableFindings(exe, 1000, true, onlyImage); len(f) != 1 || f[0].Fails() {
+		t.Errorf("a binary outside APPDIR reported the AppImage: %v", f)
+	}
+	if got := appImageFile(filepath.Join(appDir+"-other", "smcpctl"), img, appDir); got != "" {
+		t.Errorf("a sibling directory of APPDIR counts as inside: %q", got)
+	}
+	t.Setenv("APPIMAGE", "")
+	t.Setenv("APPDIR", "")
 	// The real access check sees this test's own writable temp files.
 	if os.Geteuid() != 0 {
 		if f := binaryWritableFindings(exe, os.Geteuid(), true, canWritePath); len(f) != 3 {

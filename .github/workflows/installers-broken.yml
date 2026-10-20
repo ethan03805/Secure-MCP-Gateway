@@ -1,0 +1,55 @@
+# A deliberately broken installer stops publication (E-35, SRS FR-20.24).
+#
+# Runs the installers workflow exactly as release.yml does, but with
+# break: deb, which changes one byte of the amd64 .deb after it is built.
+# The job `publish` stands in for release.yml's release job: it has the
+# same dependency (needs: installers) and only prints. The job `verdict`
+# passes when the installers workflow failed and `publish` was skipped,
+# and fails otherwise, so a smoke test that let a broken installer through
+# would turn this workflow red.
+#
+# Manual (workflow_dispatch) and weekly; it builds every installer, so it
+# does not run on each pull request. Not a required check.
+name: installers-broken
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  installers:
+    name: installers (amd64 .deb broken on purpose)
+    uses: ./.github/workflows/installers.yml
+    with:
+      break: deb
+      # As in release.yml: the macOS jobs do not gate publication.
+      macos-smoke: false
+    permissions:
+      contents: read
+
+  publish:
+    name: publish (stand-in for the release job)
+    needs: installers
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "the release would be published now"
+
+  verdict:
+    name: the broken installer stopped publication
+    needs: [installers, publish]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check
+        env:
+          INSTALLERS: ${{ needs.installers.result }}
+          PUBLISH: ${{ needs.publish.result }}
+        run: |
+          echo "installers: $INSTALLERS, publish: $PUBLISH"
+          [ "$INSTALLERS" = failure ] || { echo "::error::the installers workflow did not fail with a broken .deb"; exit 1; }
+          [ "$PUBLISH" = skipped ] || { echo "::error::the publish stand-in ran ($PUBLISH)"; exit 1; }
+          echo "A deliberately broken .deb failed its smoke test and nothing was published (FR-20.24)." >> "$GITHUB_STEP_SUMMARY"
