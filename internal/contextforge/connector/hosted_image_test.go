@@ -19,14 +19,16 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cftest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
-// hostedUpstream is a hosted MCP server fixture on the host's loopback
+// hostedUpstream is a hosted MCP server fixture on the host (where
+// cftest.FixtureHost says the container reaches it)
 // with tool names that need the FR-22.10 mapping.
-func hostedUpstream(t *testing.T, names ...string) string {
+func hostedUpstream(t *testing.T, host cftest.Host, names ...string) string {
 	t.Helper()
 	s := mcp.NewServer(&mcp.Implementation{Name: "fx-hosted", Version: "2.0.0"}, nil)
 	// ContextForge serves "get_time" and "get-time" under one name (it
@@ -38,7 +40,7 @@ func hostedUpstream(t *testing.T, names ...string) string {
 		})
 	}
 	h := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", net.JoinHostPort(host.Listen, "0"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +52,7 @@ func hostedUpstream(t *testing.T, names ...string) string {
 }
 
 // TestHostedImportImage imports a hosted entry through the pinned image
-// (SMCP_CONTEXTFORGE_IMAGE=1, Docker with host.docker.internal): the probe
+// (SMCP_CONTEXTFORGE_IMAGE=1, Docker): the probe
 // registers the entry in the bundled instance, reads the served tools with
 // the package's own token and removes its objects; the manifest_version 2
 // package maps the names as FR-22.10 states, every tool is untrusted, the
@@ -69,14 +71,10 @@ func TestHostedImportImage(t *testing.T) {
 		t.Skip("docker not installed")
 	}
 	img := contextforge.ReleaseLock().ContextForge.ImageRef("linux/" + runtime.GOARCH)
-	py := "import socket,ipaddress\nfor a in sorted({x[4][0] for x in socket.getaddrinfo('host.docker.internal',None)}):\n print(a+('/32' if ipaddress.ip_address(a).version==4 else '/128'))"
-	out, err := exec.Command(eng, "run", "--rm", "--entrypoint", "python3", img, "-c", py).CombinedOutput()
-	if err != nil {
-		t.Skipf("host.docker.internal is not resolvable: %s", out)
-	}
-	nets := cidrLines(string(out))
-	port := hostedUpstream(t, "get-time", "read.file", strings.Repeat("long-name-", 6))
-	dupPort := hostedUpstream(t, "get-time", "get_time")
+	h := cftest.FixtureHost(t, eng, img)
+	nets := h.Nets
+	port := hostedUpstream(t, h, "get-time", "read.file", strings.Repeat("long-name-", 6))
+	dupPort := hostedUpstream(t, h, "get-time", "get_time")
 
 	state := t.TempDir()
 	catalog := []byte("catalog_servers:\n  - id: fixture-hosted\n    name: Fixture hosted\n    provider: Example\n    auth_type: Open\n    url: https://hosted.example/mcp\n    description: A hosted fixture.\n" +
@@ -107,9 +105,9 @@ func TestHostedImportImage(t *testing.T) {
 	c, err := New(Options{Config: cfg, Library: lib, Recorder: rec, Broker: testBroker(t, rec), Version: "test", SSRFAllowed: nets, Now: now,
 		EndpointFor: func(u string) (string, error) {
 			if strings.Contains(u, "dup.example") {
-				return "http://host.docker.internal:" + dupPort + "/mcp", nil
+				return h.URL(dupPort), nil
 			}
-			return "http://host.docker.internal:" + port + "/mcp", nil
+			return h.URL(port), nil
 		}})
 	if err != nil {
 		t.Fatal(err)
@@ -239,16 +237,4 @@ func manifestName(s string) bool {
 		}
 	}
 	return true
-}
-
-// cidrLines keeps the network lines of an engine's output (a pull prints
-// progress lines first).
-func cidrLines(out string) []string {
-	var nets []string
-	for _, f := range strings.Fields(out) {
-		if strings.Contains(f, "/") && !strings.Contains(f, ":/") && strings.IndexFunc(f, func(r rune) bool { return r >= 'g' && r <= 'z' }) < 0 {
-			nets = append(nets, f)
-		}
-	}
-	return nets
 }

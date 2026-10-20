@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cftest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
 // startForTest starts the pinned image with the host reachable for
-// fixture upstreams (SMCP_CONTEXTFORGE_IMAGE=1, Docker with
-// host.docker.internal).
-func startForTest(t *testing.T, name string) (*Instance, *Admin) {
+// fixture upstreams (SMCP_CONTEXTFORGE_IMAGE=1, Docker) and returns where
+// those fixtures listen.
+func startForTest(t *testing.T, name string) (*Instance, *Admin, cftest.Host) {
 	t.Helper()
 	if os.Getenv("SMCP_CONTEXTFORGE_IMAGE") != "1" {
 		t.Skip("set SMCP_CONTEXTFORGE_IMAGE=1 to run the pinned ContextForge image")
@@ -26,7 +27,8 @@ func startForTest(t *testing.T, name string) (*Instance, *Admin) {
 		t.Skip(err)
 	}
 	img := contextforge.ReleaseLock().ContextForge.ImageRef("linux/" + runtime.GOARCH)
-	nets := hostNetworks(t, eng, img)
+	h := cftest.FixtureHost(t, eng.Path, img)
+	nets := h.Nets
 	creds, _ := NewCredentials()
 	in, err := New(Options{Engine: eng, Image: img, Name: name,
 		Settings:    Settings{SSRFAllowed: nets, Limits: Limits{UpstreamTimeout: 45 * time.Second, CallsPerMinute: 60, Concurrency: 16}},
@@ -46,7 +48,7 @@ func startForTest(t *testing.T, name string) (*Instance, *Admin) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	return in, &Admin{Base: in.BaseURL(), AdminToken: func() (string, error) { return in.AdminToken(5 * time.Minute) }}
+	return in, &Admin{Base: in.BaseURL(), AdminToken: func() (string, error) { return in.AdminToken(5 * time.Minute) }}, h
 }
 
 // TestReconcileImage registers a hosted package in the pinned image, then
@@ -56,11 +58,11 @@ func startForTest(t *testing.T, name string) (*Instance, *Admin) {
 // notification, removes the injected objects and reports the drift.
 func TestReconcileImage(t *testing.T) {
 	reqtest.Partial(t, "FR-22.33", "FR-22.38")
-	_, a := startForTest(t, "smcp-cf-test-reconcile")
+	_, a, h := startForTest(t, "smcp-cf-test-reconcile")
 	ctx := context.Background()
-	ua, uc := newUpstream(t, "A"), newUpstream(t, "C")
+	ua, uc := newUpstream(t, h, "A"), newUpstream(t, h, "C")
 	pw, _ := NewCredential()
-	url := "http://host.docker.internal:" + ua.port + "/mcp"
+	url := h.URL(ua.port)
 	p, err := a.Provision(ctx, PackageSpec{Slug: "smcp-pkg-a", URL: url}, pw)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +82,7 @@ func TestReconcileImage(t *testing.T) {
 	}
 
 	// Injected objects.
-	if err := a.Call(ctx, http.MethodPost, "/v1/gateways", "", map[string]any{"name": "smcp-intruder", "url": "http://host.docker.internal:" + uc.port + "/mcp", "transport": "STREAMABLEHTTP", "visibility": "public"}, nil); err != nil {
+	if err := a.Call(ctx, http.MethodPost, "/v1/gateways", "", map[string]any{"name": "smcp-intruder", "url": h.URL(uc.port), "transport": "STREAMABLEHTTP", "visibility": "public"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.CreateUser(ctx, "intruder@example.com", pw, "intruder"); err != nil {

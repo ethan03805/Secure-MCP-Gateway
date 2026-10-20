@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -15,17 +14,19 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cftest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
 // upstream is a hosted-server fixture: a Streamable HTTP MCP server on the
-// host's loopback that counts tool calls.
+// host (where cftest.FixtureHost says the container reaches it) that counts
+// tool calls.
 type upstream struct {
 	port  string
 	calls atomic.Int32
 }
 
-func newUpstream(t *testing.T, name string) *upstream {
+func newUpstream(t *testing.T, host cftest.Host, name string) *upstream {
 	t.Helper()
 	u := &upstream{}
 	s := mcp.NewServer(&mcp.Implementation{Name: "fx-" + name, Version: "1"}, nil)
@@ -36,7 +37,7 @@ func newUpstream(t *testing.T, name string) *upstream {
 		})
 	}
 	h := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return s }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", net.JoinHostPort(host.Listen, "0"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,20 +50,8 @@ func newUpstream(t *testing.T, name string) *upstream {
 	return u
 }
 
-// hostNetworks returns the addresses of host.docker.internal inside the
-// image, as SSRF allowlist entries.
-func hostNetworks(t *testing.T, eng Engine, img string) []string {
-	t.Helper()
-	py := "import socket,ipaddress\nfor a in sorted({x[4][0] for x in socket.getaddrinfo('host.docker.internal',None)}):\n print(a+('/32' if ipaddress.ip_address(a).version==4 else '/128'))"
-	out, err := exec.Command(eng.Path, "run", "--rm", "--network", "bridge", "--entrypoint", "python3", img, "-c", py).CombinedOutput()
-	if err != nil {
-		t.Skipf("host.docker.internal is not resolvable in this engine: %s", out)
-	}
-	return cidrs(string(out))
-}
-
 // TestIsolationImage provisions two hosted packages in the pinned image
-// (SMCP_CONTEXTFORGE_IMAGE=1, Docker with host.docker.internal) and runs
+// (SMCP_CONTEXTFORGE_IMAGE=1, Docker) and runs
 // the scope self-check: with each package's token, /mcp and /rpc list only
 // its own tools, the other package's tool cannot be called through its
 // virtual server, /mcp or /rpc, its fixture records no call, and admin
@@ -79,7 +68,8 @@ func TestIsolationImage(t *testing.T) {
 		t.Skip(err)
 	}
 	img := contextforge.ReleaseLock().ContextForge.ImageRef("linux/" + runtime.GOARCH)
-	nets := hostNetworks(t, eng, img)
+	h := cftest.FixtureHost(t, eng.Path, img)
+	nets := h.Nets
 	creds, _ := NewCredentials()
 	in, err := New(Options{Engine: eng, Image: img, Name: "smcp-cf-test-isolation",
 		Settings:    Settings{SSRFAllowed: nets, Limits: Limits{UpstreamTimeout: 45 * time.Second, CallsPerMinute: 60, Concurrency: 16}},
@@ -100,11 +90,11 @@ func TestIsolationImage(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	}
 	a := &Admin{Base: in.BaseURL(), AdminToken: func() (string, error) { return in.AdminToken(5 * time.Minute) }}
-	ua, ub := newUpstream(t, "A"), newUpstream(t, "B")
+	ua, ub := newUpstream(t, h, "A"), newUpstream(t, h, "B")
 	pkgs := map[string]*Provisioned{}
 	for name, u := range map[string]*upstream{"smcp-pkg-a": ua, "smcp-pkg-b": ub} {
 		pw, _ := NewCredential()
-		p, err := a.Provision(ctx, PackageSpec{Slug: name, URL: "http://host.docker.internal:" + u.port + "/mcp"}, pw)
+		p, err := a.Provision(ctx, PackageSpec{Slug: name, URL: h.URL(u.port)}, pw)
 		if err != nil {
 			t.Fatalf("provision %s: %v", name, err)
 		}
@@ -132,8 +122,8 @@ func TestIsolationImage(t *testing.T) {
 
 	// The leaking set-up: a gateway in no team and an administrator-owned
 	// token restricted only by scope.server_id.
-	uc := newUpstream(t, "C")
-	if err := a.Call(ctx, http.MethodPost, "/v1/gateways", "", map[string]any{"name": "smcp-leak-c", "url": "http://host.docker.internal:" + uc.port + "/mcp",
+	uc := newUpstream(t, h, "C")
+	if err := a.Call(ctx, http.MethodPost, "/v1/gateways", "", map[string]any{"name": "smcp-leak-c", "url": h.URL(uc.port),
 		"transport": "STREAMABLEHTTP", "visibility": "public"}, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -166,16 +156,4 @@ func TestIsolationImage(t *testing.T) {
 		t.Fatalf("the leaking set-up was not found: %+v", findings)
 	}
 	t.Logf("leaking set-up findings: %d (for example %+v)", len(findings), findings[0])
-}
-
-// cidrs keeps the network lines of an engine's output (a pull prints
-// progress lines first).
-func cidrs(out string) []string {
-	var nets []string
-	for _, f := range strings.Fields(out) {
-		if strings.Contains(f, "/") && !strings.Contains(f, ":/") && strings.IndexFunc(f, func(r rune) bool { return r >= 'g' && r <= 'z' }) < 0 {
-			nets = append(nets, f)
-		}
-	}
-	return nets
 }

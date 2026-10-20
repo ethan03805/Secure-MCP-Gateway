@@ -126,7 +126,7 @@ func TestPinnedImage(t *testing.T) {
 	if err := in.Stop(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := exec.Command(eng.Path, "inspect", name).CombinedOutput(); err == nil {
+	if out, err := exec.Command(eng.Path, "inspect", "--type", "container", name).CombinedOutput(); err == nil {
 		t.Fatalf("container still exists after Stop: %s", out)
 	}
 }
