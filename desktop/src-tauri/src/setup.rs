@@ -115,6 +115,39 @@ pub fn find_smcpctl(exe_dir: Option<&Path>, h: &Host) -> Option<PathBuf> {
         .find(|p| p.is_absolute() && p.is_file())
 }
 
+/// The `smcpctl` that `pkexec` may run as root for the Enforced profile
+/// (SR-2-7): `p` with every symbolic link resolved, provided that the file
+/// and each directory above it are owned by root and writable by no one
+/// else (group write only for group root). Otherwise a process of the user
+/// could replace the file, or a directory on its path, between the check
+/// and the polkit prompt and have its own program run as root; this
+/// happens when the application runs from a build or download directory
+/// and smcpctl is found in `~/.local/bin` (security review v1.3, SR-18).
+#[cfg(unix)]
+pub fn elevation_safe(p: &Path) -> Result<PathBuf, String> {
+    use std::os::unix::fs::MetadataExt;
+    let real = std::fs::canonicalize(p).map_err(|e| format!("{}: {e}", p.display()))?;
+    let mut cur = Some(real.as_path());
+    while let Some(c) = cur {
+        let m = std::fs::symlink_metadata(c).map_err(|e| format!("{}: {e}", c.display()))?;
+        if m.uid() != 0 {
+            return Err(format!("{} is not owned by root", c.display()));
+        }
+        let mode = m.mode();
+        if mode & 0o002 != 0 || (mode & 0o020 != 0 && m.gid() != 0) {
+            return Err(format!("{} can be changed by accounts other than root", c.display()));
+        }
+        cur = c.parent();
+    }
+    Ok(real)
+}
+
+/// Elevation is used on Linux only; elsewhere nothing qualifies.
+#[cfg(not(unix))]
+pub fn elevation_safe(p: &Path) -> Result<PathBuf, String> {
+    Err(format!("{} cannot be run with elevation on this platform", p.display()))
+}
+
 /// The profiles setup may offer on this host (FR-20.9, FR-20.19): the
 /// Enforced profile only on Linux and never from an AppImage, which cannot
 /// install system packages.
@@ -816,6 +849,34 @@ mod tests {
         // The Debug form never shows the password.
         assert_eq!(format!("{admin:?}"), "Secret(redacted)");
         std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    /// Security review v1.3, SR-18: pkexec runs smcpctl as root only from
+    /// a path the user cannot change. A copy in a directory the user owns
+    /// (as `~/.local/bin` is), or a link to one, is refused; a root-owned
+    /// system file is accepted with its links resolved.
+    #[cfg(unix)]
+    #[test]
+    fn elevation_only_runs_a_root_owned_smcpctl() {
+        claims::partial(&["SR-2-7", "FR-20.9"]);
+        let root = tmp("elevation");
+        let user_copy = root.join("home/.local/bin/smcpctl");
+        touch(&user_copy);
+        // SAFETY: geteuid has no preconditions.
+        if unsafe { libc::geteuid() } != 0 {
+            let err = elevation_safe(&user_copy).unwrap_err();
+            assert!(err.contains("not owned by root"), "{err}");
+            let link = root.join("smcpctl-link");
+            std::os::unix::fs::symlink(&user_copy, &link).unwrap();
+            assert!(elevation_safe(&link).is_err());
+        }
+        assert!(elevation_safe(&root.join("missing")).is_err());
+        // A file owned by root in root-owned directories: /bin/sh exists on
+        // every Unix test host (on some, /bin is a link to /usr/bin).
+        let sh = elevation_safe(Path::new("/bin/sh")).unwrap();
+        assert!(sh.is_absolute());
+        assert_eq!(sh, std::fs::canonicalize("/bin/sh").unwrap());
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
