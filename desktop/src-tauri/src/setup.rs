@@ -185,6 +185,45 @@ pub fn profiles(os: &str, appimage: bool) -> Vec<Profile> {
     }
 }
 
+/// What first-run setup would offer on this host, one `<key>\t<value>`
+/// line each: `profile` for every profile of [`profiles`], `smcpctl` for
+/// the command setup runs (or `not found`), and `configured` (`yes` or
+/// `no`, [`configured`]). For `smcp-desktop --setup-profiles`, which the
+/// installer smoke tests run to check that an AppImage offers the
+/// Standalone profile only (FR-20.19). It runs nothing.
+pub fn report(h: &Host, appimage: bool, exe_dir: Option<&Path>) -> Vec<String> {
+    let mut v: Vec<String> = profiles(h.os, appimage)
+        .into_iter()
+        .map(|p| format!("profile\t{}", p.as_str()))
+        .collect();
+    v.push(match find_smcpctl(exe_dir, h) {
+        Some(p) => format!("smcpctl\t{}", p.display()),
+        None => "smcpctl\tnot found".into(),
+    });
+    v.push(format!("configured\t{}", if configured(h) { "yes" } else { "no" }));
+    v
+}
+
+/// `smcp-desktop --setup-profiles`: prints [`report`] for this host and
+/// returns the exit code (1 when no `smcpctl` was found).
+pub fn print_report() -> i32 {
+    let exe = std::env::current_exe().ok().map(|e| crate::commands::real_path(&e));
+    let lines = report(
+        &Host::current(),
+        std::env::var_os("APPIMAGE").is_some(),
+        exe.as_deref().and_then(Path::parent),
+    );
+    let found = !lines.iter().any(|l| l == "smcpctl\tnot found");
+    for l in lines {
+        println!("{l}");
+    }
+    if found {
+        0
+    } else {
+        1
+    }
+}
+
 /// The prerequisite check of FR-13.5, run as the user before Enforced is
 /// offered. It changes nothing.
 pub fn check_argv(smcpctl: &Path) -> Vec<String> {
@@ -856,6 +895,32 @@ mod tests {
         assert_eq!(profiles("windows", false), vec![Profile::Standalone]);
         assert_eq!(profiles("linux", false), vec![Profile::Standalone, Profile::Enforced]);
         assert_eq!(profiles("linux", true), vec![Profile::Standalone]);
+    }
+
+    #[test]
+    fn the_setup_report_names_the_offered_profiles() {
+        claims::partial(&["FR-20.19"]);
+        let root = tmp("report");
+        let exe = root.join("app");
+        touch(&exe.join("smcpctl"));
+        let linux = host("linux", &root);
+        let r = report(&linux, true, Some(&exe));
+        assert_eq!(
+            r,
+            vec![
+                "profile\tstandalone".to_string(),
+                format!("smcpctl\t{}", exe.join("smcpctl").display()),
+                "configured\tno".to_string(),
+            ]
+        );
+        let r = report(&linux, false, Some(&exe));
+        assert_eq!(&r[..2], ["profile\tstandalone", "profile\tenforced"]);
+        touch(&root.join("home/.config/smcp-gateway/smcp.toml"));
+        assert_eq!(
+            report(&linux, true, Some(&root.join("none"))).last().unwrap(),
+            "configured\tyes"
+        );
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

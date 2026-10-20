@@ -7506,12 +7506,12 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 |---|---|
 | ID | FR-20.18 |
 | Parent ID | FR-20 — Desktop application and platform installers |
-| Statement | The Gateway release **SHALL** publish, for linux-amd64 and linux-arm64, a `.deb` and an `.rpm` package `smcp` built with nFPM through GoReleaser that installs `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` in `/usr/bin` with no graphical dependency, and a `.deb` and an `.rpm` package `smcp-desktop` built by the Tauri bundler that installs the Desktop Application and depends on `smcp` of the same version. The packages are release assets; signed APT and RPM repositories are deferred (FR-20.32). |
+| Statement | The Gateway release **SHALL** publish, for linux-amd64 and linux-arm64, a `.deb` and an `.rpm` package `smcp` built with nFPM through GoReleaser that installs `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` in `/usr/bin` with no graphical dependency, and a `.deb` and an `.rpm` package `smcp-desktop` that install the Desktop Application and depend on `smcp` of the same version, the `.deb` built by the Tauri bundler and the `.rpm` built with `rpmbuild` from the files of that `.deb`. The packages are release assets; signed APT and RPM repositories are deferred (FR-20.32). |
 | Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
 | Verification Method | Test |
 | Verification Statement | On Ubuntu 24.04 and Fedora containers for both architectures, install `smcp` alone and confirm the commands and that no graphical library was pulled in; install `smcp-desktop` and confirm the application starts and that installing it with a different `smcp` version is refused by the package manager. |
 | Source | OWNER (Linux .deb/.rpm) |
-| Rationale | Enforced hosts are often headless; splitting the packages keeps WebKitGTK off them, and the version dependency keeps the application and the daemon in step. |
+| Rationale | Enforced hosts are often headless; splitting the packages keeps WebKitGTK off them, and the version dependency keeps the application and the daemon in step. Changed on 2026-10-20 to match the build: the Tauri bundler writes each dependency of its `.rpm` as a bare package name, so `smcp = <version>` would require a package of that literal name and never be met; the `.rpm` is therefore built with `rpmbuild` from the files of the Tauri-built `.deb`, with a real versioned requirement (`packaging/installers/desktop/build.sh`). |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-20.19 — Linux AppImage

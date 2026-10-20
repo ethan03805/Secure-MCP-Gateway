@@ -11,7 +11,9 @@ Toolset target, on the Windows runner of the package's architecture:
       and, beside it, smcpd, smcpctl, smcp-session, smcp-stdio, smcp-connect
       and smcp-refserver from -BinDir, with the marker package-format
       ("msi") that tells smcpctl uninstall and upgrade the binaries belong
-      to a package. A Start menu shortcut whose application user model ID
+      to a package; on removal (not on an upgrade) the package first runs
+      `smcpctl uninstall --package-removal` (package-removal.wxs,
+      FR-20.22). A Start menu shortcut whose application user model ID
       is the application's identifier (the approval toasts use it), the
       URL scheme smcp (FR-20.28) under HKLM\Software\Classes, and the
       WebView2 Evergreen bootstrapper, which the package runs only when no
@@ -66,7 +68,12 @@ $conf = [ordered]@{
   version = $Version
   bundle  = [ordered]@{
     resources = $resources
-    windows   = [ordered]@{ wix = [ordered]@{ version = $msiVersion } }
+    # The package removal of FR-20.22 (package-removal.wxs).
+    windows   = [ordered]@{ wix = [ordered]@{
+        version            = $msiVersion
+        fragmentPaths      = @((Join-Path $PSScriptRoot 'package-removal.wxs').Replace('\', '/'))
+        componentGroupRefs = @('SmcpPackageRemoval')
+      } }
   }
 }
 $work = Join-Path ([IO.Path]::GetTempPath()) ("smcp-desktop-msi-" + [Guid]::NewGuid().ToString('N'))

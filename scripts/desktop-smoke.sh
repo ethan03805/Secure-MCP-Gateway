@@ -9,11 +9,28 @@
 #              list its bundled commands, start it and quit it;
 #   .deb       (Ubuntu, sudo) the smcp .deb is the third argument: refuse
 #              the application without smcp and with an smcp of another
-#              version, install both, list the commands, start the
+#              version, install both over an installation of the previous
+#              release's smcp package with a Gateway state, which must
+#              stay byte-for-byte unchanged (FR-20.21), check that every
+#              file of smcp-desktop is owned by root and not writable by
+#              the user (SR-4.11-2), list the commands, start the
 #              application, remove both;
-#   .rpm       (Fedora container, root) the same with the smcp .rpm, without
-#              the other-version check (no rpmbuild in the container);
-#   .AppImage  (Ubuntu) list the bundled commands and start it.
+#   .rpm       (Fedora container, root, with an unprivileged user for the
+#              user's part) the same with the smcp .rpm;
+#   .AppImage  (Ubuntu, Arch Linux) list the bundled commands, check that
+#              setup offers the Standalone profile only, and start it.
+#              With SMCP_SMOKE_SETUP=1 (Ubuntu with a systemd user session
+#              and FUSE) also run setup's `smcpctl install` from the
+#              mounted image: a systemd user unit that runs copies of the
+#              commands outside the image, so the service starts again
+#              after the image is unmounted (FR-20.19), and `smcpctl
+#              doctor` reporting the AppImage and the copies as writable
+#              by the user (SR-4.11-2).
+#
+# The .dmg copy's `smcpctl doctor` must report the user-writable bundle
+# (SR-4.11-2). A pre-release's .deb and .rpm versions must order before
+# the final release's (1.3.0~beta.2 before 1.3.0), so the release upgrades
+# them.
 #
 # "Start" runs the application for 10 seconds (under Xvfb on Linux) and
 # requires it still to be running; `smcp-desktop --commands` must find the
@@ -35,7 +52,8 @@ smcp=${3:-}
 fail() { echo "::error::desktop-smoke: $*" >&2; exit 1; }
 step() { echo "== $*"; }
 priv() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo -n "$@"; fi; }
-work=$(mktemp -d)
+# Resolved (macOS /var is a link), as smcpctl doctor prints paths.
+work=$(cd "$(mktemp -d)" && pwd -P)
 cleanup() {
 	pkill -f "$work/" 2>/dev/null || true
 	[ -d "$work/mnt" ] && hdiutil detach -quiet "$work/mnt" 2>/dev/null || true
@@ -74,8 +92,176 @@ start_app() {
 	echo "the application ran for 10 seconds"
 }
 
+# before_final <package version> <deb|rpm>: a pre-release version orders
+# before the final release's, which therefore upgrades it.
+before_final() {
+	case "$want" in *-*) ;; *) return 0 ;; esac
+	local final=${want%%-*}
+	case $2 in
+	deb) dpkg --compare-versions "$1" lt "$final" || fail "package version $1 does not order before the release $final" ;;
+	rpm)
+		[ "$(rpm --eval "%{lua: print(rpm.vercmp('$1', '$final'))}")" = -1 ] ||
+			fail "package version $1 does not order before the release $final"
+		;;
+	esac
+	echo "package version $1 orders before the release $final"
+}
+
+# doctor_writable <smcpctl> <expected path>: smcpctl doctor, with a
+# throwaway configuration, reports the path as writable by this user
+# (SR-4.11-2).
+doctor_writable() {
+	local st=$work/doctor-st out
+	if [ ! -f "$st/smcp.toml" ]; then
+		(umask 077 && printf 'smoke-approver-password-1' >"$work/doctor-approver")
+		"$1" bootstrap --dir "$st" --bootstrap-token --approver-password-file "$work/doctor-approver" \
+			--port 28443 --admin-port 28444 </dev/null >/dev/null
+	fi
+	out=$("$1" doctor --config "$st/smcp.toml" 2>&1 || true)
+	if ! grep -F "$2" <<<"$out" | grep -q 'binary-writable'; then
+		printf '%s\n' "$out" >&2
+		fail "smcpctl doctor does not report $2 as writable"
+	fi
+	echo "doctor reports $2 as writable by this user"
+}
+
 xvfb() {
 	if command -v xvfb-run >/dev/null; then xvfb-run -a "$@"; else "$@"; fi
+}
+
+# The user's part: as root (Fedora container) a new unprivileged user.
+if [ "$(id -u)" = 0 ]; then
+	asuser() { runuser -u smcptest -- "$@"; }
+else
+	asuser() { "$@"; }
+fi
+
+# previous_release <deb|rpm>: installs the previous release's smcp package
+# (SMCP_PREVIOUS_RELEASE, default v1.2.0, checked against its checksum
+# file) and makes a Gateway state with its smcpctl in $work/prev-st, the
+# existing installation the new packages are installed over (FR-20.21).
+previous_release() {
+	local prev=${SMCP_PREVIOUS_RELEASE:-v1.2.0} asset base sum got
+	case $1 in
+	deb) asset=smcp_${prev#v}_$(dpkg --print-architecture).deb ;;
+	rpm) asset=smcp-${prev#v}-1.$(uname -m).rpm ;;
+	esac
+	if [ "$(id -u)" = 0 ]; then id smcptest >/dev/null 2>&1 || useradd -m smcptest; fi
+	chmod 0755 "$work"
+	mkdir -p "$work/prev"
+	chmod 0755 "$work/prev"
+	base=https://github.com/ethan03805/Secure-MCP-Gateway/releases/download/$prev
+	curl -fsSL --proto '=https' --retry 3 -o "$work/prev/$asset" "$base/$asset"
+	curl -fsSL --proto '=https' --retry 3 -o "$work/prev/checksums.txt" "$base/smcp_${prev#v}_checksums.txt"
+	sum=$(awk -v a="$asset" '$2 == a {print $1}' "$work/prev/checksums.txt")
+	got=$(sha256sum "$work/prev/$asset" | awk '{print $1}')
+	[ -n "$sum" ] && [ "$got" = "$sum" ] || fail "$asset of $prev does not match its checksum file"
+	case $1 in
+	deb) priv env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$work/prev/$asset" >/dev/null ;;
+	rpm) priv dnf install -y -q "$work/prev/$asset" >/dev/null ;;
+	esac
+	[ "$(asuser /usr/bin/smcpctl version --short)" = "${prev#v}" ] || fail "the previous release does not report version ${prev#v}"
+	asuser sh -c "umask 077; printf 'smoke-approver-password-1' > '$work/prev-approver'"
+	asuser /usr/bin/smcpctl bootstrap --dir "$work/prev-st" --bootstrap-token --approver-password-file "$work/prev-approver" \
+		--port 28643 --admin-port 28644 </dev/null >/dev/null
+	prev_digests=$(state_digests)
+	echo "smcp ${prev#v} installed, with a Gateway state of $(printf '%s\n' "$prev_digests" | wc -l | tr -d ' ') files"
+}
+
+state_digests() {
+	(cd "$work/prev-st" && find . -type f ! -path './state/log/*' -print0 | sort -z | xargs -0 sha256sum)
+}
+
+# over_previous: after installing this build's packages over the previous
+# release, the state is unchanged, its journal verifies with the new
+# smcpctl, and no Gateway configuration, unit or process was created
+# (FR-20.21).
+over_previous() {
+	local now p uhome=$HOME
+	if [ "$(id -u)" = 0 ]; then uhome=$(getent passwd smcptest | cut -d: -f6); fi
+	now=$(state_digests)
+	[ "$now" = "$prev_digests" ] || { diff <(echo "$prev_digests") <(echo "$now") >&2 || true; fail "installing over the previous release changed its Gateway state"; }
+	asuser /usr/bin/smcpctl journal verify --dir "$work/prev-st/state/journal" --key "$work/prev-st/state/keys/evidence-genesis.pub" >/dev/null
+	for p in /etc/smcp /var/lib/smcp /etc/systemd/system/smcpd.service "$uhome/.config/smcp-gateway" \
+		"$uhome/.config/systemd/user/smcpd.service"; do
+		[ ! -e "$p" ] || fail "installing the packages created $p"
+	done
+	if pgrep -x smcpd >/dev/null; then fail "installing the packages started smcpd"; fi
+	echo "installed over the previous release: its state unchanged and verified, nothing created or started"
+}
+
+# no_gateway_objects: copying or starting the application created no
+# Gateway configuration, state, unit or process (FR-20.21).
+no_gateway_objects() {
+	local p
+	for p in "$HOME/Library/Application Support/smcp-gateway" "$HOME/Library/LaunchAgents/com.smcp.gateway.plist" \
+		"$HOME/.config/smcp-gateway" "$HOME/.local/state/smcp-gateway" "$HOME/.config/systemd/user/smcpd.service"; do
+		[ ! -e "$p" ] || fail "the application created $p"
+	done
+	if pgrep -x smcpd >/dev/null; then fail "the application started smcpd"; fi
+	echo "no Gateway configuration, state, unit or process was created"
+}
+
+# check_package_files <deb|rpm>: every file and directory of smcp-desktop
+# is owned by root and not writable by the user (SR-4.11-2).
+check_package_files() {
+	local list f n=0
+	case $1 in
+	deb) list=$(dpkg -L smcp-desktop) ;;
+	rpm) list=$(rpm -ql smcp-desktop) ;;
+	esac
+	while IFS= read -r f; do
+		case $f in */smcp-desktop*) ;; *) continue ;; esac
+		[ -e "$f" ] || continue
+		[ "$(stat -c %u "$f")" = 0 ] || fail "$f is not owned by root (SR-4.11-2)"
+		if asuser test -w "$f"; then fail "$f is writable by the user (SR-4.11-2)"; fi
+		n=$((n + 1))
+	done <<<"$list"
+	[ "$n" -gt 0 ] || fail "no smcp-desktop file found"
+	echo "$n files of smcp-desktop: owned by root, not writable by the user"
+}
+
+# appimage_setup: what first-run setup runs, from the mounted image
+# (desktop/src-tauri/src/setup.rs, install_argv), then the service after
+# the image is unmounted, doctor, and uninstall.
+appimage_setup() {
+	local mnt pid unit copies ok
+	step "AppImage: setup's smcpctl install from the mounted image (FR-20.19)"
+	unset APPIMAGE_EXTRACT_AND_RUN
+	"$work/app.AppImage" --appimage-mount >"$work/mount.txt" 2>"$work/mount.err" &
+	pid=$!
+	for _ in $(seq 1 50); do [ -s "$work/mount.txt" ] && break; sleep 0.2; done
+	mnt=$(head -n1 "$work/mount.txt")
+	[ -n "$mnt" ] && [ -x "$mnt/usr/bin/smcpctl" ] || { cat "$work/mount.err" >&2; fail "the AppImage could not be mounted"; }
+	(umask 077 && printf 'smoke-admin-password-1' >"$work/admin.pw" && printf 'smoke-approver-password-1' >"$work/approver.pw")
+	APPIMAGE="$work/app.AppImage" APPDIR="$mnt" "$mnt/usr/bin/smcpctl" install --profile standalone \
+		--admin-password-file "$work/admin.pw" --approver-password-file "$work/approver.pw" \
+		--metrics-port 9464 --notify off --health-timeout 90s
+	unit=$HOME/.config/systemd/user/smcpd.service
+	copies=$HOME/.local/share/smcp-gateway/bin
+	grep -q "^ExecStart=$copies/smcpd " "$unit" || { cat "$unit" >&2; fail "the user unit does not run the copy in $copies"; }
+	if grep -qF "$mnt" "$unit"; then fail "the user unit names the AppImage mount $mnt"; fi
+	systemctl --user is-active --quiet smcpd.service || fail "the smcpd user unit is not active"
+	echo "systemd user unit $unit runs $copies/smcpd and is active"
+	step "AppImage: smcpctl doctor reports the AppImage and the copies as writable (SR-4.11-2)"
+	APPIMAGE="$work/app.AppImage" APPDIR="$mnt" doctor_writable "$mnt/usr/bin/smcpctl" "$work/app.AppImage"
+	doctor_writable "$copies/smcpctl" "$copies"
+	step "AppImage: the service starts again after the image is unmounted"
+	kill "$pid" 2>/dev/null || true
+	wait "$pid" 2>/dev/null || true
+	for _ in $(seq 1 50); do [ -x "$mnt/usr/bin/smcpctl" ] || break; sleep 0.2; done
+	[ ! -x "$mnt/usr/bin/smcpctl" ] || fail "the image is still mounted"
+	systemctl --user restart smcpd.service
+	ok=0
+	for _ in $(seq 1 60); do
+		if "$copies/smcpctl" health --config "$HOME/.config/smcp-gateway/smcp.toml" >/dev/null 2>&1; then ok=1; break; fi
+		sleep 1
+	done
+	[ $ok = 1 ] || { systemctl --user status smcpd.service --no-pager >&2 || true; fail "smcpd did not answer health after a restart without the image"; }
+	echo "smcpd restarted from $copies and answers health"
+	"$copies/smcpctl" uninstall
+	[ ! -e "$unit" ] || fail "uninstall left $unit"
+	rm -rf "$HOME/.config/smcp-gateway" "$HOME/.local/state/smcp-gateway" "$HOME/.local/share/smcp-gateway"
 }
 
 case "$file" in
@@ -107,7 +293,10 @@ case "$file" in
 	exe="$work/Applications/Secure MCP Gateway.app/Contents/MacOS/smcp-desktop"
 	check_commands "$exe"
 	check_version "$exe"
+	step "dmg: smcpctl doctor reports the copied bundle as writable (SR-4.11-2)"
+	doctor_writable "$work/Applications/Secure MCP Gateway.app/Contents/MacOS/smcpctl" "$work/Applications/Secure MCP Gateway.app/Contents/MacOS"
 	start_app "$exe"
+	no_gateway_objects
 	;;
 *.deb)
 	[ -n "$smcp" ] || fail "pass the smcp .deb of the same build"
@@ -117,6 +306,7 @@ case "$file" in
 	# The same version as smcp: a pre-release keeps "~", so the release
 	# (1.3.0) upgrades it; Tauri's own "1.3.0-beta.2" would order after it.
 	[ "$(dpkg-deb -f "$file" Version)" = "$debver" ] || fail "version $(dpkg-deb -f "$file" Version), not the smcp package's $debver"
+	before_final "$debver" deb
 	n=$(dpkg-deb -f "$file" Depends | tr ',' '\n' | sed 's/^ *//; s/ *$//' | sort | uniq -d | wc -l | tr -d ' ')
 	[ "$n" = 0 ] || fail "Depends lists a package twice: $(dpkg-deb -f "$file" Depends)"
 	dpkg-deb -f "$file" Depends | grep -qF "smcp (= $debver)" || fail "does not depend on smcp (= $debver)"
@@ -140,8 +330,11 @@ case "$file" in
 	grep -q 'smcp (= ' "$work/dpkg.log" || { cat "$work/dpkg.log" >&2; fail "dpkg did not name the required smcp version"; }
 	priv dpkg --purge smcp-desktop smcp >/dev/null 2>&1 || true
 	echo "refused: no smcp, smcp 0.0.1"
-	step "deb: install with smcp, list the commands, start, remove"
+	step "deb: over the previous release, install with smcp, list the commands, start, remove"
+	previous_release deb
 	priv env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$smcp" "$file" >/dev/null
+	over_previous
+	check_package_files deb
 	check_commands /usr/bin/smcp-desktop
 	check_version /usr/bin/smcp-desktop
 	start_app xvfb /usr/bin/smcp-desktop
@@ -158,14 +351,28 @@ case "$file" in
 	# --requires but is never satisfied.
 	req=$(rpm -qp --qf '[%{REQUIRENAME}|%{REQUIREFLAGS:depflags}|%{REQUIREVERSION}\n]' "$file" | grep '^smcp|' | tr -d ' ' || true)
 	[ "$req" = "smcp|=|$rpmver" ] || fail "requires '$req', not smcp = $rpmver"
+	before_final "$(rpm -qp --qf '%{VERSION}' "$file")" rpm
 	if rpm -qlp "$file" | grep -Eq '^/usr/bin/smcp(d|ctl|-session|-stdio|-connect|-refserver)$'; then
 		fail "smcp-desktop carries Gateway commands"
 	fi
 	if rpm -i --test "$file" >"$work/rpm.log" 2>&1; then fail "smcp-desktop installs without smcp"; fi
 	grep -qF "smcp = $rpmver is needed" "$work/rpm.log" || { cat "$work/rpm.log" >&2; fail "rpm did not name the smcp dependency"; }
 	echo "refused without smcp"
-	step "rpm: install with smcp, list the commands, start, remove"
+	step "rpm: refused with smcp of another version"
+	priv dnf install -y -q rpm-build >/dev/null
+	mkdir -p "$work/rpmtop"
+	printf 'Name: smcp\nVersion: 0.0.1\nRelease: 1\nSummary: other version (smoke test)\nLicense: none\nBuildArch: noarch\n%%description\nother version\n%%files\n' >"$work/other.spec"
+	rpmbuild --quiet -bb --define "_topdir $work/rpmtop" "$work/other.spec"
+	priv rpm -i "$work"/rpmtop/RPMS/noarch/smcp-0.0.1-1.noarch.rpm
+	if rpm -i --test "$file" >"$work/rpm.log" 2>&1; then fail "smcp-desktop installs with smcp 0.0.1"; fi
+	grep -qF "smcp = $rpmver is needed" "$work/rpm.log" || { cat "$work/rpm.log" >&2; fail "rpm did not name the required smcp version"; }
+	priv rpm -e smcp
+	echo "refused: no smcp, smcp 0.0.1"
+	step "rpm: over the previous release, install with smcp, list the commands, start, remove"
+	previous_release rpm
 	priv dnf install -y -q "$smcp" "$file" xorg-x11-server-Xvfb xorg-x11-xauth which >/dev/null
+	over_previous
+	check_package_files rpm
 	check_commands /usr/bin/smcp-desktop
 	check_version /usr/bin/smcp-desktop
 	start_app xvfb /usr/bin/smcp-desktop
@@ -182,7 +389,13 @@ case "$file" in
 	n=$(printf '%s\n' "$out" | awk -F'\t' -v v="$want" '$3 == v && $2 !~ "^/usr/(local/)?bin/"' | wc -l | tr -d ' ')
 	[ "$n" = 6 ] || fail "$n of 6 bundled commands found inside the AppImage with version $want"
 	check_version "$work/app.AppImage"
+	step "AppImage: setup offers the Standalone profile only (FR-20.19)"
+	profiles=$("$work/app.AppImage" --setup-profiles | awk -F'\t' '$1 == "profile" {print $2}' | paste -sd' ' -)
+	[ "$profiles" = standalone ] || fail "setup offers '$profiles', not the Standalone profile only"
+	echo "setup offers: $profiles"
 	start_app xvfb "$work/app.AppImage"
+	no_gateway_objects
+	if [ "${SMCP_SMOKE_SETUP:-}" = 1 ]; then appimage_setup; fi
 	;;
 *) fail "$file: not a .dmg, .deb, .rpm or .AppImage" ;;
 esac

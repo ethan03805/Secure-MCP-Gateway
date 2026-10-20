@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -113,6 +114,52 @@ func TestUninstallKeepsPackagedBinaries(t *testing.T) {
 	err := upgradeCmd([]string{"--config", cfg, "--bin-dir", bin, "--release", t.TempDir()}, &out)
 	if err == nil || !strings.Contains(err.Error(), "installed by the smcp rpm package") {
 		t.Errorf("upgrade of packaged binaries: %v", err)
+	}
+}
+
+// TestWindowsPackageRemoval: the .msi packages' removal command stops
+// and removes the machine-mode service when it runs the package's own
+// smcpd or a copy no package owns, and keeps a service that runs another
+// smcp package's smcpd (FR-20.22). The run on a Windows runner is
+// scripts/msi-smoke.ps1.
+func TestWindowsPackageRemoval(t *testing.T) {
+	reqtest.Partial(t, "FR-20.22")
+	pkg := t.TempDir()
+	other := t.TempDir()
+	writeMarker(t, filepath.Join(other, "package-format"), "msi")
+	copies := t.TempDir()
+	for _, c := range []struct {
+		name      string
+		img       string
+		installed bool
+		removed   bool
+		says      string
+	}{
+		{"own package", filepath.Join(pkg, "smcpd.exe"), true, true, "stopped and removed the smcpd service"},
+		{"copies of no package", filepath.Join(copies, "smcpd.exe"), true, true, "stopped and removed the smcpd service"},
+		{"another package", filepath.Join(other, "smcpd.exe"), true, false, "kept: the smcpd service, which runs " + filepath.Join(other, "smcpd.exe") + " of another smcp package"},
+		{"no service", "", false, false, "no smcpd service installed"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			removed := false
+			var out bytes.Buffer
+			err := windowsPackageRemoval(&out, pkg, func() (string, bool, error) { return c.img, c.installed, nil },
+				func() error { removed = true; return nil })
+			if err != nil || removed != c.removed || !strings.Contains(out.String(), c.says) {
+				t.Fatalf("err %v removed %v:\n%s", err, removed, out.String())
+			}
+			for _, s := range []string{"kept: configuration, state, evidence journal", "smcpctl uninstall --purge"} {
+				if !strings.Contains(out.String(), s) {
+					t.Errorf("output lacks %q", s)
+				}
+			}
+		})
+	}
+	// A failure is printed, never returned: the package removal goes on.
+	var out bytes.Buffer
+	if err := windowsPackageRemoval(&out, pkg, func() (string, bool, error) { return filepath.Join(pkg, "smcpd.exe"), true, nil },
+		func() error { return errors.New("access denied") }); err != nil || !strings.Contains(out.String(), "access denied") {
+		t.Fatalf("%v\n%s", err, out.String())
 	}
 }
 
@@ -350,6 +397,154 @@ func TestInstallersInChecksumFile(t *testing.T) {
 	// which fails it only on a real failure).
 	if !regexp.MustCompile(`(?m)^  release:\n(?:    .*\n)*?    needs: (?:installers|\[installers(?:, [a-z-]+)*\])\n`).Match(wf) {
 		t.Error("the release job of release.yml does not need the installers job")
+	}
+}
+
+// debVersionCompare compares two Debian package versions as dpkg does
+// (deb-version(7): epoch, upstream version, revision; "~" sorts before
+// everything, even the end of the string).
+func debVersionCompare(a, b string) int {
+	split := func(v string) (epoch int, upstream, revision string) {
+		if i := strings.IndexByte(v, ':'); i >= 0 {
+			for _, c := range v[:i] {
+				epoch = epoch*10 + int(c-'0')
+			}
+			v = v[i+1:]
+		}
+		if i := strings.LastIndexByte(v, '-'); i >= 0 {
+			return epoch, v[:i], v[i+1:]
+		}
+		return epoch, v, ""
+	}
+	order := func(c byte) int {
+		switch {
+		case c == '~':
+			return -1
+		case c >= '0' && c <= '9':
+			return 0
+		case c == 0:
+			return 0
+		case (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'):
+			return int(c)
+		}
+		return int(c) + 256
+	}
+	part := func(x, y string) int {
+		for x != "" || y != "" {
+			for (x != "" && (x[0] < '0' || x[0] > '9')) || (y != "" && (y[0] < '0' || y[0] > '9')) {
+				var cx, cy byte
+				if x != "" {
+					cx = x[0]
+				}
+				if y != "" {
+					cy = y[0]
+				}
+				if cx >= '0' && cx <= '9' {
+					cx = 0
+				}
+				if cy >= '0' && cy <= '9' {
+					cy = 0
+				}
+				if d := order(cx) - order(cy); d != 0 {
+					return d
+				}
+				if x != "" && cx != 0 {
+					x = x[1:]
+				}
+				if y != "" && cy != 0 {
+					y = y[1:]
+				}
+			}
+			nx, ny := 0, 0
+			for x != "" && x[0] >= '0' && x[0] <= '9' {
+				nx = nx*10 + int(x[0]-'0')
+				x = x[1:]
+			}
+			for y != "" && y[0] >= '0' && y[0] <= '9' {
+				ny = ny*10 + int(y[0]-'0')
+				y = y[1:]
+			}
+			if nx != ny {
+				return nx - ny
+			}
+		}
+		return 0
+	}
+	ea, ua, ra := split(a)
+	eb, ub, rb := split(b)
+	if ea != eb {
+		return ea - eb
+	}
+	if d := part(ua, ub); d != 0 {
+		return d
+	}
+	return part(ra, rb)
+}
+
+// TestDesktopDebVersionOrdersBeforeRelease: the smcp-desktop .deb of a
+// pre-release carries the smcp package's version (1.3.0~beta.2), which
+// dpkg orders before the final release, so that the release upgrades it;
+// the version Tauri writes (1.3.0-beta.2: upstream 1.3.0, revision
+// beta.2) orders after it, and the release would not replace the beta.
+// build.sh repacks the .deb with that version, and the installer smoke
+// test checks the order on the built package with dpkg and rpm
+// (FR-20.18; the file name keeps "." for "~", TestPackageFileNamesAreAssetNames).
+func TestDesktopDebVersionOrdersBeforeRelease(t *testing.T) {
+	reqtest.Partial(t, "FR-20.18")
+	for _, c := range []struct {
+		a, b string
+		want int
+	}{
+		{"1.3.0~beta.2", "1.3.0", -1},
+		{"1.3.0-beta.2", "1.3.0", 1},
+		{"1.3.0~beta.2", "1.3.0~rc.1", -1},
+		{"1.3.0~rc.1", "1.3.0~rc.2", -1},
+		{"1.2.0", "1.3.0~beta.2", -1},
+		{"1.3.0", "1.3.0", 0},
+		{"1.3.0~snapshot.abc1234", "1.3.0", -1},
+	} {
+		got := debVersionCompare(c.a, c.b)
+		if (got < 0) != (c.want < 0) || (got > 0) != (c.want > 0) {
+			t.Errorf("compare(%s, %s) = %d, want sign of %d", c.a, c.b, got, c.want)
+		}
+	}
+	build, err := os.ReadFile(filepath.Join(repoRoot, "packaging/installers/desktop/build.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`debver=$(dpkg-deb -f "$smcpdeb" Version)`,
+		`s/^Version: .*/Version: $debver/`,
+		`[ "$(dpkg-deb -f "$deb" Version)" = "$debver" ]`,
+	} {
+		if !strings.Contains(string(build), want) {
+			t.Errorf("desktop/build.sh lacks %q: the .deb would keep Tauri's version", want)
+		}
+	}
+	smoke, err := os.ReadFile(filepath.Join(repoRoot, "scripts/desktop-smoke.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`dpkg --compare-versions "$1" lt "$final"`, `rpm.vercmp('$1', '$final')`, `before_final "$debver" deb`} {
+		if !strings.Contains(string(smoke), want) {
+			t.Errorf("scripts/desktop-smoke.sh lacks the order check %q", want)
+		}
+	}
+}
+
+// TestNoFlatpak: no release build makes a Flatpak (FR-20.19); the
+// installers job also checks the files it built (tools/reqreport/jobs.go).
+func TestNoFlatpak(t *testing.T) {
+	reqtest.Partial(t, "FR-20.19")
+	for _, f := range []string{".goreleaser.yaml", ".github/workflows/release.yml", ".github/workflows/installers.yml",
+		".github/workflows/installers-desktop-macos.yml", "packaging/installers/desktop/build.sh", "desktop/src-tauri/tauri.conf.json"} {
+		b, err := os.ReadFile(filepath.Join(repoRoot, f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(strings.ToLower(string(b)), "flatpak") {
+			t.Errorf("%s mentions a Flatpak", f)
+		}
 	}
 }
 

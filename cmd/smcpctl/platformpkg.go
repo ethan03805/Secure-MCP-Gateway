@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/harness"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsvc"
 )
 
 // Platform packages (E-35, SRS FR-20.17 to FR-20.22). The .deb and .rpm
@@ -69,8 +71,23 @@ func errPackaged(binDir, format, what string) error {
 // created (FR-20.22): smcpd.service and smcp-nftables.service. It keeps the
 // configuration, state, evidence journal, keys and backups, and every other
 // host object, and it never fails the package removal: a problem is
-// printed, not returned.
+// printed, not returned. On Windows the .msi packages run it when they are
+// removed (not upgraded), for the machine-mode service (FR-21.6):
+// windowsPackageRemoval.
 func packageRemoval(out io.Writer, goos string, run func(argv ...string) error) error {
+	if goos == "windows" {
+		exe, err := os.Executable()
+		if err != nil {
+			fmt.Fprintf(out, "package removal: cannot locate smcpctl: %v\n", err)
+			return nil
+		}
+		return windowsPackageRemoval(out, filepath.Dir(exe), winsvc.ServiceImage, func() error {
+			if err := winsvc.StopService(75 * time.Second); err != nil {
+				return err
+			}
+			return winsvc.DeleteService()
+		})
+	}
 	if goos != "linux" {
 		fmt.Fprintf(out, "package removal: no system service on %s\n", goos)
 		return nil
@@ -100,6 +117,39 @@ func packageRemoval(out io.Writer, goos string, run func(argv ...string) error) 
 	}
 	fmt.Fprintln(out, "kept: configuration, state, evidence journal, evidence keys, backups, the nftables table, LSM profiles and service identities")
 	fmt.Fprintln(out, "per-user services: run `smcpctl uninstall` as each user before removing the package; to delete everything: `smcpctl uninstall --purge`")
+	return nil
+}
+
+// windowsPackageRemoval is `smcpctl uninstall --package-removal` run by
+// the smcp and smcp-desktop .msi packages, as the system account, before
+// they remove their files (FR-20.22). It stops and removes the
+// machine-mode service smcpd when the service runs this package's own
+// smcpd (the smcp .msi's directory) or a copy that no package owns (the
+// copy `smcpctl install --machine` made from the smcp-desktop package);
+// a service that runs the smcpd of another installed smcp package stays.
+// The per-user task, configuration, state, journal, keys and backups
+// stay, and a problem is printed, never returned.
+func windowsPackageRemoval(out io.Writer, pkgDir string, image func() (string, bool, error), remove func() error) error {
+	img, installed, err := image()
+	switch {
+	case err != nil:
+		fmt.Fprintf(out, "package removal: cannot read the smcpd service: %v\n", err)
+	case !installed:
+		fmt.Fprintln(out, "package removal: no smcpd service installed")
+	default:
+		dir := filepath.Dir(img)
+		if !strings.EqualFold(filepath.Clean(dir), filepath.Clean(pkgDir)) && packageFormat(dir) != "" {
+			fmt.Fprintf(out, "kept: the smcpd service, which runs %s of another smcp package\n", img)
+			break
+		}
+		if err := remove(); err != nil {
+			fmt.Fprintf(out, "package removal: the smcpd service (%s): %v\n", img, err)
+		} else {
+			fmt.Fprintf(out, "stopped and removed the smcpd service (%s)\n", img)
+		}
+	}
+	fmt.Fprintln(out, "kept: configuration, state, evidence journal, evidence keys, backups and the per-user task")
+	fmt.Fprintln(out, "per-user installations: run `smcpctl uninstall` as each user before removing the package; to delete everything: `smcpctl uninstall --purge`")
 	return nil
 }
 

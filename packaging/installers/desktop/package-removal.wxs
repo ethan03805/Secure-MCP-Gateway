@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Package removal of the smcp-desktop .msi (E-35, SRS FR-20.22), a WiX
+  Toolset 3 fragment that build-msi.ps1 adds to the Tauri bundler's
+  template (bundle.windows.wix.fragmentPaths, pulled in through the
+  component group SmcpPackageRemoval).
+
+  When the package is removed (not upgraded), before its files go, it runs
+  the packaged `smcpctl uninstall --package-removal` as the system
+  account, as the smcp .msi and the .deb and .rpm pre-removal scripts do:
+  that stops and removes the machine-mode service smcpd when it runs this
+  package's smcpd or the copy `smcpctl install --machine` made from it,
+  and keeps the configuration, state, journal, keys, backups and every
+  per-user task. A failure never stops the removal.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <CustomAction Id="SmcpPackageRemoval" Directory="INSTALLDIR"
+                  ExeCommand="&quot;[INSTALLDIR]smcpctl.exe&quot; uninstall --package-removal"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="SmcpPackageRemoval" Before="RemoveFiles">REMOVE~="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
+    </InstallExecuteSequence>
+    <ComponentGroup Id="SmcpPackageRemoval">
+      <Component Id="SmcpPackageRemovalRegistration" Directory="INSTALLDIR" Guid="6f1d2c7e-5b0a-4c3e-9a8f-2d4e7b9c1a35">
+        <RegistryValue Root="HKLM" Key="Software\smcp-desktop" Name="PackageRemoval" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

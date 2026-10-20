@@ -163,6 +163,24 @@ func CommandLine(args ...string) string {
 	return strings.Join(out, " ")
 }
 
+// ImageOf returns the program of a service command line: the first
+// argument as CommandLineToArgvW reads it (quoted or up to the first
+// blank). Backslashes in a quoted program path are literal, as Windows
+// takes them for the program name.
+func ImageOf(commandLine string) string {
+	s := strings.TrimLeft(commandLine, " \t")
+	if strings.HasPrefix(s, `"`) {
+		if i := strings.IndexByte(s[1:], '"'); i >= 0 {
+			return s[1 : i+1]
+		}
+		return s[1:]
+	}
+	if i := strings.IndexAny(s, " \t"); i >= 0 {
+		return s[:i]
+	}
+	return s
+}
+
 func quoteArg(s string) string {
 	if s != "" && !strings.ContainsAny(s, " \t\n\v\"") {
 		return s

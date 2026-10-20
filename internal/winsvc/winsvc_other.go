@@ -38,5 +38,14 @@ func RunValueData() string { return "" }
 // DeleteRunValue returns ErrNotWindows.
 func DeleteRunValue() error { return ErrNotWindows }
 
+// ServiceImage returns ErrNotWindows.
+func ServiceImage() (string, bool, error) { return "", false, ErrNotWindows }
+
+// StopService returns ErrNotWindows.
+func StopService(time.Duration) error { return ErrNotWindows }
+
+// DeleteService returns ErrNotWindows.
+func DeleteService() error { return ErrNotWindows }
+
 // StartDetached returns ErrNotWindows.
 func StartDetached(string, []string, string, *os.File) (int, error) { return 0, ErrNotWindows }

@@ -1751,7 +1751,7 @@ jobs:
     if: >-
       always() && github.event_name != 'pull_request' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration, install-standalone, install-guide, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop, desktop-e2e, windows, contextforge]
+    needs: [srs, go, lint, site, security, linux-integration, install-standalone, install-guide, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop, desktop-e2e, windows, contextforge, installers]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -1895,9 +1895,10 @@ jobs:
             echo "install-standalone results missing for one runner; not merged"
           fi
           # The desktop application's Rust test claims (FR-20, desktop job),
-          # one file per platform, and those of its end-to-end tests
-          # (desktop-e2e on Linux, the desktop job on macOS).
-          for f in build/desktop-macos-test.json build/desktop-linux-test.json build/desktop-e2e-linux-test.json build/desktop-e2e-macos-test.json build/desktop-windows-test.json build/desktop-windows-arm64-test.json; do
+          # one file per platform, those of its end-to-end tests
+          # (desktop-e2e on Linux, the desktop job on macOS) and those of
+          # the installer jobs (installers.yml, claims job).
+          for f in build/desktop-macos-test.json build/desktop-linux-test.json build/desktop-e2e-linux-test.json build/desktop-e2e-macos-test.json build/desktop-windows-test.json build/desktop-windows-arm64-test.json build/desktop-installers-test.json; do
             if [ -s "$f" ]; then
               cat "$f" >> build/all-test.json
               merged=1
