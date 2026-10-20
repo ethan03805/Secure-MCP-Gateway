@@ -38,6 +38,10 @@ jobs:
           jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Package) \(.Test)"' build/windows-test.json
           jq -r 'select(.Action == "output") | .Output' build/windows-test.json | grep -v '^=== ' | tail -150
           exit "${rc:-0}"
+      - name: Console close
+        if: always()
+        run: |
+          go test -count=1 -v -timeout 15m -run '^TestWindowsConsoleClose$' ./internal/acceptance/ 2>&1 | grep -v '^=== ' | tail -40
       - name: Machine smoke
         if: always()
         shell: pwsh
@@ -56,6 +60,7 @@ jobs:
           jq -r 'select(.Action == "output") | .Output' build/windows-export-raw.json | grep -v '^=== ' | tail -80
           exit "$rc"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
         with:
           name: windows-dpapi-state
           path: ${{ runner.temp }}/dpapi-state
@@ -63,6 +68,7 @@ jobs:
           retention-days: 1
   copy:
     needs: [win]
+    if: always()
     runs-on: windows-latest
     timeout-minutes: 30
     env:

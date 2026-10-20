@@ -44,6 +44,10 @@ type exportRecord struct {
 	// service under NT SERVICE\smcpd): each a DPAPI blob that the runner's
 	// administrator account cannot decrypt.
 	Machine map[string]string `json:"machine"`
+	// Passphrase is true when a vault initialized with the passphrase key
+	// source kept its master key age-encrypted to an scrypt recipient and
+	// opened with the passphrase only (the other SR-2.13-4 option).
+	Passphrase bool `json:"passphrase"`
 }
 
 const exportFile = "dpapi-export.json"
@@ -114,6 +118,28 @@ func TestWindowsStateCopyExport(t *testing.T) {
 		}
 		t.Logf("machine-mode state: %d DPAPI blobs bound to the service account", len(rec.Machine))
 	}
+	// The passphrase option of SR-2.13-4.
+	ptmp := t.TempDir()
+	if err := winsec.SecureOwnerOnly(ptmp); err != nil {
+		t.Fatal(err)
+	}
+	pdir := filepath.Join(ptmp, "pvault")
+	pks := secrets.Passphrase{Path: filepath.Join(pdir, secrets.MasterKeyFile), Passphrase: func() (string, error) { return "export vault passphrase", nil }, WorkFactor: 10}
+	if _, err := secrets.Init(pdir, pks); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(filepath.Join(pdir, secrets.MasterKeyFile)); err != nil || !strings.HasPrefix(string(b), "age-encryption.org/v1\n-> scrypt ") {
+		t.Fatalf("passphrase vault master key is not age/scrypt: %v", err)
+	}
+	if _, err := secrets.Open(pdir, pks, secrets.VaultOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	wrong := pks
+	wrong.Passphrase = func() (string, error) { return "a different passphrase", nil }
+	if _, err := secrets.Open(pdir, wrong, secrets.VaultOptions{}); !errors.Is(err, secrets.ErrLocked) {
+		t.Fatalf("passphrase vault opened with a wrong passphrase: %v", err)
+	}
+	rec.Passphrase = true
 	b, _ := json.MarshalIndent(rec, "", "  ")
 	if err := os.WriteFile(filepath.Join(dir, exportFile), b, 0o600); err != nil {
 		t.Fatal(err)
@@ -215,7 +241,17 @@ func TestWindowsStateCopyRefused(t *testing.T) {
 	} else {
 		reqtest.Partial(t, "FR-21.10") // the machine-mode keys were not checked
 	}
-	reqtest.Partial(t, "SR-2.13-4")
+	// SR-2.13-4: the vault master key is a DPAPI blob in both modes (per
+	// user: this copy; machine: made by the service), another account (the
+	// runner's administrator, for the service's key) and another host (this
+	// runner) cannot decrypt it, and the passphrase option was confirmed.
+	_, userVault := rec.Blobs["vault/"+secrets.DPAPIKeyFile]
+	_, machineVault := rec.Machine["vault/"+secrets.DPAPIKeyFile]
+	if userVault && machineVault && rec.Passphrase {
+		reqtest.Verifies(t, "SR-2.13-4")
+	} else {
+		reqtest.Partial(t, "SR-2.13-4")
+	}
 }
 
 func digest(b []byte) string {

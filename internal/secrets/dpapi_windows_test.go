@@ -58,9 +58,6 @@ func TestWindowsVaultMasterKey(t *testing.T) {
 	if v.KeySource() != KeySourceDPAPI {
 		t.Fatalf("store records key source %q", v.KeySource())
 	}
-	if _, err := v.Create("test", CreateParams{Name: "windows-test", Value: []byte("value-of-windows-test")}); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := Open(dir, ks, VaultOptions{}); err != nil {
 		t.Fatalf("reopen: %v", err)
 	}

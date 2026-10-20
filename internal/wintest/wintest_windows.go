@@ -95,7 +95,7 @@ func NewGroup(t testing.TB) (name, sid string) {
 func NewUser(t testing.TB, groups ...string) *User {
 	t.Helper()
 	requireAdmin(t)
-	u := &User{Name: "smcpu" + randomHex(5), Password: "Aa1!" + randomHex(12)}
+	u := &User{Name: "smcpu" + randomHex(5), Password: "Aa1!" + randomHex(5)} // net user asks before a password over 14 characters
 	run(t, "net", "user", u.Name, u.Password, "/add", "/passwordchg:no", "/expires:never")
 	t.Cleanup(func() { _ = exec.Command("net", "user", u.Name, "/delete").Run() })
 	for _, g := range groups {
