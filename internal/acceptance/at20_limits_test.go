@@ -137,16 +137,23 @@ func TestAT20LimitsAndLoad(t *testing.T) {
 		t.Fatalf("%d complete calls in the journal, want 400", len(overhead))
 	}
 	t.Logf("8 callers x 50 reads of 64 KiB: p95 gateway overhead %.2f ms, p95 decision %.3f ms", p95(overhead), p95(decision))
+	overBudget := ""
 	if runtime.GOOS == "windows" && (p95(overhead) > 50 || p95(decision) > 10) {
 		// The FR-11 budgets hold for the reference hardware, a Linux runner
 		// class (docs/reference-hardware.md); a Windows runner over them
-		// reports the scenario as not run in its mode, with the figures.
-		skipScenario(t, fmt.Sprintf("the FR-11 latency budgets are set for the reference hardware (docs/reference-hardware.md); this Windows runner measured p95 gateway overhead %.2f ms and decision %.3f ms", p95(overhead), p95(decision)), "AT-20")
+		// reports the scenario as not run in its mode, with the figures,
+		// after the disk and restart parts below have run.
+		overBudget = fmt.Sprintf("the FR-11 latency budgets are set for the reference hardware (docs/reference-hardware.md); this Windows runner measured p95 gateway overhead %.2f ms and decision %.3f ms", p95(overhead), p95(decision))
+		defer func() {
+			if !t.Failed() {
+				skipScenario(t, overBudget, "AT-20")
+			}
+		}()
 	}
-	if p95(overhead) > 50 {
+	if overBudget == "" && p95(overhead) > 50 {
 		t.Errorf("p95 gateway overhead %.2f ms exceeds 50 ms", p95(overhead))
 	}
-	if p95(decision) > 10 {
+	if overBudget == "" && p95(decision) > 10 {
 		t.Errorf("p95 decision time %.3f ms exceeds 10 ms", p95(decision))
 	}
 
@@ -174,6 +181,20 @@ func TestAT20LimitsAndLoad(t *testing.T) {
 	}, "fail-closed with audit_capacity")
 	if text, isErr, err := call(cs, "ref_echo", map[string]any{"text": "disk full"}); err == nil && !isErr {
 		t.Fatalf("a call was dispatched below the audit reserve: %q", text)
+	}
+	if runtime.GOOS == "windows" {
+		// FR-21.26: the free space of a real, nearly full NTFS volume is
+		// measured with GetDiskFreeSpaceEx and gives the state and cause
+		// it gives on Linux, with the warning in the diagnostic log.
+		// A subtest, so that the claim counts even when the scenario is
+		// reported as not run for the latency budgets.
+		logs := g.logs.String()
+		t.Run("free space measured on Windows", func(st *testing.T) {
+			reqtest.Verifies(st, "FR-21.26")
+			if !strings.Contains(logs, "health state changed") || !strings.Contains(logs, "audit_capacity") {
+				st.Fatalf("no health warning naming audit_capacity in the diagnostic log:\n%s", logs)
+			}
+		})
 	}
 	if err := os.Remove(filler); err != nil {
 		t.Fatal(err)

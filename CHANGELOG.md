@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- AT-20 on Windows runs its disk-exhaustion and restart parts before it reports the scenario as not run for the FR-11 latency budgets, and claims FR-21.26 (free space of a nearly full NTFS volume measured with `GetDiskFreeSpaceEx`, same state and cause as on Linux).
 - The fuzz targets of the v1.3.0 security review claim the requirements they exercise (FR-12.10): `FuzzSSEReader`, the regression test of finding SR-21, partly claims FR-5.28 and FR-5.30; `FuzzEncodeValue` and `FuzzHeaderParams` FR-5.29; `FuzzParseCatalog` FR-22.2. The other findings' regression tests already claimed theirs (SR-18: SR-2-7, SR-19: SR-2.8-6, SR-20: FR-21.6).
 - ContextForge security requirements verified (SRS SR-5.6-3, SR-6.18-2, planned v1.3.0):
 - ContextForge security requirements verified (SRS SR-3.6-2, SR-4-3, SR-5.6-3, SR-6.18-2, planned v1.3.0):

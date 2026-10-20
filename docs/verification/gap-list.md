@@ -143,7 +143,6 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 ### E-23 Health & Safety Monitor
 
 - FR-20.5 **unverified** (partly verified): The four gauges are tested on a running Standalone Gateway; the scrape on an Enforced installation and the metrics setting left by a real first-run setup are not checked together.
-- FR-21.26 **unverified** (no claiming test or record): `GetDiskFreeSpaceEx` feeds the free-space checks (Windows test); a running Gateway with a nearly full volume is not tested.
 - SR-4-2 **unverified** (partly verified): Labels and modes are tested per place; a WSL2 installation running as a systemd service (needs FR-21.15) and the `high` package refusal in each mode are not.
 
 ### E-24 Management Console & Control API
@@ -266,6 +265,8 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - SR-3.5-2 **unverified** (partly verified): The probe holds no secret, its only network destination is its endpoint for the entry's host, and a probe secret is delivered in S1 only (`connector.TestHostedPackagesThroughEgress`, `egress.TestHostedEndpoints`); the run with a production secret bound to another package is not made.
 
 ## History
+
+Updated on 2026-10-20 by the phase-13 windows-verify work (second part): FR-21.26 is claimed by the Windows run of AT-20 (`internal/acceptance.TestAT20LimitsAndLoad`, subtest "free space measured on Windows"): a running `smcpd` on a nearly full 320 MiB NTFS volume fails closed with `audit_capacity`, as on Linux, and logs the health warning. On Windows the scenario still reports AT-20 as not run when the runner is over the FR-11 latency budgets, but now only after the disk and restart parts have run. Its line is removed.
 
 The dated notes below record how the list changed, in the order they were added. Requirements named in them as open may since have been verified; the list above is the current state.
 
