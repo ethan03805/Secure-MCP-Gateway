@@ -381,6 +381,18 @@ async fn setup_get(app: AppHandle, webview: tauri::Webview) -> Result<SetupInfo,
                 detail: "smcpctl was not found".into(),
             }),
             (setup::Profile::Enforced, Some(p)) => {
+                // pkexec runs smcpctl as root: only a copy the user cannot
+                // change is offered (security review v1.3, SR-18).
+                if let Err(why) = setup::elevation_safe(p) {
+                    let c = setup::Check::Missing {
+                        missing: vec![format!(
+                            "a copy of smcpctl that only root can change ({why}); the Gateway package installs one in /usr/bin"
+                        )],
+                    };
+                    *session.enforced.lock().unwrap_or_else(|e| e.into_inner()) = Some(c.clone());
+                    profiles.push(ProfileInfo { id, check: Some(c) });
+                    continue;
+                }
                 let argv = setup::check_argv(p);
                 let r = tauri::async_runtime::spawn_blocking(move || SystemRunner.run(&argv, setup::CHECK_TIMEOUT))
                     .await
@@ -433,7 +445,12 @@ fn setup_run(
     {
         return Err(refusal("SETUP_PROFILE_UNAVAILABLE"));
     }
-    let smcpctl = smcpctl_path(&shared.host).ok_or_else(|| refusal("SETUP_SMCPCTL_MISSING"))?;
+    let mut smcpctl = smcpctl_path(&shared.host).ok_or_else(|| refusal("SETUP_SMCPCTL_MISSING"))?;
+    if profile == setup::Profile::Enforced {
+        // Checked again here and run by its resolved path, so pkexec runs
+        // exactly the root-owned file (SR-18).
+        smcpctl = setup::elevation_safe(&smcpctl).map_err(|_| refusal("SETUP_PROFILE_UNAVAILABLE"))?;
+    }
     if !session.begin(profile) {
         return Err(refusal("SETUP_RUNNING"));
     }

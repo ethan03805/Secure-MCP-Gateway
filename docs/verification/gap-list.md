@@ -218,7 +218,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - SR-2-5 **unverified** (partly verified): Capability files and command registrations are checked; invoking each command from the console window's script context is not tested.
 - SR-2-6 **unverified** (partly verified): The bundled CSP and the console origin rule are tested; no network capture of a full run and no injected remote script in a test build.
 - SR-2.6-2 **unverified** (partly verified): Notifications have no actions and open only G-13 (unit tests); the signed-out, Operator and Approver decisions through the window are not run.
-- SR-2-7 **unverified** (partly verified): Fixed argument vectors and elevation only for the package manager are unit-tested; the process is not observed on each platform; User Account Control on Windows is not built.
+- SR-2-7 **unverified** (partly verified): Fixed argument vectors, elevation only for the package manager and, for the Enforced setup, only of a root-owned `smcpctl` (security review v1.3, SR-18) are unit-tested; the process is not observed on each platform; User Account Control on Windows is not built.
 - SR-2.8-5 **unverified** (partly verified): Gateway-CA pinning and the error page are unit-tested with generated certificates; the console window is not pointed at test listeners with another CA, an expired certificate and another name.
 - SR-7-2 **unverified** (partly verified): Every refusal case is tested against a test feed on macOS and Linux, with the real release key and cosign bundle; the Windows `.msi` path is not built.
 
