@@ -20,6 +20,12 @@
       "reason": "hash of internal/approval/notice_test.go, a Go test of desktop notifications that syft takes for a NOTICE file by its name; it holds no license text and is not compiled into the release binaries"
     },
     {
+      "package": "github.com/ethan03805/secure-mcp-gateway",
+      "identifier": "LicenseRef-1d090e76c0d71360022d6265045c2dbfc7df3beb6e9623e0500f8bf9f30339f5",
+      "license": "Apache-2.0",
+      "reason": "hash of internal/contextforge/release/NOTICE, the attribution notice for the pinned IBM ContextForge v1.0.11 catalog file compiled into smcpd and smcpctl; ContextForge is Apache-2.0 and the notice is not a license. The Gateway itself is Apache-2.0 (LICENSE)"
+    },
+    {
       "package": "github.com/apache/arrow-go/v18",
       "identifier": "LicenseRef-c02e3dc1587f49e4876c8b75ae9e534739a00e834b609395cc2bb2fd24452dfe",
       "license": "Apache-2.0 AND BSD-3-Clause",
