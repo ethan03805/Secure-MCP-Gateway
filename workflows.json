@@ -4,11 +4,11 @@
     "requirements": [
       "FR-15.8"
     ],
-    "ref": "v1.3.0-beta.2",
-    "commit": "fe82231b29c71528b99c68d0dd8fda3465d804fd",
+    "ref": "main",
+    "commit": "636c58223b2812f42a10002e56a233a77fc88ad1",
     "conclusion": "success",
-    "date": "2026-10-20T12:13:22Z",
-    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39419231451"
+    "date": "2026-10-20T12:22:18Z",
+    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39420577188"
   },
   {
     "workflow": "agents-lockdown",
