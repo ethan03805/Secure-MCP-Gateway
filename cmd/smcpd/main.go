@@ -35,6 +35,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/obspolicy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/openapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
 	"github.com/ethan03805/secure-mcp-gateway/internal/principals"
 	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
@@ -245,6 +246,10 @@ func run(parent context.Context, cfgPath, level string) error {
 		return err
 	}
 	defer cf.Close()
+	if cfg.ContextForge.Bundled {
+		// FR-22.15: hosted packages' S1 grants go to their egress endpoints.
+		opts.WrapInjector = func(next pipeline.SecretHeaderInjector) pipeline.SecretHeaderInjector { return cf.S1Router(next) }
+	}
 	a, err := app.Start(ctx, cfg, opts)
 	// FR-9.17: while the Evidence Journal cannot be opened for writing,
 	// harness requests get -31004; Start is retried once the journal

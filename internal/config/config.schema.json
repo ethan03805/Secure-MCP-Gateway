@@ -507,7 +507,8 @@
         "npm_registry": { "type": "string", "pattern": "^https?://" },
         "pypi_index": { "type": "string", "pattern": "^https?://" },
         "engine": { "type": "string", "pattern": "^/" },
-        "cosign": { "type": "string", "pattern": "^/" }
+        "cosign": { "type": "string", "pattern": "^/" },
+        "python": { "type": "string", "minLength": 1 }
       }
     },
     "packages": {

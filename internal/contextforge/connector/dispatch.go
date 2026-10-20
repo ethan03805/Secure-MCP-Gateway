@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
@@ -31,9 +32,28 @@ const ReconcileInterval = 5 * time.Minute
 // instance.
 type hostedPkg struct {
 	ServerID, Revision string
-	Prov               *bundle.Provisioned
-	ToBackend          map[string]string
-	Expected           bundle.Expected
+	// Alias is the configured server alias; Host and Port are the
+	// manifest's hosted destination (its endpoint and S1 grants).
+	Alias     string
+	Host      string
+	Port      int
+	Prov      *bundle.Provisioned
+	ToBackend map[string]string
+	Expected  bundle.Expected
+	// tok is the current package token, read for each request
+	// (FR-22.36) and replaced by renewal (renew.go).
+	tok atomic.Pointer[string]
+}
+
+func (hp *hostedPkg) key() string { return hp.ServerID + "@" + hp.Revision }
+
+func (hp *hostedPkg) setToken(t string) { hp.tok.Store(&t) }
+
+func (hp *hostedPkg) token() string {
+	if p := hp.tok.Load(); p != nil {
+		return *p
+	}
+	return ""
 }
 
 // ResolveHosted is the library's resolver of an enabled hosted package
@@ -81,19 +101,33 @@ func (c *Connector) ResolveHosted(sc config.Server, m *packaging.Manifest, rev l
 	}
 	pw := string(vals[user])
 	clear(vals[user])
-	target, err := c.endpointFor(m.Upstream.URL)
+	host, port, err := hostPort(m.Upstream.URL)
 	if err != nil {
 		return sc, err
+	}
+	// FR-22.40, FR-22.34: the gateway's URL is the package's own E-18
+	// endpoint.
+	target, err := c.packageEndpoint(sc.Alias, rev.Key(), m.Upstream.URL)
+	if err != nil {
+		return sc, err
+	}
+	if len(m.Secrets) > 0 {
+		if err := c.bindRegistrationSecrets(ctx, sc.Alias, rev.Key()); err != nil {
+			c.dropEndpoint(rev.Key())
+			return sc, err
+		}
 	}
 	prov, err := a.Provision(ctx, bundle.PackageSpec{Slug: slug, URL: target, Transport: m.Upstream.Transport}, pw)
 	if err != nil {
 		if prov != nil {
 			_ = a.Deprovision(context.WithoutCancel(ctx), prov)
 		}
+		c.dropEndpoint(rev.Key())
 		return sc, packaging.Wrap(packaging.ReasonProbeFailed, "registering "+rev.Key()+" in the bundled instance", err)
 	}
-	hp := &hostedPkg{ServerID: rev.ServerID, Revision: rev.Revision, Prov: prov, ToBackend: map[string]string{},
+	hp := &hostedPkg{ServerID: rev.ServerID, Revision: rev.Revision, Alias: sc.Alias, Host: host, Port: port, Prov: prov, ToBackend: map[string]string{},
 		Expected: bundle.Expected{Provisioned: *prov, URL: target, Tools: map[string]string{}}}
+	hp.setToken(prov.Token)
 	var want []string
 	for _, t := range m.Tools {
 		hp.ToBackend[t.Name] = t.BackendName
@@ -103,7 +137,13 @@ func (c *Connector) ResolveHosted(sc config.Server, m *packaging.Manifest, rev l
 	sort.Strings(want)
 	if got := slices.Clone(prov.Tools); !slices.Equal(got, want) {
 		_ = a.Deprovision(context.WithoutCancel(ctx), prov)
+		c.dropEndpoint(rev.Key())
 		return sc, packaging.Errf(ReasonDrift, "%s: the bundled instance serves %v, the manifest names %v", rev.Key(), got, want)
+	}
+	for id, old := range c.hosted {
+		if old.key() == hp.key() {
+			delete(c.hosted, id) // an earlier registration of this revision
+		}
 	}
 	c.hosted[prov.ServerID] = hp
 	pkgs := make([]*bundle.Provisioned, 0, len(c.hosted))
@@ -115,6 +155,7 @@ func (c *Connector) ResolveHosted(sc config.Server, m *packaging.Manifest, rev l
 		c.scopeBroken(err)
 		return sc, err
 	}
+	c.setRoute(rev.ServerID, rev.Revision, prov.ServerID)
 	out := sc
 	out.URL = c.inst.BaseURL() + "/servers/" + prov.ServerID + "/mcp"
 	out.Command, out.Args, out.Env, out.Dir, out.Runtime, out.ArtifactRoot = "", nil, nil, "", "", ""
@@ -129,6 +170,7 @@ func (c *Connector) scopeBroken(cause error) {
 		if c.o.Suspend != nil {
 			_ = c.o.Suspend(hp.ServerID, hp.Revision, cause)
 		}
+		c.dropEndpoint(hp.key())
 	}
 	c.hosted = map[string]*hostedPkg{}
 	if c.o.Recorder != nil {
@@ -165,9 +207,12 @@ type hostedLauncher struct {
 }
 
 // WrapLauncher returns inner with the hosted packages' connections taken
-// care of: the package token as SMCP_UPSTREAM_TOKEN of the southbound
-// transport (never in a configuration or file) and renameProcess around
-// the connection. Put it outside southbound.Wrap and inside the Secret
+// care of: the package token bound as the spec's TokenSource, read for
+// each request so that a renewed token applies at once (never in an
+// environment, configuration or file; FR-22.36, FR-22.29), and
+// renameProcess around the connection. A hosted package's secrets are
+// delivered only in mode S1 at its endpoint (FR-22.15): a launch with
+// secret files (S2, S3) is refused. Put it outside southbound.Wrap and inside the Secret
 // Broker's wrapper. get returns the Connector, which may be created after
 // the launcher chain (nil: no hosted package).
 func WrapLauncher(inner pipeline.Launcher, get func() *Connector) pipeline.Launcher {
@@ -195,12 +240,14 @@ func (h *hostedLauncher) Launch(ctx context.Context, spec pipeline.ServerSpec) (
 	if hp == nil {
 		return h.Launcher.Launch(ctx, spec)
 	}
-	env := maps.Clone(spec.Env)
-	if env == nil {
-		env = map[string]string{}
+	if spec.SecretDir != "" {
+		return nil, packaging.Errf(ReasonHostedSecretMode, "%s is a hosted package: its secrets are delivered only in mode S1 at its egress endpoint, not as files", spec.Alias)
 	}
-	env[southbound.TokenEnv] = hp.Prov.Token
+	env := maps.Clone(spec.Env)
+	delete(env, southbound.TokenEnv)
+	delete(env, southbound.TokenFileEnv)
 	spec.Env = env
+	spec.TokenSource = hp.token
 	proc, err := h.Launcher.Launch(ctx, spec)
 	if err != nil {
 		return nil, err
@@ -259,5 +306,6 @@ func (c *Connector) reconcile(ctx context.Context) {
 			_ = c.o.Suspend(hp.ServerID, hp.Revision, packaging.Errf(ReasonDrift, "%s: %s", d.Kind, d.Detail))
 		}
 		delete(c.hosted, hp.Prov.ServerID)
+		c.dropEndpoint(hp.key())
 	}
 }

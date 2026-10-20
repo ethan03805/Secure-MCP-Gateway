@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"sort"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/health"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
 
 // openContextForge creates the ContextForge Connector (E-36) before the
@@ -43,6 +45,11 @@ func openContextForge(cfg *config.Config, pkgs *library.Runtime, sec *secrets.Se
 // health monitor to the Connector.
 func attachContextForge(ctx context.Context, c *connector.Connector, a *app.App, mon *health.Monitor) {
 	c.SetRecorder(a.Evidence)
+	a.Evidence.AddDecorator(c.Decorate) // FR-22.39: route fields of hosted calls
+	if p := c.ManagedProcess(); p != nil && runtime.GOOS == "windows" {
+		// FR-22.25: the managed process in its Job Object is unconfined.
+		mon.Register("contextforge-process", winsandbox.ContextForgeUnconfinedCheck(p.Running))
+	}
 	c.Start(ctx)
 	c.RegisterRoutes(a.Admin)
 	// FR-22.25, FR-22.30: degraded, never fail-closed, for the bundled

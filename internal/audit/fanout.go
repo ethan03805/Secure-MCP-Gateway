@@ -46,10 +46,20 @@ type Fanout struct {
 	store Appender
 	log   *slog.Logger
 
-	mu        sync.RWMutex
-	observers []*observerQueue
-	direct    []directObserver
-	closed    bool
+	mu         sync.RWMutex
+	observers  []*observerQueue
+	direct     []directObserver
+	decorators []func(*Event)
+	closed     bool
+}
+
+// AddDecorator adds a function that may complete each event before it is
+// written (the ContextForge Connector's route fields, SRS FR-22.39). It
+// must be fast, must not block and must not write evidence.
+func (f *Fanout) AddDecorator(d func(*Event)) {
+	f.mu.Lock()
+	f.decorators = append(f.decorators, d)
+	f.mu.Unlock()
 }
 
 type directObserver struct {
@@ -114,6 +124,11 @@ func (f *Fanout) Record(ev Event) error { return f.append(ev, false) }
 func (f *Fanout) Commit(ev Event) error { return f.append(ev, true) }
 
 func (f *Fanout) append(ev Event, durable bool) error {
+	f.mu.RLock()
+	for _, d := range f.decorators {
+		d(&ev)
+	}
+	f.mu.RUnlock()
 	written, err := f.store.Append(ev, durable)
 	if err != nil {
 		return err

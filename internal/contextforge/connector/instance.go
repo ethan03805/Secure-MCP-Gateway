@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -56,10 +57,24 @@ func (c *Connector) setupInstance() {
 		c.instErr = packaging.Errf(ReasonVaultRequired, "the bundled ContextForge instance keeps its credentials in the Secret Vault; run smcpctl secrets init and add a [secrets] table")
 		return
 	}
+	c.platform = "linux/" + runtime.GOARCH
+	if c.o.Runner != nil {
+		if c.o.Verifier == nil {
+			c.instErr = errors.New("contextforge connector: a runner needs its verifier")
+			return
+		}
+		c.inst, c.verifier = c.o.Runner, c.o.Verifier
+		return
+	}
 	eng := bundle.Engine{Path: cf.Engine}
 	if eng.Path == "" {
 		var err error
-		if eng, err = bundle.FindEngine(); err != nil {
+		eng, err = bundle.FindEngine()
+		if runtime.GOOS == "windows" || (err != nil && cf.Python != "" && !c.o.Enforced) {
+			c.setupProcess()
+			return
+		}
+		if err != nil {
 			c.instErr = packaging.Errf(ReasonEngineMissing, "%v", err)
 			return
 		}
@@ -71,12 +86,11 @@ func (c *Connector) setupInstance() {
 		cosign, _ = exec.LookPath("cosign")
 	}
 	lock := contextforge.ReleaseLock().ContextForge
-	c.platform = "linux/" + runtime.GOARCH
 	sum := sha256.Sum256([]byte(c.o.Config.State.Dir))
 	l := c.o.Config.Limits
 	inst, err := bundle.New(bundle.Options{Engine: eng, Image: lock.ImageRef(c.platform), Name: "smcp-contextforge-" + hex.EncodeToString(sum[:4]),
 		Settings:    bundle.Settings{SSRFAllowed: c.o.SSRFAllowed, Limits: bundle.Limits{UpstreamTimeout: l.UpstreamTimeout.Duration, CallsPerMinute: l.PrincipalCallsPerMin, Concurrency: l.ToolConcurrencyTotal}},
-		Credentials: c.credentials, OnState: c.instanceState, Log: c.o.Log})
+		Credentials: c.credentials, OnState: c.instanceState, Log: c.o.Log, Enforced: c.o.Enforced})
 	if err != nil {
 		c.instErr = err
 		return
@@ -84,6 +98,36 @@ func (c *Connector) setupInstance() {
 	c.inst = inst
 	c.verifier = &bundle.Verifier{Cosign: cosign, Engine: eng}
 }
+
+// ReasonPythonRequired: the managed-process form needs [contextforge]
+// python (FR-22.25).
+const ReasonPythonRequired = "CONTEXTFORGE_PYTHON_REQUIRED"
+
+// setupProcess prepares the managed-process form (FR-22.25): on Windows,
+// and where no container engine is installed.
+func (c *Connector) setupProcess() {
+	cf := c.o.Config.ContextForge
+	if cf.Python == "" {
+		c.instErr = packaging.Errf(ReasonPythonRequired, "the bundled ContextForge instance runs here as a managed process: set [contextforge] python to the interpreter of a virtual environment with ContextForge %s installed",
+			contextforge.ReleaseLock().ContextForge.Version)
+		return
+	}
+	l := c.o.Config.Limits
+	p, err := bundle.NewProcess(bundle.ProcessOptions{Python: cf.Python, Dir: filepath.Join(c.dir, "instance"),
+		Settings:    bundle.Settings{Limits: bundle.Limits{UpstreamTimeout: l.UpstreamTimeout.Duration, CallsPerMinute: l.PrincipalCallsPerMin, Concurrency: l.ToolConcurrencyTotal}},
+		Credentials: c.credentials, OnState: c.instanceState, Log: c.o.Log})
+	if err != nil {
+		c.instErr = err
+		return
+	}
+	c.platform = bundle.ManagedPlatform
+	c.inst, c.verifier, c.process = p, bundle.ProcessVerifier{Python: cf.Python}, p
+}
+
+// ManagedProcess returns the managed-process form when the bundled
+// instance runs as one (nil otherwise): smcpd registers its health check
+// on Windows (winsandbox.ContextForgeUnconfinedCheck).
+func (c *Connector) ManagedProcess() *bundle.Process { return c.process }
 
 // credentials creates the instance credentials in the vault on first use
 // and delivers them through the Secret Broker (FR-22.28).
@@ -176,6 +220,9 @@ func (c *Connector) StartInstance(ctx context.Context, actor string) error {
 		return refuse(err)
 	}
 	c.verified = ver
+	if err := c.prepareEgress(ctx); err != nil {
+		return refuse(err)
+	}
 	if err := c.inst.Start(ctx); err != nil {
 		return refuse(err)
 	}
@@ -235,8 +282,10 @@ func (c *Connector) HealthCauses() map[string]string {
 	if st.State == bundle.StateStopped {
 		return out
 	}
-	if !c.o.Enforced {
+	if !c.o.Enforced && c.process == nil {
 		out["contextforge_unconfined"] = "the bundled ContextForge instance runs outside the Enforced profile, without the E-16 sandbox"
+	} else if c.process != nil && runtime.GOOS != "windows" {
+		out["contextforge_unconfined"] = "the bundled ContextForge instance runs as a managed process, without a container or the E-16 sandbox"
 	}
 	if st.State == bundle.StateUnhealthy {
 		out["contextforge_unhealthy"] = "the bundled ContextForge instance does not answer /health: " + st.Detail

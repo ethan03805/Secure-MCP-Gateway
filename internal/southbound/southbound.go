@@ -88,6 +88,8 @@ type Endpoint struct {
 	URL string
 	// Token, when not empty, is sent as Authorization: Bearer.
 	Token string
+	// TokenSource, when set, gives the token for each request instead.
+	TokenSource func() string
 	// CAFile, when set, names PEM certificates that are the only roots
 	// trusted for an https endpoint.
 	CAFile string
@@ -195,12 +197,13 @@ func refusedAddr(ip netip.Addr) string {
 // Conn is one connection to a Streamable HTTP server, presented as a
 // pipeline.Process.
 type Conn struct {
-	url   string
-	token string
-	limit int
-	http  *http.Client
-	ctx   context.Context
-	stop  context.CancelFunc
+	url      string
+	token    string
+	tokenSrc func() string
+	limit    int
+	http     *http.Client
+	ctx      context.Context
+	stop     context.CancelFunc
 
 	pr *io.PipeReader
 	pw *io.PipeWriter
@@ -245,7 +248,7 @@ func Dial(ep Endpoint) (*Conn, error) {
 	}
 	ctx, stop := context.WithCancel(context.Background())
 	pr, pw := io.Pipe()
-	return &Conn{url: u.String(), token: ep.Token, limit: limit, http: h, ctx: ctx, stop: stop, pr: pr, pw: pw,
+	return &Conn{url: u.String(), token: ep.Token, tokenSrc: ep.TokenSource, limit: limit, http: h, ctx: ctx, stop: stop, pr: pr, pw: pw,
 		tools: map[string][]headerParam{}, inflight: map[string]context.CancelFunc{}, diag: pipeline.Ring{Max: 16 << 10}}, nil
 }
 
@@ -473,8 +476,12 @@ func describe(env envelope) string {
 }
 
 func (c *Conn) authorize(h http.Header) {
-	if c.token != "" {
-		h.Set("Authorization", "Bearer "+c.token)
+	tok := c.token
+	if c.tokenSrc != nil {
+		tok = c.tokenSrc()
+	}
+	if tok != "" {
+		h.Set("Authorization", "Bearer "+tok)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/exec"
 	"sort"
@@ -65,6 +66,9 @@ type Options struct {
 	// OnState is called on each state change (health evidence, G-15).
 	OnState func(state, detail string)
 	Log     *slog.Logger
+	// Enforced runs the instance under the Enforced containment
+	// (network.go, FR-22.24): rootless Podman only.
+	Enforced bool
 }
 
 // Status is the instance's state for G-15 and smcpctl.
@@ -82,13 +86,16 @@ type Instance struct {
 	o    Options
 	http *http.Client
 	// exec runs the engine; tests replace it.
-	exec func(ctx context.Context, vals map[string]string, args ...string) (string, error)
+	exec      func(ctx context.Context, vals map[string]string, args ...string) (string, error)
+	execStdin func(ctx context.Context, stdin string, args ...string) (string, error)
 
-	mu      sync.Mutex
-	st      Status
-	creds   Credentials
-	cancel  context.CancelFunc
-	stopped chan struct{}
+	mu          sync.Mutex
+	access      HostAccess
+	egressAllow netip.AddrPort
+	st          Status
+	creds       Credentials
+	cancel      context.CancelFunc
+	stopped     chan struct{}
 }
 
 // New prepares an Instance; nothing runs until Start.
@@ -98,6 +105,9 @@ func New(o Options) (*Instance, error) {
 	}
 	if !strings.Contains(o.Image, "@sha256:") {
 		return nil, fmt.Errorf("bundle: image %q is not pinned by digest", o.Image)
+	}
+	if o.Enforced && !o.Engine.Podman {
+		return nil, errors.New("bundle: the Enforced containment runs the instance with rootless Podman only")
 	}
 	if o.MemoryMiB == 0 {
 		o.MemoryMiB = 1024
@@ -122,6 +132,7 @@ func New(o Options) (*Instance, error) {
 	}
 	i := &Instance{o: o, http: &http.Client{Timeout: 5 * time.Second}, st: Status{State: StateStopped, Image: o.Image}}
 	i.exec = i.runEngine
+	i.execStdin = i.runEngineStdin
 	return i, nil
 }
 
@@ -281,15 +292,13 @@ func (i *Instance) run(ctx context.Context, env map[string]string, creds Credent
 	if i.o.Engine.Podman {
 		vol += ":U"
 	}
-	args := []string{"run", "-d", "--name", i.o.Name,
+	args := []string{"--name", i.o.Name,
 		"-p", "127.0.0.1:" + strconv.Itoa(port) + ":" + strconv.Itoa(ContainerPort),
 		"--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
 		"--cap-drop", "ALL", "--security-opt", "no-new-privileges",
 		"--memory", strconv.Itoa(i.o.MemoryMiB) + "m", "--cpus", strconv.FormatFloat(i.o.CPUs, 'f', -1, 64),
 		"--pids-limit", strconv.Itoa(i.o.Pids), "-v", vol, "--label", "smcp.component=contextforge"}
-	if i.o.Engine.Podman {
-		args = append(args, "--userns=keep-id:uid=10001,gid=10001")
-	}
+	args = append(args, i.networkArgs()...)
 	vals := map[string]string{}
 	for k, v := range env {
 		vals[k] = v
@@ -306,8 +315,11 @@ func (i *Instance) run(ctx context.Context, env map[string]string, creds Credent
 		args = append(args, "-e", k)
 	}
 	args = append(args, i.o.Image)
-	out, err := i.engine(ctx, vals, args...)
-	if err != nil {
+	if i.o.Enforced {
+		if err := i.startEnforced(ctx, vals, args); err != nil {
+			return errors.New(redactOutput(err.Error(), creds))
+		}
+	} else if out, err := i.engine(ctx, vals, append([]string{"run", "-d"}, args...)...); err != nil {
 		return fmt.Errorf("start bundled ContextForge: %w: %s", err, redactOutput(out, creds))
 	}
 	i.mu.Lock()

@@ -3,6 +3,7 @@ package audit
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -331,5 +332,33 @@ func TestFanoutCallsNonBlockingObserversDirectly(t *testing.T) {
 	f.Close()
 	if err := f.Record(Event{Class: "x", Origin: "E-21"}); err != nil || len(d.seen) != 3 {
 		t.Fatalf("after Close: %v, %d events", err, len(d.seen))
+	}
+}
+
+// TestFanoutDecorators: a decorator completes each event before it is
+// stored and observed, and an event it leaves alone has no route.
+func TestFanoutDecorators(t *testing.T) {
+	reqtest.Partial(t, "FR-22.39")
+	m := &Memory{}
+	f := NewFanout(m, nil)
+	d := &directObs{}
+	f.AddObserver("direct", d, 1)
+	f.AddDecorator(func(e *Event) {
+		if e.ServerRevision == "hosted@1" {
+			e.Route = map[string]string{"via": "contextforge"}
+		}
+	})
+	for _, rev := range []string{"hosted@1", "local@1"} {
+		if err := f.Commit(Event{Class: "decision", Origin: "E-06", ServerRevision: rev}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ev := m.Events()
+	if len(ev) != 2 || ev[0].Route["via"] != "contextforge" || ev[1].Route != nil || d.seen[0].Route["via"] != "contextforge" {
+		t.Fatalf("events %+v, observed %+v", ev, d.seen)
+	}
+	raw, _ := json.Marshal(ev[1])
+	if strings.Contains(string(raw), `"route"`) {
+		t.Fatalf("an undecorated event has a route: %s", raw)
 	}
 }

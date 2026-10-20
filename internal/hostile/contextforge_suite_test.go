@@ -3,9 +3,7 @@
 package hostile
 
 import (
-	"context"
 	"fmt"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,20 +108,6 @@ var cfChecks = map[string]func(t *testing.T) (string, bool){
 		e := list[0]
 		return fmt.Sprintf("class %s: %s", e.Class, strings.Join(e.Reasons, "; ")), e.Class == "unsupported" && strings.Contains(strings.Join(e.Reasons, ";"), "plain http")
 	},
-	"HFC-10": func(t *testing.T) (string, bool) {
-		srv := httptest.NewServer(&CFStandIn{Packages: []string{"a", "b"}, Leak: true})
-		defer srv.Close()
-		a := &bundle.Admin{Base: srv.URL, AdminToken: func() (string, error) { return "admin", nil }}
-		f := a.SelfCheck(context.Background(), []*bundle.Provisioned{
-			{Slug: "a", ServerID: "sa", Tools: []string{"a-echo"}, Token: "tok-a"},
-			{Slug: "b", ServerID: "sb", Tools: []string{"b-echo"}, Token: "tok-b"},
-		})
-		probes := map[string]bool{}
-		for _, x := range f {
-			probes[strings.Fields(x.Probe)[0]+" "+strings.Fields(x.Probe)[1]] = true
-		}
-		return fmt.Sprintf("self-check reported %d findings (%d kinds, %s); suspending hosted packages is not built yet", len(f), len(probes), bundle.ReasonScopeBroken), false
-	},
 	"HFC-14": func(t *testing.T) (string, bool) {
 		creds, _ := bundle.NewCredentials()
 		creds[bundle.KeyJWTSecret] = "my-test-key"
@@ -133,12 +117,16 @@ var cfChecks = map[string]func(t *testing.T) (string, bool){
 }
 
 // TestHostileContextForge runs the HFC rows the current build can assert
-// and writes build/hostile-contextforge.json and .md. Rows that need hosted
-// packages or the Enforced-profile containment are reported as not
-// asserted.
+// and writes build/hostile-contextforge.json and .md. The rows with hosted
+// packages run against the ContextForge stand-in
+// (contextforge_hosted_test.go); the rows that need the Enforced-profile
+// containment, the console or the full request pipeline name where they
+// are asserted, or what is missing.
 func TestHostileContextForge(t *testing.T) {
 	reqtest.Partial(t, "FR-22.43")
-	claims := map[string][]string{"HFC-02": {"FR-22.2"}, "HFC-03": {"FR-22.7"}, "HFC-04": {"FR-22.6"}, "HFC-06": {"FR-22.3"}}
+	claims := map[string][]string{"HFC-02": {"FR-22.2"}, "HFC-03": {"FR-22.7"}, "HFC-04": {"FR-22.6"}, "HFC-06": {"FR-22.3"},
+		"HFC-05": {"FR-22.40", "SR-3.5-2"}, "HFC-08": {"FR-22.33", "SR-3.8-2"}, "HFC-10": {"FR-22.29"}, "HFC-11": {"FR-22.15", "FR-22.9"},
+		"HFC-13": {"FR-22.33", "SR-5.6-3", "FR-22.38"}, "HFC-01": {"SR-5.9-2"}}
 	var results []Result
 	for _, row := range CFRows {
 		r := Result{Fixture: row.ID, Attack: row.Attack, Expected: row.Expected, Profile: "standalone"}
@@ -146,10 +134,12 @@ func TestHostileContextForge(t *testing.T) {
 		switch {
 		case !ok && row.ID == "HFC-07":
 			r.Observed = "asserted by console/e2e/contextforge.spec.ts (Playwright, the console job)"
-		case !ok && (row.ID == "HFC-08" || row.ID == "HFC-13"):
-			r.Observed = "reconciliation removes injected objects and reports a gateway rename and tool changes against v1.0.11 (bundle TestReconcileImage, the contextforge job); suspension and contextforge_drift events need hosted packages, not built yet"
+		case !ok && row.ID == "HFC-09":
+			r.Observed = "not asserted: every hosted tool is source_trust untrusted (connector tests) and docs/security-limitations.md records the one containment domain, but the E-11 filtering and session taint of a swapped result are not run through the full pipeline"
+		case !ok && row.ID == "HFC-12":
+			r.Observed = "Enforced profile: asserted by the contextforge job's rootless Podman run (bundle TestEnforcedImage: connections to the Internet, the LAN, the Gateway's listeners and the Podman socket fail from inside the instance); not run by this suite"
 		case !ok:
-			r.Observed = "not asserted: needs hosted packages or the Enforced-profile containment of the bundled instance, not built yet"
+			r.Observed = "not asserted"
 		default:
 			t.Run(row.ID, func(t *testing.T) {
 				r.Observed, r.Pass = check(t)

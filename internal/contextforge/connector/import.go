@@ -52,6 +52,9 @@ type LocalImport struct {
 	Source         *packaging.RecipeSource `json:"source,omitempty"`
 	RiskClass      string                  `json:"risk_class,omitempty"`  // default moderate
 	SideEffect     string                  `json:"side_effect,omitempty"` // default external
+	// ProbeSecret is the vault secret the probe of a hosted entry that
+	// needs an API key sends (egress.go, FR-22.9).
+	ProbeSecret *ProbeSecret `json:"probe_secret,omitempty"`
 }
 
 // proposal is one import attempt between the request and the decision.

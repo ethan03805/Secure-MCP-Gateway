@@ -44,6 +44,7 @@ The import body:
 | `source` | no | Source reference, as in a packaging recipe |
 | `risk_class` | no | `moderate` (default) or `high`; the catalog import key's anchor scope decides which are admitted |
 | `side_effect` | no | Default side-effect class of every tool (default `external`); every tool's source trust is `untrusted` |
+| `probe_secret` | for a hosted entry that needs an API key | `{"secret": "<vault secret name>", "header": "X-Api-Key", "template": "{secret}"}`: the secret the Egress Broker inserts on the probe's requests to the entry's host (S1); `header` defaults to `Authorization` with `Bearer {secret}`. Without it such an entry is refused with `PROBE_SECRET_REQUIRED` |
 
 The Gateway then fetches the pinned artifact, probes it as `smcpctl package build` does, and records the ContextForge origin in the provenance statement (FR-22.11). When the proposal is `ready`, `decision.text` is the trust decision (FR-22.12): class, provider, repository, auth type, artifact, tools with their classes, risk class, side-effect classes, egress destinations and secret slots. Accepting it requires `presented_sha256` equal to `decision.sha256`; the Gateway then writes the decision (actor, time, text and its SHA-256) into the provenance statement's `trust_decision`, signs the package with the catalog import key, and imports it into the Library as verified-disabled without changing any policy grant (FR-22.13). A decision waits for one hour; after that the proposal is abandoned.
 

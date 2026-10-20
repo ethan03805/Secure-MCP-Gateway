@@ -95,7 +95,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-10 Tool Dispatcher
 
-- FR-22.36 **unverified** (partly verified): Hosted calls use the southbound HTTP client with the package token; the conformance fixtures against the bundled instance are not run.
+- FR-22.36 **unverified** (partly verified): Hosted calls use the southbound HTTP client with the package token, bound as a token source read for each request (`southbound.TestTokenSource`, `connector.TestHostedPackagesThroughEgress` against the ContextForge stand-in); the southbound conformance fixtures are not run against the bundled instance.
 - SR-2.10-2 **unverified** (partly verified): Hosted calls carry only the package token; a capture of every request from E-10 and E-36 during a reconciliation is not made.
 
 ### E-12 Enforcement Coordinator
@@ -114,31 +114,31 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-21.12 **unverified** (partly verified): Memory, process and CPU limits and kill-on-close are tested on Windows runners; the hostile fixtures through a running Gateway with the CP-24 values are partly covered.
 - FR-21.25 **unverified** (no claiming test or record): The path rules are tested on every platform (`internal/winpath`) and on Windows; the junction pointing outside the root and the request-filter fixtures compared with Linux are not claimed in full.
 - FR-22.8 **unverified** (no claiming test or record): A local-entry package is an ordinary package, but no test enables one with the bundled instance stopped and running and checks that the instance receives nothing.
-- FR-22.24 **missing** (no claiming test or record): The Enforced-profile containment of the instance (rootless Podman under an E-16 profile, own CP-46 identity, network namespace limited to E-18 endpoints) is not built; the instance runs as a hardened container with `contextforge_unconfined`.
-- FR-22.25 **unverified** (partly verified): The container form is tested with Docker; the managed-process form exists only as the Windows Job Object primitive (FR-22.20 is not built), and on Windows the Connector does not yet choose it over a container. SRS changed in this pass to allow the container form.
+- FR-22.24 **unverified** (partly verified): In the Enforced profile the instance is a rootless Podman container with its own user namespace on slirp4netns, and an nftables table in its namespace admits only its listener and the hosted egress listener before its process starts (`bundle.TestEnforcedStart`; `bundle.TestEnforcedImage` in the contextforge job checks `podman inspect` and the blocked connections, writes and setuid from inside); the memory after 20 hosted calls is not measured.
+- FR-22.25 **unverified** (partly verified): The container form is tested; the managed-process form (`bundle.Process`, in a Job Object through `winsandbox.StartManaged` on Windows, `[contextforge] python`) is tested with a stand-in process for its environment, working directory and limits (`bundle.TestManagedProcess`), and `winsandbox.ContextForgeUnconfinedCheck` is registered on Windows; a start of the real ContextForge as a managed process on Windows is not run, and its wheel set (FR-22.20) is not built.
 - SR-4.8-2 **unverified** (partly verified): Enablement and launch refuse every interpreter form; a process-creation trace of a full Windows test run is not made.
 
 ### E-16 Execution Sandbox
 
 - FR-21.13 **unverified** (partly verified): Per-revision AppContainer profiles, grants and `partially_confined` are tested on the Windows runner; the hostile fixtures through a machine-mode Gateway are not.
-- SR-4.5-4 **missing** (no claiming test or record): No network namespace for the bundled instance; part of FR-22.24.
+- SR-4.5-4 **unverified** (partly verified): The Enforced containment admits only the hosted egress listener; `bundle.TestEnforcedImage` (contextforge job) checks that the Internet, the slirp4netns DNS, a LAN address and another host listener are unreachable from inside; the run with ContextForge's own SSRF allowlist set to allow everything is not made.
 - SR-4.6-2 **unverified** (partly verified): Grants follow enablement and are revoked (Windows test); a write to a read-only root through a running machine-mode Gateway is not tested.
-- SR-4.7-3 **missing** (no claiming test or record): Not tested; the container gets no engine socket or host namespace, but the E-16 profile of FR-22.24 is not built.
+- SR-4.7-3 **unverified** (partly verified): `bundle.TestEnforcedImage` (contextforge job) checks from inside the instance that no engine or bus socket, host process or host disk is visible; host namespaces are checked through `podman inspect`.
 
 ### E-18 Egress Broker
 
 - FR-21.14 **unverified** (partly verified): WFP filters and the fixed proxy port are tested on the Windows runner; the hostile egress fixtures through a machine-mode Gateway and the removal on disable are not.
-- FR-22.40 **missing** (no claiming test or record): No E-18 endpoint per hosted package; the bundled instance reaches hosted servers directly.
+- FR-22.40 **unverified** (partly verified): Each enabled hosted package and each probe gets its own key-bound endpoint on the hosted egress listener, bound to its host and port 443 with TLS originated by the broker; redirects to another host or a private address, metadata and private destinations and unknown keys are refused and recorded (`egress.TestHostedEndpoints`, `connector.TestHostedPackagesThroughEgress`); the Enforced run with a redirecting fixture through the pinned image is not made.
 - SR-4.5-3 **unverified** (no claiming test or record): Filters in the Gateway provider and sublayer block a contained process except the broker port (Windows test); `smcpctl uninstall` removing them is not tested.
 
 ### E-19 Secret Vault
 
 - SR-2.13-4 **unverified** (no claiming test or record): The vault master key is a DPAPI blob in the per-user mode; decryption as another account and from another host, and the passphrase option, are not tested on Windows.
-- SR-2.13-5 **unverified** (partly verified): The instance credentials are vault entries in the `component.` namespace; a D-16 dump after importing API-key hosted packages is not inspected (the probe secret, FR-22.15, does not exist).
+- SR-2.13-5 **unverified** (partly verified): The instance credentials are vault entries in the `component.` namespace; an API-key hosted package's key reaches only the hosted fixture, never the instance stand-in or an event (`connector.TestHostedPackagesThroughEgress`); a D-16 dump of the pinned image after such an import is not inspected.
 
 ### E-21 Audit & Evidence Service
 
-- FR-22.39 **missing** (no claiming test or record): Call events do not carry the virtual-server ID, the instance version and digest or `via=contextforge`.
+- FR-22.39 **unverified** (partly verified): Events of a hosted package's revision carry a `route` member (`via` `contextforge`, server ID and revision, virtual server, instance version and digest) and a local revision's carry none (`audit.TestFanoutDecorators`, `connector.TestHostedPackagesThroughEgress`); the decision, intent and outcome events of a call through the full pipeline are not checked.
 - SR-6.18-2 **missing** (no claiming test or record): Results from the bundled instance are not labelled server-asserted with the instance attribution.
 
 ### E-22 Key & Trust Anchor Manager
@@ -240,36 +240,36 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 - FR-22.1 **unverified** (partly verified): The pinned and operator catalog digests are checked; the run with outbound network blocked is not.
 - FR-22.7 **unverified** (partly verified): The install text is never executed (source check and HFC-03); the marker-file fixture through a full import is not run.
-- FR-22.9 **missing** (partly verified): The probe runs through the bundled instance, but not through an E-18 endpoint (FR-22.40) and without the probe secret of API-key entries.
+- FR-22.9 **unverified** (partly verified): The probe registers the entry with an endpoint of its own for the entry's host, an API-key entry needs a probe secret delivered in S1 by the Egress Broker, and the secret reaches the fixture and not the instance stand-in (`connector.TestHostedPackagesThroughEgress`); the run with a second fixture host and the inspection of the pinned image's environment, files and database are not made.
 - FR-22.10 **unverified** (partly verified): Manifest version 2, name mapping and renames are tested against the pinned image; the operator `low` refusal and the reverse-order probe are not in one claim.
 - FR-22.11 **unverified** (partly verified): Provenance members are written for local and hosted imports; the inspection record of two imported packages is not made.
 - FR-22.12 **unverified** (partly verified): The trust decision is presented and recorded; the decline through G-15 is not tested.
 - FR-22.14 **unverified** (partly verified): Both events are recorded; `smcpctl journal verify` after a refused and a declined import is not run in the same test.
-- FR-22.15 **missing** (no claiming test or record): No secret slot for API-key entries and no S1 binding at an E-18 endpoint.
+- FR-22.15 **unverified** (partly verified): An API-key entry's manifest declares one `S1` slot for its host; the S1 grant of the package's alias is bound at its endpoint and a grant for another host is refused (`connector.TestHostedPackagesThroughEgress`); the readback refusal through the control API and the memory dump of the pinned image are not checked.
 - FR-22.16 **unverified** (partly verified): The `changed` mark is tested; the enabled revision serving unchanged and the re-import as a new revision are not tested together.
 - FR-22.17 **unverified** (partly verified): The starter set is in the release lock and offered only with the bundled instance; the Demonstration is not recorded.
 - FR-22.18 **missing** (partly verified): The release lock has no wheel set and is not signed with the release key; the advisory check at release is not recorded.
 - FR-22.19 **unverified** (partly verified): cosign verification of the pinned image is tested against the network; the re-tagged unsigned image and another workflow identity are not.
-- FR-22.20 **missing** (no claiming test or record): The managed-process form (wheel set, private virtual environment) is not built.
+- FR-22.20 **missing** (no claiming test or record): The managed process runs from an operator-supplied virtual environment (`[contextforge] python`) that is checked for the pinned version only; the wheel set with each wheel's SHA-256 in the release lock, and the install from a wheel directory into a private virtual environment that refuses an unlisted or altered wheel, are not built. The wheel set is computed at release for each platform and signed with the lock (FR-22.18).
 - FR-22.21 **missing** (no claiming test or record): The SBOM set has the catalog NOTICE only; the image and wheel SBOMs and the failing check for a missing identifier are not built.
 - FR-22.22 **unverified** (partly verified): The choice, the configuration value and the refusals are tested; that no artifact is fetched on a no is not checked against the engine.
 - FR-22.23 **unverified** (partly verified): The instance starts with a hosted revision and stops after it; the probe case and the 30-second bound are not claimed in one test.
-- FR-22.26 **unverified** (partly verified): The listener is on loopback on a fresh port; the scan of non-loopback addresses and the Enforced firewall rule (not built) are missing.
+- FR-22.26 **unverified** (partly verified): The listener is on loopback on a fresh port in every form; the scan of non-loopback addresses and the Enforced firewall rule for the Gateway identity are not built (in rootless Podman the published port is a slirp4netns listener another local user can reach, and a host rule needs root).
 - FR-22.27 **unverified** (partly verified): The generated configuration and the refusal of a changed key are tested against the pinned image; the route-family requests and the telemetry check are not all claimed.
 - FR-22.28 **unverified** (partly verified): Generation, vault storage and the weak-credential refusal are tested; a token signed with a published key against the running instance, and generation at upgrade (FR-22.31), are not.
-- FR-22.29 **unverified** (partly verified): Teams, users, tokens and the self-check are tested against v1.0.11; token renewal before expiry is not scheduled (a restart renews it).
+- FR-22.29 **unverified** (partly verified): Teams, users, tokens and the self-check are tested against v1.0.11; a token is renewed an hour before its one-day expiry with a self-check before use and the old token revoked (`connector.TestHostedTokenRenewal` with two-second tokens), and a leaking stand-in suspends every hosted package (`connector.TestHostedScopeBroken`, HFC-10); renewal against the pinned image is not run.
 - FR-22.30 **unverified** (partly verified): Starting, health checks, restarts and `contextforge_unhealthy` are tested; the timed first answer on an empty D-16 and a local tool succeeding during the outage are not.
-- FR-22.31 **missing** (no claiming test or record): Upgrade with rollback is not built: `smcpctl contextforge` has no upgrade subcommand.
+- FR-22.31 **missing** (no claiming test or record): Upgrade with rollback is not built: `smcpctl contextforge` has no upgrade subcommand. A second release to upgrade from exists upstream (v1.0.10 of 2026-09-07; v1.0.11 of 2026-09-28 is the latest), so the test needs the feature, not the owner; the signed-lock case needs the release key (FR-22.18).
 - FR-22.32 **unverified** (partly verified): `smcpctl contextforge uninstall` is tested; `smcpctl uninstall` removing the instance and `journal verify` afterwards are not.
 - FR-22.33 **unverified** (partly verified): Reconciliation, suspension and the `Unknown tool` mapping are tested against the pinned image; the 5-second start after an unknown tool and every listed change in one run are not.
-- FR-22.34 **unverified** (partly verified): One team, user, gateway and virtual server per package is tested; the gateway URL is the hosted URL, not an E-18 endpoint (FR-22.40).
+- FR-22.34 **unverified** (partly verified): One team, user, gateway and virtual server per package is tested; each gateway's URL is the package's own egress endpoint and each package's calls reach only its fixture (`connector.TestHostedPackagesThroughEgress`); the pinned-image run with two packages through the endpoints is not made.
 - FR-22.37 **unverified** (partly verified): Plugins off and the doubled limits are checked; a hosted call at the Gateway's rate limit and with a withheld result is not.
 - FR-22.38 **unverified** (partly verified): Reconciliation removes excluded objects (tested); the inspection of the admin client's operations is not recorded.
 - FR-22.42 **unverified** (no claiming test or record): `docs/security-limitations.md` states the six points under Planned for v1.3.0; the inspection of a release candidate is not recorded.
-- FR-22.43 **missing** (partly verified): The suite asserts HFC-02, HFC-03, HFC-04, HFC-06, HFC-10 and HFC-14, the console suite HFC-07, and the reconciliation tests part of HFC-08 and HFC-13; HFC-01, HFC-05, HFC-09, HFC-11 and HFC-12 are not asserted (they need E-18 endpoints, the probe secret or the Enforced containment).
+- FR-22.43 **missing** (partly verified): The suite asserts HFC-01 to HFC-06, HFC-08, HFC-10, HFC-11 and HFC-13 (the hosted rows against the ContextForge stand-in), the console suite HFC-07 and the contextforge job HFC-12 (`bundle.TestEnforcedImage`); HFC-09 (E-11 filtering and taint of a swapped result through the full pipeline) and HFC-14's refusal by the running instance within the suite are not asserted.
 - FR-22.44 **unverified** (partly verified): `smcpctl bootstrap` and `install` ask (tested), and the desktop first-run setup offers the box, unchecked by default, with the same notes and passes `--with-contextforge` only when it is checked (`desktop/src-tauri/src/contextforge.rs`, `desktop/test/contextforge-choice.test.ts`); the Demonstration of both setups is not recorded.
 - SR-3.2-2 **unverified** (partly verified): The signature binding and its journal event are tested for the pinned image; images signed from another tag or repository are not.
-- SR-3.5-2 **missing** (no claiming test or record): The probe is not limited to the entry's host through E-18 (FR-22.40).
+- SR-3.5-2 **unverified** (partly verified): The probe holds no secret, its only network destination is its endpoint for the entry's host, and a probe secret is delivered in S1 only (`connector.TestHostedPackagesThroughEgress`, `egress.TestHostedEndpoints`); the run with a production secret bound to another package is not made.
 - SR-3.6-2 **unverified** (no claiming test or record): Stdio transport is off in the generated configuration; no test watches processes and network during a hosted call.
 - SR-4-3 **unverified** (no claiming test or record): The instance listens on loopback with authentication required; no test tries every port from the harness account with and without the harness token.
 ## History
