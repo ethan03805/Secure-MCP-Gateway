@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/harness"
@@ -123,7 +124,7 @@ func binaryWritableFindings(exe string, euid int, enforced bool, writable func(s
 		paths = append(paths, dir)
 	}
 	for _, name := range releaseBinaries {
-		p := filepath.Join(dir, name)
+		p := filepath.Join(dir, exeName(runtime.GOOS, name))
 		if _, err := os.Stat(p); err == nil && writable(p) {
 			paths = append(paths, p)
 		}
@@ -140,10 +141,14 @@ func binaryWritableFindings(exe string, euid int, enforced bool, writable func(s
 	if !enforced {
 		kind, prefix = harness.KindWarning, harness.KindBinaryWritable+": "
 	}
+	fix := "install from the .pkg, .deb or .rpm package, or make it root-owned"
+	if runtime.GOOS == "windows" {
+		fix = "install from the .msi package, or let only Administrators write it"
+	}
 	var out []harness.Finding
 	for _, p := range paths {
 		out = append(out, harness.Finding{Kind: kind, Path: p,
-			Message: prefix + "this user, who runs the agents, can write this Gateway binary, directory or AppImage and so replace the Gateway; install from the .pkg, .deb or .rpm package, or make it root-owned (SR-4.11-2)"})
+			Message: prefix + "this user, who runs the agents, can write this Gateway binary, directory or AppImage and so replace the Gateway; " + fix + " (SR-4.11-2)"})
 	}
 	return out
 }

@@ -71,6 +71,12 @@ func DefaultPath() string {
 	if p := os.Getenv("SMCP_CREDENTIALS"); p != "" {
 		return p
 	}
+	if runtime.GOOS == "windows" {
+		// CP-43 on Windows: %APPDATA%\smcp\credentials.toml (FR-21.16).
+		if a := os.Getenv("APPDATA"); a != "" {
+			return filepath.Join(a, "smcp", "credentials.toml")
+		}
+	}
 	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
 		return filepath.Join(x, "smcp", "credentials.toml")
 	}
