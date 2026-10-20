@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T01:49:42Z",
-  "commit": "ab4a8e35430b07bd9734b26f137d7d11f936d368",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ab4a8e35430b07bd9734b26f137d7d11f936d368",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39341037905",
+  "generatedAt": "2026-10-20T03:38:13Z",
+  "commit": "199cdc6f2e682938eb64a810d20c1e35a8cbdad0",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/199cdc6f2e682938eb64a810d20c1e35a8cbdad0",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39354535332",
   "tests": {
-    "total": 1723,
-    "passed": 1705,
+    "total": 1823,
+    "passed": 1804,
     "failed": 0,
-    "skipped": 18,
-    "durationSec": 5538.2,
+    "skipped": 19,
+    "durationSec": 4784.3,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -43,13 +43,13 @@
       },
       {
         "name": "desktop/linux",
-        "passed": 54,
+        "passed": 90,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "desktop/macos",
-        "passed": 54,
+        "passed": 89,
         "failed": 0,
         "skipped": 0
       },
@@ -67,7 +67,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 90,
+        "passed": 91,
         "failed": 0,
         "skipped": 0
       },
@@ -133,7 +133,7 @@
       },
       {
         "name": "internal/app",
-        "passed": 4,
+        "passed": 5,
         "failed": 0,
         "skipped": 0
       },
@@ -157,7 +157,7 @@
       },
       {
         "name": "internal/backend",
-        "passed": 47,
+        "passed": 48,
         "failed": 0,
         "skipped": 0
       },
@@ -223,7 +223,7 @@
       },
       {
         "name": "internal/edge",
-        "passed": 143,
+        "passed": 144,
         "failed": 0,
         "skipped": 1
       },
@@ -265,7 +265,7 @@
       },
       {
         "name": "internal/hostile",
-        "passed": 70,
+        "passed": 73,
         "failed": 0,
         "skipped": 1
       },
@@ -283,7 +283,7 @@
       },
       {
         "name": "internal/library",
-        "passed": 37,
+        "passed": 38,
         "failed": 0,
         "skipped": 0
       },
@@ -337,7 +337,7 @@
       },
       {
         "name": "internal/pipeline",
-        "passed": 21,
+        "passed": 26,
         "failed": 0,
         "skipped": 0
       },
@@ -373,7 +373,7 @@
       },
       {
         "name": "internal/profile",
-        "passed": 1,
+        "passed": 3,
         "failed": 0,
         "skipped": 0
       },
@@ -421,7 +421,7 @@
       },
       {
         "name": "internal/southbound",
-        "passed": 6,
+        "passed": 7,
         "failed": 0,
         "skipped": 0
       },
@@ -444,6 +444,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/winsandbox",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "packaging/linux",
         "passed": 1,
         "failed": 0,
@@ -457,9 +463,9 @@
       },
       {
         "name": "tools/installsh",
-        "passed": 6,
+        "passed": 10,
         "failed": 0,
-        "skipped": 1
+        "skipped": 2
       },
       {
         "name": "tools/openapi",
@@ -494,7 +500,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.7,
+    "totalPct": 76.8,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -522,7 +528,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 43.6
+        "pct": 43.7
       },
       {
         "name": "cmd/smcpd",
@@ -550,7 +556,7 @@
       },
       {
         "name": "internal/app",
-        "pct": 76.4
+        "pct": 76.6
       },
       {
         "name": "internal/approval",
@@ -606,7 +612,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.5
+        "pct": 91.4
       },
       {
         "name": "internal/egress",
@@ -622,11 +628,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.8
+        "pct": 83.9
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.8
+        "pct": 80
       },
       {
         "name": "internal/harness",
@@ -638,7 +644,7 @@
       },
       {
         "name": "internal/hostile",
-        "pct": 60.1
+        "pct": 64.9
       },
       {
         "name": "internal/ids",
@@ -650,7 +656,7 @@
       },
       {
         "name": "internal/library",
-        "pct": 84.6
+        "pct": 84.5
       },
       {
         "name": "internal/metrics",
@@ -666,7 +672,7 @@
       },
       {
         "name": "internal/obsstore",
-        "pct": 81.1
+        "pct": 80.7
       },
       {
         "name": "internal/openapi",
@@ -674,7 +680,7 @@
       },
       {
         "name": "internal/ops",
-        "pct": 73.2
+        "pct": 73.1
       },
       {
         "name": "internal/packaging",
@@ -714,7 +720,7 @@
       },
       {
         "name": "internal/profile",
-        "pct": 94.7
+        "pct": 91.5
       },
       {
         "name": "internal/remote",
@@ -730,7 +736,7 @@
       },
       {
         "name": "internal/sandbox",
-        "pct": 84.4
+        "pct": 84.3
       },
       {
         "name": "internal/sandbox/probe",
@@ -738,7 +744,7 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 80
+        "pct": 79.7
       },
       {
         "name": "internal/session",
@@ -746,7 +752,7 @@
       },
       {
         "name": "internal/southbound",
-        "pct": 84
+        "pct": 85.3
       },
       {
         "name": "internal/southbound/sbtest",
@@ -763,6 +769,10 @@
       {
         "name": "internal/versions",
         "pct": 82.8
+      },
+      {
+        "name": "internal/winsandbox",
+        "pct": 100
       },
       {
         "name": "packaging/linux",
@@ -4495,7 +4505,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (004bafcb98e7, 2026-10-20T01:38:39Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39351119557"
+          "workflow agents-lockdown at main (8710498367e7, 2026-10-20T03:34:23Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39361584974"
         ]
       },
       {
@@ -4564,7 +4574,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (004bafcb98e7, 2026-10-20T01:38:37Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39351119557"
+          "workflow agents at main (8710498367e7, 2026-10-20T03:34:21Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39361584974"
         ]
       },
       {
@@ -6801,10 +6811,12 @@
         "status": "partial",
         "tests": [
           "desktop/linux.console::tests::approvals_open_at_g13",
+          "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::no_notice_while_notifications_are_off",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
           "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
           "desktop/macos.console::tests::approvals_open_at_g13",
+          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/macos.notify::tests::no_notice_while_notifications_are_off",
           "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
           "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count"
@@ -6867,15 +6879,45 @@
       {
         "id": "FR-20.11",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
+          "desktop/linux.release::tests::offline_check_fails_once_without_a_loop",
+          "desktop/linux.release::tests::only_https_or_loopback_http",
+          "desktop/linux.release::tests::parses_a_stable_release_and_skips_prereleases",
+          "desktop/linux.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
+          "desktop/linux.settings::tests::update_checks_default_on_and_older_files_load",
+          "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once",
+          "desktop/macos.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
+          "desktop/macos.release::tests::offline_check_fails_once_without_a_loop",
+          "desktop/macos.release::tests::only_https_or_loopback_http",
+          "desktop/macos.release::tests::parses_a_stable_release_and_skips_prereleases",
+          "desktop/macos.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
+          "desktop/macos.settings::tests::update_checks_default_on_and_older_files_load",
+          "desktop/macos.updates::tests::manual_check_reports_newer_latest_and_offline_once"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-20.12",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/linux.upgrade::tests::argv_is_fixed_and_carries_no_passphrase",
+          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/linux.upgrade::tests::installation_comes_from_the_service_definition",
+          "desktop/linux.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
+          "desktop/linux.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
+          "desktop/linux.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin",
+          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/macos.upgrade::tests::argv_is_fixed_and_carries_no_passphrase",
+          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/macos.upgrade::tests::installation_comes_from_the_service_definition",
+          "desktop/macos.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
+          "desktop/macos.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
+          "desktop/macos.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -6884,7 +6926,21 @@
         "status": "partial",
         "tests": [
           "desktop/linux.config_tests::no_updater_or_shell_plugin",
-          "desktop/macos.config_tests::no_updater_or_shell_plugin"
+          "desktop/linux.installer::tests::appimage_is_replaced_atomically_and_executable",
+          "desktop/linux.installer::tests::detects_the_installation_kind",
+          "desktop/linux.installer::tests::picks_the_installer_of_the_kind_that_installed_the_app",
+          "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/linux.release::tests::downloads_are_bounded_and_new_files",
+          "desktop/linux.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/macos.config_tests::no_updater_or_shell_plugin",
+          "desktop/macos.installer::tests::appimage_is_replaced_atomically_and_executable",
+          "desktop/macos.installer::tests::detects_the_installation_kind",
+          "desktop/macos.installer::tests::picks_the_installer_of_the_kind_that_installed_the_app",
+          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/macos.release::tests::downloads_are_bounded_and_new_files",
+          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one"
         ],
         "target": "v1.3.0"
       },
@@ -6893,7 +6949,13 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/linux.autostart::tests::entries_name_this_program_only",
+          "desktop/linux.autostart::tests::off_until_turned_on_and_off_again",
+          "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/linux.config_tests::single_instance_is_the_first_plugin",
+          "desktop/macos.autostart::tests::entries_name_this_program_only",
+          "desktop/macos.autostart::tests::off_until_turned_on_and_off_again",
+          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/macos.config_tests::single_instance_is_the_first_plugin"
         ],
         "target": "v1.3.0"
@@ -7015,8 +7077,17 @@
       {
         "id": "FR-20.28",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/linux.deeplink::tests::accepts_exactly_the_three_forms",
+          "desktop/linux.deeplink::tests::ignores_every_other_link",
+          "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
+          "desktop/macos.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/macos.deeplink::tests::accepts_exactly_the_three_forms",
+          "desktop/macos.deeplink::tests::ignores_every_other_link",
+          "desktop/macos.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7087,9 +7158,11 @@
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
           "desktop/macos.clients::tests::failures_are_explained_with_their_code",
           "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
-          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures"
+          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue"
         ],
         "target": "v1.3.0"
       },
@@ -7099,7 +7172,9 @@
         "status": "partial",
         "tests": [
           "desktop/linux.explain::tests::every_state_has_an_explanation",
+          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
           "desktop/macos.explain::tests::every_state_has_an_explanation",
+          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue",
           "internal/edge.TestMessageCatalogue"
         ],
         "target": "v1.3.0"
@@ -7137,8 +7212,10 @@
       {
         "id": "FR-21",
         "element": "E-24",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "analysis: 0 of 26 child requirements verified"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7214,15 +7291,32 @@
       {
         "id": "FR-21.11",
         "element": "E-15",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/library.TestWindowsEnableRefusesShellLaunch",
+          "internal/pipeline.TestCheckLaunchSpecWindowsRules",
+          "internal/pipeline.TestWindowsSubprocessLauncher",
+          "internal/winsandbox.TestCheckCommand",
+          "internal/winsandbox.TestWindowsArgumentsAndJobFromCreation"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-21.12",
         "element": "E-15",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/app.TestRuntimeLimits",
+          "internal/hostile.TestWindowsJobForkBomb",
+          "internal/hostile.TestWindowsJobMemoryBlowUp",
+          "internal/pipeline.TestLimitsForDefaults",
+          "internal/pipeline.TestWindowsLaunchProcessLimit",
+          "internal/pipeline.TestWindowsSubprocessLauncher",
+          "internal/winsandbox.TestWindowsJobCPURate",
+          "internal/winsandbox.TestWindowsJobMemoryLimit",
+          "internal/winsandbox.TestWindowsJobProcessLimit",
+          "internal/winsandbox.TestWindowsKillOnClose"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7729,9 +7823,13 @@
         "status": "partial",
         "tests": [
           "desktop/linux.console::tests::approvals_open_at_g13",
+          "desktop/linux.deeplink::tests::ignores_every_other_link",
+          "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
           "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
           "desktop/macos.console::tests::approvals_open_at_g13",
+          "desktop/macos.deeplink::tests::ignores_every_other_link",
+          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
           "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count"
         ],
@@ -7742,10 +7840,16 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
-          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments"
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here"
         ],
         "target": "v1.3.0"
       },
@@ -7849,8 +7953,13 @@
       {
         "id": "SR-4-2",
         "element": "E-23",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestLabelWithMode",
+          "internal/edge.TestHealthReportsInstallationMode",
+          "internal/profile.TestIsWSL",
+          "internal/profile.TestWindowsAndWSLProfiles"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7891,8 +8000,14 @@
       {
         "id": "SR-4.8-2",
         "element": "E-15",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/library.TestWindowsEnableRefusesShellLaunch",
+          "internal/pipeline.TestCheckLaunchSpecWindowsRules",
+          "internal/pipeline.TestWindowsLaunchRefusesInterpreters",
+          "internal/winsandbox.TestCheckCommand",
+          "internal/winsandbox.TestWindowsStartRefusesInterpreters"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7924,8 +8039,26 @@
       {
         "id": "SR-7-2",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.installer::tests::sealed_copy_cannot_be_changed",
+          "desktop/linux.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/linux.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/linux.verify::tests::cosign_argv_is_fixed",
+          "desktop/linux.verify::tests::real_cosign_with_the_release_bundle",
+          "desktop/linux.verify::tests::real_release_signature_verifies_with_the_embedded_key",
+          "desktop/linux.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
+          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/linux.verify::tests::version_rule_refuses_equal_and_older",
+          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/macos.verify::tests::cosign_argv_is_fixed",
+          "desktop/macos.verify::tests::real_cosign_with_the_release_bundle",
+          "desktop/macos.verify::tests::real_release_signature_verifies_with_the_embedded_key",
+          "desktop/macos.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
+          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/macos.verify::tests::version_rule_refuses_equal_and_older"
+        ],
         "target": "v1.3.0"
       }
     ]
@@ -8038,9 +8171,10 @@
       "subsystem": "SS-4",
       "implementation": "partial",
       "packages": [
-        "internal/backend"
+        "internal/backend",
+        "internal/southbound"
       ],
-      "note": "stdio dispatch with CP-10 concurrency and queue bounds, CP-13 upstream timeout, bounded result reading, backend error mapping, cancellation propagated to the backend with notifications/cancelled (FR-5.26), suspension of a server on drift or on a changed command file (SR-3.6-1). No client capability is declared southbound; server-initiated requests other than ping are refused with -32601 and an InputRequiredResult with -31010. Backend progress travels on a Gateway-issued token. An instance that times out or fails is replaced; the third unexpected exit within five minutes suspends the revision (FR-5.12). When dispatching to an instance attached to the Egress Broker it delivers the call's one-use egress capabilities in _meta. Requirement report (main 383485d): all 22 verified. Deferred from 1.0 (Appendix N): per-session and per-call instances, the modern-era southbound probe and requests (FR-5.16 to FR-5.18, SR-5.1-2, SR-5.3-2) and southbound Streamable HTTP (FR-5.28 to FR-5.31)."
+      "note": "stdio dispatch with CP-10 concurrency and queue bounds, CP-13 upstream timeout, bounded result reading, backend error mapping, cancellation propagated to the backend with notifications/cancelled (FR-5.26), suspension of a server on drift or on a changed command file (SR-3.6-1). No client capability is declared southbound; server-initiated requests other than ping are refused with -32601 and an InputRequiredResult with -31010. Backend progress travels on a Gateway-issued token. An instance that times out or fails is replaced; the third unexpected exit within five minutes suspends the revision (FR-5.12). When dispatching to an instance attached to the Egress Broker it delivers the call's one-use egress capabilities in _meta. Requirement report (main 383485d): all 22 verified. Deferred from 1.0 (Appendix N): per-session and per-call instances, the modern-era southbound probe and requests (FR-5.16 to FR-5.18, SR-5.1-2, SR-5.3-2). The southbound Streamable HTTP client (FR-5.28 to FR-5.30, planned for v1.3.0) is in internal/southbound: url servers, header mirroring and encoding, JSON and SSE responses, sessions, resumption, hostile rows over HTTP (TestHostileHTTPFixtures); the list-change listen stream of the modern era (FR-5.31) stays deferred."
     },
     {
       "id": "E-11",
@@ -8608,7 +8742,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8643,7 +8777,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:46247: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:33565: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8760,7 +8894,7 @@
     }
   ],
   "acceptance": {
-    "commit": "ab4a8e35430b07bd9734b26f137d7d11f936d368",
+    "commit": "199cdc6f2e682938eb64a810d20c1e35a8cbdad0",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9452,23 +9586,23 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "ab4a8e35430b07bd9734b26f137d7d11f936d368",
-    "generatedAt": "2026-10-20T00:02:30Z",
+    "commit": "199cdc6f2e682938eb64a810d20c1e35a8cbdad0",
+    "generatedAt": "2026-10-20T02:23:29Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000011759",
-      "memoryBytes": 16760344576,
+      "runner": "GitHub Actions 1000012868",
+      "memoryBytes": 16770744320,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 89631641600,
-      "diskDevice": "nvme0n1p1",
-      "diskModel": "MSFT NVMe Accelerator v1.0",
+      "diskFreeBytes": 90418044928,
+      "diskDevice": "sda1",
+      "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
-      "imageVersion": "20261018.339.1"
+      "imageVersion": "20261012.334.1"
     },
     "referenceHardware": true,
     "referenceClass": "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)",
@@ -9487,7 +9621,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.012309,
+        "value": 0.023684,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9500,7 +9634,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 10.407471,
+        "value": 16.309621,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9513,19 +9647,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.11989562500000073,
+        "value": 0.9412263750000012,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (6.276 ms, mean of 6.456, 6.088, 6.495, 6.750, 6.088, 6.221, 6.056, 6.051) minus disabled (6.156 ms, mean of 6.652, 5.789, 6.247, 6.040, 6.112, 6.008, 5.977, 6.421), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.983 ms, mean of 11.092, 10.726, 11.054, 10.979, 11.186, 10.836, 11.355, 10.639) minus disabled (10.042 ms, mean of 10.676, 9.878, 10.527, 9.506, 9.941, 9.919, 9.890, 10.001), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9659453765353,
+        "value": 1999.9655481568082,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9537,7 +9671,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 467.840476,
+        "value": 781.586296,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9549,12 +9683,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1507.921875,
+        "value": 1548.03125,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m15s after start with no traffic: smcpd (98.5 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1409.4 MiB in 2 processes, process 4032 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m15s after start with no traffic: smcpd (125.3 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1422.7 MiB in 2 processes, process 4226 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
