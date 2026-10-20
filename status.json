@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T23:44:03Z",
-  "commit": "413677046b43464c1993fd36a81a536df1d926bb",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/413677046b43464c1993fd36a81a536df1d926bb",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39328988239",
+  "generatedAt": "2026-10-20T01:49:42Z",
+  "commit": "ab4a8e35430b07bd9734b26f137d7d11f936d368",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/ab4a8e35430b07bd9734b26f137d7d11f936d368",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39341037905",
   "tests": {
-    "total": 1692,
-    "passed": 1674,
+    "total": 1723,
+    "passed": 1705,
     "failed": 0,
     "skipped": 18,
-    "durationSec": 5246.3,
+    "durationSec": 5538.2,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -43,13 +43,13 @@
       },
       {
         "name": "desktop/linux",
-        "passed": 49,
+        "passed": 54,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "desktop/macos",
-        "passed": 49,
+        "passed": 54,
         "failed": 0,
         "skipped": 0
       },
@@ -67,7 +67,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 88,
+        "passed": 90,
         "failed": 0,
         "skipped": 0
       },
@@ -157,7 +157,7 @@
       },
       {
         "name": "internal/backend",
-        "passed": 35,
+        "passed": 47,
         "failed": 0,
         "skipped": 0
       },
@@ -181,7 +181,7 @@
       },
       {
         "name": "internal/config",
-        "passed": 17,
+        "passed": 18,
         "failed": 0,
         "skipped": 0
       },
@@ -420,6 +420,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/southbound",
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/testport",
         "passed": 2,
         "failed": 0,
@@ -488,7 +494,7 @@
     ]
   },
   "coverage": {
-    "totalPct": 76.5,
+    "totalPct": 76.7,
     "packages": [
       {
         "name": "cmd/smcp-connect",
@@ -516,7 +522,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 43.2
+        "pct": 43.6
       },
       {
         "name": "cmd/smcpd",
@@ -528,7 +534,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 73.7
+        "pct": 73.1
       },
       {
         "name": "internal/adminapi",
@@ -560,11 +566,11 @@
       },
       {
         "name": "internal/backend",
-        "pct": 92
+        "pct": 92.6
       },
       {
         "name": "internal/backup",
-        "pct": 79.8
+        "pct": 79.6
       },
       {
         "name": "internal/baseline",
@@ -580,7 +586,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.2
+        "pct": 90.5
       },
       {
         "name": "internal/consoleapi",
@@ -600,7 +606,7 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.3
+        "pct": 91.5
       },
       {
         "name": "internal/egress",
@@ -616,15 +622,15 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.9
+        "pct": 83.8
       },
       {
         "name": "internal/gwtest",
-        "pct": 80
+        "pct": 80.8
       },
       {
         "name": "internal/harness",
-        "pct": 83.5
+        "pct": 85.6
       },
       {
         "name": "internal/health",
@@ -660,7 +666,7 @@
       },
       {
         "name": "internal/obsstore",
-        "pct": 80.7
+        "pct": 81.1
       },
       {
         "name": "internal/openapi",
@@ -684,7 +690,7 @@
       },
       {
         "name": "internal/pipeline",
-        "pct": 91.7
+        "pct": 91.5
       },
       {
         "name": "internal/policy",
@@ -732,15 +738,23 @@
       },
       {
         "name": "internal/secrets",
-        "pct": 79.7
+        "pct": 80
       },
       {
         "name": "internal/session",
         "pct": 89.4
       },
       {
+        "name": "internal/southbound",
+        "pct": 84
+      },
+      {
+        "name": "internal/southbound/sbtest",
+        "pct": 96.3
+      },
+      {
         "name": "internal/testport",
-        "pct": 79.6
+        "pct": 81.6
       },
       {
         "name": "internal/tunnel",
@@ -4481,7 +4495,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (413677046b43, 2026-10-19T22:53:09Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39328988172"
+          "workflow agents-lockdown at main (004bafcb98e7, 2026-10-20T01:38:39Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39351119557"
         ]
       },
       {
@@ -4550,7 +4564,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (413677046b43, 2026-10-19T22:53:07Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39328988172"
+          "workflow agents at main (004bafcb98e7, 2026-10-20T01:38:37Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39351119557"
         ]
       },
       {
@@ -6659,22 +6673,28 @@
       {
         "id": "FR-5.28",
         "element": "E-10",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestHTTPRequestHeadersAndResponseTypes"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-5.29",
         "element": "E-10",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestHTTPHeaderMirroringAndEncoding"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-5.30",
         "element": "E-10",
-        "status": "planned",
-        "tests": [],
+        "status": "verified",
+        "tests": [
+          "internal/backend.TestHTTPSSECommentsIgnored"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -6828,8 +6848,20 @@
       {
         "id": "FR-20.10",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestClientsDetectAndJSONDryRun",
+          "desktop/linux.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/linux.clients::tests::commands_run_in_the_given_directory",
+          "desktop/linux.clients::tests::detection_and_previews_parse",
+          "desktop/linux.clients::tests::failures_are_explained_with_their_code",
+          "desktop/linux.clients::tests::only_listed_client_ids_are_used",
+          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/macos.clients::tests::commands_run_in_the_given_directory",
+          "desktop/macos.clients::tests::detection_and_previews_parse",
+          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
+          "desktop/macos.clients::tests::only_listed_client_ids_are_used"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -6885,7 +6917,8 @@
         "element": "E-35",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestMacPkgBuildScript"
+          "cmd/smcpctl.TestMacPkgBuildScript",
+          "cmd/smcpctl.TestMacPkgLinuxBuildScript"
         ],
         "target": "v1.3.0"
       },
@@ -6922,7 +6955,8 @@
         "tests": [
           "cmd/smcpctl.TestLinuxPackageConfig",
           "cmd/smcpctl.TestLinuxPackageScripts",
-          "cmd/smcpctl.TestMacPkgBuildScript"
+          "cmd/smcpctl.TestMacPkgBuildScript",
+          "cmd/smcpctl.TestMacPkgLinuxBuildScript"
         ],
         "target": "v1.3.0"
       },
@@ -6966,7 +7000,8 @@
         "element": "E-35",
         "status": "partial",
         "tests": [
-          "cmd/smcpctl.TestMacPkgBuildScript"
+          "cmd/smcpctl.TestMacPkgBuildScript",
+          "cmd/smcpctl.TestMacPkgLinuxBuildScript"
         ],
         "target": "v1.3.0"
       },
@@ -7049,8 +7084,10 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/linux.clients::tests::failures_are_explained_with_their_code",
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
           "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures"
         ],
@@ -7657,10 +7694,14 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "desktop/linux.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/linux.clients::tests::only_listed_client_ids_are_used",
           "desktop/linux.config_tests::commands_are_declared_and_registered_once",
           "desktop/linux.config_tests::no_updater_or_shell_plugin",
           "desktop/linux.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
           "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/macos.clients::tests::only_listed_client_ids_are_used",
           "desktop/macos.config_tests::commands_are_declared_and_registered_once",
           "desktop/macos.config_tests::no_updater_or_shell_plugin",
           "desktop/macos.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
@@ -7861,7 +7902,8 @@
         "tests": [
           "cmd/smcpctl.TestDoctorReportsWritableBinaries",
           "cmd/smcpctl.TestLinuxPackageConfig",
-          "cmd/smcpctl.TestMacPkgBuildScript"
+          "cmd/smcpctl.TestMacPkgBuildScript",
+          "cmd/smcpctl.TestMacPkgLinuxBuildScript"
         ],
         "target": "v1.3.0"
       },
@@ -8566,7 +8608,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 10 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8601,7 +8643,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41441: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:46247: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8718,7 +8760,7 @@
     }
   ],
   "acceptance": {
-    "commit": "413677046b43464c1993fd36a81a536df1d926bb",
+    "commit": "ab4a8e35430b07bd9734b26f137d7d11f936d368",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9410,23 +9452,23 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "413677046b43464c1993fd36a81a536df1d926bb",
-    "generatedAt": "2026-10-19T22:02:04Z",
+    "commit": "ab4a8e35430b07bd9734b26f137d7d11f936d368",
+    "generatedAt": "2026-10-20T00:02:30Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000010783",
-      "memoryBytes": 16766414848,
+      "runner": "GitHub Actions 1000011759",
+      "memoryBytes": 16760344576,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90421403648,
+      "diskFreeBytes": 89631641600,
       "diskDevice": "nvme0n1p1",
       "diskModel": "MSFT NVMe Accelerator v1.0",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
-      "imageVersion": "20261012.334.1"
+      "imageVersion": "20261018.339.1"
     },
     "referenceHardware": true,
     "referenceClass": "GitHub-hosted runner ubuntu-24.04, standard Linux class (x86_64, 4 vCPU, 16 GiB, SSD)",
@@ -9445,7 +9487,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.015633,
+        "value": 0.012309,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9458,7 +9500,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 19.709046,
+        "value": 10.407471,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9471,19 +9513,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.03459712499999945,
+        "value": 0.11989562500000073,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (8.133 ms, mean of 8.131, 8.225, 8.005, 8.192, 8.216, 8.105, 8.033, 8.154) minus disabled (8.098 ms, mean of 8.047, 7.766, 8.001, 8.091, 8.486, 7.832, 8.045, 8.516), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (6.276 ms, mean of 6.456, 6.088, 6.495, 6.750, 6.088, 6.221, 6.056, 6.051) minus disabled (6.156 ms, mean of 6.652, 5.789, 6.247, 6.040, 6.112, 6.008, 5.977, 6.421), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9653351275037,
+        "value": 1999.9659453765353,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9495,7 +9537,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 579.664766,
+        "value": 467.840476,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9507,12 +9549,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1556.125,
+        "value": 1507.921875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m16s after start with no traffic: smcpd (126.9 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1429.2 MiB in 2 processes, process 3957 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m15s after start with no traffic: smcpd (98.5 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1409.4 MiB in 2 processes, process 4032 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
