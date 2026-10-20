@@ -125,6 +125,7 @@ func (c *Connector) Uninstall(ctx context.Context, actor string) (UninstallRepor
 		return rep, err
 	}
 	_ = os.Remove(filepath.Join(c.dir, "verified.json"))
+	_ = os.Remove(filepath.Join(c.dir, runningLockFile))
 	if c.o.Recorder != nil {
 		if err := c.o.Recorder.Commit(c.instanceEvent("uninstalled", "", map[string]any{"actor": actor, "credentials_retired": n,
 			"suspended": rep.Suspended, "volume_removed": rep.VolumeRemoved, "image_removed": rep.ImageRemoved})); err != nil {

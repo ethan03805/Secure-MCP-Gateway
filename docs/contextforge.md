@@ -134,6 +134,28 @@ With `[contextforge] bundled = true` and a Secret Vault (`[secrets]`), the Conne
 
 The measured start on macOS arm64 with Docker was 8 to 9 s to the first healthy answer.
 
+## Upgrade
+
+The bundled instance runs the release of the active lock: the release lock compiled into the Gateway, or a signed release lock an earlier upgrade installed (`<state>/contextforge/lock.json` with its `.minisig`). `<state>/contextforge/running.lock.json` records the release the instance last ran, which its D-16 belongs to. The version changes only through an upgrade (FR-22.31):
+
+```sh
+smcpctl contextforge upgrade --config smcp.toml                     # to this Gateway release's ContextForge, when it is newer
+smcpctl contextforge upgrade --config smcp.toml --lock contextforge.lock.json   # to a release lock signed with the release key (.minisig beside it)
+```
+
+The first start after installing a Gateway release that pins another ContextForge release is the same upgrade. An upgrade (Operator; `POST /api/v1/contextforge/instance/upgrade`) refuses a lock without a signature or whose signature does not verify with the release key (`CONTEXTFORGE_UPGRADE_REFUSED`), then:
+
+1. stops the instance and copies D-16 to a backup (a second volume, or `data.backup` of the managed process);
+2. verifies the new release's artifacts: the image's cosign signature and SBOM attestation and its local digest (FR-22.19), or the wheel set into a new virtual environment (FR-22.20);
+3. generates new instance credentials in the vault (FR-22.28);
+4. starts the new release on the existing D-16 and waits for its first healthy answer within the CP-47 wait (60 s);
+5. reconciles it (FR-22.33) and registers every enabled hosted package again, checking that each virtual server serves exactly the manifest's tools and running the scope self-check (FR-22.29);
+6. installs the lock (or removes the installed one when the target is the compiled lock), records the running release, removes the backup and the previous image or virtual environment, and records an `upgraded` event.
+
+When any step fails, the Connector stops the new release, switches back to the previous image or environment, restores D-16 from the backup, the previous credentials and the previous verification record, starts the previous release again when it was running, and records `upgrade_rolled_back` with the step; the request answers `CONTEXTFORGE_UPGRADE_ROLLED_BACK`. After a failed upgrade at start, the previous release runs and the next Gateway start tries again. Events: `contextforge` with outcomes `upgrade_started`, `upgraded`, `upgrade_rolled_back` and `upgrade_refused`, each with `from`, `to` and `source` (`release` or `signed_lock`).
+
+The contextforge CI job upgrades from ContextForge v1.0.10 (a lock in `internal/contextforge/testdata`, the release before the pinned v1.0.11) to v1.0.11 with an enabled hosted package (`connector.TestUpgradeImage`), including a rollback after a failed health wait and the refusal of an unsigned lock and of one signed with another key.
+
 ## Per-package isolation
 
 `bundle.Admin.Provision` registers one hosted package as the spike found isolating (FR-22.29, FR-22.34): a team created by the administrator, a non-admin user `<slug>@example.com` added as its owner, the gateway (named and slugged as the manifest's `upstream` member) and the virtual server created with team visibility in that team, the administrator then removed from the team, and a token minted by the user for that team with the virtual server as `scope.server_id`, valid one day. `bundle.Admin.SelfCheck` then probes, with each package's token, `tools/list` on `/mcp` and `/rpc`, `tools/call` of another package's tool through its `/servers/<id>/mcp`, `/mcp` and `/rpc`, a GET of its `/servers/<id>/sse`, and two admin routes; anything not refused is a finding, reported with `CONTEXTFORGE_SCOPE_BROKEN`. Against v1.0.11 with two fixture servers the isolated set-up gives no finding and its fixtures see no call; an administrator-owned token restricted only by `scope.server_id` with a gateway outside any team gives findings on `/mcp` and `/rpc`, as the spike reported. The per-package user passwords are generated like the instance credentials; ContextForge refuses passwords with three sequential characters, so such draws are redrawn, and its 90-day password expiry is set out of reach for these machine accounts.
@@ -156,5 +178,4 @@ The measured start on macOS arm64 with Docker was 8 to 9 s to the first healthy 
 ## Not built yet
 
 - The host firewall rule of FR-22.26 for the Enforced profile.
-- Upgrade with rollback to a second pinned release (FR-22.31).
 - The hostile rows HFC-09 (the E-11 filtering and session taint of a swapped result through the full pipeline) and HFC-14's refusal by the running instance in the suite (the contextforge job asserts it).

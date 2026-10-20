@@ -15,6 +15,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -29,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"aead.dev/minisign"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
@@ -109,6 +111,10 @@ type Options struct {
 	RenewInterval time.Duration
 	// Resolve maps extra names to addresses (private, metadata).
 	Resolve map[string]string
+	// LockKeys and UpgradeHealthWait are the Connector's upgrade options
+	// (FR-22.31).
+	LockKeys          []minisign.PublicKey
+	UpgradeHealthWait time.Duration
 }
 
 // New builds the environment: a vault and Secret Broker, a library, the
@@ -180,7 +186,8 @@ func New(t *testing.T, o Options) *Env {
 		return egress.NewHostedGuest(opts, listen, guest)
 	}
 	e.Conn, err = connector.New(connector.Options{Config: cfg, Library: e.Lib, Recorder: e.Fanout, Broker: e.Broker, Version: "test",
-		Runner: e.Runner, Verifier: verifier{}, Egress: open, RenewBefore: o.RenewBefore, RenewInterval: o.RenewInterval})
+		Runner: e.Runner, Verifier: verifier{}, Egress: open, RenewBefore: o.RenewBefore, RenewInterval: o.RenewInterval,
+		LockKeys: o.LockKeys, UpgradeHealthWait: o.UpgradeHealthWait})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -428,7 +435,10 @@ func (g *Gateway) Call(public string, args map[string]any) (*mcp.CallToolResult,
 	return g.Reg.Call(context.Background(), backend.Dispatch{Principal: "p", Ref: ref, Capability: g.Caps.Issue(b), Binding: b, Arguments: raw})
 }
 
-// Runner is the stand-in's Runner: always healthy once started.
+// Runner is the stand-in's Runner: healthy once started, unless it runs
+// the release named in Unhealthy. It stands in for an upgradable instance
+// (FR-22.31): Release is the release it runs and Data stands for D-16,
+// which a start of another release than the data's "migrates".
 type Runner struct {
 	base, admin string
 	mu          sync.Mutex
@@ -436,12 +446,64 @@ type Runner struct {
 	started     time.Time
 	SSRF        []string
 	Allow       netip.AddrPort
+	Release     string
+	Unhealthy   string
+	Data        string
+	backup      *string
+	Removed     []string
+}
+
+// SetRelease switches the release of the next start.
+func (r *Runner) SetRelease(l *contextforge.LockedRelease) error {
+	r.mu.Lock()
+	r.Release = l.Version
+	r.mu.Unlock()
+	return nil
+}
+
+// BackupData keeps a copy of Data.
+func (r *Runner) BackupData(context.Context) error {
+	r.mu.Lock()
+	d := r.Data
+	r.backup = &d
+	r.mu.Unlock()
+	return nil
+}
+
+// RestoreData puts the copy back.
+func (r *Runner) RestoreData(context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.backup == nil {
+		return errors.New("no backup")
+	}
+	r.Data = *r.backup
+	return nil
+}
+
+// DropBackup forgets the copy.
+func (r *Runner) DropBackup(context.Context) error {
+	r.mu.Lock()
+	r.backup = nil
+	r.mu.Unlock()
+	return nil
+}
+
+// RemoveImageRef records the artifact the Connector removed.
+func (r *Runner) RemoveImageRef(_ context.Context, ref string) error {
+	r.mu.Lock()
+	r.Removed = append(r.Removed, ref)
+	r.mu.Unlock()
+	return nil
 }
 
 func (r *Runner) Start(context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.running, r.started = true, time.Now()
+	if r.Release != "" && !strings.HasSuffix(r.Data, "@"+r.Release) {
+		r.Data += " migrated@" + r.Release
+	}
 	return nil
 }
 
@@ -457,6 +519,9 @@ func (r *Runner) Status() bundle.Status {
 	defer r.mu.Unlock()
 	if !r.running {
 		return bundle.Status{State: bundle.StateStopped}
+	}
+	if r.Unhealthy != "" && r.Release == r.Unhealthy {
+		return bundle.Status{State: bundle.StateStarting, StartedAt: r.started, Port: 1}
 	}
 	return bundle.Status{State: bundle.StateHealthy, StartedAt: r.started, Port: 1}
 }
