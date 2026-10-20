@@ -17,11 +17,11 @@ TARGET: v1.3.0
 
 @FR-20.1 | Desktop application platforms
 P: FR-20
-S: The Desktop Application (E-34) SHALL be built with Tauri 2 from source in the Gateway repository and SHALL run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on the x64 Windows hosts of FR-21.1 (WebView2), where it controls the Windows service of FR-21.6. On macOS the application SHALL be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6).
+S: The Desktop Application (E-34) SHALL be built with Tauri 2 from source in the Gateway repository and SHALL run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 11 x64 hosts of FR-21.1 (WebView2), where it controls the Windows service of FR-21.6; Windows Server hosts get the Gateway without the application (FR-20.20). On macOS the application SHALL be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6).
 A: E-34; F-100; X-07
-V: Test | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens.
+V: Test | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens. GitHub offers no Windows 11 x64 hosted runner (`windows-latest` is Windows Server 2025), so the Windows start is repeated on a Windows 11 x64 host and recorded under `docs/verification/`.
 SRC: OWNER (Tauri v2 tray app on macOS, Linux and Windows; desktop application macOS arm64 only, 2026-10-18)
-R: One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon. Owner decision of 2026-10-18: the macOS application targets Apple silicon only; Intel Macs keep the terminal path (the darwin-amd64 archive and `install.sh`), which needs no second application build to test and support.
+R: One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon. Owner decision of 2026-10-18: the macOS application targets Apple silicon only; Intel Macs keep the terminal path (the darwin-amd64 archive and `install.sh`), which needs no second application build to test and support. Later owner decision for v1.3.0: on Windows the application is qualified on Windows 11 only; Windows Server hosts, which have no desktop session for most operators and may lack the WebView2 runtime, get the command-line Gateway.
 TARGET: v1.3.0
 
 @FR-20.2 | Tray icon and menu
@@ -161,11 +161,11 @@ TARGET: v1.3.0
 
 @FR-20.17 | macOS installers
 P: FR-20
-S: The Gateway release SHALL publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` built with `pkgbuild` and `productbuild` that installs the application bundle in `/Applications` and links those five commands into `/usr/local/bin`.
+S: The Gateway release SHALL publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` built with `pkgbuild` and `productbuild` that installs those five commands owned by root and links them into `/usr/local/bin`.
 A: E-35; F-105; F-106; X-18
-V: Test | On a GitHub-hosted macOS arm64 runner, install the `.pkg`; confirm the application bundle, the five links and that each command prints the release version; mount the `.dmg`, copy the application, and confirm it starts and finds its bundled commands.
+V: Test | On a GitHub-hosted macOS arm64 runner, install the `.pkg`; confirm the five links, their root ownership and that each command prints the release version; mount the `.dmg`, copy the application, and confirm it starts and finds its bundled commands.
 SRC: OWNER (macOS .pkg/.dmg)
-R: The `.pkg` puts the commands on the path and the application where users expect it; the `.dmg` is the drag-to-install form many users prefer and needs no administrator password.
+R: The `.pkg` puts the commands on the path, root-owned so that an agent running as the user cannot replace them (SR-4.11-2); the `.dmg` carries the application, in the drag-to-install form many users prefer, with no administrator password. Changed on 2026-10-20 to match the build: the release `.pkg` is built on Linux, so a release never lacks it when no macOS runner is available, and the application can only be built on a Mac; the earlier text had the `.pkg` also install the application bundle in `/Applications`. `packaging/installers/macos/build-pkg.sh` run on a Mac can still add the application to a `.pkg`.
 TARGET: v1.3.0
 
 @FR-20.18 | Linux packages
@@ -188,11 +188,11 @@ TARGET: v1.3.0
 
 @FR-20.20 | Windows installer
 P: FR-20
-S: The Gateway release SHALL publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries of FR-21.3 and the machine-mode Windows service of FR-21.6 per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime.
+S: The Gateway release SHALL publish, for windows-amd64 and windows-arm64, an `.msi` package `smcp` built with the WiX Toolset that installs the Windows binaries of FR-21.3 per machine under `%ProgramFiles%` with no Desktop Application and no WebView2 component, for every host of FR-21.1; and, for windows-amd64, an `.msi` package `smcp-desktop` built with the WiX Toolset that installs the Desktop Application and the same binaries per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime. Neither package SHALL register the Windows service of FR-21.6, which `smcpctl install --machine` registers (FR-20.21).
 A: E-35; F-105; F-106; X-18
-V: Test | On a GitHub-hosted Windows runner with networking blocked, install the `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that the application starts and that installation succeeded without network access; uninstall from Settings and confirm removal.
+V: Test | On GitHub-hosted `windows-latest` and `windows-11-arm` runners with networking blocked, install the `smcp` `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that `smcpctl version` prints the release version, that no service was registered, and that installation succeeded without network access; uninstall and confirm removal. Repeat with the `smcp-desktop` `.msi` on a Windows 11 x64 host and confirm that the application starts.
 SRC: OWNER (Windows MSI/MSIX)
-R: MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 11 ships the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB.
+R: MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 11 ships the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB. Changed on 2026-10-20 to match the owner decision for v1.3.0 (the desktop package is qualified on Windows 11 only and Windows Server gets the command-line Gateway without WebView2) and to remove a conflict with FR-20.21, under which no installer creates a service: the earlier text had the one `.msi` install the machine-mode service.
 TARGET: v1.3.0
 
 @FR-20.21 | Installers place files only
@@ -502,7 +502,7 @@ TARGET: v1.3.0
 
 @SR-4.11-2 | Installed code outside the agent's reach
 P: SEC-4.11
-S: The `.pkg`, `.deb`, `.rpm` and `.msi` Platform Installers (E-35) SHALL install the Gateway binaries and the Desktop Application owned by root (macOS, Linux) or with Administrators-only write access (Windows), not writable by the installing user, and `smcpctl doctor` SHALL report a Gateway binary or application bundle that the user running it can write, which includes the `.dmg` and AppImage forms.
+S: The `.pkg`, `.deb`, `.rpm` and `.msi` Platform Installers (E-35) SHALL install the Gateway binaries and, where the package carries it, the Desktop Application owned by root (macOS, Linux) or with Administrators-only write access (Windows), not writable by the installing user, and `smcpctl doctor` SHALL report a Gateway binary or application bundle that the user running it can write, which includes the `.dmg` and AppImage forms.
 A: E-35; F-106; E-33; F-98; X-18
 V: Test | Install each of the four packages; confirm owner and modes (macOS, Linux) or ACLs (Windows) of every installed file and that a write as the installing user fails; install from the `.dmg` and the AppImage and confirm `smcpctl doctor` reports the writable binaries.
 SRC: SEC 4.11

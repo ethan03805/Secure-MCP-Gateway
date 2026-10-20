@@ -5,15 +5,15 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 ## Scope of v1
 
 - The Gateway relays MCP **tools** only. Resources and prompts are not supported; sampling, elicitation and roots requests from servers are refused (`-32601`, or `-31010` for an `InputRequiredResult`); the MRTR Relay Profile that would relay them is not implemented.
-- Backends are **local** MCP servers that the Gateway launches from signed packages. Remote (hosted) MCP servers cannot be used as backends in v1.
-- macOS runs the Standalone (unconfined) profile, labelled "not enforced". Server containment requires the Enforced profile on Linux.
+- Backends are **local** MCP servers that the Gateway launches from signed packages. Remote (hosted) MCP servers cannot be used as backends in v1 up to v1.2.0, the current release. Hosted MCP servers over Streamable HTTP ([southbound-http.md](southbound-http.md)) and through a bundled ContextForge instance ([contextforge.md](contextforge.md)) are on the main branch for v1.3.0.
+- macOS runs the Standalone (unconfined) profile, labelled "not enforced". Server containment requires the Enforced profile on Linux. Windows (on main for v1.3.0) is always labelled "not enforced"; its service mode contains servers partly ([windows-port.md](windows-port.md)).
 
 ## Start here
 
 | Document | For |
 |---|---|
 | [What you do with Secure MCP Gateway](user-guide.md) | New users: what the product is, the day-one path (install, connect Claude Code, first call, approval, journal), everyday tasks, Standalone and Enforced, what is planned for v1.3 |
-| [Install guide](install.md) | install.sh, Homebrew, building from source, the Linux enforced host, upgrade, rollback, uninstall (FR-18.1) |
+| [Install guide](install.md) | install.sh, install.ps1 (Windows), Homebrew, building from source, the `.deb`, `.rpm`, `.pkg`, `.dmg`, AppImage and `.msi` packages, the Linux enforced host, upgrade, rollback, uninstall (FR-18.1, FR-20.21 to FR-20.25) |
 | [Release checklist](release-checklist.md) | Publishing a release: signing key, secrets, snapshot, tag, post-release verification (FR-13.1 to FR-13.3) |
 | [Quick start](quickstart.md) | Bootstrap, start, connect Claude Code or Codex, make a call, approve a held call, verify the journal |
 | [Operator guide](operator-guide.md) | Day-2 operation: accounts and roles, approvals, sessions, policy publication, packages, secrets, emergency stop, backups, keys, reload, logs and metrics, upgrade, remote access (FR-18.4) |
@@ -36,12 +36,12 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Egress Broker](egress.md) | E-18 | Grants, DNS and address checks, limits, evidence, `smcpctl egress` |
 | [Management console](console.md), [console visual rules](console-style.md), [first-run audit](design/console-audit.md) | FR-8 | Views, sign-in, roles |
 | [Writing style guide](design/writing.md), [visual design guide](design/visual.md) | FR-20.48 to FR-20.51 (planned v1.3.0) | Normative rules for UI text and look of the console, desktop app and site; banned words and visual patterns; `tools/uilint` and its allowlist |
-| [Desktop application (draft)](desktop.md) | FR-20 (planned v1.3.0) | Tray states, service control, console window, approval notifications; holds no authority beyond the console sign-in |
+| [Desktop application (draft)](desktop.md) | FR-20 (planned v1.3.0) | Introduction, first-run setup, client setup, tray states, service control, console window, approval notifications, updates, deep links, start at login; holds no authority beyond the console sign-in |
 | [Graph mirror](graph.md) | FR-9.1 to FR-9.3, FR-9.18 | Neo4j mirror, catch-up and rebuild, canned queries, `smcpctl graph` |
 | [Observation and analytics](observation.md) | FR-10, FR-11 | Collector, store, baselines, anomaly scoring, research exports, `smcpctl observe` |
 | [Operations](operations/README.md) | FR-7.11 to FR-7.14, FR-13.7 to FR-13.13, FR-17 | Health, logs, metrics, reload, keys, backup, upgrade, uninstall |
 | [Remote Access Profile](remote-access.md) | FR-16 | Tunnel, remote listener, registrations, device sign-in, limits |
-| [ContextForge catalog and connector](contextforge.md) | FR-22 (planned v1.3.0) | Release lock, pinned catalog, entry classes, hosted tool names, `smcpctl catalog` |
+| [ContextForge catalog and connector](contextforge.md) | FR-22 (planned v1.3.0) | Release lock, pinned catalog, entry classes, hosted tool names, local and hosted import, the bundled instance, per-package isolation, reconciliation, `smcpctl catalog` and `smcpctl contextforge` |
 | [ContextForge integration spike](contextforge-spike.md) | FR-22 (planned v1.3.0) | ContextForge as a loopback backend, end-to-end run through smcpd, catalog import feasibility, requirement findings |
 | [Harness adapters](adapters.md) | FR-12.12, FR-12.13, FR-16.9 | `smcp-session`, `smcp-stdio`, `smcp-connect`, the credential file |
 | [X-01 harness interface ICD](icd/x-01-harness-interface.md) | FR-1.48, FR-12.9 | Listeners (TLS and UDS), both protocol eras, OAuth endpoints and scopes, session API, required headers, error codes, conformance fixtures and the conformance suite (`make conformance`) |
@@ -53,7 +53,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Reference hardware](reference-hardware.md) | FR-11 | The recorded reference hardware (the GitHub-hosted `ubuntu-24.04` runner class), what each performance report records, and when a measurement is a full claim |
 | [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)), runbook execution records and the [gap list](verification/gap-list.md) of unverified requirements |
 | [Continuous integration](ci.md) | — | For contributors: the required checks, and which CI jobs a pull request that changes only documentation skips |
-| [Windows port](windows-port.md) | FR-21 (planned v1.3.0) | For contributors: measured Windows build gaps, what fails closed on Windows today, the `windows` CI job, effort and order per FR-21 area, and open questions on the requirements |
+| [Windows port](windows-port.md) | FR-21 (planned v1.3.0) | What is ported (per-user and machine installation, DPAPI keys, DACL checks, named pipes, Job Objects, AppContainer and WFP containment, path rules, `.msi`, `install.ps1`), the `windows` CI job, and what remains per FR-21 area |
 
 ## Client quick starts (FR-18.3)
 

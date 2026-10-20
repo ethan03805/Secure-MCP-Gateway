@@ -156,7 +156,7 @@ The application registers the URL scheme `smcp` (SRS FR-20.28) and accepts only 
 
 An accepted link only brings the console window to that page; you still sign in and decide there. Every other link, including one with a query string, another path, an ID that is not a UUID or more than 64 characters, is ignored and nothing is sent to the Gateway. Any web page can open a registered link, so a link never approves, denies or changes anything.
 
-## Building from source (until the installers ship)
+## Building from source
 
 You need Rust 1.90 or later, Node.js 22.18 or later, and on Linux `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev` and `libxdo-dev`.
 
@@ -172,4 +172,4 @@ The macOS bundle is not signed; macOS asks you to approve it in System Settings,
 
 ## Not yet available
 
-Windows (FR-20.1, FR-20.20), and the platform installers with their installation and removal instructions (FR-20.17 to FR-20.26).
+The Windows 11 build of the application and its `smcp-desktop` `.msi` (FR-20.1, FR-20.20): there is no Windows build yet, and Windows hosts use the command-line Gateway. The Linux and macOS installers are in the pre-release `v1.3.0-beta.1`; installing, verifying and removing them is in the [install guide](install.md#option-4-platform-packages-deb-rpm-macos-pkg-and-dmg-appimage-msi). The bundled ContextForge choice of FR-22.44 is asked by `smcpctl bootstrap` and `smcpctl install`, not yet by the application's first-run setup. What else is missing for each FR-20 requirement is in the [gap list](verification/gap-list.md#planned-for-v130).

@@ -112,7 +112,7 @@ A **platform profile** is always active; exactly one of the two applies to an in
 | Linux x86_64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd (system units for Enforced, user unit for Standalone) | Enforced only | Enforced only |
 | Linux arm64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd | Enforced only | Enforced only |
 | macOS amd64 | Standalone (archive built; not part of the qualified set) | GitHub Releases archive | launchd user agent | No | No |
-| Windows x64 and arm64 (planned v1.3.0, FR-21) | Standalone restrictions and the label "not enforced" in every mode (SR-4-2) | GitHub Releases zip archive, `install.ps1`, the `.msi` of FR-20.20 | Task Scheduler logon task or Run key (per-user mode); Windows service under `NT SERVICE\smcpd` (machine mode); systemd inside a WSL2 distribution (WSL2 mode) | Machine mode: AppContainer and Job Object per server revision, partial (FR-21.13); WSL2 mode: rootless Podman | Machine mode: Windows Filtering Platform filters and the loopback broker (FR-21.14); WSL2 mode: nftables |
+| Windows x64 and arm64 (planned v1.3.0, FR-21) | Standalone restrictions and the label "not enforced" in every mode (SR-4-2) | GitHub Releases zip archive, `install.ps1`, the `smcp` `.msi` of FR-20.20 (the `smcp-desktop` `.msi` on Windows 11 x64) | Task Scheduler logon task or Run key (per-user mode); Windows service under `NT SERVICE\smcpd` (machine mode); systemd inside a WSL2 distribution (WSL2 mode) | Machine mode: AppContainer and Job Object per server revision, partial (FR-21.13); WSL2 mode: rootless Podman | Machine mode: Windows Filtering Platform filters and the loopback broker (FR-21.14); WSL2 mode: nftables |
 
 The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The recorded reference hardware of FR-11 is the GitHub-hosted `ubuntu-24.04` standard runner class (x86_64, 4 vCPU, 16 GiB, SSD); the processor model varies within the class, so each performance report records the processor model, processor count, memory and disk of its run (`docs/reference-hardware.md`). The supported client matrix is Appendix K.
 
@@ -122,7 +122,7 @@ Planned for v1.3.0 (FR-20): native installers and a desktop tray application, di
 |---|---|---|
 | macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView; arm64 only (no Intel or universal build; Intel Macs keep the darwin-amd64 archive) |
 | Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`) as release assets (signed APT and RPM repositories deferred, FR-20.32), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
-| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is FR-21 (service FR-21.6, archives FR-21.3) | Tauri 2, WebView2 |
+| Windows 11 x86_64 | `smcp-desktop` `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); Windows Server and arm64 hosts get the `smcp` `.msi` without the application; the Windows runtime of `smcpd` is FR-21 (service FR-21.6, archives FR-21.3) | Tauri 2, WebView2 |
 
 ## 2. Conventions and traceability rules
 
@@ -7268,12 +7268,12 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 |---|---|
 | ID | FR-20.1 |
 | Parent ID | FR-20 — Desktop application and platform installers |
-| Statement | The Desktop Application (E-34) **SHALL** be built with Tauri 2 from source in the Gateway repository and **SHALL** run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on the x64 Windows hosts of FR-21.1 (WebView2), where it controls the Windows service of FR-21.6. On macOS the application **SHALL** be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6). |
+| Statement | The Desktop Application (E-34) **SHALL** be built with Tauri 2 from source in the Gateway repository and **SHALL** run on macOS 14 or later on arm64 (WKWebView), on Linux x86_64 and arm64 with WebKitGTK 4.1 and a system tray that implements the StatusNotifierItem or AppIndicator protocol, and on Windows 11 x64 hosts of FR-21.1 (WebView2), where it controls the Windows service of FR-21.6; Windows Server hosts get the Gateway without the application (FR-20.20). On macOS the application **SHALL** be built for arm64 only, with no x86_64 or universal build; the command-line archives keep their darwin-amd64 build (Section 1.6). |
 | Allocation | Elements: E-34 Desktop Application; Functions: F-100; External interfaces: X-07 |
 | Verification Method | Test |
-| Verification Statement | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens. |
+| Verification Statement | In CI, build the application on GitHub-hosted macOS arm64, Ubuntu 24.04 x86_64 and arm64, and Windows x86_64 runners; on each, start it against a running Gateway and confirm the tray icon appears and the console window opens. GitHub offers no Windows 11 x64 hosted runner (`windows-latest` is Windows Server 2025), so the Windows start is repeated on a Windows 11 x64 host and recorded under `docs/verification/`. |
 | Source | OWNER (Tauri v2 tray app on macOS, Linux and Windows; desktop application macOS arm64 only, 2026-10-18) |
-| Rationale | One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon. Owner decision of 2026-10-18: the macOS application targets Apple silicon only; Intel Macs keep the terminal path (the darwin-amd64 archive and `install.sh`), which needs no second application build to test and support. |
+| Rationale | One code base for three desktops. Tauri uses the operating system's webview, so the application adds no browser engine of its own to patch, and its Rust core is memory-safe like the Go daemon. Owner decision of 2026-10-18: the macOS application targets Apple silicon only; Intel Macs keep the terminal path (the darwin-amd64 archive and `install.sh`), which needs no second application build to test and support. Later owner decision for v1.3.0: on Windows the application is qualified on Windows 11 only; Windows Server hosts, which have no desktop session for most operators and may lack the WebView2 runtime, get the command-line Gateway. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-20.2 — Tray icon and menu
@@ -7492,12 +7492,12 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 |---|---|
 | ID | FR-20.17 |
 | Parent ID | FR-20 — Desktop application and platform installers |
-| Statement | The Gateway release **SHALL** publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` built with `pkgbuild` and `productbuild` that installs the application bundle in `/Applications` and links those five commands into `/usr/local/bin`. |
+| Statement | The Gateway release **SHALL** publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` built with `pkgbuild` and `productbuild` that installs those five commands owned by root and links them into `/usr/local/bin`. |
 | Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
 | Verification Method | Test |
-| Verification Statement | On a GitHub-hosted macOS arm64 runner, install the `.pkg`; confirm the application bundle, the five links and that each command prints the release version; mount the `.dmg`, copy the application, and confirm it starts and finds its bundled commands. |
+| Verification Statement | On a GitHub-hosted macOS arm64 runner, install the `.pkg`; confirm the five links, their root ownership and that each command prints the release version; mount the `.dmg`, copy the application, and confirm it starts and finds its bundled commands. |
 | Source | OWNER (macOS .pkg/.dmg) |
-| Rationale | The `.pkg` puts the commands on the path and the application where users expect it; the `.dmg` is the drag-to-install form many users prefer and needs no administrator password. |
+| Rationale | The `.pkg` puts the commands on the path, root-owned so that an agent running as the user cannot replace them (SR-4.11-2); the `.dmg` carries the application, in the drag-to-install form many users prefer, with no administrator password. Changed on 2026-10-20 to match the build: the release `.pkg` is built on Linux, so a release never lacks it when no macOS runner is available, and the application can only be built on a Mac; the earlier text had the `.pkg` also install the application bundle in `/Applications`. `packaging/installers/macos/build-pkg.sh` run on a Mac can still add the application to a `.pkg`. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-20.18 — Linux packages
@@ -7534,12 +7534,12 @@ Owner decision of 2026-10-18: the product gets a desktop application and native 
 |---|---|
 | ID | FR-20.20 |
 | Parent ID | FR-20 — Desktop application and platform installers |
-| Statement | The Gateway release **SHALL** publish, for windows-amd64, an `.msi` built with the WiX Toolset that installs the Desktop Application and the Windows binaries of FR-21.3 and the machine-mode Windows service of FR-21.6 per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime. |
+| Statement | The Gateway release **SHALL** publish, for windows-amd64 and windows-arm64, an `.msi` package `smcp` built with the WiX Toolset that installs the Windows binaries of FR-21.3 per machine under `%ProgramFiles%` with no Desktop Application and no WebView2 component, for every host of FR-21.1; and, for windows-amd64, an `.msi` package `smcp-desktop` built with the WiX Toolset that installs the Desktop Application and the same binaries per machine under `%ProgramFiles%`, embeds the WebView2 bootstrapper, and makes no network request during installation on a host that already has the WebView2 runtime. Neither package **SHALL** register the Windows service of FR-21.6, which `smcpctl install --machine` registers (FR-20.21). |
 | Allocation | Elements: E-35 Platform Installers; Functions: F-105, F-106; External interfaces: X-18 |
 | Verification Method | Test |
-| Verification Statement | On a GitHub-hosted Windows runner with networking blocked, install the `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that the application starts and that installation succeeded without network access; uninstall from Settings and confirm removal. |
+| Verification Statement | On GitHub-hosted `windows-latest` and `windows-11-arm` runners with networking blocked, install the `smcp` `.msi` with `msiexec /qn`; confirm the files under `%ProgramFiles%`, that `smcpctl version` prints the release version, that no service was registered, and that installation succeeded without network access; uninstall and confirm removal. Repeat with the `smcp-desktop` `.msi` on a Windows 11 x64 host and confirm that the application starts. |
 | Source | OWNER (Windows MSI/MSIX) |
-| Rationale | MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 11 ships the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB. |
+| Rationale | MSI is the format Windows administrators deploy and the one Tauri builds; MSIX needs a trusted signature to install at all, so it is deferred with platform signing (FR-20.31). Windows 11 ships the WebView2 runtime, so the embedded bootstrapper covers the rest without an offline download of 127 MB. Changed on 2026-10-20 to match the owner decision for v1.3.0 (the desktop package is qualified on Windows 11 only and Windows Server gets the command-line Gateway without WebView2) and to remove a conflict with FR-20.21, under which no installer creates a service: the earlier text had the one `.msi` install the machine-mode service. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-20.21 — Installers place files only
@@ -7962,7 +7962,7 @@ Parents are the MUSTs of `MCP_Gateway_Security_SRS.md` whose controls the deskto
 |---|---|
 | ID | SR-4.11-2 |
 | Parent ID | SEC-4.11 — Protected client configuration (MUST, `MCP_Gateway_Security_SRS.md`) |
-| Statement | The `.pkg`, `.deb`, `.rpm` and `.msi` Platform Installers (E-35) **SHALL** install the Gateway binaries and the Desktop Application owned by root (macOS, Linux) or with Administrators-only write access (Windows), not writable by the installing user, and `smcpctl doctor` **SHALL** report a Gateway binary or application bundle that the user running it can write, which includes the `.dmg` and AppImage forms. |
+| Statement | The `.pkg`, `.deb`, `.rpm` and `.msi` Platform Installers (E-35) **SHALL** install the Gateway binaries and, where the package carries it, the Desktop Application owned by root (macOS, Linux) or with Administrators-only write access (Windows), not writable by the installing user, and `smcpctl doctor` **SHALL** report a Gateway binary or application bundle that the user running it can write, which includes the `.dmg` and AppImage forms. |
 | Allocation | Elements: E-35 Platform Installers, E-33 Harness Adapter Kit; Functions: F-106, F-98; External interfaces: X-18 |
 | Verification Method | Test |
 | Verification Statement | Install each of the four packages; confirm owner and modes (macOS, Linux) or ACLs (Windows) of every installed file and that a write as the installing user fails; install from the `.dmg` and the AppImage and confirm `smcpctl doctor` reports the writable binaries. |
@@ -7994,7 +7994,7 @@ The health causes (`partially_confined`, `state_acl`, `key_protection`, `pipe_sq
 
 Three Windows installation modes are specified: the **per-user** mode (no elevation; servers run as ordinary child processes, as on macOS), the **machine** mode (a Windows service under a virtual service account; servers contained in AppContainers with Job Object limits and Windows Filtering Platform egress filters), and the **WSL2** mode (the Linux build in a dedicated WSL2 distribution, reached from Windows agents over the loopback listener). In the per-user mode the agents and `smcpd` run as the same account, so an agent can read the Gateway's state whatever its DACL says; DPAPI there protects against copying the state to another account or host, not against the agent. The machine-mode records (FR-21.13, FR-21.14, SR-4.1-3, SR-4.5-3, SR-4.6-2) fix the outcome; the mechanism (who creates AppContainer profiles, loopback exemptions and WFP filters, and with which rights) is confirmed by the spike that `docs/windows-port.md` schedules before the machine mode is built, and a different mechanism with the same outcome is a controlled change.
 
-**Relation to FR-20 and FR-22.** The Desktop Application (E-34) and the `.msi` Platform Installer (E-35) for Windows are specified in FR-20 (FR-20.1, FR-20.20) and run on the x64 hosts of FR-21.1; the application controls the service of FR-21.6 and shows the label of SR-4-2. No desktop application is built for Windows on arm64 in v1.3.0; those hosts use the FR-21.3 zip archive. The bundled ContextForge instance of FR-22 runs on Windows, in every installation mode, as the managed process of FR-22.20 and FR-22.25 inside its own Job Object (FR-21.12) and not in an AppContainer, so the health cause `contextforge_unconfined` applies while it runs, also in the machine mode.
+**Relation to FR-20 and FR-22.** The Desktop Application (E-34) and the `.msi` Platform Installers (E-35) for Windows are specified in FR-20 (FR-20.1, FR-20.20): the application and its `smcp-desktop` `.msi` run on Windows 11 x64, and the `smcp` `.msi` with the command-line Gateway runs on every host of FR-21.1. The application controls the service of FR-21.6 and shows the label of SR-4-2. No desktop application is built for Windows on arm64 or qualified on Windows Server in v1.3.0; those hosts use the `smcp` `.msi` or the FR-21.3 zip archive. The bundled ContextForge instance of FR-22 runs on Windows, in every installation mode, as the managed process of FR-22.20 and FR-22.25 inside its own Job Object (FR-21.12) and not in an AppContainer, so the health cause `contextforge_unconfined` applies while it runs, also in the machine mode.
 
 Revised on 2026-10-19 after the measured port (`docs/windows-port.md`, #144): the findings listed there under "Requirements in #131 to adjust" are applied, the named-pipe SR is SR-2.8-6 (SR-2.8-5 belongs to FR-20), and Authenticode signing is left to FR-20.30, which already names the secrets.
 
@@ -8774,12 +8774,12 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 |---|---|
 | ID | FR-22.20 |
 | Parent ID | FR-22 — ContextForge integration |
-| Statement | On a host without the Enforced profile, the ContextForge Connector (E-36) **SHALL** install the bundled instance into a private virtual environment owned by the Gateway's identity from the wheel set of the release lock with every wheel's SHA-256 verified, from a local wheel directory when the operator supplies one, and **SHALL** refuse a wheel without a matching hash. |
+| Statement | On a host without the Enforced profile that has no Podman or Docker, and on every Windows host, the ContextForge Connector (E-36) **SHALL** install the bundled instance into a private virtual environment owned by the Gateway's identity from the wheel set of the release lock with every wheel's SHA-256 verified, from a local wheel directory when the operator supplies one, and **SHALL** refuse a wheel without a matching hash. |
 | Allocation | Elements: E-36 ContextForge Connector; Functions: F-108; External interfaces: X-20 |
 | Verification Method | Test |
 | Verification Statement | Install the managed-process form from a wheel directory with networking blocked, from a directory with one wheel replaced, and with an extra unlisted wheel; confirm the first installs and the others are refused naming the wheel. |
 | Source | OWNER (managed process elsewhere; version pinned and verified); SEC 3.6; CF: PyPI package `mcp-contextforge-gateway` |
-| Rationale | The Standalone profile has no Podman, so ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image. |
+| Rationale | Without a container engine ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image. Hosts with Podman or Docker run the verified image instead (FR-22.25). |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.21 — License and SBOM records
@@ -8838,18 +8838,18 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Rationale | ContextForge is a large Python service with a history of SSRF and injection advisories; it is contained like any untrusted server. The doubled CP-24 budget (1 GiB, 2 CPUs, 256 PIDs) was checked against the ContextForge spike (`docs/contextforge-spike.md`): with the one worker that FR-22.27 pins, v1.0.11 used 404 to 414 MiB and 10 processes and threads idle and after calls; with ContextForge's default worker count it used 2.78 GiB on a 10-CPU host, which is why the worker count is pinned rather than the budget raised. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
-#### FR-22.25 — Managed process outside the Enforced profile
+#### FR-22.25 — Bundled instance outside the Enforced profile
 
 | Field | Value |
 |---|---|
 | ID | FR-22.25 |
 | Parent ID | FR-22 — ContextForge integration |
-| Statement | Outside the Enforced profile, the Server Runtime Manager (E-15) **SHALL** run the bundled instance as a child process of the Gateway with the environment built only from the generated configuration (SR-2.14-1), a private working directory holding D-16, and the CP-24 resource limits the operating system supports, and the Health & Safety Monitor (E-23) **SHALL** report `degraded` with cause `contextforge_unconfined` while it runs. |
+| Statement | Outside the Enforced profile, the Server Runtime Manager (E-15) **SHALL** run the bundled instance, when Podman or Docker is installed and the host is not Windows, as one container of the verified image (FR-22.19) with a read-only root filesystem, one private volume for D-16, no other host mount, all capabilities dropped, `no-new-privileges` and the CP-24 resource limits doubled, and otherwise as a child process of the Gateway installed by FR-22.20 with the environment built only from the generated configuration (SR-2.14-1), a private working directory holding D-16, and the CP-24 resource limits the operating system supports; in either form the Health & Safety Monitor (E-23) **SHALL** report `degraded` with cause `contextforge_unconfined` while it runs. |
 | Allocation | Elements: E-15 Server Runtime Manager, E-23 Health & Safety Monitor, E-36 ContextForge Connector; Functions: F-38, F-61 |
 | Verification Method | Test |
-| Verification Statement | In a Standalone installation start the bundled instance; confirm its environment contains only the generated keys, its working directory, the applied limits, and the health cause `contextforge_unconfined`. |
+| Verification Statement | In a Standalone installation with Docker or Podman, start the bundled instance and confirm with the engine's inspect command the container properties listed; in a Standalone installation without an engine and on Windows, start it and confirm its environment contains only the generated keys, its working directory and the applied limits; confirm the health cause `contextforge_unconfined` in each case. |
 | Source | OWNER (managed process elsewhere); ARCH §2.2 A-8 |
-| Rationale | The Standalone profile cannot contain the instance, and the operator must see that. |
+| Rationale | The Standalone profile cannot contain the instance, and the operator must see that. Changed on 2026-10-20 to match the build: where a container engine is installed, the verified image runs as a hardened container (stronger than a child process, and the same artifact the Enforced profile runs), which is not the E-16 containment of FR-22.24 and still reports `contextforge_unconfined`. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.26 — Loopback-only listener
@@ -10655,7 +10655,7 @@ Use this matrix to code element by element. A requirement allocated to several e
 | FR-22.22 (planned v1.3.0) | FR-22 | Test | E-36, E-14, E-24 | Opt-in |
 | FR-22.23 (planned v1.3.0) | FR-22 | Test | E-36, E-15 | Start on demand |
 | FR-22.24 (planned v1.3.0) | FR-22 | Test | E-15, E-16, E-36 | Contained instance in the Enforced profile |
-| FR-22.25 (planned v1.3.0) | FR-22 | Test | E-15, E-23, E-36 | Managed process outside the Enforced profile |
+| FR-22.25 (planned v1.3.0) | FR-22 | Test | E-15, E-23, E-36 | Bundled instance outside the Enforced profile |
 | FR-22.26 (planned v1.3.0) | FR-22 | Test | E-36, E-15 | Loopback-only listener |
 | FR-22.27 (planned v1.3.0) | FR-22 | Test | E-36 | Hardened configuration |
 | FR-22.28 (planned v1.3.0) | FR-22 | Test | E-36, E-19, E-20 | Generated ContextForge credentials |
@@ -10707,7 +10707,7 @@ Generated by the SRS build script from the requirement records, `ArchitectureV2.
 | Security SHALL items without citing FR | None |
 | Barren functional roots (no children) | None |
 | Parameter Catalog (`docs/parameters.json`) | 93 parameters; all 92 ARCH §10.3 IDs present |
-| Implementation status (`docs/status/elements.json`) | implemented 8, not-started 1, partial 27 |
+| Implementation status (`docs/status/elements.json`) | implemented 8, partial 28 |
 | Elements without an allocated requirement | None |
 | Functions without an allocated requirement | None |
 | External interfaces without an allocated requirement | None |

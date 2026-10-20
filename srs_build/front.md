@@ -112,7 +112,7 @@ A **platform profile** is always active; exactly one of the two applies to an in
 | Linux x86_64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd (system units for Enforced, user unit for Standalone) | Enforced only | Enforced only |
 | Linux arm64 | Enforced, or Standalone when prerequisites are absent | GitHub Releases archive, `install.sh`, Homebrew tap | systemd | Enforced only | Enforced only |
 | macOS amd64 | Standalone (archive built; not part of the qualified set) | GitHub Releases archive | launchd user agent | No | No |
-| Windows x64 and arm64 (planned v1.3.0, FR-21) | Standalone restrictions and the label "not enforced" in every mode (SR-4-2) | GitHub Releases zip archive, `install.ps1`, the `.msi` of FR-20.20 | Task Scheduler logon task or Run key (per-user mode); Windows service under `NT SERVICE\smcpd` (machine mode); systemd inside a WSL2 distribution (WSL2 mode) | Machine mode: AppContainer and Job Object per server revision, partial (FR-21.13); WSL2 mode: rootless Podman | Machine mode: Windows Filtering Platform filters and the loopback broker (FR-21.14); WSL2 mode: nftables |
+| Windows x64 and arm64 (planned v1.3.0, FR-21) | Standalone restrictions and the label "not enforced" in every mode (SR-4-2) | GitHub Releases zip archive, `install.ps1`, the `smcp` `.msi` of FR-20.20 (the `smcp-desktop` `.msi` on Windows 11 x64) | Task Scheduler logon task or Run key (per-user mode); Windows service under `NT SERVICE\smcpd` (machine mode); systemd inside a WSL2 distribution (WSL2 mode) | Machine mode: AppContainer and Job Object per server revision, partial (FR-21.13); WSL2 mode: rootless Podman | Machine mode: Windows Filtering Platform filters and the loopback broker (FR-21.14); WSL2 mode: nftables |
 
 The continuous-integration qualification of the Enforced profile runs on GitHub-hosted Ubuntu runners. The recorded reference hardware of FR-11 is the GitHub-hosted `ubuntu-24.04` standard runner class (x86_64, 4 vCPU, 16 GiB, SSD); the processor model varies within the class, so each performance report records the processor model, processor count, memory and disk of its run (`docs/reference-hardware.md`). The supported client matrix is Appendix K.
 
@@ -122,7 +122,7 @@ Planned for v1.3.0 (FR-20): native installers and a desktop tray application, di
 |---|---|---|
 | macOS arm64 | `.pkg`, `.dmg` (ad-hoc signed; Developer ID and notarization deferred, FR-20.29) | Tauri 2, WKWebView; arm64 only (no Intel or universal build; Intel Macs keep the darwin-amd64 archive) |
 | Linux x86_64 and arm64 | `.deb` and `.rpm` (`smcp` and `smcp-desktop`) as release assets (signed APT and RPM repositories deferred, FR-20.32), AppImage (Standalone only) | Tauri 2, WebKitGTK 4.1 |
-| Windows x86_64 | `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); the Windows runtime of `smcpd` is FR-21 (service FR-21.6, archives FR-21.3) | Tauri 2, WebView2 |
+| Windows 11 x86_64 | `smcp-desktop` `.msi` (unsigned; Authenticode and MSIX deferred, FR-20.30, FR-20.31); Windows Server and arm64 hosts get the `smcp` `.msi` without the application; the Windows runtime of `smcpd` is FR-21 (service FR-21.6, archives FR-21.3) | Tauri 2, WebView2 |
 
 ## 2. Conventions and traceability rules
 

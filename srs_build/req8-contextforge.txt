@@ -192,11 +192,11 @@ TARGET: v1.3.0
 
 @FR-22.20 | Managed-process installation
 P: FR-22
-S: On a host without the Enforced profile, the ContextForge Connector (E-36) SHALL install the bundled instance into a private virtual environment owned by the Gateway's identity from the wheel set of the release lock with every wheel's SHA-256 verified, from a local wheel directory when the operator supplies one, and SHALL refuse a wheel without a matching hash.
+S: On a host without the Enforced profile that has no Podman or Docker, and on every Windows host, the ContextForge Connector (E-36) SHALL install the bundled instance into a private virtual environment owned by the Gateway's identity from the wheel set of the release lock with every wheel's SHA-256 verified, from a local wheel directory when the operator supplies one, and SHALL refuse a wheel without a matching hash.
 A: E-36; F-108; X-20
 V: Test | Install the managed-process form from a wheel directory with networking blocked, from a directory with one wheel replaced, and with an extra unlisted wheel; confirm the first installs and the others are refused naming the wheel.
 SRC: OWNER (managed process elsewhere; version pinned and verified); SEC 3.6; CF: PyPI package `mcp-contextforge-gateway`
-R: The Standalone profile has no Podman, so ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image.
+R: Without a container engine ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image. Hosts with Podman or Docker run the verified image instead (FR-22.25).
 TARGET: v1.3.0
 
 @FR-22.21 | License and SBOM records
@@ -235,13 +235,13 @@ SRC: OWNER (Podman container on Linux/Enforced; sandboxed managed component unde
 R: ContextForge is a large Python service with a history of SSRF and injection advisories; it is contained like any untrusted server. The doubled CP-24 budget (1 GiB, 2 CPUs, 256 PIDs) was checked against the ContextForge spike (`docs/contextforge-spike.md`): with the one worker that FR-22.27 pins, v1.0.11 used 404 to 414 MiB and 10 processes and threads idle and after calls; with ContextForge's default worker count it used 2.78 GiB on a 10-CPU host, which is why the worker count is pinned rather than the budget raised.
 TARGET: v1.3.0
 
-@FR-22.25 | Managed process outside the Enforced profile
+@FR-22.25 | Bundled instance outside the Enforced profile
 P: FR-22
-S: Outside the Enforced profile, the Server Runtime Manager (E-15) SHALL run the bundled instance as a child process of the Gateway with the environment built only from the generated configuration (SR-2.14-1), a private working directory holding D-16, and the CP-24 resource limits the operating system supports, and the Health & Safety Monitor (E-23) SHALL report `degraded` with cause `contextforge_unconfined` while it runs.
+S: Outside the Enforced profile, the Server Runtime Manager (E-15) SHALL run the bundled instance, when Podman or Docker is installed and the host is not Windows, as one container of the verified image (FR-22.19) with a read-only root filesystem, one private volume for D-16, no other host mount, all capabilities dropped, `no-new-privileges` and the CP-24 resource limits doubled, and otherwise as a child process of the Gateway installed by FR-22.20 with the environment built only from the generated configuration (SR-2.14-1), a private working directory holding D-16, and the CP-24 resource limits the operating system supports; in either form the Health & Safety Monitor (E-23) SHALL report `degraded` with cause `contextforge_unconfined` while it runs.
 A: E-15; E-23; E-36; F-38; F-61
-V: Test | In a Standalone installation start the bundled instance; confirm its environment contains only the generated keys, its working directory, the applied limits, and the health cause `contextforge_unconfined`.
+V: Test | In a Standalone installation with Docker or Podman, start the bundled instance and confirm with the engine's inspect command the container properties listed; in a Standalone installation without an engine and on Windows, start it and confirm its environment contains only the generated keys, its working directory and the applied limits; confirm the health cause `contextforge_unconfined` in each case.
 SRC: OWNER (managed process elsewhere); ARCH §2.2 A-8
-R: The Standalone profile cannot contain the instance, and the operator must see that.
+R: The Standalone profile cannot contain the instance, and the operator must see that. Changed on 2026-10-20 to match the build: where a container engine is installed, the verified image runs as a hardened container (stronger than a child process, and the same artifact the Enforced profile runs), which is not the E-16 containment of FR-22.24 and still reports `contextforge_unconfined`.
 TARGET: v1.3.0
 
 @FR-22.26 | Loopback-only listener

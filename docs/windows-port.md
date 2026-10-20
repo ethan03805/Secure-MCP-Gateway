@@ -2,7 +2,7 @@
 
 For contributors. The owner decided on 2026-10-18 that the Gateway also runs on Windows (SRS FR-21, planned for v1.3.0; the requirements are in `srs_build/req7-windows.txt`, pull request #131). This page records where the code stood when the port started, what the first step changed, what each FR-21 area will cost, and the requirements that look infeasible or mis-specified as written.
 
-No Windows installation mode is supported yet. A Windows build of `smcpd` starts with keys protected by DPAPI in a state directory with a protected DACL and launches backends in Job Objects, but refuses to open the UDS Harness Profile (see [What fails closed](#what-fails-closed-on-windows-today)).
+Status on main (v1.3.0 work, in no published release yet): the per-user mode (`smcpctl install`) and the machine mode (`smcpctl install --machine`, the `smcpd` service under `NT SERVICE\smcpd` with AppContainer and Windows Filtering Platform containment) are built, with DPAPI keys, DACL checks, the named-pipe harness transport, Job Objects, the Windows path rules, the release zips, `install.ps1`, the Defender scan and the `smcp` `.msi`. Not built: the WSL2 mode (FR-21.15), the Windows client paths and real-agent runs (FR-21.17, FR-21.21), the acceptance subset (FR-21.20), and the desktop application for Windows. What each FR-21 requirement still lacks is in the [gap list](verification/gap-list.md#planned-for-v130). Features that are not ported refuse instead of running with weaker protection ([What fails closed](#what-fails-closed-on-windows-today)).
 
 ## Measured gaps (2026-10-18, commit d9dde78)
 
