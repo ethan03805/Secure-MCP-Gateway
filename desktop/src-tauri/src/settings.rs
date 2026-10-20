@@ -126,16 +126,35 @@ pub struct Resolved {
     pub notifications: bool,
 }
 
-/// The Standalone CA bundle path of CP-46 on this platform:
-/// `<state dir>/tls/ca.crt`.
+/// The CA certificate an Enforced installation publishes for users (CP-46
+/// `public/`): the state directory is closed to them, so `smcpd` copies its
+/// trust bundle here, readable by everyone (the certificate is public).
+pub const ENFORCED_CA_FILE: &str = "/var/lib/smcp/public/ca.crt";
+
+/// The CA bundle the console window trusts when Settings name none: the
+/// Standalone `<state dir>/tls/ca.crt` of CP-46 on this platform, or on
+/// Linux, when that file does not exist and an Enforced installation has
+/// published its CA certificate, that copy.
 pub fn default_ca_file(os: &str, home: &Path, xdg_state_home: Option<&Path>) -> PathBuf {
+    default_ca_file_in(os, home, xdg_state_home, Path::new(ENFORCED_CA_FILE))
+}
+
+/// [`default_ca_file`] with the Enforced copy's path given (tests).
+pub fn default_ca_file_in(os: &str, home: &Path, xdg_state_home: Option<&Path>, enforced: &Path) -> PathBuf {
     match os {
         "macos" => home.join("Library/Application Support/smcp-gateway/state/tls/ca.crt"),
-        _ => xdg_state_home
-            .filter(|p| p.is_absolute())
-            .map(Path::to_path_buf)
-            .unwrap_or_else(|| home.join(".local/state"))
-            .join("smcp-gateway/tls/ca.crt"),
+        _ => {
+            let standalone = xdg_state_home
+                .filter(|p| p.is_absolute())
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| home.join(".local/state"))
+                .join("smcp-gateway/tls/ca.crt");
+            if os == "linux" && !standalone.exists() && enforced.is_file() {
+                enforced.to_path_buf()
+            } else {
+                standalone
+            }
+        }
     }
 }
 
@@ -296,6 +315,32 @@ mod tests {
             default_ca_file("linux", home, Some(Path::new("/x/state"))),
             PathBuf::from("/x/state/smcp-gateway/tls/ca.crt")
         );
+
+        // Linux Enforced: the state directory is closed to the user, so the
+        // CA certificate the Gateway publishes is the default, unless a
+        // Standalone CA exists for this user.
+        let dir = std::env::temp_dir().join(format!("smcp-settings-ca-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let published = dir.join("public/ca.crt");
+        let state = dir.join("state");
+        let standalone = state.join("smcp-gateway/tls/ca.crt");
+        assert_eq!(
+            default_ca_file_in("linux", home, Some(&state), &published),
+            standalone,
+            "nothing published: the Standalone path"
+        );
+        std::fs::create_dir_all(published.parent().unwrap()).unwrap();
+        std::fs::write(&published, "ca").unwrap();
+        assert_eq!(default_ca_file_in("linux", home, Some(&state), &published), published);
+        assert_eq!(
+            default_ca_file_in("macos", home, Some(&state), &published),
+            home.join("Library/Application Support/smcp-gateway/state/tls/ca.crt")
+        );
+        std::fs::create_dir_all(standalone.parent().unwrap()).unwrap();
+        std::fs::write(&standalone, "ca").unwrap();
+        assert_eq!(default_ca_file_in("linux", home, Some(&state), &published), standalone);
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(ENFORCED_CA_FILE, "/var/lib/smcp/public/ca.crt");
         let bad = Settings {
             admin_url: "http://x".into(),
             metrics_address: "192.0.2.1:9464".into(),

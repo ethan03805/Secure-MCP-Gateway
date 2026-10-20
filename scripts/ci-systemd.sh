@@ -97,6 +97,12 @@ sudo -n systemctl is-active --quiet smcpd.service || fail "smcpctl install did n
 say "a Standalone uninstall beside the Enforced installation"
 SMCP_ENFORCED_HOST_TEST=1 host_test TestStandaloneUninstallKeepsEnforcedHost || fail "Standalone uninstall beside the Enforced installation"
 
+# The desktop application and smcpctl connect run as a user who cannot read
+# /etc/smcp or the state directory; the client view in /var/lib/smcp/public
+# gives that user the CA certificate and the addresses (CP-46).
+say "client view for users outside group smcp (console window CA, smcpctl connect)"
+SMCP_ENFORCED_HOST_TEST=1 host_test TestEnforcedClientViewOnHost || fail "client view of the Enforced installation"
+
 say "server identity smcp-srv (CP-46)"
 srv_uid=$(id -u smcp-srv)
 as_srv() {

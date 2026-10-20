@@ -76,9 +76,12 @@ pub fn valid_id(id: &str) -> bool {
 }
 
 /// The Gateway configuration `smcpctl connect` needs: the first one that
-/// exists on this host, by path only (the application never reads it).
+/// exists on this host, by path only (the application never reads it). The
+/// Enforced configuration in `/etc/smcp` counts although the user cannot
+/// read it:
+/// `smcpctl connect` then uses the client view the Gateway publishes.
 pub fn config_path(h: &Host) -> Option<PathBuf> {
-    setup::config_paths(h).into_iter().find(|p| p.exists())
+    setup::config_paths(h).into_iter().find(|p| setup::present(p))
 }
 
 fn s(p: &Path) -> String {

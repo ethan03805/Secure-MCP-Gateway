@@ -1,9 +1,10 @@
 [Desktop Entry]
 Categories={{categories}}
 Comment=Tray, service control and console window for the Secure MCP Gateway
-Exec={{exec}}
+Exec={{exec}} %u
 StartupWMClass={{exec}}
 Icon={{icon}}
 Name=Secure MCP Gateway
 Terminal=false
 Type=Application
+MimeType=x-scheme-handler/smcp;

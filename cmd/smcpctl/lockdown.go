@@ -40,7 +40,7 @@ func lockdownCmd(args []string, out io.Writer) error {
 	if !ok {
 		return fmt.Errorf("unknown client %q; known: %s", pos[0], strings.Join(harness.IDs(), ", "))
 	}
-	cfg, err := config.Load(*cfgPath)
+	cfg, err := loadClientConfig(*cfgPath, os.Stderr)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ var enforcedPaths = []string{"/etc/smcp", "/var/lib/smcp", "/var/lib/smcp/state"
 // the user's own credential file, and the Gateway endpoint given by
 // --gateway-url.
 func enforcedHarnessEnv(mcpURL string) (harness.Env, error) {
-	gw := harness.Gateway{MCPURL: mcpURL, CAFile: "/var/lib/smcp/state/tls/ca.crt", Credentials: adapter.DefaultPath(),
+	gw := harness.Gateway{MCPURL: mcpURL, CAFile: filepath.Join(config.EnforcedPublicDir, config.PublicCAFile), Credentials: adapter.DefaultPath(),
 		Origins: []string{originOf(mcpURL)}}
 	e, err := harness.NewEnv(gw)
 	if err != nil {

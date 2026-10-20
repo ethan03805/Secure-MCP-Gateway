@@ -154,7 +154,7 @@ func harnessEnv(cfg *config.Config) (harness.Env, error) {
 			origins = append(origins, st.PublicURL)
 		}
 	}
-	gw := harness.Gateway{MCPURL: cfg.ResourceURI(), CAFile: filepath.Join(cfg.State.Dir, keys.CACertFile), Credentials: adapter.DefaultPath(),
+	gw := harness.Gateway{MCPURL: cfg.ResourceURI(), CAFile: clientCAFile(cfg), Credentials: adapter.DefaultPath(),
 		Origins: origins, Standalone: cfg.Profile.Mode == "standalone" || runtime.GOOS != "linux"}
 	e, err := harness.NewEnv(gw)
 	if err != nil {
@@ -177,6 +177,39 @@ func harnessEnv(cfg *config.Config) (harness.Env, error) {
 		e.Root = root
 	}
 	return e, nil
+}
+
+// clientCAFile is the CA file client configurations name: in the Enforced
+// profile the published copy in CP-46 public/ when it exists, because the
+// clients run as users who cannot read the state directory; otherwise the
+// state directory's trust bundle.
+func clientCAFile(cfg *config.Config) string {
+	if dir := cfg.PublicDir(); dir != "" {
+		p := filepath.Join(dir, config.PublicCAFile)
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return filepath.Join(cfg.State.Dir, keys.CACertFile)
+}
+
+// loadClientConfig reads the configuration for the client commands. When
+// the file is not readable by this user, as /etc/smcp/smcp.toml (root:smcp
+// 0640) is not on an Enforced host, it reads the client view the Gateway
+// publishes for that case (CP-46 public/client.json: addresses and the CA
+// certificate, nothing secret) and says so on w.
+func loadClientConfig(path string, w io.Writer) (*config.Config, error) {
+	cfg, err := config.Load(path)
+	if err == nil || !errors.Is(err, os.ErrPermission) {
+		return cfg, err
+	}
+	dir := filepath.Join(hostRoot, config.EnforcedPublicDir)
+	v, verr := config.LoadClientView(dir)
+	if verr != nil {
+		return nil, fmt.Errorf("%w; the Gateway's client view in %s is not available either (%v): run smcpctl install --profile enforced again, or run this command as a member of group smcp", err, dir, verr)
+	}
+	fmt.Fprintf(w, "note: %s is not readable by this user; using the Gateway's client view %s\n", path, filepath.Join(dir, config.ClientViewFile))
+	return v.Config(dir), nil
 }
 
 func originOf(u string) string {
@@ -211,7 +244,7 @@ func clientSetup(args []string, out io.Writer) error {
 	if !ok {
 		return fmt.Errorf("unknown client %q; known: %s", pos[0], strings.Join(harness.IDs(), ", "))
 	}
-	cfg, err := config.Load(*cfgPath)
+	cfg, err := loadClientConfig(*cfgPath, os.Stderr)
 	if err != nil {
 		return err
 	}

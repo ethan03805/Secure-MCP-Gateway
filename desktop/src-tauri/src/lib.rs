@@ -900,10 +900,18 @@ fn open_console(app: &AppHandle, page: Page) {
                 port: r.admin.port,
                 anchors,
             });
+            // This closure runs on the main thread, holding the webview:
+            // load the page through WebKit directly, as on Linux below,
+            // not with a Tauri navigation (which hung the Linux
+            // application, #177).
+            let _ = &w2;
             // SAFETY: with_webview runs on the main thread with a live WKWebView.
             match unsafe { tlshook_macos::install(pw.inner()) } {
                 Ok(()) => {
-                    let _ = w2.navigate(target);
+                    // SAFETY: as above.
+                    if let Err(e) = unsafe { tlshook_macos::load(pw.inner(), target.as_str()) } {
+                        refused(e);
+                    }
                 }
                 Err(e) => refused(e),
             }
@@ -1118,9 +1126,23 @@ fn poll(app: AppHandle, shared: Arc<Shared>) {
     }
 }
 
+/// The Tauri context: the configuration the application was built with
+/// (`tauri.conf.json` merged with the build's `--config`) and its assets.
+fn context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
+}
+
+/// The application's version: the `version` of the configuration it was
+/// built with, which `packaging/installers/desktop/build.sh` sets to the
+/// release's version (`0.1.0` in a development build, which the update
+/// check treats as unversioned).
+pub fn app_version() -> String {
+    context().package_info().version.to_string()
+}
+
 /// Runs the application.
 pub fn run() {
-    let context = tauri::generate_context!();
+    let context = context();
     let app = tauri::Builder::default()
         // First, so a second start only focuses the first (FR-20.14).
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {

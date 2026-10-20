@@ -39,7 +39,7 @@ The window shows the two steps (keys, configuration and accounts; then the servi
 
 `smcpctl` is looked for beside the application (the `.dmg` and the AppImage carry it), then in `/usr/local/bin`, `/usr/bin`, `/opt/homebrew/bin` and `~/.local/bin`, never on `PATH`. If none is there, the window says so and names the installers.
 
-After an Enforced installation, the Gateway CA certificate (`/var/lib/smcp/state/tls/ca.crt`) is not readable by your account; copy it to a file you can read and set it in Settings so that the console window can check the admin listener (see [Console window](#console-window)).
+After an Enforced installation, `/etc/smcp/smcp.toml` and the state directory are not readable by your account. `smcpd` publishes what the application and `smcpctl connect` need in `/var/lib/smcp/public`, readable by every user: `ca.crt`, a copy of the Gateway CA certificate (kept current after a CA rotation), and `client.json`, the listener addresses. Neither holds a secret. The console window uses that CA certificate when no Standalone CA exists for your account, and client setup works as below (see [Console window](#console-window)).
 
 ## Client setup
 
@@ -50,7 +50,7 @@ After an Enforced installation, the Gateway CA certificate (`/var/lib/smcp/state
 3. **Connect** on the preview runs `smcpctl connect <client> --config <configuration>` (with `--no-lockdown` when the switch is off). The application applies only a setup whose preview you saw, with the same switch setting. Restart the agent afterwards.
 4. **Disconnect** runs `smcpctl connect <client> --config <configuration> --remove`, which restores the agent's files from the backups setup made.
 
-The commands run in your home directory, so they change only user-scope and managed settings, never a project directory. A failure shows the message, the command and its output, with Copy Details. Without a Gateway configuration the window asks you to run first-run setup first. `smcpctl clients detect` and `--dry-run --json` are also available in a terminal.
+The commands run in your home directory, so they change only user-scope and managed settings, never a project directory. On an Enforced host the configuration passed is `/etc/smcp/smcp.toml`, which your account cannot read; `smcpctl connect` then reads the client view in `/var/lib/smcp/public` instead, says so on standard error, and points the agent at the published CA certificate, which your account (and so the agent) can read. A failure shows the message, the command and its output, with Copy Details. Without a Gateway configuration the window asks you to run first-run setup first. `smcpctl clients detect` and `--dry-run --json` are also available in a terminal.
 
 ## Tray states
 
@@ -111,7 +111,7 @@ The console window loads the console that `smcpd` serves on the admin listener (
 - **stays on the admin listener.** A link to another site opens in your default browser; other link types are ignored.
 - **has no access to the application.** It has no Tauri permission and can call no application command, so content shown in the console cannot reach the desktop.
 
-For the Linux Enforced profile the state directory is not readable by your account; copy the CA certificate (`/var/lib/smcp/state/tls/ca.crt`, public) to a file you can read and set it in Settings.
+For the Linux Enforced profile the state directory is not readable by your account, so the default CA file is the copy the Gateway publishes, `/var/lib/smcp/public/ca.crt`, when the Standalone one does not exist. An Enforced installation made before v1.3.0 gets that directory when you run `sudo smcpctl install --profile enforced` again (every existing step reports `present`).
 
 ## Approval notifications
 
@@ -147,7 +147,7 @@ The application does not start at login after installation. Turn on **Open the a
 
 ## Links that open the console
 
-The application registers the URL scheme `smcp` (SRS FR-20.28) and accepts only three links:
+The application registers the URL scheme `smcp` (SRS FR-20.28): on macOS in the application's `Info.plist`, on Linux in the desktop entry the `.deb` and `.rpm` install (`MimeType=x-scheme-handler/smcp;`; the AppImage registers nothing unless an AppImage integration tool installs its entry). It accepts only three links:
 
 | Link | Opens |
 |---|---|
@@ -170,6 +170,8 @@ cd src-tauri && cargo test
 ```
 
 The macOS bundle is not signed; macOS asks you to approve it in System Settings, Privacy & Security, Open Anyway. Signed and notarized installers are covered by SRS FR-20.29 (deferred).
+
+A build from source reports version 0.1.0 (`smcp-desktop --version`), the version in `desktop/src-tauri/tauri.conf.json`, and Check for Updates never offers it an update. The release build (`packaging/installers/desktop/build.sh`) sets the release's version, and the installer smoke tests check that the application, the `.dmg`'s `Info.plist` and the `.deb` report it; the `.deb` and `.rpm` carry the version of the `smcp` package (`1.3.0~beta.2` for `v1.3.0-beta.2`), so a later release upgrades a pre-release.
 
 ## Not yet available
 

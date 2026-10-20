@@ -129,6 +129,31 @@ unsafe extern "C-unwind" fn did_receive_challenge(
     }
 }
 
+/// Loads `url` in the web view through WebKit (`loadRequest:`), for the
+/// caller inside `with_webview`, which runs on the main thread holding the
+/// web view. A Tauri navigation from there dispatches back to the main
+/// thread and waits on it; on Linux that stopped the application's event
+/// processing once the console window opened (desktop end-to-end test,
+/// #177), so both platforms load the first page through WebKit directly.
+/// The navigation delegate still decides on the request (on_navigation).
+///
+/// # Safety
+/// `wkwebview` must be a live `WKWebView` pointer, on the main thread.
+pub unsafe fn load(wkwebview: *mut c_void, url: &str) -> Result<(), String> {
+    let wv = NonNull::new(wkwebview as *mut AnyObject).ok_or("no web view")?;
+    let s = NSString::from_str(url);
+    let nsurl: *mut AnyObject = msg_send![class!(NSURL), URLWithString: &*s];
+    if nsurl.is_null() {
+        return Err(format!("not a URL: {url}"));
+    }
+    let req: *mut AnyObject = msg_send![class!(NSURLRequest), requestWithURL: nsurl];
+    if req.is_null() {
+        return Err("the request could not be made".into());
+    }
+    let _navigation: *mut AnyObject = msg_send![wv.as_ptr(), loadRequest: req];
+    Ok(())
+}
+
 /// Adds the challenge handler to the class of the web view's navigation
 /// delegate. Idempotent; fails if the class already has a handler that is
 /// not this one (a wry upgrade that adds its own must be reviewed).

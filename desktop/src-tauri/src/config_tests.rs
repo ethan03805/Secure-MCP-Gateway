@@ -319,3 +319,50 @@ fn single_instance_is_the_first_plugin() {
     assert!(body.contains("deeplink::on_second_start(&argv)"));
     assert!(body.contains("open_console(app,page)"));
 }
+
+/// The version the application reports (`smcp-desktop --version`, and the
+/// one the update check compares) is the configuration's `version`, which
+/// the release build replaces with the tag's (build.sh passes it with
+/// `--config`; scripts/desktop-smoke.sh checks the built installers).
+#[test]
+fn reported_version_is_the_configuration_version() {
+    claims::partial(&["FR-20.11"]);
+    let want = conf()["version"].as_str().unwrap().to_string();
+    assert_eq!(crate::app_version(), want);
+    let build = include_str!("../../../packaging/installers/desktop/build.sh");
+    assert!(
+        build.contains("{version: $v,") && build.contains("--config \"$work/tauri.json\""),
+        "build.sh no longer sets the application's version"
+    );
+}
+
+/// FR-20.28 on Linux: the desktop entry of the `.deb` and `.rpm` registers
+/// the `smcp` scheme of the configuration and passes the link as the
+/// argument the application reads (`deeplink::from_args`). Tauri's own
+/// template does this from the configuration; the custom template must
+/// too (the `v1.3.0-beta.2` packages lacked it).
+#[test]
+fn linux_desktop_entry_registers_the_link_scheme() {
+    claims::partial(&["FR-20.28"]);
+    let entry = include_str!("../../../packaging/installers/desktop/smcp-desktop.desktop");
+    let schemes = conf()["plugins"]["deep-link"]["desktop"]["schemes"].clone();
+    assert_eq!(schemes, serde_json::json!(["smcp"]));
+    assert!(entry.lines().any(|l| l == "MimeType=x-scheme-handler/smcp;"), "{entry}");
+    assert!(entry.lines().any(|l| l == "Exec={{exec}} %u"), "{entry}");
+}
+
+/// Inside `with_webview` the console window loads its first page through
+/// WebKit, on macOS as on Linux, not through a Tauri navigation, which
+/// waits on the main thread the closure holds (#177).
+#[test]
+fn console_first_page_loads_through_webkit() {
+    claims::partial(&["FR-20.6"]);
+    let at = LIB
+        .find("let _ = w.with_webview(")
+        .expect("with_webview in open_console");
+    let end = LIB[at..].find("\n    });").expect("end of with_webview") + at;
+    let body = &LIB[at..end];
+    assert!(!body.contains(".navigate("), "a Tauri navigation inside with_webview");
+    assert!(body.contains("tlshook_macos::load("));
+    assert!(body.contains("WebViewExt::load_uri("));
+}

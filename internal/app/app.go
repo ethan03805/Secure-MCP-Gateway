@@ -187,6 +187,7 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	if a.TLS.LeafRotated {
 		o.Log.Warn("listener certificate reissued", "not_after", a.TLS.LeafNotAfter)
 	}
+	PublishClientView(cfg, o.Log)
 	// E-05: the active signed revision of the Policy Store, or the policy
 	// file imported as the first revision. A revision that does not verify
 	// starts the Gateway fail-closed (SR-1.1-2).
@@ -490,4 +491,24 @@ func (a *App) recordStop(detail any) {
 // stops the rest without writing the stop event again.
 func (a *App) RecordStop(reason string) {
 	a.stopOnce.Do(func() { a.recordStop(map[string]any{"reason": reason}) })
+}
+
+// PublishClientView writes the Enforced profile's client view (the CA
+// trust bundle and client.json in CP-46 public/, config.ClientView) when it
+// changed. A failure is logged and does not stop the Gateway: the view
+// only serves the desktop application and client setup run by users, and
+// an installation made before the directory existed gets it when
+// `smcpctl install --profile enforced` runs again.
+func PublishClientView(cfg *config.Config, log *slog.Logger) {
+	dir := cfg.PublicDir()
+	if dir == "" {
+		return
+	}
+	wrote, err := keys.PublishPublic(cfg.State.Dir, dir, cfg.ClientView(dir))
+	switch {
+	case err != nil:
+		log.Warn("client view not published: users' desktop application and smcpctl connect cannot read the Gateway CA certificate; run smcpctl install --profile enforced again to create the directory", "dir", dir, "err", err)
+	case wrote:
+		log.Info("client view published", "dir", dir)
+	}
 }
