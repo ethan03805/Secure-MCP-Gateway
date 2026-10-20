@@ -32,8 +32,11 @@ pub fn parse(link: &str) -> Option<Page> {
     // Exact, case-sensitive prefix: no `SMCP:`, no `smcp:/approvals`.
     let rest = link.strip_prefix("smcp://")?;
     match rest {
-        "console" => Some(Page::Home),
-        "approvals" => Some(Page::Approvals),
+        // Windows hands a link whose path is empty to the application with
+        // a "/" added (smcp://approvals becomes smcp://approvals/), which is
+        // the same URL.
+        "console" | "console/" => Some(Page::Home),
+        "approvals" | "approvals/" => Some(Page::Approvals),
         _ => {
             let id = rest.strip_prefix("approvals/")?;
             ApprovalId::parse(id).map(Page::Approval)
@@ -87,6 +90,9 @@ mod tests {
         claims::partial(&["FR-20.28"]);
         assert_eq!(parse("smcp://console"), Some(Page::Home));
         assert_eq!(parse("smcp://approvals"), Some(Page::Approvals));
+        // The same links as Windows passes them, with the empty path as "/".
+        assert_eq!(parse("smcp://console/"), Some(Page::Home));
+        assert_eq!(parse("smcp://approvals/"), Some(Page::Approvals));
         let p = parse(&format!("smcp://approvals/{ID}")).unwrap();
         assert_eq!(p.path(), format!("/approvals/{ID}"));
         // Upper-case hex is the same UUID.
@@ -98,12 +104,13 @@ mod tests {
         claims::partial(&["FR-20.28", "SR-2.6-2"]);
         let long = format!("smcp://approvals/{}", "a".repeat(64 * 1024));
         for bad in [
-            "smcp://console/",
+            "smcp://console//",
             "smcp://console?next=https://evil.example/",
             "smcp://approvals?approve=1",
             "smcp://approvals#x",
-            "smcp://approvals/",
+            "smcp://approvals//",
             "smcp://approvals/not-a-uuid",
+            "smcp://approvals/0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b/",
             "smcp://approvals/0b0e5c1e2f0e4a7b9a516d5f8e7c1a2b",
             "smcp://approvals/0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b/approve",
             "smcp://approvals/0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b?decision=allow",

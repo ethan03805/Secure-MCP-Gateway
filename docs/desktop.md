@@ -159,7 +159,7 @@ The application registers the URL scheme `smcp` (SRS FR-20.28): on macOS in the 
 
 The scheme is registered by the application's `Info.plist` on macOS, its desktop entry on Linux, and on Windows by the `.msi` for the computer (`HKLM\Software\Classes\smcp`), which starts `smcp-desktop.exe` with the link. When the application already runs, the new start hands the link to the running copy and ends.
 
-An accepted link only brings the console window to that page; you still sign in and decide there. Every other link, including one with a query string, another path, an ID that is not a UUID or more than 64 characters, is ignored and nothing is sent to the Gateway. Any web page can open a registered link, so a link never approves, denies or changes anything.
+On Windows a link arrives with a `/` after `console` or `approvals` (`smcp://approvals/`), which is the same link and is accepted. An accepted link only brings the console window to that page; you still sign in and decide there. Every other link, including one with a query string, another path, an ID that is not a UUID or more than 64 characters, is ignored and nothing is sent to the Gateway. Any web page can open a registered link, so a link never approves, denies or changes anything.
 
 ## Building from source
 
