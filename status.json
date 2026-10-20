@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T18:24:51Z",
-  "commit": "75873b8b4dd9db5a88f71b42d368d416a0264ad7",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/75873b8b4dd9db5a88f71b42d368d416a0264ad7",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39465018417",
+  "generatedAt": "2026-10-20T19:16:22Z",
+  "commit": "44b4d6018bfd775edaf90caad8405700a07921bc",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/44b4d6018bfd775edaf90caad8405700a07921bc",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39470420944",
   "tests": {
-    "total": 1942,
-    "passed": 1912,
+    "total": 2279,
+    "passed": 2249,
     "failed": 0,
     "skipped": 30,
-    "durationSec": 2051.3,
+    "durationSec": 2055.1,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -48,8 +48,32 @@
         "skipped": 0
       },
       {
+        "name": "desktop/e2e-macos",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "desktop/linux",
-        "passed": 103,
+        "passed": 114,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "desktop/macos",
+        "passed": 113,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "desktop/windows",
+        "passed": 99,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "name": "desktop/windows-arm64",
+        "passed": 99,
         "failed": 0,
         "skipped": 0
       },
@@ -67,7 +91,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "passed": 106,
+        "passed": 119,
         "failed": 0,
         "skipped": 2
       },
@@ -600,7 +624,7 @@
       },
       {
         "name": "cmd/smcpctl",
-        "pct": 45.2
+        "pct": 45.9
       },
       {
         "name": "cmd/smcpd",
@@ -612,7 +636,7 @@
       },
       {
         "name": "internal/adapter",
-        "pct": 72.2
+        "pct": 72.1
       },
       {
         "name": "internal/adminapi",
@@ -632,7 +656,7 @@
       },
       {
         "name": "internal/approval",
-        "pct": 85.3
+        "pct": 85.5
       },
       {
         "name": "internal/audit",
@@ -680,15 +704,15 @@
       },
       {
         "name": "internal/contextforge/bundle",
-        "pct": 70.2
+        "pct": 68.6
       },
       {
         "name": "internal/contextforge/cfharness",
-        "pct": 85.1
+        "pct": 84.7
       },
       {
         "name": "internal/contextforge/cftest",
-        "pct": 70.3
+        "pct": 69.5
       },
       {
         "name": "internal/contextforge/connector",
@@ -704,11 +728,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.5
+        "pct": 91.4
       },
       {
         "name": "internal/egress",
-        "pct": 85
+        "pct": 84.9
       },
       {
         "name": "internal/filterapi",
@@ -720,11 +744,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.9
+        "pct": 83.6
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.8
+        "pct": 80
       },
       {
         "name": "internal/harness",
@@ -860,7 +884,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 80
+        "pct": 81.2
       },
       {
         "name": "internal/versions",
@@ -884,7 +908,7 @@
       },
       {
         "name": "internal/winsvc",
-        "pct": 84.5
+        "pct": 81.7
       },
       {
         "name": "packaging/linux",
@@ -4639,7 +4663,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (75873b8b4dd9, 2026-10-20T18:17:58Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39465017761"
+          "workflow agents-lockdown at main (0d798b0edd54, 2026-10-20T19:05:58Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39476271373"
         ]
       },
       {
@@ -4709,7 +4733,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (75873b8b4dd9, 2026-10-20T18:17:56Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39465017761"
+          "workflow agents at main (0d798b0edd54, 2026-10-20T19:05:56Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39476271373"
         ]
       },
       {
@@ -6938,8 +6962,29 @@
       {
         "id": "FR-20.1",
         "element": "E-34",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "desktop/linux.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper",
+          "desktop/linux.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/linux.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/linux.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/linux.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener",
+          "desktop/macos.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper",
+          "desktop/macos.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/macos.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/macos.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/macos.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener",
+          "desktop/windows-arm64.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper",
+          "desktop/windows-arm64.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/windows-arm64.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/windows-arm64.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/windows-arm64.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener",
+          "desktop/windows.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper",
+          "desktop/windows.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/windows.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/windows.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/windows.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -6953,7 +6998,28 @@
           "desktop/linux.state::tests::accessible_names_state_the_state",
           "desktop/linux.state::tests::six_states_from_metrics_and_service",
           "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced",
-          "desktop/linux.state::tests::start_stop_restart_follow_the_service"
+          "desktop/linux.state::tests::start_stop_restart_follow_the_service",
+          "desktop/macos.icons::tests::distinct_icons",
+          "desktop/macos.icons::tests::template_icons_differ_by_silhouette",
+          "desktop/macos.service::tests::status_from_the_service_manager",
+          "desktop/macos.state::tests::accessible_names_state_the_state",
+          "desktop/macos.state::tests::six_states_from_metrics_and_service",
+          "desktop/macos.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/macos.state::tests::start_stop_restart_follow_the_service",
+          "desktop/windows-arm64.icons::tests::distinct_icons",
+          "desktop/windows-arm64.icons::tests::template_icons_differ_by_silhouette",
+          "desktop/windows-arm64.service::tests::status_from_the_service_manager",
+          "desktop/windows-arm64.state::tests::accessible_names_state_the_state",
+          "desktop/windows-arm64.state::tests::six_states_from_metrics_and_service",
+          "desktop/windows-arm64.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/windows-arm64.state::tests::start_stop_restart_follow_the_service",
+          "desktop/windows.icons::tests::distinct_icons",
+          "desktop/windows.icons::tests::template_icons_differ_by_silhouette",
+          "desktop/windows.service::tests::status_from_the_service_manager",
+          "desktop/windows.state::tests::accessible_names_state_the_state",
+          "desktop/windows.state::tests::six_states_from_metrics_and_service",
+          "desktop/windows.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/windows.state::tests::start_stop_restart_follow_the_service"
         ],
         "target": "v1.3.0"
       },
@@ -6962,11 +7028,39 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestServiceActions",
+          "cmd/smcpctl.TestServiceStatusPerPlatform",
+          "cmd/smcpctl.TestServiceWin32ExitCode",
           "desktop/linux.service::tests::detects_the_unit_smcpctl_installed",
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
           "desktop/linux.service::tests::reports_outcome_and_error_text_within_30_seconds",
           "desktop/linux.service::tests::status_from_the_service_manager",
-          "desktop/linux.service::tests::the_system_runner_runs_without_a_shell_and_times_out"
+          "desktop/linux.service::tests::the_system_runner_runs_without_a_shell_and_times_out",
+          "desktop/linux.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/linux.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/linux.service::tests::windows_failures_carry_the_service_managers_text",
+          "desktop/macos.service::tests::detects_the_unit_smcpctl_installed",
+          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/macos.service::tests::reports_outcome_and_error_text_within_30_seconds",
+          "desktop/macos.service::tests::status_from_the_service_manager",
+          "desktop/macos.service::tests::the_system_runner_runs_without_a_shell_and_times_out",
+          "desktop/macos.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/macos.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/macos.service::tests::windows_failures_carry_the_service_managers_text",
+          "desktop/windows-arm64.service::tests::detects_the_unit_smcpctl_installed",
+          "desktop/windows-arm64.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/windows-arm64.service::tests::reports_outcome_and_error_text_within_30_seconds",
+          "desktop/windows-arm64.service::tests::status_from_the_service_manager",
+          "desktop/windows-arm64.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/windows-arm64.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/windows-arm64.service::tests::windows_failures_carry_the_service_managers_text",
+          "desktop/windows.service::tests::detects_the_unit_smcpctl_installed",
+          "desktop/windows.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/windows.service::tests::reports_outcome_and_error_text_within_30_seconds",
+          "desktop/windows.service::tests::status_from_the_service_manager",
+          "desktop/windows.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/windows.service::tests::windows_detects_the_per_user_and_the_machine_installation",
+          "desktop/windows.service::tests::windows_failures_carry_the_service_managers_text"
         ],
         "target": "v1.3.0"
       },
@@ -6982,7 +7076,31 @@
           "desktop/linux.state::tests::poll_a_live_endpoint_then_lose_it",
           "desktop/linux.state::tests::six_states_from_metrics_and_service",
           "desktop/linux.state::tests::stale_data_is_unreachable_never_healthy",
-          "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced"
+          "desktop/linux.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/macos.health::tests::fetches_over_loopback_only",
+          "desktop/macos.health::tests::parses_the_desktop_gauges",
+          "desktop/macos.settings::tests::defaults_are_cp03_and_cp51_and_metrics_must_be_loopback",
+          "desktop/macos.state::tests::not_enforced_label_unless_the_exposition_says_enforced",
+          "desktop/macos.state::tests::poll_a_live_endpoint_then_lose_it",
+          "desktop/macos.state::tests::six_states_from_metrics_and_service",
+          "desktop/macos.state::tests::stale_data_is_unreachable_never_healthy",
+          "desktop/macos.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/windows-arm64.health::tests::fetches_over_loopback_only",
+          "desktop/windows-arm64.health::tests::parses_the_desktop_gauges",
+          "desktop/windows-arm64.settings::tests::defaults_are_cp03_and_cp51_and_metrics_must_be_loopback",
+          "desktop/windows-arm64.state::tests::not_enforced_label_unless_the_exposition_says_enforced",
+          "desktop/windows-arm64.state::tests::poll_a_live_endpoint_then_lose_it",
+          "desktop/windows-arm64.state::tests::six_states_from_metrics_and_service",
+          "desktop/windows-arm64.state::tests::stale_data_is_unreachable_never_healthy",
+          "desktop/windows-arm64.state::tests::standalone_profile_only_is_running_not_enforced",
+          "desktop/windows.health::tests::fetches_over_loopback_only",
+          "desktop/windows.health::tests::parses_the_desktop_gauges",
+          "desktop/windows.settings::tests::defaults_are_cp03_and_cp51_and_metrics_must_be_loopback",
+          "desktop/windows.state::tests::not_enforced_label_unless_the_exposition_says_enforced",
+          "desktop/windows.state::tests::poll_a_live_endpoint_then_lose_it",
+          "desktop/windows.state::tests::six_states_from_metrics_and_service",
+          "desktop/windows.state::tests::stale_data_is_unreachable_never_healthy",
+          "desktop/windows.state::tests::standalone_profile_only_is_running_not_enforced"
         ],
         "target": "v1.3.0"
       },
@@ -6993,6 +7111,9 @@
         "tests": [
           "desktop/e2e-linux.e2e::linux::metrics_after_setup",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/windows-arm64.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/windows.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "internal/e2e.TestDesktopMetricsOnRunningGateway",
           "internal/metrics.TestDesktopGauges",
           "internal/metrics.TestProfileGauges"
@@ -7005,9 +7126,19 @@
         "status": "partial",
         "tests": [
           "desktop/e2e-linux.e2e::linux::console_window",
+          "desktop/e2e-macos.e2e::macos::console_window",
           "desktop/linux.config_tests::console_first_page_loads_through_webkit",
           "desktop/linux.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/linux.settings::tests::admin_origin_is_https_origin_only"
+          "desktop/linux.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/macos.config_tests::console_first_page_loads_through_webkit",
+          "desktop/macos.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/macos.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/windows-arm64.config_tests::console_first_page_loads_through_webkit",
+          "desktop/windows-arm64.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/windows-arm64.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/windows.config_tests::console_first_page_loads_through_webkit",
+          "desktop/windows.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/windows.settings::tests::admin_origin_is_https_origin_only"
         ],
         "target": "v1.3.0"
       },
@@ -7020,7 +7151,22 @@
           "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::no_notice_while_notifications_are_off",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count"
+          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/macos.console::tests::approvals_open_at_g13",
+          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/macos.notify::tests::no_notice_while_notifications_are_off",
+          "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/windows-arm64.console::tests::approvals_open_at_g13",
+          "desktop/windows-arm64.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/windows-arm64.notify::tests::no_notice_while_notifications_are_off",
+          "desktop/windows-arm64.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/windows-arm64.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/windows.console::tests::approvals_open_at_g13",
+          "desktop/windows.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/windows.notify::tests::no_notice_while_notifications_are_off",
+          "desktop/windows.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/windows.notify::tests::the_text_is_fixed_except_for_the_count"
         ],
         "target": "v1.3.0"
       },
@@ -7036,7 +7182,23 @@
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only"
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/macos.setup::tests::offered_only_without_a_configuration",
+          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/windows-arm64.setup::tests::offered_only_without_a_configuration",
+          "desktop/windows-arm64.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/windows-arm64.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/windows-arm64.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/windows-arm64.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/windows.setup::tests::offered_only_without_a_configuration",
+          "desktop/windows.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/windows.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/windows.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/windows.setup::tests::smcpctl_is_found_in_fixed_places_only"
         ],
         "target": "v1.3.0"
       },
@@ -7050,7 +7212,14 @@
           "desktop/e2e-linux.e2e::linux::setup_profile_offer",
           "desktop/linux.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
           "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
-          "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one"
+          "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one",
+          "desktop/macos.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
+          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/macos.setup::tests::the_prerequisite_check_names_each_missing_one",
+          "desktop/windows-arm64.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/windows-arm64.setup::tests::the_prerequisite_check_names_each_missing_one",
+          "desktop/windows.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/windows.setup::tests::the_prerequisite_check_names_each_missing_one"
         ],
         "target": "v1.3.0"
       },
@@ -7067,7 +7236,21 @@
           "desktop/linux.clients::tests::detection_and_previews_parse",
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
           "desktop/linux.clients::tests::only_listed_client_ids_are_used",
-          "desktop/linux.setup::tests::enforced_configuration_in_an_unsearchable_directory_is_found"
+          "desktop/linux.setup::tests::enforced_configuration_in_an_unsearchable_directory_is_found",
+          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/macos.clients::tests::commands_run_in_the_given_directory",
+          "desktop/macos.clients::tests::detection_and_previews_parse",
+          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
+          "desktop/macos.clients::tests::only_listed_client_ids_are_used",
+          "desktop/macos.setup::tests::enforced_configuration_in_an_unsearchable_directory_is_found",
+          "desktop/windows-arm64.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/windows-arm64.clients::tests::detection_and_previews_parse",
+          "desktop/windows-arm64.clients::tests::failures_are_explained_with_their_code",
+          "desktop/windows-arm64.clients::tests::only_listed_client_ids_are_used",
+          "desktop/windows.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/windows.clients::tests::detection_and_previews_parse",
+          "desktop/windows.clients::tests::failures_are_explained_with_their_code",
+          "desktop/windows.clients::tests::only_listed_client_ids_are_used"
         ],
         "target": "v1.3.0"
       },
@@ -7083,7 +7266,31 @@
           "desktop/linux.release::tests::parses_a_stable_release_and_skips_prereleases",
           "desktop/linux.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
           "desktop/linux.settings::tests::update_checks_default_on_and_older_files_load",
-          "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once"
+          "desktop/linux.updates::tests::manual_check_reports_newer_latest_and_offline_once",
+          "desktop/macos.config_tests::reported_version_is_the_configuration_version",
+          "desktop/macos.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
+          "desktop/macos.release::tests::offline_check_fails_once_without_a_loop",
+          "desktop/macos.release::tests::only_https_or_loopback_http",
+          "desktop/macos.release::tests::parses_a_stable_release_and_skips_prereleases",
+          "desktop/macos.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
+          "desktop/macos.settings::tests::update_checks_default_on_and_older_files_load",
+          "desktop/macos.updates::tests::manual_check_reports_newer_latest_and_offline_once",
+          "desktop/windows-arm64.config_tests::reported_version_is_the_configuration_version",
+          "desktop/windows-arm64.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
+          "desktop/windows-arm64.release::tests::offline_check_fails_once_without_a_loop",
+          "desktop/windows-arm64.release::tests::only_https_or_loopback_http",
+          "desktop/windows-arm64.release::tests::parses_a_stable_release_and_skips_prereleases",
+          "desktop/windows-arm64.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
+          "desktop/windows-arm64.settings::tests::update_checks_default_on_and_older_files_load",
+          "desktop/windows-arm64.updates::tests::manual_check_reports_newer_latest_and_offline_once",
+          "desktop/windows.config_tests::reported_version_is_the_configuration_version",
+          "desktop/windows.release::tests::check_against_a_local_feed_is_anonymous_and_scheduled",
+          "desktop/windows.release::tests::offline_check_fails_once_without_a_loop",
+          "desktop/windows.release::tests::only_https_or_loopback_http",
+          "desktop/windows.release::tests::parses_a_stable_release_and_skips_prereleases",
+          "desktop/windows.release::tests::schedule_is_at_most_once_a_day_and_off_when_disabled",
+          "desktop/windows.settings::tests::update_checks_default_on_and_older_files_load",
+          "desktop/windows.updates::tests::manual_check_reports_newer_latest_and_offline_once"
         ],
         "target": "v1.3.0"
       },
@@ -7098,7 +7305,20 @@
           "desktop/linux.upgrade::tests::installation_comes_from_the_service_definition",
           "desktop/linux.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
           "desktop/linux.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
-          "desktop/linux.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin"
+          "desktop/linux.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin",
+          "desktop/linux.upgrade::tests::windows_installations_are_not_upgraded_here",
+          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/macos.upgrade::tests::argv_is_fixed_and_carries_no_passphrase",
+          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/macos.upgrade::tests::installation_comes_from_the_service_definition",
+          "desktop/macos.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
+          "desktop/macos.upgrade::tests::run_fixed_kills_at_the_timeout_and_refuses_relative_programs",
+          "desktop/macos.upgrade::tests::runs_smcpctl_upgrade_with_the_passphrase_on_stdin",
+          "desktop/macos.upgrade::tests::windows_installations_are_not_upgraded_here",
+          "desktop/windows-arm64.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
+          "desktop/windows-arm64.upgrade::tests::windows_installations_are_not_upgraded_here",
+          "desktop/windows.upgrade::tests::outcomes_report_a_rollback_as_a_failure_with_the_running_version",
+          "desktop/windows.upgrade::tests::windows_installations_are_not_upgraded_here"
         ],
         "target": "v1.3.0"
       },
@@ -7114,7 +7334,29 @@
           "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/linux.release::tests::downloads_are_bounded_and_new_files",
           "desktop/linux.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
-          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one"
+          "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/macos.config_tests::no_updater_or_shell_plugin",
+          "desktop/macos.installer::tests::appimage_is_replaced_atomically_and_executable",
+          "desktop/macos.installer::tests::detects_the_installation_kind",
+          "desktop/macos.installer::tests::picks_the_installer_of_the_kind_that_installed_the_app",
+          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/macos.release::tests::downloads_are_bounded_and_new_files",
+          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/windows-arm64.config_tests::no_updater_or_shell_plugin",
+          "desktop/windows-arm64.installer::tests::detects_the_installation_kind",
+          "desktop/windows-arm64.installer::tests::picks_the_installer_of_the_kind_that_installed_the_app",
+          "desktop/windows-arm64.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/windows-arm64.release::tests::downloads_are_bounded_and_new_files",
+          "desktop/windows-arm64.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/windows-arm64.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/windows.config_tests::no_updater_or_shell_plugin",
+          "desktop/windows.installer::tests::detects_the_installation_kind",
+          "desktop/windows.installer::tests::picks_the_installer_of_the_kind_that_installed_the_app",
+          "desktop/windows.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/windows.release::tests::downloads_are_bounded_and_new_files",
+          "desktop/windows.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/windows.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one"
         ],
         "target": "v1.3.0"
       },
@@ -7127,7 +7369,22 @@
           "desktop/linux.autostart::tests::off_until_turned_on_and_off_again",
           "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/linux.config_tests::single_instance_is_the_first_plugin",
-          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing"
+          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/macos.autostart::tests::entries_name_this_program_only",
+          "desktop/macos.autostart::tests::off_until_turned_on_and_off_again",
+          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/macos.config_tests::single_instance_is_the_first_plugin",
+          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/windows-arm64.autostart::tests::entries_name_this_program_only",
+          "desktop/windows-arm64.autostart::tests::off_until_turned_on_and_off_again",
+          "desktop/windows-arm64.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/windows-arm64.config_tests::single_instance_is_the_first_plugin",
+          "desktop/windows-arm64.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/windows.autostart::tests::entries_name_this_program_only",
+          "desktop/windows.autostart::tests::off_until_turned_on_and_off_again",
+          "desktop/windows.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/windows.config_tests::single_instance_is_the_first_plugin",
+          "desktop/windows.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing"
         ],
         "target": "v1.3.0"
       },
@@ -7155,7 +7412,9 @@
           "cmd/smcpctl.TestMacPkgBuildScript",
           "cmd/smcpctl.TestMacPkgLinuxBuildScript",
           "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
-          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path"
+          "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
+          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path"
         ],
         "target": "v1.3.0"
       },
@@ -7175,15 +7434,30 @@
         "tests": [
           "desktop/linux.commands::tests::bundled_commands_are_found_with_their_versions",
           "desktop/linux.commands::tests::own_directory_first_then_fixed_and_never_path",
-          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only"
+          "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/macos.commands::tests::bundled_commands_are_found_with_their_versions",
+          "desktop/macos.commands::tests::own_directory_first_then_fixed_and_never_path",
+          "desktop/macos.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/windows-arm64.setup::tests::enforced_is_offered_on_linux_packages_only",
+          "desktop/windows.setup::tests::enforced_is_offered_on_linux_packages_only"
         ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-20.20",
         "element": "E-35",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "cmd/smcpctl.TestDesktopMsiBuildAndRelease",
+          "desktop/linux.commands::path_tests::verbatim_drive_paths_lose_their_prefix",
+          "desktop/linux.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper",
+          "desktop/macos.commands::path_tests::verbatim_drive_paths_lose_their_prefix",
+          "desktop/macos.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper",
+          "desktop/windows-arm64.commands::path_tests::verbatim_drive_paths_lose_their_prefix",
+          "desktop/windows-arm64.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper",
+          "desktop/windows.commands::path_tests::verbatim_drive_paths_lose_their_prefix",
+          "desktop/windows.config_tests::the_windows_installer_embeds_the_webview2_bootstrapper"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7215,6 +7489,7 @@
         "element": "E-35",
         "status": "partial",
         "tests": [
+          "cmd/smcpctl.TestDesktopMsiBuildAndRelease",
           "cmd/smcpctl.TestInstallersInChecksumFile",
           "cmd/smcpctl.TestPackageFileNamesAreAssetNames"
         ],
@@ -7257,12 +7532,31 @@
         "status": "partial",
         "tests": [
           "desktop/e2e-linux.e2e::linux::deep_links",
+          "desktop/e2e-macos.e2e::macos::deep_links",
           "desktop/linux.config_tests::linux_desktop_entry_registers_the_link_scheme",
           "desktop/linux.config_tests::only_the_smcp_scheme_is_registered",
           "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/linux.deeplink::tests::accepts_exactly_the_three_forms",
           "desktop/linux.deeplink::tests::ignores_every_other_link",
-          "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
+          "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
+          "desktop/macos.config_tests::linux_desktop_entry_registers_the_link_scheme",
+          "desktop/macos.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/macos.deeplink::tests::accepts_exactly_the_three_forms",
+          "desktop/macos.deeplink::tests::ignores_every_other_link",
+          "desktop/macos.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
+          "desktop/windows-arm64.config_tests::linux_desktop_entry_registers_the_link_scheme",
+          "desktop/windows-arm64.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/windows-arm64.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/windows-arm64.deeplink::tests::accepts_exactly_the_three_forms",
+          "desktop/windows-arm64.deeplink::tests::ignores_every_other_link",
+          "desktop/windows-arm64.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
+          "desktop/windows.config_tests::linux_desktop_entry_registers_the_link_scheme",
+          "desktop/windows.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/windows.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
+          "desktop/windows.deeplink::tests::accepts_exactly_the_three_forms",
+          "desktop/windows.deeplink::tests::ignores_every_other_link",
+          "desktop/windows.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
         ],
         "target": "v1.3.0"
       },
@@ -7280,7 +7574,10 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
-          "desktop/linux.intro::tests::shows_until_completed_or_skipped"
+          "desktop/linux.intro::tests::shows_until_completed_or_skipped",
+          "desktop/macos.intro::tests::shows_until_completed_or_skipped",
+          "desktop/windows-arm64.intro::tests::shows_until_completed_or_skipped",
+          "desktop/windows.intro::tests::shows_until_completed_or_skipped"
         ],
         "target": "v1.3.0"
       },
@@ -7289,7 +7586,10 @@
         "element": "E-34",
         "status": "partial",
         "tests": [
-          "desktop/linux.intro::tests::only_the_flag_is_stored"
+          "desktop/linux.intro::tests::only_the_flag_is_stored",
+          "desktop/macos.intro::tests::only_the_flag_is_stored",
+          "desktop/windows-arm64.intro::tests::only_the_flag_is_stored",
+          "desktop/windows.intro::tests::only_the_flag_is_stored"
         ],
         "target": "v1.3.0"
       },
@@ -7313,7 +7613,13 @@
         "status": "partial",
         "tests": [
           "desktop/linux.explain::tests::every_state_has_an_explanation",
-          "desktop/linux.explain::tests::status_lines_name_the_state_and_one_sentence"
+          "desktop/linux.explain::tests::status_lines_name_the_state_and_one_sentence",
+          "desktop/macos.explain::tests::every_state_has_an_explanation",
+          "desktop/macos.explain::tests::status_lines_name_the_state_and_one_sentence",
+          "desktop/windows-arm64.explain::tests::every_state_has_an_explanation",
+          "desktop/windows-arm64.explain::tests::status_lines_name_the_state_and_one_sentence",
+          "desktop/windows.explain::tests::every_state_has_an_explanation",
+          "desktop/windows.explain::tests::status_lines_name_the_state_and_one_sentence"
         ],
         "target": "v1.3.0"
       },
@@ -7332,7 +7638,19 @@
           "desktop/linux.clients::tests::failures_are_explained_with_their_code",
           "desktop/linux.setup::tests::passwords_follow_smcpctl_rules",
           "desktop/linux.setup::tests::progress_follows_the_two_steps_and_explains_failures",
-          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue"
+          "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/macos.clients::tests::failures_are_explained_with_their_code",
+          "desktop/macos.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/macos.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/windows-arm64.clients::tests::failures_are_explained_with_their_code",
+          "desktop/windows-arm64.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/windows-arm64.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/windows-arm64.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/windows.clients::tests::failures_are_explained_with_their_code",
+          "desktop/windows.setup::tests::passwords_follow_smcpctl_rules",
+          "desktop/windows.setup::tests::progress_follows_the_two_steps_and_explains_failures",
+          "desktop/windows.updates::tests::every_message_code_is_in_the_catalogue"
         ],
         "target": "v1.3.0"
       },
@@ -7343,6 +7661,12 @@
         "tests": [
           "desktop/linux.explain::tests::every_state_has_an_explanation",
           "desktop/linux.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/macos.explain::tests::every_state_has_an_explanation",
+          "desktop/macos.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/windows-arm64.explain::tests::every_state_has_an_explanation",
+          "desktop/windows-arm64.updates::tests::every_message_code_is_in_the_catalogue",
+          "desktop/windows.explain::tests::every_state_has_an_explanation",
+          "desktop/windows.updates::tests::every_message_code_is_in_the_catalogue",
           "internal/edge.TestMessageCatalogue"
         ],
         "target": "v1.3.0"
@@ -7583,7 +7907,7 @@
         "element": "E-33",
         "status": "partial",
         "tests": [
-          "workflow agents-windows at main (75873b8b4dd9, 2026-10-20T18:18:01Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39465017761"
+          "workflow agents-windows at main (0d798b0edd54, 2026-10-20T19:06:00Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39476271373"
         ],
         "target": "v1.3.0"
       },
@@ -7855,6 +8179,9 @@
         "tests": [
           "cmd/smcpctl.TestBootstrapContextForgeChoice",
           "desktop/linux.contextforge::tests::flag_only_when_chosen",
+          "desktop/macos.contextforge::tests::flag_only_when_chosen",
+          "desktop/windows-arm64.contextforge::tests::flag_only_when_chosen",
+          "desktop/windows.contextforge::tests::flag_only_when_chosen",
           "internal/contextforge/connector.TestHostedImportNeedsBundledInstance",
           "internal/library.TestHostedAdmission"
         ],
@@ -8101,7 +8428,16 @@
           "cmd/smcpctl.TestContextForgeChoice",
           "desktop/linux.contextforge::tests::flag_only_when_chosen",
           "desktop/linux.contextforge::tests::progress_reports_the_choice_off_by_default",
-          "desktop/linux.contextforge::tests::retry_carries_the_choice"
+          "desktop/linux.contextforge::tests::retry_carries_the_choice",
+          "desktop/macos.contextforge::tests::flag_only_when_chosen",
+          "desktop/macos.contextforge::tests::progress_reports_the_choice_off_by_default",
+          "desktop/macos.contextforge::tests::retry_carries_the_choice",
+          "desktop/windows-arm64.contextforge::tests::flag_only_when_chosen",
+          "desktop/windows-arm64.contextforge::tests::progress_reports_the_choice_off_by_default",
+          "desktop/windows-arm64.contextforge::tests::retry_carries_the_choice",
+          "desktop/windows.contextforge::tests::flag_only_when_chosen",
+          "desktop/windows.contextforge::tests::progress_reports_the_choice_off_by_default",
+          "desktop/windows.contextforge::tests::retry_carries_the_choice"
         ],
         "target": "v1.3.0"
       },
@@ -8118,7 +8454,13 @@
         "status": "partial",
         "tests": [
           "desktop/linux.config_tests::no_gateway_secret_or_control_api_in_the_application",
-          "desktop/linux.setup::tests::offered_only_without_a_configuration"
+          "desktop/linux.setup::tests::offered_only_without_a_configuration",
+          "desktop/macos.config_tests::no_gateway_secret_or_control_api_in_the_application",
+          "desktop/macos.setup::tests::offered_only_without_a_configuration",
+          "desktop/windows-arm64.config_tests::no_gateway_secret_or_control_api_in_the_application",
+          "desktop/windows-arm64.setup::tests::offered_only_without_a_configuration",
+          "desktop/windows.config_tests::no_gateway_secret_or_control_api_in_the_application",
+          "desktop/windows.setup::tests::offered_only_without_a_configuration"
         ],
         "target": "v1.3.0"
       },
@@ -8131,7 +8473,17 @@
           "desktop/linux.console::tests::the_window_is_incognito_without_devtools",
           "desktop/linux.settings::tests::saved_settings_are_private_and_round_trip",
           "desktop/linux.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
-          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments"
+          "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.console::tests::the_window_is_incognito_without_devtools",
+          "desktop/macos.settings::tests::saved_settings_are_private_and_round_trip",
+          "desktop/macos.setup::tests::a_run_passes_files_streams_output_and_deletes_the_files",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/windows-arm64.console::tests::the_window_is_incognito_without_devtools",
+          "desktop/windows-arm64.settings::tests::saved_settings_are_private_and_round_trip",
+          "desktop/windows-arm64.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/windows.console::tests::the_window_is_incognito_without_devtools",
+          "desktop/windows.settings::tests::saved_settings_are_private_and_round_trip",
+          "desktop/windows.setup::tests::passwords_go_in_private_files_never_in_arguments"
         ],
         "target": "v1.3.0"
       },
@@ -8145,7 +8497,25 @@
           "desktop/linux.config_tests::commands_are_declared_and_registered_once",
           "desktop/linux.config_tests::no_updater_or_shell_plugin",
           "desktop/linux.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
-          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only"
+          "desktop/linux.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/macos.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/macos.clients::tests::only_listed_client_ids_are_used",
+          "desktop/macos.config_tests::commands_are_declared_and_registered_once",
+          "desktop/macos.config_tests::no_updater_or_shell_plugin",
+          "desktop/macos.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
+          "desktop/macos.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/windows-arm64.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/windows-arm64.clients::tests::only_listed_client_ids_are_used",
+          "desktop/windows-arm64.config_tests::commands_are_declared_and_registered_once",
+          "desktop/windows-arm64.config_tests::no_updater_or_shell_plugin",
+          "desktop/windows-arm64.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
+          "desktop/windows-arm64.setup::tests::smcpctl_is_found_in_fixed_places_only",
+          "desktop/windows.clients::tests::commands_are_fixed_and_use_the_connect_alias",
+          "desktop/windows.clients::tests::only_listed_client_ids_are_used",
+          "desktop/windows.config_tests::commands_are_declared_and_registered_once",
+          "desktop/windows.config_tests::no_updater_or_shell_plugin",
+          "desktop/windows.config_tests::one_capability_per_bundled_window_and_none_for_the_console",
+          "desktop/windows.setup::tests::smcpctl_is_found_in_fixed_places_only"
         ],
         "target": "v1.3.0"
       },
@@ -8156,7 +8526,16 @@
         "tests": [
           "desktop/linux.config_tests::bundled_pages_are_self_only",
           "desktop/linux.console::tests::the_window_stays_on_the_admin_origin",
-          "desktop/linux.settings::tests::admin_origin_is_https_origin_only"
+          "desktop/linux.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/macos.config_tests::bundled_pages_are_self_only",
+          "desktop/macos.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/macos.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/windows-arm64.config_tests::bundled_pages_are_self_only",
+          "desktop/windows-arm64.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/windows-arm64.settings::tests::admin_origin_is_https_origin_only",
+          "desktop/windows.config_tests::bundled_pages_are_self_only",
+          "desktop/windows.console::tests::the_window_stays_on_the_admin_origin",
+          "desktop/windows.settings::tests::admin_origin_is_https_origin_only"
         ],
         "target": "v1.3.0"
       },
@@ -8169,7 +8548,22 @@
           "desktop/linux.deeplink::tests::ignores_every_other_link",
           "desktop/linux.notify::tests::activation_only_opens_the_approvals_view",
           "desktop/linux.notify::tests::one_notice_per_increase_with_the_count_only",
-          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count"
+          "desktop/linux.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/macos.console::tests::approvals_open_at_g13",
+          "desktop/macos.deeplink::tests::ignores_every_other_link",
+          "desktop/macos.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/macos.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/macos.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/windows-arm64.console::tests::approvals_open_at_g13",
+          "desktop/windows-arm64.deeplink::tests::ignores_every_other_link",
+          "desktop/windows-arm64.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/windows-arm64.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/windows-arm64.notify::tests::the_text_is_fixed_except_for_the_count",
+          "desktop/windows.console::tests::approvals_open_at_g13",
+          "desktop/windows.deeplink::tests::ignores_every_other_link",
+          "desktop/windows.notify::tests::activation_only_opens_the_approvals_view",
+          "desktop/windows.notify::tests::one_notice_per_increase_with_the_count_only",
+          "desktop/windows.notify::tests::the_text_is_fixed_except_for_the_count"
         ],
         "target": "v1.3.0"
       },
@@ -8181,9 +8575,31 @@
           "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/linux.service::tests::windows_command_lines_follow_the_c_runtime_rules",
+          "desktop/linux.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
           "desktop/linux.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
-          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here"
+          "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/macos.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/macos.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/macos.service::tests::windows_command_lines_follow_the_c_runtime_rules",
+          "desktop/macos.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/macos.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
+          "desktop/macos.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/macos.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here",
+          "desktop/windows-arm64.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/windows-arm64.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/windows-arm64.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/windows-arm64.service::tests::windows_command_lines_follow_the_c_runtime_rules",
+          "desktop/windows-arm64.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/windows-arm64.setup::tests::passwords_go_in_private_files_never_in_arguments",
+          "desktop/windows.autostart::tests::windows_uses_the_run_key_of_the_user",
+          "desktop/windows.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
+          "desktop/windows.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/windows.service::tests::windows_command_lines_follow_the_c_runtime_rules",
+          "desktop/windows.service::tests::windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service",
+          "desktop/windows.setup::tests::passwords_go_in_private_files_never_in_arguments"
         ],
         "target": "v1.3.0"
       },
@@ -8194,11 +8610,43 @@
         "tests": [
           "cmd/smcpctl.TestEnforcedClientViewOnHost",
           "desktop/e2e-linux.e2e::linux::console_window",
+          "desktop/e2e-macos.e2e::macos::console_window",
           "desktop/linux.console::tests::the_error_page_offers_no_way_to_proceed",
           "desktop/linux.tlspin::tests::a_rotation_bundle_trusts_both_cas",
           "desktop/linux.tlspin::tests::accepts_a_certificate_made_by_smcpd",
           "desktop/linux.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
-          "desktop/linux.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing"
+          "desktop/linux.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing",
+          "desktop/linux.tlswebview2::tests::a_page_without_a_checked_certificate_is_refused_at_the_deadline",
+          "desktop/linux.tlswebview2::tests::ipv6_admin_listeners_match_by_host_and_port",
+          "desktop/linux.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/linux.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener",
+          "desktop/macos.console::tests::the_error_page_offers_no_way_to_proceed",
+          "desktop/macos.tlspin::tests::a_rotation_bundle_trusts_both_cas",
+          "desktop/macos.tlspin::tests::accepts_a_certificate_made_by_smcpd",
+          "desktop/macos.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
+          "desktop/macos.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing",
+          "desktop/macos.tlswebview2::tests::a_page_without_a_checked_certificate_is_refused_at_the_deadline",
+          "desktop/macos.tlswebview2::tests::ipv6_admin_listeners_match_by_host_and_port",
+          "desktop/macos.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/macos.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener",
+          "desktop/windows-arm64.console::tests::the_error_page_offers_no_way_to_proceed",
+          "desktop/windows-arm64.tlspin::tests::a_rotation_bundle_trusts_both_cas",
+          "desktop/windows-arm64.tlspin::tests::accepts_a_certificate_made_by_smcpd",
+          "desktop/windows-arm64.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
+          "desktop/windows-arm64.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing",
+          "desktop/windows-arm64.tlswebview2::tests::a_page_without_a_checked_certificate_is_refused_at_the_deadline",
+          "desktop/windows-arm64.tlswebview2::tests::ipv6_admin_listeners_match_by_host_and_port",
+          "desktop/windows-arm64.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/windows-arm64.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener",
+          "desktop/windows.console::tests::the_error_page_offers_no_way_to_proceed",
+          "desktop/windows.tlspin::tests::a_rotation_bundle_trusts_both_cas",
+          "desktop/windows.tlspin::tests::accepts_a_certificate_made_by_smcpd",
+          "desktop/windows.tlspin::tests::accepts_only_the_gateway_ca_and_the_configured_name",
+          "desktop/windows.tlspin::tests::an_empty_or_garbled_bundle_trusts_nothing",
+          "desktop/windows.tlswebview2::tests::a_page_without_a_checked_certificate_is_refused_at_the_deadline",
+          "desktop/windows.tlswebview2::tests::ipv6_admin_listeners_match_by_host_and_port",
+          "desktop/windows.tlswebview2::tests::the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not",
+          "desktop/windows.tlswebview2::tests::the_error_handler_allows_only_the_gateway_ca_at_the_admin_listener"
         ],
         "target": "v1.3.0"
       },
@@ -8422,7 +8870,29 @@
           "desktop/linux.verify::tests::real_release_signature_verifies_with_the_embedded_key",
           "desktop/linux.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
           "desktop/linux.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
-          "desktop/linux.verify::tests::version_rule_refuses_equal_and_older"
+          "desktop/linux.verify::tests::version_rule_refuses_equal_and_older",
+          "desktop/macos.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/macos.updates::tests::gateway_upgrade_runs_smcpctl_and_reports_a_rollback",
+          "desktop/macos.verify::tests::cosign_argv_is_fixed",
+          "desktop/macos.verify::tests::real_cosign_with_the_release_bundle",
+          "desktop/macos.verify::tests::real_release_signature_verifies_with_the_embedded_key",
+          "desktop/macos.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
+          "desktop/macos.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/macos.verify::tests::version_rule_refuses_equal_and_older",
+          "desktop/windows-arm64.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/windows-arm64.verify::tests::cosign_argv_is_fixed",
+          "desktop/windows-arm64.verify::tests::real_cosign_with_the_release_bundle",
+          "desktop/windows-arm64.verify::tests::real_release_signature_verifies_with_the_embedded_key",
+          "desktop/windows-arm64.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
+          "desktop/windows-arm64.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/windows-arm64.verify::tests::version_rule_refuses_equal_and_older",
+          "desktop/windows.updates::tests::app_update_verifies_then_starts_the_installer_of_its_kind",
+          "desktop/windows.verify::tests::cosign_argv_is_fixed",
+          "desktop/windows.verify::tests::real_cosign_with_the_release_bundle",
+          "desktop/windows.verify::tests::real_release_signature_verifies_with_the_embedded_key",
+          "desktop/windows.verify::tests::release_key_matches_install_sh_security_md_and_smcpctl",
+          "desktop/windows.verify::tests::test_feed_refuses_each_tampered_release_and_accepts_a_good_one",
+          "desktop/windows.verify::tests::version_rule_refuses_equal_and_older"
         ],
         "target": "v1.3.0"
       }
@@ -8813,7 +9283,7 @@
       "packages": [
         "desktop"
       ],
-      "note": "Desktop Application (Tauri 2 tray application, planned for v1.3.0). Built for macOS arm64 and Linux x86_64 and arm64: tray states and accessible names from the CP-51 metrics endpoint (\"running, not enforced\" when only the Standalone profile's own cause degrades health), service control through launchd and systemd with fixed argument vectors, the console window loaded from the admin listener with Gateway-CA pinning, no IPC and a non-persistent data store, count-only approval notifications that open G-13, the first-run introduction, first-run setup through smcpctl install with password files, client setup through smcpctl clients detect and connect, update checks against GitHub Releases with minisign, SHA-256 and cosign verification before an installer or smcpctl upgrade runs, smcp:// deep links, single instance and start at login, bundled IBM Plex fonts and template tray icons. The Rust tests send their requirement claims to the status data (claims.rs), and the desktop-e2e (linux) job completes first-run setup against the real binaries under Xvfb. Not built: the Windows 11 application (Service Control Manager control, WebView2) and the bundled ContextForge choice in first-run setup (FR-22.44). Published only in the pre-release v1.3.0-beta.1 (Linux packages and AppImage, macOS .dmg). Planned for v1.3.0 (not counted above): 35 allocated, 26 partly verified, 9 with no claim yet; what each lacks is in the gap list."
+      "note": "Desktop Application (Tauri 2 tray application, planned for v1.3.0). Built for macOS arm64, Linux x86_64 and arm64, and Windows 11 x64 and arm64 (WebView2): tray states and accessible names from the CP-51 metrics endpoint (\"running, not enforced\" when only the Standalone profile's own cause degrades health), service control through launchd and systemd with fixed argument vectors and on Windows through smcpctl service (User Account Control only for the machine-mode service), the console window loaded from the admin listener with Gateway-CA pinning, no IPC and a non-persistent data store, count-only approval notifications that open G-13, the first-run introduction, first-run setup through smcpctl install with password files, client setup through smcpctl clients detect and connect, update checks against GitHub Releases with minisign, SHA-256 and cosign verification before an installer or smcpctl upgrade runs, smcp:// deep links, single instance and start at login, bundled IBM Plex fonts and template tray icons. The Rust tests send their requirement claims to the status data (claims.rs), and the desktop-e2e (linux) job completes first-run setup against the real binaries under Xvfb. Not recorded: the Windows 11 x64 start on a Windows 11 x64 host. Published only in the pre-release v1.3.0-beta.1 (Linux packages and AppImage, macOS .dmg). Planned for v1.3.0 (not counted above): 35 allocated, 26 partly verified, 9 with no claim yet; what each lacks is in the gap list."
     },
     {
       "id": "E-35",
@@ -8823,7 +9293,7 @@
       "packages": [
         "packaging/installers"
       ],
-      "note": "Platform Installers (planned for v1.3.0), without platform code signing and verified with the release minisign signature, Sigstore bundle and SHA-256 checksums. Published since v1.2.0: the smcp .deb and .rpm for amd64 and arm64 (nFPM through GoReleaser; the pre-removal script stops only a system service) and the macOS arm64 command-line .pkg, built on Linux. In the pre-release v1.3.0-beta.1: the smcp-desktop .deb, .rpm and AppImage for amd64 and arm64 and the macOS arm64 .dmg with the application and the commands, ad-hoc signed. On main: the smcp .msi for Windows amd64 and arm64 (WiX Toolset, per machine, no service). installers.yml builds, installs, exercises and removes each on a runner of its platform before the release job (scripts/package-smoke.sh, scripts/desktop-smoke.sh and the Windows smoke steps); a truncated or altered package is refused, installers-broken.yml shows that a broken installer stops the release, and install.sh --package verifies and installs a package. Not built: the smcp-desktop .msi for Windows 11 x64. Planned for v1.3.0 (not counted above): 11 allocated, 8 partly verified, 3 with no claim yet; what each lacks is in the gap list. Platform signing, notarization, MSIX and signed APT and RPM repositories are deferred (Appendix N)."
+      "note": "Platform Installers (planned for v1.3.0), without platform code signing and verified with the release minisign signature, Sigstore bundle and SHA-256 checksums. Published since v1.2.0: the smcp .deb and .rpm for amd64 and arm64 (nFPM through GoReleaser; the pre-removal script stops only a system service) and the macOS arm64 command-line .pkg, built on Linux. In the pre-release v1.3.0-beta.1: the smcp-desktop .deb, .rpm and AppImage for amd64 and arm64 and the macOS arm64 .dmg with the application and the commands, ad-hoc signed. On main: the smcp .msi for Windows amd64 and arm64 (WiX Toolset, per machine, no service). installers.yml builds, installs, exercises and removes each on a runner of its platform before the release job (scripts/package-smoke.sh, scripts/desktop-smoke.sh and the Windows smoke steps); a truncated or altered package is refused, installers-broken.yml shows that a broken installer stops the release, and install.sh --package verifies and installs a package. On main also the smcp-desktop .msi for Windows amd64 and arm64 (Tauri bundler, WiX, WebView2 bootstrapper), installed, started and removed on windows-latest and windows-11-arm by scripts/desktop-msi-smoke.ps1. Planned for v1.3.0 (not counted above): 11 allocated, 8 partly verified, 3 with no claim yet; what each lacks is in the gap list. Platform signing, notarization, MSIX and signed APT and RPM repositories are deferred (Appendix N)."
     },
     {
       "id": "E-36",
@@ -9115,7 +9585,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9150,7 +9620,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:44337: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:39267: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9267,7 +9737,7 @@
     }
   ],
   "acceptance": {
-    "commit": "75873b8b4dd9db5a88f71b42d368d416a0264ad7",
+    "commit": "44b4d6018bfd775edaf90caad8405700a07921bc",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -10241,7 +10711,7 @@
           },
           "windows-user": {
             "result": "not-run",
-            "reason": "the FR-11 latency budgets are set for the reference hardware (docs/reference-hardware.md); this Windows runner measured p95 gateway overhead 75.02 ms and decision 0.000 ms"
+            "reason": "the FR-11 latency budgets are set for the reference hardware (docs/reference-hardware.md); this Windows runner measured p95 gateway overhead 65.93 ms and decision 0.000 ms"
           },
           "wsl2": {
             "result": "not-run",
@@ -10327,18 +10797,18 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "75873b8b4dd9db5a88f71b42d368d416a0264ad7",
-    "generatedAt": "2026-10-20T17:41:34Z",
+    "commit": "44b4d6018bfd775edaf90caad8405700a07921bc",
+    "generatedAt": "2026-10-20T18:25:57Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
       "cpu": "AMD EPYC 9V45 96-Core Processor",
       "goVersion": "go1.26.10",
-      "runner": "GitHub Actions 1000017913",
-      "memoryBytes": 16760344576,
+      "runner": "GitHub Actions 1000018036",
+      "memoryBytes": 16760340480,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 89146376192,
+      "diskFreeBytes": 89146200064,
       "diskDevice": "nvme0n1p1",
       "diskModel": "MSFT NVMe Accelerator v1.0",
       "runnerEnvironment": "github-hosted",
@@ -10362,7 +10832,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.012058,
+        "value": 0.010166,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -10375,7 +10845,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 16.727376,
+        "value": 13.391617,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -10388,19 +10858,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.37276475,
+        "value": 0.38831049999999934,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (6.064 ms, mean of 5.759, 5.959, 6.222, 6.031, 6.225, 6.328, 5.839, 6.147) minus disabled (5.691 ms, mean of 5.929, 5.495, 5.484, 5.866, 5.725, 5.806, 5.542, 5.682), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (5.905 ms, mean of 5.936, 6.141, 5.731, 6.380, 5.903, 5.454, 5.771, 5.926) minus disabled (5.517 ms, mean of 5.687, 5.478, 5.552, 5.583, 5.477, 5.660, 5.385, 5.313), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.9649618405138,
+        "value": 1999.9664845449856,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -10412,7 +10882,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 530.87408,
+        "value": 474.72277,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -10424,12 +10894,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1516.390625,
+        "value": 1509.4375,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m9s after start with no traffic: smcpd (99.4 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1417.0 MiB in 2 processes, process 7082 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m9s after start with no traffic: smcpd (100.3 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1409.1 MiB in 2 processes, process 7082 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
