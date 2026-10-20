@@ -301,5 +301,5 @@ fn single_instance_is_the_first_plugin() {
         .unwrap();
     let body = &compact[at..at + 900];
     assert!(body.contains("deeplink::on_second_start(&argv)"));
-    assert!(body.contains("open_console(&a,page)"));
+    assert!(body.contains("open_console(app,page)"));
 }

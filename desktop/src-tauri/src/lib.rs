@@ -650,8 +650,7 @@ fn notify_approvals(app: &AppHandle, body: &str) {
                 match n.show() {
                     Ok(handle) => handle.wait_for_action(|action| {
                         if notify::opens_approvals(action) {
-                            let a = app.clone();
-                            let _ = app.run_on_main_thread(move || open_console(&a, Page::Approvals));
+                            open_console(&app, Page::Approvals);
                         }
                     }),
                     Err(_) => notify(&app, &body),
@@ -962,15 +961,13 @@ pub fn run() {
             // A deep link opened while the application runs arrives here
             // on Linux and Windows (FR-20.28); a refused link is ignored,
             // and a second start without a link focuses the console window.
-            // The plugin may call this off the main thread, where windows
-            // must not be built.
+            // Tauri dispatches the window operations to the main thread.
             let Some(page) = deeplink::on_second_start(&argv) else {
                 eprintln!("smcp-desktop: second start: link ignored");
                 return;
             };
             eprintln!("smcp-desktop: second start");
-            let a = app.clone();
-            let _ = app.run_on_main_thread(move || open_console(&a, page));
+            open_console(app, page);
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
