@@ -162,7 +162,23 @@ sha256sum --check --ignore-missing smcp_<version>_checksums.txt      # Linux
 shasum -a 256 --check --ignore-missing smcp_<version>_checksums.txt  # macOS
 ```
 
-`minisign` must print `Signature and comment signature verified` and a trusted comment naming that checksum file, `cosign` `Verified OK`, and the checksum line of your package `OK`. If any check fails, do not install the package. Packages are downloaded from the [release page](https://github.com/ethan03805/Secure-MCP-Gateway/releases) once a release has them.
+On Windows, in PowerShell, with `minisign.exe` (`winget install jedisct1.minisign`) and, optionally, `cosign.exe`:
+
+```powershell
+minisign -Vm smcp_<version>_checksums.txt -P RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
+(Get-FileHash smcp-desktop_<version>_windows_amd64.msi -Algorithm SHA256).Hash.ToLower()   # compare with its line in the checksum file
+```
+
+`minisign` must print `Signature and comment signature verified` and a trusted comment naming that checksum file, `cosign` `Verified OK`, and the checksum line of your package `OK` (on Windows, the hash must equal the one on the package's line). If any check fails, do not install the package.
+
+**Prompts for an unsigned installer** (until Developer ID signing, FR-20.29, and Authenticode signing, FR-20.30, are in place). These are the prompts a verified package is expected to show; any other wording, such as a damaged or revoked package, means you should download and check it again.
+
+- macOS 15 and later, opening the `.pkg` or the application from the `.dmg` in Finder: the dialog **"<name>" Not Opened** ("Apple could not verify ... is free of malware"), with Done and Move to Trash. Click Done, open System Settings, Privacy & Security, find the message that the item was blocked to protect your Mac, click **Open Anyway** and confirm with your password. `sudo installer -pkg` in Terminal shows no prompt. Details are in [Install](#install) below.
+- Windows, opening a downloaded `.msi` from the browser or Explorer: SmartScreen shows **Windows protected your PC** ("Microsoft Defender SmartScreen prevented an unrecognized app from starting") with only a Don't run button. Select **More info**, check that the file name is the one you verified, and select **Run anyway**. `msiexec /i` from a terminal does not show this dialog.
+- Windows, the User Account Control prompt that follows: **Do you want to allow this app from an unknown publisher to make changes to your device?** with **Publisher: Unknown** and the file name. Unknown publisher is expected, because the `.msi` carries no Authenticode signature; select Yes only for the file you verified.
+- Windows 11 with **Smart App Control** on: it blocks unsigned installers and programs outright and offers no option to run them. The packages cannot be installed while it is on; the choice to turn it off (Windows Security, App & browser control, Smart App Control settings) is a decision for that computer, and it covers every unsigned program, not only this one.
+
+Packages are downloaded from the [release page](https://github.com/ethan03805/Secure-MCP-Gateway/releases) once a release has them.
 
 `install.sh --package` does the same checks for you: it downloads the package of this host's format (`--package=deb`, `--package=rpm` or `--package=pkg` to choose), verifies the checksum file's minisign signature with the release key, the Sigstore bundle when `cosign` is installed and the package's SHA-256, and only then saves it (in `--dir`, default the current directory). Run as root it also installs the package with `apt-get`, `dnf` or `installer`, which upgrades an installed `smcp`; otherwise it prints that command. A package that fails a check is neither saved nor installed, and an installed older version stays as it is:
 
