@@ -89,3 +89,81 @@ func TestWindowsPipeListenDialIdentify(t *testing.T) {
 		t.Fatal("Close did not end a blocked Accept")
 	}
 }
+
+// TestWindowsPipeListenerDACL: the listener reads the pipe's descriptor
+// through a server instance (SR-2.8-6) before any Accept, while an Accept
+// waits and between Accepts, and it matches what a client handle reads:
+// protected, NETWORK and ANONYMOUS LOGON denied, this account allowed
+// read and write, no other SID allowed.
+func TestWindowsPipeListenerDACL(t *testing.T) {
+	reqtest.Partial(t, "SR-2.8-6")
+	self, err := winsec.ProcessUserSID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := fmt.Sprintf(`\\.\pipe\smcp-winpipe-dacl-%d-%d`, os.Getpid(), time.Now().UnixNano())
+	ln, err := Listen(name, Entries(self))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	check := func(when string, protected, null bool, entries []winsec.Entry, err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("%s: %v", when, err)
+		}
+		if !protected || null {
+			t.Fatalf("%s: protected=%v null=%v", when, protected, null)
+		}
+		denied := map[string]bool{}
+		allowed := false
+		for _, e := range entries {
+			switch {
+			case e.Deny:
+				denied[e.SID] = true
+			case e.SID != self:
+				t.Errorf("%s: pipe grants %s", when, e)
+			case e.Access&0x3 != 0x3:
+				t.Errorf("%s: this account lacks read and write: %s", when, e)
+			default:
+				allowed = true
+			}
+		}
+		if !allowed || !denied[winsec.SIDNetwork] || !denied[winsec.SIDAnonymous] {
+			t.Fatalf("%s: entries %v", when, entries)
+		}
+	}
+	p, n, e, err := ln.DACL()
+	check("before Accept", p, n, e, err)
+
+	accepted := make(chan net.Conn, 1)
+	go func() {
+		if c, err := ln.Accept(); err == nil {
+			accepted <- c
+		}
+	}()
+	time.Sleep(100 * time.Millisecond) // Accept waits on the first instance
+	p, n, e, err = ln.DACL()
+	check("during Accept", p, n, e, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, err := Dial(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case sc := <-accepted:
+		sc.Close()
+	case <-time.After(5 * time.Second):
+		t.Fatal("Accept did not serve the client")
+	}
+	c.Close()
+
+	// Between Accepts no instance exists: DACL creates the one the next
+	// Accept serves. A client handle on it, with nobody accepting, reads
+	// the same descriptor.
+	p, n, e, err = ln.DACL()
+	check("between Accepts", p, n, e, err)
+	p, n, e, err = DACL(name)
+	check("client handle", p, n, e, err)
+}

@@ -15,6 +15,11 @@ type Listener struct{ net.Listener }
 // Listen returns ErrNotWindows.
 func Listen(string, []winsec.Entry) (*Listener, error) { return nil, ErrNotWindows }
 
+// DACL returns ErrNotWindows.
+func (*Listener) DACL() (protected, null bool, entries []winsec.Entry, err error) {
+	return false, false, nil, ErrNotWindows
+}
+
 // Conn is a pipe connection (Windows only).
 type Conn struct{ net.Conn }
 
