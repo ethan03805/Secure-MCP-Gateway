@@ -164,6 +164,18 @@ previous_release() {
 	asuser sh -c "umask 077; printf 'smoke-approver-password-1' > '$work/prev-approver'"
 	asuser /usr/bin/smcpctl bootstrap --dir "$work/prev-st" --bootstrap-token --approver-password-file "$work/prev-approver" \
 		--port 28643 --admin-port 28644 </dev/null >/dev/null
+	# The previous release's smcpd writes its journal, then stops.
+	asuser sh -c "printf '\n[profile]\nmode = \"standalone\"\n' >> '$work/prev-st/smcp.toml'"
+	asuser sh -c "/usr/bin/smcpd --config '$work/prev-st/smcp.toml' > '$work/prev-smcpd.log' 2>&1 &"
+	local ok=0
+	for _ in $(seq 1 60); do
+		if asuser /usr/bin/smcpctl health --config "$work/prev-st/smcp.toml" >/dev/null 2>&1; then ok=1; break; fi
+		sleep 1
+	done
+	[ $ok = 1 ] || { cat "$work/prev-smcpd.log" >&2; fail "smcpd ${prev#v} did not answer health"; }
+	pkill -f "smcpd --config $work/prev-st/" || true
+	for _ in $(seq 1 30); do pgrep -f "smcpd --config $work/prev-st/" >/dev/null || break; sleep 1; done
+	ls "$work/prev-st/state/journal"/segment-*.jsonl >/dev/null || fail "the previous release wrote no journal"
 	prev_digests=$(state_digests)
 	echo "smcp ${prev#v} installed, with a Gateway state of $(printf '%s\n' "$prev_digests" | wc -l | tr -d ' ') files"
 }
@@ -239,7 +251,7 @@ appimage_setup() {
 		--metrics-port 9464 --notify off --health-timeout 90s
 	unit=$HOME/.config/systemd/user/smcpd.service
 	copies=$HOME/.local/share/smcp-gateway/bin
-	grep -q "^ExecStart=$copies/smcpd " "$unit" || { cat "$unit" >&2; fail "the user unit does not run the copy in $copies"; }
+	grep '^ExecStart=' "$unit" | grep -qF "$copies/smcpd" || { cat "$unit" >&2; fail "the user unit does not run the copy in $copies"; }
 	if grep -qF "$mnt" "$unit"; then fail "the user unit names the AppImage mount $mnt"; fi
 	systemctl --user is-active --quiet smcpd.service || fail "the smcpd user unit is not active"
 	echo "systemd user unit $unit runs $copies/smcpd and is active"
