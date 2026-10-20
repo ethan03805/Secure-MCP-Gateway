@@ -19,6 +19,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/backend"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/bundle"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cftest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
@@ -152,6 +153,34 @@ func TestHostedDispatchImage(t *testing.T) {
 	}
 	if res.IsError || len(res.Content) == 0 || res.Content[0].(*mcp.TextContent).Text != "ok" {
 		t.Fatalf("hosted result %+v", res)
+	}
+
+	// FR-22.35: a harness's or agent's credential (an opaque Gateway
+	// access token, and a JWT of another issuer) is refused on every
+	// path of the running instance.
+	c.hostedMu.Lock()
+	var vsID string
+	for id := range c.hosted {
+		vsID = id
+	}
+	c.hostedMu.Unlock()
+	agentJWT, _ := bundle.SignJWT("an-agent-signing-key-of-32-bytes-or-more", map[string]any{"sub": "agent", "iss": "smcp", "aud": "smcp",
+		"iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix()})
+	for _, tok := range []string{"smcp_at_0123456789abcdef0123456789abcdef", agentJWT} {
+		for _, path := range []string{"/servers/" + vsID + "/mcp", "/mcp", "/rpc", "/v1/tools"} {
+			req, _ := http.NewRequest(http.MethodPost, c.inst.BaseURL()+path, strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}`))
+			req.Header.Set("Authorization", "Bearer "+tok)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/json, text/event-stream")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp.Body.Close()
+			if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden {
+				t.Fatalf("the instance answered %d to an agent credential on %s", resp.StatusCode, path)
+			}
+		}
 	}
 
 	// The tool taken off the package's virtual server behind the Gateway's

@@ -1,8 +1,10 @@
 package connector
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -282,8 +284,109 @@ func TestUpgradeImage(t *testing.T) {
 	if !slices.Equal(outcomes, want) {
 		t.Fatalf("events %v, want %v", outcomes, want)
 	}
-	reqtest.Verifies(t, "FR-22.31")
-	reqtest.Partial(t, "FR-22.28", "FR-22.19")
+	// FR-22.28 on the upgraded instance: a token signed with a published
+	// key is refused by the running instance; the five instance
+	// credentials and the package user's password are vault entries that
+	// appear in no file of the state directory; a start with a published
+	// or empty JWT_SECRET_KEY, or an empty DEFAULT_USER_PASSWORD, is
+	// refused, and the generated credentials start it again.
+	forged, err := bundle.SignJWT("my-test-key", map[string]any{"sub": bundle.AdminEmail, "iss": "mcpgateway", "aud": "mcpgateway-api",
+		"iat": time.Now().Unix(), "exp": time.Now().Add(time.Hour).Unix(), "jti": "forged-upgrade-test", "token_use": "session"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/v1/tokens", "/v1/gateways", "/v1/teams"} {
+		req, _ := http.NewRequest(http.MethodGet, c.inst.BaseURL()+path, nil)
+		req.Header.Set("Authorization", "Bearer "+forged)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusForbidden {
+			t.Fatalf("forged token on %s: %d", path, resp.StatusCode)
+		}
+	}
+	m, _, err := lib.Manifest(rev.ServerID, rev.Revision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := []string{"user-" + m.Upstream.GatewaySlug}
+	for _, k := range bundle.CredentialKeys {
+		names = append(names, credentialName(k))
+	}
+	vals, err := c.o.Broker.DeliverComponent(component, names)
+	if err != nil || len(vals) != len(names) {
+		t.Fatalf("vault entries %v: %v", names, err)
+	}
+	err = filepath.WalkDir(state, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		raw, rerr := os.ReadFile(p)
+		if rerr != nil {
+			return nil //nolint:nilerr // an unreadable file holds nothing the test can see
+		}
+		for n, v := range vals {
+			if len(v) > 0 && bytes.Contains(raw, v) {
+				t.Errorf("%s holds %s", p, n)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.StopInstance(ctx, "op"); err != nil {
+		t.Fatal(err)
+	}
+	setCred := func(name, v string) {
+		t.Helper()
+		if err := c.o.Broker.RotateComponent(component, name, func() ([]byte, error) { return []byte(v), nil }); err != nil {
+			t.Fatalf("set %s: %v", name, err)
+		}
+	}
+	jwtName, userPw := credentialName(bundle.KeyJWTSecret), credentialName("DEFAULT_USER_PASSWORD")
+	// The vault does not hold an empty credential at all; an empty value
+	// delivered to the instance is refused before the engine runs.
+	for _, k := range []string{bundle.KeyJWTSecret, bundle.KeyDefaultUser} {
+		if err := c.o.Broker.RotateComponent(component, credentialName(k), func() ([]byte, error) { return nil, nil }); err == nil {
+			t.Fatalf("the vault stored an empty %s", k)
+		}
+		creds := bundle.Credentials{}
+		for n, v := range vals {
+			for _, ck := range bundle.CredentialKeys {
+				if credentialName(ck) == n {
+					creds[ck] = string(v)
+				}
+			}
+		}
+		creds[k] = ""
+		empty, err := bundle.New(bundle.Options{Engine: bundle.Engine{Path: eng}, Image: newRel.ImageRef(plat), Name: "smcp-cf-empty-cred",
+			Credentials: func() (bundle.Credentials, error) { return creds, nil }})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := empty.Start(ctx); packaging.ReasonOf(err) != bundle.ReasonWeakCredential {
+			t.Fatalf("start with an empty %s: %v", k, err)
+		}
+	}
+	for _, weak := range []struct{ name, value string }{{jwtName, "changeme"}, {jwtName, "my-test-key"}, {userPw, "changeme123"}} {
+		setCred(weak.name, weak.value)
+		if err := c.StartInstance(ctx, "op"); packaging.ReasonOf(err) != bundle.ReasonWeakCredential {
+			t.Fatalf("start with %s = %q: %v", weak.name, weak.value, err)
+		}
+		if st := c.Instance().State; st != bundle.StateStopped {
+			t.Fatalf("instance %s after a refused start", st)
+		}
+		setCred(weak.name, string(vals[weak.name]))
+	}
+	if err := c.StartInstance(ctx, "op"); err != nil {
+		t.Fatal(err)
+	}
+	waitHealthy(t, c)
+	reqtest.Verifies(t, "FR-22.31", "FR-22.28")
+	reqtest.Partial(t, "FR-22.19")
 }
 
 func waitHealthy(t *testing.T, c *Connector) {
