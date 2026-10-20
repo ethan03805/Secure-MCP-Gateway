@@ -37,7 +37,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Egress Broker](egress.md) | E-18 | Grants, DNS and address checks, limits, evidence, `smcpctl egress` |
 | [Management console](console.md), [console visual rules](console-style.md), [first-run audit](design/console-audit.md) | FR-8 | Views, sign-in, roles |
 | [Writing style guide](design/writing.md), [visual design guide](design/visual.md) | FR-20.48 to FR-20.51 (planned v1.3.0) | Normative rules for UI text and look of the console, desktop app and site; banned words and visual patterns; `tools/uilint` and its allowlist |
-| [Desktop application (draft)](desktop.md) | FR-20 (planned v1.3.0) | Introduction, first-run setup, client setup, tray states, service control, console window, approval notifications, updates, deep links, start at login; holds no authority beyond the console sign-in |
+| [Desktop application (draft)](desktop.md) | FR-20 (planned v1.3.0) | Introduction, first-run setup, client setup, tray states, service control, console window, approval notifications, updates, deep links, start at login, on macOS, Linux and Windows 11; holds no authority beyond the console sign-in |
 | [Graph mirror](graph.md) | FR-9.1 to FR-9.3, FR-9.18 | Neo4j mirror, catch-up and rebuild, canned queries, `smcpctl graph` |
 | [Observation and analytics](observation.md) | FR-10, FR-11 | Collector, store, baselines, anomaly scoring, research exports, `smcpctl observe` |
 | [Operations](operations/README.md) | FR-7.11 to FR-7.14, FR-13.7 to FR-13.13, FR-17 | Health, logs, metrics, reload, keys, backup, upgrade, uninstall |
@@ -54,7 +54,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Reference hardware](reference-hardware.md) | FR-11 | The recorded reference hardware (the GitHub-hosted `ubuntu-24.04` runner class), what each performance report records, and when a measurement is a full claim |
 | [Verification records](verification/README.md) | FR-19.4, FR-18.8 | Record format, inspection records ([inspections.md](verification/inspections.md)), runbook execution records and the [gap list](verification/gap-list.md) of unverified requirements |
 | [Continuous integration](ci.md) | — | For contributors: the required checks, and which CI jobs a pull request that changes only documentation skips |
-| [Windows port](windows-port.md) | FR-21 (planned v1.3.0) | What is ported (per-user and machine installation, DPAPI keys, DACL checks, named pipes, Job Objects, AppContainer and WFP containment, path rules, `.msi`, `install.ps1`), the `windows` CI job, and what remains per FR-21 area |
+| [Windows port](windows-port.md) | FR-21 (planned v1.3.0) | What is ported (per-user, machine and WSL2 installation, DPAPI keys, DACL checks, named pipes, Job Objects, AppContainer and WFP containment, path rules and `PATH_REFUSED`, client paths, `.msi`, `install.ps1`), the acceptance subset, hostile suite and process trace of the `windows` CI job, and what remains per FR-21 area |
 
 ## Client quick starts (FR-18.3)
 

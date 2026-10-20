@@ -2,7 +2,7 @@
 
 How to install, upgrade, roll back and remove the Secure MCP Gateway on each platform and profile (SRS FR-18.1). For a first run after installing, go to the [quick start](quickstart.md).
 
-**Release status.** v1.2.0 is the latest release (2026-10-19, rehearsed with v1.2.0-rc.1 on the same commit); it is the first with the `smcp` `.deb`, `.rpm` and macOS `.pkg` packages (Option 4). The pre-release `v1.3.0-beta.1` (2026-10-20) adds the desktop application packages for Linux and macOS and the ContextForge catalog; it has no Windows files, no `.pkg` and no Sigstore bundle, because its release run stopped at the SBOM license check after publishing (fixed on main). v1.1.0 was released on 2026-10-18 (main `935dc4d`, rehearsed with v1.1.0-rc.1 and rc.2; rc.2 and v1.1.0 are the same commit). v1.0.0 was the first final release, rehearsed with v1.0.0-rc.1 to rc.3 (rc.3 and v1.0.0 are the same commit, `17b84ba`). GitHub's latest-release link skips pre-releases, so `install.sh` without `--version` installs the latest final release and a pre-release needs `--version`. The release workflow writes each final release's formula to the Homebrew tap (rehearsed with v1.0.0-rc.2, [verification/FR-13.3.md](verification/FR-13.3.md)). For v1.1.0 the `tap` workflow installed the formula and the archive on macOS and Ubuntu and found every binary equal to the release archive (run 39178720966; for v1.0.0, run 39096814323). Building from source (below) needs no release. The sections on release archives describe what the release workflow (`.github/workflows/release.yml`) publishes. Since v1.1.0 the archives also carry the build recipe, the lockfiles, `PROVENANCE.md` and `THIRD_PARTY_NOTICES.txt`, and their SBOMs pass the license check (FR-12.8, FR-12.1). [release-checklist.md](release-checklist.md) is the release procedure.
+**Release status.** v1.2.0 is the latest release (2026-10-19, rehearsed with v1.2.0-rc.1 on the same commit); it is the first with the `smcp` `.deb`, `.rpm` and macOS `.pkg` packages (Option 4). The pre-release `v1.3.0-beta.1` (2026-10-20) adds the desktop application packages for Linux and macOS and the ContextForge catalog; it has no Windows files, no `.pkg` and no Sigstore bundle, because its release run stopped at the SBOM license check after publishing (fixed on main). The pre-release `v1.3.0-beta.2` (2026-10-20) also has the Windows zip archives and the `smcp` `.msi` for x64 and arm64; it has no `.pkg`, no `smcp-desktop` `.msi` (built on main since) and no Sigstore bundle, because its release run stopped at the Windows zip check after publishing (fixed on main). v1.1.0 was released on 2026-10-18 (main `935dc4d`, rehearsed with v1.1.0-rc.1 and rc.2; rc.2 and v1.1.0 are the same commit). v1.0.0 was the first final release, rehearsed with v1.0.0-rc.1 to rc.3 (rc.3 and v1.0.0 are the same commit, `17b84ba`). GitHub's latest-release link skips pre-releases, so `install.sh` without `--version` installs the latest final release and a pre-release needs `--version`. The release workflow writes each final release's formula to the Homebrew tap (rehearsed with v1.0.0-rc.2, [verification/FR-13.3.md](verification/FR-13.3.md)). For v1.1.0 the `tap` workflow installed the formula and the archive on macOS and Ubuntu and found every binary equal to the release archive (run 39178720966; for v1.0.0, run 39096814323). Building from source (below) needs no release. The sections on release archives describe what the release workflow (`.github/workflows/release.yml`) publishes. Since v1.1.0 the archives also carry the build recipe, the lockfiles, `PROVENANCE.md` and `THIRD_PARTY_NOTICES.txt`, and their SBOMs pass the license check (FR-12.8, FR-12.1). [release-checklist.md](release-checklist.md) is the release procedure.
 
 The short path on macOS or Linux, once a release exists:
 
@@ -10,6 +10,19 @@ The short path on macOS or Linux, once a release exists:
 curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh   # or: brew install ethan03805/tap/smcp
 smcpctl install          # Standalone: CP-46 directories, keys, smcp.toml, launchd agent or systemd user unit, health check
 ```
+
+Which path to take (the desktop application and the Windows files are planned for v1.3.0 and are in the pre-releases only):
+
+| Computer | Command-line Gateway | Desktop application |
+|---|---|---|
+| macOS on Apple silicon | `install.sh`, Homebrew or the `.pkg` (macOS 13 or later) ([Option 1](#option-1-installsh-linux-and-macos), [Option 4](#option-4-platform-packages-deb-rpm-macos-pkg-and-dmg-appimage-msi)) | The `.dmg` (macOS 14 or later), which carries the commands too |
+| macOS on Intel | `install.sh` or Homebrew | None (the application is built for Apple silicon only) |
+| Debian, Ubuntu, Fedora, RHEL | `install.sh` or the `smcp` `.deb` or `.rpm` | The `smcp-desktop` `.deb` or `.rpm`, installed together with the `smcp` package of the same version |
+| Other Linux with a graphical desktop | `install.sh` | The AppImage, which carries the commands |
+| Windows 11 23H2 or later (x64, arm64) | `install.ps1` or the `smcp` `.msi` ([Option 1a](#option-1a-installps1-windows-planned-for-v130)) | The `smcp-desktop` `.msi`, which carries the commands |
+| Windows Server 2022 and 2025 | `install.ps1` or the `smcp` `.msi` | None (Windows Server gets the command-line Gateway only) |
+
+None of the installers carries an Apple Developer ID or Authenticode signature; check each download with minisign and SHA-256 as described below before you open it.
 
 ## What gets installed
 
@@ -72,7 +85,7 @@ sha256sum --check --ignore-missing smcp_<version>_checksums.txt
 
 ## Option 1a: install.ps1 (Windows, planned for v1.3.0)
 
-Windows support is being built for v1.3.0 (SRS FR-21; status in [windows-port.md](windows-port.md)). From v1.3.0 on, each release carries `smcp_<version>_windows_amd64.zip` and `smcp_<version>_windows_arm64.zip` with `smcpd.exe`, `smcpctl.exe`, `smcp-session.exe`, `smcp-stdio.exe` and `smcp-connect.exe`, listed in the same signed checksum file. `install.ps1` installs them for the current user, without elevation:
+Windows support is built on main for v1.3.0 (SRS FR-21; status in [windows-port.md](windows-port.md)), and `v1.3.0-beta.2` is the first pre-release with Windows files. From v1.3.0 on, each release carries `smcp_<version>_windows_amd64.zip` and `smcp_<version>_windows_arm64.zip` with `smcpd.exe`, `smcpctl.exe`, `smcp-session.exe`, `smcp-stdio.exe` and `smcp-connect.exe`, listed in the same signed checksum file. `install.ps1` installs them for the current user, without elevation:
 
 ```powershell
 irm https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.ps1 | iex
@@ -118,7 +131,7 @@ Builds with cgo (the default when a C compiler is present) use DuckDB for the Ob
 
 ## Option 4: platform packages (.deb, .rpm, macOS .pkg and .dmg, AppImage, .msi)
 
-Specified for release v1.3.0 (SRS FR-20.17 to FR-20.26). v1.2.0 has the `smcp` `.deb`, `.rpm` and `.pkg`; `v1.3.0-beta.1` adds the desktop `.deb`, `.rpm`, AppImage and `.dmg`; the Windows `.msi` packages are built on main and in no published release yet. The release workflow builds them from the tag, installs, exercises and removes each one on a runner of its platform before it publishes anything (`.github/workflows/installers.yml` with `scripts/package-smoke.sh`), and lists each in the signed checksum file. The desktop application installers (`smcp-desktop` `.deb` and `.rpm`, the `.dmg` and the AppImage) are built and smoke-tested the same way (`scripts/desktop-smoke.sh`); the `.dmg` needs a Mac to build, and a release made while no macOS runner was available has none. The Windows `.msi` of the command-line Gateway is built with the WiX Toolset (`packaging/installers/windows`) and installed, checked and removed on Windows x64 and arm64 runners. The `smcp-desktop` `.msi` with the desktop application (Windows 11 x64 and arm64, SRS FR-20.20) is built with the Tauri bundler and installed, started and removed on the same runners (`scripts/desktop-msi-smoke.ps1`).
+Specified for release v1.3.0 (SRS FR-20.17 to FR-20.26). v1.2.0 has the `smcp` `.deb`, `.rpm` and `.pkg`; `v1.3.0-beta.1` adds the desktop `.deb`, `.rpm`, AppImage and `.dmg`; `v1.3.0-beta.2` adds the `smcp` `.msi`; the `smcp-desktop` `.msi` is built on main and in no published release yet. The release workflow builds them from the tag, installs, exercises and removes each one on a runner of its platform before it publishes anything (`.github/workflows/installers.yml` with `scripts/package-smoke.sh`), and lists each in the signed checksum file. The desktop application installers (`smcp-desktop` `.deb` and `.rpm`, the `.dmg` and the AppImage) are built and smoke-tested the same way (`scripts/desktop-smoke.sh`); the `.dmg` needs a Mac to build, and a release made while no macOS runner was available has none. The Windows `.msi` of the command-line Gateway is built with the WiX Toolset (`packaging/installers/windows`) and installed, checked and removed on Windows x64 and arm64 runners. The `smcp-desktop` `.msi` with the desktop application (Windows 11 x64 and arm64, SRS FR-20.20) is built with the Tauri bundler and installed, started and removed on the same runners (`scripts/desktop-msi-smoke.ps1`).
 
 | File | Platform | Installs |
 |---|---|---|
