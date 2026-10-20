@@ -21,6 +21,7 @@
   - Inspection records `docs/verification/FR-20.49.md` (writing guide and 30 UI strings) and `FR-20.50.md` (visual guide, the desktop windows, five console views and two site pages in both schemes).
   - The first-run introduction no longer says "this Mac" and "On a Mac the Gateway runs in the Standalone profile" on Linux and Windows; it names the profile for each platform and the Enforced profile on Linux.
   - The console window's error page takes its title, what, why and what-to-do text from `docs/design/messages.json` at build time instead of a copy; `internal/edge.TestCatalogueIsTheOnlySource` checks that no console or desktop source holds a copy of a catalogue text (FR-20.48).
+  - The status window shows the catalogue's APPROVALS_NONE empty state (reason and next step) when a fresh reading has no pending approval, instead of a bare 0 (FR-20.46).
   - The bundled-window checks (`desktop/e2e/a11y.mjs`) record requirement claims, merged by the status job as `build/desktop-a11y-test.json`.
 
 - Desktop first-run setup asks about the bundled ContextForge instance (SRS FR-22.44, planned v1.3.0): the Set Up the Gateway window has a checkbox, unchecked by default, with the same notes on what the instance adds and on its risk as `smcpctl bootstrap`. Only a checked box adds `--with-contextforge` to `smcpctl install`, and the retry command of a failed setup keeps the choice. The text lives in `desktop/src/contextforge-choice.ts` and the flag in `desktop/src-tauri/src/contextforge.rs`.

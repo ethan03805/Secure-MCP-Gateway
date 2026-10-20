@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { explain, STATES, type Catalogue } from "../src/status-model.ts";
+import { approvalsEmpty, explain, STATES, type Catalogue } from "../src/status-model.ts";
 
 const catalogue = JSON.parse(readFileSync(new URL("../../docs/design/messages.json", import.meta.url), "utf8")) as Catalogue;
 
@@ -16,6 +16,18 @@ test("FR-20.45: each of the seven states has a meaning, an action and a control"
       assert.equal(Boolean(x.notEnforced), !enforced && known, state);
     }
   }
+});
+
+test("FR-20.46: no pending approval shows its reason and next step from the catalogue", () => {
+  const none = approvalsEmpty(catalogue, { state: "healthy", enforced: true, pending: 0 });
+  assert.ok(none);
+  assert.equal(none.title, "No approvals waiting");
+  assert.match(none.what, /No tool call is waiting/);
+  assert.ok(none.todo.length > 0);
+  // A count, a stale reading or a stopped service shows no empty state.
+  assert.equal(approvalsEmpty(catalogue, { state: "healthy", enforced: true, pending: 2 }), null);
+  assert.equal(approvalsEmpty(catalogue, { state: "unreachable", enforced: true, pending: 0 }), null);
+  assert.equal(approvalsEmpty(catalogue, { state: "stopped", enforced: true, pending: 0 }), null);
 });
 
 test("FR-20.45: the controls the requirement names", () => {
