@@ -25,6 +25,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/consoleauth"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/connector"
 	"github.com/ethan03805/secure-mcp-gateway/internal/diag"
 	"github.com/ethan03805/secure-mcp-gateway/internal/edge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/filterapi"
@@ -214,11 +215,19 @@ func run(parent context.Context, cfgPath, level string) error {
 	// url servers connect over Streamable HTTP (FR-5.28); innermost, so the
 	// Secret Broker's teardown and the package checks wrap them too.
 	opts.Launcher = southbound.Wrap(opts.Launcher)
+	// E-36: hosted packages' connections get their package token and the
+	// backend-name wrapper, inside the Secret Broker's wrapper.
+	var cf *connector.Connector
+	opts.Launcher = connector.WrapLauncher(opts.Launcher, func() *connector.Connector { return cf })
 	sec, err := attachSecrets(cfg, &opts, obs, mon, log) // E-19, E-20; nil when [secrets] is absent
 	if err != nil {
 		return err
 	}
 	defer sec.Close()
+	if cf, err = openContextForge(cfg, pkgs, sec, rt != nil, log); err != nil { // E-36 (planned v1.3.0)
+		return err
+	}
+	defer cf.Close()
 	a, err := app.Start(ctx, cfg, opts)
 	// FR-9.17: while the Evidence Journal cannot be opened for writing,
 	// harness requests get -31004; Start is retried once the journal
@@ -285,11 +294,7 @@ func run(parent context.Context, cfgPath, level string) error {
 	}
 	defer rs.Close()
 	rs.Register(a.Admin)
-	cf, err := attachContextForge(ctx, cfg, pkgs, a, sec, mon, log) // E-36 (planned v1.3.0): catalog and local-entry import
-	if err != nil {
-		return err
-	}
-	defer cf.Close()
+	attachContextForge(ctx, cf, a, mon)
 	// Every component exists from here on: the elements report reads them.
 	w := &wiring{app: a, approvals: approvals, notify: notifyMode(cfg.Approvals.Notify), packages: pkgs, sandbox: rt, secrets: sec,
 		mirror: mirror, obs: obs, remote: rs, console: true, contextforge: cf}

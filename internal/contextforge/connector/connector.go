@@ -85,6 +85,9 @@ type Options struct {
 	// SSRFAllowed are the networks the bundled instance may reach (the
 	// E-18 endpoint addresses, FR-22.27).
 	SSRFAllowed []string
+	// Suspend suspends an enabled revision for cause (drift, a broken
+	// scope); smcpd passes library.Runtime.SuspendRevision.
+	Suspend func(id, rev string, cause error) error
 	// Enforced is true in the Enforced profile; elsewhere the bundled
 	// instance is reported contextforge_unconfined (FR-22.25).
 	Enforced bool
@@ -119,6 +122,12 @@ type Connector struct {
 	platform string
 	instMu   sync.Mutex
 
+	// Registered hosted packages (dispatch.go), by virtual server ID.
+	hostedMu     sync.Mutex
+	hosted       map[string]*hostedPkg
+	cleanedAt    time.Time
+	reconcileReq chan struct{}
+
 	// Demand for the instance (demand.go, FR-22.23).
 	demandMu     sync.Mutex
 	probes       int
@@ -147,6 +156,7 @@ func New(o Options) (*Connector, error) {
 		o.BuildTimeout = 15 * time.Minute
 	}
 	c := &Connector{o: o, dir: filepath.Join(o.Config.State.Dir, dirName), proposals: map[string]*proposal{},
+		hosted: map[string]*hostedPkg{}, reconcileReq: make(chan struct{}, 1),
 		fetcher: &packaging.Fetcher{NPMRegistry: o.Config.ContextForge.NPMRegistry, PyPIIndex: o.Config.ContextForge.PyPIIndex}}
 	if err := os.MkdirAll(c.dir, 0o700); err != nil {
 		return nil, err
@@ -241,6 +251,11 @@ func (c *Connector) keyEnrolled() (bool, []string) {
 	return false, nil
 }
 
+// SetRecorder sets the evidence recorder once the journal is open (smcpd
+// creates the Connector before app.Start so that hosted packages resolve
+// at the first launch).
+func (c *Connector) SetRecorder(rec audit.Recorder) { c.o.Recorder = rec }
+
 // Catalog returns the loaded catalog or the reason it was refused.
 func (c *Connector) Catalog() (*contextforge.Catalog, error) { return c.cat, c.catErr }
 
@@ -259,6 +274,8 @@ func (c *Connector) Start(ctx context.Context) {
 		defer t.Stop()
 		d := time.NewTicker(demandTick)
 		defer d.Stop()
+		rc := time.NewTicker(ReconcileInterval)
+		defer rc.Stop()
 		for {
 			select {
 			case <-ctx.Done():
@@ -267,6 +284,10 @@ func (c *Connector) Start(ctx context.Context) {
 				c.expire()
 			case <-d.C:
 				c.onDemand(ctx)
+			case <-rc.C:
+				c.reconcile(ctx)
+			case <-c.reconcileReq:
+				c.reconcile(ctx)
 			}
 		}
 	}()

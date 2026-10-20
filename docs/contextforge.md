@@ -78,7 +78,13 @@ With the bundled instance enabled, a hosted entry with auth type `Open` is impor
 
 ContextForge v1.0.11 serves a server's tools `get-time` and `get_time` under one name (it turns underscores into hyphens), so such a server is refused with `TOOL_NAME_COLLISION`.
 
-Not built yet: the probe through the entry's E-18 endpoint and the probe secret of API-key entries (they are refused with `HOSTED_IMPORT_UNAVAILABLE`), the narrowed probe network in the Enforced profile (SR-3.5-2), and the dispatch of an enabled hosted package through its virtual server (FR-22.36, with the southbound HTTP transport); an enabled hosted package is not started (`HOSTED_DISPATCH_UNAVAILABLE`).
+Not built yet: the probe through the entry's E-18 endpoint and the probe secret of API-key entries (they are refused with `HOSTED_IMPORT_UNAVAILABLE`), and the narrowed probe network in the Enforced profile (SR-3.5-2).
+
+## Calling a hosted package
+
+An enabled hosted package is resolved by the Connector when the Gateway launches it (FR-22.29, FR-22.34, FR-22.36). It starts the bundled instance if needed; after each start of the instance it first removes whatever an earlier run left in it. It registers the package with its own team, non-admin user (password generated into the vault as `component.contextforge.user-<slug>`), gateway named as the manifest's `upstream` member, virtual server and one-day token, checks that the virtual server serves exactly the manifest's backend names, and runs the scope self-check over every registered hosted package; a finding suspends every hosted package with `CONTEXTFORGE_SCOPE_BROKEN` and stops the instance. The Tool Dispatcher then reaches the package's virtual server over loopback with the southbound Streamable HTTP transport, authenticated with the package token, which only the Connector holds and hands to the transport at launch. Each call goes out under the tool's `backend_name`; the served list comes back under manifest names, so the usual drift check applies; an `Unknown tool` answer for a manifest tool becomes `-31007` `BACKEND_ERROR` with `backendCode` `-32601` and starts a reconciliation at once. Reconciliation runs every 5 minutes, journals each finding as a `contextforge_drift` event and suspends a drifted revision (`CONTEXTFORGE_DRIFT`).
+
+Not built yet for hosted calls: token renewal before the 24-hour expiry (a Gateway restart renews it), the evidence fields of FR-22.39, and the E-18 endpoint per package (FR-22.40).
 
 ## Choosing the bundled instance at setup
 
@@ -115,7 +121,7 @@ The measured start on macOS arm64 with Docker was 8 to 9 s to the first healthy 
 
 ## Not built yet
 
-- Dispatch of an enabled hosted package: registering it with its own team, user, gateway, virtual server and token at enablement, the scope self-check at each start and token renewal with suspension on a finding, reconciliation every 5 minutes with suspension on drift and `contextforge_drift` events, and calls through the southbound Streamable HTTP transport with the backend-name wrapper (built, `renameProcess`) and the evidence fields of FR-22.39.
+- For hosted calls: token renewal, the evidence fields of FR-22.39.
 - An E-18 endpoint per hosted package (FR-22.40), the probe secret of API-key entries, and the narrowed probe network (SR-3.5-2).
 - The Enforced-profile containment of the bundled instance (rootless Podman under E-16, network namespace limited to E-18 endpoints, firewall rule for the Gateway identity; FR-22.24, FR-22.26, SR-4.5-4, SR-4.7-3).
 - The managed-process form for hosts without a container engine (FR-22.20, needs a hashed wheel set in the release lock), upgrade with rollback (FR-22.31), the release lock's signature and the SBOM records (FR-22.18, FR-22.21), and the desktop setup choice (FR-22.44).
