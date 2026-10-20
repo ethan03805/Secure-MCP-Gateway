@@ -11,7 +11,7 @@
     "version": "0.142.2",
     "mode": "ai-gateway",
     "result": "pass",
-    "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
+    "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (denied: retried once; first attempt: deny precondition not held: call 01a15809-dbdc-7cf7-84b0-ed43bae8d631 to ref_time_now was dispatched, but the session's last permitted call (01a15808-c030-7547-a74a-c66006f9ff87) was 1m12.621s earlier, so its rate window was empty and permitting it was correct; the agent called after the probe's fill had expired, which tests nothing about enforcement (harness timing, not a Gateway fault); approval: held and approved 1 with smcpctl); journal verify ok"
   },
   {
     "client": "Hermes Agent",
