@@ -77,10 +77,10 @@ const find = (/** @type {string} */ css) =>
 const click = (/** @type {string} */ id) => wd("POST", `${S}/element/${id}/click`, {});
 const type = (/** @type {string} */ id, /** @type {string} */ text) => wd("POST", `${S}/element/${id}/value`, { text });
 const text = async (/** @type {string} */ css) => /** @type {string} */ (await wd("GET", `${S}/element/${await find(css)}/text`));
-/** The button whose text is label, found in the page itself. */
+/** The button whose text is label (ignoring case), found in the page itself. */
 const button = (/** @type {string} */ label) =>
   waitFor(
-    async () => ref(await script("return [...document.querySelectorAll('button')].find(b => b.textContent.trim() === arguments[0]) || null;", [label])),
+    async () => ref(await script("return [...document.querySelectorAll('button')].find(b => b.textContent.trim().toLowerCase() === arguments[0].toLowerCase()) || null;", [label])),
     `the button ${label}`,
     30000,
   ).catch(async (e) => {
