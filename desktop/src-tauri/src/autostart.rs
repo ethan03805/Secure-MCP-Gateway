@@ -201,6 +201,7 @@ mod tests {
                 xdg_config_home: None,
                 etc_systemd: root.join("etc/systemd/system"),
                 uid: 501,
+                win: Default::default(),
             },
         )
     }

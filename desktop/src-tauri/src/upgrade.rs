@@ -157,6 +157,9 @@ pub enum NotHere {
     Packaged(String),
     /// The service definition could not be read.
     Unreadable(String),
+    /// A Windows installation: there is no Windows release archive for
+    /// this window; upgrade with `smcpctl upgrade` or the `.msi`.
+    Windows,
 }
 
 /// Finds the Standalone installation the service manager runs.
@@ -167,6 +170,9 @@ pub fn find_installation(
     let m = m.ok_or(NotHere::NotInstalled)?;
     if *m == Manager::SystemdSystem {
         return Err(NotHere::Enforced);
+    }
+    if matches!(m, Manager::WindowsUser { .. } | Manager::WindowsMachine { .. }) {
+        return Err(NotHere::Windows);
     }
     let path = unit_file(m).ok_or(NotHere::NotInstalled)?;
     let text = std::fs::read_to_string(&path).map_err(|e| NotHere::Unreadable(format!("{}: {e}", path.display())))?;
@@ -194,7 +200,7 @@ pub fn unit_file(h: &crate::service::Host, m: &Manager) -> Option<PathBuf> {
                 .join("systemd/user")
                 .join(crate::service::SYSTEMD_UNIT),
         ),
-        Manager::SystemdSystem => None,
+        Manager::SystemdSystem | Manager::WindowsUser { .. } | Manager::WindowsMachine { .. } => None,
     }
 }
 
@@ -286,7 +292,7 @@ pub fn run_fixed(argv: &[String], stdin: Option<&str>, timeout: Duration, on_lin
             ..Default::default()
         };
     }
-    let mut child = match Command::new(prog)
+    let mut child = match crate::service::no_console(&mut Command::new(prog))
         .args(args)
         .stdin(if stdin.is_some() { Stdio::piped() } else { Stdio::null() })
         .stdout(Stdio::piped())
@@ -451,6 +457,7 @@ mod tests {
     use super::*;
     use crate::claims;
 
+    #[cfg_attr(not(unix), allow(dead_code))]
     fn tmp(tag: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!(
             "smcp-desktop-up-{tag}-{}-{:?}",
@@ -464,6 +471,7 @@ mod tests {
 
     /// The exact files `smcpctl install` writes (cmd/smcpctl/install.go),
     /// with a path that needs escaping.
+    #[cfg(unix)]
     const PLIST: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
@@ -480,8 +488,12 @@ mod tests {
 </dict>
 </plist>
 "#;
+    #[cfg(unix)]
     const UNIT: &str = "[Service]\nType=simple\nExecStart=\"/home/a/.local/bin/smcpd\" --config \"/home/a/.config/smcp-gateway/100%% \\\"x\\\".toml\"\nRestart=on-failure\n";
 
+    // The Gateway upgrade of this window is for launchd and systemd
+    // installations; the paths in these tests are Unix paths.
+    #[cfg(unix)]
     #[test]
     fn installation_comes_from_the_service_definition() {
         claims::partial(&["FR-20.12"]);
@@ -507,6 +519,33 @@ mod tests {
         }
     }
 
+    #[test]
+    fn windows_installations_are_not_upgraded_here() {
+        claims::partial(&["FR-20.12"]);
+        for m in [
+            Manager::WindowsUser {
+                smcpctl: "C:\\p\\smcpctl.exe".into(),
+                config: "C:\\c\\smcp.toml".into(),
+            },
+            Manager::WindowsMachine {
+                smcpctl: "C:\\p\\smcpctl.exe".into(),
+                config: "C:\\c\\smcp.toml".into(),
+            },
+        ] {
+            assert_eq!(find_installation(Some(&m), |_| None), Err(NotHere::Windows));
+            let h = crate::service::Host {
+                os: "windows",
+                home: "C:\\Users\\a".into(),
+                xdg_config_home: None,
+                etc_systemd: "C:\\none".into(),
+                uid: 0,
+                win: Default::default(),
+            };
+            assert_eq!(unit_file(&h, &m), None);
+        }
+    }
+
+    #[cfg(unix)]
     #[test]
     fn enforced_packaged_and_missing_installations_are_not_upgraded_here() {
         claims::partial(&["FR-20.12", "SR-2-7"]);
@@ -539,6 +578,7 @@ mod tests {
             xdg_config_home: None,
             etc_systemd: "/etc/systemd/system".into(),
             uid: 1000,
+            win: Default::default(),
         };
         assert_eq!(
             unit_file(&h, &Manager::SystemdUser),

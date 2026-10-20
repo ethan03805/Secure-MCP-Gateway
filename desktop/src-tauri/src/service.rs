@@ -10,6 +10,15 @@
 //! console. Elevation (`pkexec`, which names the command in its polkit
 //! prompt) is requested only for the system unit. The names mirror
 //! `cmd/smcpctl/service.go`.
+//!
+//! On Windows (FR-21.6) the application runs `smcpctl service
+//! start|stop|restart|status --config <file>` instead, which holds the
+//! per-user stop event, supervisor start and Service Control Manager calls:
+//! for the per-user installation as the user, and for the machine-mode
+//! service `smcpd` with the User Account Control prompt (`winproc`), the
+//! only elevation, using the `smcpctl.exe` that `smcpctl install --machine`
+//! placed in `%ProgramFiles%\smcp-gateway`, which only administrators can
+//! change. The status query is never elevated.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -39,6 +48,12 @@ pub enum Manager {
     SystemdUser,
     /// Linux systemd system unit (Enforced); changes need elevation.
     SystemdSystem,
+    /// Windows per-user installation (Task Scheduler task or Run value),
+    /// controlled through `smcpctl service` as the user.
+    WindowsUser { smcpctl: PathBuf, config: PathBuf },
+    /// Windows machine-mode service `smcpd`; changes need User Account
+    /// Control.
+    WindowsMachine { smcpctl: PathBuf, config: PathBuf },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,11 +81,76 @@ pub struct Host {
     pub xdg_config_home: Option<PathBuf>,
     pub etc_systemd: PathBuf,
     pub uid: u32,
+    /// The Windows directories (used on Windows only).
+    pub win: WinDirs,
 }
+
+/// The Windows directories of CP-46 and the application's own directory,
+/// from the environment (`LOCALAPPDATA`, `ProgramData`, `ProgramFiles`).
+#[derive(Debug, Clone, Default)]
+pub struct WinDirs {
+    pub local_app_data: Option<PathBuf>,
+    pub program_data: Option<PathBuf>,
+    pub program_files: Option<PathBuf>,
+    /// The directory of the application's executable.
+    pub exe_dir: Option<PathBuf>,
+}
+
+impl WinDirs {
+    pub fn current() -> WinDirs {
+        let env = |k: &str| std::env::var_os(k).map(PathBuf::from).filter(|p| p.is_absolute());
+        WinDirs {
+            local_app_data: env("LOCALAPPDATA"),
+            program_data: env("ProgramData"),
+            program_files: env("ProgramFiles"),
+            exe_dir: std::env::current_exe()
+                .ok()
+                .and_then(|e| e.parent().map(Path::to_path_buf)),
+        }
+    }
+
+    /// The per-user configuration directory (`smcpctl install`).
+    pub fn user_config_dir(&self) -> Option<PathBuf> {
+        self.local_app_data
+            .as_ref()
+            .map(|d| d.join("smcp-gateway").join("config"))
+    }
+
+    /// The per-user state directory.
+    pub fn user_state_dir(&self) -> Option<PathBuf> {
+        self.local_app_data
+            .as_ref()
+            .map(|d| d.join("smcp-gateway").join("state"))
+    }
+
+    /// The machine-mode configuration directory (`smcpctl install --machine`).
+    pub fn machine_config_dir(&self) -> Option<PathBuf> {
+        self.program_data
+            .as_ref()
+            .map(|d| d.join("smcp-gateway").join("config"))
+    }
+
+    /// The machine-mode binaries, which only administrators can change.
+    pub fn machine_smcpctl(&self) -> Option<PathBuf> {
+        self.program_files
+            .as_ref()
+            .map(|d| d.join("smcp-gateway").join("smcpctl.exe"))
+    }
+}
+
+/// The definition files `smcpctl install` writes beside the configuration
+/// (cmd/smcpctl/install_winuser.go).
+pub const WIN_TASK_FILE: &str = "smcpd-task.xml";
+pub const WIN_RUN_FILE: &str = "smcpd-run.txt";
+pub const WIN_SERVICE_FILE: &str = "smcpd-service.txt";
 
 impl Host {
     pub fn current() -> Host {
-        let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
+        // Windows sets USERPROFILE, not HOME.
+        let home = std::env::var_os("HOME")
+            .or_else(|| cfg!(windows).then(|| std::env::var_os("USERPROFILE")).flatten())
+            .map(PathBuf::from)
+            .unwrap_or_default();
         let xdg = std::env::var_os("XDG_CONFIG_HOME")
             .map(PathBuf::from)
             .filter(|p| p.is_absolute());
@@ -80,6 +160,7 @@ impl Host {
             xdg_config_home: xdg,
             etc_systemd: PathBuf::from("/etc/systemd/system"),
             uid: current_uid(),
+            win: WinDirs::current(),
         }
     }
 }
@@ -115,8 +196,104 @@ pub fn detect(h: &Host) -> Option<Manager> {
                 None
             }
         }
+        "windows" => detect_windows(h),
         _ => None,
     }
+}
+
+/// A file that exists, or that the user may not see (the machine-mode
+/// configuration directory grants users no access).
+fn exists_or_hidden(p: &Path) -> bool {
+    match std::fs::symlink_metadata(p) {
+        Ok(_) => true,
+        Err(e) => e.kind() == std::io::ErrorKind::PermissionDenied,
+    }
+}
+
+fn detect_windows(h: &Host) -> Option<Manager> {
+    if let Some(dir) = h.win.user_config_dir() {
+        if dir.join(WIN_TASK_FILE).is_file() || dir.join(WIN_RUN_FILE).is_file() {
+            let smcpctl = crate::setup::find_smcpctl(h.win.exe_dir.as_deref(), h)?;
+            return Some(Manager::WindowsUser {
+                smcpctl,
+                config: crate::setup::config_file(&dir),
+            });
+        }
+    }
+    let dir = h.win.machine_config_dir()?;
+    if exists_or_hidden(&dir.join(WIN_SERVICE_FILE)) {
+        let smcpctl = h.win.machine_smcpctl().filter(|p| p.is_file())?;
+        return Some(Manager::WindowsMachine {
+            smcpctl,
+            config: crate::setup::config_file(&dir),
+        });
+    }
+    None
+}
+
+/// Whether actions on this service run with the User Account Control
+/// prompt (Windows machine mode). On Linux the system unit's commands
+/// carry `pkexec` themselves.
+pub fn needs_uac(m: &Manager) -> bool {
+    matches!(m, Manager::WindowsMachine { .. })
+}
+
+/// `smcpctl service <verb> --config <file>`.
+fn smcpctl_service(smcpctl: &Path, verb: &str, config: &Path) -> Vec<String> {
+    vec![
+        smcpctl.display().to_string(),
+        "service".into(),
+        verb.into(),
+        "--config".into(),
+        config.display().to_string(),
+    ]
+}
+
+/// Joins arguments into one Windows command line by the Microsoft C
+/// runtime rules (as Go's `windows.ComposeCommandLine` does), for
+/// `ShellExecuteExW`.
+pub fn windows_command_line(args: &[String]) -> String {
+    let mut out = String::new();
+    for (i, a) in args.iter().enumerate() {
+        if i > 0 {
+            out.push(' ');
+        }
+        if !a.is_empty() && !a.contains([' ', '\t', '\n', '\x0b', '"']) {
+            out.push_str(a);
+            continue;
+        }
+        out.push('"');
+        let mut backslashes = 0;
+        for c in a.chars() {
+            match c {
+                '\\' => backslashes += 1,
+                '"' => {
+                    out.extend(std::iter::repeat_n('\\', backslashes * 2 + 1));
+                    out.push('"');
+                    backslashes = 0;
+                }
+                _ => {
+                    out.extend(std::iter::repeat_n('\\', backslashes));
+                    out.push(c);
+                    backslashes = 0;
+                }
+            }
+        }
+        out.extend(std::iter::repeat_n('\\', backslashes * 2));
+        out.push('"');
+    }
+    out
+}
+
+/// Keeps a console program started by the application from opening a
+/// console window on Windows (CREATE_NO_WINDOW); does nothing elsewhere.
+pub fn no_console(cmd: &mut Command) -> &mut Command {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd
 }
 
 fn v(args: &[&str]) -> Vec<String> {
@@ -146,6 +323,9 @@ pub fn action_argv(m: &Manager, a: Action) -> Vec<String> {
             Action::Start => v(&[PKEXEC, SYSTEMCTL, "start", NFT_UNIT, SYSTEMD_UNIT]),
             _ => v(&[PKEXEC, SYSTEMCTL, a.verb(), SYSTEMD_UNIT]),
         },
+        Manager::WindowsUser { smcpctl, config } | Manager::WindowsMachine { smcpctl, config } => {
+            smcpctl_service(smcpctl, a.verb(), config)
+        }
     }
 }
 
@@ -155,6 +335,9 @@ pub fn status_argv(m: &Manager) -> Vec<String> {
         Manager::Launchd { uid, .. } => vec![LAUNCHCTL.into(), "print".into(), format!("gui/{uid}/{LAUNCHD_LABEL}")],
         Manager::SystemdUser => v(&[SYSTEMCTL, "--user", "is-active", SYSTEMD_UNIT]),
         Manager::SystemdSystem => v(&[SYSTEMCTL, "is-active", SYSTEMD_UNIT]),
+        Manager::WindowsUser { smcpctl, config } | Manager::WindowsMachine { smcpctl, config } => {
+            smcpctl_service(smcpctl, "status", config)
+        }
     }
 }
 
@@ -178,6 +361,13 @@ pub fn parse_status(m: &Manager, r: &RunResult) -> ServiceStatus {
             "inactive" | "failed" | "deactivating" => ServiceStatus::Stopped,
             _ => ServiceStatus::Unknown,
         },
+        // `smcpctl service status` prints one word.
+        Manager::WindowsUser { .. } | Manager::WindowsMachine { .. } => match (r.code, r.stdout.trim()) {
+            (Some(0), "running") => ServiceStatus::Running,
+            (Some(0), "stopped") => ServiceStatus::Stopped,
+            (Some(0), "not-installed") => ServiceStatus::NotInstalled,
+            _ => ServiceStatus::Unknown,
+        },
     }
 }
 
@@ -194,6 +384,12 @@ pub struct RunResult {
 /// Runs a fixed argument vector. A trait so tests can record commands.
 pub trait Runner: Send + Sync {
     fn run(&self, argv: &[String], timeout: Duration) -> RunResult;
+
+    /// Runs a command with the User Account Control prompt (Windows); only
+    /// its exit code is available, not its output.
+    fn run_elevated(&self, argv: &[String], timeout: Duration) -> RunResult {
+        self.run(argv, timeout)
+    }
 }
 
 /// Runs commands with `std::process`, no shell, a closed standard input,
@@ -209,7 +405,7 @@ impl Runner for SystemRunner {
             };
         };
         debug_assert!(Path::new(prog).is_absolute());
-        let child = Command::new(prog)
+        let child = no_console(&mut Command::new(prog))
             .args(args)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -266,6 +462,40 @@ impl Runner for SystemRunner {
             spawn_error: None,
         }
     }
+
+    #[cfg(windows)]
+    fn run_elevated(&self, argv: &[String], timeout: Duration) -> RunResult {
+        crate::winproc::run_elevated(argv, timeout)
+    }
+}
+
+/// The customer-code bit of an `smcpctl service` exit code that carries a
+/// Win32 error code (cmd/smcpctl/servicecmd.go).
+pub const WIN32_EXIT_BIT: i32 = 0x2000_0000;
+
+/// The text for an exit code of `smcpctl service` that carries a Win32
+/// error code, with `message` giving the system's text (Windows).
+pub fn win32_exit_detail(code: Option<i32>, message: impl Fn(u32) -> Option<String>) -> Option<String> {
+    let c = code?;
+    if c <= 0 || c & WIN32_EXIT_BIT == 0 {
+        return None;
+    }
+    let errno = (c & 0xFFFF) as u32;
+    Some(match message(errno) {
+        Some(m) => format!("{m} (error {errno})"),
+        None => format!("Windows error {errno}"),
+    })
+}
+
+fn system_message(_code: u32) -> Option<String> {
+    #[cfg(windows)]
+    {
+        crate::winproc::win32_message(_code)
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
 }
 
 /// Queries the service's status.
@@ -283,7 +513,11 @@ pub fn perform(r: &dyn Runner, m: Option<&Manager>, a: Action) -> Result<String,
         return Err("No Gateway service is installed. Run the first-run setup or `smcpctl install` first.".into());
     };
     let argv = action_argv(m, a);
-    let res = r.run(&argv, ACTION_TIMEOUT);
+    let res = if needs_uac(m) {
+        r.run_elevated(&argv, ACTION_TIMEOUT)
+    } else {
+        r.run(&argv, ACTION_TIMEOUT)
+    };
     if res.timed_out {
         return Err(format!(
             "`{}` did not finish within {} seconds.",
@@ -304,12 +538,19 @@ pub fn perform(r: &dyn Runner, m: Option<&Manager>, a: Action) -> Result<String,
             }
         ));
     }
-    let detail = if res.stderr.trim().is_empty() {
+    let win32 = win32_exit_detail(res.code, system_message);
+    let detail = if let Some(w) = win32.as_deref() {
+        w
+    } else if res.stderr.trim().is_empty() {
         res.stdout.trim()
     } else {
         res.stderr.trim()
     };
-    let code = res.code.map(|c| c.to_string()).unwrap_or_else(|| "a signal".into());
+    let code = match res.code {
+        Some(c) if c > 0 && c & WIN32_EXIT_BIT != 0 => format!("{c:#x}"),
+        Some(c) => c.to_string(),
+        None => "a signal".into(),
+    };
     Err(format!(
         "Could not {} the Gateway service (`{}` exited with {code}): {detail}",
         a.verb(),
@@ -325,6 +566,7 @@ mod tests {
 
     struct Fake {
         calls: Mutex<Vec<(Vec<String>, Duration)>>,
+        elevated: Mutex<Vec<Vec<String>>>,
         result: RunResult,
     }
 
@@ -333,13 +575,191 @@ mod tests {
             self.calls.lock().unwrap().push((argv.to_vec(), timeout));
             self.result.clone()
         }
+
+        fn run_elevated(&self, argv: &[String], timeout: Duration) -> RunResult {
+            self.elevated.lock().unwrap().push(argv.to_vec());
+            self.run(argv, timeout)
+        }
     }
 
     fn fake(result: RunResult) -> Fake {
         Fake {
             calls: Mutex::new(Vec::new()),
+            elevated: Mutex::new(Vec::new()),
             result,
         }
+    }
+
+    fn windows_host(d: &Path) -> Host {
+        Host {
+            os: "windows",
+            home: d.join("Users/u"),
+            xdg_config_home: None,
+            etc_systemd: d.join("none"),
+            uid: 0,
+            win: WinDirs {
+                local_app_data: Some(d.join("Users/u/AppData/Local")),
+                program_data: Some(d.join("ProgramData")),
+                program_files: Some(d.join("Program Files")),
+                exe_dir: Some(d.join("Program Files/Secure MCP Gateway")),
+            },
+        }
+    }
+
+    #[test]
+    fn windows_detects_the_per_user_and_the_machine_installation() {
+        claims::partial(&["FR-20.3", "FR-20.1"]);
+        let d = tempdir::Dir::new();
+        let h = windows_host(d.path());
+        assert_eq!(detect(&h), None);
+        let app_smcpctl = d.path().join("Program Files/Secure MCP Gateway/smcpctl.exe");
+        touch(&app_smcpctl);
+        // The machine mode: its definition file and the administrators'
+        // smcpctl in %ProgramFiles%\smcp-gateway.
+        let machine_cfg = d.path().join("ProgramData/smcp-gateway/config");
+        touch(&machine_cfg.join("smcpd-service.txt"));
+        assert_eq!(detect(&h), None, "machine mode without the administrators' smcpctl");
+        let machine_smcpctl = d.path().join("Program Files/smcp-gateway/smcpctl.exe");
+        touch(&machine_smcpctl);
+        assert_eq!(
+            detect(&h),
+            Some(Manager::WindowsMachine {
+                smcpctl: machine_smcpctl.clone(),
+                config: machine_cfg.join("smcp.toml"),
+            })
+        );
+        // A per-user installation (Task Scheduler task or Run value) wins,
+        // controlled with the application's own smcpctl.
+        let user_cfg = d.path().join("Users/u/AppData/Local/smcp-gateway/config");
+        for f in ["smcpd-run.txt", "smcpd-task.xml"] {
+            touch(&user_cfg.join(f));
+            assert_eq!(
+                detect(&h),
+                Some(Manager::WindowsUser {
+                    smcpctl: app_smcpctl.clone(),
+                    config: user_cfg.join("smcp.toml"),
+                })
+            );
+            std::fs::remove_file(user_cfg.join(f)).unwrap();
+        }
+    }
+
+    #[test]
+    fn windows_controls_go_through_smcpctl_and_elevate_only_the_machine_service() {
+        claims::partial(&["FR-20.3", "SR-2-7", "FR-20.1"]);
+        let user = Manager::WindowsUser {
+            smcpctl: PathBuf::from(r"C:\Program Files\Secure MCP Gateway\smcpctl.exe"),
+            config: PathBuf::from(r"C:\Users\u\AppData\Local\smcp-gateway\config\smcp.toml"),
+        };
+        let machine = Manager::WindowsMachine {
+            smcpctl: PathBuf::from(r"C:\Program Files\smcp-gateway\smcpctl.exe"),
+            config: PathBuf::from(r"C:\ProgramData\smcp-gateway\config\smcp.toml"),
+        };
+        assert_eq!(
+            action_argv(&user, Action::Restart),
+            v(&[
+                r"C:\Program Files\Secure MCP Gateway\smcpctl.exe",
+                "service",
+                "restart",
+                "--config",
+                r"C:\Users\u\AppData\Local\smcp-gateway\config\smcp.toml"
+            ])
+        );
+        assert_eq!(
+            status_argv(&machine),
+            v(&[
+                r"C:\Program Files\smcp-gateway\smcpctl.exe",
+                "service",
+                "status",
+                "--config",
+                r"C:\ProgramData\smcp-gateway\config\smcp.toml"
+            ])
+        );
+        assert!(!needs_uac(&user) && needs_uac(&machine));
+        assert!(!needs_uac(&Manager::SystemdSystem), "pkexec is in the argument vector");
+        for a in [Action::Start, Action::Stop, Action::Restart] {
+            let ok = fake(RunResult {
+                code: Some(0),
+                ..Default::default()
+            });
+            assert!(perform(&ok, Some(&user), a).is_ok());
+            assert!(
+                ok.elevated.lock().unwrap().is_empty(),
+                "the per-user mode ran a command with User Account Control"
+            );
+            assert!(perform(&ok, Some(&machine), a).is_ok());
+            assert_eq!(*ok.elevated.lock().unwrap(), vec![action_argv(&machine, a)]);
+        }
+        // The status query is never elevated.
+        let st = fake(RunResult {
+            code: Some(0),
+            stdout: "running\r\n".into(),
+            ..Default::default()
+        });
+        assert_eq!(status(&st, Some(&machine)), ServiceStatus::Running);
+        assert!(st.elevated.lock().unwrap().is_empty());
+        let r = |code, out: &str| RunResult {
+            code: Some(code),
+            stdout: out.into(),
+            ..Default::default()
+        };
+        assert_eq!(parse_status(&user, &r(0, "stopped\n")), ServiceStatus::Stopped);
+        assert_eq!(
+            parse_status(&user, &r(0, "not-installed\n")),
+            ServiceStatus::NotInstalled
+        );
+        assert_eq!(parse_status(&user, &r(1, "running\n")), ServiceStatus::Unknown);
+        assert_eq!(parse_status(&user, &r(0, "something else")), ServiceStatus::Unknown);
+    }
+
+    #[test]
+    fn windows_failures_carry_the_service_managers_text() {
+        claims::partial(&["FR-20.3"]);
+        let machine = Manager::WindowsMachine {
+            smcpctl: PathBuf::from(r"C:\Program Files\smcp-gateway\smcpctl.exe"),
+            config: PathBuf::from(r"C:\ProgramData\smcp-gateway\config\smcp.toml"),
+        };
+        // smcpctl ends with the customer bit and ERROR_SERVICE_DISABLED.
+        let disabled = fake(RunResult {
+            code: Some(0x2000_0000 | 1058),
+            ..Default::default()
+        });
+        let err = perform(&disabled, Some(&machine), Action::Start).unwrap_err();
+        assert!(err.contains("Could not start the Gateway service"), "{err}");
+        assert!(err.contains("1058"), "{err}");
+        assert!(err.contains("0x20000422"), "{err}");
+        assert_eq!(
+            win32_exit_detail(Some(0x2000_0000 | 5), |c| (c == 5).then(|| "Access is denied.".into())),
+            Some("Access is denied. (error 5)".into())
+        );
+        assert_eq!(win32_exit_detail(Some(1), |_| None), None);
+        assert_eq!(win32_exit_detail(Some(-1), |_| None), None);
+        assert_eq!(win32_exit_detail(None, |_| None), None);
+        // A declined consent prompt.
+        let declined = fake(RunResult {
+            spawn_error: Some("the User Account Control prompt was declined".into()),
+            ..Default::default()
+        });
+        assert!(perform(&declined, Some(&machine), Action::Stop)
+            .unwrap_err()
+            .contains("declined"));
+    }
+
+    #[test]
+    fn windows_command_lines_follow_the_c_runtime_rules() {
+        claims::partial(&["SR-2-7"]);
+        let q = |a: &[&str]| windows_command_line(&v(a));
+        assert_eq!(q(&["service", "start"]), "service start");
+        assert_eq!(
+            q(&["--config", r"C:\ProgramData\smcp-gateway\config\smcp.toml"]),
+            r"--config C:\ProgramData\smcp-gateway\config\smcp.toml"
+        );
+        assert_eq!(q(&[r"C:\Program Files\x"]), r#""C:\Program Files\x""#);
+        assert_eq!(q(&[""]), r#""""#);
+        assert_eq!(q(&[r#"a"b"#]), r#""a\"b""#);
+        assert_eq!(q(&[r"a b\"]), r#""a b\\""#);
+        assert_eq!(q(&[r#"a\"b c"#]), r#""a\\\"b c""#);
+        assert_eq!(q(&["a&b|c%PATH%"]), "a&b|c%PATH%");
     }
 
     fn host(os: &'static str) -> (tempdir::Dir, Host) {
@@ -350,6 +770,7 @@ mod tests {
             xdg_config_home: None,
             etc_systemd: d.path().join("etc/systemd/system"),
             uid: 501,
+            win: WinDirs::default(),
         };
         (d, h)
     }
@@ -459,9 +880,12 @@ mod tests {
             status_argv(&Manager::SystemdSystem),
             v(&["/usr/bin/systemctl", "is-active", "smcpd.service"])
         );
-        for m in [&l, &Manager::SystemdUser, &Manager::SystemdSystem] {
-            for a in [Action::Start, Action::Stop, Action::Restart] {
-                assert!(Path::new(&action_argv(m, a)[0]).is_absolute());
+        // Unix paths are absolute only on Unix.
+        if cfg!(unix) {
+            for m in [&l, &Manager::SystemdUser, &Manager::SystemdSystem] {
+                for a in [Action::Start, Action::Stop, Action::Restart] {
+                    assert!(Path::new(&action_argv(m, a)[0]).is_absolute());
+                }
             }
         }
     }

@@ -3712,9 +3712,12 @@ dependencies = [
  "tauri-plugin-notification",
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
+ "tauri-winrt-notification",
  "ureq",
  "url",
  "webkit2gtk",
+ "webview2-com",
+ "windows",
 ]
 
 [[package]]

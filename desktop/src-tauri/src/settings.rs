@@ -143,6 +143,8 @@ pub fn default_ca_file(os: &str, home: &Path, xdg_state_home: Option<&Path>) -> 
 pub fn default_ca_file_in(os: &str, home: &Path, xdg_state_home: Option<&Path>, enforced: &Path) -> PathBuf {
     match os {
         "macos" => home.join("Library/Application Support/smcp-gateway/state/tls/ca.crt"),
+        // The per-user mode's state directory, %LOCALAPPDATA%\smcp-gateway\state.
+        "windows" => home.join(r"AppData\Local\smcp-gateway\state\tls\ca.crt"),
         _ => {
             let standalone = xdg_state_home
                 .filter(|p| p.is_absolute())

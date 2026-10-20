@@ -81,7 +81,10 @@ pub fn version_of(name: &str, path: &Path) -> Option<String> {
     } else {
         &["--version"]
     };
-    let out = Command::new(path).args(args).output().ok()?;
+    let out = crate::service::no_console(&mut Command::new(path))
+        .args(args)
+        .output()
+        .ok()?;
     if !out.status.success() {
         return None;
     }

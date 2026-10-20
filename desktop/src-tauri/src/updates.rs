@@ -291,6 +291,11 @@ impl Updates {
                 Some(format!("The Gateway was installed by the {f} package and is updated with it: update the app, which installs both.")),
             ),
             Err(NotHere::Unreadable(m)) => (None, false, Some(format!("The Gateway service definition could not be read: {m}"))),
+            Err(NotHere::Windows) => (
+                None,
+                false,
+                Some("On Windows the Gateway is upgraded with smcpctl upgrade in a terminal, or with the smcp-desktop .msi, which Update App installs.".to_string()),
+            ),
         };
         self.set(|v| {
             v.gateway = version.map(|x| x.to_string());
