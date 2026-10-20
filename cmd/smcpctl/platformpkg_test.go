@@ -336,10 +336,15 @@ func TestInstallersInChecksumFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"needs: installers", "uses: ./.github/workflows/installers.yml", "--skip=nfpm", "build/installers"} {
+	for _, want := range []string{"uses: ./.github/workflows/installers.yml", "uses: ./.github/workflows/installers-desktop-macos.yml", "--skip=nfpm", "build/installers"} {
 		if !strings.Contains(string(wf), want) {
 			t.Errorf("release.yml lacks %q", want)
 		}
+	}
+	// The release job waits for the installers (and the macOS .dmg build,
+	// which fails it only on a real failure).
+	if !regexp.MustCompile(`(?m)^  release:\n(?:    .*\n)*?    needs: (?:installers|\[installers(?:, [a-z-]+)*\])\n`).Match(wf) {
+		t.Error("the release job of release.yml does not need the installers job")
 	}
 }
 
