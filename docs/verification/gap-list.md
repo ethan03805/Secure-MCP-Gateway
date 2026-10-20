@@ -75,7 +75,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 ### E-01 Harness Interface Endpoint
 
 - FR-21.8 **unverified** (no claiming test or record): Conformance requests run over the named pipe on Windows; the fixtures of both protocol eras compared with the TLS listener and the AF_UNIX scan are not complete.
-- SR-2.8-6 **unverified** (no claiming test or record): The DACL, the first-instance flag and `pipe_squatted` are tested; a connection over SMB (`\\localhost\pipe\`) and as a user outside the group are not.
+- SR-2.8-6 **unverified** (no claiming test or record): The DACL, the first-instance flag, `pipe_squatted` and the name held between connections (security review v1.3, SR-19) are tested; a connection over SMB (`\\localhost\pipe\`) and as a user outside the group are not.
 
 ### E-02 Protocol Mediator
 
@@ -265,7 +265,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-22.34 **unverified** (partly verified): One team, user, gateway and virtual server per package is tested; each gateway's URL is the package's own egress endpoint and each package's calls reach only its fixture (`connector.TestHostedPackagesThroughEgress`); the pinned-image run with two packages through the endpoints is not made.
 - FR-22.37 **unverified** (partly verified): Plugins off and the doubled limits are checked; a hosted call at the Gateway's rate limit and with a withheld result is not.
 - FR-22.38 **unverified** (partly verified): Reconciliation removes excluded objects (tested); the inspection of the admin client's operations is not recorded.
-- FR-22.42 **unverified** (no claiming test or record): `docs/security-limitations.md` states the six points under Planned for v1.3.0; the inspection of a release candidate is not recorded.
+- FR-22.42 **unverified** (no claiming test or record): `docs/security-limitations.md` states the six points as of v1.3.0, with the residual risks of the [v1.3 security review](../security-review-v1.3.md) (engine `inspect` shows the instance's credentials, Docker Engine before 28.0); the inspection of a release candidate is not recorded.
 - FR-22.43 **missing** (partly verified): The suite asserts HFC-01 to HFC-06, HFC-08, HFC-10, HFC-11 and HFC-13 (the hosted rows against the ContextForge stand-in), the console suite HFC-07 and the contextforge job HFC-12 (`bundle.TestEnforcedImage`); HFC-09 (E-11 filtering and taint of a swapped result through the full pipeline) and HFC-14's refusal by the running instance within the suite are not asserted.
 - FR-22.44 **unverified** (partly verified): `smcpctl bootstrap` and `install` ask (tested), and the desktop first-run setup offers the box, unchecked by default, with the same notes and passes `--with-contextforge` only when it is checked (`desktop/src-tauri/src/contextforge.rs`, `desktop/test/contextforge-choice.test.ts`); the Demonstration of both setups is not recorded.
 - SR-3.2-2 **unverified** (partly verified): The signature binding and its journal event are tested for the pinned image; images signed from another tag or repository are not.

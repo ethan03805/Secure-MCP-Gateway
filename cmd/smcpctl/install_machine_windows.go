@@ -22,19 +22,11 @@ const (
 	groupOperators = "smcp-operators"
 )
 
-func programData() string {
-	if v := os.Getenv("ProgramData"); v != "" {
-		return v
-	}
-	return `C:\ProgramData`
-}
-
-func programFiles() string {
-	if v := os.Getenv("ProgramFiles"); v != "" {
-		return v
-	}
-	return `C:\Program Files`
-}
+// The machine-mode folders come from Windows, not from environment
+// variables the user can set (winsvc.ProgramData, security review v1.3,
+// SR-20).
+func programData() string  { return winsvc.ProgramData() }
+func programFiles() string { return winsvc.ProgramFiles() }
 
 // machineConfigPath is the machine-mode configuration (CP-46).
 func machineConfigPath() string {

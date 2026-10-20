@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sys/windows"
+
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
@@ -159,11 +161,88 @@ func TestWindowsPipeListenerDACL(t *testing.T) {
 	}
 	c.Close()
 
-	// Between Accepts no instance exists: DACL creates the one the next
-	// Accept serves. A client handle on it, with nobody accepting, reads
-	// the same descriptor.
+	// Between Accepts the instance the next Accept serves already exists
+	// (SR-19). A client handle on it, with nobody accepting, reads the
+	// same descriptor.
 	p, n, e, err = ln.DACL()
 	check("between Accepts", p, n, e, err)
 	p, n, e, err = DACL(name)
 	check("client handle", p, n, e, err)
+}
+
+// TestWindowsPipeNameHeldBetweenAccepts: security review v1.3, SR-19.
+// After a connection is accepted and closed, and before the next Accept,
+// the pipe name stays held by an instance of the listener, so another
+// process cannot create it (FILE_FLAG_FIRST_PIPE_INSTANCE fails) and the
+// listener's next instance cannot join a pipe someone else created.
+func TestWindowsPipeNameHeldBetweenAccepts(t *testing.T) {
+	reqtest.Partial(t, "SR-2.8-6")
+	self, err := winsec.ProcessUserSID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := fmt.Sprintf(`\\.\pipe\smcp-winpipe-gap-%d-%d`, os.Getpid(), time.Now().UnixNano())
+	ln, err := Listen(name, Entries(self))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	accepted := make(chan net.Conn, 1)
+	go func() {
+		if c, err := ln.Accept(); err == nil {
+			accepted <- c
+		}
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, err := Dial(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case sc := <-accepted:
+		sc.Close()
+	case <-time.After(5 * time.Second):
+		t.Fatal("Accept did not serve the client")
+	}
+	c.Close()
+	// A squatter with the default security descriptor, as another account
+	// would try it now that the served instance is closed.
+	h, err := createInstance(name, nil, true)
+	if err == nil {
+		_ = windows.CloseHandle(h)
+		t.Fatal("the pipe name was free between Accepts: another process could create it")
+	}
+	if !errors.Is(err, ErrSquatted) {
+		t.Fatalf("squat attempt: %v", err)
+	}
+	// A client that opens the waiting instance and leaves before it is
+	// accepted does not end the listener, and the next client is served.
+	gone, err := Dial(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gone.Close()
+	errs := make(chan error, 1)
+	go func() {
+		c, err := ln.Accept()
+		if err != nil {
+			errs <- err
+			return
+		}
+		accepted <- c
+	}()
+	c2, err := Dial(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c2.Close()
+	select {
+	case sc := <-accepted:
+		sc.Close()
+	case err := <-errs:
+		t.Fatalf("Accept after a client left: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("the next Accept did not serve the client")
+	}
 }
