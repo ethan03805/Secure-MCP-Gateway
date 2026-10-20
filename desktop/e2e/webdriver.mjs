@@ -24,7 +24,6 @@ const ADMIN_PW = "e2e admin password 7f3a";
 const APPROVER_PW = "e2e approver password 9c1d";
 const AXE = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "node_modules", "axe-core", "axe.min.js"), "utf8");
 const ELEMENT = "element-6066-11e4-a52e-4f735466cecc";
-const SECOND_LOG = path.join(os.tmpdir(), "smcp-desktop-second.log");
 
 let failures = 0;
 const fail = (/** @type {string} */ m) => {
@@ -215,63 +214,58 @@ try {
   if (fs.readFileSync(claudeJson, "utf8") !== original) fail("~/.claude.json was not restored");
   else ok("Disconnect restored ~/.claude.json");
 
-  // ---- Console window (FR-20.6, SR-2.8-5) and deep links (FR-20.28) ----
-  const start = (/** @type {string} */ link) => {
-    const fd = fs.openSync(SECOND_LOG, "a");
-    spawn(APP, [link], { stdio: ["ignore", fd, fd], detached: true }).unref();
-  };
-  /** The handle and address of the console window, if one is open. */
-  const consoleWindow = async () => {
-    for (const h of /** @type {string[]} */ (await wd("GET", `${S}/window/handles`))) {
-      await wd("POST", `${S}/window`, { handle: h });
-      const href = /** @type {string} */ (await script("return location.href;"));
-      // The console window starts at about:blank; the bundled windows are
-      // tauri: pages, except the certificate error page.
-      if (href.startsWith("https://") || href.includes("/error.html")) return { h, href };
-    }
-    return null;
-  };
-  const describeWindows = async () => {
-    const titles = [];
-    for (const h of /** @type {string[]} */ (await wd("GET", `${S}/window/handles`))) {
-      await wd("POST", `${S}/window`, { handle: h });
-      titles.push(`${await wd("GET", `${S}/title`)} <${await script("return location.href;")}>`);
-    }
-    return titles.join(" | ");
-  };
-  await windowTitled("Set Up the Gateway");
-  await click(await button("Open Console"));
-  const opened = await waitFor(consoleWindow, "the console window", 60000).catch(async (e) => {
-    fail(`${e}; windows: ${await describeWindows().catch((x) => String(x))}`);
-    return null;
-  });
-  if (opened) {
-    if (!opened.href.startsWith("https://127.0.0.1:8444/")) fail(`the console window shows ${opened.href}`);
-    else ok(`Open Console loaded the console from the admin listener through the CA-pinned check (${opened.href})`);
-    start("smcp://approvals");
-    const atApprovals = await waitFor(async () => {
-      await wd("POST", `${S}/window`, { handle: opened.h });
-      const href = /** @type {string} */ (await script("return location.href;"));
-      return href.includes("approvals") ? href : null;
-    }, "the console window at Approvals", 30000).catch((e) => {
-      fail(String(e));
-      return "";
-    });
-    if (atApprovals) ok(`smcp://approvals brought the console window to ${atApprovals}`);
-    const here = /** @type {string} */ (await script("return location.href;"));
-    start("smcp://approvals?approve=1");
-    start("smcp://stop");
-    start(`smcp://approvals/${"a".repeat(64 * 1024)}`);
-    await sleep(3000);
-    const now = /** @type {string} */ (await script("return location.href;"));
-    if (now !== here) fail(`a refused link navigated the console window to ${now}`);
-    else ok("refused links left the console window where it was");
-  }
+  // The console window is checked without WebDriver below: under
+  // WebKitWebDriver the application exited as soon as it opened the
+  // console window (CI, October 2026), so that window is checked with the
+  // application running on its own.
 } catch (e) {
   fail(String(e instanceof Error ? e.stack : e));
 } finally {
-  if (failures && fs.existsSync(SECOND_LOG)) console.log(`output of the second starts:\n${fs.readFileSync(SECOND_LOG, "utf8")}`);
   await wd("DELETE", S).catch(() => undefined);
 }
-console.log(failures ? `${failures} failure(s)` : "desktop end-to-end: setup, client setup and deep links passed");
+
+// ---- Console window (FR-20.6, SR-2.8-5) and deep links (FR-20.28) ----
+// The application runs on its own now (no automation). A link is passed as
+// an argument, as the desktop entry does; the application logs each
+// console page it opens ("smcp-desktop: console: <url>") and each refusal
+// of the listener's certificate.
+await sleep(2000);
+const LOG = path.join(os.tmpdir(), "smcp-desktop-direct.log");
+fs.writeFileSync(LOG, "");
+const startApp = (/** @type {string[]} */ args) => {
+  const fd = fs.openSync(LOG, "a");
+  return spawn(APP, args, { stdio: ["ignore", fd, fd] });
+};
+const consoleLines = () => fs.readFileSync(LOG, "utf8").split("\n").filter((l) => l.startsWith("smcp-desktop: console: "));
+const first = startApp(["smcp://approvals"]);
+let exited = /** @type {number | null | string} */ (null);
+first.on("exit", (code, sig) => (exited = code ?? sig));
+try {
+  await waitFor(async () => consoleLines().some((l) => l.endsWith(" https://127.0.0.1:8444/approvals")), "smcp://approvals to open the console at Approvals", 60000);
+  ok("smcp://approvals at start opened the console window at https://127.0.0.1:8444/approvals");
+  await sleep(8000);
+  const log = fs.readFileSync(LOG, "utf8");
+  if (exited !== null) fail(`the application exited (${exited}) after opening the console window`);
+  else if (/console refused/.test(log)) fail(`the console window refused the Gateway's certificate: ${log.split("\n").filter((l) => l.includes("refused")).join(" | ")}`);
+  else ok("the console window accepted the admin listener's certificate (CA-pinned) and the application keeps running");
+  const n = consoleLines().length;
+  for (const bad of ["smcp://approvals?approve=1", "smcp://stop", "smcp://approvals/not-a-uuid", `smcp://approvals/${"a".repeat(64 * 1024)}`]) {
+    const p = startApp([bad]);
+    await new Promise((r) => p.on("exit", r));
+  }
+  await sleep(2000);
+  if (consoleLines().length !== n) fail(`a refused link opened a console page: ${consoleLines().slice(n).join(" | ")}`);
+  else ok("refused links reached the running application and opened nothing");
+  const id = "0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b";
+  const p = startApp([`smcp://approvals/${id}`]);
+  await new Promise((r) => p.on("exit", r));
+  await waitFor(async () => consoleLines().slice(n).some((l) => l.endsWith(`/approvals/${id}`)), "an approval link to reach the running application", 20000);
+  ok("an approval link reached the running application, which opened that approval in the console window");
+} catch (e) {
+  fail(String(e instanceof Error ? e.stack : e));
+  console.log(`application output:\n${fs.readFileSync(LOG, "utf8").split("\n").filter((l) => !l.includes("xdg-desktop-portal")).slice(-40).join("\n")}`);
+} finally {
+  first.kill();
+}
+console.log(failures ? `${failures} failure(s)` : "desktop end-to-end: setup, client setup, console window and deep links passed");
 process.exit(failures ? 1 : 0);
