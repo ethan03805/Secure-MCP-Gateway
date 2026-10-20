@@ -104,6 +104,12 @@ type Options struct {
 	// expiries are checked; default one minute.
 	RenewBefore   time.Duration
 	RenewInterval time.Duration
+	// LockKeys verify the signature of a release lock given to Upgrade
+	// (FR-22.31); default the release key (contextforge.ReleaseKey).
+	LockKeys []minisign.PublicKey
+	// UpgradeHealthWait bounds the wait for the upgraded instance's first
+	// healthy answer; default the CP-47 health wait.
+	UpgradeHealthWait time.Duration
 	// Suspend suspends an enabled revision for cause (drift, a broken
 	// scope); smcpd passes library.Runtime.SuspendRevision.
 	Suspend func(id, rev string, cause error) error
@@ -139,6 +145,9 @@ type Connector struct {
 	instErr  error
 	verifier ImageVerifier
 	verified atomic.Pointer[bundle.Verification]
+	// active is the release the instance runs (upgrade.go); nil: the
+	// compiled release lock.
+	active   atomic.Pointer[contextforge.LockedRelease]
 	platform string
 	instMu   sync.Mutex
 
@@ -208,6 +217,7 @@ func New(o Options) (*Connector, error) {
 		return nil, err
 	}
 	if o.Config.ContextForge.Bundled {
+		c.loadActiveLock()
 		c.setupInstance()
 	}
 	c.cat, c.catErr = loadCatalog(o.Config.ContextForge)

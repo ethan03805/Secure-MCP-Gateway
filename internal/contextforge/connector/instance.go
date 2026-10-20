@@ -85,7 +85,7 @@ func (c *Connector) setupInstance() {
 	if cosign == "" {
 		cosign, _ = exec.LookPath("cosign")
 	}
-	lock := contextforge.ReleaseLock().ContextForge
+	lock := c.lock()
 	sum := sha256.Sum256([]byte(c.o.Config.State.Dir))
 	l := c.o.Config.Limits
 	inst, err := bundle.New(bundle.Options{Engine: eng, Image: lock.ImageRef(c.platform), Name: "smcp-contextforge-" + hex.EncodeToString(sum[:4]),
@@ -107,7 +107,7 @@ const ReasonPythonRequired = "CONTEXTFORGE_PYTHON_REQUIRED"
 // and where no container engine is installed.
 func (c *Connector) setupProcess() {
 	cf := c.o.Config.ContextForge
-	lock := contextforge.ReleaseLock().ContextForge
+	lock := c.lock()
 	if cf.Python == "" {
 		c.instErr = packaging.Errf(ReasonPythonRequired, "the bundled ContextForge instance runs here as a managed process: set [contextforge] python to a CPython %s interpreter; the Connector installs ContextForge %s into a private virtual environment from the release lock's wheel set",
 			lock.Python, lock.Version)
@@ -170,8 +170,8 @@ func (c *Connector) instanceState(state, detail string) {
 }
 
 func (c *Connector) instanceEvent(outcome, reason string, d map[string]any) audit.Event {
-	l := contextforge.ReleaseLock().ContextForge
-	d["version"], d["image"] = l.Version, l.ImageRef(c.platform)
+	l := c.lock()
+	d["version"], d["image"] = l.Version, c.artifact(l)
 	return audit.Event{Class: ClassInstance, Origin: "E-36", Outcome: outcome, ReasonCode: reason, PolicyStatus: "not_evaluated", Detail: d}
 }
 
@@ -193,9 +193,22 @@ func (c *Connector) StartInstance(ctx context.Context, actor string) error {
 	if c.instErr != nil {
 		return refuse(c.instErr)
 	}
-	lock := contextforge.ReleaseLock().ContextForge
 	c.instMu.Lock()
 	defer c.instMu.Unlock()
+	// The instance last ran another release than the active lock (a newly
+	// installed Gateway release): this start is its upgrade (FR-22.31).
+	// After a rollback the previous release starts, and the next Gateway
+	// start tries again.
+	if from, to := c.pendingUpgrade(); from != nil && c.inst.Status().State == bundle.StateStopped {
+		rep := UpgradeReport{From: from.Version, To: to.Version, Source: "release", Packages: []string{}}
+		_, err := c.upgradeLocked(ctx, actor, rep, from, to, nil, nil)
+		if err == nil {
+			return nil
+		}
+		c.o.Log.Warn("upgrading the bundled ContextForge instance to the release of this Gateway failed; starting the previous release", "error", err)
+		c.active.Store(from)
+	}
+	lock := *c.lock()
 	ver, err := bundle.LoadVerification(c.dir)
 	if err != nil {
 		return refuse(err)
@@ -228,6 +241,9 @@ func (c *Connector) StartInstance(ctx context.Context, actor string) error {
 	if err := c.inst.Start(ctx); err != nil {
 		return refuse(err)
 	}
+	if err := c.saveRunningLock(&lock); err != nil {
+		c.o.Log.Warn("recording the running ContextForge release", "error", err)
+	}
 	if c.o.Recorder != nil {
 		return c.o.Recorder.Commit(c.instanceEvent("started", "", map[string]any{"actor": actor, "unconfined": !c.o.Enforced}))
 	}
@@ -256,8 +272,11 @@ func (c *Connector) StopInstance(ctx context.Context, actor string) error {
 
 // Instance returns the bundled instance's view.
 func (c *Connector) Instance() InstanceView {
-	lock := contextforge.ReleaseLock().ContextForge
+	lock := *c.lock()
 	v := InstanceView{State: "disabled", Version: lock.Version, Image: lock.ImageRef("linux/" + runtime.GOARCH), Unconfined: !c.o.Enforced}
+	if c.process != nil {
+		v.Image = c.artifact(&lock)
+	}
 	switch {
 	case !c.o.Config.ContextForge.Bundled:
 	case c.instErr != nil:

@@ -195,6 +195,7 @@ var routeRoles = map[string][]string{
 	"POST /api/v1/contextforge/proposals/{id}/decision": operator,
 	"POST /api/v1/contextforge/instance/start":          operator,
 	"POST /api/v1/contextforge/instance/stop":           operator,
+	"POST /api/v1/contextforge/instance/upgrade":        operator,
 	"POST /api/v1/contextforge/starter-set":             operator,
 }
 

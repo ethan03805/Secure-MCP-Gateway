@@ -4,7 +4,6 @@ import (
 	"maps"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
-	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
 )
 
 // RouteVia is the route marker of a call to a hosted package (FR-22.39).
@@ -14,7 +13,7 @@ const RouteVia = "contextforge"
 // package server ID and revision, its ContextForge virtual server and the
 // bundled instance's version and digest (FR-22.39).
 func (c *Connector) setRoute(serverID, revision, virtualServer string) {
-	lock := contextforge.ReleaseLock().ContextForge
+	lock := c.lock()
 	r := map[string]string{"via": RouteVia, "server_id": serverID, "revision": revision, "virtual_server": virtualServer,
 		"instance_version": lock.Version, "instance_digest": c.instanceDigest()}
 	c.routeMu.Lock()
@@ -73,5 +72,5 @@ func (c *Connector) instanceDigest() string {
 	if v := c.verified.Load(); v != nil {
 		return v.PlatformDigest
 	}
-	return contextforge.ReleaseLock().ContextForge.Image.Platforms[c.platform]
+	return c.lock().Image.Platforms[c.platform]
 }

@@ -202,7 +202,7 @@ func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforg
 		}
 		m.Tools = append(m.Tools, mt)
 	}
-	lock := contextforge.ReleaseLock().ContextForge
+	lock := c.lock()
 	origin := &packaging.ContextForgeOrigin{CatalogSHA256: c.cat.SHA256, ContextForgeRelease: c.cat.Release, EntryID: e.ID, EntrySHA256: e.SHA256(),
 		Class: contextforge.ClassHosted, URL: e.URL, Repo: e.Repo, InstanceDigest: c.instanceDigest(), ProbedAt: probedAt.Format(time.RFC3339)}
 	origin.TLSPublicKeySHA256 = tlsKeyDigest(ctx, u)

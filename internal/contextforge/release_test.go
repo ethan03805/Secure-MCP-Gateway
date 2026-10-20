@@ -70,6 +70,18 @@ func TestReleaseLock(t *testing.T) {
 	}
 }
 
+// The key an upgrade checks a release lock with is the release key that
+// SECURITY.md publishes (FR-22.31).
+func TestReleaseKeyPublished(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "SECURITY.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), ReleaseKey) {
+		t.Fatal("contextforge.ReleaseKey is not the key SECURITY.md publishes")
+	}
+}
+
 func TestParseLockRefusals(t *testing.T) {
 	mutate := func(f func(m map[string]any)) []byte {
 		var m map[string]any

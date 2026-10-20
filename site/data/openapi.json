@@ -2735,6 +2735,53 @@
     ]
    }
   },
+  "/api/v1/contextforge/instance/upgrade": {
+   "post": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "postContextforgeInstanceUpgrade",
+    "parameters": [],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Upgrade the bundled instance to this release's lock or a signed release lock, restoring the previous release when a step fails",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator"
+    ]
+   }
+  },
   "/api/v1/contextforge/proposals": {
    "get": {
     "description": "Reference: docs/api/contextforge.md",
