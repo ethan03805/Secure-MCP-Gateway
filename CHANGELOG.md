@@ -49,6 +49,11 @@
 
 - "Running, not enforced" (UX pass): a Standalone Gateway whose health is degraded only by the profile's own cause `unconfined` now reads `running, not enforced` in the desktop tray, the Gateway Status window, the console status bar and G-01, not `degraded`. Any other cause still reads `degraded`. The Gateway's health state is unchanged (FR-13.10). New metrics `smcp_profile_standalone` and `smcp_health_profile_only` (FR-20.5, partial: `internal/metrics.TestProfileGauges`, `internal/e2e.TestDesktopMetricsOnRunningGateway`) and a `profile_only` field in `GET /admin/v1/health`. The tray has a seventh state (a square with its left half filled) and a catalogue entry `running`; `degraded-not-enforced` now means a cause besides the profile's own. SRS FR-20.2, FR-20.5 and FR-20.45 are amended for the seventh state.
 
+- CI job `desktop-e2e (linux)` (not required): the debug desktop application in WebKitGTK under Xvfb, driven by tauri-driver, completes first-run setup against the real smcpctl and smcpd and samples process arguments for the passwords every 100 ms. It then checks the configuration, the user unit and the CP-51 metrics, connects and disconnects Claude Code through the client setup window, and runs axe in the application's own webview. It then starts the application on its own with deep links: the console window opens at the linked page through the CA-pinned check, and refused links reach the running copy and open nothing (`desktop/e2e/webdriver.mjs`). Fixes this test found:
+  - On Linux the console window now loads its first page through WebKit itself. Before, the application stopped processing events once the console window opened.
+  - A refused link on a second start no longer falls back to opening the console's home page (FR-20.28: ignored without a request).
+  - A second start and a notification click open the console window directly instead of posting a task to the main thread, which never ran.
+
 ## v1.2.0 — 2026-10-19
 
 Third release, built to SRS V1.2 and architecture V2.3 from main after the phase-10 work (32 pull requests since v1.1.0). The tag is made by the procedure in `docs/release-checklist.md`, rehearsed with `v1.2.0-rc.1` on the same commit.

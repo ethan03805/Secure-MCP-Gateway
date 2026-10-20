@@ -315,5 +315,7 @@ fn single_instance_is_the_first_plugin() {
     let at = compact
         .find("tauri_plugin_single_instance::init(|app,argv,_cwd|")
         .unwrap();
-    assert!(compact[at..at + 300].contains("open_console(app,deeplink::from_args(argv).unwrap_or(Page::Home))"));
+    let body = &compact[at..at + 900];
+    assert!(body.contains("deeplink::on_second_start(&argv)"));
+    assert!(body.contains("open_console(app,page)"));
 }

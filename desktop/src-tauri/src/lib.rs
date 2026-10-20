@@ -777,8 +777,7 @@ fn notify_approvals(app: &AppHandle, body: &str) {
                 match n.show() {
                     Ok(handle) => handle.wait_for_action(|action| {
                         if notify::opens_approvals(action) {
-                            let a = app.clone();
-                            let _ = app.run_on_main_thread(move || open_console(&a, Page::Approvals));
+                            open_console(&app, Page::Approvals);
                         }
                     }),
                     Err(_) => notify(&app, &body),
@@ -814,6 +813,7 @@ fn open_console(app: &AppHandle, page: Page) {
         }
     };
     let target = r.admin.page(&page.path());
+    eprintln!("smcp-desktop: console: {target}");
     if let Some(w) = app.get_webview_window(CONSOLE_LABEL) {
         if page != Page::Home {
             let _ = w.navigate(target);
@@ -857,10 +857,15 @@ fn open_console(app: &AppHandle, page: Page) {
         let app = app.clone();
         move |reason: String| {
             eprintln!("smcp-desktop: console refused: {reason}");
-            if let Some(w) = app.get_webview_window(CONSOLE_LABEL) {
-                let _ = w.set_title(&format!("{} - not opened: {reason}", WINDOW.title));
-                let _ = w.navigate(console::error_page());
-            }
+            // Called from WebKit's handlers on the main thread; the window
+            // operations go through Tauri from another thread.
+            let app = app.clone();
+            std::thread::spawn(move || {
+                if let Some(w) = app.get_webview_window(CONSOLE_LABEL) {
+                    let _ = w.set_title(&format!("{} - not opened: {reason}", WINDOW.title));
+                    let _ = w.navigate(console::error_page());
+                }
+            });
         }
     };
     let w2 = w.clone();
@@ -889,8 +894,15 @@ fn open_console(app: &AppHandle, page: Page) {
                 port: r.admin.port,
                 anchors,
             };
-            tlshook_linux::install(&pw.inner(), pin, refused);
-            let _ = w2.navigate(target);
+            // This closure runs on the main thread, holding the webview:
+            // load the page through WebKit directly. With a Tauri
+            // navigation from here, the application stopped processing
+            // events once the console window opened (Linux, CI end-to-end
+            // test).
+            let wv = pw.inner();
+            tlshook_linux::install(&wv, pin, refused);
+            let _ = &w2;
+            webkit2gtk::WebViewExt::load_uri(&wv, target.as_str());
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
         {
@@ -1092,9 +1104,15 @@ pub fn run() {
         // First, so a second start only focuses the first (FR-20.14).
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             // A deep link opened while the application runs arrives here
-            // on Linux and Windows (FR-20.28); any other second start
-            // focuses the console window.
-            open_console(app, deeplink::from_args(argv).unwrap_or(Page::Home))
+            // on Linux and Windows (FR-20.28); a refused link is ignored,
+            // and a second start without a link focuses the console window.
+            // Tauri dispatches the window operations to the main thread.
+            let Some(page) = deeplink::on_second_start(&argv) else {
+                eprintln!("smcp-desktop: second start: link ignored");
+                return;
+            };
+            eprintln!("smcp-desktop: second start");
+            open_console(app, page);
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())

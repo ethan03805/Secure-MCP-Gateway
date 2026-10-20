@@ -52,8 +52,27 @@ where
 {
     args.into_iter()
         .map(|a| a.as_ref().to_string())
-        .filter(|a| a.get(..5).is_some_and(|p| p.eq_ignore_ascii_case("smcp:")))
+        .filter(|a| is_link(a))
         .find_map(|a| parse(&a))
+}
+
+/// Whether a process argument is an `smcp:` link (accepted or not).
+pub fn is_link(arg: &str) -> bool {
+    arg.get(..5).is_some_and(|p| p.eq_ignore_ascii_case("smcp:"))
+}
+
+/// What a second start of the application opens: the page of an accepted
+/// link, nothing for a refused link (FR-20.28: ignored), and the console's
+/// home page when the start carries no link (FR-20.14: focus).
+pub fn on_second_start(argv: &[String]) -> Option<Page> {
+    if let Some(p) = from_args(argv) {
+        return Some(p);
+    }
+    if argv.iter().skip(1).any(|a| is_link(a)) {
+        None
+    } else {
+        Some(Page::Home)
+    }
 }
 
 #[cfg(test)]
@@ -118,5 +137,19 @@ mod tests {
         );
         assert_eq!(from_args([exe, "smcp://approvals?x=1"]), None);
         assert_eq!(from_args([exe, "é"]), None);
+    }
+
+    #[test]
+    fn a_refused_link_on_a_second_start_opens_nothing() {
+        claims::partial(&["FR-20.28", "FR-20.14"]);
+        let v = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let exe = "/usr/bin/smcp-desktop";
+        assert_eq!(on_second_start(&v(&[exe])), Some(Page::Home));
+        assert_eq!(on_second_start(&v(&[exe, "smcp://approvals"])), Some(Page::Approvals));
+        for bad in ["smcp://stop", "smcp://approvals?approve=1", "SMCP://console", "smcp:"] {
+            assert_eq!(on_second_start(&v(&[exe, bad])), None, "{bad}");
+        }
+        // The program path itself is never taken for a link.
+        assert_eq!(on_second_start(&v(&["smcp:odd-name"])), Some(Page::Home));
     }
 }
