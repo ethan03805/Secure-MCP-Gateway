@@ -19,6 +19,8 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/app"
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
+	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
+	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsvc"
 )
 
@@ -105,7 +107,13 @@ func (s service) Execute(_ []string, req <-chan svc.ChangeRequest, status chan<-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	done := make(chan error, 1)
-	go func() { done <- run(ctx, s.cfgPath, s.level) }()
+	go func() {
+		if err := prepareMachineState(s.cfgPath); err != nil {
+			done <- err
+			return
+		}
+		done <- run(ctx, s.cfgPath, s.level)
+	}()
 	accepts := svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPreShutdown
 	status <- svc.Status{State: svc.Running, Accepts: accepts}
 	for {
@@ -140,5 +148,22 @@ func (s service) Execute(_ []string, req <-chan svc.ChangeRequest, status chan<-
 }
 
 func runService(cfgPath, level string) error {
+	// Only smcpctl install --machine registers the service (SR-4-2).
+	installMode = profile.ModeWindowsMachine
 	return svc.Run(winsvc.ServiceName, service{cfgPath: cfgPath, level: level})
+}
+
+// prepareMachineState creates, as the service account, the keys that
+// smcpctl install --machine leaves out: they are DPAPI blobs of NT
+// SERVICE\smcpd, which only this account can make (FR-21.10). It also
+// refreshes the machine-scope operator token copy that Administrators use.
+func prepareMachineState(cfgPath string) error {
+	cfg, err := config.Load(cfgPath)
+	if err != nil {
+		return fmt.Errorf("configuration: %w", err)
+	}
+	if err := keys.Ensure(cfg.State.Dir, "127.0.0.1"); err != nil {
+		return fmt.Errorf("keys: %w", err)
+	}
+	return keys.WriteMachineOperatorToken(cfg.State.Dir)
 }

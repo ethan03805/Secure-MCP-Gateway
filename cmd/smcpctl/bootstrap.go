@@ -195,6 +195,7 @@ type bootstrapOpts struct {
 	useToken                bool
 	sandbox, refserver      string
 	noRefServer             bool // configure no backend server (Windows until FR-21.11)
+	noKeys                  bool // leave the keys to smcpd (Windows machine mode: DPAPI of the service account)
 	port, adminPort         int
 	metricsPort             int
 	notify                  string
@@ -318,7 +319,9 @@ func runBootstrap(o bootstrapOpts, out io.Writer) (bootstrapResult, error) {
 			r.keysCreated = true
 		}
 	}
-	if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
+	if o.noKeys {
+		r.keysCreated = false
+	} else if err := keys.Ensure(stateDir, "127.0.0.1"); err != nil {
 		return r, err
 	}
 	policyValue := o.policyFile

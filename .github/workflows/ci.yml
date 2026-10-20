@@ -633,6 +633,12 @@ jobs:
             Get-Content build\installps1-test.json | ConvertFrom-Json | Where-Object { $_.Action -eq 'output' } | ForEach-Object { $_.Output } | Select-Object -Last 200
           }
           exit $rc
+      # FR-21.6 machine mode, as the elevated runner account: the service
+      # under NT SERVICE\smcpd, its recovery actions, the CP-46 DACLs and
+      # the service-made DPAPI keys (scripts/windows-machine-smoke.ps1).
+      - name: Machine-mode install smoke test
+        shell: pwsh
+        run: ./scripts/windows-machine-smoke.ps1 -BinDir build\win\bin
       - name: Every package, measured (informational, never fails)
         continue-on-error: true
         run: |

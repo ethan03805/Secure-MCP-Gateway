@@ -63,7 +63,7 @@ func scopeFor(profileMode string) uninstallScope {
 // profile being uninstalled.
 func (s uninstallScope) removesUnit(kind string) bool {
 	switch kind {
-	case "launchd", "systemd-user", "win-task", "win-run":
+	case "launchd", "systemd-user", "win-task", "win-run", "win-service":
 		return !s.enforced
 	default: // systemd-system, systemd-aux, nft-ruleset
 		return s.enforced
@@ -119,7 +119,7 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 	}
 
 	// 1. Stop the service.
-	svc := service{stopCmd: *stopCmd}
+	svc := service{stopCmd: *stopCmd, cfgDir: filepath.Dir(cfgAbs)}
 	if daemonUp(cfg) {
 		if err := svc.stop(); err != nil {
 			return fmt.Errorf("stop the Gateway first: %w", err)
@@ -137,6 +137,9 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 		if !u.exists || !scope.removesUnit(u.kind) {
 			continue
 		}
+		if isWinUnit(u.kind) && !strings.EqualFold(filepath.Dir(u.path), filepath.Dir(cfgAbs)) {
+			continue // another Windows installation's definition
+		}
 		if hostRoot == "" {
 			// Unload or disable before the file goes (ignored when the
 			// manager does not know the unit).
@@ -147,7 +150,7 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 				_ = runQuiet("systemctl", "--user", "disable", "--now", systemdUnit)
 			case "systemd-system", "systemd-aux":
 				_ = runQuiet(asRoot("systemctl", "disable", filepath.Base(u.path))...)
-			case "win-task", "win-run":
+			case "win-task", "win-run", "win-service":
 				winRemoveUnit(u)
 			}
 		}

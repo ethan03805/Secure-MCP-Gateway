@@ -86,7 +86,34 @@ func checkPlatform(stateDir string) error {
 // windowsPrivateFiles are private files of other packages that the
 // Windows check covers as well: the policy-signing key of the Policy Store
 // (internal/policystore), also a DPAPI blob on Windows.
-var windowsPrivateFiles = []string{"keys/policy.key"}
+var windowsPrivateFiles = []string{"keys/policy.key", AdminTokenMachineFile}
 
 // modeChecked is false on Windows: file modes are not read there.
 const modeChecked = false
+
+// WriteMachineOperatorToken writes, in the Windows machine mode, a copy of
+// the operator token protected with machine-scope DPAPI and a protected
+// DACL for SYSTEM, Administrators and the service account, so that
+// smcpctl run by an Administrator can use the control API: the service's
+// own copy is user-scope DPAPI of the virtual service account, which no
+// other account can decrypt. As root on an Enforced host, Administrators
+// can read it; a copy of the state to another host cannot be decrypted.
+func WriteMachineOperatorToken(stateDir string) error {
+	tok, err := readPrivate(filepath.Join(stateDir, AdminTokenFile))
+	if err != nil {
+		return err
+	}
+	blob, err := winsec.ProtectMachine(tok)
+	if err != nil {
+		return err
+	}
+	p := filepath.Join(stateDir, AdminTokenMachineFile)
+	if err := WriteFileAtomic(p, blob, 0o600); err != nil {
+		return err
+	}
+	self, err := winsec.ProcessUserSID()
+	if err != nil {
+		return err
+	}
+	return winsec.SetProtectedDACL(p, winsec.OwnerEntries(self))
+}

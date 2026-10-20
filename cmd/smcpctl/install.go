@@ -64,6 +64,7 @@ func installCmd(args []string, out io.Writer) error {
 	noStart := fs.Bool("no-start", false, "write the service unit but do not load or start it, and skip the health check")
 	check := fs.Bool("check", false, "check the profile's prerequisites (FR-13.5) and the binaries, change nothing, and exit non-zero naming each missing one")
 	wait := fs.Duration("health-timeout", installHealthWait, "how long to wait for the started Gateway to answer")
+	machine := fs.Bool("machine", false, "Windows: install the machine mode (a Windows service under NT SERVICE\\smcpd; run as Administrator)")
 	o := bootstrapOpts{}
 	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (mode 0600 or stricter) instead of a prompt")
 	fs.StringVar(&o.approverFile, "approver-password-file", "", "read the Session Approver password from this file (mode 0600 or stricter) instead of a prompt")
@@ -88,6 +89,12 @@ func installCmd(args []string, out io.Writer) error {
 	}
 	if *check {
 		return in.check(*profile)
+	}
+	if *machine {
+		if *profile != "standalone" {
+			return errors.New("--machine is the Windows machine mode; it takes no --profile")
+		}
+		return in.windowsMachine()
 	}
 	switch *profile {
 	case "standalone":
@@ -270,7 +277,7 @@ func standaloneConfigPath() string {
 // installedConfigPath returns the configuration that `smcpctl install`
 // wrote on this host (Enforced first, then Standalone), or "".
 func installedConfigPath() string {
-	for _, p := range []string{filepath.Join(hostRoot, "/etc/smcp/smcp.toml"), standaloneConfigPath()} {
+	for _, p := range []string{filepath.Join(hostRoot, "/etc/smcp/smcp.toml"), standaloneConfigPath(), machineConfigPath()} {
 		if p == "" {
 			continue
 		}

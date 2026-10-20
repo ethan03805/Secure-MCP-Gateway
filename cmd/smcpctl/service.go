@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,6 +35,9 @@ var hostRoot = ""
 type service struct {
 	startCmd, stopCmd string
 	env               []string
+	// cfgDir limits the Windows service definitions to the installation
+	// whose configuration is in this directory ("" means any).
+	cfgDir string
 }
 
 type unitFile struct {
@@ -70,12 +74,23 @@ func unitFiles() []unitFile {
 		if cfg := standaloneConfigPath(); cfg != "" {
 			out = append(out, winUnitFiles(filepath.Dir(cfg))...)
 		}
+		if cfg := machineConfigPath(); cfg != "" {
+			p := filepath.Join(filepath.Dir(cfg), winServiceFile)
+			_, err := os.Stat(p)
+			out = append(out, unitFile{path: p, kind: "win-service", exists: err == nil})
+		}
 	}
 	return out
 }
 
-func installedUnit() *unitFile {
+// installedUnitFor returns the installed service definition, with the Windows ones limited to
+// the installation whose configuration is in cfgDir (a per-user and a
+// machine-mode installation can exist side by side).
+func installedUnitFor(cfgDir string) *unitFile {
 	for _, u := range unitFiles() {
+		if isWinUnit(u.kind) && cfgDir != "" && !strings.EqualFold(filepath.Dir(u.path), cfgDir) {
+			continue
+		}
 		if u.exists && (u.kind == "launchd" || u.kind == "systemd-user" || u.kind == "systemd-system" || isWinUnit(u.kind)) {
 			return &u
 		}
@@ -116,7 +131,7 @@ func (s service) do(action string) error {
 	case action == "stop" && s.stopCmd != "":
 		return s.run(ctx, s.stopCmd)
 	}
-	u := installedUnit()
+	u := installedUnitFor(s.cfgDir)
 	if u == nil {
 		return errNoManager
 	}

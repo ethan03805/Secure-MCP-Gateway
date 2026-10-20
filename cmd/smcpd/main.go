@@ -36,6 +36,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/openapi"
 	"github.com/ethan03805/secure-mcp-gateway/internal/ops"
 	"github.com/ethan03805/secure-mcp-gateway/internal/principals"
+	"github.com/ethan03805/secure-mcp-gateway/internal/profile"
 	"github.com/ethan03805/secure-mcp-gateway/internal/remote"
 	"github.com/ethan03805/secure-mcp-gateway/internal/sandbox"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
@@ -109,6 +110,22 @@ func notifyMode(m string) string {
 		return "auto"
 	}
 	return m
+}
+
+// installMode is the SR-4-2 installation mode that this process knows
+// better than profile.DetectHost: the Windows machine-mode service sets
+// windows-machine before run (main_windows.go). Empty means detect.
+var installMode string
+
+// hostOverride returns the host for app.Options: nil (detect) unless
+// mode is set, and then the detected host with that installation mode.
+func hostOverride(mode string) *profile.Host {
+	if mode == "" {
+		return nil
+	}
+	h := profile.DetectHost()
+	h.InstallMode = mode
+	return &h
 }
 
 // run starts the Gateway and serves until parent is cancelled, SIGINT or
@@ -185,7 +202,7 @@ func run(parent context.Context, cfgPath, level string) error {
 		return nil
 	}))
 	opts := app.Options{Log: log, Approver: approvals, Approvals: approvals, HealthGate: mon.Gate, Packages: pkgs, Listeners: lns,
-		Observers: map[string]audit.Observer{"graph": mirror}}
+		Observers: map[string]audit.Observer{"graph": mirror}, Host: hostOverride(installMode)}
 	frameworkOf := func(id string) string { // FR-8.9: principals of the file and of the G-11 directory
 		if p := cfg.FindPrincipal(id); p != nil {
 			return p.Framework

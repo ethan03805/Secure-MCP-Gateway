@@ -2,7 +2,10 @@
 
 package keys
 
-import "os"
+import (
+	"errors"
+	"os"
+)
 
 func readPrivate(path string) ([]byte, error) { return os.ReadFile(path) }
 
@@ -15,3 +18,8 @@ func secureDir(string) error { return nil }
 func checkPlatform(string) error { return nil }
 
 const modeChecked = true
+
+// WriteMachineOperatorToken is used by the Windows machine mode only.
+func WriteMachineOperatorToken(string) error {
+	return errors.New("keys: the machine-mode operator token is Windows only")
+}

@@ -42,3 +42,9 @@ func CheckOwnerOnly(string) error { return ErrNotWindows }
 
 // SecureOwnerOnly returns ErrNotWindows.
 func SecureOwnerOnly(string) error { return ErrNotWindows }
+
+// ProtectMachine returns ErrNotWindows.
+func ProtectMachine([]byte) ([]byte, error) { return nil, ErrNotWindows }
+
+// IsElevated is false off Windows.
+func IsElevated() bool { return false }

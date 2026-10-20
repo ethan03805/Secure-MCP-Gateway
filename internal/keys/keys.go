@@ -48,14 +48,17 @@ import (
 
 // Layout under the state directory.
 const (
-	CACertFile       = "tls/ca.crt"
-	CAKeyFile        = "tls/ca.key"
-	ServerCertFile   = "tls/server.crt"
-	ServerKeyFile    = "tls/server.key"
-	EvidenceKeyFile  = "keys/evidence.key"
-	EvidencePubFile  = "keys/evidence.pub"
-	AdminTokenFile   = "keys/admin.token"
-	EvidenceKeyBytes = ed25519.SeedSize
+	CACertFile      = "tls/ca.crt"
+	CAKeyFile       = "tls/ca.key"
+	ServerCertFile  = "tls/server.crt"
+	ServerKeyFile   = "tls/server.key"
+	EvidenceKeyFile = "keys/evidence.key"
+	EvidencePubFile = "keys/evidence.pub"
+	AdminTokenFile  = "keys/admin.token"
+	// AdminTokenMachineFile is the Windows machine mode's copy of the
+	// operator token for Administrators (WriteMachineOperatorToken).
+	AdminTokenMachineFile = "keys/admin.token.machine"
+	EvidenceKeyBytes      = ed25519.SeedSize
 	// EvidenceGenesisFile is the public key that signed the first journal
 	// segment: the trust root `smcpctl journal verify` starts from when the
 	// evidence key has been rotated (FR-17.8).
@@ -472,6 +475,13 @@ func LoadEvidencePublicKey(stateDir string) (ed25519.PublicKey, error) {
 // equivalent to administrator access, like holding the CA key.
 func LoadAdminToken(stateDir string) (string, error) {
 	b, err := readPrivate(filepath.Join(stateDir, AdminTokenFile))
+	if errors.Is(err, ErrKeyProtection) {
+		// Windows machine mode: the token is the service account's DPAPI
+		// blob; Administrators read the machine-scope copy (protect_windows.go).
+		if mb, merr := readPrivate(filepath.Join(stateDir, AdminTokenMachineFile)); merr == nil {
+			b, err = mb, nil
+		}
+	}
 	if err != nil {
 		return "", err
 	}
