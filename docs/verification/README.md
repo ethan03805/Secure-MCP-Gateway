@@ -57,6 +57,7 @@ Some Test-method requirements are verified by a GitHub Actions workflow that is 
 - [FR-8.32-webkit.md](FR-8.32-webkit.md): the manual focus-order, target-size and contrast check repeated with WebKit (supporting record).
 - [FR-12.3.md](FR-12.3.md): the platform Demonstration (Enforced on an Ubuntu runner, Standalone on macOS arm64).
 - [SR-4.1-1.md](SR-4.1-1.md): the UIDs of the running `smcpd` and server processes on the Enforced CI host (Inspection).
+- [FR-22.42.md](FR-22.42.md): the six ContextForge statements of the Security Limitations document at the head of main after the v1.3.0 security review (Inspection).
 - [FR-12.4.md](FR-12.4.md): the CP-46 directories, owners and modes of the Enforced CI host and of the Standalone installs on Ubuntu and macOS (Inspection).
 - [SR-4.2-2.md](SR-4.2-2.md): the owner and modes of the Observation Store's files on the Enforced CI host (Inspection).
 - [FR-11.md](FR-11.md): the review of the FR-11 performance report of a `perf` run on the recorded reference hardware, with every FR-11 child verified (Analysis).
