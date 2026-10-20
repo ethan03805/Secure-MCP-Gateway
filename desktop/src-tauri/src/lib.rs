@@ -19,13 +19,18 @@ pub mod deeplink;
 pub mod explain;
 pub mod health;
 pub mod icons;
+pub mod installer;
 pub mod intro;
 pub mod notify;
+pub mod release;
 pub mod service;
 pub mod settings;
 pub mod setup;
 pub mod state;
 pub mod tlspin;
+pub mod updates;
+pub mod upgrade;
+pub mod verify;
 
 #[cfg(target_os = "linux")]
 mod tlshook_linux;
@@ -60,6 +65,7 @@ pub const INTRO_LABEL: &str = "intro";
 pub const STATUS_LABEL: &str = "status";
 pub const SETUP_LABEL: &str = "setup";
 pub const CLIENTS_LABEL: &str = "clients";
+pub const UPDATES_LABEL: &str = "updates";
 /// The desktop guide, opened in the default browser from Help.
 const GUIDE_URL: &str = "https://github.com/ethan03805/Secure-MCP-Gateway/blob/main/docs/desktop.md";
 /// Where the introduction sends a user for a task this version of the
@@ -75,6 +81,7 @@ struct Items {
     start: MenuItem<tauri::Wry>,
     stop: MenuItem<tauri::Wry>,
     restart: MenuItem<tauri::Wry>,
+    updates: MenuItem<tauri::Wry>,
 }
 
 struct Shared {
@@ -91,6 +98,9 @@ struct Shared {
     /// Gateway Status window.
     view: Mutex<Option<TrayView>>,
     last_read: Mutex<Option<Instant>>,
+    /// Update checks, the application update and the Gateway upgrade
+    /// (FR-20.11 to FR-20.13).
+    updates: Arc<updates::Updates>,
 }
 
 impl Shared {
@@ -586,6 +596,122 @@ async fn clients_remove(app: AppHandle, webview: tauri::Webview, id: String) -> 
     Ok(clients::outcome(&argv, &exit, out, "CLIENT_REMOVE_FAILED"))
 }
 
+#[tauri::command]
+fn updates_get(webview: tauri::Webview, shared: State<'_, Arc<Shared>>) -> Result<updates::View, String> {
+    only_window(&webview, UPDATES_LABEL)?;
+    Ok(shared.updates.view())
+}
+
+#[tauri::command]
+fn updates_check(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, UPDATES_LABEL)?;
+    check_updates(&app, true);
+    Ok(())
+}
+
+/// Opens the release notes of the newer release in the default browser.
+#[tauri::command]
+fn updates_open_notes(webview: tauri::Webview, shared: State<'_, Arc<Shared>>) -> Result<(), String> {
+    only_window(&webview, UPDATES_LABEL)?;
+    let u = shared.updates.notes_url().ok_or("no newer release")?;
+    tauri_plugin_opener::open_url(u.as_str(), None::<&str>).map_err(|e| e.to_string())
+}
+
+/// FR-20.13: verifies and starts the installer, then quits (macOS,
+/// Windows) or restarts (Linux) so the new version runs.
+#[tauri::command]
+fn updates_install_app(app: AppHandle, webview: tauri::Webview) -> Result<(), String> {
+    only_window(&webview, UPDATES_LABEL)?;
+    std::thread::spawn(move || {
+        let shared = app.state::<Arc<Shared>>().inner().clone();
+        if let Some(kind) = shared.updates.update_app() {
+            // Leave the window time to show that the installer started.
+            std::thread::sleep(Duration::from_secs(3));
+            if kind.quits_after_start() {
+                app.exit(0);
+            } else {
+                app.restart();
+            }
+        }
+    });
+    Ok(())
+}
+
+/// FR-20.12: upgrades the Gateway with `smcpctl upgrade`. The backup
+/// passphrase goes to its standard input and is not kept.
+#[tauri::command]
+fn updates_upgrade_gateway(app: AppHandle, webview: tauri::Webview, passphrase: String) -> Result<(), String> {
+    only_window(&webview, UPDATES_LABEL)?;
+    if passphrase.is_empty() {
+        return Err("enter the backup passphrase".into());
+    }
+    std::thread::spawn(move || {
+        let shared = app.state::<Arc<Shared>>().inner().clone();
+        shared.updates.upgrade_gateway(&passphrase);
+    });
+    Ok(())
+}
+
+/// Runs an update check on a background thread and shows a newer release
+/// in the tray menu (FR-20.11).
+fn check_updates(app: &AppHandle, manual: bool) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let shared = app.state::<Arc<Shared>>().inner().clone();
+        if let Some(v) = shared.updates.check(manual, std::time::SystemTime::now()) {
+            if let Some(items) = shared.items.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
+                let _ = items.updates.set_text(format!("Update Available ({v})…"));
+            }
+        }
+    });
+}
+
+/// Automatic update checks: at most once every 24 hours, none when they
+/// are off in Settings (FR-20.11).
+fn schedule_updates(app: AppHandle, shared: Arc<Shared>) {
+    loop {
+        let on = shared.settings.lock().unwrap_or_else(|e| e.into_inner()).update_checks;
+        if shared.updates.auto_due(on, std::time::SystemTime::now()) {
+            check_updates(&app, false);
+        }
+        std::thread::sleep(Duration::from_secs(15 * 60));
+    }
+}
+
+/// The Check for Updates window (FR-20.11 to FR-20.13).
+fn open_updates(app: &AppHandle) {
+    open_bundled(app, UPDATES_LABEL, "updates.html", "Check for Updates", (600.0, 600.0));
+}
+
+fn updates_env(app: &AppHandle, config_dir: &std::path::Path) -> tauri::Result<updates::Env> {
+    let feed = std::env::var(release::FEED_ENV).ok();
+    let feed = release::feed_url(feed.as_deref()).unwrap_or_else(|e| {
+        eprintln!("smcp-desktop: {e}; using {}", release::DEFAULT_FEED);
+        release::feed_url(None).expect("the default feed is valid")
+    });
+    let host = Host::current();
+    Ok(updates::Env {
+        http: Arc::new(release::NetHttp),
+        feed,
+        pubkey: verify::RELEASE_PUBLIC_KEY.into(),
+        cosign: Arc::new(|| {
+            verify::find_cosign(std::env::var("PATH").ok().as_deref())
+                .map(|p| Arc::new(verify::SystemCosign(p)) as Arc<dyn verify::Cosign>)
+        }),
+        app_version: semver::Version::parse(&app.package_info().version.to_string())
+            .unwrap_or_else(|_| semver::Version::new(0, 0, 0)),
+        os: std::env::consts::OS.into(),
+        arch: std::env::consts::ARCH.into(),
+        kind: installer::detect(&installer::Probe::current()),
+        download_root: app.path().app_cache_dir()?.join("updates"),
+        config_dir: config_dir.to_path_buf(),
+        installation: Arc::new(move || {
+            upgrade::find_installation(service::detect(&host).as_ref(), |m| upgrade::unit_file(&host, m))
+        }),
+        start: Arc::new(updates::start_installer),
+    })
+}
+
 /// Shows a bundled window, creating it if needed.
 fn open_bundled(app: &AppHandle, label: &str, page: &str, title: &str, size: (f64, f64)) {
     if let Some(w) = app.get_webview_window(label) {
@@ -795,6 +921,10 @@ fn on_menu(app: &AppHandle, id: &str) {
         "settings" => open_settings(app),
         "status" | "help_status" => open_status(app),
         "help_intro" => open_intro(app),
+        "check_updates" => {
+            open_updates(app);
+            check_updates(app, true);
+        }
         "help_setup" => open_setup(app),
         "setup_client" => open_clients(app),
         "help_guide" => {
@@ -816,10 +946,8 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
     let start = item("start", "Start", false)?;
     let stop = item("stop", "Stop", false)?;
     let restart = item("restart", "Restart", false)?;
-    // Check for Updates arrives with the update window (FR-20.11); until
-    // then it is shown disabled so the menu has the FR-20.2 shape.
     let setup = item("setup_client", "Set Up a Client…", true)?;
-    let updates = item("check_updates", "Check for Updates", false)?;
+    let updates = item("check_updates", "Check for Updates…", true)?;
     let settings_item = item("settings", "Settings…", true)?;
     // Help (FR-20.41): the introduction, the status explanations and the guide.
     let help = Submenu::with_items(
@@ -878,6 +1006,7 @@ fn build_tray(app: &AppHandle, shared: &Arc<Shared>) -> tauri::Result<()> {
         start,
         stop,
         restart,
+        updates,
     });
     *shared.tray.lock().unwrap_or_else(|e| e.into_inner()) = Some(tray);
     Ok(())
@@ -986,7 +1115,12 @@ pub fn run() {
             clients_list,
             clients_preview,
             clients_apply,
-            clients_remove
+            clients_remove,
+            updates_get,
+            updates_check,
+            updates_open_notes,
+            updates_install_app,
+            updates_upgrade_gateway
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -994,6 +1128,8 @@ pub fn run() {
             let dir = app.path().app_config_dir()?;
             let settings_path = dir.join("settings.json");
             let show_intro = intro::show_at_start(intro::load(&dir));
+            let update_env = updates_env(app.handle(), &dir)?;
+            updates::clean_downloads(&update_env.download_root);
             let shared = Arc::new(Shared {
                 settings: Mutex::new(Settings::load(&settings_path)),
                 settings_path,
@@ -1005,6 +1141,7 @@ pub fn run() {
                 config_dir: dir,
                 view: Mutex::new(None),
                 last_read: Mutex::new(None),
+                updates: Arc::new(updates::Updates::new(update_env)),
             });
             app.manage(shared.clone());
             app.manage(Arc::new(setup::Session::default()));
@@ -1023,6 +1160,8 @@ pub fn run() {
                 open_console(app.handle(), page);
             }
             let handle = app.handle().clone();
+            let (h2, s2) = (handle.clone(), shared.clone());
+            std::thread::spawn(move || schedule_updates(h2, s2));
             std::thread::spawn(move || poll(handle, shared));
             Ok(())
         })

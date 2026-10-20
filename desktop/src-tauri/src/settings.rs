@@ -30,6 +30,9 @@ pub struct Settings {
     pub notifications: bool,
     /// Start the application at login (FR-20.14); off after installation.
     pub start_at_login: bool,
+    /// Automatic update checks, at most once every 24 hours (FR-20.11).
+    /// Off, the application checks only when Check for Updates is selected.
+    pub update_checks: bool,
 }
 
 impl Default for Settings {
@@ -40,6 +43,7 @@ impl Default for Settings {
             ca_file: String::new(),
             notifications: true,
             start_at_login: false,
+            update_checks: true,
         }
     }
 }
@@ -298,10 +302,26 @@ mod tests {
             ca_file: "rel/ca.crt".into(),
             notifications: false,
             start_at_login: false,
+            update_checks: false,
         };
         let errs = bad.resolve("linux", home, None).unwrap_err();
         let fields: Vec<_> = errs.iter().map(|e| e.field).collect();
         assert_eq!(fields, ["admin_url", "metrics_address", "ca_file"]);
+    }
+
+    #[test]
+    fn update_checks_default_on_and_older_files_load() {
+        claims::partial(&["FR-20.11"]);
+        assert!(Settings::default().update_checks);
+        // A settings file written before the switch existed keeps it on.
+        let old: Settings = serde_json::from_str(
+            r#"{"admin_url":"https://127.0.0.1:8444","metrics_address":"127.0.0.1:9464","ca_file":"","notifications":false}"#,
+        )
+        .unwrap();
+        assert!(old.update_checks);
+        assert!(!old.notifications);
+        let off: Settings = serde_json::from_str(r#"{"update_checks":false}"#).unwrap();
+        assert!(!off.update_checks);
     }
 
     #[test]

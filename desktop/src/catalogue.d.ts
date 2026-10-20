@@ -2,5 +2,6 @@
 // docs/design/messages.json at build time (FR-20.48): the bundled windows
 // carry the catalogue's text, and no window fetches it.
 import type { Catalogue } from "./status-model.ts";
+import type { MessageCatalogue } from "./updates-model.ts";
 
-export declare const catalogue: Catalogue;
+export declare const catalogue: Catalogue & MessageCatalogue;

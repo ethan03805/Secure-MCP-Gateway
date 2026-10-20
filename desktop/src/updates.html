@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check for Updates</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="updates-view.js"></script>
+</head>
+<body>
+<div class="window">
+  <main class="content" aria-labelledby="title" aria-busy="false" id="main">
+    <h1 id="title" tabindex="-1">Updates</h1>
+    <p id="status" role="status" aria-live="polite"></p>
+    <div id="message"></div>
+    <dl class="kv" id="facts"></dl>
+    <section id="app-update" hidden aria-labelledby="app-update-title">
+      <h2 id="app-update-title">Update the app</h2>
+      <p class="help" id="app-update-help">Downloads the release's <span id="app-kind"></span>, checks its minisign signature with the release key and its SHA-256 checksum (and its Sigstore bundle when cosign is installed), then starts it.</p>
+      <div class="actions-inline"><button type="button" class="primary" id="update-app">Update App</button></div>
+    </section>
+    <p id="app-blocked" class="note" hidden></p>
+    <section id="gateway-upgrade" hidden aria-labelledby="gateway-upgrade-title">
+      <h2 id="gateway-upgrade-title">Upgrade the Gateway</h2>
+      <div class="field">
+        <label for="passphrase">Backup passphrase</label>
+        <input id="passphrase" type="password" autocomplete="off" spellcheck="false" aria-describedby="passphrase-help passphrase-error">
+        <p id="passphrase-help" class="help">smcpctl upgrade takes an encrypted backup first and restores it if the upgrade fails. The passphrase goes to smcpctl and is not stored.</p>
+        <p id="passphrase-error" class="error" role="alert"></p>
+      </div>
+      <div class="actions-inline"><button type="button" id="upgrade-gateway">Upgrade Gateway</button></div>
+    </section>
+    <p id="gateway-blocked" class="note" hidden></p>
+    <details id="progress" hidden>
+      <summary>Progress</summary>
+      <pre class="log mono" id="log"></pre>
+    </details>
+  </main>
+  <div class="bar">
+    <button type="button" id="notes" class="link" hidden>Release Notes</button>
+    <span class="spacer"></span>
+    <button type="button" id="check">Check Now</button>
+    <button type="button" id="close">Close</button>
+  </div>
+</div>
+</body>
+</html>

@@ -13,7 +13,7 @@
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'",
       "freezePrototype": true,
-      "capabilities": ["settings-window", "intro-window", "status-window", "setup-window", "clients-window"]
+      "capabilities": ["settings-window", "intro-window", "status-window", "setup-window", "clients-window", "updates-window"]
     }
   },
   "bundle": {

@@ -19,3 +19,6 @@ internal/contextforge/testdata/*.yml -text
 # Built console (make console), embedded into smcpd.
 console/dist/** linguist-generated=true
 console/package-lock.json linguist-generated=true
+
+# Release signature fixtures of the desktop update tests: keep their bytes.
+desktop/src-tauri/tests/fixtures/release-*/** -text

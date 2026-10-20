@@ -138,7 +138,7 @@ dl.kv dd { margin: 0; }
 .field label { display: block; font-weight: 600; margin-bottom: 4px; }
 .field.check { display: flex; gap: 8px; align-items: center; }
 .field.check label { display: inline; margin: 0; font-weight: 400; }
-input[type="text"], input[type="url"] {
+input[type="text"], input[type="url"], input[type="password"] {
   width: 100%; padding: 5px 8px; font: inherit; font-size: var(--fs-3);
   border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--surface); color: var(--ink);
 }
@@ -184,3 +184,10 @@ ul.client-list li { display: flex; justify-content: space-between; align-items: 
 ul.client-list li strong { display: block; }
 ul.client-list .actions-inline { margin: 0; }
 p.change { margin: 12px 0 4px; font-weight: 600; overflow-wrap: anywhere; }
+
+/* Check for Updates window: progress output and error details. */
+pre.log { margin: 8px 0; padding: 8px 10px; max-height: 12rem; overflow: auto; white-space: pre-wrap; word-break: break-word; background: var(--surface); border: 1px solid var(--rule); color: var(--ink-2); }
+.message { margin: 12px 0; padding-left: 10px; border-left: 2px solid var(--rule-strong); }
+.message[role="alert"] { border-left-color: var(--bad); }
+.message h2 { margin-top: 0; }
+section[hidden], .note[hidden], details[hidden] { display: none; }

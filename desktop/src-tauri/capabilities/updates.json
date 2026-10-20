@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "updates-window",
+  "description": "The bundled Check for Updates window (SRS FR-20.11 to FR-20.13): reads the update state, checks the release feed, opens the release notes, and starts the verified application update or the Gateway upgrade.",
+  "local": true,
+  "windows": ["updates"],
+  "permissions": ["allow-updates-get", "allow-updates-check", "allow-updates-open-notes", "allow-updates-install-app", "allow-updates-upgrade-gateway"]
+}
