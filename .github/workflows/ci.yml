@@ -847,6 +847,9 @@ jobs:
         run: |
           set -o pipefail
           export SMCP_BIN_DIR="$RUNNER_TEMP/setup-bin"
+          # As the release builds them: no cgo on Windows (the arm64 image's
+          # gcc targets x64).
+          if [ "$RUNNER_OS" = Windows ]; then export CGO_ENABLED=0; fi
           (cd ../.. && go build -o "$SMCP_BIN_DIR/" ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver)
           rm -f "$RUNNER_TEMP/setup-claims.tsv"
           rc=0
