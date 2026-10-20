@@ -11,7 +11,7 @@ errors, warnings = [], []
 
 # ---------- security SRS ----------
 sec = {}
-t = SEC_FILE.read_text()
+t = SEC_FILE.read_text(encoding="utf-8")
 for m in re.finditer(r'^### ([\d.]+) — (.*?)\n.*?\| Statement \| (.*?) \|', t, re.S | re.M):
     sid, name, stmt = m.group(1), m.group(2).strip(), m.group(3)
     imp = "MUST" if "**MUST**" in stmt else "SHALL"
@@ -22,7 +22,7 @@ for sid in sec:
         sec_children[sid.rsplit(".", 1)[0]].append(sid)
 
 # ---------- architecture IDs ----------
-a = ARCH_FILE.read_text()
+a = ARCH_FILE.read_text(encoding="utf-8")
 arch = {k: set(re.findall(rf'\b{k}-\d{{2,3}}\b', a)) for k in ["E", "F", "I", "X", "G", "D", "P"]}
 enames = dict(re.findall(r'^#### (E-\d\d) (.*?) — T', a, re.M))
 fnames = dict(re.findall(r'^\| (F-\d{2,3}) \| ([^|]+?) \|', a, re.M))
@@ -32,7 +32,7 @@ def natkey(x):
     return [int(p) if p.isdigit() else p for p in re.split(r'(\d+)', x)]
 
 # ---------- controlled parameters ----------
-APPX = (HERE / "appendix.md").read_text()
+APPX = (HERE / "appendix.md").read_text(encoding="utf-8")
 cp_defined = {int(n) for n in re.findall(r'^\| CP-(\d\d) \|', APPX, re.M)}
 
 # ---------- requirement sources ----------
@@ -40,7 +40,7 @@ items = []  # sequence of ("md", text) / ("req", dict) / ("disp", dict)
 reqs, disps = collections.OrderedDict(), {}
 for fn in sorted(HERE.glob("req*.txt")):
     cur = None
-    for raw in fn.read_text().splitlines() + [""]:
+    for raw in fn.read_text(encoding="utf-8").splitlines() + [""]:
         line = raw.rstrip()
         if line.startswith("@DISP "):
             sid, txt = line[6:].split(" | ", 1)
@@ -165,7 +165,7 @@ for sid in disps:
         errors.append(f"disposition for unknown SEC-{sid}")
 
 # ---------- cross-references in the front matter and appendices ----------
-for name, text in [("front.md", (HERE / "front.md").read_text()), ("appendix.md", APPX), ("appendix2.md", (HERE / "appendix2.md").read_text())]:
+for name, text in [("front.md", (HERE / "front.md").read_text(encoding="utf-8")), ("appendix.md", APPX), ("appendix2.md", (HERE / "appendix2.md").read_text(encoding="utf-8"))]:
     for ref in set(re.findall(r'\b(?:FR|SR)-\d+(?:\.\d+)*(?:-\d+)?\b', text)):
         if ref not in allrecs:
             errors.append(f"{name}: references unknown {ref}")
@@ -181,7 +181,7 @@ sec103 = re.search(r'^### 10\.3 .*?(?=^### |^## )', a, re.S | re.M)
 arch_params = sorted(set(re.findall(r'\bP-(\d{3})\b', sec103.group(0) if sec103 else "")))
 PARAM_FIELDS = ["id", "name", "description", "unit", "dataType", "sourceElement", "capturePoint", "derivation", "sensitivity", "baselinable", "costClass"]
 try:
-    cat = json.loads((DOCS / "parameters.json").read_text())
+    cat = json.loads((DOCS / "parameters.json").read_text(encoding="utf-8"))
     entries = cat.get("parameters", [])
     catalog_ids = [e.get("id") for e in entries]
     for e in entries:
@@ -200,12 +200,12 @@ try:
 except (OSError, ValueError) as ex:
     errors.append(f"docs/parameters.json: {ex}")
 try:
-    json.loads((DOCS / "schemas" / "manifest.schema.json").read_text())
+    json.loads((DOCS / "schemas" / "manifest.schema.json").read_text(encoding="utf-8"))
 except (OSError, ValueError) as ex:
     errors.append(f"docs/schemas/manifest.schema.json: {ex}")
 status_elems = {}
 try:
-    for e in json.loads((DOCS / "status" / "elements.json").read_text()):
+    for e in json.loads((DOCS / "status" / "elements.json").read_text(encoding="utf-8")):
         status_elems[e.get("id")] = e
         if e.get("implementation") not in ("implemented", "partial", "not-started"):
             errors.append(f"docs/status/elements.json: {e.get('id')} bad implementation value")
@@ -311,7 +311,7 @@ def parent_fmt(r):
         return f"{p} — {s['name']} (MUST, `MCP_Gateway_Security_SRS.md`)"
     return f"{p} — {allrecs[p]['title']}"
 
-out = [(HERE / "front.md").read_text().rstrip() + "\n\n"]
+out = [(HERE / "front.md").read_text(encoding="utf-8").rstrip() + "\n\n"]
 for kind, obj in items:
     if kind == "md":
         out.append(obj + "\n")
@@ -428,7 +428,7 @@ out.append("2. **Dispositions.** The SEC requirements listed above are realized 
 out.append("3. **Owner-set values.** CP values marked *New* in Appendix A are engineering values set under the delegation; they are revised by controlled change.\n")
 out.append("4. **Usability measure.** FR-8.24 turns \"user friendly\" into a timed task.\n")
 out.append("\n")
-out.append((HERE / "appendix2.md").read_text().rstrip() + "\n")
+out.append((HERE / "appendix2.md").read_text(encoding="utf-8").rstrip() + "\n")
 
 # Appendix N
 out.append("\n## Appendix N — Requirements deferred from release 1.0\n\n")
@@ -440,6 +440,7 @@ for r in deferred.values():
     out.append(f"| Verification Method | {r['method']} |\n| Verification Statement | {esc(r['vstmt'])} |\n")
     out.append(f"| Source | {esc(r['src'])} |\n| Rationale | {esc(r['rat'])} |\n| Deferral | {esc(r['defer'])} |\n\n")
 
-OUT.write_text("".join(out))
+with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+    f.write("".join(out))
 print(f"OK: {len(fr) + len(sr)} requirements ({len(fr)} FR, {len(sr)} SR), {len(planned)} planned, {len(deferred)} deferred -> {OUT}")
 print("WARNINGS:\n" + ("\n".join(warnings) if warnings else "none"))

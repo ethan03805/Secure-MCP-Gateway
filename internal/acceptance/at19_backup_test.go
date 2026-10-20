@@ -177,6 +177,11 @@ func TestAT19BackupRestoreRollback(t *testing.T) {
 	g.expectServerSuspended(id, rev, "after a policy rollback")
 	g.stop()
 
+	if runtime.GOOS == "windows" {
+		// The scenario is reported as not run in the per-user mode: every
+		// step above ran, the upgrade rollback below cannot.
+		skipScenario(t, "smcpctl upgrade does not handle the Windows zip archives or restart the per-user task yet, so the upgrade rollback of FR-13.8 is not run on Windows", "AT-19")
+	}
 	// FR-13.8: an upgrade whose new smcpd never becomes healthy rolls back;
 	// SR-7.9-1: the previous version keeps all three.
 	upgradeRollback(t, g, pass, func() {
@@ -285,7 +290,7 @@ func upgradeRollback(t *testing.T, g *gateway, pass string, afterRollback func()
 	}
 	files := map[string][]byte{"smcpd": []byte("#!/bin/sh\nexit 1\n")}
 	for _, b := range []string{"smcpd", "smcpctl"} {
-		raw, err := os.ReadFile(filepath.Join(binDir, b))
+		raw, err := os.ReadFile(bin(b))
 		if err != nil {
 			t.Fatal(err)
 		}

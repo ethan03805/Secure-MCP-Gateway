@@ -30,6 +30,7 @@ var reasonMessages = map[string]string{
 	"SECRET_IN_ARGUMENTS":        "The request appears to contain a password, key or token, so it was not sent. Remove the secret and try again.",
 	"PATH_INVALID":               "A file path in the request is not allowed in this form. Use a plain path.",
 	"PATH_OUTSIDE_ROOTS":         "A file path in the request is outside the folders this tool may use.",
+	"PATH_REFUSED":               "A file path in the request uses a Windows form that is not allowed, such as a device name, a stream or a network share. Use a plain path inside the granted folders.",
 	"URL_INVALID":                "A web address in the request is not valid.",
 	"URL_NOT_ALLOWED":            "A web address in the request is not allowed for this tool.",
 	"URL_PRIVATE_ADDRESS":        "A web address in the request points to a local or private network address, which this tool may not use.",

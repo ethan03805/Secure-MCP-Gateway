@@ -2,6 +2,7 @@ package acceptance
 
 import (
 	"bufio"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -17,6 +18,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +26,8 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winpipe"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 // controlPaths are control API routes of several elements; each needs an
@@ -134,6 +138,16 @@ func controlStatus(t *testing.T, hc *http.Client, base, method, path, token stri
 func TestControlAPIOnlyOnAdminListener(t *testing.T) {
 	reqtest.Verifies(t, "SR-2.5-1")
 	sock := filepath.Join(testport.SocketDir(t), "h.sock")
+	peer := fmt.Sprintf("uid = %d", os.Getuid())
+	if runtime.GOOS == "windows" {
+		// FR-21.8, FR-21.9: the named pipe, and the peer by user SID.
+		sid, err := winsec.ProcessUserSID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		sock = fmt.Sprintf(`\\.\pipe\smcp-acceptance-%d`, testport.Free(t))
+		peer = fmt.Sprintf("uid = 0\nsid = %q", sid)
+	}
 	u, err := user.Current()
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +171,7 @@ enabled = true
 path = %q
 group = %q
 [[uds.peer]]
-uid = %d
+%s
 principal = "claude-code-local"
 key_hash = %q
 
@@ -170,7 +184,7 @@ profile = "dev"
 address = %q
 default_principal = "cloud"
 templates = ["read-only"]
-`, sock, grp.Name, os.Getuid(), hash, remoteAddr))
+`, sock, grp.Name, peer, hash, remoteAddr))
 	// The bootstrap configuration has metrics off; turn them on, on a free port.
 	raw, err := os.ReadFile(g.cfg)
 	if err != nil {
@@ -226,7 +240,14 @@ templates = ["read-only"]
 	}
 	// The UDS socket speaks newline-delimited JSON-RPC only: an HTTP
 	// control request gets no HTTP answer.
-	c, err := net.Dial("unix", sock)
+	var c net.Conn
+	if runtime.GOOS == "windows" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		c, err = winpipe.Dial(ctx, sock)
+		cancel()
+	} else {
+		c, err = net.Dial("unix", sock)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

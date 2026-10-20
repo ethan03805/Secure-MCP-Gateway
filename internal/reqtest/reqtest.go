@@ -65,11 +65,49 @@ const (
 	Enforced   = "enforced"
 )
 
+// Windows installation modes (SR-4-2). A scenario claimed in one of them is
+// reported per mode next to the Enforced and Standalone results (FR-21.20)
+// and never counts toward the release label.
+const (
+	WindowsUser    = "windows-user"
+	WindowsMachine = "windows-machine"
+	WSL2           = "wsl2"
+)
+
+// ScenarioNotRunMarker starts the log line of ScenarioNotRun.
+const ScenarioNotRunMarker = "SCENARIO-NOT-RUN:"
+
+func knownProfile(p string) bool {
+	switch p {
+	case Standalone, Enforced, WindowsUser, WindowsMachine, WSL2:
+		return true
+	}
+	return false
+}
+
+// ScenarioNotRun records that the calling test cannot run the given
+// scenarios in profile, a Windows installation mode, and why (FR-21.20:
+// each scenario a mode cannot run is listed with its reason). The test
+// then skips.
+func ScenarioNotRun(t testing.TB, profile, reason string, ids ...string) {
+	t.Helper()
+	if profile != WindowsUser && profile != WindowsMachine && profile != WSL2 {
+		t.Fatalf("reqtest.ScenarioNotRun: %q is not a Windows installation mode", profile)
+	}
+	for _, id := range ids {
+		if !scenarioPattern.MatchString(id) {
+			t.Fatalf("reqtest.ScenarioNotRun: %q is not a scenario ID AT-01 to AT-21", id)
+		}
+	}
+	t.Log(ScenarioNotRunMarker + " " + strings.Join(ids, " ") + " profile=" + profile + " reason=" + strings.Join(strings.Fields(reason), " "))
+}
+
 var scenarioPattern = regexp.MustCompile(`^AT-(0[1-9]|1[0-9]|2[01])$`)
 
 // Scenario declares that the calling test executes the given acceptance
 // scenarios of SRS Appendix M (AT-01 to AT-21) in profile, which is
-// Standalone or Enforced and must name the profile the test actually ran
+// Standalone or Enforced, or on Windows the installation mode (WindowsUser,
+// WindowsMachine, WSL2), and must name the profile the test actually ran
 // the Gateway in. tools/reqreport reports a scenario as passed in a profile
 // when every test that claims it in that profile passed, and the release
 // label (FR-19.3) counts only Enforced results. A scenario claim says
@@ -77,8 +115,8 @@ var scenarioPattern = regexp.MustCompile(`^AT-(0[1-9]|1[0-9]|2[01])$`)
 // Verifies or Partial as usual.
 func Scenario(t testing.TB, profile string, ids ...string) {
 	t.Helper()
-	if profile != Standalone && profile != Enforced {
-		t.Fatalf("reqtest.Scenario: profile %q is not %q or %q", profile, Standalone, Enforced)
+	if !knownProfile(profile) {
+		t.Fatalf("reqtest.Scenario: profile %q is not %q, %q or a Windows installation mode", profile, Standalone, Enforced)
 	}
 	if len(ids) == 0 {
 		t.Fatalf("reqtest.Scenario: no scenario IDs given")

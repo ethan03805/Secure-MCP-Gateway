@@ -69,7 +69,7 @@ const at17Policy = `{
 func TestAT17OfflineEngineeringWorkflow(t *testing.T) {
 	needBinaries(t)
 	if os.Getenv("SMCP_ACCEPTANCE_OFFLINE") != "1" {
-		t.Skip("runs in the offline CI job (SMCP_ACCEPTANCE_OFFLINE=1, SMCP_REFPKG_DIR)")
+		skipScenario(t, "runs in the offline CI job (SMCP_ACCEPTANCE_OFFLINE=1, SMCP_REFPKG_DIR), which blocks outbound access with a Linux network namespace", "AT-17")
 	}
 	if ok, why := outboundBlocked(); !ok {
 		t.Fatalf("SMCP_ACCEPTANCE_OFFLINE=1 but outbound access is not blocked: %s", why)

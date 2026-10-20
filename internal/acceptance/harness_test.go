@@ -21,6 +21,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/keys"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/testport"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsvc"
 )
 
 // binDir holds smcpd, smcpctl and smcp-refserver built by TestMain.
@@ -55,6 +57,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	binDir = dir
+	startProcessTrace() // Windows: SR-4.8-2, every process of the run from creation
 	goTool, err := exec.LookPath("go")
 	if err != nil {
 		os.RemoveAll(dir)
@@ -63,7 +66,7 @@ func TestMain(m *testing.M) {
 	// The reference server and the hostile fixture are linked statically
 	// so that the Enforced profile can run them in a container.
 	for _, pkg := range []string{"smcpd", "smcpctl", "smcp-refserver", "smcp-hostile"} {
-		cmd := exec.Command(goTool, "build", "-trimpath", "-o", filepath.Join(dir, pkg), "../../cmd/"+pkg)
+		cmd := exec.Command(goTool, "build", "-trimpath", "-o", filepath.Join(dir, pkg+exeSuffix()), "../../cmd/"+pkg)
 		cmd.Stderr = os.Stderr
 		if pkg == "smcp-refserver" || pkg == "smcp-hostile" {
 			cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
@@ -76,6 +79,28 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
+}
+
+// exeSuffix is the file name suffix of an executable on this platform.
+func exeSuffix() string {
+	if runtime.GOOS == "windows" {
+		return ".exe"
+	}
+	return ""
+}
+
+// bin is the path of a command TestMain built.
+func bin(name string) string { return filepath.Join(binDir, name+exeSuffix()) }
+
+// skipScenario skips the calling test with reason; on Windows it first
+// lists the scenarios as not run in the per-user mode with that reason
+// (FR-21.20).
+func skipScenario(t *testing.T, reason string, ids ...string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		reqtest.ScenarioNotRun(t, reqtest.WindowsUser, reason, ids...)
+	}
+	t.Skip(reason)
 }
 
 // needBinaries skips the calling test in -short mode, where TestMain builds
@@ -163,7 +188,7 @@ func newGateway(t *testing.T, o options) *gateway {
 	adminPW := writeFile(t, priv, "admin.pw", adminPassword+"\n", 0o600)
 	approverPW := writeFile(t, priv, "approver.pw", approverPassword+"\n", 0o600)
 	g.mustCtl("bootstrap", "--dir", dir, "--admin-password-file", adminPW, "--approver-password-file", approverPW,
-		"--refserver", filepath.Join(binDir, "smcp-refserver"), "--port", strconv.Itoa(g.port), "--admin-port", strconv.Itoa(g.adminPort),
+		"--refserver", bin("smcp-refserver"), "--port", strconv.Itoa(g.port), "--admin-port", strconv.Itoa(g.adminPort),
 		"--metrics-port", "0", "--notify", "off")
 	g.publicURL = fmt.Sprintf("https://127.0.0.1:%d", g.port)
 	g.adminURL = fmt.Sprintf("https://127.0.0.1:%d", g.adminPort)
@@ -235,7 +260,7 @@ func (g *gateway) ctl(args ...string) (string, error) {
 	if len(args) > 0 && !noConfig(args) && !hasFlag(args, "--config") && !hasFlag(args, "--dir") {
 		args = append(args, "--config", g.cfg)
 	}
-	cmd := exec.Command(filepath.Join(binDir, "smcpctl"), args...)
+	cmd := exec.Command(bin("smcpctl"), args...)
 	cmd.Dir = g.dir
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
@@ -248,7 +273,7 @@ func (g *gateway) ctl(args ...string) (string, error) {
 func (g *gateway) sudoCtl(args ...string) (string, error) {
 	g.t.Helper()
 	args = append(args, "--config", g.cfg)
-	cmd := exec.Command("sudo", append([]string{"-n", filepath.Join(binDir, "smcpctl")}, args...)...)
+	cmd := exec.Command("sudo", append([]string{"-n", bin("smcpctl")}, args...)...)
 	cmd.Dir = g.dir
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
@@ -325,7 +350,15 @@ func (g *gateway) start() {
 // launch starts smcpd without waiting for it.
 func (g *gateway) launch() error {
 	g.t.Helper()
-	cmd := exec.Command(filepath.Join(binDir, "smcpd"), "--config", g.cfg)
+	return g.launchWith(nil)
+}
+
+// launchWith starts smcpd with the given process attributes (nil for the
+// defaults) without waiting for it.
+func (g *gateway) launchWith(attr *syscall.SysProcAttr) error {
+	g.t.Helper()
+	cmd := exec.Command(bin("smcpd"), "--config", g.cfg)
+	cmd.SysProcAttr = attr
 	cmd.Dir = g.dir
 	logs := &lockedBuffer{}
 	cmd.Stdout, cmd.Stderr = logs, logs
@@ -368,7 +401,15 @@ func (g *gateway) stop() {
 	if g.cmd == nil {
 		return
 	}
-	_ = g.cmd.Process.Signal(syscall.SIGTERM)
+	if runtime.GOOS == "windows" {
+		// No SIGTERM on Windows: the installation's stop event is the
+		// orderly stop of a console smcpd (FR-21.7).
+		if ok, err := winsvc.SignalStop(g.cfg); err != nil || !ok {
+			g.t.Fatalf("set the stop event: %v %v", ok, err)
+		}
+	} else {
+		_ = g.cmd.Process.Signal(syscall.SIGTERM)
+	}
 	select {
 	case <-g.exited:
 	case <-time.After(30 * time.Second):
@@ -436,9 +477,20 @@ func (g *gateway) profile() string {
 
 // scenario claims the scenario in the profile the instance reports. A run
 // asked for the Enforced profile that did not get it fails, so a standalone
-// result is never reported as an enforced one.
+// result is never reported as an enforced one. On Windows the claim names
+// the installation mode the Gateway reports (windows-user), which is
+// reported per mode and never counts toward the label (FR-21.20).
 func (g *gateway) scenario(ids ...string) {
 	g.t.Helper()
+	if runtime.GOOS == "windows" {
+		info, _ := g.health()["info"].(map[string]any)
+		mode, _ := info["installation_mode"].(string)
+		if mode == "" {
+			g.t.Fatal("a Windows Gateway reports no installation mode (SR-4-2)")
+		}
+		reqtest.Scenario(g.t, mode, ids...)
+		return
+	}
 	p := g.profile()
 	if requestedProfile() == reqtest.Enforced && p != reqtest.Enforced {
 		g.t.Fatalf("SMCP_ACCEPTANCE_PROFILE=enforced but the Gateway reports the %s profile", p)

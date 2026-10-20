@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -92,8 +91,13 @@ func TestHostileFixtures(t *testing.T) {
 				mu.Unlock()
 			}()
 			observed, pass := check(t)
-			if row.EnforcedOnly() && profile != "enforced" {
-				observed = "not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: " + observed
+			// In the Windows per-user mode the instance's Job Object
+			// enforces the process and memory limits (FR-21.12), so HF-20
+			// and HF-21 are asserted there; the other Enforced rows need
+			// the Linux sandbox.
+			jobRow := profile == "windows-user" && (row.ID == "HF-20" || row.ID == "HF-21")
+			if row.EnforcedOnly() && profile != "enforced" && !jobRow {
+				observed = "not asserted (Enforced row, " + profile + " profile; see docs/security-limitations.md). Observed: " + observed
 				pass = false
 			}
 			res.Observed, res.Pass = observed, pass
@@ -101,7 +105,10 @@ func TestHostileFixtures(t *testing.T) {
 			if requireEnforced && row.EnforcedOnly() && !pass {
 				t.Errorf("%s is an Enforced row and did not behave as expected in the enforced profile", row.ID)
 			}
-			if pass {
+			switch {
+			case pass && jobRow:
+				reqtest.Partial(t, "FR-21.12") // the Job Object limits, not the Linux cgroup rows' SRs
+			case pass:
 				// A passing row exercises its requirements against one hostile
 				// behavior; none of them is proven in full by one row.
 				reqtest.Partial(t, row.Requirements...)
@@ -126,6 +133,9 @@ func TestHostileFixtures(t *testing.T) {
 		{"AT-09", []string{"HF-04", "HF-05", "HF-06", "HF-07", "HF-08", "HF-09", "HF-16"}, false},
 	} {
 		t.Run(sc.id, func(t *testing.T) {
+			if sc.enforcedOnly && profile == reqtest.WindowsUser {
+				reqtest.ScenarioNotRun(t, profile, "HF-23 and HF-24 need the network isolation of the Enforced sandbox; the per-user mode runs servers as ordinary processes in Job Objects, which assert HF-20 and HF-21 only (FR-21.12)", sc.id)
+			}
 			if sc.enforcedOnly && profile != reqtest.Enforced {
 				t.Skipf("%s is asserted in the Enforced profile only", sc.id)
 			}
@@ -451,11 +461,11 @@ func invalidStdout(t *testing.T) (string, bool) {
 	pidBefore, before := g.pidAndNonce(cs)
 	o := g.call(cs, "h_garble", map[string]any{}, nil)
 	gone := false
-	if pidBefore > 0 && suiteProfile() == "standalone" {
-		gone = waitFor(5*time.Second, func() bool { return syscall.Kill(pidBefore, 0) != nil })
+	if pidBefore > 0 && suiteProfile() != "enforced" {
+		gone = waitFor(5*time.Second, func() bool { return processGone(pidBefore) })
 	}
 	after := g.instance(cs, "h")
-	if suiteProfile() != "standalone" {
+	if suiteProfile() == "enforced" {
 		gone = after != before
 	}
 	_, event := g.waitEvent(time.Second, func(e audit.Event) bool {

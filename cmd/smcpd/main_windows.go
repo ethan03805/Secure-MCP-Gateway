@@ -67,11 +67,6 @@ func supervisorLog(cfgPath string) io.Writer {
 	return f
 }
 
-// consoleCloseBudget is how long smcpd takes at most after a console
-// close, logoff or shutdown event: Windows ends the process about 5
-// seconds after the event whatever the handler does (FR-21.7).
-const consoleCloseBudget = 3500 * time.Millisecond
-
 // watchConsoleClose: Go delivers CTRL_CLOSE, CTRL_LOGOFF and CTRL_SHUTDOWN
 // as SIGTERM on Windows (CTRL_C and CTRL_BREAK are os.Interrupt, the
 // orderly stop of run). For those three the stop is recorded in the
@@ -84,13 +79,10 @@ func watchConsoleClose(a *app.App, log *slog.Logger) {
 	}
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM)
-	go func() {
-		<-ch
-		time.AfterFunc(consoleCloseBudget, func() { os.Exit(1) })
+	go onConsoleClose(ch, func() {
 		log.Warn("console close, logoff or shutdown event: recording the stop and exiting")
 		a.RecordStop("console_close")
-		os.Exit(0)
-	}()
+	}, os.Exit, consoleCloseBudget)
 }
 
 // serviceStopWait bounds an orderly service stop: CP-47's 60 s health wait.

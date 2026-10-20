@@ -584,7 +584,7 @@ jobs:
           # (build/windows-test.json, FR-21.19); their names are unique to
           # Windows, so they never replace a Linux result of the same test.
           rc=0
-          go test -json -count=1 -run '^TestWindows' ./internal/keys ./internal/pipeline ./internal/edge ./internal/winsec ./internal/winsvc ./internal/winpipe ./internal/durable ./internal/health ./internal/filters ./internal/adapter > build/windows-test.json || rc=1
+          go test -json -count=1 -run '^TestWindows' ./internal/keys ./internal/pipeline ./internal/edge ./internal/winsec ./internal/winsvc ./internal/winpipe ./internal/durable ./internal/health ./internal/filters ./internal/adapter ./internal/harness ./internal/packaging > build/windows-test.json || rc=1
           jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Package | sub(".*/secure-mcp-gateway/"; ""))\t\(.Test)"' build/windows-test.json
           exit "$rc"
       # The Windows backend sandbox (FR-21.11, FR-21.12, SR-4.8-2): Job
@@ -599,6 +599,43 @@ jobs:
           jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Package) \(.Test)"' build/windows-sandbox-test.json
           if jq -e -s 'any(.[]; .Action == "fail")' build/windows-sandbox-test.json >/dev/null; then
             jq -r 'select(.Action == "output") | .Output' build/windows-sandbox-test.json | tail -200
+            exit 1
+          fi
+      # FR-21.20: the Appendix M scenarios of internal/acceptance against
+      # real smcpd processes in the per-user mode, with the FR-21.7 console
+      # stop and the SR-4.8-2 process-creation trace of the whole run (the
+      # test binary sits in a trace Job Object, so every process the run
+      # creates is recorded from creation). Each scenario is claimed in the
+      # mode windows-user, which tools/reqreport reports per mode and never
+      # counts toward the release label; a scenario the mode cannot run is
+      # listed with its reason. The results are renamed to the package
+      # .../internal/acceptance/windows-user (the Linux run has tests of the
+      # same names) and merged by the status job.
+      - name: Windows acceptance subset (per-user mode) and process trace
+        env:
+          SMCP_PROCESS_TRACE: build/windows-process-trace.json
+        run: |
+          mkdir -p build
+          rc=0
+          go test -count=1 -json -timeout 30m ./internal/acceptance/ > build/acceptance-windows-raw.json || rc=$?
+          jq -c 'if .Package then .Package += "/windows-user" else . end' build/acceptance-windows-raw.json > build/windows-acceptance-test.json
+          jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Test)"' build/windows-acceptance-test.json
+          if [ "$rc" != 0 ]; then
+            jq -r 'select(.Action == "output") | .Output' build/windows-acceptance-test.json | tail -200
+            exit 1
+          fi
+      # AT-08 on Windows: the Appendix L hostile fixtures through a running
+      # Gateway in the per-user mode (internal/hostile, renamed to
+      # .../internal/hostile/windows-user like the Enforced run).
+      - name: Hostile fixture suite through a running smcpd
+        run: |
+          mkdir -p build
+          rc=0
+          go test -tags hostile -count=1 -json -run 'TestHostileFixtures' ./internal/hostile/ > build/hostile-windows-raw.json || rc=$?
+          jq -c 'if .Package then .Package += "/windows-user" else . end' build/hostile-windows-raw.json > build/windows-hostile-test.json
+          jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Test)"' build/windows-hostile-test.json
+          if [ "$rc" != 0 ]; then
+            jq -r 'select(.Action == "output") | .Output' build/windows-hostile-test.json | tail -200
             exit 1
           fi
       # FR-21.5, FR-21.6, FR-21.7, FR-21.10: smcpctl install in the per-user
@@ -660,7 +697,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-results-${{ matrix.runner }}
-          path: build/windows-*-test.json
+          path: |
+            build/windows-*-test.json
+            build/windows-process-trace.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -1804,6 +1843,16 @@ jobs:
           else
             echo "no windows sandbox results"
           fi
+          # The Windows acceptance subset and hostile suite in the per-user
+          # mode (FR-21.20; per-mode scenario results, not the label).
+          for f in windows-acceptance-test windows-hostile-test; do
+            if [ -s "build/$f.json" ]; then
+              cat "build/$f.json" >> build/all-test.json
+              merged=1
+            else
+              echo "no $f results"
+            fi
+          done
           # The install guide followed on both runners (FR-18.1).
           if [ -s build/install-guide-macos-test.json ] && [ -s build/install-guide-linux-test.json ]; then
             cat build/install-guide-macos-test.json build/install-guide-linux-test.json >> build/all-test.json

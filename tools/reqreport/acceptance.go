@@ -41,6 +41,17 @@ const (
 
 var scenarioPattern = regexp.MustCompile(`^AT-(0[1-9]|1[0-9]|2[01])$`)
 
+// windowsModes are the Windows installation modes (SR-4-2) whose results
+// are reported per mode (FR-21.20). They never count toward the label.
+var windowsModes = []string{"windows-user", "windows-machine", "wsl2"}
+
+// WindowsResult is a scenario's result in one Windows installation mode;
+// Reason says why a not-run scenario cannot run in that mode.
+type WindowsResult struct {
+	Result string `json:"result"`
+	Reason string `json:"reason,omitempty"`
+}
+
 // Scenario is one row of SRS Appendix M.
 type Scenario struct {
 	ID           string
@@ -72,14 +83,16 @@ type ScenarioRecord struct {
 
 // ScenarioResult is the computed state of one scenario.
 type ScenarioResult struct {
-	ID           string           `json:"id"`
-	Title        string           `json:"title"`
-	Evidence     string           `json:"evidence"`
-	Requirements []string         `json:"requirements"`
-	Enforced     string           `json:"enforced"`
-	Standalone   string           `json:"standalone"`
-	Tests        []ScenarioTest   `json:"tests"`
-	Records      []ScenarioRecord `json:"records"`
+	ID           string   `json:"id"`
+	Title        string   `json:"title"`
+	Evidence     string   `json:"evidence"`
+	Requirements []string `json:"requirements"`
+	Enforced     string   `json:"enforced"`
+	Standalone   string   `json:"standalone"`
+	// Windows holds the result per Windows installation mode (FR-21.20).
+	Windows map[string]WindowsResult `json:"windows"`
+	Tests   []ScenarioTest           `json:"tests"`
+	Records []ScenarioRecord         `json:"records"`
 }
 
 // Acceptance is the "acceptance" member of the status document.
@@ -93,9 +106,12 @@ type Acceptance struct {
 	Total   int      `json:"total"`
 	// EnforcedPassed and StandalonePassed count scenarios that passed in
 	// each profile.
-	EnforcedPassed   int              `json:"enforcedPassed"`
-	StandalonePassed int              `json:"standalonePassed"`
-	Scenarios        []ScenarioResult `json:"scenarios"`
+	EnforcedPassed   int `json:"enforcedPassed"`
+	StandalonePassed int `json:"standalonePassed"`
+	// WindowsPassed counts the scenarios that passed in each Windows
+	// installation mode (FR-21.20).
+	WindowsPassed map[string]int   `json:"windowsPassed"`
+	Scenarios     []ScenarioResult `json:"scenarios"`
 }
 
 // loadScenarios reads the Appendix M table: rows "| AT-nn Title | realization
@@ -162,9 +178,16 @@ func recordProfile(s string) string {
 
 // buildAcceptance computes every scenario's results for commit.
 func buildAcceptance(scenarios []Scenario, log *TestLog, recs []Record, recordsDir, commit, module string) Acceptance {
-	a := Acceptance{Commit: commit, Reasons: []string{}, Total: len(scenarios), Scenarios: []ScenarioResult{}}
+	a := Acceptance{Commit: commit, Reasons: []string{}, Total: len(scenarios), Scenarios: []ScenarioResult{}, WindowsPassed: map[string]int{}}
 	tests := map[string][]ScenarioTest{}
+	notRun := map[string]map[string]string{} // scenario -> mode -> reason
 	for _, t := range log.Tests {
+		for _, n := range t.NotRun {
+			if notRun[n.ID] == nil {
+				notRun[n.ID] = map[string]string{}
+			}
+			notRun[n.ID][n.Profile] = n.Reason
+		}
 		seen := map[ScenarioClaim]bool{}
 		for _, c := range t.Scenarios {
 			if seen[c] {
@@ -219,6 +242,19 @@ func buildAcceptance(scenarios []Scenario, log *TestLog, recs []Record, recordsD
 		}
 		if res.Standalone == resultPass {
 			a.StandalonePassed++
+		}
+		res.Windows = map[string]WindowsResult{}
+		for _, m := range windowsModes {
+			w := WindowsResult{Result: profileResult(ts, rs, m)}
+			switch {
+			case w.Result == resultPass:
+				a.WindowsPassed[m]++
+			case w.Result == resultNotRun && notRun[s.ID][m] != "":
+				w.Reason = notRun[s.ID][m]
+			case w.Result == resultNotRun:
+				w.Reason = "no automated result in this mode"
+			}
+			res.Windows[m] = w
 		}
 		a.Scenarios = append(a.Scenarios, res)
 	}
@@ -277,6 +313,10 @@ func renderAcceptance(a Acceptance) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Release label: **%s**. Scenarios passed in the Enforced profile: %d of %d; in the Standalone profile: %d of %d.\n\n",
 		a.Label, a.EnforcedPassed, a.Total, a.StandalonePassed, a.Total)
+	if n := a.WindowsPassed["windows-user"] + a.WindowsPassed["windows-machine"]; n > 0 {
+		fmt.Fprintf(&b, "Windows (FR-21.20, not counted toward the label): %d of %d passed in the per-user mode, %d in the machine mode.\n\n",
+			a.WindowsPassed["windows-user"], a.Total, a.WindowsPassed["windows-machine"])
+	}
 	b.WriteString("| Scenario | Evidence | Enforced | Standalone | Claimed by |\n|---|---|---|---|---|\n")
 	for _, s := range a.Scenarios {
 		var by []string

@@ -16,8 +16,9 @@ import (
 // Windows (FR-21.25): case-insensitive containment after resolution, a
 // leading separator is absolute and never joined to a root, and streams,
 // device names, device prefixes, UNC hosts and a junction leaving the root
-// are refused. Partial: the filesystem slots of the Server Runtime Manager
-// (reason PATH_REFUSED) are not covered here.
+// are refused, the Windows-only forms with reason PATH_REFUSED. Partial:
+// the filesystem slots are tested in internal/packaging, and the
+// comparison of the request-filter fixtures with Linux is not made here.
 func TestWindowsPathRules(t *testing.T) {
 	reqtest.Partial(t, "FR-21.25")
 	root, err := filepath.EvalSymlinks(t.TempDir())
@@ -44,6 +45,17 @@ func TestWindowsPathRules(t *testing.T) {
 		if c, rule := CanonicalPath(p, []string{grant}); rule == "" {
 			t.Errorf("%q allowed as %q", p, c)
 		}
+	}
+	// The Windows-only forms carry reason PATH_REFUSED; a junction leaving
+	// the root is PATH_OUTSIDE_ROOTS, as a symbolic link is on Linux.
+	for _, p := range []string{filepath.Join(grant, "a.txt") + ":hidden", filepath.Join(grant, "NUL"), `\\?\` + grant,
+		`\\.\PhysicalDrive0`, `\\host\share\x`, `C:x`} {
+		if _, rule := CanonicalPath(p, []string{grant}); !windowsRule[rule] {
+			t.Errorf("%q: rule %q, want a PATH_REFUSED rule", p, rule)
+		}
+	}
+	if _, rule := CanonicalPath(filepath.Join(junction, "f.txt"), []string{grant}); rule != "outside-roots" {
+		t.Errorf("junction: rule %q, want outside-roots", rule)
 	}
 	// Case-insensitive containment: a differently cased path inside the
 	// root is the same directory.

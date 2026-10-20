@@ -79,6 +79,9 @@ func ResolveLaunch(in LaunchInput) (pipeline.ServerSpec, error) {
 		if _, ok := declared[slot]; !ok {
 			return spec, fmt.Errorf("slot %q is not declared by the manifest", slot)
 		}
+		if err := CheckSlotPath(slot, p); err != nil {
+			return spec, err
+		}
 		if !filepath.IsAbs(p) {
 			return spec, fmt.Errorf("slot %q path %q must be absolute", slot, p)
 		}

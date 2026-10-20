@@ -128,6 +128,12 @@
       ],
       "message": "A file path in the request is outside the folders this tool may use."
     },
+    "PATH_REFUSED": {
+      "codes": [
+        -31001
+      ],
+      "message": "A file path in the request uses a Windows form that is not allowed, such as a device name, a stream or a network share. Use a plain path inside the granted folders."
+    },
     "URL_INVALID": {
       "codes": [
         -31001

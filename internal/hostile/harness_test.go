@@ -54,6 +54,11 @@ func suiteProfile() string {
 	if p := os.Getenv("SMCP_HOSTILE_PROFILE"); p == "enforced" {
 		return p
 	}
+	if runtime.GOOS == "windows" {
+		// The Windows per-user mode (SR-4-2): servers are ordinary
+		// processes in Job Objects with the [runtime] limits (FR-21.12).
+		return "windows-user"
+	}
 	return "standalone"
 }
 
@@ -260,7 +265,7 @@ func startGateway(t *testing.T, sp gwSpec) (*gw, error) {
 			lib.Close()
 			t.Fatal(err)
 		}
-		if _, err := lib.Enable(id, "1", library.EnableOptions{Actor: "hostile-suite", Standalone: suiteProfile() == "standalone"}); err != nil {
+		if _, err := lib.Enable(id, "1", library.EnableOptions{Actor: "hostile-suite", Standalone: suiteProfile() != "enforced"}); err != nil {
 			lib.Close()
 			t.Fatal(err)
 		}
@@ -277,6 +282,10 @@ func startGateway(t *testing.T, sp gwSpec) (*gw, error) {
 		if m := os.Getenv("SMCP_SANDBOX_IT_CGROUP_MANAGER"); m != "" {
 			extra += fmt.Sprintf("cgroup_manager = %q\n", m)
 		}
+	}
+	if suiteProfile() == "windows-user" {
+		// The Enforced row limits, applied by the instance's Job Object.
+		extra += "\n[runtime]\npids = 32\nmemory_bytes = 134217728\n"
 	}
 	if sp.secrets && suiteProfile() == "enforced" {
 		// The broker's secret files are mode 0600 of the Gateway user; only

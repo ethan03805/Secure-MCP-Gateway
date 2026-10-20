@@ -327,6 +327,11 @@ func goose() *client {
 		// Linux it reads SSL_CERT_FILE. The suite never edits the keychain.
 		reason = "on macOS Goose verifies TLS only against the system keychain; the suite does not add the Gateway CA to it (runs on Linux)"
 	}
+	if runtime.GOOS == "windows" {
+		// The same verifier uses the Windows certificate store there, and
+		// Goose reads its configuration from %APPDATA%, not XDG_CONFIG_HOME.
+		reason = "on Windows Goose verifies TLS only against the Windows certificate store; the suite does not add the Gateway CA to it (runs on Linux)"
+	}
 	return &client{
 		ID: "goose", Name: "Goose", Framework: "goose", Bins: []string{"goose"}, NeedsKey: aiKeyEnv, NotRunReason: reason,
 		setup: func(c *client, e *runEnv) error {

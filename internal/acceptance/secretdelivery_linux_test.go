@@ -232,7 +232,7 @@ endpoint_env = "WEB_URL"
 key_source = "passphrase"
 passphrase_file = %q
 runtime_dir = %q
-`, filepath.Join(binDir, "smcp-hostile"), probeBin, dns.addr(), caFile, aport, pass, runtimeDir)
+`, bin("smcp-hostile"), probeBin, dns.addr(), caFile, aport, pass, runtimeDir)
 	g := newGateway(t, options{extra: extra})
 	g.writePolicy(secretDeliveryPolicy)
 	// Secrets are stored through the control API of a running Gateway;

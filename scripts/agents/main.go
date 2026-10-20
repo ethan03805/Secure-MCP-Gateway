@@ -24,10 +24,13 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 type options struct {
@@ -182,6 +185,14 @@ func run(ctx context.Context, o options, stdout io.Writer) ([]agentResult, error
 	}
 	if err := os.MkdirAll(work, 0o700); err != nil {
 		return nil, err
+	}
+	if runtime.GOOS == "windows" {
+		// The password and credential files below must be readable by
+		// this account only (FR-21.2); a runner's temporary directory
+		// grants Users.
+		if err := winsec.SecureOwnerOnly(work); err != nil {
+			return nil, fmt.Errorf("access control list of %s: %w", work, err)
+		}
 	}
 	if !o.keep && o.work == "" {
 		defer os.RemoveAll(work)

@@ -22,6 +22,9 @@ import (
 // neither is possible.
 func smallVolume(t *testing.T) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		return smallVolumeWindows(t)
+	}
 	mnt := filepath.Join(t.TempDir(), "vol")
 	if err := os.MkdirAll(mnt, 0o755); err != nil {
 		t.Fatal(err)

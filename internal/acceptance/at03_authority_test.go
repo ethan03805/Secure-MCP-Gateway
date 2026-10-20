@@ -138,9 +138,7 @@ func TestAT03PolicyAuthorityAndOutage(t *testing.T) {
 	// the directory is writable, and then starts and serves normally.
 	if os.Geteuid() != 0 {
 		jdir := filepath.Join(g.state, "journal")
-		if err := os.Chmod(jdir, 0o500); err != nil {
-			t.Fatal(err)
-		}
+		setReadOnlyDir(t, jdir, true)
 		if err := g.launch(); err != nil {
 			t.Fatal(err)
 		}
@@ -163,9 +161,7 @@ func TestAT03PolicyAuthorityAndOutage(t *testing.T) {
 		if !refused {
 			t.Fatalf("no -31004 with a read-only journal directory\n%s", g.logs.String())
 		}
-		if err := os.Chmod(jdir, 0o700); err != nil {
-			t.Fatal(err)
-		}
+		setReadOnlyDir(t, jdir, false)
 		for deadline := time.Now().Add(60 * time.Second); ; {
 			if _, err := g.ctl("health"); err == nil {
 				break

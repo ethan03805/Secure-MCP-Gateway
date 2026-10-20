@@ -51,6 +51,10 @@ type Env struct {
 	// Root prefixes system-wide (managed) paths; "" is the real root. Tests
 	// point it at a temporary directory.
 	Root string
+	// AppData, ProgramFiles and ProgramData are the Windows folders of the
+	// same names (%APPDATA%, %ProgramFiles%, %ProgramData%), used when OS
+	// is "windows" (FR-21.17); empty values take the Windows defaults.
+	AppData, ProgramFiles, ProgramData string
 	Gateway
 }
 
@@ -64,10 +68,47 @@ func NewEnv(gw Gateway) (Env, error) {
 	if err != nil {
 		return Env{}, err
 	}
-	return Env{Home: home, CWD: cwd, OS: runtime.GOOS, Gateway: gw}, nil
+	e := Env{Home: home, CWD: cwd, OS: runtime.GOOS, Gateway: gw}
+	if e.OS == "windows" {
+		e.AppData, e.ProgramFiles, e.ProgramData = os.Getenv("APPDATA"), os.Getenv("ProgramFiles"), os.Getenv("ProgramData")
+	}
+	return e, nil
 }
 
 func (e Env) home(p ...string) string { return filepath.Join(append([]string{e.Home}, p...)...) }
+
+// appData is a path below %APPDATA% (the roaming application data folder).
+func (e Env) appData(p ...string) string {
+	base := e.AppData
+	if base == "" {
+		base = e.home("AppData", "Roaming")
+	}
+	return filepath.Join(append([]string{base}, p...)...)
+}
+
+// winSys is a system-wide Windows path below %ProgramFiles% (programData
+// false) or %ProgramData%, prefixed by Root without its drive letter.
+func (e Env) winSys(programData bool, p ...string) string {
+	base := e.ProgramFiles
+	if base == "" {
+		base = `C:\Program Files`
+	}
+	if programData {
+		base = e.ProgramData
+		if base == "" {
+			base = `C:\ProgramData`
+		}
+	}
+	full := strings.Join(append([]string{base}, p...), `\`)
+	if e.Root == "" {
+		return full
+	}
+	if len(full) >= 2 && full[1] == ':' {
+		full = full[2:]
+	}
+	return filepath.Join(e.Root, filepath.FromSlash(strings.ReplaceAll(full, `\`, "/")))
+}
+
 func (e Env) sys(p string) string {
 	if e.Root == "" {
 		return p
@@ -142,6 +183,21 @@ type Client struct {
 	CATrust   func(Env) (bool, string)
 	// LockdownMechanism is empty when the client offers none (Appendix K).
 	LockdownMechanism string
+	// NoWindows says why docs/clients/matrix.json records no Windows path
+	// for the client; setup, lockdown and doctor then report it as
+	// unsupported on windows (FR-21.17). Empty when the client is
+	// supported on Windows.
+	NoWindows string
+}
+
+// Unsupported returns an error naming the client as unsupported on
+// windows when the environment is Windows and the matrix records no
+// Windows path for it (FR-21.17), and nil otherwise.
+func (c *Client) Unsupported(e Env) error {
+	if e.OS == "windows" && c.NoWindows != "" {
+		return fmt.Errorf("%s: unsupported on windows (%s)", c.ID, c.NoWindows)
+	}
+	return nil
 }
 
 var registry = map[string]*Client{}

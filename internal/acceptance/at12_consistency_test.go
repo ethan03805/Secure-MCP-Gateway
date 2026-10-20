@@ -48,9 +48,9 @@ const at12Policy = `{
 // SR-6.11-1 (export lag stop) is verified by its own tests and not
 // exercised here. Linux only: the fault uses prlimit(2).
 func TestAT12AuditConsistency(t *testing.T) {
-	gopts := graphOptions(t)
+	gopts := graphOptions(t, "AT-12")
 	if runtime.GOOS != "linux" {
-		t.Skip("the journal flush fault lowers RLIMIT_FSIZE of the running smcpd with prlimit(2), which needs Linux")
+		skipScenario(t, "the journal flush fault lowers RLIMIT_FSIZE of the running smcpd with prlimit(2), which needs Linux", "AT-12")
 	}
 	g := newGateway(t, options{extra: gopts})
 	g.writePolicy(at12Policy)

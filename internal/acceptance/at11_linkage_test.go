@@ -18,12 +18,12 @@ import (
 // Neo4j database named by SMCP_NEO4J_URL (SMCP_NEO4J_USER, default neo4j,
 // and SMCP_NEO4J_PASSWORD), or skips the test when it is unset. The CI job
 // acceptance-enforced runs Neo4j Community Edition in a service container.
-func graphOptions(t *testing.T) string {
+func graphOptions(t *testing.T, scenario string) string {
 	t.Helper()
 	needBinaries(t)
 	uri := os.Getenv("SMCP_NEO4J_URL")
 	if uri == "" {
-		t.Skip("needs a Neo4j database: set SMCP_NEO4J_URL (and SMCP_NEO4J_USER, SMCP_NEO4J_PASSWORD)")
+		skipScenario(t, "needs a Neo4j database: set SMCP_NEO4J_URL (and SMCP_NEO4J_USER, SMCP_NEO4J_PASSWORD); the CI runs it with the Neo4j service container of acceptance-enforced, which Windows runners cannot run", scenario)
 	}
 	user := os.Getenv("SMCP_NEO4J_USER")
 	if user == "" {
@@ -148,7 +148,7 @@ const at11Policy = `{
 // Partial claims: the requirements are verified by their unit tests
 // (internal/graph, internal/edge).
 func TestAT11AuditLinkage(t *testing.T) {
-	gopts := graphOptions(t)
+	gopts := graphOptions(t, "AT-11")
 	g := newGateway(t, options{extra: gopts})
 	g.writePolicy(fmt.Sprintf(at11Policy, "ref", "ref"))
 	g.start()
@@ -335,7 +335,7 @@ func at11NewRevision(t *testing.T, g *gateway, rev string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, pkg, filepath.Join("artifact", "smcp-refserver"), string(artifact), 0o755)
+	writeFile(t, pkg, filepath.Join("artifact", "smcp-refserver"+exeSuffix()), string(artifact), 0o755)
 	os.Remove(filepath.Join(pkg, "index.json.minisig"))
 	// The provenance statement first: the manifest names its digest.
 	for _, member := range []string{"provenance", "manifest"} {

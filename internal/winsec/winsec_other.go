@@ -48,3 +48,9 @@ func ProtectMachine([]byte) ([]byte, error) { return nil, ErrNotWindows }
 
 // IsElevated is false off Windows.
 func IsElevated() bool { return false }
+
+// FinalPath returns ErrNotWindows.
+func FinalPath(string) (string, error) { return "", ErrNotWindows }
+
+// LongPath returns ErrNotWindows.
+func LongPath(string) (string, error) { return "", ErrNotWindows }
