@@ -61,6 +61,8 @@ Transport-specific rules:
 | Proxy variables in the Gateway's environment | Ignored |
 | A host name (or public address) in `url` that resolves to a loopback, link-local, cloud-metadata, multicast or unspecified address | Not connected; the instance fails. Private addresses are allowed. A local server must be named by a loopback URL. |
 
+The hostile fixture suite runs the applicable Appendix L rows over this transport, plus transport rows of its own (`TestHostileHTTPFixtures`, [hostile-fixtures.md](hostile-fixtures.md#over-streamable-http)).
+
 The transport's diagnostics (refusals and what the server answered) are the instance's `Stderr` and become server-asserted evidence (SR-6.18-1). They never contain the token.
 
 ## Not in v1.3.0

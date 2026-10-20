@@ -29,6 +29,12 @@ Each row starts its own Gateway on ephemeral loopback ports with its own state d
 
 The Gateway is built with `app.Start` and the same elements `cmd/smcpd` wires for the defenses under test: the filters and the metadata scan (`app.Start` itself), the signed package library (`library.OpenRuntime`), the secret broker (`secrets.Configure`), the Egress Broker (`[egress]`), and in the enforced profile the sandbox launcher (`sandbox.FromConfig`). Approvals, the graph mirror, observation and the console are not started; no row depends on them. Policy rules give every fixture tool `side_effect = "read"` and `source_trust = "untrusted"`.
 
+## Over Streamable HTTP
+
+`TestHostileHTTPFixtures` runs the rows whose misbehavior is in the server's messages against the southbound Streamable HTTP transport (FR-5.28, [southbound-http.md](southbound-http.md)): HF-01, HF-02, HF-04 to HF-07, HF-10 to HF-12, HF-14 to HF-19 and HF-25 to HF-27. Each fixture is served by `hostile.HTTPFront` on a loopback `httptest` listener and configured as a `url` server; each initialize starts a new fixture instance with its own nonce, so restarts are visible. The other rows need a local process (HF-08 and HF-09 a delivered secret file, HF-20 to HF-24 the sandbox) or a signed package (HF-03, HF-13), and a url server is neither. Two rows differ by design over HTTP: HF-18 checks that the instance is replaced (the fixture is not a child process whose exit can be observed), and in HF-26 the JSON-RPC batch line fails the call, because the negotiated version does not allow batches on HTTP. Three transport rows are added: `HTTP-ID` (responses for another request ID on a call's stream are dropped), `HTTP-REDIRECT` (a redirect is not followed and its target receives nothing) and `HTTP-COMMENTS` (5,000 SSE comment lines and 100 empty events before the response). Every row must pass; the test fails otherwise. It writes no results file; the CI `hostile` job runs it as its own step, and `make hostile` runs it after the stdio suite.
+
+For a manual run, `smcp-hostile -fixture HF-04 -http 127.0.0.1:0` serves a fixture over HTTP on a loopback address and prints the endpoint URL.
+
 ## Safety of the fixtures
 
 Every fixture is inert and self-contained:

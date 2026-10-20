@@ -16,6 +16,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -102,7 +103,15 @@ type serverSpec struct {
 	// pkg, when set, makes the server a signed package whose manifest holds
 	// these tools (the fixture's live list may differ).
 	pkg []*mcp.Tool
+	// url, when set, configures the server as a Streamable HTTP endpoint
+	// (FR-5.28) instead of the fixture.
+	url string
 }
+
+// transportHTTP makes startGateway serve each fixture that is not a
+// package over Streamable HTTP (HTTPFront) and configure it with url, so
+// the rows run against the southbound HTTP transport.
+var transportHTTP bool
 
 // gwSpec describes one Gateway run.
 type gwSpec struct {
@@ -205,6 +214,22 @@ func startGateway(t *testing.T, sp gwSpec) (*gw, error) {
 		names := toolNamesOf(s, Config{})
 		qn, _ := json.Marshal(names)
 		fmt.Fprintf(&rules, `,{"id": "r-%s", "server": %q, "tools": %s, "side_effect": "read", "source_trust": "untrusted"}`, s.alias, s.alias, qn)
+		if s.url != "" {
+			fmt.Fprintf(&servers, "[[server]]\nalias = %q\nurl = %q\n", s.alias, s.url)
+			continue
+		}
+		if s.pkg == nil && transportHTTP {
+			fc, err := ParseArgs(args[1:])
+			if err != nil {
+				t.Fatal(err)
+			}
+			fc.Self = []string{exe, SelfFlag}
+			front := NewHTTPFront(fc)
+			srv := httptest.NewServer(front)
+			t.Cleanup(func() { srv.Close(); front.Close() })
+			fmt.Fprintf(&servers, "[[server]]\nalias = %q\nurl = %q\n", s.alias, srv.URL+"/mcp")
+			continue
+		}
 		if s.pkg == nil {
 			qa, _ := json.Marshal(args)
 			fmt.Fprintf(&servers, "[[server]]\nalias = %q\ncommand = %q\nargs = %s\n", s.alias, exe, qa)

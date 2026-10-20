@@ -67,14 +67,44 @@ type Config struct {
 	// Self is the command line that re-executes this server (the binary and
 	// any leading arguments); HF-20 appends -hold to it for each child.
 	Self []string
+	// Nonce replaces the process nonce in echo results (set per session by
+	// the HTTP front, where one process serves several instances).
+	Nonce string
+	// HTTP, when set, serves the fixture over Streamable HTTP on this
+	// loopback address instead of standard input and output (HTTPHandler).
+	HTTP string
 }
 
 // Main runs the server with the given arguments (the command line after
 // the program name and after self's leading arguments) on standard input
 // and output. It returns the process exit status.
 func Main(self, args []string) int {
+	c, hold, list, err := parseArgs(args)
+	if err != nil {
+		return 2
+	}
+	if hold {
+		Hold(os.Stdin, 10*time.Minute)
+		return 0
+	}
+	if list {
+		for _, r := range Rows {
+			fmt.Printf("%s\t%s\t%s\n", r.ID, r.Profiles, r.Attack)
+		}
+		return 0
+	}
+	return run(self, c)
+}
+
+// ParseArgs reads a fixture command line (the arguments Main takes) into
+// a Config.
+func ParseArgs(args []string) (Config, error) {
+	c, _, _, err := parseArgs(args)
+	return c, err
+}
+
+func parseArgs(args []string) (c Config, hold, list bool, err error) {
 	fs := flag.NewFlagSet("smcp-hostile", flag.ContinueOnError)
-	var c Config
 	fs.StringVar(&c.Fixture, "fixture", "", "Appendix L row to behave as (HF-01 to HF-27, or benign)")
 	fs.StringVar(&c.CanaryAddr, "canary-addr", "", "loopback TCP canary address (HF-23, HF-24)")
 	fs.StringVar(&c.CanaryDNS, "canary-dns", "", "loopback UDP DNS canary address (HF-24)")
@@ -87,22 +117,22 @@ func Main(self, args []string) int {
 	fs.IntVar(&c.AllocMiB, "alloc-mib", MaxAllocMiB, "MiB to allocate (HF-21, at most 256)")
 	fs.IntVar(&c.OversizeMiB, "oversize-mib", 1, "result size in MiB (HF-16, at most 32)")
 	fs.DurationVar(&c.DripEvery, "drip-every", time.Second, "interval between bytes (HF-17)")
-	hold := fs.Bool("hold", false, "internal: run as an HF-20 child that waits for standard input to close")
-	list := fs.Bool("list", false, "print the Appendix L rows and exit")
-	if err := fs.Parse(args); err != nil {
-		return 2
-	}
-	if *hold {
-		Hold(os.Stdin, 10*time.Minute)
-		return 0
-	}
-	if *list {
-		for _, r := range Rows {
-			fmt.Printf("%s\t%s\t%s\n", r.ID, r.Profiles, r.Attack)
+	fs.StringVar(&c.HTTP, "http", "", "serve over Streamable HTTP on this loopback address (host:port) instead of stdio")
+	fs.BoolVar(&hold, "hold", false, "internal: run as an HF-20 child that waits for standard input to close")
+	fs.BoolVar(&list, "list", false, "print the Appendix L rows and exit")
+	err = fs.Parse(args)
+	return c, hold, list, err
+}
+
+func run(self []string, c Config) int {
+	c.Self = self
+	if c.HTTP != "" {
+		if err := ListenHTTP(context.Background(), c, func(url string) { fmt.Println(url) }); err != nil {
+			fmt.Fprintln(os.Stderr, "smcp-hostile:", err)
+			return 1
 		}
 		return 0
 	}
-	c.Self = self
 	if err := Serve(context.Background(), c, os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "smcp-hostile:", err)
 		return 1
@@ -354,5 +384,9 @@ var instanceNonce = func() string {
 // can tell whether the instance was restarted.
 func echo(s *server, id json.RawMessage, p callParams) {
 	t, _ := p.Arguments["text"].(string)
-	s.reply(id, text(fmt.Sprintf("echo:%s pid=%d nonce=%s", t, os.Getpid(), instanceNonce)))
+	nonce := instanceNonce
+	if s.cfg.Nonce != "" {
+		nonce = s.cfg.Nonce // one HTTP session of ServeHTTP
+	}
+	s.reply(id, text(fmt.Sprintf("echo:%s pid=%d nonce=%s", t, os.Getpid(), nonce)))
 }
