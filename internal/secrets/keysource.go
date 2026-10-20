@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"filippo.io/age"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 // Key sources for the vault master key (SR-2.13-1). The master key is an
@@ -224,7 +226,13 @@ func PassphraseFromFile(path string) func() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if st.Mode().Perm()&0o077 != 0 {
+		if runtime.GOOS == "windows" {
+			// No POSIX modes on Windows: only this account, SYSTEM and
+			// Administrators may have access (FR-21.2).
+			if err := winsec.CheckOwnerOnly(path); err != nil {
+				return "", fmt.Errorf("passphrase file must be readable by your account only: %w", err)
+			}
+		} else if st.Mode().Perm()&0o077 != 0 {
 			return "", fmt.Errorf("passphrase file %s has mode %o; it must be 0600 or stricter", path, st.Mode().Perm())
 		}
 		b, err := os.ReadFile(path)

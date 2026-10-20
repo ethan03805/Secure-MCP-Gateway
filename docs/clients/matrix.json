@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "updated": "2026-10-16",
-  "note": "Client matrix of SRS Appendix K (FR-15.10). pinnedVersion null means the matrix job has not yet pinned and run the client. Mechanisms marked confirm=true are taken from vendor documentation and are not yet verified against a pinned version. Cloud agent entries carry tunnelProvider, registrationMode and agentBuild for the dated manual record of FR-15.9; null until a run is recorded; until then each cloud entry is not-run with reviewed (the date the entry was last reviewed) and notRunReason. notes is a plain-language summary of how the client is driven and why it is not run, shown on the project site.",
+  "note": "Client matrix of SRS Appendix K (FR-15.10). pinnedVersion null means the matrix job has not yet pinned and run the client. Mechanisms marked confirm=true are taken from vendor documentation and are not yet verified against a pinned version. Cloud agent entries carry tunnelProvider, registrationMode and agentBuild for the dated manual record of FR-15.9; null until a run is recorded; until then each cloud entry is not-run with reviewed (the date the entry was last reviewed) and notRunReason. notes is a plain-language summary of how the client is driven and why it is not run, shown on the project site. Each local client's windows entry records the Windows configuration paths that smcpctl clients setup, lockdown and doctor use (FR-21.17), with %USERPROFILE%, %APPDATA%, %ProgramFiles% and %ProgramData% standing for those folders, or why the client is unsupported on Windows; confirm=true marks paths taken from vendor documentation and not yet verified by a Windows run (FR-21.21). The windows entry's lastResult, lastRun, version and run record the real-agent suite on windows-latest against a per-user Gateway (FR-21.21); that suite writes its own client configuration, so a pass does not confirm the setup paths.",
   "clients": [
     {
       "client": "Claude Code",
@@ -23,7 +23,19 @@
       "lastResult": "pass",
       "lastRun": "2026-10-16",
       "quickStart": "docs/clients/claude-code.md",
-      "notes": "Driven with the SDK control protocol (stream-json with --permission-prompt-tool stdio): Claude Code asks before every call to a tool marked requiresUserInteraction (FR-1.50), and the suite answers that local prompt for mcp__smcp__ tools only, so the Gateway's hold is exercised and smcpctl approves the call. The native build uses BoringSSL, which rejects iPAddress name constraints; CP-53 CAs carry dNSName constraints only, and an older CA must be replaced with smcpctl keys rotate ca."
+      "notes": "Driven with the SDK control protocol (stream-json with --permission-prompt-tool stdio): Claude Code asks before every call to a tool marked requiresUserInteraction (FR-1.50), and the suite answers that local prompt for mcp__smcp__ tools only, so the Gateway's hold is exercised and smcpctl approves the call. The native build uses BoringSSL, which rejects iPAddress name constraints; CP-53 CAs carry dNSName constraints only, and an older CA must be replaced with smcpctl keys rotate ca.",
+      "windows": {
+        "paths": {
+          "connection": "%USERPROFILE%\\.claude.json",
+          "ca-trust": "%USERPROFILE%\\.claude\\settings.json",
+          "lockdown": "%ProgramFiles%\\ClaudeCode\\managed-settings.json"
+        },
+        "confirm": true,
+        "lastResult": "pass",
+        "lastRun": "2026-10-20",
+        "version": "2.1.302",
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223"
+      }
     },
     {
       "client": "Codex CLI",
@@ -45,7 +57,18 @@
       "lastResult": "pass",
       "lastRun": "2026-10-16",
       "quickStart": "docs/clients/codex.md",
-      "notes": "Codex offers the model its own MCP resource tools next to the server's tools; every prompt says the Gateway's tools are MCP tools, not resources, and Codex runs at low reasoning effort. Calls run without a local prompt (default_tools_approval_mode approve); the Gateway holds the approval-obligated call."
+      "notes": "Codex offers the model its own MCP resource tools next to the server's tools; every prompt says the Gateway's tools are MCP tools, not resources, and Codex runs at low reasoning effort. Calls run without a local prompt (default_tools_approval_mode approve); the Gateway holds the approval-obligated call.",
+      "windows": {
+        "paths": {
+          "connection": "%USERPROFILE%\\.codex\\config.toml",
+          "lockdown": "%USERPROFILE%\\.config\\smcp\\codex-requirements.toml"
+        },
+        "confirm": true,
+        "lastResult": "pass",
+        "lastRun": "2026-10-20",
+        "version": "0.142.2",
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223"
+      }
     },
     {
       "client": "Hermes Agent",
@@ -67,7 +90,10 @@
       "lastResult": "pass",
       "lastRun": "2026-10-16",
       "quickStart": "docs/clients/hermes.md",
-      "notes": "Installed with the installer of the pinned release tag, because the main-line installer cannot install the pinned version. TLS trust is the ssl_verify CA path. No lockdown mechanism is documented by the vendor."
+      "notes": "Installed with the installer of the pinned release tag, because the main-line installer cannot install the pinned version. TLS trust is the ssl_verify CA path. No lockdown mechanism is documented by the vendor.",
+      "windows": {
+        "unsupported": "Hermes Agent publishes no native Windows build; inside WSL2 the Linux paths apply"
+      }
     },
     {
       "client": "OpenCode",
@@ -89,7 +115,17 @@
       "lastResult": "pass",
       "lastRun": "2026-10-16",
       "quickStart": "docs/clients/opencode.md",
-      "notes": "Runs on Bun (BoringSSL), so it needs the dNSName-only CA of CP-53 like native Claude Code. Built-in tools are turned off in the suite; the remote MCP server reads the session token with {env:SMCP_SESSION_TOKEN}."
+      "notes": "Runs on Bun (BoringSSL), so it needs the dNSName-only CA of CP-53 like native Claude Code. Built-in tools are turned off in the suite; the remote MCP server reads the session token with {env:SMCP_SESSION_TOKEN}.",
+      "windows": {
+        "paths": {
+          "connection": "%USERPROFILE%\\.config\\opencode\\opencode.json"
+        },
+        "confirm": true,
+        "lastResult": "pass",
+        "lastRun": "2026-10-20",
+        "version": "1.15.13",
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223"
+      }
     },
     {
       "client": "Gemini CLI",
@@ -111,7 +147,19 @@
       "lastResult": "not-run",
       "lastRun": null,
       "quickStart": "docs/clients/gemini-cli.md",
-      "notes": "Not run: the suite needs GEMINI_API_KEY, because the Vercel AI Gateway that serves the other clients' models does not serve the Gemini API, and no such key is configured for CI. The driver, the system settings file with mcpServers.smcp.httpUrl and the NODE_EXTRA_CA_CERTS trust are in place, and CI installs the CLI. Set the repository secret GEMINI_API_KEY to run it."
+      "notes": "Not run: the suite needs GEMINI_API_KEY, because the Vercel AI Gateway that serves the other clients' models does not serve the Gemini API, and no such key is configured for CI. The driver, the system settings file with mcpServers.smcp.httpUrl and the NODE_EXTRA_CA_CERTS trust are in place, and CI installs the CLI. Set the repository secret GEMINI_API_KEY to run it.",
+      "windows": {
+        "paths": {
+          "connection": "%USERPROFILE%\\.gemini\\settings.json",
+          "lockdown": "%ProgramData%\\gemini-cli\\settings.json"
+        },
+        "confirm": true,
+        "lastResult": "not-run",
+        "lastRun": "2026-10-20",
+        "version": null,
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223",
+        "notRunReason": "the suite needs GEMINI_API_KEY, which is not configured for CI (as on Linux)"
+      }
     },
     {
       "client": "Goose",
@@ -133,7 +181,19 @@
       "lastResult": "pass",
       "lastRun": "2026-10-16",
       "quickStart": "docs/clients/goose.md",
-      "notes": "Runs in CI on Linux only: on macOS Goose verifies TLS against the system keychain alone, which the suite does not change, so it is not run there. Goose does not expand variables in extension headers, so its temporary config file (mode 0600) holds the session token."
+      "notes": "Runs in CI on Linux only: on macOS Goose verifies TLS against the system keychain alone, which the suite does not change, so it is not run there. Goose does not expand variables in extension headers, so its temporary config file (mode 0600) holds the session token.",
+      "windows": {
+        "paths": {
+          "connection": "%APPDATA%\\Block\\goose\\config\\config.yaml",
+          "lockdown": "%USERPROFILE%\\.config\\smcp\\goose-allowlist.yaml"
+        },
+        "confirm": true,
+        "lastResult": "not-run",
+        "lastRun": "2026-10-20",
+        "version": "1.55.0",
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223",
+        "notRunReason": "on Windows Goose verifies TLS only against the Windows certificate store, which the suite does not change"
+      }
     },
     {
       "client": "Grok Build",
@@ -155,7 +215,10 @@
       "lastResult": "not-run",
       "lastRun": null,
       "quickStart": "docs/clients/grok-build.md",
-      "notes": "Not run: there is no publicly installable Grok Build CLI. The connection mode is to be confirmed when a version can be pinned; smcp-stdio is the fallback for any client that can launch a command."
+      "notes": "Not run: there is no publicly installable Grok Build CLI. The connection mode is to be confirmed when a version can be pinned; smcp-stdio is the fallback for any client that can launch a command.",
+      "windows": {
+        "unsupported": "Grok Build's configuration location is not known (to confirm at pinning)"
+      }
     },
     {
       "client": "Grok Bot",

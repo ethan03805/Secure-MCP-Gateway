@@ -223,7 +223,7 @@ func TestAT15ConsoleAuthority(t *testing.T) {
 
 // ctlRaw runs smcpctl without adding --config.
 func (g *gateway) ctlRaw(args ...string) (string, error) {
-	cmd := exec.Command(filepath.Join(binDir, "smcpctl"), args...)
+	cmd := exec.Command(bin("smcpctl"), args...)
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	err := cmd.Run()

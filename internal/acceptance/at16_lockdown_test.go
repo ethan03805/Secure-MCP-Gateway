@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,9 +19,10 @@ import (
 func (g *gateway) ctlAsUser(home, proj string, args ...string) (string, error) {
 	g.t.Helper()
 	args = append(args, "--config", g.cfg)
-	cmd := exec.Command(filepath.Join(binDir, "smcpctl"), args...)
+	cmd := exec.Command(bin("smcpctl"), args...)
 	cmd.Dir = proj
-	cmd.Env = append(os.Environ(), "HOME="+home, "XDG_CONFIG_HOME="+filepath.Join(home, ".config"), "USERPROFILE="+home)
+	cmd.Env = append(os.Environ(), "HOME="+home, "XDG_CONFIG_HOME="+filepath.Join(home, ".config"), "USERPROFILE="+home,
+		"APPDATA="+filepath.Join(home, "AppData", "Roaming"))
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	err := cmd.Run()
@@ -101,6 +104,19 @@ func TestAT16HarnessLockdown(t *testing.T) {
 	managed := map[string][]string{"claude-code": {"allowManagedMcpServersOnly", "allowedMcpServers", "smcp-stdio", "Edit(~/.claude.json)", "Read(/"},
 		"gemini-cli": {`"allowed"`, `"smcp"`}}
 	clients := []string{"claude-code", "codex", "gemini-cli", "goose", "hermes", "opencode"}
+	noMechanism := []string{"hermes", "opencode"}
+	gooseConfig := filepath.Join(home, ".config", "goose", "config.yaml")
+	if runtime.GOOS == "windows" {
+		// FR-21.17: the Windows paths of docs/clients/matrix.json; Hermes
+		// Agent has none and is refused as unsupported on windows.
+		out, err := g.ctlAsUser(home, proj, "clients", "setup", "hermes")
+		if err == nil || !strings.Contains(out, "unsupported on windows") {
+			t.Fatalf("setup hermes on Windows: %v\n%s", err, out)
+		}
+		clients = slices.DeleteFunc(clients, func(c string) bool { return c == "hermes" })
+		noMechanism = []string{"opencode"}
+		gooseConfig = filepath.Join(home, "AppData", "Roaming", "Block", "goose", "config", "config.yaml")
+	}
 	for _, c := range clients {
 		args := []string{"clients", "setup", c}
 		if managed[c] != nil {
@@ -122,7 +138,10 @@ func TestAT16HarnessLockdown(t *testing.T) {
 		}
 	}
 	grok, _ := g.ctlAsUser(home, proj, "clients", "setup", "grok-build")
-	if !strings.Contains(grok, "to be confirmed at pinning") {
+	if runtime.GOOS == "windows" && !strings.Contains(grok, "unsupported on windows") {
+		t.Fatalf("grok-build setup on Windows is not refused as unsupported on windows:\n%s", grok)
+	}
+	if runtime.GOOS != "windows" && !strings.Contains(grok, "to be confirmed at pinning") {
 		t.Fatalf("grok-build setup does not state the unconfirmed mechanism:\n%s", grok)
 	}
 
@@ -155,7 +174,7 @@ func TestAT16HarnessLockdown(t *testing.T) {
 			t.Fatalf("%s: server findings with the Gateway only: %v", c, findings(r, "non-gateway-server", c))
 		}
 	}
-	for _, c := range []string{"hermes", "opencode"} {
+	for _, c := range noMechanism {
 		if !strings.Contains(strings.Join(findings(r, "info", c), "\n"), "no lockdown mechanism") {
 			t.Fatalf("%s: doctor does not report the missing lockdown mechanism", c)
 		}
@@ -166,8 +185,10 @@ func TestAT16HarnessLockdown(t *testing.T) {
 	writeFile(t, proj, filepath.Join(".codex", "config.toml"), "[mcp_servers.rogue-codex]\ncommand = \"rogue-mcp\"\n", 0o600)
 	writeFile(t, proj, filepath.Join(".gemini", "settings.json"), `{"mcpServers":{"rogue-gemini":{"command":"rogue-mcp"}}}`, 0o600)
 	writeFile(t, proj, "opencode.json", `{"mcp":{"rogue-opencode":{"type":"local","command":["rogue-mcp"]}}}`, 0o600)
-	insertAfter(t, filepath.Join(home, ".config", "goose", "config.yaml"), "extensions:", "  rogue-goose:\n    type: stdio\n    cmd: rogue-mcp\n")
-	insertAfter(t, filepath.Join(home, ".hermes", "config.yaml"), "mcp_servers:", "  rogue-hermes:\n    command: rogue-mcp\n")
+	insertAfter(t, gooseConfig, "extensions:", "  rogue-goose:\n    type: stdio\n    cmd: rogue-mcp\n")
+	if slices.Contains(clients, "hermes") {
+		insertAfter(t, filepath.Join(home, ".hermes", "config.yaml"), "mcp_servers:", "  rogue-hermes:\n    command: rogue-mcp\n")
+	}
 	r = g.doctor(home, proj)
 	for _, c := range clients {
 		want := "rogue-" + strings.TrimSuffix(c, "-cli")

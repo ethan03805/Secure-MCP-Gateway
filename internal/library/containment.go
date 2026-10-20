@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
+	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
 
@@ -56,6 +57,9 @@ func (l *Library) placementRequest(r *Revision) (winsandbox.PlacementRequest, er
 	}
 	for _, s := range m.Capabilities.Filesystem {
 		if p, ok := slots[s.Slot]; ok {
+			if err := packaging.CheckSlotPath(s.Slot, p); err != nil {
+				return winsandbox.PlacementRequest{}, err
+			}
 			req.Roots = append(req.Roots, winsandbox.PathGrant{Path: p, Write: s.Mode == "rw"})
 		}
 	}
@@ -69,6 +73,9 @@ func (l *Library) contain(r *Revision, actor string) error {
 		return nil
 	}
 	req, err := l.placementRequest(r)
+	if packaging.ReasonOf(err) == packaging.ReasonPathRefused {
+		return err
+	}
 	if err == nil {
 		var pl winsandbox.Placement
 		if pl, err = l.containment.Ensure(req); err == nil {

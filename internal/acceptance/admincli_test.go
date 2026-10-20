@@ -46,7 +46,7 @@ func TestAdminCLIDemonstration(t *testing.T) {
 		if args[0] != "client" && args[0] != "lockdown" && args[0] != "doctor" {
 			return g.ctl(args...)
 		}
-		cmd := exec.Command(filepath.Join(binDir, "smcpctl"), append(args, "--config", g.cfg)...)
+		cmd := exec.Command(bin("smcpctl"), append(args, "--config", g.cfg)...)
 		cmd.Dir = g.dir
 		cmd.Env = append(os.Environ(), "HOME="+home, "XDG_CONFIG_HOME="+filepath.Join(home, ".config"))
 		var b bytes.Buffer

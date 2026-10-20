@@ -112,6 +112,11 @@ func Doctor(e Env, ids []string, prereq Prereq) Report {
 	}
 	for _, c := range clients {
 		r.Clients = append(r.Clients, c.ID)
+		if err := c.Unsupported(e); err != nil {
+			// FR-21.17: no Windows path in the client matrix.
+			r.Findings = append(r.Findings, Finding{Kind: KindInfo, Client: c.ID, Message: err.Error()})
+			continue
+		}
 		servers, notes := c.Inventory(e)
 		gateway := false
 		for _, s := range servers {

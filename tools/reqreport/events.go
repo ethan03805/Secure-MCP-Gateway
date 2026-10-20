@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +19,10 @@ const (
 	// markerScenario is an acceptance scenario claim (FR-19.4):
 	// "SCENARIO: AT-01 AT-02 profile=standalone".
 	markerScenario = "SCENARIO:"
+	// markerScenarioNotRun is a scenario a Windows installation mode cannot
+	// run, with the reason (FR-21.20):
+	// "SCENARIO-NOT-RUN: AT-11 profile=windows-user reason=...".
+	markerScenarioNotRun = "SCENARIO-NOT-RUN:"
 	// markerCorpus is a detection corpus measurement (FR-19.5), logged by
 	// internal/filters TestCorpusRates: "CORPUS rule_set=... version=...
 	// positives=n negatives=n fp_rate=x fn_rate=x target_fp=x target_fn=x".
@@ -97,6 +102,8 @@ type TestRun struct {
 	Claims  []Claim
 	// Scenarios are the acceptance scenarios the test claims to execute.
 	Scenarios []ScenarioClaim
+	// NotRun are the scenarios the test cannot run in a Windows mode.
+	NotRun []ScenarioNotRun
 	// Corpora are the detection corpus measurements the test logged.
 	Corpora []CorpusRate
 }
@@ -106,6 +113,12 @@ type TestRun struct {
 type ScenarioClaim struct {
 	ID      string
 	Profile string
+}
+
+// ScenarioNotRun is a scenario a test cannot run in a Windows installation
+// mode, and why.
+type ScenarioNotRun struct {
+	ID, Profile, Reason string
 }
 
 // Key identifies the test uniquely across packages.
@@ -167,6 +180,9 @@ func parseTestLog(r io.Reader) (*TestLog, error) {
 		}
 		if i := strings.Index(line, markerScenario); i >= 0 {
 			t.Scenarios = append(t.Scenarios, parseScenarioLine(line[i+len(markerScenario):])...)
+		}
+		if i := strings.Index(line, markerScenarioNotRun); i >= 0 {
+			t.NotRun = append(t.NotRun, parseNotRunLine(line[i+len(markerScenarioNotRun):])...)
 		}
 		for _, m := range []struct {
 			marker  string
@@ -281,12 +297,34 @@ func parseScenarioLine(rest string) []ScenarioClaim {
 			ids = append(ids, f)
 		}
 	}
-	if profile != profileStandalone && profile != profileEnforced {
+	if profile != profileStandalone && profile != profileEnforced && !slices.Contains(windowsModes, profile) {
 		return nil
 	}
 	out := make([]ScenarioClaim, 0, len(ids))
 	for _, id := range ids {
 		out = append(out, ScenarioClaim{ID: id, Profile: profile})
+	}
+	return out
+}
+
+// parseNotRunLine reads "AT-11 profile=windows-user reason=text ...".
+func parseNotRunLine(rest string) []ScenarioNotRun {
+	head, reason, _ := strings.Cut(rest, " reason=")
+	var ids []string
+	profile := ""
+	for _, f := range strings.Fields(head) {
+		if p, ok := strings.CutPrefix(f, "profile="); ok {
+			profile = p
+		} else if scenarioPattern.MatchString(f) {
+			ids = append(ids, f)
+		}
+	}
+	if !slices.Contains(windowsModes, profile) {
+		return nil
+	}
+	out := make([]ScenarioNotRun, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, ScenarioNotRun{ID: id, Profile: profile, Reason: strings.TrimSpace(reason)})
 	}
 	return out
 }

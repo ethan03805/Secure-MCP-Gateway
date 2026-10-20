@@ -56,6 +56,9 @@ type installer struct {
 	serviceBin string
 	boot       bootstrapOpts
 	win        winHooks // Windows per-user mode (install_winuser.go)
+	// wslTemp writes a temporary file for the WSL2 mode (tests); nil is
+	// writeWSLTemp.
+	wslTemp func(name string, b []byte) (string, func(), error)
 }
 
 func installCmd(args []string, out io.Writer) error {
@@ -66,6 +69,8 @@ func installCmd(args []string, out io.Writer) error {
 	check := fs.Bool("check", false, "check the profile's prerequisites (FR-13.5) and the binaries, change nothing, and exit non-zero naming each missing one")
 	wait := fs.Duration("health-timeout", installHealthWait, "how long to wait for the started Gateway to answer")
 	machine := fs.Bool("machine", false, "Windows: install the machine mode (a Windows service under NT SERVICE\\smcpd; run as Administrator)")
+	wsl := fs.Bool("wsl", false, "Windows: install the WSL2 mode (the Linux build in the WSL2 distribution smcp-gateway, with interop off; FR-21.15)")
+	wslVersion := fs.String("wsl-version", wslDefaultVersion(), "with --wsl: the release tag installed inside the distribution")
 	o := bootstrapOpts{}
 	fs.StringVar(&o.adminFile, "admin-password-file", "", "read the administrator password from this file (mode 0600 or stricter) instead of a prompt")
 	fs.StringVar(&o.approverFile, "approver-password-file", "", "read the Session Approver password from this file (mode 0600 or stricter) instead of a prompt")
@@ -90,6 +95,12 @@ func installCmd(args []string, out io.Writer) error {
 	}
 	if *check {
 		return in.check(*profile)
+	}
+	if *wsl {
+		if *machine || *profile != "standalone" {
+			return errors.New("--wsl is the Windows WSL2 mode; it takes neither --machine nor --profile")
+		}
+		return in.windowsWSL(*wslVersion)
 	}
 	if *machine {
 		if *profile != "standalone" {

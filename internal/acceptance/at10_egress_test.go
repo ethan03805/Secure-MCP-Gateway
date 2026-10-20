@@ -15,7 +15,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -225,7 +224,7 @@ func TestAT10WebBroker(t *testing.T) {
 
 	dir := t.TempDir()
 	caFile := writeFile(t, dir, "egress-ca.pem", string(caPEM), 0o644)
-	extra := fmt.Sprintf("\n[[server]]\nalias = \"eg\"\ncommand = %q\nargs = [\"-fixture\", \"EGRESS\"]\n", filepath.Join(binDir, "smcp-hostile"))
+	extra := fmt.Sprintf("\n[[server]]\nalias = \"eg\"\ncommand = %q\nargs = [\"-fixture\", \"EGRESS\"]\n", bin("smcp-hostile"))
 	if requestedProfile() == reqtest.Enforced {
 		extra += "\n[[runtime.server]]\nalias = \"eg\"\nnetwork = \"egress\"\n"
 	}

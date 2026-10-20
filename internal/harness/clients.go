@@ -106,7 +106,10 @@ func addNote(p *Plan, n string) {
 // ---- Claude Code (FR-15.2) ----
 
 func claudeManaged(e Env, file string) string {
-	if e.OS == "darwin" {
+	switch e.OS {
+	case "windows":
+		return e.winSys(false, "ClaudeCode", file)
+	case "darwin":
 		return e.sys(filepath.Join("/Library/Application Support/ClaudeCode", file))
 	}
 	return e.sys(filepath.Join("/etc/claude-code", file))
@@ -299,6 +302,7 @@ func init() {
 	// ---- Hermes Agent ----
 	register(&Client{
 		ID: "hermes", Name: "Hermes Agent",
+		NoWindows: "Hermes Agent publishes no native Windows build; inside WSL2 the Linux paths apply",
 		Installed: installed(func(e Env) []string { return []string{e.home(".hermes")} }, "hermes"),
 		Setup: func(e Env, o Options) (Plan, error) {
 			p := Plan{Client: "hermes"}
@@ -397,6 +401,9 @@ func init() {
 
 	// ---- Gemini CLI ----
 	geminiSystem := func(e Env) string {
+		if e.OS == "windows" {
+			return e.winSys(true, "gemini-cli", "settings.json")
+		}
 		if e.OS == "darwin" {
 			return e.sys("/Library/Application Support/GeminiCli/settings.json")
 		}
@@ -464,14 +471,22 @@ func init() {
 	})
 
 	// ---- Goose ----
+	// gooseConfig is Goose's configuration file: under %APPDATA% on
+	// Windows, ~/.config/goose elsewhere.
+	gooseConfig := func(e Env) string {
+		if e.OS == "windows" {
+			return e.appData("Block", "goose", "config", "config.yaml")
+		}
+		return e.home(".config", "goose", "config.yaml")
+	}
 	register(&Client{
 		ID: "goose", Name: "Goose",
 		LockdownMechanism: "GOOSE_ALLOWLIST YAML allowlist matched on the extension command (to confirm at pinning)",
-		Installed:         installed(func(e Env) []string { return []string{e.home(".config", "goose")} }, "goose"),
+		Installed:         installed(func(e Env) []string { return []string{filepath.Dir(gooseConfig(e)), e.home(".config", "goose")} }, "goose"),
 		Setup: func(e Env, _ Options) (Plan, error) {
 			p := Plan{Client: "goose"}
 			block := fmt.Sprintf("extensions:\n  %s:\n    name: %s\n    type: stdio\n    cmd: smcp-stdio\n    args: []\n    enabled: true\n    timeout: 300\n", GatewayName, GatewayName)
-			c, err := blockEdit(e.home(".config", "goose", "config.yaml"), "user", PurposeConnection, block, func(outside string) string {
+			c, err := blockEdit(gooseConfig(e), "user", PurposeConnection, block, func(outside string) string {
 				if hasTopKey(outside, "extensions") {
 					return "already has an extensions section"
 				}
@@ -494,13 +509,13 @@ func init() {
 			return p, nil
 		},
 		Inventory: func(e Env) ([]Server, []string) {
-			b, err := readOrNil(e.home(".config", "goose", "config.yaml"))
+			b, err := readOrNil(gooseConfig(e))
 			if err != nil || b == nil {
 				return nil, nil
 			}
-			return yamlServers(e, "goose", "user", e.home(".config", "goose", "config.yaml"), yamlChildren(string(b), "extensions")), nil
+			return yamlServers(e, "goose", "user", gooseConfig(e), yamlChildren(string(b), "extensions")), nil
 		},
-		SettingsFiles: func(e Env) []string { return []string{e.home(".config", "goose", "config.yaml")} },
+		SettingsFiles: func(e Env) []string { return []string{gooseConfig(e)} },
 		Protected:     func(Env) bool { return false },
 		CATrust:       func(Env) (bool, string) { return false, "not needed with smcp-stdio" },
 	})
@@ -508,6 +523,7 @@ func init() {
 	// ---- Grok Build ----
 	register(&Client{
 		ID: "grok-build", Name: "Grok Build",
+		NoWindows: "Grok Build's configuration location is not known (to confirm at pinning)",
 		Installed: installed(func(e Env) []string { return []string{e.home(".grok")} }, "grok"),
 		Setup: func(e Env, _ Options) (Plan, error) {
 			p := Plan{Client: "grok-build"}

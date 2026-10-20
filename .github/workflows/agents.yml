@@ -23,6 +23,12 @@ on:
         description: "Comma-separated client IDs (empty: all)"
         required: false
         default: ""
+      platform:
+        description: "Runners: all, linux or windows (FR-21.21)"
+        required: false
+        default: all
+        type: choice
+        options: [all, linux, windows]
   schedule:
     - cron: "23 8 * * *" # nightly, 03:23 America/Chicago (CDT)
 
@@ -40,6 +46,7 @@ env:
 jobs:
   agents:
     name: agents
+    if: ${{ inputs.platform != 'windows' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -130,7 +137,7 @@ jobs:
   # report the extra servers (scripts/agents/lockdown.go).
   lockdown:
     name: lockdown
-    if: ${{ inputs.clients == '' || contains(inputs.clients, 'claude-code') }}
+    if: ${{ inputs.platform != 'windows' && (inputs.clients == '' || contains(inputs.clients, 'claude-code')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -181,13 +188,87 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # FR-21.21: the real-agent suite on Windows (windows-latest) for the
+  # Appendix K clients that publish a Windows build, against a per-user
+  # Gateway (smcpd started by the suite as the runner's user, labelled
+  # windows-user and not enforced). Hermes Agent has no native Windows build
+  # and Grok Build no public CLI; Gemini CLI needs GEMINI_API_KEY as on
+  # Linux. Models come from the same Vercel AI Gateway secret, which is
+  # passed only in the environment of the suite and never printed.
+  agents-windows:
+    name: agents (windows)
+    if: ${{ inputs.platform != 'linux' }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      CGO_ENABLED: "0"
+    steps:
+      - name: Check out with LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install the agent CLIs at the pinned versions
+        env:
+          CLIENTS: ${{ inputs.clients }}
+        run: |
+          # The clients with a Windows build (docs/clients/matrix.json).
+          CLIENTS=${CLIENTS:-claude-code,codex,opencode,gemini,goose}
+          # shellcheck disable=SC2086 # CLIENTS is a list of IDs
+          scripts/agents/install-clis.sh ${CLIENTS//,/ }
+          # GITHUB_PATH takes a Windows path.
+          cygpath -w "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Run the conformance suite
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLIENTS: ${{ inputs.clients }}
+        run: |
+          go run ./scripts/agents -clients "${CLIENTS:-claude-code,codex,opencode,gemini,goose}" -work "$RUNNER_TEMP/agents" \
+            -out build/agents-windows.json -report build/agents-windows-report.json
+      - name: Summary
+        if: always()
+        run: |
+          f=build/agents-windows.json
+          [ -f "$f" ] || exit 0
+          {
+            echo "### Windows (windows-latest)"
+            echo
+            echo "| Client | Version | Mode | Result | Detail |"
+            echo "|---|---|---|---|---|"
+            jq -r '.[] | "| \(.client) | \(.version) | \(.mode) | \(.result) | \(.detail | gsub("\\|"; "/")) |"' "$f"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload results and redacted agent output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: agents-windows-results
+          path: |
+            build/agents-windows.json
+            build/agents-windows-report.json
+            ${{ runner.temp }}/agents/smcpd.log
+            ${{ runner.temp }}/agents/agents/*/*.log
+          if-no-files-found: warn
+          retention-days: 14
+
   # Each job's result becomes a claim in site-data/workflows.json: partial
   # from main, full from a release tag (tools/reqreport/workflows.go).
   # Dispatched runs, which may select clients, claim nothing. The matrix
   # job claims FR-15.8 only when the broken-build check ran.
   publish-results:
     name: publish-results
-    needs: [agents, lockdown]
+    needs: [agents, lockdown, agents-windows]
     if: >-
       always() && (github.event_name == 'push' || github.event_name == 'schedule') &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
@@ -209,6 +290,7 @@ jobs:
         env:
           AGENTS: ${{ needs.agents.result }}
           LOCKDOWN: ${{ needs.lockdown.result }}
+          WINDOWS: ${{ needs.agents-windows.result }}
           REF: ${{ github.ref_name }}
         run: |
           if [ -n "$(find results -name agents-broken.json -print -quit 2>/dev/null)" ] || [ "$AGENTS" = failure ]; then
@@ -217,6 +299,7 @@ jobs:
             echo "the broken-build check did not run; no FR-15.8 claim"
           fi
           case $LOCKDOWN in success | failure) scripts/publish-workflow-result.sh agents-lockdown "$LOCKDOWN" "$REF" "$GITHUB_SHA" FR-15.2 ;; esac
+          case $WINDOWS in success | failure) scripts/publish-workflow-result.sh agents-windows "$WINDOWS" "$REF" "$GITHUB_SHA" FR-21.21 ;; esac
 
   publish:
     name: publish

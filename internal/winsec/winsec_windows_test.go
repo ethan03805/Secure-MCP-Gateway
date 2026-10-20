@@ -67,6 +67,27 @@ func TestWindowsProtectedDACL(t *testing.T) {
 	if err := CheckDACL(f, false, user, SIDSystem, SIDAdministrators); err == nil {
 		t.Fatal("file below did not inherit the Users entry")
 	}
+	// A second grant replaces the first: the Windows sandbox narrows a
+	// slot from Modify to ReadExecute this way (SR-4.6-2).
+	if err := Grant(dir, SIDUsers, Modify); err != nil {
+		t.Fatal(err)
+	}
+	if err := Grant(dir, SIDUsers, ReadExecute); err != nil {
+		t.Fatal(err)
+	}
+	_, _, entries, err = DACL(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var users []Entry
+	for _, e := range entries {
+		if e.SID == SIDUsers {
+			users = append(users, e)
+		}
+	}
+	if len(users) != 1 || users[0].Access != ReadExecute || users[0].Deny {
+		t.Fatalf("Users entries after Modify then ReadExecute: %v", users)
+	}
 	if err := Revoke(dir, SIDUsers); err != nil {
 		t.Fatal(err)
 	}

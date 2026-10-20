@@ -50,6 +50,9 @@ func lockdownCmd(args []string, out io.Writer) error {
 	}
 	switch action {
 	case "apply", "show":
+		if err := cl.Unsupported(e); err != nil {
+			return err // FR-21.17
+		}
 		p, err := cl.Lockdown(e)
 		if err != nil {
 			return err

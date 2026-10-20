@@ -206,10 +206,13 @@ func CheckDACL(path string, requireProtected bool, allowed ...string) error {
 	return Evaluate(path, protected, null, entries, requireProtected, allowed...)
 }
 
-// Grant adds an allow entry for sid to the DACL of path, keeping the
-// existing entries and the protection state. On a directory the entry is
-// inherited below it. It is the call the Windows sandbox uses to give an
-// AppContainer SID access to a package tree (SR-4.6-2).
+// Grant gives sid exactly access on path: an earlier explicit entry for
+// sid is replaced (so a change from Modify to ReadExecute takes effect)
+// and the other entries and the protection state are kept. On a directory
+// the entry is inherited below it; Windows propagates it to the existing
+// tree once, here. It is the call the Windows sandbox uses to give an
+// AppContainer SID access to a package tree, scratch directory or slot
+// (SR-4.6-2).
 func Grant(path, sid string, access Access) error {
 	return merge(path, sid, access, windows.GRANT_ACCESS)
 }
@@ -244,16 +247,18 @@ func merge(path, sidStr string, access Access, mode windows.ACCESS_MODE) error {
 	if fi.IsDir() {
 		inh = windows.SUB_CONTAINERS_AND_OBJECTS_INHERIT
 	}
-	acl, err := windows.ACLFromEntries([]windows.EXPLICIT_ACCESS{{
-		AccessPermissions: windows.ACCESS_MASK(access),
-		AccessMode:        mode,
-		Inheritance:       inh,
-		Trustee: windows.TRUSTEE{
-			TrusteeForm:  windows.TRUSTEE_IS_SID,
-			TrusteeType:  windows.TRUSTEE_IS_UNKNOWN,
-			TrusteeValue: windows.TrusteeValueFromSID(sid),
-		},
-	}}, old)
+	trustee := windows.TRUSTEE{
+		TrusteeForm:  windows.TRUSTEE_IS_SID,
+		TrusteeType:  windows.TRUSTEE_IS_UNKNOWN,
+		TrusteeValue: windows.TrusteeValueFromSID(sid),
+	}
+	// Every explicit entry for sid is removed first, so a grant replaces
+	// the earlier one instead of adding its rights to it.
+	entries := []windows.EXPLICIT_ACCESS{{AccessMode: windows.REVOKE_ACCESS, Trustee: trustee}}
+	if mode != windows.REVOKE_ACCESS {
+		entries = append(entries, windows.EXPLICIT_ACCESS{AccessPermissions: windows.ACCESS_MASK(access), AccessMode: mode, Inheritance: inh, Trustee: trustee})
+	}
+	acl, err := windows.ACLFromEntries(entries, old)
 	if err != nil {
 		return err
 	}

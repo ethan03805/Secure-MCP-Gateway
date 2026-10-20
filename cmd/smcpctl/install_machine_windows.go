@@ -165,6 +165,12 @@ mode = "standalone"
 [log]
 file = %q
 
+# Packaged servers run in per-revision AppContainers with Job Object limits
+# and Windows Filtering Platform egress filters (FR-21.13, FR-21.14); run
+# smcpctl package enable from an elevated prompt to set each one up.
+[runtime]
+sandbox = "appcontainer"
+
 [evidence]
 export_dir = %q
 
@@ -211,7 +217,9 @@ group = %q
 This installation is not enforced (Windows machine mode, label "not
 enforced, windows-machine"). smcpd runs as %s; its keys are DPAPI
 blobs of that account. Administrators run smcpctl with the operator token
-copy in the state directory. MCP servers are not yet contained on Windows.
+copy in the state directory. Packaged servers run in their own AppContainer
+under that account; enable each from an elevated prompt (smcpctl package
+enable). Servers configured by command are not contained.
 
 Configuration: %s
 Check health:  smcpctl health --config %s

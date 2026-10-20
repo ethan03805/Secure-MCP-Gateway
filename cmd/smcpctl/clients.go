@@ -268,6 +268,9 @@ func clientSetup(args []string, out io.Writer) error {
 		}
 		return errors.Join(errs...)
 	}
+	if err := cl.Unsupported(e); err != nil {
+		return err // FR-21.17
+	}
 	plan, err := cl.Setup(e, harness.Options{Stdio: *stdio, Helper: *helper})
 	if err != nil {
 		return err

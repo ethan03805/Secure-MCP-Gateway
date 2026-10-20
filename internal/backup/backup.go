@@ -136,6 +136,11 @@ var excluded = map[string]bool{"log": true, "backups": true}
 // (internal/library), and a tar entry cannot keep their executable bits.
 var excludedDirs = map[string]bool{"packages/unpacked": true, "packages/work": true}
 
+// excludedFiles are files of the state directory that hold no state: the
+// package library's registry lock is empty, and on Windows it is locked
+// with LockFileEx while smcpd runs, so reading it fails (FR-21.20).
+var excludedFiles = map[string]bool{"packages/registry.lock": true}
+
 // FileEntry is one archived file.
 type FileEntry struct {
 	Path   string `json:"path"`
@@ -250,7 +255,7 @@ func Write(w io.Writer, s Spec) (Manifest, error) {
 			return nil
 		}
 		top := strings.SplitN(filepath.ToSlash(rel), "/", 2)[0]
-		if excluded[top] || (d.IsDir() && excludedDirs[filepath.ToSlash(rel)]) || strings.Contains(filepath.Base(p), ".tmp-") || strings.HasPrefix(filepath.Base(p), ".health-probe-") {
+		if excluded[top] || (d.IsDir() && excludedDirs[filepath.ToSlash(rel)]) || (!d.IsDir() && excludedFiles[filepath.ToSlash(rel)]) || strings.Contains(filepath.Base(p), ".tmp-") || strings.HasPrefix(filepath.Base(p), ".health-probe-") {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}

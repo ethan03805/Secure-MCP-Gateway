@@ -8,6 +8,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 var (
@@ -113,54 +115,26 @@ func (a Access) mask() windows.ACCESS_MASK {
 	return 0
 }
 
-// Grant adds an access-allowed entry for sid on path, inherited by every
-// file and directory below it (SR-4.6-2). An earlier entry for sid on the
-// path is replaced, so changing a grant from Modify to ReadExecute takes
-// effect. Windows propagates the inherited entry to the existing tree once,
+// Grant gives sid access a on path, inherited by every file and directory
+// below a directory (SR-4.6-2). It is winsec.Grant, the primitive shared
+// with the platform runtime: an earlier entry for sid on the path is
+// replaced, so changing a grant from Modify to ReadExecute takes effect,
+// and Windows propagates the inherited entry to the existing tree once,
 // here, and not at each start of the backend.
 func Grant(path string, sid *windows.SID, a Access) error {
 	if a.mask() == 0 {
 		return errors.New("winsandbox: unknown access")
 	}
-	return setEntries(path, []windows.EXPLICIT_ACCESS{revoke(sid), {
-		AccessPermissions: a.mask(),
-		AccessMode:        windows.GRANT_ACCESS,
-		Inheritance:       windows.SUB_CONTAINERS_AND_OBJECTS_INHERIT,
-		Trustee:           trustee(sid),
-	}})
+	if err := winsec.Grant(path, sid.String(), winsec.Access(a.mask())); err != nil {
+		return fmt.Errorf("grant %s on %s: %w", sid, path, err)
+	}
+	return nil
 }
 
 // Revoke removes every explicit entry for sid on path and the entries its
-// children inherited from them.
+// children inherited from them (winsec.Revoke).
 func Revoke(path string, sid *windows.SID) error {
-	return setEntries(path, []windows.EXPLICIT_ACCESS{revoke(sid)})
-}
-
-func trustee(sid *windows.SID) windows.TRUSTEE {
-	return windows.TRUSTEE{TrusteeForm: windows.TRUSTEE_IS_SID, TrusteeType: windows.TRUSTEE_IS_UNKNOWN, TrusteeValue: windows.TrusteeValueFromSID(sid)}
-}
-
-func revoke(sid *windows.SID) windows.EXPLICIT_ACCESS {
-	return windows.EXPLICIT_ACCESS{AccessMode: windows.REVOKE_ACCESS, Trustee: trustee(sid)}
-}
-
-func setEntries(path string, entries []windows.EXPLICIT_ACCESS) error {
-	sd, err := windows.GetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION)
-	if err != nil {
-		return fmt.Errorf("read the DACL of %s: %w", path, err)
-	}
-	old, _, err := sd.DACL()
-	if err != nil {
-		return fmt.Errorf("read the DACL of %s: %w", path, err)
-	}
-	acl, err := windows.ACLFromEntries(entries, old)
-	if err != nil {
-		return fmt.Errorf("build the DACL of %s: %w", path, err)
-	}
-	if err := windows.SetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION, nil, nil, acl, nil); err != nil {
-		return fmt.Errorf("write the DACL of %s: %w", path, err)
-	}
-	return nil
+	return winsec.Revoke(path, sid.String())
 }
 
 // Entry is one access-allowed or access-denied entry of a DACL.

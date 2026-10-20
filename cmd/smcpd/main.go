@@ -118,6 +118,22 @@ func notifyMode(m string) string {
 // windows-machine before run (main_windows.go). Empty means detect.
 var installMode string
 
+// machineRuntime makes a Windows machine-mode Gateway contain its packaged
+// servers (FR-21.13, FR-21.14): with installation mode windows-machine,
+// [runtime] sandbox "none" (the Standalone default, which an older
+// smcpctl install --machine left in place) becomes "appcontainer", so the
+// package library keeps each enabled revision's AppContainer placement
+// (internal/winsandbox.Placements under <state>/appcontainer) and every
+// packaged server starts in it under NT SERVICE\smcpd. It reports whether
+// it changed the configuration. Any other mode or sandbox is left alone.
+func machineRuntime(cfg *config.Config, mode string) bool {
+	if mode != profile.ModeWindowsMachine || cfg.Runtime.Sandbox != "none" {
+		return false
+	}
+	cfg.Runtime.Sandbox = "appcontainer"
+	return true
+}
+
 // hostOverride returns the host for app.Options: nil (detect) unless
 // mode is set, and then the detected host with that installation mode.
 func hostOverride(mode string) *profile.Host {
@@ -147,6 +163,9 @@ func run(parent context.Context, cfgPath, level string) error {
 		return err
 	}
 	defer logFile.Close()
+	if machineRuntime(cfg, installMode) {
+		log.Warn(`Windows machine mode: [runtime] sandbox is "none"; packaged servers run in their AppContainer placements (sandbox = "appcontainer", FR-21.13)`)
+	}
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

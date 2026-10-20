@@ -42,6 +42,7 @@ const (
 	ReasonDataClass         = "DATA_CLASS_IN_ARGUMENTS"
 	ReasonPathInvalid       = "PATH_INVALID"
 	ReasonPathOutsideRoots  = "PATH_OUTSIDE_ROOTS"
+	ReasonPathRefused       = "PATH_REFUSED" // FR-21.25: a Windows path form (stream, device, prefix, share)
 	ReasonURLInvalid        = "URL_INVALID"
 	ReasonURLNotAllowed     = "URL_NOT_ALLOWED"
 	ReasonURLPrivate        = "URL_PRIVATE_ADDRESS"

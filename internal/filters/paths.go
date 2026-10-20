@@ -90,8 +90,11 @@ func (f *pathFilter) FilterRequest(_ context.Context, call *pipeline.Call, args 
 		if rule != "" {
 			fd := pipeline.Finding{Filter: IDPathCanonicalize, Rule: rule, Location: ts.loc}
 			reason := ReasonPathInvalid
-			if rule == "outside-roots" || rule == "project-outside-roots" {
+			switch {
+			case rule == "outside-roots" || rule == "project-outside-roots":
 				reason = ReasonPathOutsideRoots
+			case windowsRule[rule]:
+				reason = ReasonPathRefused
 			}
 			return pipeline.RequestVerdict{Action: pipeline.Block, ReasonCode: reason, Finding: "path argument at " + ts.loc + ": " + pathRuleText[rule], Findings: []pipeline.Finding{fd}}, nil
 		}
@@ -169,6 +172,11 @@ var pathRuleText = map[string]string{
 	winpath.RuleUNC:           "names a network share",
 	winpath.RuleDriveRelative: "is relative to a drive's current directory",
 }
+
+// windowsRule holds the FR-21.25 rules that only Windows applies; they are
+// refused with reason PATH_REFUSED.
+var windowsRule = map[string]bool{winpath.RuleStream: true, winpath.RuleDeviceName: true, winpath.RuleDevicePrefix: true,
+	winpath.RuleUNC: true, winpath.RuleDriveRelative: true}
 
 // isAbs is filepath.IsAbs, and on Windows the FR-21.25 rule: a drive
 // letter or a leading separator makes a path absolute, so "/etc/passwd" is

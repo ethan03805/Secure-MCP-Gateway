@@ -7,12 +7,14 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 
 	"golang.org/x/term"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/secrets"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsec"
 )
 
 const secretsUsage = `usage: smcpctl secrets <command> [flags]
@@ -118,7 +120,12 @@ func readOwnerOnly(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if st.Mode().Perm()&0o077 != 0 {
+	if runtime.GOOS == "windows" {
+		// No POSIX modes on Windows (FR-21.2).
+		if err := winsec.CheckOwnerOnly(path); err != nil {
+			return nil, fmt.Errorf("a value file must be readable by your account only: %w", err)
+		}
+	} else if st.Mode().Perm()&0o077 != 0 {
 		return nil, fmt.Errorf("%s has mode %o; a value file must be 0600 or stricter", path, st.Mode().Perm())
 	}
 	return os.ReadFile(path)

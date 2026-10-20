@@ -564,6 +564,10 @@ var elsewhere = map[string]string{
 	// Needs a journal flush failure between the backend's response and the
 	// delivered event, injected in the edge harness (SR-6.3-1).
 	"OUTCOME_UNRECORDED": "internal/edge.TestAuditFailureFailsClosed, internal/edge.TestReleaseCommitFailureWithholds",
+	// A Windows-only path form (stream, device name, UNC host, device
+	// prefix; FR-21.25), refused through a running Gateway on the Windows
+	// runner with the table's message.
+	"PATH_REFUSED": "internal/acceptance.TestWindowsPathRefusedEndToEnd (Windows)",
 }
 
 // TestEveryReasonCodeEndToEnd is FR-1.51's verification: every Appendix B

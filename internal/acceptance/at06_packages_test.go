@@ -129,7 +129,7 @@ func TestAT06SourceAndBuildEvidence(t *testing.T) {
 	pkg := filepath.Join(work, "pkg")
 	copyTree(t, revDir, pkg)
 	artifact, _ := os.ReadFile(filepath.Join(pkgs, "artifacts", "sha256", artifactSHA))
-	writeFile(t, pkg, filepath.Join("artifact", "smcp-refserver"), string(artifact), 0o755)
+	writeFile(t, pkg, filepath.Join("artifact", "smcp-refserver"+exeSuffix()), string(artifact), 0o755)
 	if out := g.mustCtl("package", "verify", pkg); !strings.Contains(strings.ToLower(out), "ok") && !strings.Contains(out, "verified") {
 		t.Fatalf("the imported package does not verify as a copy: %s", out)
 	}
@@ -178,7 +178,7 @@ func TestAT06SourceAndBuildEvidence(t *testing.T) {
 
 	// SR-3-2: alter the imported artifact; the next launch is refused and
 	// the revision suspended.
-	for _, f := range []string{filepath.Join(pkgs, "artifacts", "sha256", artifactSHA), filepath.Join(pkgs, "unpacked", artifactSHA, "smcp-refserver")} {
+	for _, f := range []string{filepath.Join(pkgs, "artifacts", "sha256", artifactSHA), filepath.Join(pkgs, "unpacked", artifactSHA, "smcp-refserver"+exeSuffix())} {
 		if err := os.Chmod(f, 0o755); err != nil {
 			t.Fatal(err)
 		}

@@ -117,6 +117,56 @@ func TestAcceptanceResults(t *testing.T) {
 	}
 }
 
+// TestWindowsModeResults: scenarios claimed in a Windows installation mode
+// are reported per mode with the reason for each scenario a mode cannot
+// run, and never change the release label: a run where every scenario
+// passed in the per-user mode alone is still "not enforced" (FR-21.20).
+func TestWindowsModeResults(t *testing.T) {
+	reqtest.Partial(t, "FR-21.20")
+	const pkg = "example.com/m/internal/acceptance/windows-user"
+	var log strings.Builder
+	for i := 1; i <= 21; i++ {
+		name := fmt.Sprintf("TestAT%02d", i)
+		if i == 11 {
+			log.WriteString(ev("output", pkg, name, "    x.go:1: SCENARIO-NOT-RUN: AT-11 profile=windows-user reason=needs a Neo4j database\n") + ev("skip", pkg, name, ""))
+			continue
+		}
+		log.WriteString(ev("output", pkg, name, fmt.Sprintf("SCENARIO: AT-%02d profile=windows-user\n", i)) + ev("pass", pkg, name, ""))
+	}
+	log.WriteString(ev("output", pkg, "TestAT12b", "SCENARIO: AT-12 profile=windows-machine\n") + ev("fail", pkg, "TestAT12b", ""))
+	tl, err := parseTestLog(strings.NewReader(log.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := buildAcceptance(scenarioRows(21), tl, nil, "docs/verification", accSHA, "example.com/m")
+	if a.Label != LabelNotEnforced || a.EnforcedPassed != 0 || a.StandalonePassed != 0 {
+		t.Fatalf("Windows results changed the label: %q enforced %d standalone %d", a.Label, a.EnforcedPassed, a.StandalonePassed)
+	}
+	if a.WindowsPassed["windows-user"] != 20 || a.WindowsPassed["windows-machine"] != 0 {
+		t.Fatalf("windows passed %v", a.WindowsPassed)
+	}
+	for _, s := range a.Scenarios {
+		w := s.Windows
+		switch s.ID {
+		case "AT-11":
+			if w["windows-user"].Result != resultNotRun || w["windows-user"].Reason != "needs a Neo4j database" {
+				t.Errorf("AT-11: %+v", w)
+			}
+		case "AT-12":
+			if w["windows-user"].Result != resultPass || w["windows-machine"].Result != resultFail {
+				t.Errorf("AT-12: %+v", w)
+			}
+		default:
+			if w["windows-user"].Result != resultPass || w["windows-machine"].Result != resultNotRun || w["windows-machine"].Reason == "" {
+				t.Errorf("%s: %+v", s.ID, w)
+			}
+		}
+	}
+	if md := renderAcceptance(a); !strings.Contains(md, "20 of 21 passed in the per-user mode") {
+		t.Fatalf("markdown:\n%s", md)
+	}
+}
+
 // TestReleaseLabel is the FR-19.3 inspection in miniature: a candidate with
 // one unexecuted scenario is "not enforced", one with every scenario passing
 // in the Enforced profile is "enforced", and status data of another commit

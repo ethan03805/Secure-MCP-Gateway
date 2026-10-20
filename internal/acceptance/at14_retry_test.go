@@ -2,7 +2,6 @@ package acceptance
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -37,7 +36,7 @@ const at14Policy = `{
 // docs/verification/inspections.md; this scenario shows the Gateway-side
 // consequence: no replay of a possibly executed call.
 func TestAT14RetryAndCrash(t *testing.T) {
-	extra := fmt.Sprintf("\n[[server]]\nalias = \"hang\"\ncommand = %q\nargs = [\"-fixture\", \"HF-19\"]\n", filepath.Join(binDir, "smcp-hostile"))
+	extra := fmt.Sprintf("\n[[server]]\nalias = \"hang\"\ncommand = %q\nargs = [\"-fixture\", \"HF-19\"]\n", bin("smcp-hostile"))
 	if requestedProfile() == reqtest.Enforced {
 		extra += "\n[[runtime.server]]\nalias = \"hang\"\n"
 	}

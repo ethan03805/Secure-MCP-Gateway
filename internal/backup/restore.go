@@ -231,6 +231,11 @@ func Restore(o RestoreOptions) (RestoreReport, error) {
 		}
 	}
 
+	// Windows: the restored state directory gets a protected DACL
+	// (FR-21.5) before it replaces the current one.
+	if err := secureRestored(rstate, o.StateDir); err != nil {
+		return rep, fmt.Errorf("access control list of the restored state directory: %w", err)
+	}
 	// Swap. The previous state stays next to the restored one.
 	if exists(o.StateDir) {
 		rep.PreviousState = o.StateDir + ".pre-restore-" + stamp
