@@ -3,6 +3,7 @@
 // (capabilities/setup.json). The passwords stay in the form fields until
 // they are sent once to setup_run; the window never stores them.
 import { catalogue } from "./catalogue.js";
+import { contextforgeChecked, contextforgeField } from "./contextforge-choice.ts";
 import { byId, el, invoke } from "./dom.ts";
 import {
   details,
@@ -121,6 +122,7 @@ function renderForm(i: SetupInfo): void {
   const form = el("form", { id: "setup-form", novalidate: "" }, [
     el("fieldset", {}, [el("legend", {}, ["Profile"]), ...options]),
     el("p", { class: "note", id: "standalone-statement" }, [STANDALONE_STATEMENT]),
+    contextforgeField(),
     account("admin"),
     account("approver"),
     el("div", { class: "actions" }, [el("button", { type: "submit", class: "primary" }, ["Set Up the Gateway"])]),
@@ -167,7 +169,7 @@ async function submit(ev: Event): Promise<void> {
   const checked = document.querySelector<HTMLInputElement>('input[name="profile"]:checked');
   const profile = (checked?.value ?? "standalone") as ProfileId;
   try {
-    await invoke("setup_run", { profile, admin: v.admin, approver: v.approver });
+    await invoke("setup_run", { profile, admin: v.admin, approver: v.approver, contextforge: contextforgeChecked() });
   } catch (err) {
     const list = Array.isArray(err) ? (err as { code: string; role?: Role | null }[]) : [];
     const fields = list.filter((e) => e.role).map((e) => ({ field: e.role as Role, code: e.code, role: e.role as Role }));

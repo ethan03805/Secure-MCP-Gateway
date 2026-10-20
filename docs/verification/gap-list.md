@@ -267,7 +267,7 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 - FR-22.38 **unverified** (partly verified): Reconciliation removes excluded objects (tested); the inspection of the admin client's operations is not recorded.
 - FR-22.42 **unverified** (no claiming test or record): `docs/security-limitations.md` states the six points under Planned for v1.3.0; the inspection of a release candidate is not recorded.
 - FR-22.43 **missing** (partly verified): The suite asserts HFC-02, HFC-03, HFC-04, HFC-06, HFC-10 and HFC-14, the console suite HFC-07, and the reconciliation tests part of HFC-08 and HFC-13; HFC-01, HFC-05, HFC-09, HFC-11 and HFC-12 are not asserted (they need E-18 endpoints, the probe secret or the Enforced containment).
-- FR-22.44 **missing** (partly verified): `smcpctl bootstrap` and `install` ask (tested); the desktop first-run setup does not.
+- FR-22.44 **unverified** (partly verified): `smcpctl bootstrap` and `install` ask (tested), and the desktop first-run setup offers the box, unchecked by default, with the same notes and passes `--with-contextforge` only when it is checked (`desktop/src-tauri/src/contextforge.rs`, `desktop/test/contextforge-choice.test.ts`); the Demonstration of both setups is not recorded.
 - SR-3.2-2 **unverified** (partly verified): The signature binding and its journal event are tested for the pinned image; images signed from another tag or repository are not.
 - SR-3.5-2 **missing** (no claiming test or record): The probe is not limited to the entry's host through E-18 (FR-22.40).
 - SR-3.6-2 **unverified** (no claiming test or record): Stdio transport is off in the generated configuration; no test watches processes and network during a hosted call.
