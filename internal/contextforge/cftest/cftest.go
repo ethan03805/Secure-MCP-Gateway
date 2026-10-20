@@ -23,15 +23,22 @@ type Host struct {
 
 // FixtureHost returns where fixtures listen for the container engine at
 // engine running image img. On Linux the container reaches the host at the
-// default bridge's gateway address, so fixtures listen there (not on
-// loopback, which the container cannot reach). Docker Desktop instead
+// gateway address of Docker's default bridge, so fixtures listen there (not
+// on loopback, which the container cannot reach). Docker Desktop instead
 // forwards host.docker.internal to the host's loopback, so fixtures listen
 // on 127.0.0.1 and the allowlist holds the addresses host.docker.internal
 // has inside the image. The test is skipped when neither works.
 func FixtureHost(t *testing.T, engine, img string) Host {
 	t.Helper()
 	if runtime.GOOS == "linux" {
-		out, err := exec.Command(engine, "network", "inspect", "bridge", "--format", "{{range .IPAM.Config}}{{.Gateway}} {{end}}").CombinedOutput()
+		// The docker0 address is a host address that rootless Podman's
+		// user-mode network also reaches, so Docker's bridge serves both
+		// engines.
+		docker, err := exec.LookPath("docker")
+		if err != nil {
+			t.Skip("the fixtures need Docker's bridge network on Linux")
+		}
+		out, err := exec.Command(docker, "network", "inspect", "bridge", "--format", "{{range .IPAM.Config}}{{.Gateway}} {{end}}").CombinedOutput()
 		if err != nil {
 			t.Skipf("no default bridge network: %s", out)
 		}
