@@ -84,7 +84,10 @@ try {
   Write-Host "smcp: $cmd"
   # Windows Installer may write the 8.3 short form of the path.
   if ($cmd -notmatch '^"([^"]+)" "%1"$') { Fail "unexpected smcp command: $cmd" }
-  if ((Get-Item -LiteralPath $Matches[1]).FullName -ne (Get-Item -LiteralPath $app).FullName) { Fail "smcp is not registered for $app`: $cmd" }
+  # The short form keeps its spelling in .NET, so compare the files.
+  $reg = $Matches[1]
+  if (-not (Test-Path -LiteralPath $reg) -or (Get-FileHash -LiteralPath $reg).Hash -ne (Get-FileHash -LiteralPath $app).Hash -or
+      (Split-Path -Leaf $reg) -notmatch '^(smcp-desktop|SMCP-D~\d+)\.exe$') { Fail "smcp is not registered for $app`: $cmd" }
   if ($null -eq (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\smcp' -Name 'URL Protocol' -ErrorAction SilentlyContinue)) { Fail 'smcp has no URL Protocol value' }
 
   Step 'test certificates (openssl)'
