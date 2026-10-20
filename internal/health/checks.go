@@ -27,6 +27,8 @@ const (
 	CauseClock            = "clock_unsane"            // critical
 	CauseTrustExpired     = "trust_anchor_expired"    // critical
 	CauseTrustInvalid     = "trust_anchor_invalid"    // critical, integrity
+	CauseStateACL         = "state_acl"               // critical (Windows, FR-21.5)
+	CauseKeyProtection    = "key_protection"          // critical (Windows, FR-21.10)
 	CauseDiskLow          = "disk_space_low"          // non-critical
 	CauseKeysExpiring     = "keys_expiring"           // non-critical
 	CauseBackend          = "backend_unreachable"     // non-critical
