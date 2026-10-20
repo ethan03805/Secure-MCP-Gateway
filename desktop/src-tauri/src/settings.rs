@@ -343,6 +343,14 @@ mod tests {
         assert_eq!(default_ca_file_in("linux", home, Some(&state), &published), standalone);
         std::fs::remove_dir_all(&dir).unwrap();
         assert_eq!(ENFORCED_CA_FILE, "/var/lib/smcp/public/ca.crt");
+        // Windows: the per-user mode's state directory under %LOCALAPPDATA%.
+        assert_eq!(
+            default_ca_file("windows", Path::new(r"C:\Users\u"), None)
+                .display()
+                .to_string()
+                .replace('/', r"\"),
+            r"C:\Users\u\AppData\Local\smcp-gateway\state\tls\ca.crt"
+        );
         let bad = Settings {
             admin_url: "http://x".into(),
             metrics_address: "192.0.2.1:9464".into(),

@@ -764,6 +764,23 @@ mod tests {
         // A service unit without the configuration still counts.
         touch(&root.join("home/.config/systemd/user/smcpd.service"));
         assert!(configured(&linux));
+
+        // Windows: the per-user and the machine-mode configuration.
+        let win = Host {
+            os: "windows",
+            win: crate::service::WinDirs {
+                local_app_data: Some(root.join("Local")),
+                program_data: Some(root.join("ProgramData")),
+                ..Default::default()
+            },
+            ..host("windows", &root)
+        };
+        assert!(!configured(&win));
+        touch(&root.join("Local/smcp-gateway/config/smcp.toml"));
+        assert!(configured(&win));
+        std::fs::remove_dir_all(root.join("Local")).unwrap();
+        touch(&root.join("ProgramData/smcp-gateway/config/smcp.toml"));
+        assert!(configured(&win));
         std::fs::remove_dir_all(&root).unwrap();
     }
 
@@ -808,6 +825,27 @@ mod tests {
             ..h.clone()
         };
         assert_eq!(smcpctl_candidates(Some(&exe), &w), vec![exe.join("smcpctl.exe")]);
+        // Beside the app (smcp-desktop .msi), then the smcp .msi and
+        // machine mode, then install.ps1; never PATH.
+        let w = Host {
+            win: crate::service::WinDirs {
+                local_app_data: Some(root.join("Local")),
+                program_files: Some(root.join("Program Files")),
+                ..Default::default()
+            },
+            ..w
+        };
+        assert_eq!(
+            smcpctl_candidates(Some(&exe), &w),
+            vec![
+                exe.join("smcpctl.exe"),
+                root.join("Program Files").join("smcp-gateway").join("smcpctl.exe"),
+                root.join("Local")
+                    .join("Programs")
+                    .join("smcp-gateway")
+                    .join("smcpctl.exe"),
+            ]
+        );
         std::fs::remove_dir_all(&root).unwrap();
     }
 
