@@ -32,8 +32,12 @@ profile smcpd /usr/local/bin/smcpd flags=(attach_disconnected) {
   network unix,
   network netlink raw,
 
-  /usr/local/bin/smcpd mr,
-  /usr/local/bin/smcp-refserver r,
+  # /usr/local/bin from a release archive, /usr/bin from the smcp .deb or
+  # .rpm. smcpd.service applies this profile by name to either; the
+  # attachment path above stays /usr/local/bin, so that a Standalone smcpd
+  # started by a user from the package is not confined by it.
+  /usr/{,local/}bin/smcpd mr,
+  /usr/{,local/}bin/smcp-refserver r,
 
   # Configuration (root:smcp 0640) and state (CP-46 directories).
   /etc/smcp/ r,

@@ -50,6 +50,9 @@ type installer struct {
 
 	noStart    bool
 	healthWait time.Duration
+	// serviceBin is the directory the Enforced smcpd.service runs smcpd
+	// and smcp-refserver from: /usr/local/bin, or the package's /usr/bin.
+	serviceBin string
 	boot       bootstrapOpts
 	win        winHooks // Windows per-user mode (install_winuser.go)
 }
@@ -633,7 +636,17 @@ func (in *installer) enforced() error {
 	if err := linuxpkg.Extract(tmp); err != nil {
 		return err
 	}
-	if err := in.run("bash", filepath.Join(tmp, "install-enforced.sh"), "--bin-dir", in.binDir); err != nil {
+	// Binaries from the smcp .deb or .rpm are used where the package put
+	// them: smcpd.service runs them in place, so a package upgrade updates
+	// what the service runs. Any other binaries are copied into
+	// /usr/local/bin.
+	binArg := "--bin-dir"
+	in.serviceBin = in.host(enforcedBin)
+	if f := packageFormat(in.binDir); f == "deb" || f == "rpm" {
+		binArg, in.serviceBin = "--packaged-bin", in.binDir
+		in.step("present", "binaries in "+in.binDir+" from the smcp "+f+" package, used in place")
+	}
+	if err := in.run("bash", filepath.Join(tmp, "install-enforced.sh"), binArg, in.binDir); err != nil {
 		return fmt.Errorf("install-enforced.sh stopped (its output above names the cause): %w", err)
 	}
 
@@ -691,7 +704,7 @@ func (in *installer) writeEnforcedConfig(cfgPath string) error {
 	o.dir, o.stateDir, o.quiet = policyDir, stateDir, true
 	o.policyFile = filepath.Join(policyDir, "policy.json")
 	o.sandbox = sandbox
-	o.refserver = in.host(filepath.Join(enforcedBin, "smcp-refserver"))
+	o.refserver = filepath.Join(in.serviceBin, "smcp-refserver")
 	if o.notify == "" || o.notify == "auto" {
 		o.notify = "off" // a system service has no desktop session
 	}

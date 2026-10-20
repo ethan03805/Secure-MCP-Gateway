@@ -12,19 +12,25 @@
 # "present" lines and changes nothing. Keys, configuration, policy and the
 # journal are never touched.
 #
-# Usage: install-enforced.sh [--check [--host-only]] [--bin-dir DIR] [--start] [--no-start]
-#   --check        verify the prerequisites only
-#   --host-only    with --check: check the host, not that this runs as root
-#                  (the desktop setup checks before it asks for elevation)
-#   --bin-dir DIR  also install smcpd and smcpctl from DIR into /usr/local/bin
-#   --start        start smcp-nftables and smcpd (needs /etc/smcp/smcp.toml)
-#   --no-start     do not start anything (default)
+# Usage: install-enforced.sh [--check [--host-only]] [--bin-dir DIR | --packaged-bin DIR]
+#                            [--start] [--no-start]
+#   --check             verify the prerequisites only
+#   --host-only         with --check: check the host, not that this runs as root
+#                       (the desktop setup checks before it asks for elevation)
+#   --bin-dir DIR       also install smcpd, smcpctl and smcp-refserver from
+#                       DIR into /usr/local/bin
+#   --packaged-bin DIR  use smcpd and smcp-refserver where the smcp .deb or
+#                       .rpm installed them (DIR, normally /usr/bin): copy
+#                       nothing, and run DIR/smcpd from smcpd.service, so
+#                       that a package upgrade updates the binary it runs
+#   --start             start smcp-nftables and smcpd (needs /etc/smcp/smcp.toml)
+#   --no-start          do not start anything (default)
 #
 # See docs/sandbox.md.
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-check_only=0 host_only=0 start=0 bin_dir=""
+check_only=0 host_only=0 start=0 bin_dir="" pkg_bin=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) check_only=1 ;;
@@ -32,13 +38,23 @@ while [ $# -gt 0 ]; do
     --start) start=1 ;;
     --no-start) start=0 ;;
     --bin-dir) bin_dir=${2:?--bin-dir needs a directory}; shift ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    --packaged-bin) pkg_bin=${2:?--packaged-bin needs a directory}; shift ;;
+    -h|--help) sed -n '2,29p' "$0"; exit 0 ;;
     *) echo "install-enforced: unknown option $1" >&2; exit 2 ;;
   esac
   shift
 done
 if [ "$host_only" = 1 ] && [ "$check_only" = 0 ]; then
   echo "install-enforced: --host-only needs --check" >&2
+  exit 2
+fi
+if [ -n "$bin_dir" ] && [ -n "$pkg_bin" ]; then
+  echo "install-enforced: --bin-dir and --packaged-bin exclude each other" >&2
+  exit 2
+fi
+# The directory is written into smcpd.service: a plain absolute path only.
+if [ -n "$pkg_bin" ] && ! [[ "$pkg_bin" =~ ^/[A-Za-z0-9._/-]*$ ]]; then
+  echo "install-enforced: --packaged-bin needs an absolute path of letters, digits and . _ - / (got '$pkg_bin')" >&2
   exit 2
 fi
 
@@ -69,6 +85,11 @@ need newuidmap "newuidmap (uidmap package)"
 need newgidmap "newgidmap (uidmap package)"
 need useradd "useradd"
 need groupadd "groupadd"
+if [ -n "$pkg_bin" ]; then
+  for b in smcpd smcp-refserver; do
+    [ -x "$pkg_bin/$b" ] || missing+=("$pkg_bin/$b (from the smcp package)")
+  done
+fi
 need usermod "usermod"
 need systemctl "systemd (systemctl)"
 need loginctl "loginctl (systemd-logind)"
@@ -184,7 +205,24 @@ ensure_file() { # source destination mode
 }
 ensure_file "$here/nftables/smcp.nft" /etc/smcp/smcp.nft 0644
 ensure_file "$here/systemd/smcp-nftables.service" /etc/systemd/system/smcp-nftables.service 0644
-ensure_file "$here/systemd/smcpd.service" /etc/systemd/system/smcpd.service 0644
+if [ -n "$pkg_bin" ]; then
+  # The package's binaries, used in place: no second copy in /usr/local/bin
+  # that apt or dnf would never update.
+  unit=$(mktemp)
+  trap 'rm -f "$unit"' EXIT
+  sed "s|^ExecStart=/usr/local/bin/smcpd |ExecStart=$pkg_bin/smcpd |" "$here/systemd/smcpd.service" > "$unit"
+  grep -q "^ExecStart=$pkg_bin/smcpd --config " "$unit" || { echo "install-enforced: could not set ExecStart in smcpd.service" >&2; exit 1; }
+  ensure_file "$unit" /etc/systemd/system/smcpd.service 0644
+  if [ "$pkg_bin" != /usr/local/bin ]; then
+    for b in smcpd smcpctl smcp-refserver; do
+      if [ -e "/usr/local/bin/$b" ]; then
+        say warning "/usr/local/bin/$b is left from an earlier install; the package manager does not update it, and it comes before $pkg_bin/$b on PATH. Remove it: sudo rm /usr/local/bin/$b"
+      fi
+    done
+  fi
+else
+  ensure_file "$here/systemd/smcpd.service" /etc/systemd/system/smcpd.service 0644
+fi
 if [ -n "$bin_dir" ]; then
   for b in smcpd smcpctl smcp-refserver; do
     [ -f "$bin_dir/$b" ] && ensure_file "$bin_dir/$b" "/usr/local/bin/$b" 0755

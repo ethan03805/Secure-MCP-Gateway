@@ -20,6 +20,7 @@ directory inside the repository.
 | `release-sbom.sh` | GoReleaser before hook | Write `build/sbom/sbom.spdx.json`, the SBOM placed in every release archive (FR-13.1) |
 | `package-smoke.sh` | `installers.yml` (CI and release) | Install one platform installer (`.deb`, `.rpm` or macOS `.pkg`), check its files, owners and versions, run bootstrap, smcpd, a backup and doctor with temporary state, remove it and check that the evidence is kept (FR-20.21, FR-20.22, FR-20.24, SR-4.11-2) |
 | `package-broken.sh` | `installers.yml` (CI and release) | Truncate and alter a copy of a `.deb`, `.rpm` or `.pkg`; check that the package manager refuses each, that `package-smoke.sh` stops, and that nothing is installed (FR-20.24) |
+| `package-enforced.sh` | `installers.yml` (CI and release, `.deb` amd64) | Install the smcp `.deb` and the Enforced profile from it on an Ubuntu runner; check that `smcpd.service` runs the package's `/usr/bin/smcpd` with no copy in `/usr/local/bin`, then reinstall, remove (system service gone, evidence kept) and install again over the kept state (FR-13.5, FR-20.21, FR-20.22) |
 | `ci-systemd.sh` | `ci-integration.sh` (enforced section) | `smcpctl install --profile enforced` twice, then smcpd.service under systemd with servers as `smcp-srv` |
 | `ci-install-standalone.sh` | CI job `install-standalone` | `smcpctl install` with the runner's systemd user manager or launchd, a second install, uninstall |
 
