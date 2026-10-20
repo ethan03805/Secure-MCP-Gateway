@@ -1,4 +1,5 @@
-# GoReleaser configuration for Secure MCP Gateway release archives.
+# GoReleaser configuration for Secure MCP Gateway release archives:
+# tar.gz for linux and darwin, zip for windows (amd64, arm64).
 #
 # Local snapshot (no publishing):  make release-snapshot
 # Release: push a tag v* and .github/workflows/release.yml runs GoReleaser.
@@ -34,7 +35,7 @@ builds:
     main: ./cmd/smcpd
     binary: smcpd
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
@@ -44,7 +45,7 @@ builds:
     main: ./cmd/smcpctl
     binary: smcpctl
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
@@ -55,7 +56,7 @@ builds:
     binary: smcp-refserver
     skip: '{{ ne (envOrDefault "SMCP_BUILD_REFSERVER" "0") "1" }}'
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
@@ -67,7 +68,7 @@ builds:
     main: ./cmd/smcp-session
     binary: smcp-session
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
@@ -77,7 +78,7 @@ builds:
     main: ./cmd/smcp-stdio
     binary: smcp-stdio
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
@@ -87,7 +88,7 @@ builds:
     main: ./cmd/smcp-connect
     binary: smcp-connect
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags:
@@ -106,6 +107,16 @@ builds:
 archives:
   - id: smcp
     formats: [tar.gz]
+    # Windows (SRS FR-21.3): a zip for windows-amd64 and windows-arm64 with
+    # smcpd, smcpctl, the adapters smcp-session, smcp-stdio and
+    # smcp-connect, and smcp-refserver (which smcpctl install packages as
+    # the reference server), all .exe, with the same documents, SBOM and
+    # provenance files, listed in the same signed checksum file.
+    # smcp-workload is not built for Windows.
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    allow_different_binary_count: true
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - src: README.md
@@ -311,3 +322,5 @@ release:
     `sha256sum --check --ignore-missing {{ .ProjectName }}_{{ .Version }}_checksums.txt`
     Homebrew: `brew install ethan03805/tap/smcp`.
     Install: `curl -fsSL https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.sh | sh -s -- --version {{ .Tag }}`
+    Windows: `$env:SMCP_VERSION = '{{ .Tag }}'; irm https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.ps1 | iex`
+    The Windows binaries carry no Authenticode signature: SmartScreen may warn when they first run, and Smart App Control blocks them when it is on. Verify them with minisign and SHA-256 as above (`Get-FileHash -Algorithm SHA256` in PowerShell); install.ps1 does this before installing (docs/install.md).

@@ -69,6 +69,29 @@ cosign verify-blob --bundle smcp_<version>_checksums.txt.sigstore.json \
 sha256sum --check --ignore-missing smcp_<version>_checksums.txt
 ```
 
+## Option 1a: install.ps1 (Windows, planned for v1.3.0)
+
+Windows support is being built for v1.3.0 (SRS FR-21; status in [windows-port.md](windows-port.md)). From v1.3.0 on, each release carries `smcp_<version>_windows_amd64.zip` and `smcp_<version>_windows_arm64.zip` with `smcpd.exe`, `smcpctl.exe`, `smcp-session.exe`, `smcp-stdio.exe` and `smcp-connect.exe`, listed in the same signed checksum file. `install.ps1` installs them for the current user, without elevation:
+
+```powershell
+irm https://raw.githubusercontent.com/ethan03805/Secure-MCP-Gateway/main/install.ps1 | iex
+# or a fixed version, from a downloaded copy of the script
+powershell -ExecutionPolicy Bypass -File install.ps1 -Version v1.3.0
+```
+
+Windows refuses to run a downloaded script by its default execution policy, so these are the two supported invocations. With `irm | iex` the options are environment variables (`$env:SMCP_VERSION = 'v1.3.0'`). The script checks the same things as `install.sh`, in the same order: the minisign signature and trusted comment of the checksum file with the embedded release key, the Sigstore bundle when `cosign.exe` is installed, then the archive's SHA-256 with `Get-FileHash`. The signature is checked with `minisign.exe` when it is on `PATH` (`winget install jedisct1.minisign`) and otherwise with the OpenSSL 3 that Git for Windows installs. With neither, or when a check fails, it installs nothing and removes its temporary directory. It installs into `%LOCALAPPDATA%\Programs\smcp-gateway` (or `-Dir`) and prints the command that adds that directory to the user `PATH`.
+
+Options: `-Version <tag>`, `-Dir <path>`, `-Repo <owner/name>`, `-BaseUrl <url>` (a mirror over https; plain http only on `127.0.0.1` or `localhost`), `-From <dir>` (release files already downloaded, for example by a browser), `-PubKey <key>`, `-NoCosign`, `-Help`.
+
+After installing the binaries, `smcpctl install` sets up the Gateway for the current user, without elevation: `%LOCALAPPDATA%\smcp-gateway` with DACLs for the user, SYSTEM and Administrators only, keys protected with DPAPI, and a Task Scheduler task that starts `smcpd` at logon (or, when Windows refuses the task to a standard user, a `HKCU\...\Run` entry). `smcpctl install --machine`, from an elevated prompt, installs the machine mode instead: the Windows service `smcpd` under `NT SERVICE\smcpd`, with its files in `%ProgramData%\smcp-gateway`. Both are labelled "not enforced": MCP servers are not contained on Windows the way the Linux Enforced profile contains them ([windows-port.md](windows-port.md)).
+
+**Unsigned binaries.** The Windows binaries carry no Authenticode signature yet (SRS FR-21.22; signing is FR-20.30). SmartScreen may warn when they first run, and Smart App Control blocks them outright when it is on. Verify them instead with minisign and SHA-256: `install.ps1` does this before installing and only then removes the Mark of the Web from the installed files. To check a release by hand in PowerShell:
+
+```powershell
+minisign -Vm smcp_<version>_checksums.txt -P RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq
+(Get-FileHash -Algorithm SHA256 smcp_<version>_windows_amd64.zip).Hash.ToLower()   # compare with the line in the checksum file
+```
+
 ## Option 2: Homebrew (macOS and Linux)
 
 ```sh
