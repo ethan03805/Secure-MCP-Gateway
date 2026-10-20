@@ -237,13 +237,28 @@ const startApp = (/** @type {string[]} */ args) => {
   return spawn(APP, args, { stdio: ["ignore", fd, fd] });
 };
 const consoleLines = () => fs.readFileSync(LOG, "utf8").split("\n").filter((l) => l.startsWith("smcp-desktop: console: "));
+/** Waits at most 30 s for a second start to hand its link over and exit. */
+const exitOf = (/** @type {import("node:child_process").ChildProcess} */ p) =>
+  new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      p.kill();
+      reject(new Error("a second start did not exit within 30 s"));
+    }, 30000);
+    p.on("exit", () => {
+      clearTimeout(t);
+      resolve(undefined);
+    });
+  });
 const first = startApp(["smcp://approvals"]);
 let exited = /** @type {number | null | string} */ (null);
 first.on("exit", (code, sig) => (exited = code ?? sig));
 try {
   await waitFor(async () => consoleLines().some((l) => l.endsWith(" https://127.0.0.1:8444/approvals")), "smcp://approvals to open the console at Approvals", 60000);
   ok("smcp://approvals at start opened the console window at https://127.0.0.1:8444/approvals");
-  await sleep(8000);
+  // The tray keeps updating, so the main loop runs with the console open.
+  await waitFor(async () => /smcp-desktop: tray: /.test(fs.readFileSync(LOG, "utf8")), "the tray state with the console window open", 20000);
+  ok("the tray state updates with the console window open");
+  await sleep(5000);
   const log = fs.readFileSync(LOG, "utf8");
   if (exited !== null) fail(`the application exited (${exited}) after opening the console window`);
   else if (/console refused/.test(log)) fail(`the console window refused the Gateway's certificate: ${log.split("\n").filter((l) => l.includes("refused")).join(" | ")}`);
@@ -251,7 +266,7 @@ try {
   const n = consoleLines().length;
   for (const bad of ["smcp://approvals?approve=1", "smcp://stop", "smcp://approvals/not-a-uuid", `smcp://approvals/${"a".repeat(64 * 1024)}`]) {
     const p = startApp([bad]);
-    await new Promise((r) => p.on("exit", r));
+    await exitOf(p);
   }
   await sleep(2000);
   const ignored = fs.readFileSync(LOG, "utf8").split("\n").filter((l) => l === "smcp-desktop: second start: link ignored").length;
@@ -260,7 +275,7 @@ try {
   else ok("the 4 refused links reached the running application, which ignored them");
   const id = "0b0e5c1e-2f0e-4a7b-9a51-6d5f8e7c1a2b";
   const p = startApp([`smcp://approvals/${id}`]);
-  await new Promise((r) => p.on("exit", r));
+  await exitOf(p);
   await waitFor(async () => consoleLines().slice(n).some((l) => l.endsWith(`/approvals/${id}`)), "an approval link to reach the running application", 20000);
   ok("an approval link reached the running application, which opened that approval in the console window");
 } catch (e) {

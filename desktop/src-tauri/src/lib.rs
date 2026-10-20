@@ -730,10 +730,15 @@ fn open_console(app: &AppHandle, page: Page) {
         let app = app.clone();
         move |reason: String| {
             eprintln!("smcp-desktop: console refused: {reason}");
-            if let Some(w) = app.get_webview_window(CONSOLE_LABEL) {
-                let _ = w.set_title(&format!("{} - not opened: {reason}", WINDOW.title));
-                let _ = w.navigate(console::error_page());
-            }
+            // Called from WebKit's handlers on the main thread; the window
+            // operations go through Tauri from another thread.
+            let app = app.clone();
+            std::thread::spawn(move || {
+                if let Some(w) = app.get_webview_window(CONSOLE_LABEL) {
+                    let _ = w.set_title(&format!("{} - not opened: {reason}", WINDOW.title));
+                    let _ = w.navigate(console::error_page());
+                }
+            });
         }
     };
     let w2 = w.clone();
@@ -762,8 +767,15 @@ fn open_console(app: &AppHandle, page: Page) {
                 port: r.admin.port,
                 anchors,
             };
-            tlshook_linux::install(&pw.inner(), pin, refused);
-            let _ = w2.navigate(target);
+            // This closure runs on the main thread, holding the webview:
+            // load the page through WebKit directly. With a Tauri
+            // navigation from here, the application stopped processing
+            // events once the console window opened (Linux, CI end-to-end
+            // test).
+            let wv = pw.inner();
+            tlshook_linux::install(&wv, pin, refused);
+            let _ = &w2;
+            webkit2gtk::WebViewExt::load_uri(&wv, target.as_str());
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
         {
