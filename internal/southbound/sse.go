@@ -102,17 +102,26 @@ func (s *sseReader) Next() (event, error) {
 		}
 		switch string(field) {
 		case "data":
-			if hasData && !ev.Oversized {
-				data.WriteByte('\n')
-			}
-			hasData = true
 			if ev.Oversized {
 				continue
 			}
-			if truncated || data.Len()+len(value) > s.limit {
+			// The line feed that joins data lines counts against the
+			// bound too (found by FuzzSSEReader).
+			sep := 0
+			if hasData {
+				sep = 1
+			}
+			hasData = true
+			if truncated || data.Len()+sep+len(value) > s.limit {
+				if sep == 1 && data.Len() < s.limit {
+					data.WriteByte('\n')
+				}
 				data.Write(value[:min(len(value), max(0, s.limit-data.Len()))])
 				ev.Oversized = true
 				continue
+			}
+			if sep == 1 {
+				data.WriteByte('\n')
 			}
 			data.Write(value)
 		case "id":

@@ -19,6 +19,7 @@ User and operator documentation for the Secure MCP Gateway, and the data files t
 | [Operator guide](operator-guide.md) | Day-2 operation: accounts and roles, approvals, sessions, policy publication, packages, secrets, emergency stop, backups, keys, reload, logs and metrics, upgrade, remote access (FR-18.4) |
 | [Security Limitations](security-limitations.md) | What the Gateway does not protect against (FR-18.2) |
 | [Security review, October 2026](security-review-2026-10.md) | Findings of the pre-release adversarial review, their fixes and the residual risks |
+| [Security review of v1.3.0](security-review-v1.3.md) | Findings of the review of the desktop application, installers, Streamable HTTP transport, ContextForge Connector and Windows runtime, their fixes and the residual risks |
 | [Troubleshooting and reason codes](troubleshooting.md) | Every Appendix B error code and reason code with the next action (FR-18.7) |
 
 ## Reference
