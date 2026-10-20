@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T14:08:25Z",
-  "commit": "e61559cba50d39c58804e4282abfcce4578aa79a",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/e61559cba50d39c58804e4282abfcce4578aa79a",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39429145330",
+  "generatedAt": "2026-10-20T15:10:44Z",
+  "commit": "695a216517740c21c8e308c123731fef997ebdd6",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/695a216517740c21c8e308c123731fef997ebdd6",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39435352753",
   "tests": {
-    "total": 1835,
-    "passed": 1810,
+    "total": 1836,
+    "passed": 1811,
     "failed": 1,
     "skipped": 24,
-    "durationSec": 2194.3,
+    "durationSec": 2214.7,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -43,7 +43,7 @@
       },
       {
         "name": "desktop/linux",
-        "passed": 98,
+        "passed": 99,
         "failed": 0,
         "skipped": 0
       },
@@ -235,8 +235,8 @@
       },
       {
         "name": "internal/e2e",
-        "passed": 67,
-        "failed": 1,
+        "passed": 68,
+        "failed": 0,
         "skipped": 0
       },
       {
@@ -355,8 +355,8 @@
       },
       {
         "name": "internal/perf/run",
-        "passed": 6,
-        "failed": 0,
+        "passed": 5,
+        "failed": 1,
         "skipped": 0
       },
       {
@@ -698,7 +698,7 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.5
       },
       {
         "name": "internal/gwtest",
@@ -822,7 +822,7 @@
       },
       {
         "name": "internal/southbound",
-        "pct": 85.5
+        "pct": 85.3
       },
       {
         "name": "internal/southbound/sbtest",
@@ -838,7 +838,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 80
+        "pct": 81.2
       },
       {
         "name": "internal/versions",
@@ -908,18 +908,18 @@
   },
   "requirements": {
     "total": 530,
-    "verified": 480,
-    "partial": 40,
-    "failing": 6,
-    "unverified": 4,
+    "verified": 487,
+    "partial": 41,
+    "failing": 1,
+    "unverified": 1,
     "byElement": [
       {
         "element": "E-01",
         "name": "Harness Interface Endpoint",
         "total": 31,
-        "verified": 26,
+        "verified": 25,
         "partial": 5,
-        "failing": 0
+        "failing": 1
       },
       {
         "element": "E-02",
@@ -1005,9 +1005,9 @@
         "element": "E-12",
         "name": "Enforcement Coordinator",
         "total": 15,
-        "verified": 14,
+        "verified": 15,
         "partial": 0,
-        "failing": 1
+        "failing": 0
       },
       {
         "element": "E-13",
@@ -1077,7 +1077,7 @@
         "element": "E-21",
         "name": "Audit & Evidence Service",
         "total": 21,
-        "verified": 17,
+        "verified": 18,
         "partial": 3,
         "failing": 0
       },
@@ -1093,16 +1093,16 @@
         "element": "E-23",
         "name": "Health & Safety Monitor",
         "total": 13,
-        "verified": 7,
+        "verified": 13,
         "partial": 0,
-        "failing": 5
+        "failing": 0
       },
       {
         "element": "E-24",
         "name": "Management Console & Control API",
         "total": 73,
         "verified": 60,
-        "partial": 12,
+        "partial": 13,
         "failing": 0
       },
       {
@@ -2727,8 +2727,10 @@
       {
         "id": "FR-7",
         "element": "E-21",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "analysis: all 12 child requirements verified"
+        ]
       },
       {
         "id": "FR-7.1",
@@ -2821,7 +2823,7 @@
       {
         "id": "FR-7.11",
         "element": "E-23",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/analytics.TestObservationStoreReachability",
           "internal/e2e.TestHealthFaultEachDependency",
@@ -2839,7 +2841,7 @@
       {
         "id": "FR-7.12",
         "element": "E-23",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestDaemonWiresEveryElement",
           "console/e2e/chromium.views.spec.ts > G-01 gateway control: health, monitor causes, verification and checklist",
@@ -4088,7 +4090,7 @@
       {
         "id": "FR-11.5",
         "element": "E-01",
-        "status": "verified",
+        "status": "failing",
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
@@ -4291,8 +4293,10 @@
       {
         "id": "FR-13",
         "element": "E-24",
-        "status": "unverified",
-        "tests": []
+        "status": "partial",
+        "tests": [
+          "analysis: 9 of 13 child requirements verified"
+        ]
       },
       {
         "id": "FR-13.1",
@@ -4393,7 +4397,7 @@
       {
         "id": "FR-13.10",
         "element": "E-23",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "cmd/smcpctl.TestOnlineOpsCommands",
           "cmd/smcpctl.TestStandaloneLabelInEveryPlace",
@@ -4589,7 +4593,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (e06a1f6e70d2, 2026-10-20T13:59:57Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39434584473"
+          "workflow agents-lockdown at main (d05955fc8cb5, 2026-10-20T14:57:58Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39439516149"
         ]
       },
       {
@@ -4658,7 +4662,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (e06a1f6e70d2, 2026-10-20T13:59:55Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39434584473"
+          "workflow agents at main (d05955fc8cb5, 2026-10-20T14:57:56Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39439516149"
         ]
       },
       {
@@ -4819,8 +4823,10 @@
       {
         "id": "FR-17",
         "element": "E-23",
-        "status": "unverified",
-        "tests": []
+        "status": "verified",
+        "tests": [
+          "analysis: all 9 child requirements verified"
+        ]
       },
       {
         "id": "FR-17.1",
@@ -4858,7 +4864,7 @@
       {
         "id": "FR-17.4",
         "element": "E-23",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/config.TestOpsDefaults",
           "internal/e2e.TestOpsMetricsAndHealthGate",
@@ -4868,7 +4874,7 @@
       {
         "id": "FR-17.5",
         "element": "E-23",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/e2e.TestOpsMetricsAndHealthGate",
           "internal/metrics.TestExpositionFromEvidence"
@@ -6705,7 +6711,7 @@
       {
         "id": "SR-7.10-1",
         "element": "E-12",
-        "status": "failing",
+        "status": "verified",
         "tests": [
           "internal/acceptance.TestAT20LimitsAndLoad",
           "internal/acceptance/enforced.TestAT20LimitsAndLoad",
@@ -6905,6 +6911,7 @@
         "tests": [
           "cmd/smcpctl.TestEnforcedScriptHostOnly",
           "cmd/smcpctl.TestInstallCheck",
+          "desktop/linux.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
           "desktop/linux.setup::tests::enforced_is_offered_on_linux_packages_only",
           "desktop/linux.setup::tests::the_prerequisite_check_names_each_missing_one"
         ],
@@ -7970,6 +7977,7 @@
           "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/linux.installer::tests::start_argv_is_fixed_and_elevates_only_the_package_manager",
           "desktop/linux.service::tests::fixed_argument_vectors_through_the_service_manager",
+          "desktop/linux.setup::tests::elevation_only_runs_a_root_owned_smcpctl",
           "desktop/linux.setup::tests::passwords_go_in_private_files_never_in_arguments",
           "desktop/linux.upgrade::tests::enforced_packaged_and_missing_installations_are_not_upgraded_here"
         ],
@@ -8883,7 +8891,7 @@
       "attack": "Fork bomb",
       "expected": "PID limit stops growth; instance killed; host unaffected",
       "fixture": "HF-20",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 8 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: spawn call: result released \"spawned 64 of 64\"; instance killed: false; Gateway still answers: true | enforced: spawn call: result released \"spawned 11 of 64; stopped: fork/exec /smcp/bin/hostile.test: resource temporarily unavailable\"; instance killed: true; Gateway still answers: true",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -8918,7 +8926,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:36747: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:42603: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9035,7 +9043,7 @@
     }
   ],
   "acceptance": {
-    "commit": "e61559cba50d39c58804e4282abfcce4578aa79a",
+    "commit": "695a216517740c21c8e308c123731fef997ebdd6",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9727,20 +9735,20 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "e61559cba50d39c58804e4282abfcce4578aa79a",
-    "generatedAt": "2026-10-20T13:30:11Z",
+    "commit": "695a216517740c21c8e308c123731fef997ebdd6",
+    "generatedAt": "2026-10-20T14:20:12Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000016765",
-      "memoryBytes": 16760340480,
+      "runner": "GitHub Actions 1000017062",
+      "memoryBytes": 16760344576,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 89622183936,
-      "diskDevice": "sda1",
-      "diskModel": "Virtual Disk",
+      "diskFreeBytes": 89622011904,
+      "diskDevice": "nvme0n1p1",
+      "diskModel": "MSFT NVMe Accelerator v1.0",
       "runnerEnvironment": "github-hosted",
       "image": "ubuntu24",
       "imageVersion": "20261018.339.1"
@@ -9762,7 +9770,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.029746,
+        "value": 0.020319,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9775,11 +9783,11 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 19.418426,
+        "value": 73.214876,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
-        "pass": true,
+        "pass": false,
         "complete": true,
         "method": "real smcpd with synchronous scoring, 8 concurrent callers reading a 64 KiB file through the reference server; P-213 from journal timestamps (request receipt to delivered, minus dispatched to the backend's response)"
       },
@@ -9788,19 +9796,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.8543027500000004,
+        "value": 0.21842312500000105,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (11.084 ms, mean of 11.111, 11.478, 11.199, 11.259, 11.031, 11.050, 11.038, 10.504) minus disabled (10.229 ms, mean of 9.795, 10.177, 9.876, 10.121, 10.482, 10.330, 10.732, 10.321), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (8.385 ms, mean of 8.231, 8.496, 8.492, 8.434, 8.541, 8.170, 8.205, 8.508) minus disabled (8.166 ms, mean of 8.109, 8.138, 7.802, 7.856, 8.396, 8.355, 8.425, 8.248), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.96659059477,
+        "value": 1999.966243129773,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9812,7 +9820,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 846.946184,
+        "value": 609.574145,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9824,12 +9832,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1518.75,
+        "value": 1529.80859375,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m18s after start with no traffic: smcpd (97.4 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1421.4 MiB in 2 processes, process 4296 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m20s after start with no traffic: smcpd (100.2 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1429.6 MiB in 2 processes, process 4028 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
