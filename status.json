@@ -8759,10 +8759,10 @@
     },
     {
       "client": "Hermes Agent",
-      "version": "",
+      "version": "0.17.0",
       "mode": "ai-gateway",
-      "result": "not-run",
-      "detail": "not installed (hermes not found)"
+      "result": "pass",
+      "detail": "passed: signin, catalog, allowed, denied, approval, ungranted (approval: held and approved 1 with smcpctl); journal verify ok"
     },
     {
       "client": "OpenCode",
