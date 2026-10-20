@@ -161,11 +161,11 @@ TARGET: v1.3.0
 
 @FR-20.17 | macOS installers
 P: FR-20
-S: The Gateway release SHALL publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` built with `pkgbuild` and `productbuild` that installs those five commands owned by root and links them into `/usr/local/bin`.
+S: The Gateway release SHALL publish, for macOS arm64, a `.dmg` containing the Desktop Application bundle with `smcpd`, `smcpctl`, `smcp-session`, `smcp-stdio` and `smcp-connect` inside it, and a `.pkg` in the flat package format of the macOS Installer that installs those five commands, and no Desktop Application bundle, owned by root and links them into `/usr/local/bin`.
 A: E-35; F-105; F-106; X-18
 V: Test | On a GitHub-hosted macOS arm64 runner, install the `.pkg`; confirm the five links, their root ownership and that each command prints the release version; mount the `.dmg`, copy the application, and confirm it starts and finds its bundled commands.
 SRC: OWNER (macOS .pkg/.dmg)
-R: The `.pkg` puts the commands on the path, root-owned so that an agent running as the user cannot replace them (SR-4.11-2); the `.dmg` carries the application, in the drag-to-install form many users prefer, with no administrator password. Changed on 2026-10-20 to match the build: the release `.pkg` is built on Linux, so a release never lacks it when no macOS runner is available, and the application can only be built on a Mac; the earlier text had the `.pkg` also install the application bundle in `/Applications`. `packaging/installers/macos/build-pkg.sh` run on a Mac can still add the application to a `.pkg`.
+R: The `.pkg` puts the commands on the path, root-owned so that an agent running as the user cannot replace them (SR-4.11-2); the `.dmg` carries the application, in the drag-to-install form many users prefer, with no administrator password. Changed on 2026-10-20 to match the build: the release `.pkg` is built on Linux, so a release never lacks it when no macOS runner is available, and the application can only be built on a Mac; the earlier text had the `.pkg` also install the application bundle in `/Applications`. `packaging/installers/macos/build-pkg.sh` run on a Mac can still add the application to a `.pkg`. Changed again on 2026-10-20 by spec-owner decision: the release `.pkg` ships the command-line Gateway only and the application ships only in the `.dmg`, and the statement no longer names `pkgbuild` and `productbuild`, which the Linux build (`packaging/installers/macos/build-pkg-linux.sh`) does not use; the format, not the tool, is what `installer` checks.
 TARGET: v1.3.0
 
 @FR-20.18 | Linux packages
