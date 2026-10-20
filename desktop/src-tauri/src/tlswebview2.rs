@@ -8,14 +8,20 @@
 //! when it chains to the Gateway CA ([`crate::tlspin::verify_chain`]); every
 //! other certificate error is cancelled. A certificate that Windows does
 //! trust raises no error, so every committed https page of the console
-//! window is checked as well: the hook asks the page's certificate chain
-//! of the DevTools protocol (`Network.getCertificate` for the admin
-//! origin) and [`on_committed`] refuses it unless it chains to the Gateway
-//! CA, as WebKitGTK's committed-load check does on Linux. The Windows
-//! trust store therefore never decides alone.
+//! window is checked as well: the hook enables the DevTools protocol's
+//! Security domain, whose `Security.visibleSecurityStateChanged` event
+//! carries the certificate chain the page was loaded with, and
+//! [`on_committed`] refuses the page unless that chain leads to the
+//! Gateway CA, as WebKitGTK's committed-load check does on Linux. A page
+//! for which no such event arrives within [`CHECK_DEADLINE`] is refused
+//! too ([`Watch`]). The Windows trust store therefore never decides alone.
+//! (`Network.getCertificate` was the first choice; current Chromium
+//! answers it with an empty list.)
 //!
 //! This module is plain logic, built and tested on every platform; the
 //! COM calls are in `tlshook_windows`.
+
+use std::time::Duration;
 
 use rustls_pki_types::CertificateDer;
 
@@ -87,19 +93,12 @@ pub fn on_certificate_error(pin: &Pin, request_uri: &str, chain: Result<Vec<Vec<
     }
 }
 
-/// The admin listener's origin as the DevTools protocol names it.
-pub fn origin(pin: &Pin) -> String {
-    if pin.host.contains(':') {
-        format!("https://[{}]:{}", pin.host, pin.port)
-    } else {
-        format!("https://{}:{}", pin.host, pin.port)
-    }
-}
+/// How long a committed https page may wait for its security state
+/// before it is refused.
+pub const CHECK_DEADLINE: Duration = Duration::from_secs(10);
 
-/// The parameters of `Network.getCertificate` for the admin origin.
-pub fn get_certificate_params(pin: &Pin) -> String {
-    serde_json::json!({ "origin": origin(pin) }).to_string()
-}
+/// The DevTools event that carries the page's certificate.
+pub const SECURITY_EVENT: &str = "Security.visibleSecurityStateChanged";
 
 /// Whether a committed page needs the certificate check: every https page.
 /// The blank start page and the bundled error page
@@ -110,26 +109,27 @@ pub fn needs_check(page: &str) -> bool {
         .unwrap_or(true)
 }
 
-/// The DER chain in a `Network.getCertificate` result
-/// (`{"tableNames": [<base64 DER>, ...]}`, leaf first).
-pub fn chain_from_cdp(json: &str) -> Result<Vec<Vec<u8>>, String> {
+/// The DER chain in a `Security.visibleSecurityStateChanged` event
+/// (`visibleSecurityState.certificateSecurityState.certificate`, base64
+/// DER, leaf first).
+pub fn chain_from_security_state(json: &str) -> Result<Vec<Vec<u8>>, String> {
     let v: serde_json::Value =
-        serde_json::from_str(json).map_err(|e| format!("the DevTools answer is not JSON: {e}"))?;
-    let names = v
-        .get("tableNames")
+        serde_json::from_str(json).map_err(|e| format!("the security state is not JSON: {e}"))?;
+    let certs = v
+        .pointer("/visibleSecurityState/certificateSecurityState/certificate")
         .and_then(|t| t.as_array())
-        .ok_or("the DevTools answer has no certificate")?;
+        .ok_or("the admin listener presented no certificate")?;
     let mut chain = Vec::new();
-    for n in names {
-        let b64 = n
+    for c in certs {
+        let b64 = c
             .as_str()
-            .ok_or("the DevTools answer has a certificate that is not text")?;
+            .ok_or("the security state has a certificate that is not text")?;
         if b64.is_empty()
             || !b64
                 .bytes()
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'+' | b'/' | b'='))
         {
-            return Err("the DevTools answer has a certificate that is not base64".into());
+            return Err("the security state has a certificate that is not base64".into());
         }
         let mut pem = String::from("-----BEGIN CERTIFICATE-----\n");
         for line in b64.as_bytes().chunks(64) {
@@ -146,18 +146,46 @@ pub fn chain_from_cdp(json: &str) -> Result<Vec<Vec<u8>>, String> {
 }
 
 /// The committed-load check: a committed https page is kept only when it
-/// is on the admin origin and the certificate the DevTools protocol
-/// reports for that origin chains to the Gateway CA. `cdp` is the result
-/// of `Network.getCertificate`, or why the call failed (which refuses).
-pub fn on_committed(pin: &Pin, page: &str, cdp: Result<&str, String>, now: u64) -> Result<(), String> {
+/// is on the admin origin and the certificate of its security state chains
+/// to the Gateway CA. `state` is the event's JSON, or why it could not be
+/// read (which refuses).
+pub fn on_committed(pin: &Pin, page: &str, state: Result<&str, String>, now: u64) -> Result<(), String> {
     if !needs_check(page) {
         return Ok(());
     }
     if !is_admin(pin, page) {
         return Err("the console window loads only the admin listener".into());
     }
-    let chain = cdp.and_then(chain_from_cdp)?;
+    let chain = state.and_then(chain_from_security_state)?;
     verify(pin, &chain, now)
+}
+
+/// Which committed page still waits for its check. Each committed https
+/// page starts a new round; a passed check settles the current round; a
+/// round that is still open at its deadline is refused.
+#[derive(Debug, Default)]
+pub struct Watch {
+    round: u64,
+    settled: bool,
+}
+
+impl Watch {
+    /// A page was committed; returns its round.
+    pub fn begin(&mut self) -> u64 {
+        self.round += 1;
+        self.settled = false;
+        self.round
+    }
+
+    /// The current page passed the check.
+    pub fn settle(&mut self) {
+        self.settled = true;
+    }
+
+    /// Whether `round` is still the current page and unchecked.
+    pub fn overdue(&self, round: u64) -> bool {
+        self.round == round && !self.settled
+    }
 }
 
 #[cfg(test)]
@@ -288,6 +316,14 @@ mod tests {
         assert!(chain_from_pem(&format!("{good}{good}"), &[]).is_err());
     }
 
+    fn state(certs: &[&[u8]]) -> String {
+        let list: Vec<String> = certs.iter().map(|c| format!("\"{}\"", b64(c))).collect();
+        format!(
+            r#"{{"visibleSecurityState":{{"securityState":"secure","securityStateIssueIds":[],"certificateSecurityState":{{"protocol":"TLS 1.3","certificate":[{}],"issuer":"x"}}}}}}"#,
+            list.join(",")
+        )
+    }
+
     #[test]
     fn the_committed_check_refuses_a_certificate_windows_trusts_but_the_gateway_does_not() {
         claims::partial(&["SR-2.8-5", "FR-20.1"]);
@@ -297,18 +333,19 @@ mod tests {
         let other = ca("Windows-trusted CA");
         let (_, foreign) = leaf(&other);
         let page = "https://127.0.0.1:8444/";
-        let ok = format!(r#"{{"tableNames":["{}"]}}"#, b64(&good));
+        let ok = state(&[&good]);
         assert_eq!(on_committed(&p, page, Ok(&ok), NOW), Ok(()));
-        let bad = format!(r#"{{"tableNames":["{}"]}}"#, b64(&foreign));
+        let bad = state(&[&foreign]);
         assert!(on_committed(&p, page, Ok(&bad), NOW)
             .unwrap_err()
             .contains("does not chain to the Gateway CA"));
         // Fail closed when the chain cannot be read.
         for answer in [
-            Err("CallDevToolsProtocolMethod failed".to_string()),
+            Err("Security.enable failed".to_string()),
             Ok("{}".to_string()),
-            Ok(r#"{"tableNames":[]}"#.to_string()),
-            Ok(r#"{"tableNames":["***"]}"#.to_string()),
+            Ok(r#"{"visibleSecurityState":{"securityState":"insecure","securityStateIssueIds":["scheme-is-not-cryptographic"]}}"#.to_string()),
+            Ok(state(&[])),
+            Ok(state(&[]).replace("[]", r#"["***"]"#)),
             Ok("not json".to_string()),
         ] {
             assert!(
@@ -328,13 +365,31 @@ mod tests {
     }
 
     #[test]
-    fn the_devtools_origin_is_the_admin_origin() {
+    fn a_page_without_a_checked_certificate_is_refused_at_the_deadline() {
         claims::partial(&["SR-2.8-5"]);
-        let gw = ca("Gateway CA");
-        let mut p = pin(&gw);
-        assert_eq!(get_certificate_params(&p), r#"{"origin":"https://127.0.0.1:8444"}"#);
-        p.host = "::1".into();
-        assert_eq!(origin(&p), "https://[::1]:8444");
+        let mut w = Watch::default();
+        let first = w.begin();
+        assert!(w.overdue(first));
+        w.settle();
+        assert!(!w.overdue(first));
+        // A new page opens a new round; the old round's deadline no longer counts.
+        let second = w.begin();
+        assert!(!w.overdue(first));
+        assert!(w.overdue(second));
+        assert!(CHECK_DEADLINE <= Duration::from_secs(15));
+        assert_eq!(SECURITY_EVENT, "Security.visibleSecurityStateChanged");
+    }
+
+    #[test]
+    fn ipv6_admin_listeners_match_by_host_and_port() {
+        claims::partial(&["SR-2.8-5"]);
         assert_eq!(host_port("https://[::1]:8444/x"), Some(("::1".into(), 8444)));
+        let gw = ca("Gateway CA");
+        let p = Pin {
+            host: "::1".into(),
+            ..pin(&gw)
+        };
+        assert!(is_admin(&p, "https://[::1]:8444/approvals"));
+        assert!(!is_admin(&p, "https://127.0.0.1:8444/"));
     }
 }
