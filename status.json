@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T07:56:17Z",
-  "commit": "06d6fffb0128c30ce0a1eb145489aca79cd12bae",
-  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/06d6fffb0128c30ce0a1eb145489aca79cd12bae",
-  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39383391560",
+  "generatedAt": "2026-10-20T08:38:15Z",
+  "commit": "bc22ba82ef99192eff6aadebde0126b4344c4a1f",
+  "commitUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/commit/bc22ba82ef99192eff6aadebde0126b4344c4a1f",
+  "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39387748119",
   "tests": {
-    "total": 1924,
-    "passed": 1905,
+    "total": 1933,
+    "passed": 1914,
     "failed": 0,
     "skipped": 19,
-    "durationSec": 3276.8,
+    "durationSec": 1967.9,
     "packages": [
       {
         "name": "console/e2e/browsers",
@@ -43,13 +43,13 @@
       },
       {
         "name": "desktop/linux",
-        "passed": 94,
+        "passed": 95,
         "failed": 0,
         "skipped": 0
       },
       {
         "name": "desktop/macos",
-        "passed": 93,
+        "passed": 94,
         "failed": 0,
         "skipped": 0
       },
@@ -109,7 +109,7 @@
       },
       {
         "name": "internal/adapter",
-        "passed": 20,
+        "passed": 21,
         "failed": 0,
         "skipped": 0
       },
@@ -247,7 +247,7 @@
       },
       {
         "name": "internal/edge",
-        "passed": 145,
+        "passed": 149,
         "failed": 0,
         "skipped": 1
       },
@@ -474,6 +474,12 @@
         "skipped": 0
       },
       {
+        "name": "internal/winpipe",
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
         "name": "internal/winsandbox",
         "passed": 14,
         "failed": 0,
@@ -634,7 +640,7 @@
       },
       {
         "name": "internal/config",
-        "pct": 90.3
+        "pct": 88.8
       },
       {
         "name": "internal/consoleapi",
@@ -670,11 +676,11 @@
       },
       {
         "name": "internal/edge",
-        "pct": 91.3
+        "pct": 91.4
       },
       {
         "name": "internal/egress",
-        "pct": 84.4
+        "pct": 84.5
       },
       {
         "name": "internal/filterapi",
@@ -686,11 +692,11 @@
       },
       {
         "name": "internal/graph",
-        "pct": 83.7
+        "pct": 83.6
       },
       {
         "name": "internal/gwtest",
-        "pct": 80.8
+        "pct": 80
       },
       {
         "name": "internal/harness",
@@ -826,7 +832,7 @@
       },
       {
         "name": "internal/tunnel",
-        "pct": 81.2
+        "pct": 80
       },
       {
         "name": "internal/versions",
@@ -835,6 +841,10 @@
       {
         "name": "internal/winpath",
         "pct": 100
+      },
+      {
+        "name": "internal/winpipe",
+        "pct": 73.3
       },
       {
         "name": "internal/winsandbox",
@@ -1556,7 +1566,8 @@
         "element": "E-01",
         "status": "verified",
         "tests": [
-          "internal/edge.TestUDSHarnessTransport"
+          "internal/edge.TestUDSHarnessTransport",
+          "internal/edge.TestWindowsPipeTransport"
         ]
       },
       {
@@ -1742,7 +1753,8 @@
         "element": "E-03",
         "status": "verified",
         "tests": [
-          "internal/edge.TestUDSPeerAndKey"
+          "internal/edge.TestUDSPeerAndKey",
+          "internal/edge.TestWindowsPipePeerAndKey"
         ]
       },
       {
@@ -4271,6 +4283,7 @@
           "internal/adapter.TestRelayUnixSocket",
           "internal/adapter.TestStdioBridgeRawEquivalence",
           "internal/adapter.TestStdioBridgeWithSDKClient",
+          "internal/adapter.TestWindowsPipeRelay",
           "internal/conformance.TestConformanceThroughAdapters"
         ]
       },
@@ -4582,7 +4595,7 @@
           "internal/harness.TestClaudeCodeLockdownProfile",
           "scripts/agents.TestCheckLocked",
           "scripts/agents.TestLockdownReportFinish",
-          "workflow agents-lockdown at main (86368619e2e2, 2026-10-20T07:50:14Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39387700335"
+          "workflow agents-lockdown at main (93bc1d9b8cb2, 2026-10-20T08:17:58Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39390353076"
         ]
       },
       {
@@ -4651,7 +4664,7 @@
           "scripts/agents.TestPromptsSayToolNotResource",
           "scripts/agents.TestReferenceRun",
           "scripts/agents.TestStreamJSONSession",
-          "workflow agents at main (86368619e2e2, 2026-10-20T07:50:12Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39387700335"
+          "workflow agents at main (93bc1d9b8cb2, 2026-10-20T08:17:56Z) https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39390353076"
         ]
       },
       {
@@ -7037,10 +7050,12 @@
           "desktop/linux.autostart::tests::off_until_turned_on_and_off_again",
           "desktop/linux.autostart::tests::windows_uses_the_run_key_of_the_user",
           "desktop/linux.config_tests::single_instance_is_the_first_plugin",
+          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/macos.autostart::tests::entries_name_this_program_only",
           "desktop/macos.autostart::tests::off_until_turned_on_and_off_again",
           "desktop/macos.autostart::tests::windows_uses_the_run_key_of_the_user",
-          "desktop/macos.config_tests::single_instance_is_the_first_plugin"
+          "desktop/macos.config_tests::single_instance_is_the_first_plugin",
+          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing"
         ],
         "target": "v1.3.0"
       },
@@ -7172,10 +7187,12 @@
         "status": "partial",
         "tests": [
           "desktop/linux.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/linux.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/linux.deeplink::tests::accepts_exactly_the_three_forms",
           "desktop/linux.deeplink::tests::ignores_every_other_link",
           "desktop/linux.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows",
           "desktop/macos.config_tests::only_the_smcp_scheme_is_registered",
+          "desktop/macos.deeplink::tests::a_refused_link_on_a_second_start_opens_nothing",
           "desktop/macos.deeplink::tests::accepts_exactly_the_three_forms",
           "desktop/macos.deeplink::tests::ignores_every_other_link",
           "desktop/macos.deeplink::tests::links_arrive_as_arguments_on_linux_and_windows"
@@ -7376,15 +7393,22 @@
       {
         "id": "FR-21.8",
         "element": "E-01",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/adapter.TestWindowsPipeRelay",
+          "internal/edge.TestWindowsPipePeerAndKey",
+          "internal/edge.TestWindowsPipeTransport"
+        ],
         "target": "v1.3.0"
       },
       {
         "id": "FR-21.9",
         "element": "E-03",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/edge.TestWindowsPipePeerAndKey",
+          "internal/winpipe.TestWindowsPipeListenDialIdentify"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -7464,8 +7488,10 @@
       {
         "id": "FR-21.16",
         "element": "E-33",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/adapter.TestWindowsPipeRelay"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -8100,8 +8126,10 @@
       {
         "id": "SR-2.8-6",
         "element": "E-01",
-        "status": "planned",
-        "tests": [],
+        "status": "partial",
+        "tests": [
+          "internal/edge.TestWindowsPipeSecurityDescriptor"
+        ],
         "target": "v1.3.0"
       },
       {
@@ -9028,7 +9056,7 @@
       "attack": "Direct network escape",
       "expected": "Every connection fails; only broker endpoints are reachable",
       "fixture": "HF-23",
-      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:41291: connect: connection refused\"; canary connections: 0",
+      "observed": "standalone: not asserted (Enforced row, Standalone profile; see docs/security-limitations.md). Observed: connect to the loopback canary: result released \"connected\"; canary connections: 1 | enforced: connect to the loopback canary: result released \"blocked: dial tcp 127.0.0.1:37481: connect: connection refused\"; canary connections: 0",
       "pass": true,
       "profile": "standalone+enforced",
       "requirements": [
@@ -9145,7 +9173,7 @@
     }
   ],
   "acceptance": {
-    "commit": "06d6fffb0128c30ce0a1eb145489aca79cd12bae",
+    "commit": "bc22ba82ef99192eff6aadebde0126b4344c4a1f",
     "label": "enforced",
     "reasons": [],
     "total": 21,
@@ -9837,18 +9865,18 @@
   },
   "performance": {
     "schema": 1,
-    "commit": "06d6fffb0128c30ce0a1eb145489aca79cd12bae",
-    "generatedAt": "2026-10-20T07:01:07Z",
+    "commit": "bc22ba82ef99192eff6aadebde0126b4344c4a1f",
+    "generatedAt": "2026-10-20T08:06:10Z",
     "host": {
       "os": "linux",
       "arch": "amd64",
       "cpus": 4,
-      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
       "goVersion": "go1.26.9",
-      "runner": "GitHub Actions 1000015008",
-      "memoryBytes": 16766414848,
+      "runner": "GitHub Actions 1000015469",
+      "memoryBytes": 16765378560,
       "diskBytes": 154894188544,
-      "diskFreeBytes": 90410643456,
+      "diskFreeBytes": 90411003904,
       "diskDevice": "sda1",
       "diskModel": "Virtual Disk",
       "runnerEnvironment": "github-hosted",
@@ -9872,7 +9900,7 @@
         "name": "Decision latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 0.027501,
+        "value": 0.021284,
         "budget": 10,
         "ceiling": 100,
         "samples": 100000,
@@ -9885,7 +9913,7 @@
         "name": "Gateway-added overhead (P-213)",
         "metric": "p95",
         "unit": "ms",
-        "value": 18.893051,
+        "value": 18.417635,
         "budget": 50,
         "ceiling": 250,
         "samples": 2000,
@@ -9898,19 +9926,19 @@
         "name": "Observation capture overhead",
         "metric": "p95 difference",
         "unit": "ms",
-        "value": 0.5403756250000011,
+        "value": 0.5769459999999977,
         "budget": 1,
         "samples": 16000,
         "pass": true,
         "complete": true,
-        "method": "p95 P-213 with observation enabled (10.464 ms, mean of 10.274, 10.486, 10.757, 10.717, 10.678, 10.224, 10.578, 10.002) minus disabled (9.924 ms, mean of 9.945, 9.911, 9.794, 9.472, 10.701, 9.897, 9.707, 9.965), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
+        "method": "p95 P-213 with observation enabled (10.213 ms, mean of 9.782, 10.421, 10.072, 10.212, 10.196, 10.323, 10.439, 10.257) minus disabled (9.636 ms, mean of 9.263, 9.377, 10.131, 9.474, 10.052, 9.937, 9.741, 9.111), 16 fresh instances run in the order enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, enabled, disabled, disabled, enabled, disabled, enabled, enabled, disabled, each load started after sync(2), state on a memory file system"
       },
       {
         "requirement": "FR-11.6",
         "name": "Observation ingest",
         "metric": "sustained rate",
         "unit": "records/s",
-        "value": 1999.965734403742,
+        "value": 1999.9653721362215,
         "budget": 2000,
         "samples": 1200000,
         "pass": true,
@@ -9922,7 +9950,7 @@
         "name": "Console query latency",
         "metric": "p95",
         "unit": "ms",
-        "value": 814.50396,
+        "value": 697.738849,
         "budget": 2000,
         "samples": 1500,
         "pass": true,
@@ -9934,12 +9962,12 @@
         "name": "Idle resident memory",
         "metric": "RSS",
         "unit": "MiB",
-        "value": 1543.7890625,
+        "value": 1545.0546875,
         "budget": 4096,
         "samples": 1,
         "pass": true,
         "complete": true,
-        "method": "combined resident set size 10m16s after start with no traffic: smcpd (122.8 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1421.0 MiB in 2 processes, process 4254 and its descendants); server instances, browsers and models excluded"
+        "method": "combined resident set size 10m16s after start with no traffic: smcpd (121.4 MiB, Standalone profile, graph mirror enabled and ready) and the graph engine at bolt://127.0.0.1:7687 (1423.6 MiB in 2 processes, process 4435 and its descendants); server instances, browsers and models excluded"
       }
     ]
   }
