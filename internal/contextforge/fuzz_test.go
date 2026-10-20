@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
 // Fuzz targets of the security review of v1.3.0
@@ -15,6 +17,9 @@ import (
 // every accepted entry can be classified and drafted without an install
 // string turning into a command line with shell syntax.
 func FuzzParseCatalog(f *testing.F) {
+	// FR-22.2 in part: the bounds hold for every input; the time and
+	// memory bounds are TestBoundedParsing's.
+	reqtest.Partial(f, "FR-22.2")
 	for _, s := range []string{
 		"catalog_servers:\n  - id: a\n    name: A\n    url: https://mcp.example.com/sse\n    auth_type: OAuth2.1\n",
 		"catalog_servers:\n  - id: fs\n    install: npx -y @modelcontextprotocol/server-filesystem@1.0.0\n",
