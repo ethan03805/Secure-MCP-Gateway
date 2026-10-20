@@ -54,6 +54,9 @@ func (l *Launcher) Launch(ctx context.Context, spec pipeline.ServerSpec) (pipeli
 	if spec.URL == "" {
 		return l.Inner.Launch(ctx, spec)
 	}
+	if spec.TokenSource != nil {
+		return Dial(Endpoint{URL: spec.URL, TokenSource: spec.TokenSource, CAFile: spec.CAFile, MaxMessageBytes: spec.MaxMessageBytes, HTTP: l.HTTP})
+	}
 	tok, err := TokenFromEnv(func(k string) string { return spec.Env[k] })
 	if err != nil {
 		return nil, err

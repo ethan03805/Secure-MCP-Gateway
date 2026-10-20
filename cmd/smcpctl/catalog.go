@@ -64,6 +64,14 @@ Flags:
   --license SPDX                a license of the artifact, repeatable (import)
   --risk-class C                moderate (default) or high (import)
   --side-effect C               default side-effect class of its tools (import)
+  --probe-secret NAME           vault secret the probe of a hosted entry that
+                                needs an API key sends (import); the Egress
+                                Broker inserts it on the probe's requests to
+                                the entry's host only
+  --probe-header H              header of the probe secret (default
+                                Authorization)
+  --probe-template T            header value with {secret} (default
+                                "Bearer {secret}" for Authorization)
   --accept SHA256               accept the decision whose text has this SHA-256
   --decline                     decline the decision
 `
@@ -92,6 +100,9 @@ func catalogCmd(args []string, out io.Writer) error {
 	fs.Var(&licenses, "license", "license (repeat)")
 	risk := fs.String("risk-class", "", "risk class")
 	side := fs.String("side-effect", "", "default side-effect class")
+	probeSecret := fs.String("probe-secret", "", "vault secret the probe of a hosted entry sends")
+	probeHeader := fs.String("probe-header", "", "header of the probe secret")
+	probeTemplate := fs.String("probe-template", "", "header value template of the probe secret")
 	accept := fs.String("accept", "", "accept the decision with this SHA-256")
 	decline := fs.Bool("decline", false, "decline the decision")
 	class := fs.String("class", "", "list only this class")
@@ -143,6 +154,7 @@ func catalogCmd(args []string, out io.Writer) error {
 		}
 		body := map[string]any{"version": *version, "artifact_sha256": *artifactSHA, "integrity": *integ, "artifact_type": *typ,
 			"package": *pkg, "argv": []string(argv), "licenses": []string(licenses), "risk_class": *risk, "side_effect": *side}
+		addProbeSecret(body, *probeSecret, *probeHeader, *probeTemplate)
 		return catalogImportAPI(c, out, pos[0], body, *accept, *decline)
 	}
 	cat, err := loadCatalog(*file, *pin)
@@ -348,4 +360,14 @@ func catalogShow(out io.Writer, cat *contextforge.Catalog, id string, asJSON boo
 	}
 	row("description", e.Description)
 	return tw.Flush()
+}
+
+// addProbeSecret adds the probe secret of a hosted entry that needs an
+// API key to an import request (FR-22.9): the vault secret's name and the
+// header the Egress Broker inserts, never a value.
+func addProbeSecret(body map[string]any, secret, header, template string) {
+	if secret == "" {
+		return
+	}
+	body["probe_secret"] = map[string]string{"secret": secret, "header": header, "template": template}
 }

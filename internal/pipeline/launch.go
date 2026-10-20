@@ -64,6 +64,11 @@ type ServerSpec struct {
 	// names the only roots trusted for its TLS certificate.
 	URL    string
 	CAFile string
+	// TokenSource, when set, gives the bearer token of a url server for
+	// each request, in place of the token in Env. The ContextForge
+	// Connector binds a hosted package's token this way, so that a renewed
+	// token applies without reconnecting (SRS FR-22.36, FR-22.29).
+	TokenSource func() string
 	// MaxMessageBytes is the dispatcher's bound on one server message
 	// (CP-08 plus the envelope allowance); a transport that frames messages
 	// itself applies it while reading.

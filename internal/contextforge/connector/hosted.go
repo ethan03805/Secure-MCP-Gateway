@@ -56,8 +56,8 @@ func (c *Connector) ProposeHosted(id string, in LocalImport, actor string) (prop
 	if c.instErr != nil {
 		return refuse(c.instErr)
 	}
-	if e.RequiresAPIKey || strings.Contains(strings.ToLower(e.AuthType), "api key") {
-		return refuse(packaging.Errf(ReasonHostedNotAvailable, "entry %s needs an API key; the probe secret (S1 delivery at the E-18 endpoint, FR-22.9) is not built yet", e.ID))
+	if needsAPIKey(e) && (in.ProbeSecret == nil || in.ProbeSecret.Secret == "") {
+		return refuse(packaging.Errf(ReasonProbeSecretRequired, "entry %s needs an API key: name the vault secret the probe sends (probe_secret); the Egress Broker inserts it on the probe's requests to the entry's host only (FR-22.9)", e.ID))
 	}
 	risk := in.RiskClass
 	if risk == "" {
@@ -76,7 +76,7 @@ func (c *Connector) ProposeHosted(id string, in LocalImport, actor string) (prop
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		c.probe(p, e, risk, actor)
+		c.probe(p, e, risk, actor, in.ProbeSecret)
 	}()
 	return p.view(), nil
 }
@@ -103,10 +103,10 @@ func (c *Connector) admin() *bundle.Admin {
 }
 
 // probe runs the hosted-entry probe of a proposal.
-func (c *Connector) probe(p *proposal, e *contextforge.Entry, risk, actor string) {
+func (c *Connector) probe(p *proposal, e *contextforge.Entry, risk, actor string, ps *ProbeSecret) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.o.BuildTimeout)
 	defer cancel()
-	dec, err := c.probeHosted(ctx, p, e, risk, actor)
+	dec, err := c.probeHosted(ctx, p, e, risk, actor, ps)
 	c.mu.Lock()
 	if err != nil {
 		p.State, p.ReasonCode, p.Error = stateFailed, packaging.ReasonOf(err), err.Error()
@@ -126,16 +126,19 @@ func (c *Connector) probe(p *proposal, e *contextforge.Entry, risk, actor string
 	}
 }
 
-func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforge.Entry, risk, actor string) (*Decision, error) {
+func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforge.Entry, risk, actor string, ps *ProbeSecret) (*Decision, error) {
 	c.holdProbe()
 	defer c.releaseProbe()
 	if err := c.waitHealthy(ctx, actor); err != nil {
 		return nil, err
 	}
-	target, err := c.endpointFor(e.URL)
+	// SR-3.5-2, FR-22.9: the probe reaches only the entry's host, through
+	// an endpoint of its own, and holds no secret.
+	target, release, err := c.probeEndpoint(ctx, p.ID, e.URL, ps)
 	if err != nil {
 		return nil, err
 	}
+	defer release()
 	slug := contextforge.GatewayName(e.ID)
 	pw, err := bundle.NewCredential()
 	if err != nil {
@@ -186,6 +189,12 @@ func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforg
 			Egress: []packaging.EgressRule{{Host: strings.ToLower(u.Hostname()), Ports: []int{port}, Methods: []string{"GET", "POST", "DELETE"}}}},
 		Packaging: packaging.PackagingInfo{OperatorNote: "Hosted package of ContextForge catalog entry " + e.ID + "."},
 	}
+	if needsAPIKey(e) {
+		// FR-22.15: one secret slot, delivered only in mode S1 at the
+		// package's endpoint for its host.
+		m.Secrets = []packaging.SecretSlot{{Slot: "api_key", Purpose: "API key of the hosted server, inserted by the Egress Broker at the package's endpoint",
+			Destination: net.JoinHostPort(strings.ToLower(u.Hostname()), strconv.Itoa(port)), Modes: []string{"S1"}}}
+	}
 	for _, n := range mapped {
 		mt, err := manifestTool(byBackend[n.BackendName], n)
 		if err != nil {
@@ -198,7 +207,7 @@ func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforg
 		Class: contextforge.ClassHosted, URL: e.URL, Repo: e.Repo, InstanceDigest: lock.Image.Platforms[c.platform], ProbedAt: probedAt.Format(time.RFC3339)}
 	origin.TLSPublicKeySHA256 = tlsKeyDigest(ctx, u)
 	pv := packaging.Provenance{Builder: packaging.Builder{Tool: "smcpd contextforge connector", Version: c.o.Version},
-		Probe:        packaging.ProbeEnvironment{Launcher: "contextforge " + lock.Version, Confined: c.o.Enforced, Network: "host", EnvNames: []string{}},
+		Probe:        packaging.ProbeEnvironment{Launcher: "contextforge " + lock.Version, Confined: c.o.Enforced, Network: c.probeNetwork(u), EnvNames: []string{}},
 		ContextForge: origin}
 	pkg, err := packaging.WriteHosted(filepath.Join(p.stage, "pkg"), m, pv, "smcpd contextforge connector", c.o.Version, c.o.Now())
 	if err != nil {
@@ -207,14 +216,21 @@ func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforg
 	return hostedDecision(e, c.cat, pkg.Manifest, actor), nil
 }
 
-// endpointFor is the URL the bundled instance registers for a hosted
-// entry: the entry's E-18 endpoint when Options.EndpointFor is set (tests
-// and, later, the Egress Broker), the hosted URL itself otherwise.
-func (c *Connector) endpointFor(u string) (string, error) {
+// needsAPIKey reports whether a catalog entry needs an API key (FR-22.15).
+func needsAPIKey(e *contextforge.Entry) bool {
+	return e.RequiresAPIKey || strings.Contains(strings.ToLower(e.AuthType), "api key")
+}
+
+// probeNetwork names the probe's network in the provenance (FR-22.11).
+func (c *Connector) probeNetwork(u *url.URL) string {
 	if c.o.EndpointFor != nil {
-		return c.o.EndpointFor(u)
+		return "test-endpoint"
 	}
-	return u, nil
+	port := u.Port()
+	if port == "" {
+		port = "443"
+	}
+	return "e18:" + net.JoinHostPort(strings.ToLower(u.Hostname()), port)
 }
 
 func transportOf(e *contextforge.Entry) string {
@@ -266,6 +282,9 @@ func hostedDecision(e *contextforge.Entry, cat *contextforge.Catalog, m *packagi
 	sort.Strings(f.SideEffects)
 	for _, g := range m.Capabilities.Egress {
 		f.Egress = append(f.Egress, fmt.Sprintf("%s ports %v", g.Host, g.Ports))
+	}
+	for _, s := range m.Secrets {
+		f.SecretSlots = append(f.SecretSlots, fmt.Sprintf("%s (%s at %s)", s.Slot, strings.Join(s.Modes, ", "), s.Destination))
 	}
 	none := func(v []string) string {
 		if len(v) == 0 {

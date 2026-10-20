@@ -21,4 +21,9 @@ type ContextForge struct {
 	Engine string `toml:"engine" json:"engine,omitempty"`
 	// Cosign verifies the image signature (FR-22.19); default from PATH.
 	Cosign string `toml:"cosign" json:"cosign,omitempty"`
+	// Python is the interpreter of a virtual environment with the pinned
+	// ContextForge release installed, for the managed-process form of the
+	// bundled instance (FR-22.25): always on Windows, and where no
+	// container engine is installed.
+	Python string `toml:"python" json:"python,omitempty"`
 }

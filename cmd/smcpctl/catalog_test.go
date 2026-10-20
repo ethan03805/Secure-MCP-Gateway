@@ -8,7 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/connector"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
+	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
 // The catalog of the pinned ContextForge v1.0.11 release (see
@@ -187,5 +189,28 @@ func TestInertText(t *testing.T) {
 	}
 	if got := inert(strings.Repeat("a", 10), 4); got != "aaaa..." {
 		t.Fatalf("cut %q", got)
+	}
+}
+
+// TestCatalogImportProbeSecret: --probe-secret names the vault secret of a
+// hosted entry's probe, with its header, and the request carries the
+// name only (FR-22.9); without it the request has no probe_secret.
+func TestCatalogImportProbeSecret(t *testing.T) {
+	reqtest.Partial(t, "FR-22.9")
+	body := map[string]any{}
+	addProbeSecret(body, "", "X-Api-Key", "")
+	if _, ok := body["probe_secret"]; ok {
+		t.Fatal("probe_secret without --probe-secret")
+	}
+	addProbeSecret(body, "docs-key", "X-Api-Key", "{secret}")
+	raw, _ := json.Marshal(body)
+	if string(raw) != `{"probe_secret":{"header":"X-Api-Key","secret":"docs-key","template":"{secret}"}}` {
+		t.Fatalf("body %s", raw)
+	}
+	var in connector.LocalImport
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&in); err != nil || in.ProbeSecret == nil || in.ProbeSecret.Secret != "docs-key" {
+		t.Fatalf("the Gateway reads %+v: %v", in, err)
 	}
 }

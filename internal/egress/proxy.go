@@ -122,6 +122,16 @@ func isRedirect(code int) bool {
 // times (SR-5.15-1); the forward proxy returns redirects to the instance,
 // whose next request is authorized as a new operation.
 func (b *Broker) forward(w http.ResponseWriter, r *http.Request, rec *Record, target *url.URL, follow bool) {
+	b.forwardWith(w, r, rec, target, follow, nil)
+}
+
+// eventCopier copies a text/event-stream response body, calling flush
+// after each event (hosted.go).
+type eventCopier func(body io.Reader, dst io.Writer, flush func()) error
+
+// forwardWith is forward with an optional copier for event-stream
+// responses.
+func (b *Broker) forwardWith(w http.ResponseWriter, r *http.Request, rec *Record, target *url.URL, follow bool, events eventCopier) {
 	rec.Path = target.Path
 	if r.Header.Get("Upgrade") != "" {
 		b.refuse(w, rec, ReasonBadRequest, "protocol upgrades (WebSocket) are not brokered")
@@ -241,7 +251,17 @@ func (b *Broker) forward(w http.ResponseWriter, r *http.Request, rec *Record, ta
 	rec.Status = resp.StatusCode
 	w.WriteHeader(resp.StatusCode)
 	body := &meteredReader{r: resp.Body, limit: lim.ResponseBytes, n: &down, lim: sl.bytes, now: b.o.Now, tooLarge: ReasonResponseTooLarge}
-	_, cerr := io.Copy(w, body)
+	var cerr error
+	if events != nil && strings.HasPrefix(strings.ToLower(resp.Header.Get("Content-Type")), "text/event-stream") {
+		fl, _ := w.(http.Flusher)
+		cerr = events(body, w, func() {
+			if fl != nil {
+				fl.Flush()
+			}
+		})
+	} else {
+		_, cerr = io.Copy(w, body)
+	}
 	rec.BytesUp, rec.BytesDown = up.Load(), down.Load()
 	if cerr != nil {
 		rf := asRefusal(cerr)

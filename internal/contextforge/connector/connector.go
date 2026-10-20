@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"sort"
@@ -29,6 +30,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/bundle"
+	"github.com/ethan03805/secure-mcp-gateway/internal/egress"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
@@ -79,12 +81,28 @@ type Options struct {
 	// [secrets]; the instance then cannot run).
 	Broker *secrets.Broker
 	// EndpointFor maps a hosted URL to the URL the bundled instance
-	// registers for it (the entry's E-18 endpoint). Nil: the hosted URL
-	// itself.
+	// registers for it, in place of an E-18 endpoint. Only the
+	// pinned-image tests set it, to reach plain-HTTP fixtures; with it
+	// nil every hosted URL is reached through an endpoint of the hosted
+	// egress listener (egress.go, FR-22.40).
 	EndpointFor func(hostedURL string) (string, error)
-	// SSRFAllowed are the networks the bundled instance may reach (the
-	// E-18 endpoint addresses, FR-22.27).
+	// SSRFAllowed are networks the bundled instance may reach in addition
+	// to the hosted egress listener (tests with EndpointFor, FR-22.27).
 	SSRFAllowed []string
+	// Egress opens the hosted egress listener (FR-22.40). Nil: an
+	// Egress Broker built from the [egress] table's limits and trust
+	// (egress.HostedOptions), whether or not [egress] is enabled.
+	Egress func(o egress.Options, listen netip.AddrPort, guest netip.Addr) (*egress.Hosted, error)
+	// Runner and Verifier replace the container of the pinned image and
+	// its cosign verification: the managed process on Windows (FR-22.25)
+	// and stand-ins in tests. Both or neither.
+	Runner   Runner
+	Verifier ImageVerifier
+	// RenewBefore is how long before expiry a package token is renewed
+	// (FR-22.29); default DefaultRenewBefore. RenewInterval is how often
+	// expiries are checked; default one minute.
+	RenewBefore   time.Duration
+	RenewInterval time.Duration
 	// Suspend suspends an enabled revision for cause (drift, a broken
 	// scope); smcpd passes library.Runtime.SuspendRevision.
 	Suspend func(id, rev string, cause error) error
@@ -115,9 +133,10 @@ type Connector struct {
 
 	// The bundled instance (instance.go); nil unless [contextforge]
 	// bundled is true and it could be prepared (instErr says why not).
-	inst     *bundle.Instance
+	inst     Runner
+	process  *bundle.Process // the managed-process form, when inst is one
 	instErr  error
-	verifier *bundle.Verifier
+	verifier ImageVerifier
 	verified *bundle.Verification
 	platform string
 	instMu   sync.Mutex
@@ -127,6 +146,17 @@ type Connector struct {
 	hosted       map[string]*hostedPkg
 	cleanedAt    time.Time
 	reconcileReq chan struct{}
+
+	// The hosted egress listener and the packages' endpoints (egress.go).
+	egMu      sync.Mutex
+	eg        *egress.Hosted
+	endpoints map[string]*packageEgress // by revision key
+	late      *lateRecorder
+
+	// FR-22.39 route fields of the enabled hosted revisions, by revision
+	// key (evidence.go).
+	routeMu sync.RWMutex
+	routes  map[string]map[string]string
 
 	// Demand for the instance (demand.go, FR-22.23).
 	demandMu     sync.Mutex
@@ -155,8 +185,15 @@ func New(o Options) (*Connector, error) {
 	if o.BuildTimeout <= 0 {
 		o.BuildTimeout = 15 * time.Minute
 	}
+	if o.RenewBefore <= 0 {
+		o.RenewBefore = DefaultRenewBefore
+	}
+	if o.RenewInterval <= 0 {
+		o.RenewInterval = time.Minute
+	}
 	c := &Connector{o: o, dir: filepath.Join(o.Config.State.Dir, dirName), proposals: map[string]*proposal{},
-		hosted: map[string]*hostedPkg{}, reconcileReq: make(chan struct{}, 1),
+		hosted: map[string]*hostedPkg{}, reconcileReq: make(chan struct{}, 1), endpoints: map[string]*packageEgress{},
+		routes:  map[string]map[string]string{},
 		fetcher: &packaging.Fetcher{NPMRegistry: o.Config.ContextForge.NPMRegistry, PyPIIndex: o.Config.ContextForge.PyPIIndex}}
 	if err := os.MkdirAll(c.dir, 0o700); err != nil {
 		return nil, err
@@ -254,7 +291,12 @@ func (c *Connector) keyEnrolled() (bool, []string) {
 // SetRecorder sets the evidence recorder once the journal is open (smcpd
 // creates the Connector before app.Start so that hosted packages resolve
 // at the first launch).
-func (c *Connector) SetRecorder(rec audit.Recorder) { c.o.Recorder = rec }
+func (c *Connector) SetRecorder(rec audit.Recorder) {
+	c.o.Recorder = rec
+	if c.late != nil {
+		c.late.attach(rec)
+	}
+}
 
 // Catalog returns the loaded catalog or the reason it was refused.
 func (c *Connector) Catalog() (*contextforge.Catalog, error) { return c.cat, c.catErr }
@@ -263,6 +305,7 @@ func (c *Connector) Catalog() (*contextforge.Catalog, error) { return c.cat, c.c
 func (c *Connector) Close() {
 	c.closeInstance()
 	c.wg.Wait()
+	c.closeEgress()
 }
 
 // Start runs the proposal janitor until ctx ends.
@@ -276,6 +319,8 @@ func (c *Connector) Start(ctx context.Context) {
 		defer d.Stop()
 		rc := time.NewTicker(ReconcileInterval)
 		defer rc.Stop()
+		rn := time.NewTicker(c.o.RenewInterval)
+		defer rn.Stop()
 		for {
 			select {
 			case <-ctx.Done():
@@ -288,6 +333,8 @@ func (c *Connector) Start(ctx context.Context) {
 				c.reconcile(ctx)
 			case <-c.reconcileReq:
 				c.reconcile(ctx)
+			case <-rn.C:
+				c.renewTokens(ctx)
 			}
 		}
 	}()

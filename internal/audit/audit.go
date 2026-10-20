@@ -96,7 +96,13 @@ type Event struct {
 	ClientID            string `json:"client_id,omitempty"`
 	ClientAddress       string `json:"client_address,omitempty"`
 	ClientAddressSource string `json:"client_address_source,omitempty"`
-	Detail              any    `json:"detail,omitempty"`
+	// Route names the path a call took past the Gateway when it is not
+	// the server's own instance: for a hosted package, via=contextforge
+	// with the package server ID and revision, the ContextForge virtual
+	// server and the bundled instance's version and digest (SRS FR-22.39).
+	// A Fanout decorator sets it.
+	Route  map[string]string `json:"route,omitempty"`
+	Detail any               `json:"detail,omitempty"`
 }
 
 // Recorder is the interface every element uses to write evidence. Record

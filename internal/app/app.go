@@ -47,6 +47,10 @@ type Options struct {
 	Secrets   pipeline.SecretBroker   // default NoSecrets
 	Approver  pipeline.Approver       // default RefuseApprover
 	Filters   *pipeline.Filters       // default NewFilters (schema-validate)
+	// WrapInjector, when set, wraps the secret-header injector the Secret
+	// Broker gets (the Egress Broker, or nil without one): the ContextForge
+	// Connector routes hosted packages' S1 grants to its own endpoints.
+	WrapInjector func(pipeline.SecretHeaderInjector) pipeline.SecretHeaderInjector
 	// ExtraFilters, when set, registers further filters on the inspection
 	// chain after the built-in E-09/E-11 filters (SS-10 observation probes).
 	ExtraFilters func(*pipeline.Filters) error
@@ -225,8 +229,17 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	// E-18 performs S1 header injection for the Secret Broker (E-20).
 	if s, ok := o.Secrets.(interface {
 		SetInjector(pipeline.SecretHeaderInjector)
-	}); ok && a.Egress != nil {
-		s.SetInjector(a.Egress)
+	}); ok {
+		var inj pipeline.SecretHeaderInjector
+		if a.Egress != nil {
+			inj = a.Egress
+		}
+		if o.WrapInjector != nil {
+			inj = o.WrapInjector(inj)
+		}
+		if inj != nil {
+			s.SetInjector(inj)
+		}
 	}
 	host := profile.DetectHost()
 	if o.Host != nil {

@@ -2,10 +2,15 @@ package southbound
 
 import (
 	"bufio"
+	"context"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/southbound/sbtest"
 )
 
@@ -53,5 +58,46 @@ func TestMcpNameEncoding(t *testing.T) {
 		if dec, _ := DecodeValue(h.Get("Mcp-Name")); i == 1 && dec != "wetter-für-köln" {
 			t.Errorf("decoded %q", dec)
 		}
+	}
+}
+
+// TestTokenSource: a TokenSource is asked for each request, so a token
+// renewed while the connection is open is sent with the next request; a
+// Launcher passes the spec's TokenSource and ignores the token variables
+// (SRS FR-22.36, FR-22.29).
+func TestTokenSource(t *testing.T) {
+	reqtest.Partial(t, "FR-22.36", "FR-22.29")
+	s := sbtest.New()
+	t.Cleanup(s.Close)
+	var mu sync.Mutex
+	tok := "first-token"
+	l := &Launcher{Inner: pipeline.SubprocessLauncher{}}
+	p, err := l.Launch(context.Background(), pipeline.ServerSpec{URL: s.URL, Env: map[string]string{TokenEnv: "env-token"},
+		TokenSource: func() string { mu.Lock(); defer mu.Unlock(); return tok }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = p.Close() })
+	rd := bufio.NewReader(p)
+	send := func(id int) {
+		t.Helper()
+		if _, err := fmt.Fprintf(p, `{"jsonrpc":"2.0","id":%d,"method":"tools/list","params":{}}`+"\n", id); err != nil {
+			t.Fatal(err)
+		}
+		if l, err := rd.ReadString('\n'); err != nil || !strings.Contains(l, `"id":`) {
+			t.Fatalf("response %q %v", l, err)
+		}
+	}
+	send(1)
+	mu.Lock()
+	tok = "renewed-token"
+	mu.Unlock()
+	send(2)
+	posts := s.Posts("")
+	if len(posts) < 2 {
+		t.Fatalf("%d posts", len(posts))
+	}
+	if a, b := posts[len(posts)-2].Header.Get("Authorization"), posts[len(posts)-1].Header.Get("Authorization"); a != "Bearer first-token" || b != "Bearer renewed-token" {
+		t.Fatalf("authorization %q then %q", a, b)
 	}
 }
