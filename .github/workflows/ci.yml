@@ -831,6 +831,29 @@ jobs:
           go run ./tools/reqreport cargo -test-output "$RUNNER_TEMP/e2e-results.txt" -claims "$RUNNER_TEMP/e2e-claims.tsv" \
             -package desktop/e2e-macos -out build/desktop-e2e-macos-test.json || rc=1
           exit "$rc"
+      # First-run setup with the real smcpctl and the runner's own service
+      # manager (FR-20.8, SR-2-4, FR-20.5): the setup window's code path
+      # (setup::Session::run) installs the Standalone profile for the
+      # runner's account, with every process's command line sampled for
+      # the passwords, then uninstalls it. macOS and Windows here; Linux
+      # runs setup through the window in desktop-e2e. The status job joins
+      # the platforms' results (reqreport join).
+      - name: First-run setup with the real smcpctl (macOS, Windows)
+        if: runner.os != 'Linux'
+        working-directory: desktop/src-tauri
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          SMCP_DESKTOP_SETUP_E2E: "1"
+        run: |
+          set -o pipefail
+          export SMCP_BIN_DIR="$RUNNER_TEMP/setup-bin"
+          (cd ../.. && go build -o "$SMCP_BIN_DIR/" ./cmd/smcpd ./cmd/smcpctl ./cmd/smcp-refserver)
+          rm -f "$RUNNER_TEMP/setup-claims.tsv"
+          rc=0
+          SMCP_CLAIMS_FILE="$RUNNER_TEMP/setup-claims.tsv" cargo test --locked --lib setup::tests::first_run_setup_with_the_real_smcpctl -- --exact --nocapture 2>&1 | tee "$RUNNER_TEMP/setup-test.txt" || rc=$?
+          (cd ../.. && go run ./tools/reqreport cargo -test-output "$RUNNER_TEMP/setup-test.txt" -claims "$RUNNER_TEMP/setup-claims.tsv" \
+            -package "desktop/setup-$PLATFORM" -out "build/desktop-setup-$PLATFORM-test.json") || rc=1
+          exit "$rc"
       - name: Upload the requirement claims
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -1897,7 +1920,8 @@ jobs:
           # The desktop application's Rust test claims (FR-20, desktop job),
           # one file per platform, and those of its end-to-end tests
           # (desktop-e2e on Linux, the desktop job on macOS).
-          for f in build/desktop-macos-test.json build/desktop-linux-test.json build/desktop-e2e-linux-test.json build/desktop-e2e-macos-test.json build/desktop-windows-test.json build/desktop-windows-arm64-test.json; do
+          for f in build/desktop-macos-test.json build/desktop-linux-test.json build/desktop-e2e-linux-test.json build/desktop-e2e-macos-test.json build/desktop-windows-test.json build/desktop-windows-arm64-test.json \
+            build/desktop-setup-macos-test.json build/desktop-setup-windows-test.json build/desktop-setup-windows-arm64-test.json; do
             if [ -s "$f" ]; then
               cat "$f" >> build/all-test.json
               merged=1
@@ -1905,6 +1929,18 @@ jobs:
               echo "no $f"
             fi
           done
+          # Requirements whose tests run on several platforms, each claiming
+          # them partly: claimed in full only when every platform's test
+          # passed in this run (reqreport join).
+          s=setup::tests::first_run_setup_with_the_real_smcpctl
+          go run ./tools/reqreport join -test desktop/join::fr_20_8 -full FR-20.8 -out build/desktop-join-test.json \
+            -why "first-run setup completed through the setup window's code with the real smcpctl on Ubuntu (through the window), macOS arm64, Windows x64 and Windows 11 arm64, no password in any command line sampled every 100 ms or left in a file; a failing install shows its output and the retry command" \
+            -need build/desktop-e2e-linux-test.json:e2e::linux::introduction_then_setup \
+            -need build/desktop-e2e-linux-test.json:e2e::linux::setup_without_passwords_in_arguments \
+            -need "build/desktop-setup-macos-test.json:$s" -need "build/desktop-setup-windows-test.json:$s" \
+            -need "build/desktop-setup-windows-arm64-test.json:$s" \
+            -need build/desktop-linux-test.json:setup::tests::progress_follows_the_two_steps_and_explains_failures
+          if [ -s build/desktop-join-test.json ]; then cat build/desktop-join-test.json >> build/all-test.json; fi
           # The Windows-only tests of the windows job (FR-21).
           if [ -s build/windows-test.json ]; then
             cat build/windows-test.json >> build/all-test.json

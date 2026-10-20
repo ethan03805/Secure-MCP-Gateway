@@ -34,7 +34,13 @@ fn no_gateway_secret_or_control_api_in_the_application() {
         }
         // A Windows checkout may have CRLF line ends.
         let src = std::fs::read_to_string(&path).unwrap().replace("\r\n", "\n");
-        let code = src.split("#[cfg(test)]\nmod tests").next().unwrap();
+        // The Windows security API module (setup.rs, the password files'
+        // DACL) is not the HTTP Authorization header this check is after.
+        let code = src
+            .split("#[cfg(test)]\nmod tests")
+            .next()
+            .unwrap()
+            .replace("Win32::Security::Authorization", "");
         // First-run setup checks whether a configuration file exists
         // (FR-20.8) and reads no file at all.
         let names_config = name == "setup.rs";

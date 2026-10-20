@@ -28,6 +28,34 @@ pub fn opens_approvals(action: &str) -> bool {
     action == OPEN_ACTION.0
 }
 
+/// The link a Windows toast opens when it is activated (FR-20.7): the
+/// Approvals deep link of FR-20.28.
+pub const APPROVALS_LINK: &str = "smcp://approvals";
+
+/// The Windows toast of an approval notification, as toast XML: the fixed
+/// title and body, no actions, input or reply field, no sound, and
+/// protocol activation of [`APPROVALS_LINK`]. Windows opens that link when
+/// the toast is clicked, also from the notification center after the
+/// application that raised it has quit; the link starts the application
+/// (the `.msi` registers the scheme), or reaches the running copy, which
+/// opens the console window at the Approvals view. A link keeps the toast
+/// free of a COM activator.
+pub fn toast_xml(title: &str, body: &str) -> String {
+    fn esc(s: &str) -> String {
+        s.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;")
+    }
+    format!(
+        "<toast activationType=\"protocol\" launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text></binding></visual><audio silent=\"true\"/></toast>",
+        esc(APPROVALS_LINK),
+        esc(title),
+        esc(body)
+    )
+}
+
 /// How many notifications may wait for a click at once; each waits on a
 /// thread of its own.
 pub const MAX_WAITING: usize = 4;
@@ -123,6 +151,29 @@ mod tests {
         assert!(held.len() <= MAX_WAITING);
         drop(held);
         assert!(Waiting::take().is_some());
+    }
+
+    #[test]
+    fn the_windows_toast_opens_the_approvals_link_and_has_no_action() {
+        claims::partial(&["FR-20.7", "SR-2.6-2"]);
+        let n = notice(3);
+        let xml = toast_xml(n.title, &n.body);
+        assert_eq!(
+            xml,
+            "<toast activationType=\"protocol\" launch=\"smcp://approvals\"><visual><binding template=\"ToastGeneric\">\
+             <text>Secure MCP Gateway</text><text>3 tool calls are waiting for approval. Open the console to review them.</text>\
+             </binding></visual><audio silent=\"true\"/></toast>"
+        );
+        for word in ["<actions", "<action", "<input", "arguments="] {
+            assert!(!xml.contains(word), "{word}");
+        }
+        // The link is one the application accepts and opens at G-13.
+        assert!(matches!(
+            crate::deeplink::parse(APPROVALS_LINK),
+            Some(crate::console::Page::Approvals)
+        ));
+        assert!(toast_xml("a<b", "\"x\" & 'y'")
+            .contains("<text>a&lt;b</text><text>&quot;x&quot; &amp; &apos;y&apos;</text>"));
     }
 
     #[test]
