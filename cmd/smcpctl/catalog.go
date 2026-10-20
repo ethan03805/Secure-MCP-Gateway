@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"unicode"
@@ -14,51 +16,134 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
 )
 
-const catalogUsage = `usage: smcpctl catalog <list|show|import> [flags]
+const catalogUsage = `usage: smcpctl catalog <command> [flags]
 
-Reads the IBM ContextForge catalog (mcp-catalog.yml). By default this is the
-catalog of the ContextForge release pinned in this Gateway release, checked
-against the release lock. An operator-supplied file needs both --catalog and
-the --sha256 you confirm. Nothing is fetched, installed or run.
+Browse the IBM ContextForge catalog and import local entries into the
+Library. Without --config, list, show and import --dry-run read the catalog
+of the ContextForge release pinned in this Gateway release, checked against
+the release lock; an operator-supplied file needs --catalog and the --sha256
+you confirm. With --config, they ask the running Gateway (control API) and
+show each entry's import state. Nothing is installed or run from catalog
+text.
 
   list                    every entry with its class (local, hosted or
                           unsupported) and the reason for unsupported ones
   show <id>               every field of one entry, its class, digest and
                           proposed artifact reference
-  import --dry-run <id>   print the draft packaging recipe (local entry) or
-                          draft hosted-package manifest (hosted entry), the
-                          provenance the catalog provides and what is missing
+  import --dry-run <id>   print the draft packaging recipe or hosted-manifest
+                          draft and what the catalog does not provide
+  import <id> --version V (--integrity I | --artifact-sha256 H)
+         --argv ARG ... --license L [--accept SHA256 | --decline]
+                          import a local entry through the running Gateway:
+                          it fetches the pinned artifact, probes it, shows
+                          the trust decision and, when you accept it, signs
+                          the package with the catalog import key and
+                          imports it disabled
+  decide <proposal> (--accept SHA256 | --decline)
+                          decide a waiting proposal (for example one
+                          started from the console)
+  status                  catalog source, release lock and the catalog
+                          import key (an Administrator enrolls its public
+                          key once with smcpctl trust add)
 
 Flags:
-  --catalog FILE                an operator-supplied catalog file (at most 4 MiB)
-  --sha256 HEX                  the SHA-256 you confirm for --catalog (required with it)
-  --release TAG                 ContextForge release of an operator file (import)
-  --version V                   exact artifact version of a local entry (import)
-  --artifact-sha256 HEX         artifact SHA-256 of a local entry (import)
-  --class CLASS                 list only local, hosted or unsupported entries (list)
-  --json                        JSON output (list, show; import always prints JSON)
+  --config FILE                 ask the running Gateway (status, decide and
+                                import without --dry-run always do)
+  --catalog FILE                an operator-supplied catalog file (offline)
+  --sha256 HEX                  the SHA-256 you confirm for --catalog
+  --class CLASS                 list only local, hosted or unsupported entries
+  --category C, --auth-type A, --query TEXT
+                                filter the list (with --config)
+  --json                        JSON output
+  --version V                   exact artifact version (import)
+  --artifact-sha256 HEX         artifact SHA-256 (import; PyPI wheel)
+  --integrity sha512-...        npm registry integrity (import)
+  --type npm|pypi, --package N  artifact type and package when the install
+                                text does not name them (import)
+  --argv ARG                    one launch argument, repeated in order (import)
+  --license SPDX                a license of the artifact, repeatable (import)
+  --risk-class C                moderate (default) or high (import)
+  --side-effect C               default side-effect class of its tools (import)
+  --accept SHA256               accept the decision whose text has this SHA-256
+  --decline                     decline the decision
 `
 
 func catalogCmd(args []string, out io.Writer) error {
-	if len(args) < 1 || (args[0] != "list" && args[0] != "show" && args[0] != "import") {
+	subs := []string{"list", "show", "import", "decide", "status"}
+	if len(args) < 1 || !slices.Contains(subs, args[0]) {
 		fmt.Fprint(out, catalogUsage)
-		return errors.New("catalog: subcommand list, show or import required")
+		return errors.New("catalog: subcommand list, show, import, decide or status required")
 	}
 	sub := args[0]
 	fs := flag.NewFlagSet("catalog "+sub, flag.ContinueOnError)
 	// Accepted and ignored: the commands were experimental in v1.2.
 	fs.Bool("experimental-contextforge", false, "no longer needed")
+	cfgPath := fs.String("config", "", "configuration file of the running Gateway")
 	file := fs.String("catalog", "", "operator-supplied ContextForge mcp-catalog.yml")
 	pin := fs.String("sha256", "", "SHA-256 the operator confirms for --catalog")
 	release := fs.String("release", "", "ContextForge release of an operator-supplied catalog")
 	version := fs.String("version", "", "exact artifact version (local entry)")
 	artifactSHA := fs.String("artifact-sha256", "", "artifact SHA-256 (local entry)")
+	integ := fs.String("integrity", "", "npm registry integrity (local entry)")
+	typ := fs.String("type", "", "artifact type")
+	pkg := fs.String("package", "", "artifact package name")
+	var argv, licenses multiFlag
+	fs.Var(&argv, "argv", "launch argument (repeat)")
+	fs.Var(&licenses, "license", "license (repeat)")
+	risk := fs.String("risk-class", "", "risk class")
+	side := fs.String("side-effect", "", "default side-effect class")
+	accept := fs.String("accept", "", "accept the decision with this SHA-256")
+	decline := fs.Bool("decline", false, "decline the decision")
 	class := fs.String("class", "", "list only this class")
+	category := fs.String("category", "", "list only this category")
+	auth := fs.String("auth-type", "", "list only this auth type")
+	query := fs.String("query", "", "search text")
 	asJSON := fs.Bool("json", false, "JSON output")
 	dryRun := fs.Bool("dry-run", false, "print the mapped draft only")
 	pos, err := parseArgs(fs, args[1:])
 	if err != nil {
 		return err
+	}
+	if *accept != "" && *decline {
+		return errors.New("catalog: --accept and --decline exclude each other")
+	}
+	online := *cfgPath != "" || sub == "status" || sub == "decide" || (sub == "import" && !*dryRun)
+	if online {
+		if *file != "" {
+			return errors.New("catalog: --catalog is for offline use; the running Gateway reads [contextforge] catalog_file")
+		}
+		if *cfgPath == "" {
+			*cfgPath = "smcp.toml"
+		}
+		c, err := catalogClient(*cfgPath)
+		if err != nil {
+			return err
+		}
+		switch sub {
+		case "status":
+			return catalogStatusAPI(c, out, *asJSON)
+		case "list":
+			return catalogListAPI(c, out, url.Values{"class": {*class}, "category": {*category}, "auth_type": {*auth}, "q": {*query}}, *asJSON)
+		case "show":
+			if len(pos) != 1 {
+				return errors.New("catalog show: exactly one entry ID is required")
+			}
+			return catalogShowAPI(c, out, pos[0])
+		case "decide":
+			if len(pos) != 1 || (*accept == "" && !*decline) {
+				return errors.New("catalog decide: give one proposal ID and --accept SHA256 or --decline")
+			}
+			return catalogDecide(c, out, pos[0], *accept, *decline)
+		}
+		if len(pos) != 1 {
+			return errors.New("catalog import: exactly one entry ID is required")
+		}
+		if *dryRun {
+			return catalogShowAPI(c, out, pos[0])
+		}
+		body := map[string]any{"version": *version, "artifact_sha256": *artifactSHA, "integrity": *integ, "artifact_type": *typ,
+			"package": *pkg, "argv": []string(argv), "licenses": []string(licenses), "risk_class": *risk, "side_effect": *side}
+		return catalogImportAPI(c, out, pos[0], body, *accept, *decline)
 	}
 	cat, err := loadCatalog(*file, *pin)
 	if err != nil {
@@ -76,9 +161,6 @@ func catalogCmd(args []string, out io.Writer) error {
 		}
 		return catalogShow(out, cat, pos[0], *asJSON)
 	default:
-		if !*dryRun {
-			return errors.New("catalog import: only --dry-run is available from the command line in this build")
-		}
 		if len(pos) != 1 {
 			return errors.New("catalog import: exactly one entry ID is required")
 		}

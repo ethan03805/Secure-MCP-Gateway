@@ -183,4 +183,13 @@ var ops = []op{
 	{Pattern: "POST /api/v1/packages/trust", Tag: "packages", Summary: "Enroll a trust anchor (minisign public key scoped to risk classes)", Doc: "packages.md"},
 	{Pattern: "DELETE /api/v1/packages/trust/{name}", Tag: "packages", Summary: "Remove a trust anchor", Doc: "packages.md"},
 	{Pattern: "POST /api/v1/packages/{id}/{rev}/retire", Tag: "packages", Summary: "Retire a revision (final)", Doc: "packages.md"},
+
+	// contextforge (E-36, planned v1.3.0)
+	{Pattern: "GET /api/v1/contextforge/status", Tag: "contextforge", Summary: "Catalog source, release lock, bundled setting and the catalog import key", Doc: "contextforge.md"},
+	{Pattern: "GET /api/v1/contextforge/catalog", Tag: "contextforge", Summary: "Catalog entries with class and import state; filter by class, category, auth type and text", Doc: "contextforge.md"},
+	{Pattern: "GET /api/v1/contextforge/catalog/{id}", Tag: "contextforge", Summary: "One catalog entry with every field and its import draft", Doc: "contextforge.md"},
+	{Pattern: "POST /api/v1/contextforge/catalog/{id}/import", Tag: "contextforge", Summary: "Start importing a local entry with the operator's pins; returns a proposal", Doc: "contextforge.md"},
+	{Pattern: "GET /api/v1/contextforge/proposals", Tag: "contextforge", Summary: "Import proposals of this run", Doc: "contextforge.md"},
+	{Pattern: "GET /api/v1/contextforge/proposals/{id}", Tag: "contextforge", Summary: "One proposal with its trust decision when ready", Doc: "contextforge.md"},
+	{Pattern: "POST /api/v1/contextforge/proposals/{id}/decision", Tag: "contextforge", Summary: "Accept or decline the trust decision; an accept signs and imports the package disabled", Doc: "contextforge.md"},
 }

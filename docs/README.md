@@ -82,6 +82,7 @@ Routes are on the loopback admin listener (default `https://127.0.0.1:8444`), au
 | [api/approvals.md](api/approvals.md) | `/api/v1/approvals*` |
 | [api/policy.md](api/policy.md) | `/api/v1/policy*` |
 | [api/packages.md](api/packages.md) | `/api/v1/packages*` |
+| [api/contextforge.md](api/contextforge.md) | `/api/v1/contextforge/*` (planned v1.3.0) |
 | [api/secrets.md](api/secrets.md) | `/api/v1/secrets*`, `/api/v1/secret-use-policy*` |
 | [api/runtime.md](api/runtime.md) | `/api/v1/runtime*` |
 | [api/egress.md](api/egress.md) | `/api/v1/egress*` |

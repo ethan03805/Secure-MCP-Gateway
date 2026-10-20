@@ -62,6 +62,9 @@ type Config struct {
 	Remote    Remote   `toml:"remote" json:"remote"`
 	UDS       UDS      `toml:"uds" json:"uds"` // UDS Harness Profile (uds.go)
 	Packages  Packages `toml:"packages" json:"packages"`
+	// ContextForge configures the ContextForge Connector (E-36,
+	// contextforge.go).
+	ContextForge ContextForge `toml:"contextforge" json:"contextforge"`
 
 	// Operations (E-21 export, E-22, E-23); see ops.go.
 	SchemaVersion int      `toml:"schema_version" json:"schema_version"`
@@ -710,6 +713,7 @@ func (c *Config) resolvePaths() {
 	c.Runtime.resolvePaths(c.Dir)
 	c.resolveOpsPaths(res)
 	res(&c.Packages.Library)
+	res(&c.ContextForge.CatalogFile)
 }
 
 // ResourceURI is the CP-41 resource indicator: the public URL of the MCP

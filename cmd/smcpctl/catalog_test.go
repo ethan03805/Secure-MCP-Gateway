@@ -39,10 +39,15 @@ func TestCatalogPinnedByDefault(t *testing.T) {
 	}
 }
 
-func TestCatalogImportOnlyDryRun(t *testing.T) {
+// Without --dry-run, import goes through the running Gateway.
+func TestCatalogImportNeedsGateway(t *testing.T) {
+	t.Chdir(t.TempDir())
 	_, stderr, code := runCatalog(t, "import", "deepwiki")
-	if code == 0 || !strings.Contains(stderr, "only --dry-run") {
+	if code == 0 || !strings.Contains(stderr, "smcp.toml") {
 		t.Fatalf("code %d stderr %q", code, stderr)
+	}
+	if _, stderr, code := runCatalog(t, "list", "--config", "x.toml", "--catalog", cfFixture); code == 0 || !strings.Contains(stderr, "offline") {
+		t.Fatalf("--catalog with --config: %d %q", code, stderr)
 	}
 }
 

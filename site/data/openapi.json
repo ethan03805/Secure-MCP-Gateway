@@ -2454,6 +2454,326 @@
     ]
    }
   },
+  "/api/v1/contextforge/catalog": {
+   "get": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "getContextforgeCatalog",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Catalog entries with class and import state; filter by class, category, auth type and text",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator",
+     "auditor"
+    ]
+   }
+  },
+  "/api/v1/contextforge/catalog/{id}": {
+   "get": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "getContextforgeCatalogId",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "One catalog entry with every field and its import draft",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator",
+     "auditor"
+    ]
+   }
+  },
+  "/api/v1/contextforge/catalog/{id}/import": {
+   "post": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "postContextforgeCatalogIdImport",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Start importing a local entry with the operator's pins; returns a proposal",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator"
+    ]
+   }
+  },
+  "/api/v1/contextforge/proposals": {
+   "get": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "getContextforgeProposals",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Import proposals of this run",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator",
+     "auditor"
+    ]
+   }
+  },
+  "/api/v1/contextforge/proposals/{id}": {
+   "get": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "getContextforgeProposalsId",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "One proposal with its trust decision when ready",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator",
+     "auditor"
+    ]
+   }
+  },
+  "/api/v1/contextforge/proposals/{id}/decision": {
+   "post": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "postContextforgeProposalsIdDecision",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Accept or decline the trust decision; an accept signs and imports the package disabled",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator"
+    ]
+   }
+  },
+  "/api/v1/contextforge/status": {
+   "get": {
+    "description": "Reference: docs/api/contextforge.md",
+    "operationId": "getContextforgeStatus",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "default": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Error"
+     }
+    },
+    "summary": "Catalog source, release lock, bundled setting and the catalog import key",
+    "tags": [
+     "contextforge"
+    ],
+    "x-smcp-roles": [
+     "administrator",
+     "operator",
+     "auditor"
+    ]
+   }
+  },
   "/api/v1/credentials/{client_id}/revoke": {
    "post": {
     "description": "Reference: docs/api/console.md",
@@ -7005,6 +7325,9 @@
   },
   {
    "name": "audit"
+  },
+  {
+   "name": "contextforge"
   },
   {
    "name": "control"

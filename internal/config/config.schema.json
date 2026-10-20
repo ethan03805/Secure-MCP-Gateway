@@ -494,6 +494,18 @@
         "rotation_overlap": { "$ref": "#/$defs/duration" }
       }
     },
+    "contextforge": {
+      "type": "object",
+      "additionalProperties": false,
+      "dependentRequired": { "catalog_file": ["catalog_sha256"], "catalog_sha256": ["catalog_file"] },
+      "properties": {
+        "bundled": { "type": "boolean" },
+        "catalog_file": { "type": "string", "minLength": 1 },
+        "catalog_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "npm_registry": { "type": "string", "pattern": "^https?://" },
+        "pypi_index": { "type": "string", "pattern": "^https?://" }
+      }
+    },
     "packages": {
       "type": "object",
       "additionalProperties": false,
