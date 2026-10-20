@@ -1,0 +1,46 @@
+{
+  "reviews": [
+    {
+      "package": "jinja2",
+      "identifier": "license",
+      "license": "BSD-3-Clause",
+      "reason": "Jinja2 3.1.6 declares its license only as the trove classifier 'License :: OSI Approved :: BSD License'; its LICENSE.txt is the BSD 3-Clause text (Pallets). syft records NOASSERTION. Reviewed 2026-10-20 for the ContextForge image and wheel SBOMs (FR-22.21)."
+    },
+    {
+      "package": "markdown-it-py",
+      "identifier": "license",
+      "license": "MIT",
+      "reason": "markdown-it-py 4.2.0 declares its license only as the trove classifier 'License :: OSI Approved :: MIT License'; its LICENSE is the MIT text. syft records NOASSERTION. Reviewed 2026-10-20 (FR-22.21)."
+    },
+    {
+      "package": "pygithub",
+      "identifier": "license",
+      "license": "LGPL-3.0-or-later",
+      "reason": "PyGithub 2.10.0 declares only the classifier 'GNU Library or Lesser General Public License (LGPL)'; its COPYING.LESSER and source headers grant LGPL version 3 or any later version. syft records NOASSERTION. Reviewed 2026-10-20 (FR-22.21)."
+    },
+    {
+      "package": "colorama",
+      "identifier": "license",
+      "license": "BSD-3-Clause",
+      "reason": "colorama 0.4.6 (Windows wheel set) declares only the classifier 'License :: OSI Approved :: BSD License'; its LICENSE.txt is the BSD 3-Clause text. Reviewed 2026-10-20 (FR-22.21)."
+    },
+    {
+      "package": "ANSICON",
+      "identifier": "license",
+      "license": "MPL-2.0",
+      "reason": "ansicon 1.89.0 (Windows wheel set) declares 'MPLv2.0' and the classifier 'Mozilla Public License 2.0 (MPL 2.0)'. syft reports the package twice without a value. Reviewed 2026-10-20 (FR-22.21)."
+    },
+    {
+      "package": "PyWin32",
+      "identifier": "license",
+      "license": "PSF-2.0",
+      "reason": "pywin32 312 (Windows wheel set) declares 'PSF' and the classifier 'Python Software Foundation License'; syft reports each of its distributions without a value. Reviewed 2026-10-20 (FR-22.21)."
+    },
+    {
+      "package": "Scintilla",
+      "identifier": "license",
+      "license": "HPND",
+      "reason": "Scintilla 4.4.6 is bundled in the pywin32 312 wheel (Pythonwin); its License.txt is the Historical Permission Notice and Disclaimer text by Neil Hodgson. Reviewed 2026-10-20 (FR-22.21)."
+    }
+  ]
+}

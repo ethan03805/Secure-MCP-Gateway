@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"aead.dev/minisign"
@@ -137,7 +138,7 @@ type Connector struct {
 	process  *bundle.Process // the managed-process form, when inst is one
 	instErr  error
 	verifier ImageVerifier
-	verified *bundle.Verification
+	verified atomic.Pointer[bundle.Verification]
 	platform string
 	instMu   sync.Mutex
 

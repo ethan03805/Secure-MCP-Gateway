@@ -24,16 +24,19 @@ const ReasonUnverified = "CONTEXTFORGE_UNVERIFIED"
 // (FR-22.19). The source-to-image binding it carries is journaled at each
 // start after a change of image (SR-3.2-2).
 type Verification struct {
-	Version        string    `json:"version"`
-	SourceTag      string    `json:"source_tag"`
-	SourceCommit   string    `json:"source_commit"`
-	Workflow       string    `json:"workflow"`
-	Issuer         string    `json:"issuer"`
-	IndexDigest    string    `json:"index_digest"`
-	Platform       string    `json:"platform"`
-	PlatformDigest string    `json:"platform_digest"`
-	SBOM           string    `json:"sbom"`
-	VerifiedAt     time.Time `json:"verified_at"`
+	Version        string `json:"version"`
+	SourceTag      string `json:"source_tag"`
+	SourceCommit   string `json:"source_commit"`
+	Workflow       string `json:"workflow"`
+	Issuer         string `json:"issuer"`
+	IndexDigest    string `json:"index_digest"`
+	Platform       string `json:"platform"`
+	PlatformDigest string `json:"platform_digest"`
+	// WheelPlatform is the wheel set's platform of the managed-process
+	// form, whose PlatformDigest is the wheel-set digest (FR-22.20).
+	WheelPlatform string    `json:"wheel_platform,omitempty"`
+	SBOM          string    `json:"sbom"`
+	VerifiedAt    time.Time `json:"verified_at"`
 }
 
 // Verifier checks the bundled image against the release lock: cosign's
@@ -144,8 +147,13 @@ func (v *Verification) Save(dir string) error {
 	return packaging.WriteJSON(filepath.Join(dir, "verified.json"), v, 0o600)
 }
 
-// Matches reports whether the record verified the lock's image for platform.
+// Matches reports whether the record verified the lock's image for
+// platform, or, for the managed-process form, its wheel set.
 func (v *Verification) Matches(r *contextforge.LockedRelease, platform string) bool {
+	if v != nil && platform == ManagedPlatform {
+		return v.Platform == platform && v.Version == r.Version && v.WheelPlatform != "" &&
+			v.PlatformDigest == r.WheelSetDigest(v.WheelPlatform) && v.Issuer == r.Signer.Issuer
+	}
 	return v != nil && v.Version == r.Version && v.IndexDigest == r.Image.IndexDigest && v.Platform == platform &&
 		v.PlatformDigest == r.Image.Platforms[platform] && v.Issuer == r.Signer.Issuer
 }

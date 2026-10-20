@@ -16,7 +16,7 @@ const RouteVia = "contextforge"
 func (c *Connector) setRoute(serverID, revision, virtualServer string) {
 	lock := contextforge.ReleaseLock().ContextForge
 	r := map[string]string{"via": RouteVia, "server_id": serverID, "revision": revision, "virtual_server": virtualServer,
-		"instance_version": lock.Version, "instance_digest": lock.Image.Platforms[c.platform]}
+		"instance_version": lock.Version, "instance_digest": c.instanceDigest()}
 	c.routeMu.Lock()
 	c.routes[serverID+"@"+revision] = r
 	c.routeMu.Unlock()
@@ -64,4 +64,14 @@ func serverClaim(ev *audit.Event) bool {
 		return true
 	}
 	return false
+}
+
+// instanceDigest is the digest of the bundled instance's verified
+// artifacts: the platform image digest, or the wheel-set digest of the
+// managed-process form (FR-22.11, FR-22.39).
+func (c *Connector) instanceDigest() string {
+	if v := c.verified.Load(); v != nil {
+		return v.PlatformDigest
+	}
+	return contextforge.ReleaseLock().ContextForge.Image.Platforms[c.platform]
 }

@@ -147,6 +147,21 @@ jobs:
           mkdir -p build/installers-pending
           mv build/installers/*.pkg build/installers-pending/
           ls -l build/installers build/installers-pending
+      # The ContextForge assets (FR-22.18, FR-22.21): the release lock and its
+      # minisign signature, the SBOMs of the pinned image and wheel sets,
+      # the ContextForge license and notice, the SPDX identifier check and
+      # the advisory check of the pinned version. GoReleaser lists them in
+      # the checksum file and uploads them (extra_files).
+      - name: Install cosign (ContextForge image SBOM)
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: ContextForge release assets (FR-22.18, FR-22.21)
+        env:
+          SMCP_RELEASE: "1"
+          SMCP_VERSION: ${{ github.ref_name }}
+          MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/contextforge-release-assets.sh build/contextforge | tee -a "$GITHUB_STEP_SUMMARY"
       - name: GoReleaser
         uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:

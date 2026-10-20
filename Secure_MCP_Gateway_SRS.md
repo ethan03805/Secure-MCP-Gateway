@@ -8779,7 +8779,7 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Verification Method | Test |
 | Verification Statement | Install the managed-process form from a wheel directory with networking blocked, from a directory with one wheel replaced, and with an extra unlisted wheel; confirm the first installs and the others are refused naming the wheel. |
 | Source | OWNER (managed process elsewhere; version pinned and verified); SEC 3.6; CF: PyPI package `mcp-contextforge-gateway` |
-| Rationale | Without a container engine ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image. Hosts with Podman or Docker run the verified image instead (FR-22.25). |
+| Rationale | Without a container engine ContextForge runs as a Python process; hash pinning gives it the same supply-chain guarantee as the image. Hosts with Podman or Docker run the verified image instead (FR-22.25). The wheel set is pinned per platform for CPython 3.12 (linux/amd64, linux/arm64, darwin/arm64, windows/amd64; `scripts/contextforge-wheels.py` derives it from the release's `uv.lock`); Windows on arm64 installs the windows/amd64 set under an x64 interpreter, because four dependencies of v1.0.11 (brotli, cryptography, httptools, jq) publish no win_arm64 wheel (2026-10-20). |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.21 — License and SBOM records
