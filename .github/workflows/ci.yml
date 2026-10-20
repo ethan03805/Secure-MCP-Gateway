@@ -1,10 +1,14 @@
 # Continuous integration. The job names srs, go, lint, site, security,
 # linux-integration and console are required status checks on main;
-# renaming one breaks branch protection, so keep them stable. Do not add
-# paths-ignore to this workflow: a required check that never reports
-# blocks the pull request. Pull requests that change only documentation
-# skip heavy jobs through the changes job instead (docs/ci.md); a new
-# heavy job gets the same needs: changes and if: as console.
+# renaming one breaks branch protection, so keep them stable (go,
+# linux-integration and console carry a " (draft)" suffix on draft pull
+# requests only, on purpose). Do not add paths-ignore to this workflow: a
+# required check that never reports blocks the pull request. Pull requests
+# that change only documentation skip heavy jobs through the changes job
+# instead (docs/ci.md); a new heavy job gets the same needs: and if: as
+# hostile. Pull request runs are staged: the heavy jobs run only after srs
+# and lint pass, and not at all on drafts (docs/ci.md, "Staged pull request
+# runs and draft pull requests").
 #
 # Triggers: pull requests, pushes to main, pushes of release tags (v*) and
 # workflow_dispatch. The dispatch trigger exists because commits pushed with
@@ -21,6 +25,7 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
     tags: ["v*"]
@@ -31,7 +36,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
 env:
   GO_VERSION: "1.26.x"
@@ -151,9 +156,9 @@ jobs:
           fi
 
   go:
-    name: go
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.go != 'skip') }}
+    name: ${{ github.event.pull_request.draft && 'go (draft)' || 'go' }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.go != 'skip') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -327,9 +332,9 @@ jobs:
           extra_args: --results=verified,unknown
 
   linux-integration:
-    name: linux-integration
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    name: ${{ github.event.pull_request.draft && 'linux-integration (draft)' || 'linux-integration' }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -386,8 +391,8 @@ jobs:
   # changes.outputs.install-os lists it (docs/ci.md, "macOS runners").
   install-standalone:
     name: install-standalone (${{ matrix.os }})
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     strategy:
       fail-fast: false
       matrix:
@@ -438,8 +443,8 @@ jobs:
   # "macOS runners").
   install-guide:
     name: install-guide (${{ matrix.os }})
-    needs: changes
-    if: ${{ !cancelled() }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) }}
     strategy:
       fail-fast: false
       matrix:
@@ -482,8 +487,8 @@ jobs:
   # step summary and never fails the job: it measures the port.
   windows:
     name: windows
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: windows-latest
     timeout-minutes: 45
     env:
@@ -615,8 +620,8 @@ jobs:
   # `reqreport cargo`) go to the status job.
   desktop:
     name: desktop (${{ matrix.platform }})
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.desktop == 'true') }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.desktop == 'true') }}
     strategy:
       fail-fast: false
       matrix:
@@ -729,8 +734,8 @@ jobs:
   # (docs/ci.md, "macOS runners").
   installers:
     name: installers
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     uses: ./.github/workflows/installers.yml
     with:
       macos-smoke: ${{ needs.changes.result != 'success' || needs.changes.outputs.macos-pkg != 'false' }}
@@ -744,9 +749,9 @@ jobs:
   # per browser. The requirement claims of the run (build/console-*-test.json,
   # FR-8.34) go to the status job.
   console:
-    name: console
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    name: ${{ github.event.pull_request.draft && 'console (draft)' || 'console' }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     # The graph mirror for the G-14 investigation test (console/e2e/
@@ -999,8 +1004,8 @@ jobs:
 
   graph:
     name: graph
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
@@ -1078,8 +1083,8 @@ jobs:
   # build/hostile.json; the job still succeeds. Not a required check.
   hostile:
     name: hostile
-    needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    needs: [changes, srs, lint]
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:

@@ -27,7 +27,23 @@ A full run takes 25 to 35 minutes, almost all of it in `console` (the Playwright
 
 A job skipped by its `if:` reports the conclusion "skipped", which satisfies a required check, so a docs-only pull request can merge when the jobs that ran pass.
 
-The rule applies to `pull_request` runs only. Pushes to main (whose run publishes `status.json` to the site-data branch and must be complete), release tags and `workflow_dispatch` runs always run every job. If the `changes` job fails or cannot classify the files (no merge commit, an empty diff), every job runs.
+## Staged pull request runs and draft pull requests
+
+Every push to a pull request starts about 25 jobs, and the account runs a limited number of jobs at once, so with many open pull requests runs queue for hours. Pull request runs are therefore staged:
+
+1. **Cheap jobs first.** `changes`, `srs` (seconds), `lint` (about 1 minute), `site` and `security` (each under 3 minutes) start at once.
+2. **Everything else after `srs` and `lint` pass.** `go`, `linux-integration`, `install-standalone`, `install-guide`, `windows`, `desktop`, `installers`, `console`, `graph` and `hostile` have `needs: [changes, srs, lint]` and, on pull requests, run only when `srs` and `lint` succeeded. A pull request whose SRS is stale or whose lint fails costs two short jobs instead of 25; it stays blocked by the failed required check (`srs` or `lint`), and its skipped heavy jobs run again with the fix. `go` is not a gate: it takes 7 to 9 minutes (light or full), against about 1 minute for `lint`.
+3. **Draft pull requests run only the cheap jobs.** The heavy jobs run when the pull request is marked ready for review (the workflow listens to `ready_for_review`) and on every push after that. **Open work in progress as a draft** (`gh pr create --draft`), push as often as needed, and mark it ready (`gh pr ready`) when it should be tested in full and merged. On a draft, the required jobs `go`, `linux-integration` and `console` report as `go (draft)`, `linux-integration (draft)` and `console (draft)`: a skipped check named `console` on the head commit would satisfy branch protection when the pull request is marked ready, before the ready run has created its own `console` check. With the other names the required checks stay "expected" until the ready run reports them.
+
+When the cheap jobs pass and the files need it, a heavy job runs exactly as before: a required heavy job is never skipped on a ready pull request whose `srs` and `lint` passed, except by the `changes` rules above.
+
+Pushes to main, release tags and `workflow_dispatch` runs are not staged in effect: the heavy jobs do not check `srs` and `lint` there, so a lint failure on main does not hide the other results. They still list `srs` and `lint` under `needs`, which GitHub Actions cannot make conditional, so they start once `srs` and `lint` finish (about a minute after `changes`, well inside the 25 to 35 minutes of `console`).
+
+The concurrency group `ci-<pull request number>` (or `ci-<ref>`) cancels the previous run of a pull request, including a draft run when the pull request is marked ready, and of a dispatched run on a branch (the regenerate workflow dispatches CI on the pull request branch). Runs on main and on tags are never cancelled. The `regenerate` workflow has its own group per pull request with `cancel-in-progress`; `installers.yml` and `installers-macos-smoke.yml` are called from CI and belong to its run; `agents.yml` does not run on pull requests.
+
+## Other triggers
+
+The `changes` rule applies to `pull_request` runs only. Pushes to main (whose run publishes `status.json` to the site-data branch and must be complete), release tags and `workflow_dispatch` runs always run every job. If the `changes` job fails or cannot classify the files (no merge commit, an empty diff), every job runs.
 
 ## macOS runners
 
@@ -54,6 +70,6 @@ A `pull_request` run checks out the merge commit of the pull request into the cu
 
 - Do not add `paths-ignore` or `paths` to a workflow that hosts a required check: a required check that never reports blocks the pull request.
 - Do not rename a required job.
-- A new heavy job gets `needs: changes` and the same `if:` as `console`: `!cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true')`. The first part makes the job run when `changes` itself failed.
+- A new heavy job gets `needs: [changes, srs, lint]` and the same `if:` as `hostile`: `!cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && needs.srs.result == 'success' && needs.lint.result == 'success')) && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true')`. The middle part stages pull request runs and skips drafts; the last part makes the job run when `changes` itself failed. A new required heavy job also gets the draft name of `console`.
 - A new macOS job names its image (never `macos-latest`), sets `timeout-minutes`, is gated on pull requests by a `changes` output as in "macOS runners", and does not block a release.
 - When a Go test or tool starts reading a file that is classified as light or skipped (for example a file under `site/` outside `site/data/`), update the `case` patterns in the `changes` job and the table above.

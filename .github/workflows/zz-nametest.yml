@@ -1,0 +1,14 @@
+# TEMPORARY: checks that a job skipped by its if: evaluates its name expression. Removed before merge.
+name: nametest
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+jobs:
+  a:
+    name: ${{ github.event.pull_request.draft && 'nametest (draft)' || 'nametest' }}
+    if: false
+    runs-on: ubuntu-24.04
+    steps:
+      - run: "true"
