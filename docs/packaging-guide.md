@@ -200,6 +200,7 @@ writes `<library>/revocations/<id>@<revision>.json` and its signature. Any enrol
 | `PROVENANCE_BINDING` | verify, import | The statement names another artifact, source or package (SR-3.2-1) |
 | `REMOTE_BACKEND_UNSUPPORTED` | verify, import | The entrypoint is a network URL (FR-14.4) |
 | `UNPINNED_LAUNCH` | verify, import, start | The launch vector runs a package runner, installer or shell (SR-3.6-1) |
+| `SHELL_LAUNCH` | enable, start (Windows) | The executable is `cmd.exe`, `powershell.exe`, `pwsh.exe` or a `.bat` or `.cmd` file (FR-21.11, SR-4.8-2) |
 | `KEY_ON_COMMAND_LINE` | sign, keygen, revoke | A secret key or passphrase was given as an argument |
 | `REVOCATION_INVALID` | scan | A revocation entry is malformed or unsigned |
 | `REVOKED` | import | The revision has been revoked |

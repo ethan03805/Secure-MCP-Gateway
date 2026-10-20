@@ -44,16 +44,28 @@ Each feature that is not ported refuses with an error naming the FR-21 requireme
 | Where | Behavior on Windows | Until |
 |---|---|---|
 | `keys.CheckPrivate` (called by `app.Start`) | `smcpd` refuses to start: file modes do not protect the CA, listener and evidence keys or the operator token, and their DACLs are not checked | FR-21.5 DACL check and FR-21.10 DPAPI |
-| `pipeline.SubprocessLauncher` | refuses to start any server instance (also the probe of `smcpctl package build`) | FR-21.11 launch rules (quoting, interpreter refusal, SR-4.8-2) and FR-21.12 Job Object |
 | `edge.ListenUDS` | refuses to listen, so no AF_UNIX socket is created | FR-21.8 named pipe and FR-21.9 SID mapping |
 | `profile.Resolve` | `profile = "enforced"` fails; `auto` resolves to Standalone, label "not enforced", installation mode `windows-user` (the machine-mode service reports `windows-machine`). Inside WSL every mode, `enforced` included, resolves to Standalone with mode `wsl2` | permanent (SR-4-2) |
 | `sandbox.FromConfig` (unchanged) | `[runtime] sandbox = "podman"` fails the essential `os` check | permanent |
 
 On Linux and macOS behavior is unchanged: the new `_unix.go` and `!windows` files contain the code that was there before.
 
+## Backend launch and Job Objects (FR-21.11, FR-21.12)
+
+Since 2026-10-19 `pipeline.SubprocessLauncher` starts backends on Windows through `internal/winsandbox`, so the launch gate above is lifted:
+
+- The process is created with `CreateProcess` from the absolute executable path, with the argument vector joined by the Microsoft C runtime quoting rules (`windows.ComposeCommandLine`). No shell is involved, so `&`, `|` and `%PATH%` reach the backend unchanged.
+- The process is a member of its own Job Object from creation: the job is passed in `PROC_THREAD_ATTRIBUTE_JOB_LIST`, and no `AssignProcessToJobObject` call is made. The child inherits only its three standard stream handles (`PROC_THREAD_ATTRIBUTE_HANDLE_LIST`).
+- The Job Object has kill-on-close, a per-process and a whole-job memory limit, an active-process limit and a hard CPU rate cap, all from `[[runtime.server]]`, then the manifest's `capabilities.resources`, then `[runtime]` (CP-24 by default: 512 MiB, 1 CPU, 128 processes). Breakaway is not allowed, and the user-interface restrictions (desktop, clipboard, global atoms, system parameters) are set. The backend is a console program started without a window, so Windows adds a console host (`conhost.exe`) to the job; measured on `windows-latest`, it is listed in the job but not counted against the process limit.
+- When the job reports a broken memory or process limit, the whole instance is terminated and a line naming the limit is added to its diagnostic output, as a cgroup limit ends the instance in the Enforced profile.
+- `Close` closes standard input, waits, and then terminates the Job Object (Windows has no SIGTERM for a backend). Closing the job also ends any process the backend left behind; if `smcpd` itself ends, however it ends, the kernel closes the job handle and kill-on-close ends every backend process.
+- `cmd.exe`, `powershell.exe`, `pwsh.exe` and `.bat` or `.cmd` files are refused at enablement (reason `SHELL_LAUNCH`) and again at launch (SR-4.8-2). The check reads Windows path rules on every platform: case is ignored, trailing dots and spaces are stripped, and alternate data streams are refused. A renamed copy of an interpreter is not recognized by name.
+
+These run in the per-user mode too; they give the macOS Standalone posture plus resource limits, not confinement, and the label stays "not enforced" (SR-4-2).
+
 ## Continuous integration
 
-The job `windows` in `.github/workflows/ci.yml` runs on `windows-latest` for every pull request that changes more than documentation (the `changes` gate of [ci.md](ci.md)). It is not a required check. It builds every package for `windows/amd64` and `windows/arm64` with `CGO_ENABLED=0`, runs `go vet`, runs the unit tests of the packages in `WINDOWS_TEST_PACKAGES` (the job fails if one fails), and then runs every package once more without failing the job, writing the per-package result to the step summary as the measure of the port. The package list and the reason each other package is excluded are in the workflow. It also runs the `TestWindows*` tests of `internal/keys`, `internal/pipeline` and `internal/edge`, which check the fail-closed gates above.
+The job `windows` in `.github/workflows/ci.yml` runs on `windows-latest` for every pull request that changes more than documentation (the `changes` gate of [ci.md](ci.md)). It is not a required check. It builds every package for `windows/amd64` and `windows/arm64` with `CGO_ENABLED=0`, runs `go vet`, runs the unit tests of the packages in `WINDOWS_TEST_PACKAGES` (the job fails if one fails), and then runs every package once more without failing the job, writing the per-package result to the step summary as the measure of the port. The package list and the reason each other package is excluded are in the workflow. It also runs the `TestWindows*` tests of `internal/keys`, `internal/pipeline` and `internal/edge`, which check the fail-closed gates above, and the Windows sandbox tests (`internal/winsandbox`, the Windows launch tests of `internal/pipeline` and `internal/library`, and the HF-20 and HF-21 fixtures of `internal/hostile` against the Job Object launcher), whose requirement claims the `status` job merges from `build/windows-sandbox-test.json`.
 
 ### First Windows test run (windows-latest, 2026-10-19)
 

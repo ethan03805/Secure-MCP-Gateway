@@ -18,6 +18,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
 	"github.com/ethan03805/secure-mcp-gateway/internal/pipeline"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
 
 var aliasRE = regexp.MustCompile(`^[a-z0-9]{1,16}$`)
@@ -177,6 +178,9 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 		return sc, err
 	}
 	if err := pipeline.CheckLaunchSpec(spec); err != nil {
+		if errors.Is(err, winsandbox.ErrShellLaunch) {
+			return sc, errf(packaging.ReasonShellLaunch, "%v", err)
+		}
 		return sc, errf(packaging.ReasonUnpinnedLaunch, "%v", err)
 	}
 	rt.mu.Lock()
@@ -188,7 +192,8 @@ func (rt *Runtime) resolve(sc config.Server, l pipeline.Launcher) (config.Server
 	}
 	return config.Server{Alias: sc.Alias, Command: spec.Command, Args: spec.Args, Env: spec.Env, SecretEnv: sc.SecretEnv, Dir: spec.Dir,
 		RiskClasses: sc.RiskClasses, Package: sc.Package, PackageSHA256: sc.PackageSHA256, Slots: sc.Slots,
-		Runtime: spec.Runtime, ArtifactRoot: spec.ArtifactRoot, Roots: roots}, nil
+		Runtime: spec.Runtime, ArtifactRoot: spec.ArtifactRoot, Roots: roots,
+		MemoryBytes: spec.Limits.MemoryBytes, CPUs: spec.Limits.CPUs, Pids: spec.Limits.Processes}, nil
 }
 
 // Resolve returns the launch configuration of a packaged [[server]] entry

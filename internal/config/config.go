@@ -293,6 +293,11 @@ type Server struct {
 	Runtime      string     `toml:"-" json:"-"`
 	ArtifactRoot string     `toml:"-" json:"-"`
 	Roots        []SlotRoot `toml:"-" json:"-"`
+	// Resources are the manifest's declared resource limits (memory in
+	// bytes, CPUs, processes), zero when none; also set by the library.
+	MemoryBytes int64   `toml:"-" json:"-"`
+	CPUs        float64 `toml:"-" json:"-"`
+	Pids        int     `toml:"-" json:"-"`
 }
 
 // SlotRoot is one manifest-declared filesystem slot bound to a host path;

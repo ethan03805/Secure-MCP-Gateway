@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/policy"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
 
 type fakeReq struct {
@@ -169,6 +172,47 @@ func TestCheckLaunchSpec(t *testing.T) {
 		if err := CheckLaunchSpec(s); err != nil {
 			t.Errorf("%v refused: %v", s, err)
 		}
+	}
+}
+
+// TestCheckLaunchSpecWindowsRules: with the Windows launch rules in force,
+// CheckLaunchSpec refuses command interpreters and batch files with
+// winsandbox.ErrShellLaunch (FR-21.11, SR-4.8-2); the rules do not apply on
+// other platforms.
+func TestCheckLaunchSpecWindowsRules(t *testing.T) {
+	reqtest.Partial(t, "FR-21.11", "SR-4.8-2")
+	sep := string(filepath.Separator)
+	abs := func(p string) string { return filepath.Join(sep, "srv", p) }
+	if runtime.GOOS == "windows" {
+		abs = func(p string) string { return filepath.Join(`C:\srv`, p) }
+	}
+	defer func(g string) { launchGOOS = g }(launchGOOS)
+	for _, goos := range []string{"windows", "linux"} {
+		launchGOOS = goos
+		for _, cmd := range []string{"run.bat", "run.CMD", "cmd.exe", "powershell.exe", "pwsh.exe", "run.bat."} {
+			err := CheckLaunchSpec(ServerSpec{Command: abs(cmd)})
+			if goos == "windows" && !errors.Is(err, winsandbox.ErrShellLaunch) {
+				t.Errorf("windows: %s: %v, want ErrShellLaunch", cmd, err)
+			}
+			if goos != "windows" && err != nil {
+				t.Errorf("%s: %s refused: %v", goos, cmd, err)
+			}
+		}
+		if err := CheckLaunchSpec(ServerSpec{Command: abs("server.exe"), Args: []string{"&", "|", "%PATH%"}}); err != nil {
+			t.Errorf("%s: server.exe refused: %v", goos, err)
+		}
+	}
+}
+
+// TestLimitsForDefaults: a zero limit takes the CP-24 value.
+func TestLimitsForDefaults(t *testing.T) {
+	reqtest.Partial(t, "FR-21.12")
+	if got := (SubprocessLauncher{}).LimitsFor(ServerSpec{}); got != DefaultResourceLimits {
+		t.Fatalf("nil Limits: %+v", got)
+	}
+	l := SubprocessLauncher{Limits: func(ServerSpec) ResourceLimits { return ResourceLimits{Processes: 4} }}
+	if got := l.LimitsFor(ServerSpec{}); got != (ResourceLimits{MemoryBytes: 512 << 20, CPUs: 1, Processes: 4}) {
+		t.Fatalf("partial Limits: %+v", got)
 	}
 }
 

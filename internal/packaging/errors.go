@@ -40,6 +40,7 @@ const (
 	ReasonProvenanceBinding  = "PROVENANCE_BINDING"      // SR-3.2-1
 	ReasonRemoteBackend      = "REMOTE_BACKEND_UNSUPPORTED"
 	ReasonUnpinnedLaunch     = "UNPINNED_LAUNCH" // SR-3.6-1
+	ReasonShellLaunch        = "SHELL_LAUNCH"    // FR-21.11, SR-4.8-2
 	ReasonKeyOnCommandLine   = "KEY_ON_COMMAND_LINE"
 	ReasonRevocationInvalid  = "REVOCATION_INVALID" // FR-14.12
 )

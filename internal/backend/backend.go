@@ -498,7 +498,8 @@ const envelopeBytes = 64 << 10
 
 func (r *Registry) launch(ctx context.Context, sc config.Server) (*Server, error) {
 	spec := pipeline.ServerSpec{Alias: sc.Alias, Command: sc.Command, Args: sc.Args, Dir: sc.Dir, RiskClasses: sc.RiskClasses, HighRisk: sc.HighRisk(),
-		Runtime: sc.Runtime, ArtifactRoot: sc.ArtifactRoot, Roots: SpecRoots(sc), URL: sc.URL, CAFile: sc.CAFile}
+		Runtime: sc.Runtime, ArtifactRoot: sc.ArtifactRoot, Roots: SpecRoots(sc), URL: sc.URL, CAFile: sc.CAFile,
+		Limits: pipeline.ResourceLimits{MemoryBytes: sc.MemoryBytes, CPUs: sc.CPUs, Processes: sc.Pids}}
 	if spec.URL != "" {
 		// FR-5.28: a server reached over Streamable HTTP runs outside the
 		// Gateway's sandbox in every profile, so a high-risk class is

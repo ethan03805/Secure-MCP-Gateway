@@ -8,11 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
+
+	"github.com/ethan03805/secure-mcp-gateway/internal/winsandbox"
 )
 
 // ServerSpec is what a Launcher needs to start one backend server
@@ -65,6 +67,11 @@ type ServerSpec struct {
 	// (CP-08 plus the envelope allowance); a transport that frames messages
 	// itself applies it while reading.
 	MaxMessageBytes int
+	// Limits are the resource limits the verified manifest declares
+	// (capabilities.resources), zero when it declares none or the server
+	// has no manifest. A launcher applies them where the configuration sets
+	// no per-server value.
+	Limits ResourceLimits
 }
 
 // ResultTooLargeCode and ResultTooLargeMessage mark the error response that
@@ -129,13 +136,19 @@ var resolverCommands = []string{
 	"poetry", "deno", "go", "cargo", "gem", "bundle", "composer", "dotnet",
 }
 
+// launchGOOS is the platform whose launch rules CheckLaunchSpec applies;
+// tests change it.
+var launchGOOS = runtime.GOOS
+
 // ErrUnpinnedLaunch is returned by CheckLaunchSpec.
 var ErrUnpinnedLaunch = errors.New("launch specification is not a pinned local artifact (SR-3.6-1)")
 
 // CheckLaunchSpec refuses launch specifications that resolve or install
 // packages at run time: a command that is not an absolute path (PATH lookup
 // can change what runs), a package runner or installer, an interpreter
-// running pip, and a container run without an image digest. It does not
+// running pip, and a container run without an image digest. On Windows it
+// also refuses a command interpreter or batch file (winsandbox.ErrShellLaunch,
+// FR-21.11, SR-4.8-2). It does not
 // prove the artifact is content-addressed; signed packages (E-13) do.
 func CheckLaunchSpec(spec ServerSpec) error {
 	if spec.URL != "" {
@@ -143,6 +156,11 @@ func CheckLaunchSpec(spec ServerSpec) error {
 	}
 	if !filepath.IsAbs(spec.Command) {
 		return fmt.Errorf("%w: command %q must be an absolute path", ErrUnpinnedLaunch, spec.Command)
+	}
+	if launchGOOS == "windows" {
+		if err := winsandbox.CheckCommand(spec.Command); err != nil {
+			return err
+		}
 	}
 	base := strings.TrimSuffix(strings.ToLower(filepath.Base(spec.Command)), ".exe")
 	if slices.Contains(resolverCommands, base) {
@@ -169,14 +187,55 @@ func CheckLaunchSpec(spec ServerSpec) error {
 	return nil
 }
 
+// SubprocessSupported reports whether SubprocessLauncher can start server
+// instances on this platform: nil on Linux, macOS and, since the FR-21.11
+// launcher (launch_windows.go), Windows.
+func SubprocessSupported() error { return nil }
+
 // SubprocessLauncher runs servers as plain child processes with a minimal
-// environment. It provides no confinement: the standalone profile.
+// environment. It provides no confinement: the standalone profile. On
+// Windows each instance runs in its own Job Object with the Limits below
+// (FR-21.11, FR-21.12); elsewhere Limits is not applied.
 type SubprocessLauncher struct {
 	// TerminateAfter is how long Close waits after closing stdin before
 	// signalling (default 5s).
 	TerminateAfter time.Duration
 	// StderrBytes bounds the retained diagnostic output (default 1 MiB, CP-37).
 	StderrBytes int
+	// Limits returns the resource limits of one instance from the
+	// configuration and the spec (CP-24 or the manifest). nil, or a zero
+	// field, takes DefaultResourceLimits.
+	Limits func(spec ServerSpec) ResourceLimits
+}
+
+// ResourceLimits are the per-instance resource limits (CP-24).
+type ResourceLimits struct {
+	MemoryBytes int64
+	CPUs        float64
+	Processes   int
+}
+
+// DefaultResourceLimits is the CP-24 instance budget: 512 MiB, 1 CPU and
+// 128 processes.
+var DefaultResourceLimits = ResourceLimits{MemoryBytes: 512 << 20, CPUs: 1, Processes: 128}
+
+// LimitsFor returns the limits of one instance with the CP-24 defaults
+// applied to every field Limits leaves zero.
+func (l SubprocessLauncher) LimitsFor(spec ServerSpec) ResourceLimits {
+	var r ResourceLimits
+	if l.Limits != nil {
+		r = l.Limits(spec)
+	}
+	if r.MemoryBytes <= 0 {
+		r.MemoryBytes = DefaultResourceLimits.MemoryBytes
+	}
+	if r.CPUs <= 0 {
+		r.CPUs = DefaultResourceLimits.CPUs
+	}
+	if r.Processes <= 0 {
+		r.Processes = DefaultResourceLimits.Processes
+	}
+	return r
 }
 
 // Name implements Launcher.
@@ -185,11 +244,23 @@ func (SubprocessLauncher) Name() string { return "subprocess" }
 // Confined implements Launcher.
 func (SubprocessLauncher) Confined() bool { return false }
 
+// child is a started server process.
+type child interface {
+	// Wait waits for the process to exit; an unsuccessful exit status is
+	// an *exec.ExitError.
+	Wait() error
+	// Terminate asks the process to stop (SIGTERM); it fails where that is
+	// not possible.
+	Terminate() error
+	// Kill ends the process (and on Windows every process of its Job
+	// Object).
+	Kill() error
+	// Release frees what the child holds after it exited or was killed.
+	Release()
+}
+
 // Launch implements Launcher.
 func (l SubprocessLauncher) Launch(_ context.Context, spec ServerSpec) (Process, error) {
-	if err := subprocessSupported(); err != nil {
-		return nil, err
-	}
 	if err := CheckLaunchSpec(spec); err != nil {
 		return nil, err
 	}
@@ -199,14 +270,11 @@ func (l SubprocessLauncher) Launch(_ context.Context, spec ServerSpec) (Process,
 	if l.StderrBytes <= 0 {
 		l.StderrBytes = 1 << 20
 	}
-	cmd := exec.Command(spec.Command, spec.Args...)
 	env := make([]string, 0, len(spec.Env))
 	for k, v := range spec.Env {
 		env = append(env, k+"="+v)
 	}
 	slices.Sort(env)
-	cmd.Env = env
-	cmd.Dir = spec.Dir
 	stdoutR, stdoutW, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -218,8 +286,8 @@ func (l SubprocessLauncher) Launch(_ context.Context, spec ServerSpec) (Process,
 		return nil, err
 	}
 	rb := &Ring{Max: l.StderrBytes}
-	cmd.Stdout, cmd.Stdin, cmd.Stderr = stdoutW, stdinR, rb
-	if err := cmd.Start(); err != nil {
+	c, err := startChild(l, spec, env, stdinR, stdoutW, rb)
+	if err != nil {
 		for _, f := range []*os.File{stdoutR, stdoutW, stdinR, stdinW} {
 			f.Close()
 		}
@@ -228,16 +296,16 @@ func (l SubprocessLauncher) Launch(_ context.Context, spec ServerSpec) (Process,
 	// The child holds its own copies; close the parent's ends it does not use.
 	stdoutW.Close()
 	stdinR.Close()
-	p := &subprocess{cmd: cmd, stdout: stdoutR, stdin: stdinW, stderr: rb, after: l.TerminateAfter, done: make(chan struct{})}
+	p := &subprocess{child: c, stdout: stdoutR, stdin: stdinW, stderr: rb, after: l.TerminateAfter, done: make(chan struct{})}
 	go func() {
-		p.waitErr = cmd.Wait()
+		p.waitErr = c.Wait()
 		close(p.done)
 	}()
 	return p, nil
 }
 
 type subprocess struct {
-	cmd     *exec.Cmd
+	child   child
 	stdout  *os.File
 	stdin   *os.File
 	stderr  *Ring
@@ -254,6 +322,9 @@ func (p *subprocess) Stderr() string              { return p.stderr.Tail() }
 
 // Close closes stdin, waits for exit, then sends SIGTERM and finally
 // SIGKILL (the stdio shutdown sequence of the MCP specification, FR-5.27).
+// On Windows, where no SIGTERM exists, the second step is skipped and the
+// kill terminates the instance's Job Object; closing the Job Object at the
+// end also ends any process the server left behind.
 func (p *subprocess) Close() error {
 	p.once.Do(func() {
 		p.stdin.Close()
@@ -266,13 +337,14 @@ func (p *subprocess) Close() error {
 			}
 		}
 		if !wait(p.after) {
-			if p.cmd.Process.Signal(syscall.SIGTERM) != nil || !wait(p.after) {
-				_ = p.cmd.Process.Kill()
+			if p.child.Terminate() != nil || !wait(p.after) {
+				_ = p.child.Kill()
 				if !wait(p.after) {
 					p.err = errors.New("server process did not exit")
 				}
 			}
 		}
+		p.child.Release()
 		p.stdout.Close()
 		if p.err == nil {
 			var ee *exec.ExitError

@@ -213,9 +213,9 @@ func Start(ctx context.Context, cfg *config.Config, o Options) (a *App, err erro
 	}
 
 	if o.Launcher == nil {
-		// Command servers as subprocesses, url servers over Streamable
-		// HTTP (FR-5.28).
-		o.Launcher = southbound.Wrap(pipeline.SubprocessLauncher{})
+		// Command servers as subprocesses (on Windows in Job Objects with the
+		// CP-24 limits, FR-21.12), url servers over Streamable HTTP (FR-5.28).
+		o.Launcher = southbound.Wrap(pipeline.SubprocessLauncher{Limits: RuntimeLimits(cfg.Runtime)})
 	}
 	if a.Egress, err = egress.FromConfig(cfg, a.Evidence, o.Log); err != nil {
 		return a, fmt.Errorf("egress broker: %w", err)

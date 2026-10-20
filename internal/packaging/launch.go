@@ -88,6 +88,8 @@ func ResolveLaunch(in LaunchInput) (pipeline.ServerSpec, error) {
 	}
 	oci := m.Launch.Runtime == "oci"
 	spec.Runtime = m.Launch.Runtime
+	spec.Limits = pipeline.ResourceLimits{MemoryBytes: int64(m.Capabilities.Resources.MemoryMiB) << 20,
+		CPUs: m.Capabilities.Resources.CPUs, Processes: m.Capabilities.Resources.Pids}
 	if !oci {
 		spec.ArtifactRoot = in.Root
 	}
