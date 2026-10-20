@@ -104,6 +104,9 @@ type Options struct {
 	Tools []string
 	// Descriptions replace the fixtures' tool descriptions by tool name.
 	Descriptions map[string]string
+	// Results replace the fixtures' answers by tool name: the function
+	// gets the fixture's host.
+	Results map[string]func(host string) *mcp.CallToolResult
 	// StandIn, when set, is the stand-in with its knobs; New sets its
 	// AdminToken.
 	StandIn       *cftest.StandIn
@@ -143,7 +146,7 @@ func New(t *testing.T, o Options) *Env {
 		if err != nil || !strings.HasSuffix(host, "example.com") || e.Fixtures[host] != nil {
 			continue
 		}
-		f := e.addFixture(host, tools, o.Descriptions)
+		f := e.addFixture(host, tools, o.Descriptions, o.Results)
 		if en.RequiresAPIKey {
 			f.APIKey = "fixture-api-key-" + en.ID
 		}
@@ -208,7 +211,7 @@ func hostOf(raw string) (string, string, error) {
 
 // addFixture starts an HTTPS MCP fixture for host with the named tools;
 // each tool answers "<host> <tool> <arguments>".
-func (e *Env) addFixture(host string, tools []string, desc map[string]string) *Fixture {
+func (e *Env) addFixture(host string, tools []string, desc map[string]string, results map[string]func(string) *mcp.CallToolResult) *Fixture {
 	f := &Fixture{Host: host}
 	s := mcp.NewServer(&mcp.Implementation{Name: "fx-" + host, Version: "1.0.0"}, nil)
 	for _, n := range tools {
@@ -217,6 +220,9 @@ func (e *Env) addFixture(host string, tools []string, desc map[string]string) *F
 			d = v
 		}
 		mcp.AddTool(s, &mcp.Tool{Name: n, Description: d}, func(_ context.Context, _ *mcp.CallToolRequest, in map[string]any) (*mcp.CallToolResult, any, error) {
+			if r, ok := results[n]; ok {
+				return r(host), nil, nil
+			}
 			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("%s %s %v", host, n, in)}}}, nil, nil
 		})
 	}

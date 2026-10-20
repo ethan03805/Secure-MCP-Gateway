@@ -4,6 +4,7 @@ package hostile
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/ethan03805/secure-mcp-gateway/internal/config"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/bundle"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cfharness"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/connector"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
 	"github.com/ethan03805/secure-mcp-gateway/internal/packaging"
@@ -112,7 +114,26 @@ var cfChecks = map[string]func(t *testing.T) (string, bool){
 		creds, _ := bundle.NewCredentials()
 		creds[bundle.KeyJWTSecret] = "my-test-key"
 		err := creds.Check()
-		return fmt.Sprintf("a start with a published key refused with %s; the running instance's refusal is asserted by the contextforge CI job (TestPinnedImage)", packaging.ReasonOf(err)), false
+		// The forged administrator token against the running instance:
+		// the compromised stand-in of the suite, as the Connector reaches
+		// it (the pinned image's refusal is asserted by the contextforge
+		// job, bundle TestPinnedImage and connector TestUpgradeImage).
+		e := cfharness.New(t, cfharness.Options{Entries: []cfharness.Entry{{ID: "fa", URL: "https://fa.example.com/mcp"}}})
+		forged, ferr := bundle.AdminToken(creds, time.Now(), time.Hour)
+		refused := 0
+		for _, path := range []string{"/v1/gateways", "/v1/teams", "/v1/tokens", "/v1/users"} {
+			req, _ := http.NewRequest(http.MethodGet, e.SI.URL+path, nil)
+			req.Header.Set("Authorization", "Bearer "+forged)
+			resp, rerr := http.DefaultClient.Do(req)
+			if rerr == nil {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+					refused++
+				}
+			}
+		}
+		return fmt.Sprintf("a start with a published key refused with %s; a token signed with it refused on %d of 4 admin routes of the running instance", packaging.ReasonOf(err), refused),
+			packaging.ReasonOf(err) == bundle.ReasonWeakCredential && ferr == nil && refused == 4
 	},
 }
 
@@ -126,7 +147,7 @@ func TestHostileContextForge(t *testing.T) {
 	reqtest.Partial(t, "FR-22.43")
 	claims := map[string][]string{"HFC-02": {"FR-22.2"}, "HFC-03": {"FR-22.7"}, "HFC-04": {"FR-22.6"}, "HFC-06": {"FR-22.3"},
 		"HFC-05": {"FR-22.40", "SR-3.5-2"}, "HFC-08": {"FR-22.33", "SR-3.8-2"}, "HFC-10": {"FR-22.29"}, "HFC-11": {"FR-22.15", "FR-22.9"},
-		"HFC-13": {"FR-22.33", "SR-5.6-3", "FR-22.38"}, "HFC-01": {"SR-5.9-2"}}
+		"HFC-13": {"FR-22.33", "SR-5.6-3", "FR-22.38"}, "HFC-01": {"SR-5.9-2"}, "HFC-09": {"SR-6.18-2", "FR-22.39"}, "HFC-14": {"FR-22.28"}}
 	var results []Result
 	for _, row := range CFRows {
 		r := Result{Fixture: row.ID, Attack: row.Attack, Expected: row.Expected, Profile: "standalone"}
@@ -134,8 +155,6 @@ func TestHostileContextForge(t *testing.T) {
 		switch {
 		case !ok && row.ID == "HFC-07":
 			r.Observed = "asserted by console/e2e/contextforge.spec.ts (Playwright, the console job)"
-		case !ok && row.ID == "HFC-09":
-			r.Observed = "not asserted: every hosted tool is source_trust untrusted (connector tests) and docs/security-limitations.md records the one containment domain, but the E-11 filtering and session taint of a swapped result are not run through the full pipeline"
 		case !ok && row.ID == "HFC-12":
 			r.Observed = "Enforced profile: asserted by the contextforge job's rootless Podman run (bundle TestEnforcedImage: connections to the Internet, the LAN, the Gateway's listeners and the Podman socket fail from inside the instance); not run by this suite"
 		case !ok:

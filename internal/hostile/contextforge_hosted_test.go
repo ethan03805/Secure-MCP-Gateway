@@ -6,12 +6,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/ethan03805/secure-mcp-gateway/internal/audit"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/bundle"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cfharness"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cftest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/connector"
 	"github.com/ethan03805/secure-mcp-gateway/internal/filters"
 	"github.com/ethan03805/secure-mcp-gateway/internal/library"
@@ -27,6 +31,7 @@ func init() {
 	cfChecks["HFC-01"] = hfc01
 	cfChecks["HFC-05"] = hfc05
 	cfChecks["HFC-08"] = hfc08
+	cfChecks["HFC-09"] = hfc09
 	cfChecks["HFC-10"] = hfc10
 	cfChecks["HFC-11"] = hfc11
 	cfChecks["HFC-13"] = hfc13
@@ -255,4 +260,55 @@ func presented(g *cfharness.Gateway) []string {
 		}
 	}
 	return out
+}
+
+// HFC-09: the stand-in answers package A's call with package B's result
+// followed by injection text. Through a complete Gateway (session,
+// decision, approval, filters, dispatch, journal): the result is released
+// with the E-11 provenance tags of the injection and P-143 recorded, the
+// session is tainted because A's tools are untrusted, the call's outcome
+// events attribute the result to A's revision through the bundled
+// instance, labelled server-asserted (SR-6.18-2), and the Security
+// Limitations document records that hosted packages share one
+// containment domain (FR-22.42).
+func hfc09(t *testing.T) (string, bool) {
+	e := cfharness.New(t, cfharness.Options{Entries: []cfharness.Entry{{ID: "swap-a", URL: "https://swap-a.example.com/mcp"}, {ID: "swap-b", URL: "https://swap-b.example.com/mcp"}},
+		StandIn: &cftest.StandIn{SwapFrom: "smcp-swap-a", SwapTo: "smcp-swap-b", Injection: Canary("HFC-09")}})
+	ra := e.Import("swap-a", connector.LocalImport{})
+	rb := e.Import("swap-b", connector.LocalImport{})
+	g := e.StartGateway(cfharness.GatewayOptions{Approve: true}, ra, rb)
+	cs, sid, _ := g.Client(nil)
+	o := g.Call(cs, ra.Alias+"_echo", map[string]any{"text": "a"})
+	swapped := strings.Contains(o.Text, "swap-b.example.com echo") && strings.Contains(o.Text, CanaryMarker)
+	var tags []any
+	if o.Res != nil {
+		p, _ := o.Res.Meta["local.smcpgw/provenance"].(map[string]any)
+		tags, _ = p["tags"].([]any)
+	}
+	corr := g.Correlation(o)
+	p143 := 0.0
+	attributed, labelled := false, false
+	for _, ev := range g.Events() {
+		if ev.CorrelationID != corr || corr == "" {
+			continue
+		}
+		if ev.Class == "filter" {
+			d, _ := ev.Detail.(map[string]any)
+			if params, ok := d["parameters"].(map[string]any); ok && d["stage"] == "response" {
+				if v, ok := params["P-143"].(float64); ok {
+					p143 += v
+				}
+			}
+		}
+		if ev.Phase == audit.PhaseCompleted {
+			attributed = ev.ServerRevision == ra.Key() && ev.Route["server_id"] == ra.ServerID && ev.Route["via"] == connector.RouteVia
+			labelled = ev.Route["evidence"] == connector.EvidenceServerAsserted
+		}
+	}
+	tainted := g.App.Decider.Tainted(sid)
+	doc, _ := os.ReadFile(filepath.Join("..", "..", "docs", "security-limitations.md"))
+	recorded := strings.Contains(string(doc), "every hosted package served by the bundled instance shares one containment domain")
+	return fmt.Sprintf("call %s; B's result with the injection relayed for A: %v; provenance tags %d; P-143 %v; session tainted %v; attributed to %s via the instance: %v, labelled server-asserted: %v; limitation recorded: %v",
+			o.Reason(), swapped, len(tags), p143, tainted, ra.Key(), attributed, labelled, recorded),
+		o.Code == 0 && swapped && len(tags) > 0 && p143 > 0 && tainted && attributed && labelled && recorded
 }

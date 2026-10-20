@@ -72,13 +72,14 @@ func (c *Connector) ProposeHosted(id string, in LocalImport, actor string) (prop
 	}
 	c.mu.Lock()
 	c.proposals[p.ID] = p
+	view := p.view() // before the probe goroutine can change it
 	c.mu.Unlock()
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
 		c.probe(p, e, risk, actor, in.ProbeSecret)
 	}()
-	return p.view(), nil
+	return view, nil
 }
 
 // waitHealthy starts the instance when it is stopped and waits for it.

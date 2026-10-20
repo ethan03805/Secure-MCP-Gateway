@@ -167,13 +167,14 @@ func (c *Connector) ProposeLocal(id string, in LocalImport, actor string) (propo
 	}
 	c.mu.Lock()
 	c.proposals[p.ID] = p
+	view := p.view() // before the build goroutine can change it
 	c.mu.Unlock()
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
 		c.build(p, e, r)
 	}()
-	return p.view(), nil
+	return view, nil
 }
 
 // recipe turns the entry and the operator's pins into a packaging recipe.

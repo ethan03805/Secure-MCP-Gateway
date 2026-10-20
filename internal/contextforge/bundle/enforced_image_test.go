@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge"
+	"github.com/ethan03805/secure-mcp-gateway/internal/contextforge/cftest"
 	"github.com/ethan03805/secure-mcp-gateway/internal/reqtest"
 )
 
@@ -53,8 +54,21 @@ try:
     print("setuid ok")
 except Exception as e:
     print("setuid blocked", type(e).__name__)
-for p in ["/run/podman/podman.sock", "/var/run/docker.sock", "/run/docker.sock", "/run/systemd/private", "/run/dbus/system_bus_socket", "/var/run/dbus/system_bus_socket"]:
-    print("path:" + p, "ok" if os.path.exists(p) else "blocked")
+def unix(p):
+    if not os.path.exists(p):
+        return "blocked"
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(3)
+    try:
+        s.connect(p)
+        return "ok"
+    except Exception:
+        return "blocked"
+    finally:
+        s.close()
+for p in ["/run/podman/podman.sock", "/var/run/docker.sock", "/run/docker.sock", "/run/systemd/private", "/run/dbus/system_bus_socket", "/var/run/dbus/system_bus_socket",
+          "/run/user/1000/podman/podman.sock", "/run/user/1001/podman/podman.sock", "/run/user/1000/bus", "/run/user/1001/bus"]:
+    print("path:" + p, unix(p))
 pids = [d for d in os.listdir("/proc") if d.isdigit()]
 print("host_pids", "ok" if len(pids) > 50 else "blocked", len(pids))
 devs = sorted(os.listdir("/dev"))
@@ -71,8 +85,11 @@ print("host_devices", "ok" if extra else "blocked", ",".join(extra))
 // Internet, a LAN address of the host and another Gateway listener on the
 // host's loopback are not, and neither are the engine and bus sockets, the
 // host's processes and its disks. Writes outside the volume and setuid
-// fail. Its memory after start is below the limit (FR-22.24, SR-4.5-4,
-// SR-4.7-3, HFC-12).
+// fail. ContextForge's own SSRF allowlist is set to allow everything, and
+// its own attempts to register gateways on the Internet and the LAN fail
+// as well. A hosted package registered through the hosted listener answers
+// 20 calls, and the instance's memory after start and after the calls is
+// below the doubled CP-24 limit (FR-22.24, SR-4.5-4, SR-4.7-3, HFC-12).
 func TestEnforcedImage(t *testing.T) {
 	if os.Getenv("SMCP_CONTEXTFORGE_ENFORCED") != "1" {
 		t.Skip("set SMCP_CONTEXTFORGE_ENFORCED=1 to run the pinned image under the Enforced containment (rootless Podman, Linux)")
@@ -84,25 +101,23 @@ func TestEnforcedImage(t *testing.T) {
 	if err != nil {
 		t.Skip("podman not installed")
 	}
-	reqtest.Partial(t, "FR-22.24", "SR-4.5-4", "SR-4.7-3", "FR-22.26", "FR-22.43")
+	reqtest.Partial(t, "FR-22.26", "FR-22.43")
 	ctx := context.Background()
 	img := contextforge.ReleaseLock().ContextForge.ImageRef("linux/" + runtime.GOARCH)
 	if out, err := exec.Command(podman, "pull", "-q", img).CombinedOutput(); err != nil {
 		t.Fatalf("pull: %v: %s", err, out)
 	}
-	// The hosted egress listener and another host service on loopback
-	// (a Gateway listener the instance must not reach).
-	hosted, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer hosted.Close()
+	// The hosted egress listener, here a hosted MCP fixture on loopback,
+	// and another host service on loopback (a Gateway listener the
+	// instance must not reach).
+	hostedFx := newUpstream(t, cftest.Host{Listen: "127.0.0.1"}, "H")
+	hostedPort, _ := strconv.Atoi(hostedFx.port)
 	other, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer other.Close()
-	for _, l := range []net.Listener{hosted, other} {
+	for _, l := range []net.Listener{other} {
 		go func(l net.Listener) {
 			for {
 				c, err := l.Accept()
@@ -120,12 +135,14 @@ func TestEnforcedImage(t *testing.T) {
 	}
 	name := "smcp-cf-enforced-test"
 	in, err := New(Options{Engine: Engine{Path: podman, Podman: true}, Enforced: true, Image: img, Name: name,
-		Settings:    Settings{SSRFAllowed: []string{"10.0.2.2/32"}, Limits: Limits{UpstreamTimeout: 45 * time.Second, CallsPerMinute: 60, Concurrency: 16}},
+		// SR-4.5-4: ContextForge's own SSRF allowlist admits everything;
+		// the namespace must hold regardless.
+		Settings:    Settings{SSRFAllowed: []string{"0.0.0.0/0", "::/0"}, Limits: Limits{UpstreamTimeout: 45 * time.Second, CallsPerMinute: 60, Concurrency: 16}},
 		Credentials: func() (Credentials, error) { return creds, nil }, HealthWait: 180 * time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}
-	in.SetEgressAllow(netip.AddrPortFrom(netip.MustParseAddr("10.0.2.2"), uint16(port(hosted)))) // #nosec G115 -- a listener port
+	in.SetEgressAllow(netip.AddrPortFrom(netip.MustParseAddr("10.0.2.2"), uint16(hostedPort))) // #nosec G115 -- a listener port
 	t.Cleanup(func() {
 		_ = in.Stop(ctx)
 		_ = in.RemoveVolume(ctx)
@@ -194,7 +211,7 @@ func TestEnforcedImage(t *testing.T) {
 		}
 	}
 	args := []string{"exec", name, "python3", "-c", probeScript,
-		"hosted_listener", "10.0.2.2", strconv.Itoa(port(hosted)),
+		"hosted_listener", "10.0.2.2", hostedFx.port,
 		"gateway_listener", "10.0.2.2", strconv.Itoa(port(other)),
 		"internet", "1.1.1.1", "443",
 		"dns", "10.0.2.3", "53"}
@@ -216,7 +233,9 @@ func TestEnforcedImage(t *testing.T) {
 	want := map[string]string{"hosted_listener": "ok", "gateway_listener": "blocked", "internet": "blocked", "dns": "blocked",
 		"write_root": "blocked", "write_volume": "ok", "setuid": "blocked", "host_pids": "blocked", "host_devices": "blocked",
 		"path:/run/podman/podman.sock": "blocked", "path:/var/run/docker.sock": "blocked", "path:/run/docker.sock": "blocked",
-		"path:/run/systemd/private": "blocked", "path:/run/dbus/system_bus_socket": "blocked", "path:/var/run/dbus/system_bus_socket": "blocked"}
+		"path:/run/systemd/private": "blocked", "path:/run/dbus/system_bus_socket": "blocked", "path:/var/run/dbus/system_bus_socket": "blocked",
+		"path:/run/user/1000/podman/podman.sock": "blocked", "path:/run/user/1001/podman/podman.sock": "blocked", "path:/run/user/1000/bus": "blocked",
+		"path:/run/user/1001/bus": "blocked"}
 	if lan != "" {
 		want["lan"] = "blocked"
 	}
@@ -226,14 +245,68 @@ func TestEnforcedImage(t *testing.T) {
 		}
 	}
 	// Memory after start, below the limit.
-	mem, err := exec.Command(podman, "stats", "--no-stream", "--format", "{{.MemUsage}}", name).Output()
-	if err == nil {
-		t.Logf("memory after start: %s (limit %d MiB)", strings.TrimSpace(string(mem)), 1024)
-		if used, _, ok := strings.Cut(strings.TrimSpace(string(mem)), "/"); ok && strings.Contains(used, "GB") {
-			var gb float64
-			if _, err := fmt.Sscanf(strings.TrimSpace(used), "%fGB", &gb); err == nil && gb >= 1.07 {
-				t.Errorf("memory after start %s is at the limit", used)
-			}
+	memBelow(t, podman, name, "start")
+
+	// SR-4.5-4: ContextForge itself, with its SSRF allowlist admitting
+	// everything, cannot reach the Internet or the LAN: registering a
+	// gateway there fails.
+	a := &Admin{Base: in.BaseURL(), AdminToken: func() (string, error) { return in.AdminToken(5 * time.Minute) }}
+	escapes := map[string]string{"internet": "https://1.1.1.1/mcp"}
+	if lan != "" {
+		escapes["lan"] = "http://" + net.JoinHostPort(lan, strconv.Itoa(port(other))) + "/mcp"
+	}
+	for what, u := range escapes {
+		rctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+		err := a.Call(rctx, "POST", "/v1/gateways", "", map[string]any{"name": "smcp-escape-" + what, "url": u, "transport": "STREAMABLEHTTP"}, nil)
+		cancel()
+		if err == nil {
+			t.Errorf("ContextForge registered a gateway on the %s (%s) with its SSRF allowlist open", what, u)
+		} else {
+			t.Logf("ContextForge's own connection to the %s failed: %v", what, err)
 		}
+	}
+
+	// FR-22.24: a hosted package through the hosted listener, 20 calls,
+	// memory after them.
+	pw, _ := NewCredential()
+	prov, err := a.Provision(ctx, PackageSpec{Slug: "smcp-enforced-fx", URL: "http://10.0.2.2:" + hostedFx.port + "/mcp"}, pw)
+	if err != nil {
+		t.Fatalf("provision through the hosted listener: %v", err)
+	}
+	for i := 0; i < 20; i++ {
+		if ok, detail := a.callReaches(ctx, "/servers/"+prov.ServerID+"/mcp", prov.Token, prov.Tools[0]); !ok {
+			t.Fatalf("hosted call %d not answered: %s", i+1, detail)
+		}
+	}
+	if n := hostedFx.calls.Load(); n != 20 {
+		t.Fatalf("the hosted fixture saw %d calls, want 20", n)
+	}
+	memBelow(t, podman, name, "20 hosted calls")
+	if !t.Failed() {
+		reqtest.Verifies(t, "FR-22.24", "SR-4.5-4", "SR-4.7-3")
+	}
+}
+
+// memBelow checks that the container's resident memory is below the
+// doubled CP-24 limit of 1 GiB.
+func memBelow(t *testing.T, podman, name, when string) {
+	t.Helper()
+	mem, err := exec.Command(podman, "stats", "--no-stream", "--format", "{{.MemUsage}}", name).Output()
+	if err != nil {
+		t.Errorf("podman stats after %s: %v", when, err)
+		return
+	}
+	t.Logf("memory after %s: %s (limit %d MiB)", when, strings.TrimSpace(string(mem)), 1024)
+	used, _, _ := strings.Cut(strings.TrimSpace(string(mem)), "/")
+	used = strings.TrimSpace(used)
+	var v float64
+	switch {
+	case strings.HasSuffix(used, "GB"):
+		if _, err := fmt.Sscanf(used, "%fGB", &v); err == nil && v >= 1.07 {
+			t.Errorf("memory after %s %s is at the limit", when, used)
+		}
+	case strings.HasSuffix(used, "MB"), strings.HasSuffix(used, "kB"), strings.HasSuffix(used, "B"):
+	default:
+		t.Errorf("memory after %s: unreadable %q", when, used)
 	}
 }
