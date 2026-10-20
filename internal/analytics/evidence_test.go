@@ -88,13 +88,20 @@ func TestMetaMetricsSampling(t *testing.T) {
 			}
 		}
 	}
-	// The loop samples at the configured interval.
+	// The loop samples at the configured interval: at most one sample per
+	// 20 ms of the time the service was running. The upper bound comes
+	// from the time measured around the whole run, not from the sleep: the
+	// Windows runner counted 49 samples against a fixed bound of 40 because
+	// the sleep and the final sync took longer than 700 ms.
+	start := time.Now()
 	s2, _ := jsonlService(t, func(c *config.Config) {
 		c.Observation.MetricsInterval = config.Duration{Duration: 20 * time.Millisecond}
 	})
 	time.Sleep(700 * time.Millisecond)
-	if n := len(scanAll(t, s2, "metrics")); n < 10 || n > 40 {
-		t.Fatalf("%d samples in 700 ms at a 20 ms interval", n)
+	n := len(scanAll(t, s2, "metrics"))
+	elapsed := time.Since(start)
+	if most := int(elapsed / (20 * time.Millisecond)); n < 10 || n > most {
+		t.Fatalf("%d samples in %s at a 20 ms interval (at most %d)", n, elapsed.Round(time.Millisecond), most)
 	}
 }
 
