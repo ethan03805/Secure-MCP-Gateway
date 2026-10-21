@@ -24,6 +24,7 @@
 //	go run ./tools/reqreport -in build/go-test.json -coverprofile build/cover.out
 //	go run ./tools/reqreport history -status build/status.json -history site-data/history.json
 //	go run ./tools/reqreport cargo -test-output cargo-test.txt -claims claims.tsv -package desktop/macos -out build/desktop-macos-test.json
+//	go run ./tools/reqreport join -test desktop/join::fr_20_8 -full FR-20.8 -need <events file>#<test> ... -out build/desktop-join-test.json
 //
 // It writes <out>.json, <out>.md and, unless -status is empty, the status
 // document (schema 1). The exit status is 1 when any requirement is failing.
@@ -56,6 +57,13 @@ func main() {
 		code, err := runCargo(os.Args[2:], os.Stdout)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "reqreport cargo:", err)
+		}
+		os.Exit(code)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "join" {
+		code, err := runJoin(os.Args[2:], os.Stdout)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "reqreport join:", err)
 		}
 		os.Exit(code)
 	}

@@ -62,7 +62,7 @@ notify-rust = "=4.18.1"
 # versions wry and tauri-plugin-notification already use.
 [target.'cfg(windows)'.dependencies]
 webview2-com = "=0.39.1"
-windows = { version = "=0.62.2", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_Diagnostics_Debug", "Win32_System_Registry"] }
+windows = { version = "=0.62.2", features = ["Data_Xml_Dom", "Foundation", "UI_Notifications", "Win32_Foundation", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_System_Diagnostics_Debug", "Win32_System_Registry", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Diagnostics_ToolHelp", "Wdk_System_Threading"] }
 tauri-winrt-notification = "=0.8.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]

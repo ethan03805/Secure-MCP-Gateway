@@ -372,20 +372,83 @@ fn write_private(p: &Path, body: &[u8]) -> std::io::Result<()> {
     f.sync_all()
 }
 
+/// Creates a directory, not recursively, whose protected DACL grants
+/// full control to this account, SYSTEM and Administrators only, inherited
+/// by the files created in it: the Windows counterpart of mode 0700 and
+/// 0600, which `smcpctl` checks with `winsec.CheckOwnerOnly` before it
+/// reads a password file.
+#[cfg(windows)]
+pub fn create_private_dir(dir: &Path) -> std::io::Result<()> {
+    use windows::core::{HSTRING, PWSTR};
+    use windows::Win32::Foundation::{CloseHandle, LocalFree, HANDLE, HLOCAL};
+    use windows::Win32::Security::Authorization::{
+        ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+    };
+    use windows::Win32::Security::{
+        GetTokenInformation, TokenUser, PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
+    };
+    use windows::Win32::Storage::FileSystem::CreateDirectoryW;
+    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    let io = |e: windows::core::Error| std::io::Error::other(e.message());
+    // SAFETY: each call gets valid pointers and sizes; the token handle is
+    // closed and the strings and descriptor Windows allocates are freed.
+    unsafe {
+        let mut token = HANDLE::default();
+        OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token).map_err(io)?;
+        let mut len = 0u32;
+        let _ = GetTokenInformation(token, TokenUser, None, 0, &mut len);
+        // u64 elements: TOKEN_USER holds a pointer and needs its alignment.
+        let mut buf = vec![0u64; (len as usize).div_ceil(8)];
+        let got = GetTokenInformation(token, TokenUser, Some(buf.as_mut_ptr().cast()), len, &mut len);
+        let _ = CloseHandle(token);
+        got.map_err(io)?;
+        let user = &*(buf.as_ptr() as *const TOKEN_USER);
+        let mut text = PWSTR::null();
+        ConvertSidToStringSidW(user.User.Sid, &mut text).map_err(io)?;
+        let sid = text.to_string();
+        let _ = LocalFree(Some(HLOCAL(text.0.cast())));
+        let sid = sid.map_err(std::io::Error::other)?;
+        let sddl = HSTRING::from(format!("D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;{sid})"));
+        let mut sd = PSECURITY_DESCRIPTOR::default();
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(&sddl, SDDL_REVISION_1, &mut sd, None).map_err(io)?;
+        let sa = SECURITY_ATTRIBUTES {
+            nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: sd.0,
+            bInheritHandle: false.into(),
+        };
+        let made = CreateDirectoryW(&HSTRING::from(dir.as_os_str()), Some(&sa));
+        let _ = LocalFree(Some(HLOCAL(sd.0)));
+        made.map_err(|e| {
+            if e.code() == windows::Win32::Foundation::ERROR_ALREADY_EXISTS.to_hresult() {
+                std::io::Error::from(std::io::ErrorKind::AlreadyExists)
+            } else {
+                io(e)
+            }
+        })
+    }
+}
+
 impl SecretFiles {
-    /// Creates `<base>/smcp-setup-<random>/` (mode 0700) holding `admin`
-    /// and `approver` (mode 0600), each with its password and no newline.
+    /// Creates `<base>/smcp-setup-<random>/` (mode 0700; on Windows a
+    /// protected DACL for this account, SYSTEM and Administrators) holding
+    /// `admin` and `approver` (mode 0600, or that DACL inherited), each
+    /// with its password and no newline.
     pub fn create(base: &Path, admin: &Secret, approver: &Secret) -> std::io::Result<SecretFiles> {
         let dir = base.join(unique_name());
-        #[cfg_attr(not(unix), allow(unused_mut))]
-        let mut b = std::fs::DirBuilder::new();
-        #[cfg(unix)]
+        #[cfg(windows)]
+        create_private_dir(&dir)?;
+        #[cfg(not(windows))]
         {
-            use std::os::unix::fs::DirBuilderExt;
-            b.mode(0o700);
+            #[cfg_attr(not(unix), allow(unused_mut))]
+            let mut b = std::fs::DirBuilder::new();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::DirBuilderExt;
+                b.mode(0o700);
+            }
+            // Not recursive: fails if the name exists.
+            b.create(&dir)?;
         }
-        // Not recursive: fails if the name exists.
-        b.create(&dir)?;
         let files = SecretFiles {
             admin: dir.join("admin"),
             approver: dir.join("approver"),
@@ -742,6 +805,197 @@ mod tests {
     fn touch(p: &Path) {
         std::fs::create_dir_all(p.parent().unwrap()).unwrap();
         std::fs::write(p, "").unwrap();
+    }
+
+    /// The command line of every process this account can read.
+    #[cfg(unix)]
+    fn command_lines() -> Vec<String> {
+        std::process::Command::new("ps")
+            .args(["-A", "-o", "args="])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).lines().map(str::to_string).collect())
+            .unwrap_or_default()
+    }
+
+    /// The command line of every process this account can read
+    /// (ProcessCommandLineInformation).
+    #[cfg(windows)]
+    fn command_lines() -> Vec<String> {
+        use windows::Wdk::System::Threading::{NtQueryInformationProcess, ProcessCommandLineInformation};
+        use windows::Win32::Foundation::{CloseHandle, UNICODE_STRING};
+        use windows::Win32::System::Diagnostics::ToolHelp::{
+            CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+        };
+        use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+        let mut out = Vec::new();
+        // SAFETY: the snapshot and process handles are closed; the buffer
+        // is large enough for what NtQueryInformationProcess reports.
+        unsafe {
+            let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) else {
+                return out;
+            };
+            let mut e = PROCESSENTRY32W {
+                dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+                ..Default::default()
+            };
+            let mut more = Process32FirstW(snap, &mut e).is_ok();
+            while more {
+                if let Ok(h) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, e.th32ProcessID) {
+                    let mut buf = vec![0u64; 4096];
+                    let mut len = 0u32;
+                    let st = NtQueryInformationProcess(
+                        h,
+                        ProcessCommandLineInformation,
+                        buf.as_mut_ptr().cast(),
+                        (buf.len() * 8) as u32,
+                        &mut len,
+                    );
+                    if st.is_ok() {
+                        let u = &*(buf.as_ptr() as *const UNICODE_STRING);
+                        if !u.Buffer.is_null() {
+                            let w = std::slice::from_raw_parts(u.Buffer.0, (u.Length / 2) as usize);
+                            out.push(String::from_utf16_lossy(w));
+                        }
+                    }
+                    let _ = CloseHandle(h);
+                }
+                more = Process32NextW(snap, &mut e).is_ok();
+            }
+            let _ = CloseHandle(snap);
+        }
+        out
+    }
+
+    /// First-run setup with the real `smcpctl` on a disposable CI runner
+    /// (desktop job, macOS and Windows; Linux runs it through the window in
+    /// desktop-e2e): the setup window's own code path, `Session::run`,
+    /// installs the Standalone profile through `smcpctl install` with the
+    /// passwords in private files (on Windows a DACL that passes
+    /// `winsec.CheckOwnerOnly`), while every process's command line is
+    /// sampled every 100 ms for the passwords; then the configuration,
+    /// keys and service of FR-13.6 exist, no password file remains, and
+    /// metrics are on at the CP-51 address. Runs only with
+    /// SMCP_DESKTOP_SETUP_E2E=1 and SMCP_BIN_DIR naming the directory of
+    /// smcpctl, smcpd and smcp-refserver; it installs and then uninstalls
+    /// the per-user service of the runner's account.
+    #[test]
+    fn first_run_setup_with_the_real_smcpctl() {
+        if std::env::var("SMCP_DESKTOP_SETUP_E2E").as_deref() != Ok("1") {
+            return;
+        }
+        let bin = PathBuf::from(std::env::var_os("SMCP_BIN_DIR").expect("SMCP_BIN_DIR"));
+        claims::partial(&["FR-20.8", "SR-2-4", "FR-20.5"]);
+        let host = Host::current();
+        assert!(!configured(&host), "a Gateway is already set up on this runner");
+        let smcpctl = bin.join(if cfg!(windows) { "smcpctl.exe" } else { "smcpctl" });
+        let admin = format!("e2e admin password {}", std::process::id());
+        let approver = format!("e2e approver password {}", std::process::id());
+
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let sampler = {
+            let (stop, admin, approver) = (stop.clone(), admin.clone(), approver.clone());
+            std::thread::spawn(move || {
+                let (mut samples, mut leaked) = (0u32, Vec::new());
+                while !stop.load(std::sync::atomic::Ordering::SeqCst) {
+                    for l in command_lines() {
+                        if l.contains(&admin) || l.contains(&approver) {
+                            leaked.push(l);
+                        }
+                    }
+                    samples += 1;
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+                (samples, leaked)
+            })
+        };
+        let tmp = std::env::temp_dir();
+        let session = Arc::new(Session::default());
+        assert!(session.run(
+            &smcpctl,
+            Profile::Standalone,
+            Secret::new(admin),
+            Secret::new(approver),
+            &tmp
+        ));
+        stop.store(true, std::sync::atomic::Ordering::SeqCst);
+        let (samples, leaked) = sampler.join().unwrap();
+        let p = session.progress.lock().unwrap().clone();
+        assert_eq!(
+            p.state,
+            RunState::Succeeded,
+            "setup failed: {:?}\n{}",
+            p.failure,
+            p.output.join("\n")
+        );
+        assert!(p.bootstrap_done && p.service_done);
+        assert!(
+            samples > 0 && leaked.is_empty(),
+            "{samples} samples; a password in: {leaked:?}"
+        );
+        println!("no password in {samples} command-line samples taken every 100 ms");
+        let left: Vec<_> = std::fs::read_dir(&tmp)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_name().to_string_lossy().starts_with("smcp-setup-"))
+            .map(|e| e.path())
+            .collect();
+        assert!(left.is_empty(), "password files remain: {left:?}");
+
+        // As after the terminal procedure (FR-13.6): configuration, keys
+        // and the service.
+        let cfg = config_paths(&host)
+            .into_iter()
+            .find(|p| p.is_file())
+            .expect("no configuration was written");
+        // The service definition: on Windows the per-user task (or Run
+        // value) file beside the configuration, which service::detect also
+        // reads but only with an smcpctl in an installed place.
+        let installed = |h: &Host| {
+            if h.os == "windows" {
+                let dir = cfg.parent().unwrap();
+                dir.join(service::WIN_TASK_FILE).is_file() || dir.join(service::WIN_RUN_FILE).is_file()
+            } else {
+                service::detect(h).is_some()
+            }
+        };
+        assert!(installed(&host), "no service was installed");
+        let state = cfg.parent().unwrap().parent().unwrap().join("state");
+        assert!(
+            state.join("keys").join("evidence-genesis.pub").is_file(),
+            "no evidence key in {}",
+            state.display()
+        );
+        // FR-20.5: metrics on at the CP-51 address.
+        let mut metrics = String::new();
+        for _ in 0..60 {
+            if let Ok(mut c) = std::net::TcpStream::connect(("127.0.0.1", 9464)) {
+                use std::io::Write;
+                let _ = c.write_all(b"GET /metrics HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n");
+                metrics.clear();
+                let _ = c.read_to_string(&mut metrics);
+                if metrics.contains("smcp_release_enforced") {
+                    break;
+                }
+            }
+            std::thread::sleep(Duration::from_secs(1));
+        }
+        assert!(
+            metrics.contains("\nsmcp_release_enforced ") && metrics.contains("\nsmcp_profile_standalone 1"),
+            "metrics at 127.0.0.1:9464:\n{metrics}"
+        );
+
+        let out = std::process::Command::new(&smcpctl)
+            .args(["uninstall", "--config"])
+            .arg(&cfg)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "uninstall: {}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(!installed(&host), "the service is still installed");
     }
 
     #[test]
