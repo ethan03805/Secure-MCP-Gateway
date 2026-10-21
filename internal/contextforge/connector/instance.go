@@ -107,13 +107,15 @@ const ReasonPythonRequired = "CONTEXTFORGE_PYTHON_REQUIRED"
 // and where no container engine is installed.
 func (c *Connector) setupProcess() {
 	cf := c.o.Config.ContextForge
+	lock := contextforge.ReleaseLock().ContextForge
 	if cf.Python == "" {
-		c.instErr = packaging.Errf(ReasonPythonRequired, "the bundled ContextForge instance runs here as a managed process: set [contextforge] python to the interpreter of a virtual environment with ContextForge %s installed",
-			contextforge.ReleaseLock().ContextForge.Version)
+		c.instErr = packaging.Errf(ReasonPythonRequired, "the bundled ContextForge instance runs here as a managed process: set [contextforge] python to a CPython %s interpreter; the Connector installs ContextForge %s into a private virtual environment from the release lock's wheel set",
+			lock.Python, lock.Version)
 		return
 	}
 	l := c.o.Config.Limits
-	p, err := bundle.NewProcess(bundle.ProcessOptions{Python: cf.Python, Dir: filepath.Join(c.dir, "instance"),
+	root := filepath.Join(c.dir, "instance")
+	p, err := bundle.NewProcess(bundle.ProcessOptions{Python: bundle.VenvPython(root, lock.Version), Dir: root,
 		Settings:    bundle.Settings{Limits: bundle.Limits{UpstreamTimeout: l.UpstreamTimeout.Duration, CallsPerMinute: l.PrincipalCallsPerMin, Concurrency: l.ToolConcurrencyTotal}},
 		Credentials: c.credentials, OnState: c.instanceState, Log: c.o.Log})
 	if err != nil {
@@ -121,7 +123,7 @@ func (c *Connector) setupProcess() {
 		return
 	}
 	c.platform = bundle.ManagedPlatform
-	c.inst, c.verifier, c.process = p, bundle.ProcessVerifier{Python: cf.Python}, p
+	c.inst, c.verifier, c.process = p, bundle.WheelVerifier{Python: cf.Python, WheelDir: cf.WheelDir, Cache: filepath.Join(c.dir, "wheels"), Root: root}, p
 }
 
 // ManagedProcess returns the managed-process form when the bundled
@@ -219,7 +221,7 @@ func (c *Connector) StartInstance(ctx context.Context, actor string) error {
 	} else if err := c.verifier.LocalDigestOK(ctx, ver, lock.Image.Reference); err != nil {
 		return refuse(err)
 	}
-	c.verified = ver
+	c.verified.Store(ver)
 	if err := c.prepareEgress(ctx); err != nil {
 		return refuse(err)
 	}

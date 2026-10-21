@@ -719,6 +719,7 @@ func (c *Config) resolvePaths() {
 	c.resolveOpsPaths(res)
 	res(&c.Packages.Library)
 	res(&c.ContextForge.CatalogFile)
+	res(&c.ContextForge.WheelDir)
 }
 
 // ResourceURI is the CP-41 resource indicator: the public URL of the MCP

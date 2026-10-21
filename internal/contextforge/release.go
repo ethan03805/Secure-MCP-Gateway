@@ -52,15 +52,20 @@ type Lock struct {
 
 // LockedRelease is the one pinned ContextForge release.
 type LockedRelease struct {
-	Version    string        `json:"version"`
-	Released   string        `json:"released"`
-	License    string        `json:"license"`
-	Source     LockedSource  `json:"source"`
-	Image      LockedImage   `json:"image"`
-	Signer     LockedSigner  `json:"signer"`
-	Wheels     []LockedFile  `json:"wheels"`
-	Catalog    LockedCatalog `json:"catalog"`
-	StarterSet []string      `json:"starter_set"`
+	Version  string       `json:"version"`
+	Released string       `json:"released"`
+	License  string       `json:"license"`
+	Source   LockedSource `json:"source"`
+	Image    LockedImage  `json:"image"`
+	Signer   LockedSigner `json:"signer"`
+	// Python is the CPython minor version the wheel set is built for.
+	Python string `json:"python"`
+	// Wheels is the wheel set of the managed-process form for each
+	// platform (FR-22.18, FR-22.20): every wheel that installs the pinned
+	// release, with its SHA-256 and PyPI URL.
+	Wheels     map[string][]LockedFile `json:"wheels"`
+	Catalog    LockedCatalog           `json:"catalog"`
+	StarterSet []string                `json:"starter_set"`
 }
 
 // LockedSource is the source tag and commit the image was built from.
@@ -87,7 +92,13 @@ type LockedSigner struct {
 type LockedFile struct {
 	File   string `json:"file"`
 	SHA256 string `json:"sha256"`
+	URL    string `json:"url"`
 }
+
+// WheelPlatforms are the platforms whose wheel set every release lock
+// pins (FR-22.20). Windows on arm64 runs the windows/amd64 set under an
+// x64 interpreter: four of the dependencies publish no win_arm64 wheel.
+var WheelPlatforms = []string{"darwin/arm64", "linux/amd64", "linux/arm64", "windows/amd64"}
 
 // LockedCatalog pins the catalog file of the release.
 type LockedCatalog struct {
@@ -152,12 +163,32 @@ func ParseLock(raw []byte) (*Lock, error) {
 			return nil, bad("image digest for %s is not a sha256 digest", p)
 		}
 	}
-	seen := map[string]bool{}
-	for _, w := range r.Wheels {
-		if !wheelName.MatchString(w.File) || !hex64.MatchString(w.SHA256) || seen[w.File] {
-			return nil, bad("wheel %q is malformed or listed twice", w.File)
+	if r.Python != "3.12" {
+		return nil, bad("python %q is not the supported CPython version 3.12", r.Python)
+	}
+	if len(r.Wheels) != len(WheelPlatforms) {
+		return nil, bad("the wheel set must list exactly the platforms %v", WheelPlatforms)
+	}
+	own := "mcp_contextforge_gateway-" + strings.TrimPrefix(r.Version, "v") + "-"
+	for _, p := range WheelPlatforms {
+		set, ok := r.Wheels[p]
+		if !ok || len(set) == 0 {
+			return nil, bad("the wheel set for %s is missing", p)
 		}
-		seen[w.File] = true
+		seen, owns := map[string]bool{}, 0
+		for _, w := range set {
+			if !wheelName.MatchString(w.File) || !hex64.MatchString(w.SHA256) || seen[w.File] ||
+				!strings.HasPrefix(w.URL, "https://files.pythonhosted.org/") || !strings.HasSuffix(w.URL, "/"+w.File) {
+				return nil, bad("wheel %q of %s is malformed or listed twice", w.File, p)
+			}
+			seen[w.File] = true
+			if strings.HasPrefix(w.File, own) {
+				owns++
+			}
+		}
+		if owns != 1 {
+			return nil, bad("the wheel set for %s holds %d wheels of ContextForge %s", p, owns, r.Version)
+		}
 	}
 	if !slices.IsSorted(r.StarterSet) || len(slices.Compact(slices.Clone(r.StarterSet))) != len(r.StarterSet) {
 		return nil, bad("starter_set must be sorted and without duplicates")
@@ -210,4 +241,22 @@ func (l *Lock) CheckStarterSet(c *Catalog) error {
 // String names the release, for messages.
 func (r *LockedRelease) String() string {
 	return fmt.Sprintf("ContextForge %s (%s)", r.Version, r.Image.IndexDigest)
+}
+
+// WheelSetDigest identifies a platform's wheel set ("" when the lock pins
+// none): "sha256:" and the SHA-256 of the lines "<sha256>  <file>\n" of its
+// wheels sorted by file name, the form of a checksum file. It stands for
+// the image digest of the managed-process form in verification records,
+// provenance and evidence (FR-22.11, SR-3.8-2).
+func (r *LockedRelease) WheelSetDigest(platform string) string {
+	set := r.Wheels[platform]
+	if len(set) == 0 {
+		return ""
+	}
+	lines := make([]string, 0, len(set))
+	for _, w := range set {
+		lines = append(lines, w.SHA256+"  "+w.File+"\n")
+	}
+	slices.SortFunc(lines, func(a, b string) int { return strings.Compare(a[66:], b[66:]) })
+	return "sha256:" + packaging.SHA256Hex([]byte(strings.Join(lines, "")))
 }

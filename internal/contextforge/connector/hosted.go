@@ -204,7 +204,7 @@ func (c *Connector) probeHosted(ctx context.Context, p *proposal, e *contextforg
 	}
 	lock := contextforge.ReleaseLock().ContextForge
 	origin := &packaging.ContextForgeOrigin{CatalogSHA256: c.cat.SHA256, ContextForgeRelease: c.cat.Release, EntryID: e.ID, EntrySHA256: e.SHA256(),
-		Class: contextforge.ClassHosted, URL: e.URL, Repo: e.Repo, InstanceDigest: lock.Image.Platforms[c.platform], ProbedAt: probedAt.Format(time.RFC3339)}
+		Class: contextforge.ClassHosted, URL: e.URL, Repo: e.Repo, InstanceDigest: c.instanceDigest(), ProbedAt: probedAt.Format(time.RFC3339)}
 	origin.TLSPublicKeySHA256 = tlsKeyDigest(ctx, u)
 	pv := packaging.Provenance{Builder: packaging.Builder{Tool: "smcpd contextforge connector", Version: c.o.Version},
 		Probe:        packaging.ProbeEnvironment{Launcher: "contextforge " + lock.Version, Confined: c.o.Enforced, Network: c.probeNetwork(u), EnvNames: []string{}},

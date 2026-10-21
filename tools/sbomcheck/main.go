@@ -111,19 +111,20 @@ func main() {
 func run(args []string, out io.Writer) (int, error) {
 	fs := flag.NewFlagSet("sbomcheck", flag.ContinueOnError)
 	reviewPath := fs.String("review", "packaging/sbom-review.json", "reviewed exceptions")
+	idsOnly := fs.Bool("identifiers", false, "check only that every package carries an SPDX license expression (FR-22.21), not that it is OSI-approved")
 	if err := fs.Parse(args); err != nil {
 		return 2, err
 	}
 	if fs.NArg() == 0 {
 		return 2, errors.New("no SBOM given")
 	}
-	reviews, err := loadReviews(*reviewPath)
+	reviews, err := loadReviews(*reviewPath, *idsOnly)
 	if err != nil {
 		return 2, err
 	}
 	refused := 0
 	for _, p := range fs.Args() {
-		findings, err := checkFile(p, reviews)
+		findings, err := checkFile(p, reviews, *idsOnly)
 		if err != nil {
 			return 2, err
 		}
@@ -147,13 +148,19 @@ func run(args []string, out io.Writer) (int, error) {
 		}
 		fmt.Fprintf(out, "%s: %d packages accepted, %d refused\n", p, n, len(findings)-n)
 	}
+	if refused > 0 && *idsOnly {
+		return 1, fmt.Errorf("%d packages without an SPDX license identifier", refused)
+	}
 	if refused > 0 {
 		return 1, fmt.Errorf("%d packages without an OSI-approved or public-domain license", refused)
 	}
 	return 0, nil
 }
 
-func loadReviews(p string) ([]Review, error) {
+// loadReviews reads the review file. A review establishes an OSI-approved
+// or public-domain license, or, for the FR-22.21 identifier check, any
+// well-formed SPDX license expression.
+func loadReviews(p string, idsOnly bool) ([]Review, error) {
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
@@ -166,6 +173,13 @@ func loadReviews(p string) ([]Review, error) {
 		if r.Package == "" || r.Identifier == "" || r.License == "" || r.Reason == "" {
 			return nil, fmt.Errorf("%s: review %d lacks package, identifier, license or reason", p, i)
 		}
+		if idsOnly {
+			pr := &parser{toks: tokens(r.License), ok: func(string) bool { return true }}
+			if _, err := pr.or(); err != nil || pr.pos != len(pr.toks) {
+				return nil, fmt.Errorf("%s: review %d establishes %q, which is not an SPDX license expression", p, i, r.License)
+			}
+			continue
+		}
 		if !acceptedID(r.License) && !exprAccepted(r.License, nil) {
 			return nil, fmt.Errorf("%s: review %d establishes %q, which is not OSI-approved or public domain", p, i, r.License)
 		}
@@ -173,7 +187,7 @@ func loadReviews(p string) ([]Review, error) {
 	return rf.Reviews, nil
 }
 
-func checkFile(p string, reviews []Review) ([]Finding, error) {
+func checkFile(p string, reviews []Review, idsOnly bool) ([]Finding, error) {
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
@@ -188,6 +202,10 @@ func checkFile(p string, reviews []Review) ([]Finding, error) {
 	var out []Finding
 	for _, pkg := range doc.Packages {
 		if strings.HasPrefix(pkg.SPDXID, "SPDXRef-DocumentRoot") {
+			continue
+		}
+		if idsOnly {
+			out = append(out, checkIdentifiers(p, pkg, reviews))
 			continue
 		}
 		out = append(out, checkPackage(p, pkg, reviews))
@@ -374,4 +392,34 @@ func (p *parser) atom() (bool, error) {
 		p.pos++
 	}
 	return p.ok(id), nil
+}
+
+// checkIdentifiers is the FR-22.21 check of a bundled ContextForge
+// component: its license value must be a well-formed SPDX license
+// expression (licenseConcluded, or licenseDeclared when that is
+// NOASSERTION, NONE or empty). A package without one is accepted only
+// through a review with the identifier "license" that establishes it.
+func checkIdentifiers(file string, pkg spdxPackage, reviews []Review) Finding {
+	f := Finding{File: file, Package: pkg.Name, Version: pkg.VersionInfo}
+	expr := pkg.LicenseConcluded
+	if noValue(expr) {
+		expr = pkg.LicenseDeclared
+	}
+	if noValue(expr) {
+		f.Expression = "NOASSERTION"
+		for _, r := range reviews {
+			if r.Package == pkg.Name && strings.EqualFold(r.Identifier, "license") {
+				f.Reviewed = append(f.Reviewed, r)
+				return f
+			}
+		}
+		f.Refused = []string{"license"}
+		return f
+	}
+	f.Expression = expr
+	p := &parser{toks: tokens(expr), ok: func(string) bool { return true }}
+	if _, err := p.or(); err != nil || p.pos != len(p.toks) {
+		f.Refused = []string{"expression " + expr}
+	}
+	return f
 }

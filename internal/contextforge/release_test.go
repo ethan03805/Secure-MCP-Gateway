@@ -97,8 +97,25 @@ func TestParseLockRefusals(t *testing.T) {
 		"other issuer":   mutate(func(m map[string]any) { m["signer"].(map[string]any)["issuer"] = "https://accounts.example" }),
 		"catalog digest": mutate(func(m map[string]any) { m["catalog"].(map[string]any)["sha256"] = "abc" }),
 		"bad wheel": mutate(func(m map[string]any) {
-			m["wheels"] = []any{map[string]any{"file": "x.tar.gz", "sha256": strings.Repeat("a", 64)}}
+			m["wheels"].(map[string]any)["linux/amd64"] = []any{map[string]any{"file": "x.tar.gz", "sha256": strings.Repeat("a", 64),
+				"url": "https://files.pythonhosted.org/packages/x.tar.gz"}}
 		}),
+		"wheel url": mutate(func(m map[string]any) {
+			w := m["wheels"].(map[string]any)["linux/arm64"].([]any)[0].(map[string]any)
+			w["url"] = "https://mirror.example/" + w["file"].(string)
+		}),
+		"missing wheel platform": mutate(func(m map[string]any) { delete(m["wheels"].(map[string]any), "windows/amd64") }),
+		"no contextforge wheel": mutate(func(m map[string]any) {
+			set := m["wheels"].(map[string]any)["darwin/arm64"].([]any)
+			var keep []any
+			for _, w := range set {
+				if !strings.HasPrefix(w.(map[string]any)["file"].(string), "mcp_contextforge_gateway-") {
+					keep = append(keep, w)
+				}
+			}
+			m["wheels"].(map[string]any)["darwin/arm64"] = keep
+		}),
+		"python version":   mutate(func(m map[string]any) { m["python"] = "3.13" }),
 		"unsorted starter": mutate(func(m map[string]any) { m["starter_set"] = []any{"b", "a"} }),
 		"unknown member":   mutate(func(m map[string]any) { m["extra"] = true }),
 		"no license":       mutate(func(m map[string]any) { m["license"] = "" }),

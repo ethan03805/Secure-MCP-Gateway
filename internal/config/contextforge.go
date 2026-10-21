@@ -21,9 +21,13 @@ type ContextForge struct {
 	Engine string `toml:"engine" json:"engine,omitempty"`
 	// Cosign verifies the image signature (FR-22.19); default from PATH.
 	Cosign string `toml:"cosign" json:"cosign,omitempty"`
-	// Python is the interpreter of a virtual environment with the pinned
-	// ContextForge release installed, for the managed-process form of the
-	// bundled instance (FR-22.25): always on Windows, and where no
-	// container engine is installed.
+	// Python is a CPython interpreter of the release lock's version
+	// (3.12) from which the Connector creates the private virtual
+	// environment of the managed-process form (FR-22.20, FR-22.25):
+	// always on Windows, and where no container engine is installed.
 	Python string `toml:"python" json:"python,omitempty"`
+	// WheelDir is a directory holding exactly the release lock's wheel
+	// set for this platform, installed instead of fetching the wheels from
+	// their PyPI URLs (FR-22.20).
+	WheelDir string `toml:"wheel_dir" json:"wheel_dir,omitempty"`
 }

@@ -230,6 +230,9 @@ checksum:
   extra_files:
     - glob: build/installers/*
     - glob: build/installers-pending/*
+    # The ContextForge release lock, its signature and SBOMs (FR-22.18,
+    # FR-22.21; scripts/contextforge-release-assets.sh).
+    - glob: build/contextforge/*
 
 # SBOMs for each archive, generated with syft when it is installed (the
 # release workflow installs it). Snapshot builds without syft skip them.
@@ -313,6 +316,7 @@ release:
     name: Secure-MCP-Gateway
   extra_files:
     - glob: build/installers/*
+    - glob: build/contextforge/*
   draft: false
   prerelease: auto
   mode: replace

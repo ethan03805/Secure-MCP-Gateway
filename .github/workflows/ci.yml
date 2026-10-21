@@ -1414,7 +1414,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1438,10 +1438,21 @@ jobs:
             echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
             podman system migrate >/dev/null 2>&1 || true
           fi
+      # The managed-process installation from the wheel set (bundle
+      # TestWheelSetInstallImage, FR-22.20): CPython 3.12 with venv, and
+      # unprivileged user namespaces so that the install runs in a network
+      # namespace without network access (Ubuntu 24.04 restricts them
+      # through AppArmor by default).
+      - name: CPython 3.12 venv and user namespaces (managed-process install)
+        run: |
+          sudo apt-get install -y -qq python3.12-venv >/dev/null
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          unshare --user --map-root-user --net true
       - name: Pinned image tests
         env:
           SMCP_CONTEXTFORGE_IMAGE: "1"
           SMCP_CONTEXTFORGE_ENFORCED: "1"
+          SMCP_CONTEXTFORGE_PYTHON: /usr/bin/python3.12
         run: |
           mkdir -p build
           rc=0
@@ -1455,12 +1466,49 @@ jobs:
           docker volume ls -q | grep '^smcp-c' | xargs -r docker volume rm -f || true
           podman ps -aq --filter label=smcp.component=contextforge | xargs -r podman rm -f || true
           podman volume ls -q | grep '^smcp-c' | xargs -r podman volume rm -f || true
+      # The release's ContextForge assets built as the release workflow
+      # builds them (scripts/contextforge-release-assets.sh), signed with a
+      # key made for this run instead of the release key: the lock and its
+      # signature, the image and wheel SBOMs, the license and notice, the
+      # SPDX identifier check and the advisory check (FR-22.18, FR-22.21).
+      # The identifier check must then fail on a copy of a wheel SBOM with
+      # ContextForge's own license identifier removed.
+      - name: Install syft (SBOM)
+        uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - name: ContextForge release assets, snapshot (FR-22.18, FR-22.21)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          command -v minisign >/dev/null 2>&1 || sudo apt-get install -y -qq minisign >/dev/null
+          umask 077
+          minisign -G -W -f -p "$RUNNER_TEMP/snapshot.pub" -s "$RUNNER_TEMP/snapshot.key" >/dev/null
+          MINISIGN_KEY_FILE="$RUNNER_TEMP/snapshot.key" SMCP_VERSION="snapshot-${GITHUB_SHA::12}" \
+            scripts/contextforge-release-assets.sh build/contextforge | grep -v '^reviewed' | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/snapshot.key"
+          minisign -V -p "$RUNNER_TEMP/snapshot.pub" -m build/contextforge/contextforge.lock.json
+          cmp build/contextforge/contextforge.lock.json packaging/contextforge.lock.json
+          x=$(mktemp -d)
+          jq '(.packages[] | select(.name == "mcp-contextforge-gateway") | .licenseDeclared, .licenseConcluded) |= "NOASSERTION"' \
+            build/contextforge/contextforge-wheels-linux-amd64.spdx.json > "$x/removed.spdx.json"
+          if go run ./tools/sbomcheck -identifiers -review packaging/contextforge-sbom-review.json "$x/removed.spdx.json" > "$x/out.txt"; then
+            echo "::error::the SBOM check passed a ContextForge component without a license identifier"; exit 1
+          fi
+          grep REFUSED "$x/out.txt" | tee -a "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP/snapshot.pub" build/contextforge/snapshot-key.pub
       - name: Upload the results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: contextforge-results
           path: build/contextforge-test.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload the snapshot release assets
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: contextforge-release-assets
+          path: build/contextforge
           if-no-files-found: warn
           retention-days: 14
 
