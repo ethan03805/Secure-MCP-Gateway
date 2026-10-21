@@ -584,7 +584,11 @@ jobs:
           # (build/windows-test.json, FR-21.19); their names are unique to
           # Windows, so they never replace a Linux result of the same test.
           rc=0
-          go test -json -count=1 -run '^TestWindows' ./internal/keys ./internal/pipeline ./internal/edge ./internal/winsec ./internal/winsvc ./internal/winpipe ./internal/durable ./internal/health ./internal/filters ./internal/adapter ./internal/harness ./internal/packaging > build/windows-test.json || rc=1
+          # internal/secrets and internal/edge create local test accounts
+          # (internal/wintest; the runner is elevated); tools/winport
+          # cross-builds and vets every package for both architectures
+          # (FR-21.2).
+          go test -json -count=1 -timeout 20m -run '^TestWindows' ./internal/keys ./internal/pipeline ./internal/edge ./internal/winsec ./internal/winsvc ./internal/winpipe ./internal/durable ./internal/health ./internal/filters ./internal/adapter ./internal/harness ./internal/packaging ./internal/secrets ./tools/winport > build/windows-test.json || rc=1
           jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Package | sub(".*/secure-mcp-gateway/"; ""))\t\(.Test)"' build/windows-test.json
           exit "$rc"
       # The Windows backend sandbox (FR-21.11, FR-21.12, SR-4.8-2): Job
@@ -677,6 +681,32 @@ jobs:
       - name: Machine-mode install smoke test
         shell: pwsh
         run: ./scripts/windows-machine-smoke.ps1 -BinDir build\win\bin
+      # FR-21.10, SR-2.13-4: a state directory with DPAPI keys and a dpapi
+      # vault, started healthy here, then refused on a second runner (job
+      # windows-state-copy); the machine-mode keys and vault key that the
+      # smoke test above left are checked to be bound to the service
+      # account. The claims join build/windows-test.json.
+      - name: Export a DPAPI state directory for the second runner
+        if: matrix.runner == 'windows-latest'
+        run: |
+          SMCP_DPAPI_EXPORT=$(cygpath -w "$RUNNER_TEMP/dpapi-state")
+          export SMCP_DPAPI_EXPORT
+          rc=0
+          go test -json -count=1 -timeout 15m -run '^TestWindowsStateCopyExport$' ./internal/acceptance/ > build/windows-export-raw.json || rc=$?
+          cat build/windows-export-raw.json >> build/windows-test.json
+          jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Test)"' build/windows-export-raw.json
+          if [ "$rc" != 0 ]; then
+            jq -r 'select(.Action == "output") | .Output' build/windows-export-raw.json | tail -100
+            exit 1
+          fi
+      - name: Upload the DPAPI state directory
+        if: matrix.runner == 'windows-latest'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-dpapi-state
+          path: ${{ runner.temp }}/dpapi-state
+          if-no-files-found: error
+          retention-days: 1
       - name: Every package, measured (informational, never fails)
         continue-on-error: true
         run: |
@@ -698,9 +728,62 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-results-${{ matrix.runner }}
+          # windows-test.json holds the claims of the Windows-only tests;
+          # the pattern below it does not match its name.
           path: |
+            build/windows-test.json
             build/windows-*-test.json
             build/windows-process-trace.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  # FR-21.10, SR-2.13-4: the state directory exported by the windows job
+  # (windows-latest), restored on a second, fresh runner at the same path:
+  # smcpd must refuse it with cause key_protection and change no file, and
+  # the vault master key must stay locked. DPAPI keys are bound to the
+  # account's profile on the host that made them.
+  windows-state-copy:
+    name: windows (state copy to a second runner)
+    needs: [windows]
+    if: ${{ !cancelled() && needs.windows.result == 'success' }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CGO_ENABLED: "0"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out with LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-dpapi-state
+          path: ${{ runner.temp }}/dpapi-state
+      - name: Start smcpd on the copied state directory
+        run: |
+          mkdir -p build
+          SMCP_DPAPI_IMPORT=$(cygpath -w "$RUNNER_TEMP/dpapi-state")
+          export SMCP_DPAPI_IMPORT
+          rc=0
+          go test -json -count=1 -timeout 15m -run '^TestWindowsStateCopyRefused$' ./internal/acceptance/ > build/windows-copy-test.json || rc=$?
+          jq -r 'select(.Test != null and (.Action == "pass" or .Action == "fail" or .Action == "skip")) | "\(.Action)\t\(.Test)"' build/windows-copy-test.json
+          jq -r 'select(.Action == "output") | .Output' build/windows-copy-test.json | tail -60
+          exit "$rc"
+      - name: Upload the test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-results-state-copy
+          path: build/windows-copy-test.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -1751,7 +1834,7 @@ jobs:
     if: >-
       always() && github.event_name != 'pull_request' &&
       (needs.go.result == 'success' || needs.go.result == 'failure')
-    needs: [srs, go, lint, site, security, linux-integration, install-standalone, install-guide, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop, desktop-e2e, windows, contextforge]
+    needs: [srs, go, lint, site, security, linux-integration, install-standalone, install-guide, hostile, console, console-enforced, graph, perf, acceptance-enforced, offline, desktop, desktop-e2e, windows, windows-state-copy, contextforge]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -1825,6 +1908,11 @@ jobs:
         continue-on-error: true
         with:
           name: windows-results-windows-latest
+          path: build
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        continue-on-error: true
+        with:
+          name: windows-results-state-copy
           path: build
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         continue-on-error: true
@@ -1921,7 +2009,7 @@ jobs:
           fi
           # The Windows acceptance subset and hostile suite in the per-user
           # mode (FR-21.20; per-mode scenario results, not the label).
-          for f in windows-acceptance-test windows-hostile-test; do
+          for f in windows-acceptance-test windows-hostile-test windows-copy-test; do
             if [ -s "build/$f.json" ]; then
               cat "build/$f.json" >> build/all-test.json
               merged=1

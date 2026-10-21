@@ -60,12 +60,16 @@ func KeychainAvailable() bool {
 // ResolveKeySource maps "auto" to the strongest source the host offers.
 // The Linux kernel keyring is not used: its keys do not survive a reboot,
 // so it cannot hold the only copy of the master key; TPM sealing is not
-// implemented. On Linux the passphrase source is used.
+// implemented. On Linux the passphrase source is used; on Windows DPAPI
+// under the account that runs the Gateway (SR-2.13-4).
 func ResolveKeySource(name string) (string, error) {
 	switch name {
 	case "", KeySourceAuto:
 		if KeychainAvailable() {
 			return KeySourceKeychain, nil
+		}
+		if runtime.GOOS == "windows" {
+			return KeySourceDPAPI, nil
 		}
 		return KeySourcePassphrase, nil
 	case KeySourceKeychain:
@@ -73,10 +77,15 @@ func ResolveKeySource(name string) (string, error) {
 			return "", errors.New("key_source keychain needs macOS and /usr/bin/security")
 		}
 		return name, nil
+	case KeySourceDPAPI:
+		if runtime.GOOS != "windows" {
+			return "", errors.New("key_source dpapi needs Windows")
+		}
+		return name, nil
 	case KeySourcePassphrase:
 		return name, nil
 	}
-	return "", fmt.Errorf("unknown key_source %q (auto, keychain, passphrase)", name)
+	return "", fmt.Errorf("unknown key_source %q (auto, keychain, dpapi, passphrase)", name)
 }
 
 // Keychain keeps the master key as a generic password item. The value is

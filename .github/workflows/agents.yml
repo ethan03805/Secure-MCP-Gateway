@@ -234,6 +234,10 @@ jobs:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CLIENTS: ${{ inputs.clients }}
+          # Goose trusts only the Windows certificate store: the suite adds
+          # the Gateway CA to the machine Root store of this disposable
+          # runner for the run and removes it afterwards.
+          SMCP_AGENTS_CERT_STORE: "1"
         run: |
           go run ./scripts/agents -clients "${CLIENTS:-claude-code,codex,opencode,gemini,goose}" -work "$RUNNER_TEMP/agents" \
             -out build/agents-windows.json -report build/agents-windows-report.json

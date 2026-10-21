@@ -34,7 +34,7 @@
         "lastResult": "pass",
         "lastRun": "2026-10-20",
         "version": "2.1.302",
-        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223"
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39475909294"
       }
     },
     {
@@ -67,7 +67,7 @@
         "lastResult": "pass",
         "lastRun": "2026-10-20",
         "version": "0.142.2",
-        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223"
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39475909294"
       }
     },
     {
@@ -124,7 +124,7 @@
         "lastResult": "pass",
         "lastRun": "2026-10-20",
         "version": "1.15.13",
-        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223"
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39475909294"
       }
     },
     {
@@ -157,7 +157,7 @@
         "lastResult": "not-run",
         "lastRun": "2026-10-20",
         "version": null,
-        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223",
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39475909294",
         "notRunReason": "the suite needs GEMINI_API_KEY, which is not configured for CI (as on Linux)"
       }
     },
@@ -188,11 +188,10 @@
           "lockdown": "%USERPROFILE%\\.config\\smcp\\goose-allowlist.yaml"
         },
         "confirm": true,
-        "lastResult": "not-run",
+        "lastResult": "pass",
         "lastRun": "2026-10-20",
         "version": "1.55.0",
-        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39431972223",
-        "notRunReason": "on Windows Goose verifies TLS only against the Windows certificate store, which the suite does not change"
+        "run": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/39475909294"
       }
     },
     {

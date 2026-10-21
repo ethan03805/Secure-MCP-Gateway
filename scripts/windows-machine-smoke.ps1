@@ -1,6 +1,6 @@
 <#
 Windows machine-mode installation smoke test (SRS FR-21.6, FR-21.5,
-FR-21.10, SR-4.1-3 in part, SR-4-2), run elevated by the windows job of
+FR-21.10, SR-2.13-4, SR-4.1-3 in part, SR-4-2), run elevated by the windows job of
 .github/workflows/ci.yml:
 
   1. smcpctl install --machine: the service smcpd under NT SERVICE\smcpd
@@ -77,6 +77,25 @@ Step 'health and label (SR-4-2)'
 $health = & $smcpctl health --config $cfg 2>&1 | Out-String
 Write-Host $health
 if ($health -notmatch 'degraded' -or $health -notmatch 'not enforced, windows-machine') { Fail 'health or label wrong' }
+
+Step 'vault master key made by the service as a DPAPI blob (SR-2.13-4)'
+# With the dpapi key source and no vault, smcpd creates the vault at its
+# start under NT SERVICE\smcpd. internal/acceptance
+# TestWindowsStateCopyExport later checks that this administrator account
+# cannot decrypt it.
+Add-Content -LiteralPath $cfg -Value "`n[secrets]`nkey_source = `"dpapi`"`n"
+Restart-Service -Name smcpd
+$deadline = (Get-Date).AddSeconds(120)
+do {
+  Start-Sleep -Seconds 2
+  & $smcpctl health --config $cfg *> $null
+  $up = ($LASTEXITCODE -eq 0)
+} until ($up -or (Get-Date) -gt $deadline)
+if (-not $up) { Fail 'the service did not come back after the [secrets] change' }
+$mk = Join-Path $base 'state\vault\master.dpapi'
+if (-not (Test-Path -LiteralPath $mk)) { Fail 'the service did not create the vault master key' }
+$b = [IO.File]::ReadAllBytes($mk)
+for ($i = 0; $i -lt $dpapi.Length; $i++) { if ($b[$i] -ne $dpapi[$i]) { Fail 'master.dpapi is not a DPAPI blob' } }
 
 Step 'restart after a failure (FR-21.6)'
 $p = Get-CimInstance Win32_Service -Filter "Name = 'smcpd'"
