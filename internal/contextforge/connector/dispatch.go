@@ -87,6 +87,22 @@ func (c *Connector) ResolveHosted(sc config.Server, m *packaging.Manifest, rev l
 		}
 		c.hosted, c.cleanedAt = map[string]*hostedPkg{}, started
 	}
+	// Registered already in this start of the instance (an upgrade
+	// registers every enabled hosted package before the Gateway launches
+	// it again, FR-22.31): the launch uses that registration.
+	for id, hp := range c.hosted {
+		if hp.key() == rev.Key() && hp.Alias == sc.Alias {
+			out := sc
+			out.URL = c.inst.BaseURL() + "/servers/" + id + "/mcp"
+			out.Command, out.Args, out.Env, out.Dir, out.Runtime, out.ArtifactRoot = "", nil, nil, "", "", ""
+			return out, nil
+		}
+	}
+	// SR-3.8-2: the revision's tools were checked against this instance's
+	// code, or it is suspended for drift.
+	if err := c.checkInstanceDigest(rev); err != nil {
+		return sc, err
+	}
 	slug := m.Upstream.GatewaySlug
 	user := "user-" + slug
 	if _, err := c.o.Broker.EnsureComponent(component, user, func() ([]byte, error) {

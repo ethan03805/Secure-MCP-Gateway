@@ -32,6 +32,12 @@ const (
 	ReasonContextForgeDisabled = "CONTEXTFORGE_DISABLED"
 )
 
+// ReleaseKey is the minisign public key of the Gateway's releases (key ID
+// 064FAC0C64ACCED0, SECURITY.md). The release workflow signs the release
+// lock with it, and an upgrade to a release lock that is not compiled into
+// the Gateway needs a signature that verifies with it (FR-22.18, FR-22.31).
+const ReleaseKey = "RWTQzqxkDKxPBk0ZPk07i/mcrUVaevLmrm8zRkQLqGrs14RwtUhG30Dq"
+
 // The release lock and the catalog file of the pinned ContextForge
 // release are compiled into the Gateway, so the pinned catalog is read
 // without any network access (FR-22.1). release/contextforge.lock.json is

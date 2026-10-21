@@ -1497,7 +1497,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1536,11 +1536,27 @@ jobs:
           SMCP_CONTEXTFORGE_IMAGE: "1"
           SMCP_CONTEXTFORGE_ENFORCED: "1"
           SMCP_CONTEXTFORGE_PYTHON: /usr/bin/python3.12
+          SMCP_CONTEXTFORGE_FIREWALL: "1"
         run: |
           mkdir -p build
           rc=0
           go test -count=1 -json -run 'Image|Network' ./internal/contextforge/... > build/contextforge-test.json || rc=$?
           jq -r 'select(.Action == "output") | .Output' build/contextforge-test.json | grep -E '^(--- |ok |FAIL|PASS|    .*(healthy after|SKIP|skip))' || true
+          exit "$rc"
+      # The hostile ContextForge rows (FR-22.43) in the Enforced profile,
+      # where HFC-12 runs the pinned image under the Enforced containment;
+      # the hostile job runs them in the Standalone profile. The results go
+      # to the status data with the Appendix L rows.
+      - name: Hostile ContextForge rows, Enforced profile (FR-22.43)
+        env:
+          SMCP_CONTEXTFORGE_IMAGE: "1"
+          SMCP_HOSTILE_PROFILE: enforced
+        run: |
+          rc=0
+          SMCP_HOSTILE_OUT="$GITHUB_WORKSPACE/build" go test -tags hostile -count=1 -json -run TestHostileContextForge ./internal/hostile/ > build/hostile-cf-enforced-raw.json || rc=$?
+          jq -c 'if .Package then .Package += "/contextforge-enforced" else . end' build/hostile-cf-enforced-raw.json >> build/contextforge-test.json
+          jq -r 'select(.Action == "output" and (.Output | test("pass=|FAIL"))) | .Output' build/hostile-cf-enforced-raw.json || true
+          if [ -f build/hostile-contextforge-enforced.md ]; then cat build/hostile-contextforge-enforced.md >> "$GITHUB_STEP_SUMMARY"; fi
           exit "$rc"
       - name: Remove the instance's containers and volumes
         if: always()
@@ -1583,7 +1599,10 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: contextforge-results
-          path: build/contextforge-test.json
+          path: |
+            build/contextforge-test.json
+            build/hostile-contextforge-enforced.json
+            build/hostile-contextforge-enforced.md
           if-no-files-found: warn
           retention-days: 14
       - name: Upload the snapshot release assets
@@ -1943,6 +1962,14 @@ jobs:
           if [ -s build/workflows.json ]; then merged=1; fi
           if [ -s build/hostile.json ] && jq -e 'type == "array"' build/hostile.json >/dev/null; then
             cat build/hostile-*-test.json >> build/all-test.json 2>/dev/null || true
+            # The hostile ContextForge rows (FR-22.43) are published with
+            # the Appendix L rows: the Standalone run of the hostile job and
+            # the Enforced run of the contextforge job.
+            for f in build/hostile-contextforge.json build/hostile-contextforge-enforced.json; do
+              if [ -s "$f" ] && jq -e 'type == "array"' "$f" >/dev/null; then
+                jq -s 'add' build/hostile.json "$f" > build/hostile.merged.json && mv build/hostile.merged.json build/hostile.json
+              fi
+            done
             merged=1
           else
             rm -f build/hostile.json

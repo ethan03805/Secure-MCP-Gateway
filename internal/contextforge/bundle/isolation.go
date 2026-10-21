@@ -130,7 +130,10 @@ func (a *Admin) RenewToken(ctx context.Context, p *Provisioned, password string)
 			ExpiresAt string `json:"expires_at"`
 		} `json:"token"`
 	}
-	if err := a.Call(ctx, http.MethodPost, "/v1/tokens", session, map[string]any{"name": p.Slug + "-" + time.Now().UTC().Format("20060102T150405"),
+	// The name is unique per user: a probe's token and the token of the
+	// registration that follows it can be minted within the same second.
+	now := time.Now().UTC()
+	if err := a.Call(ctx, http.MethodPost, "/v1/tokens", session, map[string]any{"name": fmt.Sprintf("%s-%s-%09d", p.Slug, now.Format("20060102T150405"), now.Nanosecond()),
 		"expires_in_days": 1, "team_id": p.TeamID, "scope": map[string]any{"server_id": p.ServerID}}, &tok); err != nil {
 		return err
 	}

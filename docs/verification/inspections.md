@@ -753,3 +753,31 @@ Observations:
 - `install.sh` resolved the latest release to v1.2.0, verified the signatures and the checksum, and installed binaries that report `1.2.0`. The tap formula is 1.2.0 and the `tap` workflow passed (run 39330362409). `smcpctl upgrade` from v1.1.0 to v1.2.0-rc.1 reported `release verified` and `upgrade complete`.
 
 Deviation: in the pre-release v1.2.0-rc.1 the checksum file named the four Linux packages with `~` (`smcp_1.2.0~rc.1_amd64.deb`), while GitHub stored them with `.` (`smcp_1.2.0.rc.1_amd64.deb`), so `shasum -c` on the downloaded pre-release failed for those four files. The final release has no `~` in any name and is not affected. Fixed after the release in `.goreleaser.yaml` (the package file names replace `~` with `.`) with checks in `.github/workflows/installers.yml` and `.github/workflows/release.yml`.
+
+## FR-22.38 ContextForge features outside scope
+
+| Field | Content |
+|---|---|
+| Requirement or scenario | FR-22.38 |
+| Commit | `5a4d9489327426c1b08399402c45bf4789f434cc` |
+| Profile and platform | Enforced and Standalone; source of the ContextForge Connector's admin API client, and its reconciliation fixtures in CI |
+| Date | 2026-10-20 |
+| Executor | Claude Code agent (phase-13 ContextForge verification task) |
+| Method | Inspection |
+| Result | pass |
+
+Steps: listed every request the Connector's admin API client (`bundle.Admin`) sends to the bundled instance, by searching `internal/contextforge/bundle` for `a.Call(`, `a.rpc(` and `a.list(`, and every caller of them in `internal/contextforge/connector`; then read the reconciliation code and ran its fixtures.
+
+Observations (line numbers of the recorded commit):
+
+- Users: create, update, deactivate and delete the per-package non-admin user, and its login for the package token (`internal/contextforge/bundle/admin.go:122`, `internal/contextforge/bundle/admin.go:137`, `internal/contextforge/bundle/admin.go:149`, `internal/contextforge/bundle/admin.go:162`).
+- Teams: create the package's team, add its user, remove the administrator from it (`internal/contextforge/bundle/isolation.go:68`, `internal/contextforge/bundle/isolation.go:72`, `internal/contextforge/bundle/isolation.go:110`).
+- Gateways and virtual servers: register the package's gateway and create its virtual server with team visibility (`internal/contextforge/bundle/isolation.go:83`, `internal/contextforge/bundle/isolation.go:105`).
+- Tokens: mint the package token as its user (`internal/contextforge/bundle/isolation.go:133`); revoke tokens when a probe or package is removed (`internal/contextforge/bundle/probe.go:61`).
+- Tool lists: `GET /v1/tools` (`internal/contextforge/bundle/isolation.go:162`) and `tools/list` on the package's virtual server (`internal/contextforge/bundle/probe.go:23`); the scope self-check sends `tools/list` and `tools/call` to the virtual servers and the global `/mcp` and `/rpc` endpoints and reads two admin routes, expecting refusals (`internal/contextforge/bundle/isolation.go:191`, `internal/contextforge/bundle/isolation.go:209`, `internal/contextforge/bundle/isolation.go:218`).
+- Health: `GET /health` (`internal/contextforge/bundle/instance.go:408`).
+- Reconciliation reads gateways, tools, virtual servers, prompts, resources, A2A agents, users and teams and deletes what the Connector did not create (`internal/contextforge/bundle/reconcile.go:100`, `internal/contextforge/bundle/reconcile.go:108`, `internal/contextforge/bundle/reconcile.go:141`, `internal/contextforge/bundle/reconcile.go:168`, `internal/contextforge/bundle/reconcile.go:181`, `internal/contextforge/bundle/reconcile.go:194`, `internal/contextforge/bundle/reconcile.go:213`); removal of a probe's objects deletes its token, virtual server, gateway and team (`internal/contextforge/bundle/probe.go:54`).
+- No request creates a prompt, resource, A2A agent, REST or gRPC tool, peer gateway federation or discovery: no `POST` to `/v1/prompts`, `/v1/resources`, `/v1/a2a`, `/v1/tools` or a federation or discovery route exists in `internal/contextforge`, and the only `POST /v1/gateways` registers the package's own E-18 endpoint (`internal/contextforge/bundle/isolation.go:83`). The generated configuration also turns off A2A, the reverse proxy, the WebSocket relay, the direct proxy, the catalog and bulk import (FR-22.27).
+- Reconciliation fixtures: against the ContextForge stand-in, `connector_test.TestReconcileRemovesExcluded` injects a peer gateway, a REST tool of no gateway, a prompt, a resource and an A2A agent and confirms that one pass removes each and records a `contextforge_drift` event, while the package's own tool still answers; the hostile row HFC-13 does the same through the suite. Against the pinned v1.0.11 image, `bundle.TestReconcileImage` (contextforge job) removes an injected gateway, user, team and prompt in one pass. These ran in the CI of the pull request that adds this record.
+
+Deviation: the first version of the verification named only gateway, virtual-server, token and health operations; the team and user operations that FR-22.29 requires are inspected too, and the SRS verification statement was changed to name them.

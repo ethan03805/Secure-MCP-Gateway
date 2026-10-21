@@ -26,6 +26,7 @@ func (c *Connector) RegisterRoutes(s *adminapi.Server) {
 	s.Handle("POST /api/v1/contextforge/instance/start", c.apiInstance(true))
 	s.Handle("POST /api/v1/contextforge/instance/stop", c.apiInstance(false))
 	s.Handle("POST /api/v1/contextforge/instance/uninstall", c.apiUninstall)
+	s.Handle("POST /api/v1/contextforge/instance/upgrade", c.apiUpgrade)
 	s.Handle("POST /api/v1/contextforge/starter-set", c.apiStarterSet)
 }
 
@@ -36,6 +37,42 @@ func (c *Connector) apiStarterSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"proposals": ps})
+}
+
+// apiUpgrade upgrades the bundled instance (FR-22.31): with "lock" (the
+// release lock's JSON text) and "signature" (its minisign signature
+// file's text) to that lock, without them to the release lock of this
+// Gateway.
+func (c *Connector) apiUpgrade(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Lock      string `json:"lock"`
+		Signature string `json:"signature"`
+	}
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", "body: "+err.Error())
+		return
+	}
+	var raw, sig []byte
+	if in.Lock != "" {
+		raw, sig = []byte(in.Lock), []byte(in.Signature)
+	} else if in.Signature != "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "a signature needs its lock")
+		return
+	}
+	rep, err := c.Upgrade(r.Context(), adminapi.Actor(r), raw, sig)
+	if err != nil && rep.Outcome == "" {
+		writeRefusal(w, err)
+		return
+	}
+	body := map[string]any{"upgrade": rep, "instance": c.Instance()}
+	st := http.StatusOK
+	if err != nil {
+		st = http.StatusConflict
+		body["error"] = map[string]string{"code": packaging.ReasonOf(err), "message": err.Error()}
+	}
+	writeJSON(w, st, body)
 }
 
 func (c *Connector) apiUninstall(w http.ResponseWriter, r *http.Request) {

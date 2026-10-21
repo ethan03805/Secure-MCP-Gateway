@@ -52,6 +52,8 @@ for line in sys.stdin:
         out = {"jsonrpc": "2.0", "id": m["id"], "result": {"protocolVersion": "2025-11-25", "capabilities": {"tools": {}}, "serverInfo": {"name": "md", "version": "1"}}}
     elif m.get("method") == "tools/list":
         out = {"jsonrpc": "2.0", "id": m["id"], "result": {"tools": [{"name": "convert_to_markdown", "description": "Convert a URI.", "inputSchema": {"type": "object"}}]}}
+    elif m.get("method") == "tools/call":
+        out = {"jsonrpc": "2.0", "id": m["id"], "result": {"content": [{"type": "text", "text": "converted by the local server"}]}}
     else:
         out = {"jsonrpc": "2.0", "id": m["id"], "error": {"code": -32601, "message": "method not found"}}
     sys.stdout.write(json.dumps(out) + "\n")

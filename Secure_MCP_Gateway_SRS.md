@@ -8858,12 +8858,12 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 |---|---|
 | ID | FR-22.26 |
 | Parent ID | FR-22 — ContextForge integration |
-| Statement | The ContextForge Connector (E-36) **SHALL** bind the bundled instance's HTTP listener only to a loopback address on a port chosen at each start and, in the Enforced profile, **SHALL** install a host firewall rule that accepts connections to that port only from the Gateway's service identity. |
+| Statement | The ContextForge Connector (E-36) **SHALL** bind the bundled instance's HTTP listener only to a loopback address on a port chosen at each start and, in the Enforced profile, **SHALL** choose that port from a reserved port range for which the Enforced installation installs a host firewall rule that accepts connections only from the Gateway's service identity. |
 | Allocation | Elements: E-36 ContextForge Connector, E-15 Server Runtime Manager; Functions: F-108; Internal interfaces: I-43, I-13 |
 | Verification Method | Test |
 | Verification Statement | Start the bundled instance; scan every non-loopback address of the host for the port, and in the Enforced profile connect to the port as the Gateway identity and as another local user; confirm no non-loopback listener exists, the Gateway connects, and the other user's connection is refused. |
 | Source | OWNER (bound to loopback only; its admin UI and API not exposed); SEC 4.4; SEC 4.14 |
-| Rationale | ContextForge listens on `0.0.0.0:4444` by default; the Gateway must be its only client. |
+| Rationale | ContextForge listens on `0.0.0.0:4444` by default; the Gateway must be its only client. Changed on 2026-10-20 to match what can be built: smcpd runs as `smcp-core` without CAP_NET_ADMIN on the host, so it cannot install a host rule at each start; the Enforced installation (root) loads the rule with the table `inet smcp` for the reserved range 28400 to 28499 (outside the Linux ephemeral range), and the Connector picks the listener port from that range. In rootless Podman the published port is a slirp4netns listener on loopback, which the rule restricts to `smcp-core`. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.27 — Hardened configuration
@@ -9031,9 +9031,9 @@ Terms used below. A **local entry** is a catalog entry that names a repository a
 | Statement | The ContextForge Connector (E-36) **SHALL** register in the bundled instance only gateways and virtual servers for hosted packages, and **SHALL** NOT create peer-gateway federation, discovery, REST or gRPC tools, A2A agents, prompts or resources. |
 | Allocation | Elements: E-36 ContextForge Connector; Functions: F-109; Internal interfaces: I-43 |
 | Verification Method | Inspection |
-| Verification Statement | Inspect the Connector's admin API client and its reconciliation fixtures; confirm only gateway, virtual-server, token and health operations are issued, and that reconciliation removes an object of each excluded type. |
+| Verification Statement | Inspect the Connector's admin API client and its reconciliation fixtures; confirm only gateway, virtual-server, team, user, token, tool-list and health operations and the reads and removals of reconciliation are issued, and that reconciliation removes an object of each excluded type. |
 | Source | OWNER (using ContextForge as a general federated upstream for remote instances is out of scope); SEC 5.6 |
-| Rationale | Each excluded feature would add a server or capability that never passed the Library. |
+| Rationale | Each excluded feature would add a server or capability that never passed the Library. The verification names team and user operations since 2026-10-20: FR-22.29 (revised after the ContextForge spike) gives each hosted package its own team and non-admin user, which the Connector creates through the admin API. |
 | Target release | v1.3.0 (planned, Section 2.8) |
 
 #### FR-22.39 — Evidence for calls through ContextForge

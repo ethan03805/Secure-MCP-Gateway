@@ -86,8 +86,9 @@ The unit runs `/usr/local/bin/smcpd --config /etc/smcp/smcp.toml` (or the packag
 |---|---|
 | set `gateway_ports` | The harness and control listener ports (8443, 8444 by default; edit `/etc/smcp/smcp.nft` if you change them) |
 | set `graph_ports` | The graph engine's Bolt port (7687; edit `/etc/smcp/smcp.nft` if `[graph] uri` names another) |
+| set `contextforge_ports` | The loopback ports 28400 to 28499, from which the bundled ContextForge instance's listener port is chosen at each start in the Enforced profile (FR-22.26) |
 | chain `input` | Drops TCP connections to `gateway_ports` and `graph_ports` that do not arrive on loopback |
-| chain `output` | Rejects connections to `graph_ports` from every user but `smcp-core`, the identity of smcpd and its Data Access Service (SR-4.2-1); rejects every new connection opened by `smcp-data`, the identity the graph engine runs as (SR-7.4-1); then jumps to `egress` |
+| chain `output` | Rejects connections to `graph_ports` from every user but `smcp-core`, the identity of smcpd and its Data Access Service (SR-4.2-1); rejects connections to `contextforge_ports` from every user but `smcp-core`, so only the Gateway reaches the bundled ContextForge instance (FR-22.26); rejects every new connection opened by `smcp-data`, the identity the graph engine runs as (SR-7.4-1); then jumps to `egress` |
 | chain `egress` | Empty; jumped to from `output`. The Egress Broker (E-18) adds its rules here |
 
 Sandboxed instances have no network interface but loopback (network `none`), so they cannot reach anything whatever this table contains.

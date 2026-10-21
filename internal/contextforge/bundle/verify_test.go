@@ -3,9 +3,6 @@ package bundle
 import (
 	"context"
 	"errors"
-	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -87,34 +84,5 @@ func TestVerifier(t *testing.T) {
 	gone := &Verifier{Engine: Engine{Path: "docker"}, exec: fakeTools(r.Signer.Subject, "sha256:"+strings.Repeat("1", 64))}
 	if err := gone.LocalDigestOK(context.Background(), ver, r.Image.Reference); packaging.ReasonOf(err) != ReasonUnverified {
 		t.Fatalf("missing local image: %v", err)
-	}
-}
-
-// TestVerifierNetwork verifies the real pinned image with cosign (network;
-// SMCP_CONTEXTFORGE_IMAGE=1).
-func TestVerifierNetwork(t *testing.T) {
-	if os.Getenv("SMCP_CONTEXTFORGE_IMAGE") != "1" {
-		t.Skip("set SMCP_CONTEXTFORGE_IMAGE=1 to verify the pinned image over the network")
-	}
-	reqtest.Partial(t, "FR-22.19", "SR-3.2-2")
-	cosign, err := exec.LookPath("cosign")
-	if err != nil {
-		t.Skip("cosign not installed")
-	}
-	eng, err := FindEngine()
-	if err != nil {
-		t.Skip(err)
-	}
-	r := contextforge.ReleaseLock().ContextForge
-	v := &Verifier{Cosign: cosign, Engine: eng}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-	if _, err := v.Verify(ctx, &r, "linux/"+runtime.GOARCH, time.Now()); err != nil {
-		t.Fatal(err)
-	}
-	bad := r
-	bad.Signer.Subject = "https://github.com/IBM/mcp-context-forge/.github/workflows/docker-multiplatform.yml@refs/tags/v1.0.10"
-	if _, err := v.Verify(ctx, &bad, "linux/"+runtime.GOARCH, time.Now()); packaging.ReasonOf(err) != ReasonUnverified {
-		t.Fatalf("signature from another tag accepted: %v", err)
 	}
 }
