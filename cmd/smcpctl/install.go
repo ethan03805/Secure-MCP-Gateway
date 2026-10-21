@@ -310,6 +310,50 @@ func (in *installer) needBinaries(names ...string) error {
 	return nil
 }
 
+// appImageBinDir is where `smcpctl install` copies the commands of an
+// AppImage (FR-20.19): $XDG_DATA_HOME/smcp-gateway/bin.
+func (in *installer) appImageBinDir() string {
+	return filepath.Join(in.xdg("XDG_DATA_HOME", ".local/share"), "smcp-gateway", "bin")
+}
+
+// copyFromAppImage handles an installation from an AppImage (FR-20.19):
+// the AppImage runtime mounts the image at APPDIR only while the
+// application runs, so a service unit that ran smcpd from there would
+// fail at its next start. When binDir is inside APPDIR, the release
+// binaries are copied to appImageBinDir, which the unit and the
+// configuration then name. The copy belongs to the user, as the AppImage
+// does, and `smcpctl doctor` reports it as writable (SR-4.11-2).
+func (in *installer) copyFromAppImage() error {
+	if in.goos != "linux" {
+		return nil
+	}
+	img := appImageFile(filepath.Join(in.binDir, "smcpctl"), in.getenv("APPIMAGE"), in.getenv("APPDIR"))
+	if img == "" {
+		return nil
+	}
+	dst := in.appImageBinDir()
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	for _, name := range releaseBinaries {
+		b, err := os.ReadFile(filepath.Join(in.binDir, name))
+		if errors.Is(err, os.ErrNotExist) && name != "smcpd" && name != "smcp-refserver" {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("copy %s from the AppImage: %w", name, err)
+		}
+		p := filepath.Join(dst, name)
+		v, err := ensureFile(p, b, 0o755)
+		if err != nil {
+			return fmt.Errorf("copy %s from the AppImage: %w", name, err)
+		}
+		in.step(v, "binary "+p+" (from the AppImage "+img+")")
+	}
+	in.binDir = dst
+	return nil
+}
+
 func (in *installer) standalone() error {
 	if in.goos == "windows" {
 		return in.windowsUser()
@@ -322,6 +366,9 @@ func (in *installer) standalone() error {
 		return err
 	}
 	if err := in.needBinaries("smcpd", "smcp-refserver"); err != nil {
+		return err
+	}
+	if err := in.copyFromAppImage(); err != nil {
 		return err
 	}
 	dirs := []string{l.cfgDir, l.stateDir, l.logDir}

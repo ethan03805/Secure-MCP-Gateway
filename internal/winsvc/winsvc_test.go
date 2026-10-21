@@ -26,6 +26,20 @@ func TestCommandLineQuoting(t *testing.T) {
 	}
 }
 
+func TestImageOf(t *testing.T) {
+	for in, want := range map[string]string{
+		CommandLine(`C:\Program Files\smcp-gateway\smcpd.exe`, "-config", `C:\ProgramData\smcp-gateway\config\smcp.toml`): `C:\Program Files\smcp-gateway\smcpd.exe`,
+		`C:\dir\smcpd.exe -config x`: `C:\dir\smcpd.exe`,
+		`  "C:\a b\smcpd.exe"`:       `C:\a b\smcpd.exe`,
+		`"C:\unterminated`:           `C:\unterminated`,
+		`smcpd.exe`:                  `smcpd.exe`,
+	} {
+		if got := ImageOf(in); got != want {
+			t.Errorf("ImageOf(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestStopEventName(t *testing.T) {
 	a := StopEventName(`C:\Users\a\AppData\Local\smcp-gateway\config\smcp.toml`)
 	if !strings.HasPrefix(a, `Local\smcp-gateway-stop-`) || len(a) != len(`Local\smcp-gateway-stop-`)+16 {

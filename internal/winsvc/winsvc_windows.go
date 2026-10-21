@@ -315,6 +315,26 @@ func ServiceState() (svc.State, bool, error) {
 	return st.State, true, err
 }
 
+// ServiceImage returns the program the machine-mode service runs (the
+// first word of its command line), or false when it is not installed.
+func ServiceImage() (string, bool, error) {
+	m, err := mgr.Connect()
+	if err != nil {
+		return "", false, err
+	}
+	defer func() { _ = m.Disconnect() }()
+	s, err := m.OpenService(ServiceName)
+	if err != nil {
+		return "", false, nil
+	}
+	defer s.Close()
+	c, err := s.Config()
+	if err != nil {
+		return "", true, err
+	}
+	return ImageOf(c.BinaryPathName), true, nil
+}
+
 // StartService starts the machine-mode service when it is not running.
 func StartService() error {
 	m, err := mgr.Connect()

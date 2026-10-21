@@ -276,6 +276,83 @@ func TestInstallStandalone(t *testing.T) {
 	}
 }
 
+// TestInstallFromAppImage: setup run from an AppImage (FR-20.19) finds
+// smcpctl on the image's mount, which exists only while the application
+// runs. install copies the release binaries to
+// $XDG_DATA_HOME/smcp-gateway/bin and the systemd user unit and the
+// configuration name the copies, so the service still starts after the
+// application quits.
+func TestInstallFromAppImage(t *testing.T) {
+	reqtest.Partial(t, "FR-20.19")
+	home, err := os.MkdirTemp("", "smcp-home-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(home) })
+	env := map[string]string{
+		"XDG_RUNTIME_DIR": filepath.Join(home, "run"),
+		"APPIMAGE":        filepath.Join(home, "Downloads", "smcp-desktop.AppImage"),
+		"APPDIR":          binDir,
+	}
+	if err := os.MkdirAll(env["XDG_RUNTIME_DIR"], 0o700); err != nil {
+		t.Fatal(err)
+	}
+	f := &fakeManager{t: t}
+	in, out := testInstaller(t, "linux", home, env, f)
+	l, err := in.layout()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfgPath := filepath.Join(l.cfgDir, "smcp.toml")
+	f.cfg = func() string { return cfgPath }
+	if err := in.standalone(); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	copies := filepath.Join(home, ".local", "share", "smcp-gateway", "bin")
+	for _, name := range []string{"smcpd", "smcpctl", "smcp-refserver"} {
+		p := filepath.Join(copies, name)
+		st, err := os.Stat(p)
+		if err != nil || st.Mode().Perm() != 0o755 {
+			t.Fatalf("%s: %v %v", p, st, err)
+		}
+		if !strings.Contains(out.String(), "created binary "+p+" (from the AppImage "+env["APPIMAGE"]+")") {
+			t.Errorf("no step for %s:\n%s", p, out.String())
+		}
+	}
+	unit, _ := os.ReadFile(l.unit)
+	if !strings.Contains(string(unit), "ExecStart="+systemdQuote(filepath.Join(copies, "smcpd"))+" --config ") {
+		t.Fatalf("the unit does not run the copy:\n%s", unit)
+	}
+	// Nothing install wrote names the mount.
+	for _, root := range []string{l.cfgDir, l.stateDir, l.unit} {
+		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			b, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			if strings.Contains(string(b), binDir) {
+				t.Errorf("%s names the AppImage mount %s", p, binDir)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A second run finds the copies present.
+	out.Reset()
+	in.binDir = binDir
+	if err := in.standalone(); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "present binary "+filepath.Join(copies, "smcpd")) {
+		t.Fatalf("second run:\n%s", out.String())
+	}
+}
+
 func TestInstallRefusals(t *testing.T) {
 	reqtest.Partial(t, "FR-13.5")
 	home := t.TempDir()

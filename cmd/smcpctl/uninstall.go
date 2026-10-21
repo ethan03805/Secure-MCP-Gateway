@@ -97,6 +97,11 @@ func uninstallCmd(args []string, in io.Reader, out io.Writer) error {
 			return err
 		}
 		*binDir = filepath.Dir(exe)
+		// Run from an AppImage: install copied the binaries out of the
+		// image (FR-20.19), and those copies are the installed ones.
+		if runtime.GOOS == "linux" && appImageFile(exe, os.Getenv("APPIMAGE"), os.Getenv("APPDIR")) != "" {
+			*binDir = (&installer{goos: runtime.GOOS, home: homeDir(), getenv: os.Getenv}).appImageBinDir()
+		}
 	}
 	cfgAbs, err := filepath.Abs(cfgPath)
 	if err != nil {

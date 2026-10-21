@@ -13,7 +13,12 @@
     the package;
   - the directory appended to the system PATH;
   - no service, configuration or state: `smcpctl install` creates them, as
-    after a .deb or .rpm. Removal deletes only the files above.
+    after a .deb or .rpm. Removal deletes the files above and, as the
+    .deb and .rpm pre-removal script does, first runs
+    smcpctl uninstall with its package-removal option as the system account (not on an
+    upgrade), which stops and removes the machine-mode service smcpd that
+    runs this package's smcpd and keeps the configuration, state, journal,
+    keys and backups (FR-20.22).
 
   Windows Server hosts get this package only; the Desktop Application has
   its own package (desktop/).
@@ -48,6 +53,15 @@
         <RegistryValue Root="HKLM" Key="Software\smcp-gateway" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
       </Component>
     </ComponentGroup>
+
+    <!-- FR-20.22: before the files go, on removal only; a failure never
+         stops the removal. -->
+    <CustomAction Id="SmcpPackageRemoval" Directory="INSTALLFOLDER"
+                  ExeCommand="&quot;[INSTALLFOLDER]smcpctl.exe&quot; uninstall --package-removal"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="SmcpPackageRemoval" Before="RemoveFiles" Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
 
     <Feature Id="Main" Title="Secure MCP Gateway" Level="1">
       <ComponentGroupRef Id="Binaries" />

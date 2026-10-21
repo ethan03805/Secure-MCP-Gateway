@@ -3,12 +3,20 @@ Installs, starts and removes the smcp-desktop Windows Installer package
 (packaging/installers/desktop/build-msi.ps1) on a Windows runner (E-35;
 SRS FR-20.20, FR-20.1, FR-20.28, SR-2.8-5, FR-20.21, FR-20.22):
 
-  1. msiexec /i /qn installs per machine into
-     "%ProgramFiles%\Secure MCP Gateway"; the WebView2 bootstrapper is not
-     run, because the runner has the WebView2 runtime (no download);
+  1. a Gateway state made by smcpctl bootstrap with the Windows binaries
+     of the same build (-BinDir) stands for an existing installation;
+     msiexec /i /qn installs per machine into
+     "%ProgramFiles%\Secure MCP Gateway" with Windows Installer's network
+     access blocked and no connection tried (FR-20.20,
+     scripts/msi-offline.ps1); the WebView2 bootstrapper is not run,
+     because the runner has the WebView2 runtime; every installed file
+     grants write access to SYSTEM, Administrators and TrustedInstaller
+     only, and a standard user can write none of them (SR-4.11-2,
+     scripts/msi-checks.ps1);
   2. smcp-desktop --commands finds the six commands beside it, each
      reporting the expected version; the package marker says msi; no
-     service, task or Gateway configuration was created;
+     service, task or Gateway configuration was created, and the existing
+     state is byte-for-byte unchanged (FR-20.21);
   3. the URL scheme smcp is registered for smcp-desktop.exe;
   4. the application starts and its console window checks the admin
      listener's certificate (SR-2.8-5): against a test listener (openssl
@@ -23,18 +31,22 @@ SRS FR-20.20, FR-20.1, FR-20.28, SR-2.8-5, FR-20.21, FR-20.22):
 The application's log is its standard error. Changes the runner's machine
 root store and the user's application settings, so it runs only in CI.
 
-Usage: pwsh -File scripts/desktop-msi-smoke.ps1 -Msi build\desktop\smcp-desktop_1.3.0_windows_amd64.msi -Version 1.3.0
+Usage: pwsh -File scripts/desktop-msi-smoke.ps1 -Msi build\desktop\smcp-desktop_1.3.0_windows_amd64.msi -Version 1.3.0 -BinDir build\win\amd64
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Msi,
-  [Parameter(Mandatory = $true)][string]$Version
+  [Parameter(Mandatory = $true)][string]$Version,
+  [Parameter(Mandatory = $true)][string]$BinDir
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 function Fail([string]$m) { Write-Host "::error::desktop-msi-smoke: $m"; throw $m }
 function Step([string]$m) { Write-Host "== $m" }
+. (Join-Path $PSScriptRoot 'msi-offline.ps1')
+. (Join-Path $PSScriptRoot 'msi-checks.ps1')
 
 $Msi = (Resolve-Path $Msi).Path
+$BinDir = (Resolve-Path $BinDir).Path
 $dir = Join-Path $env:ProgramFiles 'Secure MCP Gateway'
 $app = Join-Path $dir 'smcp-desktop.exe'
 $work = Join-Path ([IO.Path]::GetTempPath()) ("smcp-desktop-smoke-" + [Guid]::NewGuid().ToString('N'))
@@ -42,6 +54,7 @@ New-Item -ItemType Directory -Path $work | Out-Null
 $log = Join-Path $work 'install.log'
 $procs = [Collections.Generic.List[Diagnostics.Process]]::new()
 $rootThumb = $null
+$block = $null
 
 function Stop-All {
   foreach ($p in $procs) { if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } }
@@ -51,9 +64,26 @@ function Stop-All {
 }
 
 try {
-  Step 'install'
+  Step 'an existing installation (FR-20.21)'
+  $secrets = Join-Path $work 'secrets'
+  New-Item -ItemType Directory -Path $secrets | Out-Null
+  & icacls.exe $secrets /inheritance:r /grant:r "$($env:USERNAME):(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+  Set-Content -LiteralPath (Join-Path $secrets 'approver.pw') -Value 'desktop-smoke-approver-password-1' -NoNewline
+  $prev = Join-Path $work 'existing'
+  & (Join-Path $BinDir 'smcpctl.exe') bootstrap --dir $prev --bootstrap-token --approver-password-file (Join-Path $secrets 'approver.pw') `
+    --port 18843 --admin-port 18844 | Out-Null
+  if ($LASTEXITCODE -ne 0) { Fail "smcpctl bootstrap exited $LASTEXITCODE" }
+  $existing = Get-Digests $prev
+
+  Step 'install with Windows Installer kept off the network (FR-20.20)'
+  $block = Enable-InstallerNetworkBlock
+  Test-InstallerNetworkBlock
+  $t0 = Get-Date
   $p = Start-Process msiexec.exe -ArgumentList @('/i', "`"$Msi`"", '/qn', '/norestart', '/l*v', "`"$log`"") -Wait -PassThru
   if ($p.ExitCode -ne 0) { Get-Content $log -Tail 80; Fail "msiexec /i exited $($p.ExitCode)" }
+  Assert-NoInstallerConnection $t0 'install'
+  Disable-InstallerNetworkBlock $block
+  $block = $null
   if (-not (Test-Path $app)) { Fail "$app not installed" }
   # The bootstrapper runs only without a WebView2 runtime (FR-20.20).
   $wv = Get-ItemProperty -Path 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -71,6 +101,10 @@ try {
   if ($n -ne 6) { Fail "$n of 6 commands beside the application report version $Version" }
   if ((Get-Content (Join-Path $dir 'package-format')).Trim() -ne 'msi') { Fail 'package marker is not msi' }
 
+  Step 'installed files: write access for Administrators only, none for a standard user (SR-4.11-2)'
+  Assert-AdminsOnlyWrite $dir
+  Assert-UserCannotWrite $dir
+
   Step 'no service, task or configuration (FR-20.21)'
   if (Get-Service smcpd -ErrorAction SilentlyContinue) { Fail 'the package registered the smcpd service' }
   schtasks /query /tn smcp-gateway 2>$null | Out-Null
@@ -78,6 +112,7 @@ try {
   foreach ($c in (Join-Path $env:LOCALAPPDATA 'smcp-gateway'), (Join-Path $env:ProgramData 'smcp-gateway')) {
     if (Test-Path $c) { Fail "the package created $c" }
   }
+  Compare-Digests $existing (Get-Digests $prev) 'the existing installation'
 
   Step 'URL scheme smcp (FR-20.28)'
   $cmd = (Get-ItemProperty -Path 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\smcp\shell\open\command').'(default)'
@@ -185,6 +220,7 @@ try {
   Write-Host 'desktop msi smoke test passed'
 }
 finally {
+  if ($block) { Disable-InstallerNetworkBlock $block }
   Stop-All
   if ($rootThumb) { Remove-Item -Path "Cert:\LocalMachine\Root\$rootThumb" -ErrorAction SilentlyContinue }
   Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue

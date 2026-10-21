@@ -12,21 +12,31 @@
 #  1. checks the package metadata: no dependency, files only under the
 #     package's own prefixes, no maintainer script but the pre-removal one;
 #  2. installs the package and checks that installing created no Gateway
-#     configuration, state, unit or account and started nothing (FR-20.21);
-#  3. checks every binary: root-owned, not writable by the user
-#     (SR-4.11-2), reports the expected version; on macOS ad-hoc signed
-#     (FR-20.26) and linked from /usr/local/bin (FR-20.17);
+#     configuration, state, unit or account, started nothing (FR-20.21) and
+#     installed no other package, graphical or not (FR-20.18);
+#  3. checks every binary: root-owned, not writable by the user, and a
+#     write to it as the user fails (SR-4.11-2), reports the expected
+#     version; on macOS ad-hoc signed (FR-20.26) and linked from
+#     /usr/local/bin (FR-20.17);
 #  4. runs smcpctl bootstrap, smcpd, a journal, a backup and smcpctl doctor
 #     in the Standalone profile in a temporary directory; doctor must not
 #     report the packaged binaries as writable, and must report a copy in a
 #     user-writable directory;
-#  5. on Linux with systemd, installs a stand-in system smcpd.service;
+#  5. on Linux with systemd, installs a stand-in system smcpd.service and,
+#     as the user, a stand-in per-user smcpd.service;
 #  6. removes the package (Linux: the package manager; macOS: the steps of
 #     docs/install.md) and checks that the binaries and the system service
-#     are gone and that configuration, journal, keys and backups are
-#     byte-for-byte unchanged (FR-20.22);
+#     are gone, that the per-user service still runs, and that
+#     configuration, journal, keys and backups are byte-for-byte unchanged
+#     (FR-20.22);
 #  7. installs the package again, verifies the kept journal with the new
-#     smcpctl, and removes it again.
+#     smcpctl, and removes it again;
+#  8. installs the previous release's package of the same format
+#     (SMCP_PREVIOUS_RELEASE, default v1.2.0, checked against that
+#     release's checksum file), makes a Gateway state with its smcpctl and
+#     smcpd (configuration, keys, policy, journal and a backup), installs
+#     this package over it and checks that the state is byte-for-byte
+#     unchanged and its journal verifies with the new smcpctl (FR-20.21).
 set -euo pipefail
 
 [ $# -eq 2 ] || { echo "usage: $0 <package file> <expected version>" >&2; exit 2; }
@@ -73,6 +83,17 @@ cleanup() {
 trap cleanup EXIT
 
 have_systemd() { [ "$format" != pkg ] && [ -d /run/systemd/system ]; }
+# A systemd user manager for this (non-root) user.
+have_user_systemd() { have_systemd && [ "$(id -u)" != 0 ] && systemctl --user show-environment >/dev/null 2>&1; }
+
+# The installed packages, one name per line (FR-20.18: smcp pulls in none).
+installed_packages() {
+	case $format in
+	deb) dpkg-query -W -f '${Package}\n' | sort -u ;;
+	rpm) rpm -qa --qf '%{NAME}\n' | sort -u ;;
+	pkg) pkgutil --pkgs | sort -u ;;
+	esac
+}
 
 install_pkg() {
 	case $format in
@@ -154,10 +175,16 @@ done
 
 step "2. install creates no Gateway state and starts nothing (FR-20.21)"
 before=$(host_objects)
+pkgs_before=$(installed_packages)
 install_pkg
+pkgs_after=$(installed_packages)
 after=$(host_objects)
 [ "$before" = "$after" ] || fail "installing changed Gateway host objects: before '$before' after '$after'"
 echo "host objects unchanged: ${after:-none}"
+added=$(comm -13 <(printf '%s\n' "$pkgs_before") <(printf '%s\n' "$pkgs_after") | paste -sd' ' -)
+case $format in pkg) want_added=io.github.ethan03805.smcp ;; *) want_added=smcp ;; esac
+[ "$added" = "$want_added" ] || fail "installing the package added the packages '$added', not $want_added alone (FR-20.18)"
+echo "packages added: $added (no dependency, graphical or other)"
 
 step "3. binaries"
 for b in "${binaries[@]}"; do
@@ -174,6 +201,8 @@ for b in "${binaries[@]}"; do
 	fi
 	[ "$owner" = 0 ] || fail "$real is owned by uid $owner, not root (SR-4.11-2)"
 	if asuser test -w "$real"; then fail "$real is writable by the user (SR-4.11-2)"; fi
+	# shellcheck disable=SC2016 # $1 is the inner shell's argument
+	if asuser sh -c ': >> "$1"' sh "$real" 2>/dev/null; then fail "the user opened $real for writing (SR-4.11-2)"; fi
 	if [ "$b" = smcpctl ]; then
 		got=$(asuser "$link" version --short)
 		[ "$got" = "$want" ] || fail "smcpctl version --short printed '$got', not '$want'"
@@ -184,6 +213,23 @@ for b in "${binaries[@]}"; do
 	echo "$link: uid 0, not writable by the user, version $want"
 done
 if asuser test -w "$libdir"; then fail "$libdir is writable by the user (SR-4.11-2)"; fi
+# Every file and directory the package installed, not the shared parents
+# such as /usr/local/bin (SR-4.11-2).
+case $format in
+deb) installed=$(dpkg -L smcp) ;;
+rpm) installed=$(rpm -ql smcp) ;;
+pkg) installed=$(sed -n 's|^\./|/|p' <<<"$files") ;;
+esac
+installed=$(grep -E '/smcp[^/]*(/|$)|/Secure MCP Gateway\.app(/|$)' <<<"$installed" || true)
+n=0
+while IFS= read -r f; do
+	if [ -z "$f" ] || { [ ! -e "$f" ] && [ ! -L "$f" ]; }; then continue; fi
+	if [ "$format" = pkg ]; then owner=$(stat -f %u "$f"); else owner=$(stat -c %u "$f"); fi
+	[ "$owner" = 0 ] || fail "$f is owned by uid $owner, not root (SR-4.11-2)"
+	if [ ! -L "$f" ] && asuser test -w "$f"; then fail "$f is writable by the user (SR-4.11-2)"; fi
+	n=$((n + 1))
+done <<<"$installed"
+echo "$n installed files and directories: owned by root, not writable by the user"
 if [ "$format" = pkg ] && grep -q '^\./Applications/Secure MCP Gateway\.app/Contents/MacOS/smcp-desktop$' <<<"$files"; then
 	# The Desktop Application (FR-20.17, FR-20.26, SR-4.11-2).
 	app="/Applications/Secure MCP Gateway.app"
@@ -247,6 +293,14 @@ if have_systemd; then
 	priv systemctl daemon-reload
 	priv systemctl enable --now smcpd.service
 	systemctl is-active --quiet smcpd.service || fail "stand-in smcpd.service did not start"
+	if have_user_systemd; then
+		mkdir -p "$uhome/.config/systemd/user"
+		printf '[Unit]\nDescription=per-user smcpd stand-in (package smoke test)\n[Service]\nExecStart=/bin/sleep infinity\n' >"$uhome/.config/systemd/user/smcpd.service"
+		systemctl --user daemon-reload
+		systemctl --user start smcpd.service
+		systemctl --user is-active --quiet smcpd.service || fail "stand-in per-user smcpd.service did not start"
+		echo "stand-in system and per-user smcpd.service running"
+	fi
 else
 	step "5. no systemd: system service check skipped"
 fi
@@ -278,6 +332,14 @@ if have_systemd; then
 	[ ! -e /etc/systemd/system/smcpd.service ] || fail "the system smcpd.service is still installed"
 	if systemctl is-active --quiet smcpd.service; then fail "smcpd.service still runs"; fi
 	echo "system smcpd.service stopped and removed"
+	if have_user_systemd; then
+		systemctl --user is-active --quiet smcpd.service || fail "removing the package stopped the per-user smcpd.service"
+		[ -f "$uhome/.config/systemd/user/smcpd.service" ] || fail "removing the package removed the per-user unit"
+		echo "per-user smcpd.service still runs"
+		systemctl --user stop smcpd.service
+		rm -f "$uhome/.config/systemd/user/smcpd.service"
+		systemctl --user daemon-reload
+	fi
 fi
 now=$(asuser bash -c "$(declare -f digests); st='$st'; digests")
 [ "$kept" = "$now" ] || { diff <(echo "$kept") <(echo "$now") >&2 || true; fail "configuration, journal, keys or backups changed on removal"; }
@@ -288,5 +350,54 @@ install_pkg
 now=$(asuser bash -c "$(declare -f digests); st='$st'; digests")
 [ "$kept" = "$now" ] || fail "installing over the kept state changed it (FR-20.21)"
 asuser "$bindir/smcpctl" journal verify --dir "$st/state/journal" --key "$st/state/keys/evidence-genesis.pub"
+remove_pkg
+
+step "8. over an installation of the previous release (FR-20.21)"
+prev=${SMCP_PREVIOUS_RELEASE:-v1.2.0}
+case $format in
+deb) asset=smcp_${prev#v}_$(dpkg --print-architecture).deb ;;
+rpm) asset=smcp-${prev#v}-1.$(uname -m).rpm ;;
+pkg) asset=smcp_${prev#v}_darwin_arm64.pkg ;;
+esac
+mkdir "$work/prev"
+chmod 0755 "$work/prev"
+base=https://github.com/ethan03805/Secure-MCP-Gateway/releases/download/$prev
+curl -fsSL --proto '=https' --retry 3 -o "$work/prev/$asset" "$base/$asset"
+curl -fsSL --proto '=https' --retry 3 -o "$work/prev/checksums.txt" "$base/smcp_${prev#v}_checksums.txt"
+sum=$(awk -v a="$asset" '$2 == a {print $1}' "$work/prev/checksums.txt")
+[ -n "$sum" ] || fail "$asset is not in the checksum file of $prev"
+hash=(shasum -a 256)
+if command -v sha256sum >/dev/null; then hash=(sha256sum); fi
+got=$("${hash[@]}" "$work/prev/$asset" | awk '{print $1}')
+[ "$got" = "$sum" ] || fail "$asset of $prev does not match its checksum"
+newpkg=$pkg
+pkg=$work/prev/$asset
+install_pkg >/dev/null
+pkg=$newpkg
+got=$(asuser "$bindir/smcpctl" version --short)
+[ "$got" = "${prev#v}" ] || fail "the previous release reports version '$got', not ${prev#v}"
+pst=$work/prev-st
+asuser "$bindir/smcpctl" bootstrap --dir "$pst" --bootstrap-token --approver-password-file "$work/approver" \
+	--port 28543 --admin-port 28544 </dev/null >/dev/null
+asuser sh -c "printf '\n[profile]\nmode = \"standalone\"\n' >> '$pst/smcp.toml'"
+asuser sh -c "'$bindir/smcpd' --config '$pst/smcp.toml' > '$work/prev-smcpd.log' 2>&1 &"
+ok=0
+for _ in $(seq 1 60); do
+	if asuser "$bindir/smcpctl" health --config "$pst/smcp.toml" >/dev/null 2>&1; then ok=1; break; fi
+	sleep 1
+done
+[ $ok = 1 ] || { cat "$work/prev-smcpd.log" >&2; fail "smcpd ${prev#v} did not answer health"; }
+asuser "$bindir/smcpctl" backup --config "$pst/smcp.toml" --passphrase-file "$work/backup-pass" >/dev/null
+pkill -f "smcpd --config $pst/" || true
+for _ in $(seq 1 30); do pgrep -f "smcpd --config $pst/" >/dev/null || break; sleep 1; done
+ls "$pst/state/journal"/segment-*.jsonl "$pst/backups"/*.age >/dev/null || fail "the previous release made no journal or backup"
+kept=$(asuser bash -c "$(declare -f digests); st='$pst'; digests")
+install_pkg >/dev/null
+got=$(asuser "$bindir/smcpctl" version --short)
+[ "$got" = "$want" ] || fail "after installing over ${prev#v}, smcpctl reports '$got', not $want"
+now=$(asuser bash -c "$(declare -f digests); st='$pst'; digests")
+[ "$kept" = "$now" ] || { diff <(echo "$kept") <(echo "$now") >&2 || true; fail "installing over ${prev#v} changed its configuration, keys, policy, journal or backups"; }
+echo "installed over ${prev#v}: $(printf '%s\n' "$now" | wc -l | tr -d ' ') files unchanged"
+asuser "$bindir/smcpctl" journal verify --dir "$pst/state/journal" --key "$pst/state/keys/evidence-genesis.pub"
 remove_pkg
 echo "package-smoke: $format passed"
