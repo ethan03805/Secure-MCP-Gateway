@@ -13,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, webkit } from "playwright";
 import { AxeBuilder } from "@axe-core/playwright";
+import { Results } from "./results.mjs";
 
 const dist = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "dist");
 const conf = JSON.parse(fs.readFileSync(path.join(dist, "..", "src-tauri", "tauri.conf.json"), "utf8"));
@@ -40,11 +41,17 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", () => r(undefined)));
 const base = `http://127.0.0.1:${/** @type {import("node:net").AddressInfo} */ (server.address()).port}`;
 
-let failures = 0;
-const fail = (/** @type {string} */ m) => {
-  failures++;
-  console.log(`FAIL ${m}`);
-};
+// Requirement claims (FR-12.10), each partial: what each requirement
+// still needs is in docs/verification/gap-list.md. With SMCP_E2E_RESULTS
+// and SMCP_CLAIMS_FILE set, `reqreport cargo` turns them into events.
+const r = new Results(`a11y::${process.env.ENGINE === "chromium" ? "chromium" : "webkit"}`, {
+  axe_light_and_dark: ["FR-20.15", "FR-20.43", "FR-20.52"],
+  csp_and_bundled_fonts: ["SR-2-6"],
+  reduced_motion: ["FR-20.43", "FR-20.52"],
+  keyboard_introduction: ["FR-20.43", "FR-20.41"],
+  keyboard_setup_and_clients: ["FR-20.15"],
+});
+const fail = (/** @type {string} */ m) => r.fail(m);
 
 /** @param {import("playwright").Page} page @param {string} name */
 async function axe(page, name) {
@@ -82,6 +89,7 @@ const UPDATES = ["idle", "latest", "available", "working", "verify-failed", "rol
 
 const engine = process.env.ENGINE === "chromium" ? chromium : webkit;
 const browser = await engine.launch();
+r.begin("axe_light_and_dark");
 for (const scheme of /** @type {const} */ (["light", "dark"])) {
   const ctx = await browser.newContext({ viewport: { width: 600, height: 560 }, colorScheme: scheme, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
@@ -131,6 +139,7 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
 }
 
 // Under the application's CSP the pages load and run with no error (SR-2-6).
+r.begin("csp_and_bundled_fonts");
 {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
@@ -159,6 +168,7 @@ for (const scheme of /** @type {const} */ (["light", "dark"])) {
 }
 
 // Reduced motion: no animation on a change of step (FR-20.43, FR-20.52).
+r.begin("reduced_motion");
 {
   const ctx = await browser.newContext({ reducedMotion: "reduce" });
   const page = await ctx.newPage();
@@ -173,6 +183,7 @@ await browser.close();
 // Keyboard (FR-20.43). Chromium: WebKit on macOS moves Tab focus to text
 // fields only, as Safari does by default.
 const kb = await chromium.launch();
+r.begin("keyboard_introduction");
 {
   const ctx = await kb.newContext();
   const page = await ctx.newPage();
@@ -210,6 +221,7 @@ const kb = await chromium.launch();
   }
   if (calls.at(-1) !== 'intro_close {"flag":"completed"}') fail(`Done did not complete: ${calls.join(", ")}`);
 
+  r.begin("keyboard_setup_and_clients");
   // First-run setup by keyboard alone (FR-20.15): focus starts on the
   // heading, Tab reaches the profile, the bundled ContextForge box
   // (unchecked, FR-22.44) and the four password fields in order, a
@@ -277,5 +289,6 @@ const kb = await chromium.launch();
 }
 await kb.close();
 server.close();
-console.log(failures ? `${failures} failure(s)` : "bundled windows: accessibility, CSP, motion and keyboard checks passed");
-process.exit(failures ? 1 : 0);
+const passed = r.write();
+console.log(passed ? "bundled windows: accessibility, CSP, motion and keyboard checks passed" : `${r.failures} failure(s)`);
+process.exit(passed ? 0 : 1);

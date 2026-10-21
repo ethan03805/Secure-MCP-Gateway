@@ -46,7 +46,21 @@ export interface Catalogue {
   desktop: {
     states: Record<string, StateText>;
     labels: Record<string, { label: string; meaning: string }>;
+    empty?: Record<string, { title: string; what: string; todo: string }>;
   };
+}
+
+/**
+ * The empty state of the status window's approvals count (FR-20.46): with
+ * a fresh reading of no pending approval, APPROVALS_NONE's title, reason
+ * and next step; otherwise none (a count is shown, or no reading).
+ */
+export function approvalsEmpty(c: Catalogue, h: Health): { title: string; what: string; todo: string } | null {
+  const state = (STATES as readonly string[]).includes(h.state) ? (h.state as TrayState) : "unreachable";
+  if (h.pending !== 0 || !READING[state]) return null;
+  const e = c.desktop.empty?.["APPROVALS_NONE"];
+  if (!e) throw new Error("the catalogue has no desktop.empty.APPROVALS_NONE");
+  return e;
 }
 
 export interface Health {

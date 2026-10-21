@@ -1,7 +1,7 @@
 // The Gateway Status window (FR-20.45): the tray state, what it means, what
 // to do, and the control that does it.
 import { catalogue } from "./catalogue.js";
-import { CONTROL_LABELS, explain, type Control, type Health, type TrayState } from "./status-model.ts";
+import { approvalsEmpty, CONTROL_LABELS, explain, type Control, type Health, type TrayState } from "./status-model.ts";
 import { byId, el, invoke } from "./dom.ts";
 
 const COMMANDS: Record<Control, string> = { "open-console": "status_open_console", start: "status_start", restart: "status_restart" };
@@ -51,6 +51,8 @@ function render(h: Health): void {
   const dl = byId("facts");
   dl.replaceChildren(...facts.flatMap(([k, v]) => [el("dt", {}, [k]), el("dd", {}, [v])]));
   dl.hidden = facts.length === 0;
+  const none = approvalsEmpty(catalogue, h);
+  byId("approvals").replaceChildren(...(none ? [el("h2", {}, [none.title]), el("p", {}, [none.what]), el("p", { class: "help" }, [none.todo])] : []));
   document.title = `Gateway Status: ${x.label}`;
 }
 

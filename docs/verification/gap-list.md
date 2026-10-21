@@ -148,9 +148,9 @@ Every requirement with `TARGET: v1.3.0` (SRS Section 2.8: FR-20, FR-21, FR-22, F
 
 ### E-24 Management Console & Control API
 
-- FR-20.48 **unverified** (partly verified): The catalogue holds every reason code with its Table B.2 text and every desktop code; the console (`console/src/messages.ts`) and the desktop windows import it, but no test claims that neither build holds a differing copy.
-- FR-20.49 **unverified** (no claiming test or record): `docs/design/writing.md` exists and `tools/uilint` applies its banned list; the inspection of 30 strings is not recorded under `docs/verification/`.
-- FR-20.50 **unverified** (no claiming test or record): `docs/design/visual.md` exists; the inspection of the desktop windows, five console views and the site pages in both schemes is not recorded.
+- FR-20.48 verified (2026-10-20, phase 13): `internal/edge.TestCatalogueIsTheOnlySource` checks the catalogue against Table B.2 and the desktop parts, that the console, the desktop windows and the Rust core import it, that none of their sources holds a copy of a catalogue text, and that every desktop code they raise has an entry. The console window's error page, which runs no script, now takes its text from the catalogue at build time (`desktop/scripts/copy-static.mjs`).
+- FR-20.49 verified (2026-10-20, phase 13): Inspection record [FR-20.49.md](FR-20.49.md), the guide's topics and 30 strings; two introduction strings that said "this Mac" on every platform were corrected.
+- FR-20.50 verified (2026-10-20, phase 13): Inspection record [FR-20.50.md](FR-20.50.md), the guide's topics, every bundled desktop window, five console views and the site's home and install pages in both schemes.
 - FR-21.1 **unverified** (partly verified): The version refusal is tested; the Windows acceptance subset runs on `windows-latest` and `windows-11-arm` (the owner's 2026-10-20 decision: `windows-11-arm` qualifies Windows 11 arm64 and `windows-latest` stands in for Windows x64), and the run on Windows 11 x64 hardware is blocked on the owner.
 - FR-21.2 **unverified** (no claiming test or record): The `windows` CI job cross-builds and vets every package and runs the `TestWindows*` fail-closed tests, without an FR-21.2 claim.
 - FR-21.3 **external** (no claiming test or record): `.goreleaser.yaml` builds both zips and lists them in the checksum file; `v1.3.0-beta.2` has both zips in its signed checksum file but no Sigstore bundle, because its release run stopped after publishing (fixed on main); needs the inspection of a release whose run completes.

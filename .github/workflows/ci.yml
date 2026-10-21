@@ -789,9 +789,17 @@ jobs:
       - name: Bundled windows in WebKit and Chromium (axe WCAG 2.2 AA, CSP, keyboard, reduced motion; FR-20.43)
         if: runner.os == 'macOS'
         working-directory: desktop
+        env:
+          SMCP_E2E_RESULTS: ${{ runner.temp }}/a11y-results.txt
+          SMCP_CLAIMS_FILE: ${{ runner.temp }}/a11y-claims.tsv
         run: |
           npx --no-install playwright install chromium webkit
-          npm run test:a11y
+          rc=0
+          npm run test:a11y || rc=$?
+          mkdir -p ../build
+          (cd .. && go run ./tools/reqreport cargo -test-output "$SMCP_E2E_RESULTS" -claims "$SMCP_CLAIMS_FILE" \
+            -package desktop/a11y -out build/desktop-a11y-test.json) || rc=1
+          exit "$rc"
       - name: npm audit (high and critical, with the reviewed allowlist)
         run: scripts/npm-audit-gate.sh desktop
       - name: cargo fmt
@@ -1897,7 +1905,7 @@ jobs:
           # The desktop application's Rust test claims (FR-20, desktop job),
           # one file per platform, and those of its end-to-end tests
           # (desktop-e2e on Linux, the desktop job on macOS).
-          for f in build/desktop-macos-test.json build/desktop-linux-test.json build/desktop-e2e-linux-test.json build/desktop-e2e-macos-test.json build/desktop-windows-test.json build/desktop-windows-arm64-test.json; do
+          for f in build/desktop-macos-test.json build/desktop-linux-test.json build/desktop-e2e-linux-test.json build/desktop-e2e-macos-test.json build/desktop-windows-test.json build/desktop-windows-arm64-test.json build/desktop-a11y-test.json; do
             if [ -s "$f" ]; then
               cat "$f" >> build/all-test.json
               merged=1

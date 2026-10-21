@@ -3,6 +3,7 @@ package edge
 import (
 	"bytes"
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -78,6 +79,13 @@ func loadCatalogue(t *testing.T) catalogue {
 // builds; this test covers the catalogue against the Gateway.
 func TestMessageCatalogue(t *testing.T) {
 	reqtest.Partial(t, "FR-20.48")
+	checkCatalogue(t)
+}
+
+// checkCatalogue is TestMessageCatalogue's check of the catalogue against
+// the Gateway's error builder and the desktop parts.
+func checkCatalogue(t *testing.T) catalogue {
+	t.Helper()
 	c := loadCatalogue(t)
 	if c.Version != 1 {
 		t.Errorf("version %d, want 1", c.Version)
@@ -171,4 +179,128 @@ func TestMessageCatalogue(t *testing.T) {
 			}
 		}
 	}
+	return c
+}
+
+// TestCatalogueIsTheOnlySource: the console and the desktop application
+// take every reason-code message, desktop error, empty state and tray
+// state text from docs/design/messages.json at build time and hold no
+// copy of it (FR-20.48). With checkCatalogue (every Table B.2 reason code
+// with the error builder's text, every desktop part) this covers the
+// whole verification statement:
+//   - the console imports the catalogue (console/src/messages.ts), the
+//     desktop windows' build writes dist/catalogue.js from it
+//     (desktop/scripts/copy-static.mjs) and the windows import that, and
+//     the Rust core compiles it in (include_str!);
+//   - no source file of the console, the desktop windows or the Rust core
+//     (tests aside) contains a catalogue text, so none can drift from it;
+//   - every desktop code the sources raise has a catalogue entry.
+func TestCatalogueIsTheOnlySource(t *testing.T) {
+	reqtest.Verifies(t, "FR-20.48")
+	c := checkCatalogue(t)
+	root := filepath.Join("..", "..")
+	read := func(p string) string {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(root, p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.ReplaceAll(string(b), "\r\n", "\n")
+	}
+	for file, want := range map[string]string{
+		"console/src/messages.ts":          `from "../../docs/design/messages.json"`,
+		"desktop/scripts/copy-static.mjs":  `"docs", "design", "messages.json"`,
+		"desktop/src-tauri/src/explain.rs": `include_str!("../../../docs/design/messages.json")`,
+		"desktop/src/status-view.ts":       `import { catalogue } from "./catalogue.js"`,
+		"desktop/src/setup-view.ts":        `import { catalogue } from "./catalogue.js"`,
+		"desktop/src/clients-view.ts":      `import { catalogue } from "./catalogue.js"`,
+		"desktop/src/updates-view.ts":      `import { catalogue } from "./catalogue.js"`,
+	} {
+		if !strings.Contains(read(file), want) {
+			t.Errorf("%s does not take its text from the catalogue (%s)", file, want)
+		}
+	}
+
+	// The catalogue's texts, each as its longest run without a parameter.
+	var texts []string
+	param := regexp.MustCompile(`\{[a-zA-Z]+\}`)
+	add := func(s string) {
+		longest := ""
+		for _, part := range param.Split(s, -1) {
+			if part = strings.TrimSpace(part); len(part) > len(longest) {
+				longest = part
+			}
+		}
+		// Short texts ("healthy", "Close") are words, not copies.
+		if len(longest) >= 24 {
+			texts = append(texts, longest)
+		}
+	}
+	for _, e := range c.ReasonCodes {
+		add(e.Message)
+	}
+	for _, st := range c.Desktop.States {
+		add(st.Meaning)
+		add(st.Action)
+		add(st.Detail)
+	}
+	for _, l := range c.Desktop.Labels {
+		add(l.Meaning)
+	}
+	for _, set := range []map[string]catalogueEntry{c.Desktop.Errors, c.Desktop.Empty} {
+		for _, e := range set {
+			add(e.What)
+			add(e.Why)
+			add(e.Todo)
+		}
+	}
+	if len(texts) < 50 {
+		t.Fatalf("only %d catalogue texts to look for", len(texts))
+	}
+
+	desktopCode := regexp.MustCompile(`"((?:SETUP|CLIENTS?|SERVICE|UPDATES?|UPGRADE|CONSOLE|ELEVATION|APPROVALS)_[A-Z0-9_]+)"`)
+	files := 0
+	for _, dir := range []string{"console/src", "desktop/src", "desktop/src-tauri/src"} {
+		err := filepath.WalkDir(filepath.Join(root, dir), func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			name := d.Name()
+			ext := filepath.Ext(name)
+			if (ext != ".ts" && ext != ".tsx" && ext != ".rs" && ext != ".html") || strings.Contains(name, ".test.") ||
+				name == "catalogue.d.ts" || name == "config_tests.rs" || name == "claims.rs" {
+				return nil
+			}
+			b, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			// A Rust file's tests may quote the catalogue to check it.
+			src, _, _ := strings.Cut(strings.ReplaceAll(string(b), "\r\n", "\n"), "#[cfg(test)]\nmod tests")
+			rel, _ := filepath.Rel(root, p)
+			for _, text := range texts {
+				if strings.Contains(src, text) {
+					t.Errorf("%s holds a copy of the catalogue text %q", rel, text)
+				}
+			}
+			if strings.HasPrefix(rel, "desktop") {
+				for _, m := range desktopCode.FindAllStringSubmatch(src, -1) {
+					_, isErr := c.Desktop.Errors[m[1]]
+					_, isEmpty := c.Desktop.Empty[m[1]]
+					if !isErr && !isEmpty {
+						t.Errorf("%s raises %s, which has no catalogue entry", rel, m[1])
+					}
+				}
+			}
+			files++
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if files < 40 {
+		t.Fatalf("only %d source files checked", files)
+	}
+	t.Logf("%d catalogue texts looked for in %d source files", len(texts), files)
 }
