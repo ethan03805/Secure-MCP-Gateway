@@ -28,9 +28,9 @@
     ],
     "ref": "main",
     "commit": "623e172720228905279c6d4b450aca4825053154",
-    "conclusion": "success",
-    "date": "2026-10-25T13:20:13Z",
-    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/40196633951"
+    "conclusion": "failure",
+    "date": "2026-10-26T15:25:51Z",
+    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/40347576121"
   },
   {
     "workflow": "reference-packages",
