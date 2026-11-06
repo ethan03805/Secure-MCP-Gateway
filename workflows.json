@@ -7,8 +7,8 @@
     "ref": "main",
     "commit": "623e172720228905279c6d4b450aca4825053154",
     "conclusion": "failure",
-    "date": "2026-11-05T16:41:53Z",
-    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/42065281796"
+    "date": "2026-11-06T16:09:24Z",
+    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/42248044808"
   },
   {
     "workflow": "agents-lockdown",
