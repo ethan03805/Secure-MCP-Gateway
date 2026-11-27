@@ -18,8 +18,8 @@
     "ref": "main",
     "commit": "623e172720228905279c6d4b450aca4825053154",
     "conclusion": "failure",
-    "date": "2026-11-26T18:34:17Z",
-    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/45876153883"
+    "date": "2026-11-27T18:22:10Z",
+    "runUrl": "https://github.com/ethan03805/Secure-MCP-Gateway/actions/runs/46048068811"
   },
   {
     "workflow": "agents-windows",
